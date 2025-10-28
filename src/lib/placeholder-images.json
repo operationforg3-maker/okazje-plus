@@ -1,0 +1,58 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "Abstract background for hero section",
+      "imageUrl": "https://images.unsplash.com/photo-1568952433726-3896e3881c65?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxhYnN0cmFjdCUyMHRlY2hub2xvZ3l8ZW58MHx8fHwxNzYxNTg1MzQ2fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract technology"
+    },
+    {
+      "id": "drone-1",
+      "description": "A modern quadcopter drone in flight.",
+      "imageUrl": "https://images.unsplash.com/photo-1709235154124-ed88ade31411?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxkcm9uZSUyMGZseWluZ3xlbnwwfHx8fDE3NjE1OTQ3MjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "drone flying"
+    },
+    {
+      "id": "smartphone-1",
+      "description": "A sleek, modern smartphone with a vibrant screen.",
+      "imageUrl": "https://images.unsplash.com/photo-1675752520743-c449b6f9341a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxzbWFydHBob25lJTIwc2NyZWVufGVufDB8fHx8MTc2MTYwNDI1MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "smartphone screen"
+    },
+    {
+      "id": "headphones-1",
+      "description": "High-quality over-ear wireless headphones.",
+      "imageUrl": "https://images.unsplash.com/photo-1633346703386-bf6f1e59ec6f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxoZWFkcGhvbmVzJTIwcHJvZHVjdHxlbnwwfHx8fDE3NjE1NzU3MzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "headphones product"
+    },
+    {
+      "id": "coffeemaker-1",
+      "description": "An automatic espresso machine.",
+      "imageUrl": "https://images.unsplash.com/photo-1552833755-fdb50eeb8cf1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjb2ZmZWUlMjBtYWNoaW5lfGVufDB8fHx8MTc2MTU3NTc4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "coffee machine"
+    },
+    {
+      "id": "smartwatch-1",
+      "description": "A stylish smartwatch displaying notifications.",
+      "imageUrl": "https://images.unsplash.com/photo-1551480634-4263800a3868?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzbWFydHdhdGNoJTIwZmFjZXxlbnwwfHx8fDE3NjE2NTg0Nzd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "smartwatch face"
+    },
+    {
+      "id": "laptop-1",
+      "description": "A thin and light ultrabook laptop.",
+      "imageUrl": "https://images.unsplash.com/photo-1745413640756-3f583116aedd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxsYXB0b3AlMjBvcGVufGVufDB8fHx8MTc2MTY2OTgyOXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "laptop open"
+    },
+    {
+      "id": "camera-1",
+      "description": "A professional DSLR camera.",
+      "imageUrl": "https://images.unsplash.com/photo-1593704212686-6d52058fb516?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjYW1lcmElMjBsZW5zfGVufDB8fHx8MTc2MTYyNTAwNnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "camera lens"
+    },
+    {
+      "id": "keyboard-1",
+      "description": "A mechanical gaming keyboard with RGB lighting.",
+      "imageUrl": "https://images.unsplash.com/photo-1606075014584-5ccf554b50db?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtZWNoYW5pY2FsJTIwa2V5Ym9hcmR8ZW58MHx8fHwxNzYxNTk4MzkxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mechanical keyboard"
+    }
+  ]
+}
