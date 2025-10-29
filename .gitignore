@@ -45,6 +45,8 @@ firebase-debug.log
 firestore-debug.log
 .firebase/
 
+.env.local
+
 
 # project specific
 src/scripts
