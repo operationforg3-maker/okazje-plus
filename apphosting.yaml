@@ -19,8 +19,5 @@ env:
 
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
-  - variable: FIREBASE_WEBAPP_CONFIG
-    secret: FIREBASE_CONFIG
-    availability:
-      - BUILD
-      - RUNTIME
+  # - variable: MY_SECRET
+  #   secret: mySecretRef
