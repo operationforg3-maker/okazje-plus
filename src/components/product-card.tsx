@@ -39,6 +39,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
           {product.description}
         </p>
+        <p className="text-xl font-bold text-primary mt-2">{new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price)}</p>
       </CardContent>
       <CardFooter className="flex items-center justify-between p-4 pt-0">
         <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground">
