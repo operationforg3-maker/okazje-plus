@@ -33,6 +33,17 @@
         "firebase-debug.*.log",
         "functions"
       ]
+    },
+    {
+      "backendId": "okazje-plus-backend",
+      "rootDir": "/",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "functions"
+      ]
     }
   ],
   "functions": [
