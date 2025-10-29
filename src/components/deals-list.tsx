@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import DealCard from '@/components/deal-card';
+import DealListCard from '@/components/deal-list-card'; // Import the new component
 import { Deal } from '@/lib/types';
 import { Grid, List } from 'lucide-react';
 
@@ -34,9 +35,8 @@ export function DealsList({ deals }: DealsListProps) {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {/* TODO: Replace with DealListCard when created */}
           {deals.map((deal) => (
-            <DealCard key={deal.id} deal={deal} />
+            <DealListCard key={deal.id} deal={deal} />
           ))}
         </div>
       )}
