@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "records": {
+      "rec1": {
+        ".read": true
+      },
+      "rec2": {
+        ".read": false
+      }
+    }
+  }
+}
