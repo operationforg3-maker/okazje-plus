@@ -24,10 +24,13 @@ import { UserNav } from '@/components/auth/user-nav';
 import { cn } from '@/lib/utils';
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
   const router = useRouter();
+  const { user, loading } = useAuth();
 
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,7 +115,15 @@ export function Navbar() {
               </div>
             </form>
           </div>
-          <UserNav />
+          {loading ? (
+              <Skeleton className="h-9 w-9 rounded-full" />
+            ) : user ? (
+              <UserNav />
+            ) : (
+              <Link href="/login">
+                <Button variant="outline">Zaloguj się</Button>
+              </Link>
+            )}
         </div>
       </div>
     </header>
