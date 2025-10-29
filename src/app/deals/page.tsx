@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { getHotDeals } from '@/lib/data';
-import DealCard from '@/components/deal-card';
 import { Deal } from '@/lib/types';
+import { DealsList } from '@/components/deals-list';
 
 export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -22,11 +22,7 @@ export default function DealsPage() {
       <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl mb-8">
         Okazje
       </h1>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {deals.map(deal => (
-          <DealCard key={deal.id} deal={deal} />
-        ))}
-      </div>
+      <DealsList deals={deals} />
     </div>
   );
 }
