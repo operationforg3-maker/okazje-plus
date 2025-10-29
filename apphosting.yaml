@@ -1,36 +1,34 @@
+
 # Settings for Backend (on Cloud Run).
 # See https://firebase.google.com/docs/app-hosting/configure#cloud-run
 runConfig:
   minInstances: 0
 
+# Environment variables for the Next.js build process.
+# These are used to embed the Firebase config into the client-side code.
+# See https://firebase.google.com/docs/app-hosting/configure#environment-variables
 env:
-  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: okazje-plus
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: okazje-plus.firebaseapp.com
-    availability:
-      - BUILD
-      - RUNTIME
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     value: AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4
     availability:
       - BUILD
-      - RUNTIME
-  - variable: FIREBASE_PROJECT_ID
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: okazje-plus.firebaseapp.com
+    availability:
+      - BUILD
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
     value: okazje-plus
     availability:
       - BUILD
-      - RUNTIME
-  - variable: FIREBASE_CLIENT_EMAIL
-    value: firebase-adminsdk-kma4u@okazje-plus.iam.gserviceaccount.com
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: okazje-plus.firebasestorage.app
     availability:
       - BUILD
-      - RUNTIME
-  - variable: FIREBASE_PRIVATE_KEY
-    secret: FIREBASE_PRIVATE_KEY
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: '298894101105'
     availability:
       - BUILD
-      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:298894101105:web:20a99f74b145cdf3ee29d0
+    availability:
+      - BUILD
