@@ -68,8 +68,8 @@ export function UserNav() {
             </Link>
           </DropdownMenuItem>
           
-          {/* Conditionally render the Admin Panel link */}
-          {user.role === 'admin' && (
+          {/* Conditionally render the Admin Panel link safely */}
+          {user && user.role === 'admin' && (
             <DropdownMenuItem asChild>
               <Link href="/admin">
                 <LayoutDashboard className="mr-2 h-4 w-4" />

@@ -24,7 +24,7 @@ import {
   PanelLeft,
 } from 'lucide-react';
 import { UserNav } from '@/components/auth/user-nav';
-import { AdminAuthGuard } from '@/components/auth/admin-auth-guard'; // Import AdminAuthGuard
+import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
 
 export default function AdminLayout({
   children,
@@ -35,7 +35,7 @@ export default function AdminLayout({
   const isActive = (path: string) => pathname === path;
 
   return (
-    <AdminAuthGuard> {/** Wrap content with AdminAuthGuard **/
+    <AdminAuthGuard>
       <SidebarProvider>
         <div className="flex min-h-screen">
           <Sidebar>
