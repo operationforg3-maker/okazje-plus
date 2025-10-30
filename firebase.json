@@ -51,8 +51,24 @@
   ],
   "functions": [
     {
-      "source": ".firebase/okazje-plus/functions",
-      "codebase": "firebase-frameworks-okazje-plus"
+      "codebase": "firebase-frameworks-okazje-plus",
+      "source": ".firebase/okazje-plus/functions"
+    },
+    {
+      "source": "okazje-plus",
+      "codebase": "okazje-plus",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint",
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
     }
   ]
 }

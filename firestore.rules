@@ -2,31 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // UŻYTKOWNICY (Bez zmian)
+    // Użytkownicy: Każdy może czytać, ale tylko właściciel może aktualizować swój profil.
     match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
-    // OKAZJE (Bez zmian)
+    // Okazje (Deals): Każdy może czytać. Tworzenie zablokowane (przez Cloud Function). Edycja/Usuwanie tylko przez autora.
     match /deals/{dealId} {
       allow read: if true;
-      allow create, update: if request.auth != null;
+      allow create: if false; // ZABLOKOWANE! Używamy funkcji 'createDeal'
+      allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
     }
 
-    // GŁOSY (Krytyczna poprawka: dodano 'read')
-    // Użytkownik musi móc odczytać swój głos (sprawdzić czy głosował)
-    // oraz zapisać (zagłosować).
-    match /deals/{dealId}/votes/{userId} {
-      allow read, write: if request.auth.uid == userId;
-    }
-
-    // PRODUKTY (Krytyczny dodatek: nowa reguła)
-    // Zezwól WSZYSTKIM na czytanie produktów (dane publiczne).
-    // Zapis będzie kontrolowany przez Panel Admina (później).
-    match /products/{productId} {
+    // Komentarze: Każdy może czytać. Tworzyć mogą tylko zalogowani. Edycja/Usuwanie tylko przez autora.
+    match /comments/{commentId} {
       allow read: if true;
-      // Domyślnie 'write' jest zablokowane, co jest poprawne.
+      allow create: if request.auth != null; // Uproszczone na teraz, docelowo też przez funkcję
+      allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+    }
+
+    // Subkolekcje (przygotowanie pod głosowanie)
+    match /deals/{dealId}/votes/{userId} {
+       allow read: if true;
+       // Zapis tylko dla zalogowanego użytkownika na jego własnym dokumencie głosu
+       allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
