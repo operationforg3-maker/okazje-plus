@@ -14,6 +14,13 @@ service cloud.firestore {
       allow create: if false; // ZABLOKOWANE! Używamy funkcji 'createDeal'
       allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
     }
+    // PRODUKTY (Krytyczny dodatek: nowa reguła)
+    // Zezwól WSZYSTKIM na czytanie produktów (dane publiczne).
+    // Zapis będzie kontrolowany przez Panel Admina (później).
+    match /products/{productId} {
+      allow read: if true;
+      // Domyślnie 'write' jest zablokowane, co jest poprawne.
+    }
 
     // Komentarze: Każdy może czytać. Tworzyć mogą tylko zalogowani. Edycja/Usuwanie tylko przez autora.
     match /comments/{commentId} {

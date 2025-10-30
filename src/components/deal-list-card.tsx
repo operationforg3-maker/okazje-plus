@@ -2,14 +2,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Deal } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { VoteControls } from '@/components/vote-controls';
 
 interface DealListCardProps {
   deal: Deal;
 }
 
 export default function DealListCard({ deal }: DealListCardProps) {
-  const temperatureColor = deal.temperature >= 0 ? 'text-red-500' : 'text-blue-500';
-
   return (
     <div className="flex bg-card p-4 rounded-lg border items-center gap-6 w-full hover:shadow-md transition-shadow">
       <Link href={`/deals/${deal.id}`} className="flex-shrink-0">
@@ -27,7 +26,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
             <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">{deal.title}</h3>
         </Link>
         <p className="text-sm text-muted-foreground mt-1">
-          Dodane przez <span className="font-medium">{deal.author}</span>
+          Dodane przez <span className="font-medium">{deal.postedBy}</span>
         </p>
         <div className="flex items-baseline gap-2 mt-2">
             <p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price)}</p>
@@ -37,7 +36,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
         </div>
       </div>
       <div className="flex flex-col items-center justify-center px-4 w-32">
-        <span className={`font-bold text-3xl ${temperatureColor}`}>{deal.temperature}°</span>
+        <VoteControls dealId={deal.id} initialVoteCount={deal.temperature} />
       </div>
       <Button asChild size="lg" className="self-center">
         <Link href={deal.link} target="_blank" rel="noopener noreferrer">

@@ -4,6 +4,7 @@ import {initializeApp} from "firebase-admin/app";
 import {getFirestore, FieldValue} from "firebase-admin/firestore";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
+import {onDocumentWritten} from "firebase-functions/v2/firestore";
 
 // Typ danych wejściowych dla funkcji
 interface NewDealData {
@@ -71,3 +72,32 @@ export const createDeal = onCall<NewDealData>(async (request) => {
     );
   }
 });
+
+export const updateVoteCount = onDocumentWritten(
+  "/deals/{dealId}/votes/{userId}",
+  async (event) => {
+    const dealId = event.params.dealId;
+    const dealRef = db.doc(`deals/${dealId}`);
+    const votesColRef = dealRef.collection("votes");
+
+    return db.runTransaction(async (transaction) => {
+      const votesSnapshot = await transaction.get(votesColRef);
+      let newCount = 0;
+
+      votesSnapshot.docs.forEach((doc) => {
+        const voteData = doc.data();
+        if (voteData.direction === "up") {
+          newCount++;
+        } else if (voteData.direction === "down") {
+          newCount--;
+        }
+      });
+
+      transaction.update(dealRef, {voteCount: newCount});
+      logger.info(
+        `Zaktualizowano licznik głosów dla okazji ${dealId} do ${newCount}`,
+      );
+      return newCount;
+    });
+  },
+);

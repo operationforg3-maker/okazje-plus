@@ -43,3 +43,7 @@ export interface User {
   photoURL: string | null;
   role: 'admin' | 'user';
 }
+
+export interface Vote {
+  direction: 'up' | 'down';
+}

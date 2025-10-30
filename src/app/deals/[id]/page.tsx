@@ -10,6 +10,7 @@ import { Deal } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, ShoppingCart } from 'lucide-react';
 import CommentSection from '@/components/comment-section';
+import { VoteControls } from '@/components/vote-controls';
 
 export default function DealDetailPage({ params }: { params: { id: string } }) {
   const [deal, setDeal] = useState<Deal | null>(null);
@@ -59,13 +60,16 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
             {deal.description}
           </p>
           
-          <div className="mt-8">
-            <div className="text-4xl font-bold text-primary">
-              {deal.price} zł
+          <div className="mt-8 flex items-center gap-4">
+            <div>
+              <div className="text-4xl font-bold text-primary">
+                {deal.price} zł
+              </div>
+              {deal.originalPrice && <div className="text-xl text-muted-foreground line-through">
+                {deal.originalPrice} zł
+              </div>}
             </div>
-            {deal.originalPrice && <div className="text-xl text-muted-foreground line-through">
-              {deal.originalPrice} zł
-            </div>}
+            <VoteControls dealId={deal.id} initialVoteCount={deal.temperature} />
           </div>
 
           <div className="mt-8 flex gap-4">
