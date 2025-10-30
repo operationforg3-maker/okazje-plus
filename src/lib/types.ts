@@ -2,15 +2,14 @@ export interface Deal {
   id: string;
   title: string;
   description: string;
-  price?: number;
+  price: number;
   originalPrice?: number;
-  promoCode?: string;
   link: string;
   image: string;
   imageHint: string;
   postedBy: string;
   postedAt: string;
-  temperature: number;
+  voteCount: number;
   commentsCount: number;
 }
 
