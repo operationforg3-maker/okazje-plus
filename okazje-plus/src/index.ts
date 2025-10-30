@@ -101,3 +101,23 @@ export const updateVoteCount = onDocumentWritten(
     });
   },
 );
+
+export const updateCommentCount = onDocumentWritten(
+  "/deals/{dealId}/comments/{commentId}",
+  async (event) => {
+    const dealId = event.params.dealId;
+    const dealRef = db.doc(`deals/${dealId}`);
+
+    return db.runTransaction(async (transaction) => {
+      const commentsColRef = dealRef.collection("comments");
+      const commentsSnapshot = await transaction.get(commentsColRef);
+      const newCount = commentsSnapshot.size;
+
+      transaction.update(dealRef, { commentCount: newCount });
+      logger.info(
+        `Zaktualizowano licznik komentarzy dla okazji ${dealId} do ${newCount}`,
+      );
+      return newCount;
+    });
+  },
+);
