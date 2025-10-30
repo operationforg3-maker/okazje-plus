@@ -15,6 +15,27 @@ interface NewDealData {
   imageUrl?: string;
 }
 
+interface ProductRatingCard {
+    average: number;
+    count: number;
+    durability: number;
+    easeOfUse: number;
+    valueForMoney: number;
+    versatility: number;
+}
+
+interface NewProductData {
+    name: string;
+    description: string;
+    longDescription: string;
+    image: string;
+    imageHint: string;
+    affiliateUrl: string;
+    category: string;
+    price: number;
+    ratingCard: ProductRatingCard;
+}
+
 initializeApp();
 const db = getFirestore();
 
@@ -122,7 +143,7 @@ export const updateCommentCount = onDocumentWritten(
   },
 );
 
-export const createProduct = onCall(async (request) => {
+export const createProduct = onCall<NewProductData>(async (request) => {
     // 1. Sprawdzenie uwierzytelnienia
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Musisz być zalogowany, aby dodać produkt.');
@@ -130,14 +151,14 @@ export const createProduct = onCall(async (request) => {
 
     // 2. Weryfikacja uprawnień administratora
     if (request.auth.token.role !== 'admin') {
-        throw new HttpsError('permission-denied', 'Musisz być administratorem, aby dodać produkt.');
+        throw new HttpsError('permission-denied', 'Tylko administratorzy mogą dodawać produkty.');
     }
 
     const data = request.data;
 
     // 3. Walidacja danych wejściowych
-    if (!data.name || !data.price || !data.affiliateUrl) {
-        throw new HttpsError('invalid-argument', 'Brakuje wymaganych pól: nazwa, cena lub link afiliacyjny.');
+    if (!data.name || !data.description || !data.price || !data.affiliateUrl) {
+        throw new HttpsError('invalid-argument', 'Brakuje wymaganych pól: nazwa, opis, cena lub link afiliacyjny.');
     }
 
     try {
