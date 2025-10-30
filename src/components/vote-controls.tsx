@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { useAuth } from "@/components/auth-provider";
+import { useAuth } from "@/lib/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
