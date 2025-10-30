@@ -121,3 +121,31 @@ export const updateCommentCount = onDocumentWritten(
     });
   },
 );
+
+export const createProduct = onCall(async (request) => {
+    // 1. Sprawdzenie uwierzytelnienia
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Musisz być zalogowany, aby dodać produkt.');
+    }
+
+    // 2. Weryfikacja uprawnień administratora
+    if (request.auth.token.role !== 'admin') {
+        throw new HttpsError('permission-denied', 'Musisz być administratorem, aby dodać produkt.');
+    }
+
+    const data = request.data;
+
+    // 3. Walidacja danych wejściowych
+    if (!data.name || !data.price || !data.affiliateUrl) {
+        throw new HttpsError('invalid-argument', 'Brakuje wymaganych pól: nazwa, cena lub link afiliacyjny.');
+    }
+
+    try {
+        const productRef = await db.collection("products").add(data);
+        logger.info(`Pomyślnie utworzono produkt: ${productRef.id}`);
+        return { productId: productRef.id };
+    } catch (error) {
+        logger.error("Błąd zapisu produktu do Firestore", { error });
+        throw new HttpsError('internal', 'Nie udało się zapisać produktu w bazie danych.');
+    }
+});
