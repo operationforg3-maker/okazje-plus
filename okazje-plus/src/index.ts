@@ -1,97 +1,111 @@
-// Plik: /functions/src/index.ts
 
 import {initializeApp} from "firebase-admin/app";
-import {getFirestore, FieldValue} from "firebase-admin/firestore";
+import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {onDocumentWritten} from "firebase-functions/v2/firestore";
 
-// Typ danych wejściowych dla funkcji
-interface NewDealData {
+// --- Interfaces --- //
+
+interface Deal {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  link: string;
+  image: string;
+  imageHint: string;
+  postedBy: string;
+  postedAt: string; // ISO String
+  voteCount: number;
+  commentsCount: number;
+  mainCategorySlug: string;
+  subCategorySlug: string;
+}
+
+interface ImportDealData {
   title: string;
   description?: string;
   price: number;
-  dealUrl: string;
-  imageUrl?: string;
+  originalPrice?: number;
+  link: string;
+  image?: string;
+  imageHint?: string;
+  mainCategorySlug: string;
+  subCategorySlug: string;
 }
 
-interface ProductRatingCard {
-    average: number;
-    count: number;
-    durability: number;
-    easeOfUse: number;
-    valueForMoney: number;
-    versatility: number;
-}
-
-interface NewProductData {
-    name: string;
-    description: string;
-    longDescription: string;
-    image: string;
-    imageHint: string;
-    affiliateUrl: string;
-    category: string;
-    price: number;
-    ratingCard: ProductRatingCard;
+interface BatchImportData {
+  deals: ImportDealData[];
 }
 
 initializeApp();
 const db = getFirestore();
 
-export const createDeal = onCall<NewDealData>(async (request) => {
-  logger.info("Rozpoczęto wywołanie createDeal", {uid: request.auth?.uid});
+// --- Cloud Functions --- //
 
-  // 1. Sprawdzenie uwierzytelnienia
+export const batchImportDeals = onCall<BatchImportData>(async (request) => {
+  logger.info("Rozpoczęto import wsadowy", {uid: request.auth?.uid});
+
   if (!request.auth) {
-    logger.error("Brak uwierzytelnienia", {data: request.data});
+    throw new HttpsError("unauthenticated", "Musisz być zalogowany.");
+  }
+
+  const userDoc = await db.collection("users").doc(request.auth.uid).get();
+  if (userDoc.data()?.role !== "admin") {
     throw new HttpsError(
-      "unauthenticated",
-      "Musisz być zalogowany, aby dodać okazję.",
+      "permission-denied",
+      "Tylko administratorzy mogą importować okazje.",
     );
   }
 
-  const {uid, token} = request.auth;
-  const data = request.data;
-
-  // 2. Walidacja serwerowa
-  if (!data.title || !data.price || !data.dealUrl) {
-    logger.error("Brakujące dane", {data});
-    throw new HttpsError(
-      "invalid-argument",
-      "Tytuł, cena i link są wymagane.",
-    );
+  const {deals: dealsToImport} = request.data;
+  if (!Array.isArray(dealsToImport) || dealsToImport.length === 0) {
+    throw new HttpsError("invalid-argument", "Brak danych do importu.");
   }
 
-  // 3. Stworzenie obiektu Deal
-  const newDeal = {
-    title: data.title,
-    description: data.description || "",
-    price: data.price,
-    dealUrl: data.dealUrl,
-    imageUrl: data.imageUrl || "",
-    authorId: uid,
-    // Pobierz 'name' z tokena auth, z wartością domyślną
-    authorName: token.name || "Anonimowy Użytkownik",
-    createdAt: FieldValue.serverTimestamp(),
-    voteCount: 0,
-    commentCount: 0,
+  const batch = db.batch();
+  let successCount = 0;
+  const errors: string[] = [];
+
+  for (const [index, deal] of dealsToImport.entries()) {
+    try {
+      if (!deal.title || !deal.link || !deal.mainCategorySlug) {
+        throw new Error(`Brak kluczowych danych w wierszu ${index + 1}.`);
+      }
+      const newDealRef = db.collection("deals").doc();
+      const newDealData: Omit<Deal, "id"> = {
+        title: deal.title,
+        description: deal.description || "",
+        price: typeof deal.price === "number" ? deal.price : 0,
+        originalPrice: deal.originalPrice,
+        link: deal.link,
+        image: deal.image || "",
+        imageHint: deal.imageHint || "",
+        mainCategorySlug: deal.mainCategorySlug,
+        subCategorySlug: deal.subCategorySlug || "ogolne",
+        postedBy: request.auth.uid,
+        postedAt: Timestamp.now().toDate().toISOString(),
+        voteCount: 0,
+        commentsCount: 0,
+      };
+      batch.set(newDealRef, newDealData);
+      successCount++;
+    } catch (error: any) {
+      errors.push(`Wiersz ${index + 1}: ${error.message}`);
+    }
+  }
+
+  if (successCount > 0) {
+    await batch.commit();
+  }
+
+  return {
+    successCount,
+    errorCount: errors.length,
+    errors,
   };
-
-  // 4. Zapis do Firestore
-  try {
-    const dealRef = await db.collection("deals").add(newDeal);
-    logger.info(`Pomyślnie utworzono okazję: ${dealRef.id}`, {uid});
-
-    // 5. Zwrócenie ID
-    return {dealId: dealRef.id};
-  } catch (error) {
-    logger.error("Błąd zapisu do Firestore", {error});
-    throw new HttpsError(
-      "internal",
-      "Nie udało się zapisać okazji w bazie danych.",
-    );
-  }
 });
 
 export const updateVoteCount = onDocumentWritten(
@@ -104,20 +118,12 @@ export const updateVoteCount = onDocumentWritten(
     return db.runTransaction(async (transaction) => {
       const votesSnapshot = await transaction.get(votesColRef);
       let newCount = 0;
-
       votesSnapshot.docs.forEach((doc) => {
         const voteData = doc.data();
-        if (voteData.direction === "up") {
-          newCount++;
-        } else if (voteData.direction === "down") {
-          newCount--;
-        }
+        if (voteData.direction === "up") newCount++;
+        else if (voteData.direction === "down") newCount--;
       });
-
       transaction.update(dealRef, {voteCount: newCount});
-      logger.info(
-        `Zaktualizowano licznik głosów dla okazji ${dealId} do ${newCount}`,
-      );
       return newCount;
     });
   },
@@ -128,45 +134,11 @@ export const updateCommentCount = onDocumentWritten(
   async (event) => {
     const dealId = event.params.dealId;
     const dealRef = db.doc(`deals/${dealId}`);
+    const commentsColRef = dealRef.collection("comments");
 
-    return db.runTransaction(async (transaction) => {
-      const commentsColRef = dealRef.collection("comments");
-      const commentsSnapshot = await transaction.get(commentsColRef);
-      const newCount = commentsSnapshot.size;
+    const commentsSnapshot = await commentsColRef.get();
+    const newCount = commentsSnapshot.size;
 
-      transaction.update(dealRef, { commentCount: newCount });
-      logger.info(
-        `Zaktualizowano licznik komentarzy dla okazji ${dealId} do ${newCount}`,
-      );
-      return newCount;
-    });
+    return dealRef.update({commentCount: newCount});
   },
 );
-
-export const createProduct = onCall<NewProductData>(async (request) => {
-    // 1. Sprawdzenie uwierzytelnienia
-    if (!request.auth) {
-        throw new HttpsError('unauthenticated', 'Musisz być zalogowany, aby dodać produkt.');
-    }
-
-    // 2. Weryfikacja uprawnień administratora
-    if (request.auth.token.role !== 'admin') {
-        throw new HttpsError('permission-denied', 'Tylko administratorzy mogą dodawać produkty.');
-    }
-
-    const data = request.data;
-
-    // 3. Walidacja danych wejściowych
-    if (!data.name || !data.description || !data.price || !data.affiliateUrl) {
-        throw new HttpsError('invalid-argument', 'Brakuje wymaganych pól: nazwa, opis, cena lub link afiliacyjny.');
-    }
-
-    try {
-        const productRef = await db.collection("products").add(data);
-        logger.info(`Pomyślnie utworzono produkt: ${productRef.id}`);
-        return { productId: productRef.id };
-    } catch (error) {
-        logger.error("Błąd zapisu produktu do Firestore", { error });
-        throw new HttpsError('internal', 'Nie udało się zapisać produktu w bazie danych.');
-    }
-});

@@ -1,3 +1,17 @@
+
+// Nowe interfejsy dla zagnieżdżonych kategorii
+export interface Subcategory {
+  name: string;
+  slug: string; // unikalny w ramach kategorii nadrzędnej
+}
+
+export interface Category {
+  id: string; // ID dokumentu (slug kategorii głównej)
+  name: string;
+  subcategories: Subcategory[]; // Tablica obiektów podkategorii
+}
+
+// Zaktualizowany interfejs Deal
 export interface Deal {
   id: string;
   title: string;
@@ -8,20 +22,14 @@ export interface Deal {
   image: string;
   imageHint: string;
   postedBy: string;
-  postedAt: string;
+  postedAt: string; // Użyjemy ISO string dla spójności
   voteCount: number;
   commentsCount: number;
+  mainCategorySlug: string; // NOWE pole
+  subCategorySlug: string;  // NOWE pole
 }
 
-export interface ProductRatingCard {
-  average: number;
-  count: number;
-  durability: number;
-  easeOfUse: number; // Zmieniono z aesthetics
-  valueForMoney: number;
-  versatility: number; // Zmieniono z functionality
-}
-
+// Zaktualizowany interfejs Product
 export interface Product {
   id: string;
   name: string;
@@ -31,8 +39,19 @@ export interface Product {
   imageHint: string;
   affiliateUrl: string;
   ratingCard: ProductRatingCard;
-  category: string;
   price: number;
+  mainCategorySlug: string; // NOWE pole
+  subCategorySlug: string;  // NOWE pole
+}
+
+// Reszta interfejsów pozostaje bez zmian
+export interface ProductRatingCard {
+  average: number;
+  count: number;
+  durability: number;
+  easeOfUse: number;
+  valueForMoney: number;
+  versatility: number;
 }
 
 export interface User {

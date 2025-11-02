@@ -8,15 +8,20 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Kategorie: Każdy może czytać, pisać mogą tylko admini.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // Okazje (Deals): Każdy może czytać. Tworzenie zablokowane (przez Cloud Function). Edycja/Usuwanie tylko przez autora.
     match /deals/{dealId} {
       allow read: if true;
       allow create: if false; // ZABLOKOWANE! Używamy funkcji 'createDeal'
       allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
     }
-    // PRODUKTY (Krytyczny dodatek: nowa reguła)
-    // Zezwól WSZYSTKIM na czytanie produktów (dane publiczne).
-    // Zapis będzie kontrolowany przez Panel Admina (później).
+
+    // PRODUKTY: Każdy może czytać. Zapis zablokowany (będzie przez Panel Admina).
     match /products/{productId} {
       allow read: if true;
       allow write: if false;
@@ -25,14 +30,13 @@ service cloud.firestore {
     // Komentarze: Każdy może czytać. Tworzyć mogą tylko zalogowani. Edycja/Usuwanie tylko przez autora.
     match /comments/{commentId} {
       allow read: if true;
-      allow create: if request.auth != null; // Uproszczone na teraz, docelowo też przez funkcję
+      allow create: if request.auth != null;
       allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
     }
 
-    // Subkolekcje (przygotowanie pod głosowanie)
+    // Głosy: Każdy może czytać. Zapis tylko dla właściciela głosu.
     match /deals/{dealId}/votes/{userId} {
        allow read: if true;
-       // Zapis tylko dla zalogowanego użytkownika na jego własnym dokumencie głosu
        allow create, update, delete: if request.auth != null && request.auth.uid == userId;
     }
   }
