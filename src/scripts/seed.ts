@@ -9,20 +9,64 @@ console.log('Attempting to initialize Firebase Admin SDK...');
 
 try {
   // Check if the required environment variables are loaded
-  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !process.env.FIREBASE_PRIVATE_KEY) {
-    throw new Error('Missing required Firebase environment variables. Please check your .env.local file.');
+  let credentialData: any = null;
+  const projectIdEnv = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+
+  if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
+    credentialData = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    };
+    console.log('Using Firebase credentials from environment variables.');
+  } else {
+    try {
+      // Fallback: attempt to load local service account JSON
+      // IMPORTANT: Ensure this file is NOT committed with real secrets in production.
+      // Current file appears to be sanitized; if the private key contains comment markers they will be stripped.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const svc = require('./serviceAccountKey.json');
+      if (!svc.project_id || !svc.client_email || !svc.private_key) {
+        throw new Error('serviceAccountKey.json missing required fields');
+      }
+      // Sanitize private key (remove lines starting with // inside the key)
+      const cleanedKey = (svc.private_key as string)
+        .split('\n')
+        .filter((l) => !l.trim().startsWith('//'))
+        .join('\n');
+      credentialData = {
+        projectId: svc.project_id,
+        clientEmail: svc.client_email,
+        privateKey: cleanedKey,
+      };
+      console.log('Using Firebase credentials from serviceAccountKey.json fallback.');
+    } catch (e) {
+      // As a last resort, attempt Application Default Credentials (ADC)
+      try {
+        admin.initializeApp({
+          credential: admin.credential.applicationDefault(),
+          projectId: projectIdEnv,
+        });
+        console.log('Initialized with Application Default Credentials.');
+      } catch (adcErr) {
+        throw new Error('Missing required Firebase credentials (env vars, serviceAccountKey.json, or ADC). ' + adcErr + ' | Fallback error: ' + e);
+      }
+      // Skip the regular initialize below since we've initialized via ADC
+      console.log('Firebase Admin SDK initialized with ADC.');
+      console.log('Proceeding with seeding...');
+      // Continue to seeding without returning, but prevent double-initialization
+      credentialData = null;
+    }
+  }
+  if (credentialData) {
+    admin.initializeApp({
+      credential: admin.credential.cert(credentialData),
+      projectId: projectIdEnv,
+    });
   }
 
-  const serviceAccount = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-    // Replace the escaped newlines from the .env file with actual newlines
-    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\n/g, '\n'),
-  };
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  // Firestore: ignoruj pola undefined, aby nie przerywać zapisu przy opcjonalnych polach
+  admin.firestore().settings({ ignoreUndefinedProperties: true });
 
   console.log('Firebase Admin SDK initialized successfully.');
 
