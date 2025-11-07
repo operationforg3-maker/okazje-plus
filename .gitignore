@@ -49,4 +49,4 @@ firestore-debug.log
 
 
 # project specific
-src/scripts
+# Usunięto ignorowanie src/scripts aby móc wersjonować pliki seed / narzędziowe

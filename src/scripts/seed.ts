@@ -56,7 +56,7 @@ try {
     }>;
   };
 
-  // Example taxonomy for initial navigation experience
+  // Rozszerzona taksonomia: minimum 5 kategorii, każda 3-11 podkategorii
   const categoriesSeed: CategorySeed[] = [
     {
       id: 'elektronika',
@@ -196,7 +196,190 @@ try {
         },
       ],
     },
+    {
+      id: 'moda',
+      name: 'Moda',
+      sortOrder: 40,
+      description: 'Styl, ubrania, obuwie i dodatki.',
+      icon: '👗',
+      accentColor: '#DB2777',
+      heroImage: 'https://images.unsplash.com/photo-1521335629791-ce4aec67dd47?auto=format&fit=crop&w=960&q=80',
+      promo: {
+        title: 'Jesienna kolekcja',
+        subtitle: 'Warstwowy styl na chłodne dni',
+        description: 'Swetry, kurtki i dodatki w nowych kolorach sezonu.',
+        image: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?auto=format&fit=crop&w=900&q=80',
+        link: '/deals',
+        cta: 'Odkryj trendy',
+        badge: 'Trend',
+        color: '#BE185D',
+      },
+      subcategories: [
+        {
+          id: 'obuwie',
+          name: 'Obuwie',
+          slug: 'obuwie',
+          sortOrder: 10,
+          description: 'Buty sportowe, casual i eleganckie.',
+          image: 'https://images.unsplash.com/photo-1519741491150-74f64f6d5d37?auto=format&fit=crop&w=600&q=80',
+          highlight: true,
+        },
+        {
+          id: 'odziez-meska',
+          name: 'Odzież męska',
+          slug: 'odziez-meska',
+          sortOrder: 20,
+          description: 'Klasyka i nowoczesność w męskich fasonach.',
+          image: 'https://images.unsplash.com/photo-1520970019510-6a7b6c5f09f0?auto=format&fit=crop&w=600&q=80',
+        },
+        {
+          id: 'odziez-damska',
+          name: 'Odzież damska',
+          slug: 'odziez-damska',
+          sortOrder: 30,
+          description: 'Kolekcje dla niej: elegancja i komfort.',
+          image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=600&q=80',
+        },
+        {
+          id: 'dodatki',
+          name: 'Dodatki',
+          slug: 'dodatki',
+          sortOrder: 40,
+          description: 'Torebki, paski, czapki i akcesoria.',
+          image: 'https://images.unsplash.com/photo-1518544801958-efcbf8a7ec06?auto=format&fit=crop&w=600&q=80',
+        },
+      ],
+    },
+    {
+      id: 'sport-i-turystyka',
+      name: 'Sport i turystyka',
+      sortOrder: 50,
+      description: 'Sprzęt sportowy, outdoor i rekreacja.',
+      icon: '🏃',
+      accentColor: '#0D9488',
+      heroImage: 'https://images.unsplash.com/photo-1526401485004-2aa7d4b5e3d5?auto=format&fit=crop&w=960&q=80',
+      promo: {
+        title: 'Pakiety outdoor',
+        subtitle: 'Taniej w zestawach',
+        description: 'Zestawy trekkingowe i fitness z rabatami do 25%.',
+        image: 'https://images.unsplash.com/photo-1508175800960-180dd151d86d?auto=format&fit=crop&w=900&q=80',
+        link: '/deals',
+        cta: 'Zobacz pakiety',
+        badge: 'Outdoor',
+        color: '#0F766E',
+      },
+      subcategories: [
+        {
+          id: 'fitness',
+          name: 'Fitness',
+          slug: 'fitness',
+          sortOrder: 10,
+          description: 'Maty, hantle, akcesoria treningowe.',
+          image: 'https://images.unsplash.com/photo-1558611848-73f7eb4001a2?auto=format&fit=crop&w=600&q=80',
+          highlight: true,
+        },
+        {
+          id: 'turystyka',
+          name: 'Turystyka',
+          slug: 'turystyka',
+          sortOrder: 20,
+          description: 'Plecaki, namioty, śpiwory.',
+          image: 'https://images.unsplash.com/photo-1516570161787-2fd917215a3d?auto=format&fit=crop&w=600&q=80',
+        },
+        {
+          id: 'sporty-zimowe',
+          name: 'Sporty zimowe',
+          slug: 'sporty-zimowe',
+          sortOrder: 30,
+          description: 'Narty, snowboard, odzież termiczna.',
+          image: 'https://images.unsplash.com/photo-1517840901100-1a7ffb41d87e?auto=format&fit=crop&w=600&q=80',
+        },
+        {
+          id: 'rowery',
+          name: 'Rowery',
+          slug: 'rowery',
+          sortOrder: 40,
+          description: 'Rowery górskie, miejskie i akcesoria.',
+          image: 'https://images.unsplash.com/photo-1501706362039-c6e80967656f?auto=format&fit=crop&w=600&q=80',
+        },
+        {
+          id: 'sporty-wodne',
+          name: 'Sporty wodne',
+          slug: 'sporty-wodne',
+          sortOrder: 50,
+          description: 'Kajaki, SUP, akcesoria wodne.',
+          image: 'https://images.unsplash.com/photo-1493558103817-58b2924bce98?auto=format&fit=crop&w=600&q=80',
+        },
+      ],
+    },
   ];
+
+  // Helpery generujące przykładowe produkty i okazje (deals)
+  function randomInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function generateProducts(mainCategory: string, subCategory: string, count: number) {
+    const products = [] as any[];
+    for (let i = 0; i < count; i++) {
+      const id = `${subCategory}-prod-${i + 1}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const price = randomInt(49, 2499);
+      const originalPrice = price + randomInt(10, 400);
+      products.push({
+        id,
+        name: `${subCategory.replace(/-/g, ' ')} produkt ${i + 1}`,
+        description: `Solidny produkt z kategorii ${subCategory}.`,
+        longDescription: `Rozszerzony opis produktu ${i + 1} w subkategorii ${subCategory} należącej do kategorii ${mainCategory}. Zawiera kluczowe cechy i zastosowania w codziennym życiu użytkownika.`,
+        image: `https://picsum.photos/seed/${encodeURIComponent(id)}/600/400`,
+        imageHint: 'Produkt ilustracyjny',
+        affiliateUrl: 'https://example.com/ref/' + id,
+        ratingCard: {
+          average: randomInt(35, 50) / 10,
+          count: randomInt(5, 120),
+          durability: randomInt(3, 5),
+          easeOfUse: randomInt(3, 5),
+            valueForMoney: randomInt(3, 5),
+          versatility: randomInt(3, 5),
+        },
+        price,
+        mainCategorySlug: mainCategory,
+        subCategorySlug: subCategory,
+        status: 'approved',
+        category: mainCategory, // kompatybilność ze starszym polem
+        originalPrice,
+      });
+    }
+    return products;
+  }
+
+  function generateDeals(mainCategory: string, subCategory: string, count: number) {
+    const deals = [] as any[];
+    for (let i = 0; i < count; i++) {
+      const id = `${subCategory}-deal-${i + 1}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const price = randomInt(29, 1999);
+      const originalPrice = price + randomInt(20, 600);
+      const temperature = randomInt(10, 500);
+      deals.push({
+        id,
+        title: `Okazja: ${subCategory.replace(/-/g, ' ')} ${i + 1}`,
+        description: `Promocyjna oferta w subkategorii ${subCategory}. Rabat względem ceny bazowej.`,
+        price,
+        originalPrice,
+        link: 'https://example.com/deal/' + id,
+        image: `https://placehold.co/600x400?text=${encodeURIComponent(subCategory)}+${i + 1}`,
+        imageHint: 'Zdjęcie poglądowe',
+        postedBy: 'system-seeder',
+        postedAt: new Date().toISOString(),
+        voteCount: temperature, // zachowujemy dla kompatybilności jeśli używane gdzieś
+        commentsCount: 0,
+        mainCategorySlug: mainCategory,
+        subCategorySlug: subCategory,
+        temperature,
+        status: 'approved',
+      });
+    }
+    return deals;
+  }
 
   async function seedTaxonomy() {
     const db = admin.firestore();
@@ -240,6 +423,20 @@ try {
           },
           { merge: true }
         );
+
+        // Generowanie produktów i deals dla każdej subkategorii
+        const productsCount = randomInt(2, 6);
+        const dealsCount = randomInt(2, 6);
+        const products = generateProducts(category.id, subcategory.slug, productsCount);
+        const deals = generateDeals(category.id, subcategory.slug, dealsCount);
+
+        for (const product of products) {
+          await db.collection('products').doc(product.id).set(product, { merge: true });
+        }
+        for (const deal of deals) {
+          await db.collection('deals').doc(deal.id).set(deal, { merge: true });
+        }
+        console.log(`Seeded ${productsCount} produktów i ${dealsCount} okazji dla subkategorii: ${subcategory.slug}`);
       }
     }
 
@@ -252,7 +449,7 @@ try {
       { merge: true }
     );
 
-    console.log('Categories, subcategories and navigation showcase seeded.');
+    console.log('Categories, subcategories, products, deals oraz navigation showcase seeded.');
   }
 
   seedTaxonomy()
