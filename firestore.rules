@@ -14,6 +14,12 @@ service cloud.firestore {
     match /categories/{categoryId} {
       allow read: if true;
       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+      match /subcategories/{subcategoryId} {
+        allow read: if true;
+        allow write: if request.auth != null
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
     }
 
     // Okazje (Deals): Każdy może czytać. 
@@ -40,6 +46,13 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow write: if request.auth != null 
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Ustawienia globalne (np. konfiguracja nawigacji): dostępne do odczytu dla wszystkich, edycja tylko dla administracji.
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 

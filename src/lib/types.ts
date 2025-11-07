@@ -3,11 +3,35 @@
 export interface Subcategory {
   name: string;
   slug: string; // unikalny w ramach kategorii nadrzędnej
+  id?: string; // identyfikator dokumentu, jeśli przechowywany w osobnej kolekcji
+  icon?: string;
+  description?: string;
+  sortOrder?: number;
+  image?: string;
+  highlight?: boolean;
+}
+
+export interface CategoryPromo {
+  title: string;
+  subtitle?: string;
+  description?: string;
+  image?: string;
+  link?: string;
+  cta?: string;
+  badge?: string;
+  color?: string;
 }
 
 export interface Category {
   id: string; // ID dokumentu (slug kategorii głównej)
   name: string;
+  slug?: string;
+  icon?: string;
+  description?: string;
+  sortOrder?: number;
+  accentColor?: string;
+  heroImage?: string;
+  promo?: CategoryPromo;
   subcategories: Subcategory[]; // Tablica obiektów podkategorii
 }
 
@@ -77,4 +101,10 @@ export interface Comment {
   userDisplayName: string;
   content: string;
   createdAt: string; // ISO string
+}
+
+export interface NavigationShowcaseConfig {
+  promotedType: 'deals' | 'products';
+  promotedIds: string[];
+  dealOfTheDayId?: string | null;
 }

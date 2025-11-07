@@ -1,6 +1,6 @@
-import { collection, getDocs, query, where, orderBy, limit, doc, runTransaction, increment, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Deal, Product, Comment } from "@/lib/types";
+import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo } from "@/lib/types";
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
@@ -101,6 +101,124 @@ export async function searchProductsForLinking(searchText: string): Promise<Prod
 
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+}
+
+export async function getCategories(): Promise<Category[]> {
+  const categoriesRef = collection(db, "categories");
+  const snapshot = await getDocs(categoriesRef);
+
+  const categories = await Promise.all(
+    snapshot.docs.map(async (categoryDoc) => {
+      const data = categoryDoc.data() as Partial<Category> & {
+        subcategories?: Array<Partial<Subcategory>>;
+        promo?: Partial<CategoryPromo> | null;
+      };
+
+      // Start with embedded subcategories array (legacy structure)
+      let subcategories: Subcategory[] = Array.isArray(data.subcategories)
+        ? data.subcategories.map((sub) => ({
+          ...sub,
+          id: sub.id ?? sub.slug,
+        }))
+        : [];
+
+      // Try to load subcategories from dedicated subcollection (new structure)
+      const subcategoriesRef = collection(db, "categories", categoryDoc.id, "subcategories");
+      const subSnapshot = await getDocs(subcategoriesRef);
+
+      if (!subSnapshot.empty) {
+        subcategories = subSnapshot.docs
+          .map((subDoc) => {
+            const subData = subDoc.data() as Partial<Subcategory>;
+            return {
+              id: subDoc.id,
+              name: subData.name ?? subDoc.id,
+              slug: subData.slug ?? subDoc.id,
+              icon: subData.icon,
+              description: subData.description,
+              sortOrder: subData.sortOrder,
+              image: subData.image,
+              highlight: subData.highlight,
+            } satisfies Subcategory;
+          })
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      }
+
+      const promo = data.promo
+        ? {
+            title: data.promo.title ?? data.name ?? categoryDoc.id,
+            subtitle: data.promo.subtitle,
+            description: data.promo.description,
+            image: data.promo.image,
+            link: data.promo.link,
+            cta: data.promo.cta,
+            badge: data.promo.badge,
+            color: data.promo.color,
+          }
+        : undefined;
+
+      return {
+        id: categoryDoc.id,
+        name: data.name ?? categoryDoc.id,
+        slug: data.slug ?? categoryDoc.id,
+        icon: data.icon,
+        description: data.description,
+        sortOrder: data.sortOrder,
+        accentColor: data.accentColor,
+        heroImage: data.heroImage,
+        promo,
+        subcategories,
+      } satisfies Category;
+    })
+  );
+
+  return categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+}
+
+export async function getDealById(dealId: string): Promise<Deal | null> {
+  const dealRef = doc(db, "deals", dealId);
+  const snapshot = await getDoc(dealRef);
+  if (!snapshot.exists()) {
+    return null;
+  }
+  return { id: snapshot.id, ...(snapshot.data() as Omit<Deal, "id">) };
+}
+
+export async function getProductById(productId: string): Promise<Product | null> {
+  const productRef = doc(db, "products", productId);
+  const snapshot = await getDoc(productRef);
+  if (!snapshot.exists()) {
+    return null;
+  }
+  return { id: snapshot.id, ...(snapshot.data() as Omit<Product, "id">) };
+}
+
+export async function getNavigationShowcase(): Promise<NavigationShowcaseConfig | null> {
+  const configRef = doc(db, "settings", "navigationShowcase");
+  const snapshot = await getDoc(configRef);
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  const rawData = snapshot.data() as Partial<NavigationShowcaseConfig> & {
+    promotedIds?: unknown;
+    promotedType?: unknown;
+    dealOfTheDayId?: unknown;
+  };
+
+  const promotedIds = Array.isArray(rawData.promotedIds)
+    ? rawData.promotedIds.filter((value): value is string => typeof value === "string")
+    : [];
+
+  const promotedType = rawData.promotedType === "products" ? "products" : "deals";
+  const dealOfTheDayId = typeof rawData.dealOfTheDayId === "string" ? rawData.dealOfTheDayId : null;
+
+  return {
+    promotedType,
+    promotedIds,
+    dealOfTheDayId,
+  };
 }
 
 // Placeholder data for users to fix build error

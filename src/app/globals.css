@@ -74,3 +74,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Prosta animacja pojawiania się (używana w MegaMenu) */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade {
+  animation: fade-in 180ms ease-out;
+}

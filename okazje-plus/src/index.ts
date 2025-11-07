@@ -10,7 +10,9 @@ import { Deal, Product, User, ProductRatingCard } from "../../src/lib/types";
 
 // --- Typy pomocnicze dla danych wejściowych ---
 // Używamy Partial<T> aby pozwolić na niepełne dane z CSV
-type ImportDealData = Partial<Omit<Deal, "id" | "postedBy" | "postedAt" | "voteCount" | "commentsCount">> & {
+type ImportDealData = Partial<
+  Omit<Deal, "id" | "postedBy" | "postedAt" | "voteCount" | "commentsCount">
+> & {
   mainCategorySlug: string;
   subCategorySlug: string;
 };
