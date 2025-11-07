@@ -12,7 +12,7 @@ import {
   CardHeader,
 } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag } from "lucide-react";
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -23,6 +23,9 @@ interface DealCardProps {
 export default function DealCard({ deal }: DealCardProps) {
   const { user } = useAuth();
   const [temperature, setTemperature] = useState(deal.temperature);
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
+  const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
+  const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
 
   const handleVote = async (vote: 1 | -1) => {
     if (!user) {
@@ -52,6 +55,11 @@ export default function DealCard({ deal }: DealCardProps) {
         </Link>
       </CardHeader>
       <CardContent className="flex-grow p-4">
+        <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
+          {(deal.subCategorySlug || deal.mainCategorySlug) && (
+            <span className="inline-flex items-center gap-1"><Tag className="h-3 w-3" aria-hidden />{deal.subCategorySlug || deal.mainCategorySlug}</span>
+          )}
+        </div>
         <Link href={`/deals/${deal.id}`}>
           <h3 className="font-headline text-lg font-semibold leading-tight hover:text-primary transition-colors">
             {deal.title}
@@ -62,14 +70,26 @@ export default function DealCard({ deal }: DealCardProps) {
         </p>
       </CardContent>
       <CardFooter className="flex items-center justify-between p-4 pt-0">
-        <div>
-            <span className="font-bold text-foreground text-lg">{deal.price} zł</span>
-            {deal.originalPrice && <span className="text-sm text-muted-foreground line-through ml-2">{deal.originalPrice} zł</span>}
+        <div className="flex items-end gap-2">
+          <span className="font-bold text-foreground text-lg">{price}</span>
+          {original && <span className="text-sm text-muted-foreground line-through">{original}</span>}
+          {typeof discount === 'number' && discount > 0 && (
+            <span className="ml-2 rounded bg-destructive/15 px-2 py-0.5 text-xs font-semibold text-destructive">-{discount}%</span>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => handleVote(1)}><ArrowUp className="w-5 h-5"/></Button>
-          <span className="font-bold text-lg text-destructive">{temperature}°</span>
-          <Button variant="ghost" size="icon" onClick={() => handleVote(-1)}><ArrowDown className="w-5 h-5"/></Button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 text-amber-600" aria-label="Temperatura okazji">
+            <Flame className="w-4 h-4" />
+            <span className="font-bold text-sm">{temperature} pkt</span>
+          </div>
+          <div className="flex items-center gap-1 text-muted-foreground" aria-label="Liczba komentarzy">
+            <MessageSquare className="w-4 h-4" />
+            <span className="text-sm">{deal.commentsCount}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => handleVote(1)} aria-label="Głos w górę"><ArrowUp className="w-5 h-5"/></Button>
+            <Button variant="ghost" size="icon" onClick={() => handleVote(-1)} aria-label="Głos w dół"><ArrowDown className="w-5 h-5"/></Button>
+          </div>
         </div>
       </CardFooter>
     </Card>
