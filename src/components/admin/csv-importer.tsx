@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Papa from 'papaparse';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, isAdmin } from '@/lib/auth';
 import { httpsCallable } from 'firebase/functions';
 import { functions, db } from '@/lib/firebase';
 import { toast } from 'sonner';
@@ -44,7 +44,7 @@ const parsePrice = (priceString: string | null | undefined): number => {
 };
 
 export default function CsvImporter() {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<{ [key: string]: string }>({});
@@ -153,7 +153,7 @@ export default function CsvImporter() {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
-  if (!user || !isAdmin) {
+  if (!user || !isAdmin(user)) {
     return <div className="text-center py-10">Brak uprawnień. Ta strona jest dostępna tylko dla administratorów.</div>;
   }
 

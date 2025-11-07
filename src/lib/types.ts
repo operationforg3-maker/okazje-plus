@@ -27,6 +27,8 @@ export interface Deal {
   commentsCount: number;
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
+  temperature: number; // System "ciepłoty" dla rankingu
+  status: 'draft' | 'approved' | 'rejected'; // Status moderacji
 }
 
 // Zaktualizowany interfejs Product
@@ -42,6 +44,8 @@ export interface Product {
   price: number;
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
+  status: 'draft' | 'approved' | 'rejected'; // Status moderacji
+  category?: string; // Stara wersja dla kompatybilności
 }
 
 // Reszta interfejsów pozostaje bez zmian
@@ -64,4 +68,13 @@ export interface User {
 
 export interface Vote {
   direction: 'up' | 'down';
+}
+
+export interface Comment {
+  id: string;
+  dealId: string;
+  userId: string;
+  userDisplayName: string;
+  content: string;
+  createdAt: string; // ISO string
 }

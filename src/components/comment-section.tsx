@@ -61,8 +61,10 @@ export default function CommentSection({ collectionName, docId }: CommentSection
       <div className="space-y-4">
         {comments.map(comment => (
           <div key={comment.id} className="border-l-4 border-primary pl-4">
-            <p className="text-muted-foreground">Użytkownik {comment.userId.substring(0, 6)}...</p>
-            <p>{comment.text}</p>
+            <p className="text-muted-foreground">
+              {comment.userDisplayName || `Użytkownik ${comment.userId.substring(0, 6)}...`}
+            </p>
+            <p>{comment.content}</p>
           </div>
         ))}
       </div>

@@ -50,7 +50,7 @@ const SearchBar = () => {
         };
         
         const searchResults = await typesenseClient.multiSearch.perform(searchRequests);
-        const hits = searchResults.results.flatMap(result => result.hits || []) as SearchHit[];
+        const hits = searchResults.results.flatMap((result: any) => result.hits || []) as SearchHit[];
         setResults(hits);
         console.log('Wyniki wyszukiwania:', hits);
 

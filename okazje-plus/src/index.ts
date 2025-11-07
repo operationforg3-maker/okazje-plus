@@ -6,7 +6,7 @@ import * as logger from "firebase-functions/logger";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 
 // KROK 1: Importuj typy z JEDNEGO źródła prawdy
-import { Deal, Product, User, ProductRatingCard } from "../src/lib/types";
+import { Deal, Product, User, ProductRatingCard } from "../../src/lib/types";
 
 // --- Typy pomocnicze dla danych wejściowych ---
 // Używamy Partial<T> aby pozwolić na niepełne dane z CSV
@@ -77,6 +77,8 @@ export const batchImportDeals = onCall(async (request) => {
         postedAt: Timestamp.now().toDate().toISOString(), // Poprawiony błąd
         voteCount: 0,
         commentsCount: 0,
+        temperature: 0, // Początkowa temperatura
+        status: 'draft', // Domyślny status do moderacji
       };
       batch.set(newDealRef, newDealData);
       successCount++;
@@ -143,6 +145,8 @@ export const batchImportProducts = onCall(async (request) => {
         mainCategorySlug: product.mainCategorySlug,
         subCategorySlug: product.subCategorySlug,
         ratingCard: defaultRatingCard,
+        status: 'draft', // Domyślny status do moderacji
+        category: product.mainCategorySlug, // Kompatybilność wsteczna
       };
       batch.set(newProductRef, newProductData);
       successCount++;

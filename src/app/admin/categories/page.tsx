@@ -5,7 +5,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { collection, doc, setDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, isAdmin } from "@/lib/auth";
 import { Category, Subcategory } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -47,7 +47,7 @@ const generateSlug = (name: string) => {
 
 
 export default function AdminCategoriesPage() {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [categoriesData, loadingCategories, errorCategories] = useCollection(collection(db, "categories"));
 
   const [isSubmittingMain, setIsSubmittingMain] = useState(false);
@@ -154,7 +154,7 @@ export default function AdminCategoriesPage() {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
-  if (!user || !isAdmin) {
+  if (!user || !isAdmin(user)) {
     return <div className="text-center py-10">Brak uprawnień. Ta strona jest dostępna tylko dla administratorów.</div>;
   }
   

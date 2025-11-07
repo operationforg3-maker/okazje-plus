@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 import {
   Card,
@@ -70,15 +72,15 @@ export default function AdminDealsPage() {
               <TableRow key={deal.id}>
                 <TableCell className="font-medium">{deal.title}</TableCell>
                 <TableCell>
-                  <Badge variant={deal.status === 'active' ? 'secondary' : 'destructive'}>
-                    {deal.status === 'active' ? 'Aktywna' : 'Wygasła'}
+                  <Badge variant={deal.status === 'approved' ? 'secondary' : deal.status === 'draft' ? 'outline' : 'destructive'}>
+                    {deal.status === 'approved' ? 'Zatwierdzona' : deal.status === 'draft' ? 'Wersja robocza' : 'Odrzucona'}
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {deal.price.toFixed(2)} zł
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  {deal.originalPrice.toFixed(2)} zł
+                  {deal.originalPrice?.toFixed(2) || 'N/A'} zł
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {deal.temperature}°

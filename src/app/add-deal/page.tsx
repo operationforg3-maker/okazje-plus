@@ -1,4 +1,6 @@
 'use client';
+export const dynamic = 'force-dynamic';
+
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth';
@@ -10,7 +12,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import ProductSuggestion from '@/components/product-suggestion';
 import { toast } from 'sonner';
-import { NewDealData } from '../../../okazje-plus/src/index';
+
+// Typ dla danych nowej okazji wysyłanych do Cloud Function
+interface NewDealData {
+  title: string;
+  description: string;
+  price: number;
+  dealUrl: string;
+  imageUrl: string;
+}
 
 const functions = getFunctions();
 const createDealCallable = httpsCallable<NewDealData, { dealId: string }>(functions, 'createDeal');
