@@ -34,7 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const docSnap = await getDoc(userRef);
 
         if (docSnap.exists()) {
-          setUser(docSnap.data() as User);
+          const existingData = docSnap.data() as Partial<User>;
+          const normalizedUser: User = {
+            uid: firebaseUser.uid,
+            email: existingData.email ?? firebaseUser.email ?? null,
+            displayName: existingData.displayName ?? firebaseUser.displayName ?? null,
+            photoURL: existingData.photoURL ?? firebaseUser.photoURL ?? null,
+            role: existingData.role ?? 'user',
+          };
+
+          // Upewnij się, że w dokumencie użytkownika przechowywane jest pole uid oraz aktualne metadane
+          await setDoc(userRef, normalizedUser, { merge: true });
+          setUser(normalizedUser);
         } else {
           const newUser: User = {
             uid: firebaseUser.uid,
