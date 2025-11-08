@@ -19,6 +19,7 @@ export default function Home() {
   const [hotDeals, setHotDeals] = useState<Deal[]>([]);
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
   const { user } = useAuth();
+  const [aiTrending, setAiTrending] = useState<Array<{ deal: Deal; prediction: { heatIndex: number; trendingReason: string } | null }>>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -28,11 +29,50 @@ export default function Home() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    async function fetchAiTrending() {
+      try {
+        const res = await fetch('/api/trending', { cache: 'no-store' });
+        const data = await res.json();
+        if (data?.items) setAiTrending(data.items);
+      } catch {}
+    }
+    fetchAiTrending();
+  }, []);
+
   return (
     <div className="flex flex-col gap-12 md:gap-16 lg:gap-24 pb-12 md:pb-16 lg:pb-24">
       <HeroSection />
 
       <StatsStrip />
+
+      <section className="container mx-auto px-4 md:px-6">
+        <div className="mb-8 flex items-center justify-between">
+          <h2 className="font-headline text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl flex items-center gap-3">
+            🔮 Trending przez AI
+          </h2>
+        </div>
+        <div className="relative">
+          <Carousel className="w-full">
+            <CarouselContent>
+              {aiTrending.map(({ deal, prediction }) => (
+                <CarouselItem key={deal.id} className="basis-full sm:basis-1/2 lg:basis-1/3">
+                  <div className="relative">
+                    <DealCard deal={deal} />
+                    {prediction && (
+                      <div className="absolute top-2 left-2 rounded-md bg-black/70 text-white px-2 py-1 text-xs shadow">
+                        AI: {Math.round(prediction.heatIndex)}/100
+                      </div>
+                    )}
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
+        </div>
+      </section>
 
       <section className="container mx-auto px-4 md:px-6">
         <div className="mb-8 flex items-center justify-between">

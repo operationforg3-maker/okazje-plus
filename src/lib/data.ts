@@ -14,6 +14,20 @@ export async function getHotDeals(count: number): Promise<Deal[]> {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
 }
 
+// Pobiera kilka losowych okazji (np. do sekcji trending AI porównawczych) - fallback gdy mało danych
+export async function getRandomDeals(count: number): Promise<Deal[]> {
+  const dealsRef = collection(db, "deals");
+  const q = query(dealsRef, where("status", "==", "approved"), limit(count * 5));
+  const snapshot = await getDocs(q);
+  const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+  // prosty shuffle
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  return all.slice(0, count);
+}
+
 export async function getRecommendedProducts(count: number): Promise<Product[]> {
     const productsRef = collection(db, "products");
     const q = query(
