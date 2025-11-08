@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { ArrowRight } from 'lucide-react';
+import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function HeroSection() {
@@ -31,17 +31,12 @@ export default function HeroSection() {
           Okazje+ to Twoje centrum najlepszych promocji i zniżek. Oszczędzaj na
           ulubionych produktach każdego dnia.
         </p>
-        <div className="mt-8 flex w-full max-w-2xl mx-auto flex-col items-center gap-4 sm:flex-row">
-            <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Czego dzisiaj szukasz?"
-                    className="w-full pl-10 h-12 text-base text-foreground"
-                />
-            </div>
-          <Button size="lg" className="w-full sm:w-auto h-12 bg-accent hover:bg-accent/90">
-            Szukaj
+        <div className="mt-8 w-full max-w-2xl mx-auto">
+          <AutocompleteSearch />
+        </div>
+        <div className="mt-4">
+          <Button asChild size="lg" className="h-12 bg-accent hover:bg-accent/90">
+            <Link href="/login">Dołącz do społeczności</Link>
           </Button>
         </div>
       </div>

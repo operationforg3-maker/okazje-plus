@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating } from "@/lib/types";
 
@@ -78,6 +78,20 @@ export async function searchProducts(searchTerm: string): Promise<Product[]> {
   });
 
   return Object.values(results).filter(p => p.status === 'approved');
+}
+
+// Statystyki: liczba produktów, okazji i użytkowników
+export async function getCounts(): Promise<{ products: number; deals: number; users: number }> {
+  const [productsSnap, dealsSnap, usersSnap] = await Promise.all([
+    getCountFromServer(collection(db, 'products')),
+    getCountFromServer(collection(db, 'deals')),
+    getCountFromServer(collection(db, 'users')),
+  ]);
+  return {
+    products: productsSnap.data().count,
+    deals: dealsSnap.data().count,
+    users: usersSnap.data().count,
+  };
 }
 
 export async function voteOnDeal(dealId: string, userId: string, vote: 1 | -1) {
