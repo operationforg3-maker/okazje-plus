@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Search, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { trackSearch } from '@/lib/analytics';
 
 export function AutocompleteSearch({ className }: { className?: string }) {
   const [query, setQuery] = useState('');
@@ -50,6 +51,9 @@ export function AutocompleteSearch({ className }: { className?: string }) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
+      // Track search w Google Analytics
+      trackSearch(query.trim(), suggestions.length);
+      
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
       setOpen(false);
     }

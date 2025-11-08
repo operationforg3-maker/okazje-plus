@@ -7,6 +7,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { trackVote } from "@/lib/analytics";
 
 interface VoteControlsProps {
   dealId: string;
@@ -29,6 +30,10 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
     try {
       const voteRef = doc(db, "deals", dealId, "votes", user.uid);
       await setDoc(voteRef, { direction });
+      
+      // Track vote event w Google Analytics
+      trackVote('deal', dealId, direction);
+      
       // Opcjonalnie: można dodać toast.success("Głos został oddany!");
       // Aktualizacja licznika głosów w UI w czasie rzeczywistym wymagałaby subskrypcji
       // do kolekcji głosów, co jest bardziej zaawansowane. Na razie licznik

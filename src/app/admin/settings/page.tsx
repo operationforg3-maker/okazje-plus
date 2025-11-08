@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { 
   Settings, 
   Save,
@@ -164,12 +165,26 @@ function SettingsPage() {
                 </h3>
                 <div className="space-y-2">
                   <Label htmlFor="ga4">Measurement ID</Label>
-                  <Input 
-                    id="ga4" 
-                    placeholder="G-XXXXXXXXXX"
-                  />
+                  <div className="flex gap-2">
+                    <Input 
+                      id="ga4" 
+                      placeholder="G-XXXXXXXXXX"
+                      defaultValue="G-4M4NQB0PQD"
+                      readOnly
+                      className="bg-muted"
+                    />
+                    <Badge variant="default" className="bg-green-600 self-center">Aktywne</Badge>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Znajdź w: Google Analytics → Admin → Data Streams
+                    GA4 jest już skonfigurowane w aplikacji. Zobacz dane w{' '}
+                    <a 
+                      href="https://analytics.google.com/analytics/web/#/p491578768/reports/intelligenthome" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      konsoli Google Analytics
+                    </a>
                   </p>
                 </div>
               </div>

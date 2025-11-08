@@ -28,24 +28,39 @@ function AnalyticsPage() {
         </p>
       </div>
 
-      {/* Google Analytics Integration Placeholder */}
-      <Card className="border-dashed">
+      {/* Google Analytics Integration Status */}
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
             Google Analytics 4
           </CardTitle>
           <CardDescription>
-            Integracja z Google Analytics będzie dostępna w następnej wersji
+            Tracking ID: G-4M4NQB0PQD
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg bg-muted/50 p-8 text-center">
-            <Globe className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-4">
-              Aby włączyć Google Analytics, skonfiguruj ID śledzenia w ustawieniach
-            </p>
-            <Badge variant="secondary">Wkrótce dostępne</Badge>
+          <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 p-6">
+            <div className="flex items-start gap-3">
+              <Globe className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-900 dark:text-green-100 mb-1">
+                  Google Analytics aktywne
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  Dane są zbierane i dostępne w{' '}
+                  <a 
+                    href="https://analytics.google.com/analytics/web/#/p491578768/reports/intelligenthome" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="underline hover:text-green-800 dark:hover:text-green-200"
+                  >
+                    konsoli GA4
+                  </a>
+                </p>
+              </div>
+              <Badge variant="default" className="bg-green-600">Aktywne</Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
