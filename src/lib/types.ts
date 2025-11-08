@@ -82,6 +82,21 @@ export interface ProductRatingCard {
   versatility: number;
 }
 
+// Nowy interfejs dla pojedynczej oceny użytkownika
+export interface ProductRating {
+  id: string;
+  productId: string;
+  userId: string;
+  userDisplayName?: string;
+  rating: number; // 1-5
+  durability: number;
+  easeOfUse: number;
+  valueForMoney: number;
+  versatility: number;
+  review?: string; // Opcjonalna recenzja tekstowa
+  createdAt: string; // ISO string
+}
+
 export interface User {
   uid: string;
   email: string | null;

@@ -7,7 +7,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { doc, getDoc, collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Product } from '@/lib/types';
+import { Product, ProductRating } from '@/lib/types';
+import { getUserProductRating, getProductRatings } from '@/lib/data';
+import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,10 +28,23 @@ import {
 } from 'lucide-react';
 import ProductCard from '@/components/product-card';
 import CommentSection from '@/components/comment-section';
+import RatingInput from '@/components/rating-input';
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [userRating, setUserRating] = useState<ProductRating | null>(null);
+  const [recentRatings, setRecentRatings] = useState<ProductRating[]>([]);
+
+  const fetchRatings = async () => {
+    if (user) {
+      const rating = await getUserProductRating(params.id, user.uid);
+      setUserRating(rating);
+    }
+    const ratings = await getProductRatings(params.id, 5);
+    setRecentRatings(ratings);
+  };
 
   useEffect(() => {
     async function fetchProduct() {
@@ -57,7 +72,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       }
     }
     fetchProduct();
-  }, [params.id]);
+    fetchRatings();
+  }, [params.id, user]);
 
   if (!product) {
     return (
@@ -223,9 +239,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
       {/* Tabs Section */}
       <Tabs defaultValue="description" className="mb-12">
-        <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
           <TabsTrigger value="description">Szczegółowy opis</TabsTrigger>
           <TabsTrigger value="reviews">Opinie ({ratingCount})</TabsTrigger>
+          <TabsTrigger value="rate">Oceń produkt</TabsTrigger>
         </TabsList>
         
         <TabsContent value="description" className="mt-6">
@@ -244,8 +261,68 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </Card>
         </TabsContent>
 
-        <TabsContent value="reviews" className="mt-6">
+        <TabsContent value="reviews" className="mt-6 space-y-6">
+          {/* Ostatnie oceny użytkowników */}
+          {recentRatings.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Ostatnie oceny użytkowników</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {recentRatings.map((rating) => (
+                  <div key={rating.id} className="border-l-4 border-primary pl-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">
+                        {rating.userDisplayName || `Użytkownik ${rating.userId.substring(0, 6)}...`}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < rating.rating
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'text-muted-foreground'
+                            }`}
+                          />
+                        ))}
+                        <span className="ml-1 text-sm font-semibold">{rating.rating.toFixed(1)}</span>
+                      </div>
+                    </div>
+                    {rating.review && (
+                      <p className="text-sm text-muted-foreground">{rating.review}</p>
+                    )}
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <span>Trwałość: {rating.durability.toFixed(1)}</span>
+                      <span>Łatwość: {rating.easeOfUse.toFixed(1)}</span>
+                      <span>Jakość/Cena: {rating.valueForMoney.toFixed(1)}</span>
+                      <span>Funkcje: {rating.versatility.toFixed(1)}</span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <CommentSection collectionName="products" docId={params.id} />
+        </TabsContent>
+
+        <TabsContent value="rate" className="mt-6">
+          <RatingInput
+            productId={params.id}
+            existingRating={userRating}
+            onRatingSubmitted={() => {
+              // Odśwież dane produktu i oceny
+              fetchRatings();
+              if (product) {
+                getDoc(doc(db, "products", params.id)).then(docSnap => {
+                  if (docSnap.exists()) {
+                    setProduct({ id: docSnap.id, ...docSnap.data() } as Product);
+                  }
+                });
+              }
+            }}
+          />
         </TabsContent>
       </Tabs>
 

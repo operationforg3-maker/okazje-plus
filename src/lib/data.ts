@@ -1,6 +1,6 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo } from "@/lib/types";
+import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating } from "@/lib/types";
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
@@ -88,6 +88,90 @@ export async function getComments(collectionName: "products" | "deals", docId: s
     const q = query(commentsColRef, orderBy("createdAt", "desc"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+}
+
+// === SYSTEM OCEN PRODUKTÓW ===
+
+export async function submitProductRating(
+    productId: string, 
+    userId: string, 
+    ratingData: {
+        rating: number;
+        durability: number;
+        easeOfUse: number;
+        valueForMoney: number;
+        versatility: number;
+        review?: string;
+        userDisplayName?: string;
+    }
+) {
+    const ratingDocRef = doc(db, "products", productId, "ratings", userId);
+    const productDocRef = doc(db, "products", productId);
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            const existingRating = await transaction.get(ratingDocRef);
+            
+            // Zapisz lub aktualizuj ocenę użytkownika
+            transaction.set(ratingDocRef, {
+                ...ratingData,
+                productId,
+                userId,
+                createdAt: new Date().toISOString(),
+            });
+
+            // Pobierz wszystkie oceny po zapisaniu
+            const ratingsRef = collection(db, "products", productId, "ratings");
+            const ratingsSnapshot = await getDocs(ratingsRef);
+            
+            // Przelicz średnie
+            let totalRating = 0;
+            let totalDurability = 0;
+            let totalEaseOfUse = 0;
+            let totalValueForMoney = 0;
+            let totalVersatility = 0;
+            const count = ratingsSnapshot.size;
+
+            ratingsSnapshot.forEach(doc => {
+                const data = doc.data();
+                totalRating += data.rating || 0;
+                totalDurability += data.durability || 0;
+                totalEaseOfUse += data.easeOfUse || 0;
+                totalValueForMoney += data.valueForMoney || 0;
+                totalVersatility += data.versatility || 0;
+            });
+
+            // Aktualizuj ratingCard produktu
+            transaction.update(productDocRef, {
+                'ratingCard.average': count > 0 ? totalRating / count : 0,
+                'ratingCard.count': count,
+                'ratingCard.durability': count > 0 ? totalDurability / count : 0,
+                'ratingCard.easeOfUse': count > 0 ? totalEaseOfUse / count : 0,
+                'ratingCard.valueForMoney': count > 0 ? totalValueForMoney / count : 0,
+                'ratingCard.versatility': count > 0 ? totalVersatility / count : 0,
+            });
+        });
+    } catch (e) {
+        console.error("Błąd podczas zapisywania oceny: ", e);
+        throw e;
+    }
+}
+
+export async function getUserProductRating(productId: string, userId: string): Promise<ProductRating | null> {
+    const ratingDocRef = doc(db, "products", productId, "ratings", userId);
+    const docSnap = await getDoc(ratingDocRef);
+    
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as ProductRating;
+    }
+    return null;
+}
+
+export async function getProductRatings(productId: string, limitCount: number = 10): Promise<ProductRating[]> {
+    const ratingsRef = collection(db, "products", productId, "ratings");
+    const q = query(ratingsRef, orderBy("createdAt", "desc"), limit(limitCount));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductRating));
 }
 
 export async function searchProductsForLinking(searchText: string): Promise<Product[]> {
