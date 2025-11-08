@@ -25,6 +25,35 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }
 
+export async function getProductsByCategory(
+  mainCategorySlug: string,
+  subCategorySlug?: string,
+  count: number = 100
+): Promise<Product[]> {
+  const productsRef = collection(db, "products");
+  let q;
+  
+  if (subCategorySlug) {
+    q = query(
+      productsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      where("subCategorySlug", "==", subCategorySlug),
+      limit(count)
+    );
+  } else {
+    q = query(
+      productsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      limit(count)
+    );
+  }
+  
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+}
+
 export async function searchProducts(searchTerm: string): Promise<Product[]> {
   const productsRef = collection(db, "products");
   const nameQuery = query(productsRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'));
