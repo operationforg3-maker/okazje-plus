@@ -29,10 +29,10 @@ export function Footer() {
           <div>
             <h3 className="font-headline font-semibold">Informacje</h3>
             <div className="mt-4 flex flex-col space-y-2">
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">O nas</Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Kontakt</Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Polityka prywatności</Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">Regulamin</Link>
+              <Link href="/#o-projekcie" className="text-sm text-muted-foreground hover:text-primary transition-colors">O nas</Link>
+              <Link href="mailto:kontakt@okazje-plus.pl" className="text-sm text-muted-foreground hover:text-primary transition-colors">Kontakt</Link>
+              <Link href="/polityka-prywatnosci" className="text-sm text-muted-foreground hover:text-primary transition-colors">Polityka prywatności</Link>
+              <Link href="/regulamin" className="text-sm text-muted-foreground hover:text-primary transition-colors">Regulamin</Link>
             </div>
           </div>
           
