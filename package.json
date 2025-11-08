@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "seed": "ts-node src/scripts/seed.ts"
+    "seed": "ts-node src/scripts/seed.ts",
+    "typesense:sync": "ts-node src/scripts/typesense-sync.ts"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",

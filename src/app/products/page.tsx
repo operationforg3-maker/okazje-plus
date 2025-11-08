@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
+import { searchProductsTypesense } from '@/lib/search';
 import ProductCard from '@/components/product-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -52,27 +53,38 @@ export default function ProductsPage() {
     fetchData();
   }, []);
 
-  // Pobierz produkty przy zmianie kategorii lub subkategorii
+  // Pobierz produkty przy zmianie kategorii / subkategorii / wyszukiwaniu
   useEffect(() => {
+    let cancelled = false;
     async function fetchProducts() {
       if (!selectedCategory) return;
-      
       setIsLoading(true);
       try {
-        const categoryProducts = await getProductsByCategory(
-          selectedCategory.id,
-          selectedSubcategory || undefined,
-          100
-        );
-        setProducts(categoryProducts);
+        const q = searchTerm.trim();
+        if (q.length > 1) {
+          const results = await searchProductsTypesense(q, {
+            mainCategorySlug: selectedCategory.id,
+            subCategorySlug: selectedSubcategory || undefined,
+            limit: 100,
+          });
+          if (!cancelled) setProducts(results);
+        } else {
+          const categoryProducts = await getProductsByCategory(
+            selectedCategory.id,
+            selectedSubcategory || undefined,
+            100
+          );
+          if (!cancelled) setProducts(categoryProducts);
+        }
       } catch (error) {
         console.error('Error fetching products:', error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
-    fetchProducts();
-  }, [selectedCategory, selectedSubcategory]);
+    const t = setTimeout(fetchProducts, 250); // drobny debounce
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [selectedCategory, selectedSubcategory, searchTerm]);
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = !searchTerm || 
