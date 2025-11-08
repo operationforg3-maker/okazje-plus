@@ -71,6 +71,63 @@ async function ensureProductsSchema(client: any) {
   }
 }
 
+async function ensureDealsSchema(client: any) {
+  const schema = {
+    name: 'deals',
+    fields: [
+      { name: 'id', type: 'string' },
+      { name: 'title', type: 'string' },
+      { name: 'description', type: 'string' },
+      { name: 'price', type: 'float', optional: true },
+      { name: 'originalPrice', type: 'float', optional: true },
+      { name: 'mainCategorySlug', type: 'string', facet: true },
+      { name: 'subCategorySlug', type: 'string', facet: true },
+      { name: 'status', type: 'string', facet: true },
+      { name: 'temperature', type: 'int32', optional: true },
+      { name: 'voteCount', type: 'int32', optional: true },
+      { name: 'postedBy', type: 'string', optional: true },
+    ],
+    default_sorting_field: 'temperature',
+  } as any;
+
+  try {
+    await client.collections('deals').retrieve();
+  } catch {
+    await client.collections().create(schema);
+  }
+}
+
+async function fetchApprovedDeals(): Promise<any[]> {
+  const db = admin.firestore();
+  const snap = await db.collection('deals').where('status', '==', 'approved').get();
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+function mapDealForIndex(d: any) {
+  return {
+    id: d.id,
+    title: d.title,
+    description: d.description,
+    price: d.price,
+    originalPrice: d.originalPrice,
+    mainCategorySlug: d.mainCategorySlug,
+    subCategorySlug: d.subCategorySlug,
+    status: d.status,
+    temperature: d.temperature,
+    voteCount: d.voteCount,
+    postedBy: d.postedBy,
+  };
+}
+
+async function upsertDeals(client: any, docs: any[]) {
+  if (!docs.length) return;
+  const chunkSize = 100;
+  for (let i = 0; i < docs.length; i += chunkSize) {
+    const batch = docs.slice(i, i + chunkSize);
+    await client.collections('deals').documents().import(batch, { action: 'upsert' });
+  }
+}
+
 async function fetchApprovedProducts(): Promise<any[]> {
   const db = admin.firestore();
   const snap = await db.collection('products').where('status', '==', 'approved').get();
@@ -108,10 +165,15 @@ async function main() {
   initFirebaseAdmin();
   const typesense = initTypesenseAdmin();
   await ensureProductsSchema(typesense);
+  await ensureDealsSchema(typesense);
   const products = await fetchApprovedProducts();
-  const docs = products.map(mapProductForIndex);
-  await upsertProducts(typesense, docs);
-  console.log(`Typesense: zsynchronizowano ${docs.length} produktów.`);
+  const productDocs = products.map(mapProductForIndex);
+  await upsertProducts(typesense, productDocs);
+  console.log(`Typesense: zsynchronizowano ${productDocs.length} produktów.`);
+  const deals = await fetchApprovedDeals();
+  const dealDocs = deals.map(mapDealForIndex);
+  await upsertDeals(typesense, dealDocs);
+  console.log(`Typesense: zsynchronizowano ${dealDocs.length} okazji.`);
 }
 
 main().catch((e) => {

@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MegaMenu } from '@/components/layout/mega-menu';
+import { AutocompleteSearch } from '@/components/autocomplete-search';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -95,17 +96,7 @@ export function Navbar() {
 
         <div className="flex flex-1 items-center justify-end space-x-4">
           <div className="flex-1 max-w-md ml-auto">
-            <form onSubmit={handleSearch}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  name="search"
-                  placeholder="Szukaj produktów i okazji..."
-                  className="w-full pl-9"
-                />
-              </div>
-            </form>
+            <AutocompleteSearch />
           </div>
           {loading ? (
               <Skeleton className="h-9 w-9 rounded-full" />
