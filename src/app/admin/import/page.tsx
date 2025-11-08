@@ -4,11 +4,11 @@ export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileUp, Package, Link2, Upload } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Link2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EnhancedCsvImporter from '@/components/admin/enhanced-csv-importer';
+import AliExpressImporter from '@/components/admin/aliexpress-importer';
 
 function ImportPage() {
   return (
@@ -34,84 +34,7 @@ function ImportPage() {
         </TabsContent>
 
         <TabsContent value="aliexpress" className="space-y-4">
-          <Card className="border-dashed">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Link2 className="h-5 w-5" />
-                Import z AliExpress API
-              </CardTitle>
-              <CardDescription>
-                Automatycznie importuj produkty z AliExpress
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-lg bg-muted/50 p-8 text-center">
-                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="font-semibold mb-2">Integracja z AliExpress API</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Ta funkcja będzie dostępna w następnej wersji. Pozwoli na automatyczny import
-                  produktów bezpośrednio z AliExpress z wykorzystaniem API Dropshipper.
-                </p>
-                <Badge variant="secondary">W przygotowaniu</Badge>
-                
-                <div className="mt-6 text-left bg-background rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">Planowane funkcje:</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                    <li>Wyszukiwanie produktów po kategoriach</li>
-                    <li>Automatyczne pobieranie zdjęć i opisów</li>
-                    <li>Generowanie linków afiliacyjnych</li>
-                    <li>Automatyczna konwersja cen (USD → PLN)</li>
-                    <li>Masowy import wybranych produktów</li>
-                    <li>Synchronizacja cen i dostępności</li>
-                  </ul>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Configuration Placeholder */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Konfiguracja API</CardTitle>
-              <CardDescription>
-                Skonfiguruj klucze dostępu do AliExpress API
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium">App Key</label>
-                  <input 
-                    type="text" 
-                    className="w-full mt-1 px-3 py-2 border rounded-md" 
-                    placeholder="Wprowadź App Key"
-                    disabled
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">App Secret</label>
-                  <input 
-                    type="password" 
-                    className="w-full mt-1 px-3 py-2 border rounded-md" 
-                    placeholder="Wprowadź App Secret"
-                    disabled
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Tracking ID</label>
-                  <input 
-                    type="text" 
-                    className="w-full mt-1 px-3 py-2 border rounded-md" 
-                    placeholder="Wprowadź Tracking ID dla programu afiliacyjnego"
-                    disabled
-                  />
-                </div>
-                <Button disabled className="w-full">
-                  Zapisz konfigurację (wkrótce)
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <AliExpressImporter />
         </TabsContent>
 
         <TabsContent value="url" className="space-y-4">
