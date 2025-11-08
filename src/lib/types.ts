@@ -122,4 +122,5 @@ export interface NavigationShowcaseConfig {
   promotedType: 'deals' | 'products';
   promotedIds: string[];
   dealOfTheDayId?: string | null;
+  productOfTheDayId?: string | null;
 }

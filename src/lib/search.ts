@@ -84,7 +84,11 @@ export type Suggestion = {
 };
 
 export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
-  if (!typesenseClient) return [];
+  // Fallback: jeśli Typesense nie skonfigurowany, użyj Firestore
+  if (!typesenseClient) {
+    return getFirestoreAutocompleteSuggestions(q, limit);
+  }
+
   try {
     const searches = {
       searches: [
@@ -108,7 +112,60 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
     }
     return out;
   } catch (e) {
-    console.warn('Typesense autocomplete failed:', e);
+    console.warn('Typesense autocomplete failed, falling back to Firestore:', e);
+    return getFirestoreAutocompleteSuggestions(q, limit);
+  }
+}
+
+// Firestore fallback dla autocomplete (bez Typesense)
+async function getFirestoreAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
+  const { searchProducts, getHotDeals } = await import('@/lib/data');
+  const normalizedQuery = q.toLowerCase().trim();
+  
+  try {
+    // Szukaj produktów i deals równolegle
+    const [products, deals] = await Promise.all([
+      searchProducts(q).then(p => p.slice(0, limit)),
+      getHotDeals(limit)
+    ]);
+
+    const out: Suggestion[] = [];
+
+    // Filtruj produkty po nazwie lub opisie
+    products
+      .filter(p => 
+        p.name.toLowerCase().includes(normalizedQuery) || 
+        p.description?.toLowerCase().includes(normalizedQuery)
+      )
+      .slice(0, limit)
+      .forEach(p => {
+        out.push({
+          type: 'product',
+          id: p.id,
+          label: p.name,
+          subLabel: p.description,
+        });
+      });
+
+    // Filtruj deals po tytule lub opisie
+    deals
+      .filter(d => 
+        d.title.toLowerCase().includes(normalizedQuery) || 
+        d.description?.toLowerCase().includes(normalizedQuery)
+      )
+      .slice(0, Math.max(0, limit - out.length))
+      .forEach(d => {
+        out.push({
+          type: 'deal',
+          id: d.id,
+          label: d.title,
+          subLabel: d.description,
+        });
+      });
+
+    return out;
+  } catch (err) {
+    console.error('Firestore autocomplete failed:', err);
     return [];
   }
 }

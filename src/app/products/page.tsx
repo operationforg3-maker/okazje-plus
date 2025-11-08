@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter } from 'lucide-react';
 import { Category, Product, Deal } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,6 +25,7 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [dealOfTheDay, setDealOfTheDay] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -99,6 +101,67 @@ export default function ProductsPage() {
     currency: 'PLN',
   });
 
+  // Sidebar Content (reusable for desktop and mobile)
+  const SidebarContent = () => (
+    <div className="space-y-2">
+      <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
+      <ScrollArea className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
+        {categories.map((category) => {
+          const isActive = selectedCategory?.id === category.id;
+          return (
+            <div key={category.id} className="mb-1">
+              <button
+                onClick={() => {
+                  setSelectedCategory(category);
+                  setSelectedSubcategory(null);
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={cn(
+                  "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "hover:bg-muted"
+                )}
+              >
+                {category.icon && <span className="text-xl">{category.icon}</span>}
+                <span className="font-medium flex-1">{category.name}</span>
+                <ChevronRight className={cn(
+                  "h-4 w-4 transition-transform",
+                  isActive ? "rotate-90" : "group-hover:translate-x-1"
+                )} />
+              </button>
+              {isActive && category.subcategories.length > 0 && (
+                <div className="mt-1 ml-2 space-y-1 border-l pl-3">
+                  {category.subcategories.map((sub) => {
+                    const subActive = selectedSubcategory === sub.slug;
+                    return (
+                      <button
+                        key={sub.slug}
+                        onClick={() => setSelectedSubcategory(subActive ? null : sub.slug)}
+                        className={cn(
+                          "w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors",
+                          subActive
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        {sub.icon && <span className="text-base">{sub.icon}</span>}
+                        <span className="flex-1 truncate">{sub.name}</span>
+                        {sub.highlight && (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0">Nowość</Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </ScrollArea>
+    </div>
+  );
+
   return (
     <div className="w-full">
       {/* Breadcrumb */}
@@ -129,39 +192,31 @@ export default function ProductsPage() {
       {/* Main Content - Mega Menu Style */}
       <div className="border-b bg-background">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-12 gap-6 py-6">
-            {/* Left Sidebar - Categories */}
-            <div className="col-span-3">
-              <div className="space-y-2">
-                <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
-                <ScrollArea className="h-[600px]">
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => {
-                        setSelectedCategory(category);
-                        setSelectedSubcategory(null);
-                      }}
-                      className={cn(
-                        "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
-                        selectedCategory?.id === category.id
-                          ? "bg-primary text-primary-foreground"
-                          : "hover:bg-muted"
-                      )}
-                    >
-                      {category.icon && <span className="text-xl">{category.icon}</span>}
-                      <span className="font-medium flex-1">{category.name}</span>
-                      <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  ))}
-                </ScrollArea>
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 py-4 lg:py-6">
+            {/* Mobile Filter Button */}
+            <div className="lg:hidden col-span-1 mb-2">
+              <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Kategorie i filtry
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] p-6">
+                  <SidebarContent />
+                </SheetContent>
+              </Sheet>
+            </div>
+
+            {/* Left Sidebar - Categories (Desktop only) */}
+            <div className="hidden lg:block lg:col-span-3">
+              <SidebarContent />
             </div>
 
             {/* Center Content - Subcategories & Products */}
-            <div className="col-span-6">
+            <div className="col-span-1 lg:col-span-6">
               {/* Search Bar */}
-              <div className="mb-6">
+              <div className="mb-4 lg:mb-6">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -173,45 +228,7 @@ export default function ProductsPage() {
                 </div>
               </div>
 
-              {/* Subcategories */}
-              {selectedCategory && (
-                <div className="mb-6">
-                  <h3 className="font-headline text-base font-semibold mb-3">
-                    {selectedCategory.name}
-                  </h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {selectedCategory.subcategories.map((sub) => (
-                      <button
-                        key={sub.slug}
-                        onClick={() => setSelectedSubcategory(
-                          selectedSubcategory === sub.slug ? null : sub.slug
-                        )}
-                        className={cn(
-                          "p-3 rounded-lg border text-left transition-all duration-200 hover:border-primary",
-                          selectedSubcategory === sub.slug
-                            ? "border-primary bg-primary/5"
-                            : "border-border"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          {sub.icon && <span className="text-lg">{sub.icon}</span>}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{sub.name}</p>
-                            {sub.description && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {sub.description}
-                              </p>
-                            )}
-                          </div>
-                          {sub.highlight && (
-                            <Badge variant="secondary" className="text-xs">Nowość</Badge>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Subcategories przeniesione do lewego panelu */}
 
               {/* Products Grid */}
               <div>
@@ -221,13 +238,13 @@ export default function ProductsPage() {
                   </h3>
                 </div>
                 {isLoading ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[...Array(6)].map((_, i) => (
                       <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
                     ))}
                   </div>
                 ) : filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {filteredProducts.slice(0, 12).map((product) => (
                       <ProductCard key={product.id} product={product} />
                     ))}
@@ -240,8 +257,8 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            {/* Right Sidebar - Deal of the Day & Promo */}
-            <div className="col-span-3 space-y-6">
+            {/* Right Sidebar - Deal of the Day & Promo (Hidden on mobile/tablet) */}
+            <div className="hidden xl:block xl:col-span-3 space-y-6">
               {/* Deal of the Day */}
               {dealOfTheDay && (
                 <Card className="overflow-hidden border-2 border-primary/20">

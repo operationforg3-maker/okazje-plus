@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Deal } from '@/lib/types';
+import { useCommentsCount } from '@/hooks/use-comments-count';
 import { voteOnDeal } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
 import {
@@ -38,6 +39,7 @@ function getRelativeTime(isoDate: string): string {
 }
 
 export default function DealCard({ deal }: DealCardProps) {
+  const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { user } = useAuth();
   const [temperature, setTemperature] = useState(deal.temperature);
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
@@ -160,13 +162,13 @@ export default function DealCard({ deal }: DealCardProps) {
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Dodane przez <span className="font-medium text-foreground">{deal.postedBy}</span></span>
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title="Głosy">
               <ArrowUp className="h-3 w-3" />
-              {deal.voteCount}
+              {typeof deal.voteCount === 'number' ? deal.voteCount : 0}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title="Komentarze">
               <MessageSquare className="h-3 w-3" />
-              {deal.commentsCount}
+              {liveComments.count}
             </span>
           </div>
         </div>

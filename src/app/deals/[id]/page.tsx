@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import DealCard from '@/components/deal-card';
 import CommentSection from '@/components/comment-section';
+import { useCommentsCount } from '@/hooks/use-comments-count';
 import { VoteControls } from '@/components/vote-controls';
 import { toast } from 'sonner';
 
@@ -53,6 +54,7 @@ function getRelativeTime(isoDate: string): string {
 export default function DealDetailPage({ params }: { params: { id: string } }) {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [relatedDeals, setRelatedDeals] = useState<Deal[]>([]);
+  const liveComments = useCommentsCount('deals', params.id, deal?.commentsCount);
 
   useEffect(() => {
     async function fetchDeal() {
@@ -134,18 +136,18 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12">
+    <div className="container mx-auto px-4 py-4 md:py-8 lg:py-12">
       {/* Breadcrumbs */}
-      <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary transition-colors">Strona główna</Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href="/deals" className="hover:text-primary transition-colors">Okazje</Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href={`/deals?category=${deal.mainCategorySlug}`} className="hover:text-primary transition-colors">
+      <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
+        <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <Link href="/deals" className="hover:text-primary transition-colors whitespace-nowrap">Okazje</Link>
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <Link href={`/deals?category=${deal.mainCategorySlug}`} className="hover:text-primary transition-colors whitespace-nowrap">
           {deal.mainCategorySlug}
         </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="font-medium text-foreground">{deal.title}</span>
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <span className="font-medium text-foreground truncate">{deal.title}</span>
       </div>
 
       {/* Main Deal Section */}
@@ -278,7 +280,7 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Komentarze</p>
-                    <p className="text-lg font-semibold">{deal.commentsCount}</p>
+                    <p className="text-lg font-semibold">{typeof deal.commentsCount === 'number' ? deal.commentsCount : 0}</p>
                   </div>
                 </div>
               </div>
@@ -322,7 +324,7 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
       {/* Tabs Section */}
       <Tabs defaultValue="discussion" className="mb-12">
         <TabsList className="grid w-full grid-cols-1 lg:w-auto">
-          <TabsTrigger value="discussion">Dyskusja ({deal.commentsCount})</TabsTrigger>
+          <TabsTrigger value="discussion">Dyskusja ({liveComments.count})</TabsTrigger>
         </TabsList>
         
         <TabsContent value="discussion" className="mt-6">

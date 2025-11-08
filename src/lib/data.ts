@@ -68,6 +68,37 @@ export async function getProductsByCategory(
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }
 
+export async function getDealsByCategory(
+  mainCategorySlug: string,
+  subCategorySlug?: string,
+  count: number = 100
+): Promise<Deal[]> {
+  const dealsRef = collection(db, "deals");
+  let q;
+  
+  if (subCategorySlug) {
+    q = query(
+      dealsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      where("subCategorySlug", "==", subCategorySlug),
+      orderBy("temperature", "desc"),
+      limit(count)
+    );
+  } else {
+    q = query(
+      dealsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      orderBy("temperature", "desc"),
+      limit(count)
+    );
+  }
+  
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+}
+
 export async function searchProducts(searchTerm: string): Promise<Product[]> {
   const productsRef = collection(db, "products");
   const nameQuery = query(productsRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'));

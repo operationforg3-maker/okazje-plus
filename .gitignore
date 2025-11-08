@@ -45,6 +45,9 @@ firebase-debug.log
 firestore-debug.log
 .firebase/
 
+# Firebase service account credentials
+src/scripts/serviceAccountKey.json
+
 .env.local
 
 

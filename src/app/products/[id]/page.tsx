@@ -91,38 +91,38 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const ratingCount = product.ratingCard.count;
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12">
+    <div className="container mx-auto px-4 py-4 md:py-8 lg:py-12">
       {/* Breadcrumbs */}
-      <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary transition-colors">Strona główna</Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href="/products" className="hover:text-primary transition-colors">Produkty</Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href={`/products?category=${product.mainCategorySlug}`} className="hover:text-primary transition-colors">
+      <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
+        <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <Link href="/products" className="hover:text-primary transition-colors whitespace-nowrap">Produkty</Link>
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <Link href={`/products?category=${product.mainCategorySlug}`} className="hover:text-primary transition-colors whitespace-nowrap">
           {product.mainCategorySlug}
         </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="font-medium text-foreground">{product.name}</span>
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <span className="font-medium text-foreground truncate">{product.name}</span>
       </div>
 
       {/* Main Product Section */}
-      <div className="grid md:grid-cols-2 gap-8 lg:gap-12 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 lg:gap-12 mb-8 md:mb-12">
         {/* Product Image */}
         <div className="relative">
-          <div className="sticky top-8">
+          <div className="md:sticky md:top-8">
             <div className="relative aspect-[4/3] bg-card rounded-xl shadow-lg overflow-hidden border">
               <Image
                 src={product.image}
                 alt={product.name}
                 data-ai-hint={product.imageHint}
                 fill
-                className="object-contain p-8"
+                className="object-contain p-4 md:p-8"
                 priority
               />
             </div>
             {avgRating >= 4.5 && (
-              <Badge className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-white shadow-lg">
-                <Award className="mr-1 h-4 w-4" />
+              <Badge className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-amber-600 text-white shadow-lg text-xs md:text-sm">
+                <Award className="mr-1 h-3 w-3 md:h-4 md:w-4" />
                 Top Rated
               </Badge>
             )}
@@ -130,33 +130,33 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         </div>
 
         {/* Product Info */}
-        <div className="flex flex-col space-y-6">
+        <div className="flex flex-col space-y-4 md:space-y-6">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Badge variant="secondary" className="flex items-center gap-1">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                 <Package className="h-3 w-3" />
                 {product.subCategorySlug || product.mainCategorySlug}
               </Badge>
               {product.status === 'approved' && (
-                <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600">
+                <Badge variant="outline" className="flex items-center gap-1 text-green-600 border-green-600 text-xs">
                   <ShieldCheck className="h-3 w-3" />
                   Zweryfikowany
                 </Badge>
               )}
             </div>
 
-            <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl mb-4">
+            <h1 className="font-headline text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight mb-3 md:mb-4">
               {product.name}
             </h1>
 
             {/* Rating Summary */}
-            <div className="flex items-center gap-4 mb-4">
+            <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-5 w-5 ${
+                      className={`h-4 w-4 md:h-5 md:w-5 ${
                         i < Math.floor(avgRating)
                           ? 'fill-amber-400 text-amber-400'
                           : 'text-muted-foreground'
@@ -164,38 +164,38 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     />
                   ))}
                 </div>
-                <span className="text-2xl font-bold">{avgRating.toFixed(1)}</span>
+                <span className="text-xl md:text-2xl font-bold">{avgRating.toFixed(1)}</span>
               </div>
-              <Separator orientation="vertical" className="h-8" />
-              <span className="text-muted-foreground">
+              <Separator orientation="vertical" className="h-6 md:h-8" />
+              <span className="text-sm md:text-base text-muted-foreground">
                 <span className="font-semibold text-foreground">{ratingCount}</span> ocen
               </span>
             </div>
 
-            <p className="text-base text-muted-foreground leading-relaxed">
+            <p className="text-sm md:text-base text-muted-foreground leading-relaxed">
               {product.description}
             </p>
           </div>
 
           {/* Price Section */}
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-2">
-            <CardContent className="p-6">
-              <div className="flex items-baseline justify-between mb-4">
-                <div className="text-4xl font-bold text-primary">{price}</div>
-                <Badge variant="outline" className="text-sm">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-baseline justify-between mb-3 md:mb-4">
+                <div className="text-2xl md:text-3xl lg:text-4xl font-bold text-primary">{price}</div>
+                <Badge variant="outline" className="text-xs md:text-sm">
                   <TrendingUp className="mr-1 h-3 w-3" />
                   Najlepsza cena
                 </Badge>
               </div>
-              <div className="flex gap-3">
-                <Button size="lg" asChild className="flex-1 bg-primary hover:bg-primary/90">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button size="lg" asChild className="flex-1 bg-primary hover:bg-primary/90 w-full sm:w-auto">
                   <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-5 w-5" />
+                    <ExternalLink className="mr-2 h-4 w-4 md:h-5 md:w-5" />
                     Kup teraz
                   </a>
                 </Button>
-                <Button size="lg" variant="outline">
-                  <ThumbsUp className="h-5 w-5" />
+                <Button size="lg" variant="outline" className="sm:w-auto">
+                  <ThumbsUp className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-3 text-center">

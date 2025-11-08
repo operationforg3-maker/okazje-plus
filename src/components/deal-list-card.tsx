@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Deal } from '@/lib/types';
+import { useCommentsCount } from '@/hooks/use-comments-count';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
@@ -27,6 +28,7 @@ function getRelativeTime(isoDate: string): string {
 }
 
 export default function DealListCard({ deal }: DealListCardProps) {
+  const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
   const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
@@ -138,13 +140,13 @@ export default function DealListCard({ deal }: DealListCardProps) {
           </div>
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title="Głosy">
               <ArrowUp className="h-3 w-3" />
-              {deal.voteCount}
+              {typeof deal.voteCount === 'number' ? deal.voteCount : 0}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1" title="Komentarze">
               <MessageSquare className="h-3 w-3" />
-              {deal.commentsCount}
+              {liveComments.count}
             </span>
           </div>
         </div>
