@@ -22,6 +22,11 @@ import {
   BrainCircuit,
   ShoppingBag,
   PanelLeft,
+  FolderTree,
+  Settings,
+  FileUp,
+  CheckSquare,
+  BarChart3,
 } from 'lucide-react';
 import { UserNav } from '@/components/auth/user-nav';
 import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
@@ -61,6 +66,12 @@ export default function AdminLayout({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                
+                {/* Separator */}
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+                  Zarządzanie treścią
+                </div>
+                
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -88,12 +99,60 @@ export default function AdminLayout({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={isActive('/admin/users')}
-                    tooltip={{ children: 'Użytkownicy' }}
+                    isActive={isActive('/admin/categories')}
+                    tooltip={{ children: 'Kategorie' }}
                   >
-                    <Link href="/admin/users">
-                      <Users />
-                      <span className="group-data-[collapsible=icon]:hidden">Użytkownicy</span>
+                    <Link href="/admin/categories">
+                      <FolderTree />
+                      <span className="group-data-[collapsible=icon]:hidden">Kategorie</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/moderation')}
+                    tooltip={{ children: 'Moderacja' }}
+                  >
+                    <Link href="/admin/moderation">
+                      <CheckSquare />
+                      <span className="group-data-[collapsible=icon]:hidden">Moderacja</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                {/* Separator */}
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+                  Import
+                </div>
+                
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/import')}
+                    tooltip={{ children: 'Import danych' }}
+                  >
+                    <Link href="/admin/import">
+                      <FileUp />
+                      <span className="group-data-[collapsible=icon]:hidden">Import danych</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                {/* Separator */}
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+                  Analityka
+                </div>
+                
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/analytics')}
+                    tooltip={{ children: 'Analityka' }}
+                  >
+                    <Link href="/admin/analytics">
+                      <BarChart3 />
+                      <span className="group-data-[collapsible=icon]:hidden">Analityka</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -106,6 +165,36 @@ export default function AdminLayout({
                     <Link href="/admin/trending-prediction">
                       <BrainCircuit />
                       <span className="group-data-[collapsible=icon]:hidden">Predykcja AI</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                {/* Separator */}
+                <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+                  System
+                </div>
+                
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/users')}
+                    tooltip={{ children: 'Użytkownicy' }}
+                  >
+                    <Link href="/admin/users">
+                      <Users />
+                      <span className="group-data-[collapsible=icon]:hidden">Użytkownicy</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/settings')}
+                    tooltip={{ children: 'Ustawienia' }}
+                  >
+                    <Link href="/admin/settings">
+                      <Settings />
+                      <span className="group-data-[collapsible=icon]:hidden">Ustawienia</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
