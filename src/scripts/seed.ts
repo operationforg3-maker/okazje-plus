@@ -378,12 +378,12 @@ try {
         imageHint: 'Produkt ilustracyjny',
         affiliateUrl: 'https://example.com/ref/' + id,
         ratingCard: {
-          average: randomInt(35, 50) / 10,
+          average: randomInt(35, 50) / 10, // 3.5 - 5.0
           count: randomInt(5, 120),
-          durability: randomInt(3, 5),
-          easeOfUse: randomInt(3, 5),
-            valueForMoney: randomInt(3, 5),
-          versatility: randomInt(3, 5),
+          durability: randomInt(30, 50) / 10, // 3.0 - 5.0
+          easeOfUse: randomInt(30, 50) / 10, // 3.0 - 5.0
+          valueForMoney: randomInt(30, 50) / 10, // 3.0 - 5.0
+          versatility: randomInt(30, 50) / 10, // 3.0 - 5.0
         },
         price,
         mainCategorySlug: mainCategory,
