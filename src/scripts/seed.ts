@@ -403,6 +403,7 @@ try {
       const price = randomInt(29, 1999);
       const originalPrice = price + randomInt(20, 600);
       const temperature = randomInt(10, 500);
+      const voteCount = randomInt(1, Math.floor(temperature / 10)); // voteCount mniejszy niż temperatura
       deals.push({
         id,
         title: `Okazja: ${subCategory.replace(/-/g, ' ')} ${i + 1}`,
@@ -413,8 +414,8 @@ try {
         image: `https://placehold.co/600x400?text=${encodeURIComponent(subCategory)}+${i + 1}`,
         imageHint: 'Zdjęcie poglądowe',
         postedBy: 'system-seeder',
-        postedAt: new Date().toISOString(),
-        voteCount: temperature, // zachowujemy dla kompatybilności jeśli używane gdzieś
+        postedAt: new Date(Date.now() - randomInt(0, 30) * 24 * 60 * 60 * 1000).toISOString(), // losowa data ostatnie 30 dni
+        voteCount,
         commentsCount: 0,
         mainCategorySlug: mainCategory,
         subCategorySlug: subCategory,

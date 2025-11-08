@@ -26,6 +26,7 @@ service cloud.firestore {
     // Użytkownicy mogą tworzyć (status 'draft' wymaga moderacji).
     // Autor może edytować swoje okazje. Admin może moderować wszystkie.
     // Tylko admin może usuwać.
+    // WAŻNE: Zezwalamy na aktualizację temperature i voteCount przez transakcje głosowania
     match /deals/{dealId} {
       allow read: if true;
       allow create: if request.auth != null 
@@ -35,8 +36,13 @@ service cloud.firestore {
         && request.resource.data.voteCount == 0
         && request.resource.data.commentsCount == 0;
       allow update: if request.auth != null && (
-        resource.data.postedBy == request.auth.uid // Autor może edytować
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' // Admin może moderować
+        // Autor może edytować
+        resource.data.postedBy == request.auth.uid
+        // Admin może moderować
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        // Głosowanie: każdy zalogowany może aktualizować temperature i voteCount
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['temperature', 'voteCount'])
+            && request.resource.data.keys().hasAll(resource.data.keys()))
       );
       allow delete: if request.auth != null 
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
@@ -56,9 +62,8 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Komentarze: Każdy może czytać. Tworzyć mogą tylko zalogowani. 
-    // Edycja/Usuwanie tylko przez autora lub admina (moderacja).
-    match /comments/{commentId} {
+    // Komentarze jako subkolekcje (products/{productId}/comments i deals/{dealId}/comments)
+    match /products/{productId}/comments/{commentId} {
       allow read: if true;
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid;
@@ -69,7 +74,19 @@ service cloud.firestore {
       );
     }
 
-    // Głosy: Każdy może czytać. Zapis tylko dla właściciela głosu.
+    match /deals/{dealId}/comments/{commentId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    // Głosy jako subkolekcje: Każdy może czytać. Zapis tylko dla właściciela głosu.
+    // Zmiana temperature jest dozwolona przez transakcję w update deala
     match /deals/{dealId}/votes/{userId} {
        allow read: if true;
        allow create, update, delete: if request.auth != null && request.auth.uid == userId;

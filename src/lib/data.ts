@@ -63,7 +63,10 @@ export async function voteOnDeal(dealId: string, userId: string, vote: 1 | -1) {
             }
 
             transaction.set(voteDocRef, { vote: vote });
-            transaction.update(dealDocRef, { temperature: increment(vote) });
+            transaction.update(dealDocRef, { 
+                temperature: increment(vote),
+                voteCount: increment(vote > 0 ? 1 : -1)
+            });
         });
     } catch (e) {
         console.error("Błąd podczas głosowania: ", e);
@@ -71,11 +74,11 @@ export async function voteOnDeal(dealId: string, userId: string, vote: 1 | -1) {
     }
 }
 
-export async function addComment(collectionName: "products" | "deals", docId: string, userId: string, text: string) {
+export async function addComment(collectionName: "products" | "deals", docId: string, userId: string, content: string) {
     const commentsColRef = collection(db, collectionName, docId, "comments");
     await addDoc(commentsColRef, {
         userId: userId,
-        text: text,
+        content: content,
         createdAt: serverTimestamp(),
     });
 }
