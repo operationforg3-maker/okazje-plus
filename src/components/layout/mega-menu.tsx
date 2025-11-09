@@ -276,7 +276,7 @@ export function MegaMenu() {
 
               {activeCategory?.heroImage ? (
                 <Link
-                  href={`/products?category=${encodeURIComponent(activeCategory.slug ?? activeCategory.id)}`}
+                  href={`/products?mainCategory=${encodeURIComponent(activeCategory.slug ?? activeCategory.id)}`}
                   className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm"
                 >
                   <Image
@@ -312,10 +312,11 @@ export function MegaMenu() {
                     const rawSub = subcategory.slug ?? subcategory.id;
                     const targetSub = rawSub ? encodeURIComponent(rawSub) : null;
                     
-                    // Link do podkategorii
+                    // Link do podkategorii - ZAWSZE kierujemy na /products (nie /deals)
+                    // Deals nie używają mega menu do nawigacji podkategorii (tylko lewy panel)
                     const href = targetSub
-                      ? `/products?category=${targetCategory}&subcategory=${targetSub}`
-                      : `/products?category=${targetCategory}`;
+                      ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}`
+                      : `/products?mainCategory=${targetCategory}`;
                     
                     // Sprawdź czy ma sub-subkategorie
                     const hasSubSubcategories = subcategory.subcategories && subcategory.subcategories.length > 0;
@@ -365,7 +366,7 @@ export function MegaMenu() {
                             {subcategory.subcategories!.map((subSubcategory) => {
                               const subSubSlug = subSubcategory.slug ?? subSubcategory.id;
                               const subSubHref = subSubSlug && targetSub
-                                ? `/products?category=${targetCategory}&subcategory=${targetSub}&subsubcategory=${encodeURIComponent(subSubSlug)}`
+                                ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}&subSubCategory=${encodeURIComponent(subSubSlug)}`
                                 : href;
                               
                               return (

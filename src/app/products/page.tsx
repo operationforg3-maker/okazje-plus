@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
 import ProductCard from '@/components/product-card';
@@ -18,6 +19,7 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export default function ProductsPage() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -27,6 +29,7 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
+  // Wczytaj kategorie i ustaw z URL
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
@@ -37,7 +40,23 @@ export default function ProductsPage() {
         ]);
         
         setCategories(fetchedCategories);
-        if (fetchedCategories.length > 0) {
+        
+        // Sprawdź parametry URL
+        const mainCategoryParam = searchParams.get('mainCategory');
+        const subCategoryParam = searchParams.get('subCategory');
+        
+        if (mainCategoryParam && fetchedCategories.length > 0) {
+          const foundCategory = fetchedCategories.find(c => c.id === mainCategoryParam || c.slug === mainCategoryParam);
+          if (foundCategory) {
+            setSelectedCategory(foundCategory);
+            if (subCategoryParam) {
+              setSelectedSubcategory(subCategoryParam);
+            }
+          } else {
+            // Fallback do pierwszej kategorii
+            setSelectedCategory(fetchedCategories[0]);
+          }
+        } else if (fetchedCategories.length > 0) {
           setSelectedCategory(fetchedCategories[0]);
         }
 
@@ -53,7 +72,7 @@ export default function ProductsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [searchParams]);
 
   // Pobierz produkty przy zmianie kategorii / subkategorii / wyszukiwaniu
   useEffect(() => {
