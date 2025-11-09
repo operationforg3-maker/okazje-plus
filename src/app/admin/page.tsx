@@ -22,7 +22,7 @@ import {
   AlertCircle,
   CheckCircle
 } from 'lucide-react';
-import { getCounts, getHotDeals, getRecommendedProducts } from '@/lib/data';
+import { getCounts, getHotDeals, getRecommendedProducts, getAdminDashboardStats } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,8 +35,24 @@ interface Stats {
   users: number;
 }
 
+interface DashboardStats {
+  totals: Stats;
+  pending: {
+    deals: number;
+    products: number;
+  };
+  new24h: {
+    deals: number;
+    users: number;
+  };
+  avgTemperature: number;
+  topCategories: Array<{ slug: string; count: number }>;
+  recentActivity: number;
+}
+
 function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [hotDeals, setHotDeals] = useState<Deal[]>([]);
   const [topProducts, setTopProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,12 +60,13 @@ function AdminPage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [counts, dealsData, productsData] = await Promise.all([
-          getCounts(),
+        const [dashStats, dealsData, productsData] = await Promise.all([
+          getAdminDashboardStats(),
           getHotDeals(5),
           getRecommendedProducts(5)
         ]);
-        setStats(counts);
+        setDashboardStats(dashStats);
+        setStats(dashStats.totals);
         setHotDeals(dealsData);
         setTopProducts(productsData);
       } catch (error) {
@@ -174,15 +191,89 @@ function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {hotDeals.length > 0 
-                ? Math.round(hotDeals.reduce((acc, d) => acc + d.temperature, 0) / hotDeals.length) 
-                : 0}°
+              {dashboardStats?.avgTemperature || 0}°
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               <span className="text-orange-600 inline-flex items-center font-medium">
                 <Activity className="h-3 w-3 mr-1" />
-                z {hotDeals.length} gorących okazji
+                ostatnie 7 dni aktywności
               </span>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Stats Row - Moderation & Activity */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-amber-900 dark:text-amber-100">
+              Oczekuje moderacji
+            </CardTitle>
+            <AlertCircle className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+              {(dashboardStats?.pending.deals || 0) + (dashboardStats?.pending.products || 0)}
+            </div>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+              {dashboardStats?.pending.deals || 0} okazji, {dashboardStats?.pending.products || 0} produktów
+            </p>
+            <Button asChild variant="link" size="sm" className="px-0 h-auto mt-2 text-amber-700 dark:text-amber-300">
+              <Link href="/admin/moderation">
+                Przejdź do moderacji <ArrowRight className="h-3 w-3 ml-1" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
+              Nowe (24h)
+            </CardTitle>
+            <Clock className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {dashboardStats?.new24h.deals || 0}
+            </div>
+            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+              okazji, {dashboardStats?.new24h.users || 0} nowych użytkowników
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              Aktywność (7 dni)
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {dashboardStats?.recentActivity || 0}
+            </div>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              aktywnych okazji z komentarzami/głosami
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-900">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
+              Top kategoria
+            </CardTitle>
+            <Package className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl font-bold text-purple-900 dark:text-purple-100">
+              {dashboardStats?.topCategories[0]?.slug || 'N/A'}
+            </div>
+            <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+              {dashboardStats?.topCategories[0]?.count || 0} okazji
             </p>
           </CardContent>
         </Card>

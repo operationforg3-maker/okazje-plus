@@ -793,3 +793,97 @@ export async function getUnreadNotificationsCount(userId: string): Promise<numbe
   const countSnapshot = await getCountFromServer(q);
   return countSnapshot.data().count;
 }
+
+// === ADMIN DASHBOARD STATISTICS ===
+
+/**
+ * Pobiera statystyki dashboardu admina
+ */
+export async function getAdminDashboardStats() {
+  const now = new Date();
+  const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  // Podstawowe liczniki
+  const counts = await getCounts();
+
+  // Pending moderation
+  const pendingDealsQuery = query(
+    collection(db, 'deals'),
+    where('status', 'in', ['draft', 'pending'])
+  );
+  const pendingProductsQuery = query(
+    collection(db, 'products'),
+    where('status', 'in', ['draft', 'pending'])
+  );
+
+  const [pendingDealsCount, pendingProductsCount] = await Promise.all([
+    getCountFromServer(pendingDealsQuery),
+    getCountFromServer(pendingProductsQuery)
+  ]);
+
+  // Nowe w ostatnich 24h
+  const newDealsQuery = query(
+    collection(db, 'deals'),
+    where('createdAt', '>=', last24Hours)
+  );
+  const newUsersQuery = query(
+    collection(db, 'users'),
+    where('createdAt', '>=', last24Hours)
+  );
+
+  const [newDealsCount, newUsersCount] = await Promise.all([
+    getCountFromServer(newDealsQuery),
+    getCountFromServer(newUsersQuery)
+  ]);
+
+  // Aktywne w ostatnich 7 dniach (deals z komentarzami lub głosami)
+  const recentDealsQuery = query(
+    collection(db, 'deals'),
+    where('updatedAt', '>=', last7Days),
+    orderBy('updatedAt', 'desc'),
+    limit(100)
+  );
+  const recentDealsSnapshot = await getDocs(recentDealsQuery);
+  const recentDeals = recentDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+
+  // Średnia temperatura z aktywnych deals
+  const avgTemperature = recentDeals.length > 0
+    ? Math.round(recentDeals.reduce((sum, deal) => sum + (deal.temperature || 0), 0) / recentDeals.length)
+    : 0;
+
+  // Top kategorie (z approved deals)
+  const allDealsQuery = query(
+    collection(db, 'deals'),
+    where('status', '==', 'approved'),
+    limit(500)
+  );
+  const allDealsSnapshot = await getDocs(allDealsQuery);
+  const allDeals = allDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+
+  const categoryCount: Record<string, number> = {};
+  allDeals.forEach(deal => {
+    const cat = deal.mainCategorySlug || 'other';
+    categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+  });
+
+  const topCategories = Object.entries(categoryCount)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 5)
+    .map(([slug, count]) => ({ slug, count }));
+
+  return {
+    totals: counts,
+    pending: {
+      deals: pendingDealsCount.data().count,
+      products: pendingProductsCount.data().count,
+    },
+    new24h: {
+      deals: newDealsCount.data().count,
+      users: newUsersCount.data().count,
+    },
+    avgTemperature,
+    topCategories,
+    recentActivity: recentDeals.length,
+  };
+}
