@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase'; // For the logout function
+import { NotificationBell } from './notification-bell';
 
 export function UserNav() {
   const { user, loading } = useAuth(); // Use the hook to get user data
@@ -41,56 +42,60 @@ export function UserNav() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-          <Avatar className="h-10 w-10">
-            {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
-            <AvatarFallback>{user.displayName ? user.displayName.charAt(0) : 'U'}</AvatarFallback>
-          </Avatar>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.displayName || 'Użytkownik'}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {user.email || 'Brak emaila'}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link href="/profile">
-              <UserIcon className="mr-2 h-4 w-4" />
-              <span>Profil</span>
-            </Link>
-          </DropdownMenuItem>
-          
-          {/* Conditionally render the Admin Panel link safely */}
-          {user && user.role === 'admin' && (
+    <div className="flex items-center gap-2">
+      <NotificationBell />
+      
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+            <Avatar className="h-10 w-10">
+              {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
+              <AvatarFallback>{user.displayName ? user.displayName.charAt(0) : 'U'}</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium leading-none">{user.displayName || 'Użytkownik'}</p>
+              <p className="text-xs leading-none text-muted-foreground">
+                {user.email || 'Brak emaila'}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link href="/admin">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                <span>Panel Admina</span>
+              <Link href="/profile">
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Profil</span>
               </Link>
             </DropdownMenuItem>
-          )}
-          
-          <DropdownMenuItem asChild>
-            <Link href="/profile/settings">
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Ustawienia</span>
-            </Link>
+            
+            {/* Conditionally render the Admin Panel link safely */}
+            {user && user.role === 'admin' && (
+              <DropdownMenuItem asChild>
+                <Link href="/admin">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  <span>Panel Admina</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
+            
+            <DropdownMenuItem asChild>
+              <Link href="/profile/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Ustawienia</span>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Wyloguj</span>
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Wyloguj</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

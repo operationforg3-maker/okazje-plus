@@ -25,7 +25,11 @@ import {
   Filter,
   ArrowUpDown,
   ExternalLink,
-  Package
+  Package,
+  Check,
+  Trash2,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -34,6 +38,7 @@ import Link from 'next/link';
 import { getFavoriteDeals, getFavoriteProducts, getDealById, getProductById } from '@/lib/data';
 import DealListCard from '@/components/deal-list-card';
 import ProductCard from '@/components/product-card';
+import { useNotifications } from '@/hooks/use-notifications';
 import { 
   Select,
   SelectContent,
@@ -52,6 +57,7 @@ type UserActivity = {
 
 function ProfilePage() {
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, loading: notificationsLoading, markAsRead, markAllAsRead, deleteNotif } = useNotifications();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [activity, setActivity] = useState<UserActivity>({
@@ -612,20 +618,152 @@ function ProfilePage() {
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Powiadomienia
-              </CardTitle>
-              <CardDescription>Centrum powiadomień</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Powiadomienia
+                    {unreadCount > 0 && (
+                      <Badge variant="destructive" className="ml-2">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {notifications.length > 0 
+                      ? `${notifications.length} powiadomień (${unreadCount} nieprzeczytanych)`
+                      : 'Brak powiadomień'
+                    }
+                  </CardDescription>
+                </div>
+                
+                {notifications.length > 0 && unreadCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={markAllAsRead}>
+                    <Check className="h-4 w-4 mr-2" />
+                    Oznacz wszystkie jako przeczytane
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <Bell className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="font-semibold text-lg mb-2">System powiadomień wkrótce!</h3>
-                <p className="text-muted-foreground">
-                  Funkcja w przygotowaniu.
-                </p>
-              </div>
+              {notificationsLoading ? (
+                <div className="space-y-4">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : notifications.length > 0 ? (
+                <div className="space-y-3">
+                  {notifications.map((notification) => (
+                    <div 
+                      key={notification.id}
+                      className={`p-4 border rounded-lg transition-all ${
+                        notification.read 
+                          ? 'bg-background border-border/50' 
+                          : 'bg-primary/5 border-primary/30'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Ikona typu powiadomienia */}
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          notification.type === 'comment_reply' 
+                            ? 'bg-blue-100 dark:bg-blue-900/20' 
+                            : notification.type === 'new_deal'
+                            ? 'bg-orange-100 dark:bg-orange-900/20'
+                            : notification.type === 'deal_approved'
+                            ? 'bg-green-100 dark:bg-green-900/20'
+                            : notification.type === 'deal_rejected'
+                            ? 'bg-red-100 dark:bg-red-900/20'
+                            : 'bg-gray-100 dark:bg-gray-900/20'
+                        }`}>
+                          {notification.type === 'comment_reply' && (
+                            <MessageSquare className="h-5 w-5 text-blue-600" />
+                          )}
+                          {notification.type === 'new_deal' && (
+                            <Flame className="h-5 w-5 text-orange-500" />
+                          )}
+                          {notification.type === 'deal_approved' && (
+                            <Check className="h-5 w-5 text-green-600" />
+                          )}
+                          {notification.type === 'deal_rejected' && (
+                            <AlertCircle className="h-5 w-5 text-red-600" />
+                          )}
+                          {notification.type === 'system' && (
+                            <Info className="h-5 w-5 text-gray-600" />
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          {/* Tytuł */}
+                          <h4 className="font-semibold text-sm mb-1">{notification.title}</h4>
+                          
+                          {/* Treść */}
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {notification.message}
+                          </p>
+                          
+                          {/* Link i data */}
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(notification.createdAt).toLocaleDateString('pl-PL', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                            
+                            {notification.link && (
+                              <Link 
+                                href={notification.link}
+                                className="text-primary hover:underline flex items-center gap-1"
+                                onClick={() => !notification.read && markAsRead(notification.id)}
+                              >
+                                <span>Zobacz szczegóły</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Akcje */}
+                        <div className="flex gap-1 flex-shrink-0">
+                          {!notification.read && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => markAsRead(notification.id)}
+                              title="Oznacz jako przeczytane"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => deleteNotif(notification.id)}
+                            title="Usuń powiadomienie"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Bell className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="font-semibold text-lg mb-2">Brak powiadomień</h3>
+                  <p className="text-muted-foreground">
+                    Będziesz tu widzieć powiadomienia o nowych okazjach, odpowiedziach na komentarze i więcej!
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

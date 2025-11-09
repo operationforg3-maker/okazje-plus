@@ -114,5 +114,17 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && resource.data.userId == request.auth.uid;
     }
+
+    // Powiadomienia: Użytkownik może czytać, aktualizować i usuwać tylko swoje powiadomienia
+    // Tworzenie mogą tylko admini lub system (Cloud Functions)
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null 
+        && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null 
+        && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+            || request.resource.data.userId == request.auth.uid);
+    }
   }
 }

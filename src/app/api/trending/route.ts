@@ -24,7 +24,7 @@ export async function GET() {
             currentRating: 4.0, // brak ratingów na dealach – konserwatywny default
             numberOfRatings: Math.max(d.voteCount ?? 0, d.commentsCount ?? 0),
             temperature: d.temperature ?? 0,
-            status: d.status === 'approved' ? 'active' : d.status,
+            status: (d.status === 'approved' ? 'active' : d.status) || 'draft',
           };
           const p = await trendingDealPrediction(input);
           return { deal: d, prediction: p };

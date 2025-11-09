@@ -146,6 +146,25 @@ export interface Favorite {
   createdAt: string; // ISO string
 }
 
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'comment_reply' | 'new_deal' | 'system' | 'deal_approved' | 'deal_rejected';
+  title: string;
+  message: string;
+  link?: string; // Link do odpowiedniego zasobu
+  itemId?: string; // ID powiązanego elementu (deal, product, comment)
+  itemType?: 'deal' | 'product' | 'comment';
+  read: boolean;
+  createdAt: string; // ISO string
+  metadata?: {
+    dealTitle?: string;
+    commentText?: string;
+    categorySlug?: string;
+    [key: string]: any;
+  };
+}
+
 export interface NavigationShowcaseConfig {
   promotedType: 'deals' | 'products';
   promotedIds: string[];

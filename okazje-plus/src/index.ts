@@ -81,6 +81,7 @@ export const batchImportDeals = onCall(async (request) => {
         link: deal.link,
         image: deal.image || "",
         imageHint: deal.imageHint || "",
+        category: deal.mainCategorySlug, // Dodane wymagane pole
         mainCategorySlug: deal.mainCategorySlug,
         subCategorySlug: deal.subCategorySlug,
         postedBy: (request.auth?.uid) || "unknown",

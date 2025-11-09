@@ -74,7 +74,7 @@ export default function ProductsPage() {
           const categoryProducts = await getProductsByCategory(
             selectedCategory.id,
             selectedSubcategory || undefined,
-            100
+            "100"
           );
           if (!cancelled) setProducts(categoryProducts);
         }
