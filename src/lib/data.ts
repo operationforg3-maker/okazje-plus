@@ -39,6 +39,70 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }
 
+// Funkcje do moderacji - pobieranie treści oczekujących
+export async function getPendingDeals(): Promise<Deal[]> {
+  const dealsRef = collection(db, "deals");
+  const q = query(
+    dealsRef,
+    where("status", "in", ["draft", "pending"]),
+    orderBy("createdAt", "desc"),
+    limit(100)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+}
+
+export async function getPendingProducts(): Promise<Product[]> {
+  const productsRef = collection(db, "products");
+  const q = query(
+    productsRef,
+    where("status", "in", ["draft", "pending"]),
+    orderBy("createdAt", "desc"),
+    limit(100)
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+}
+
+export async function getRecentlyModerated(status: "approved" | "rejected", days: number = 7): Promise<(Deal | Product)[]> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  
+  // Pobierz okazje
+  const dealsRef = collection(db, "deals");
+  const dealsQuery = query(
+    dealsRef,
+    where("status", "==", status),
+    where("updatedAt", ">=", cutoffDate),
+    orderBy("updatedAt", "desc"),
+    limit(50)
+  );
+  const dealsSnapshot = await getDocs(dealsQuery);
+  const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'deal' } as any));
+  
+  // Pobierz produkty
+  const productsRef = collection(db, "products");
+  const productsQuery = query(
+    productsRef,
+    where("status", "==", status),
+    where("updatedAt", ">=", cutoffDate),
+    orderBy("updatedAt", "desc"),
+    limit(50)
+  );
+  const productsSnapshot = await getDocs(productsQuery);
+  const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'product' } as any));
+  
+  // Połącz i posortuj po dacie
+  const all = [...deals, ...products];
+  all.sort((a, b) => {
+    const dateA = a.updatedAt?.toDate?.() || new Date(0);
+    const dateB = b.updatedAt?.toDate?.() || new Date(0);
+    return dateB.getTime() - dateA.getTime();
+  });
+  
+  return all;
+}
+
 export async function getProductsByCategory(
   mainCategorySlug: string,
   subCategorySlug?: string,
