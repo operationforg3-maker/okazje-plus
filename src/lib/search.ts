@@ -5,7 +5,11 @@ import { searchProducts as fallbackSearch } from '@/lib/data';
 export type ProductSearchOptions = {
   mainCategorySlug?: string;
   subCategorySlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
   limit?: number;
+  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'rating';
 };
 
 // Pełnotekstowe wyszukiwanie produktów w Typesense z filtrowaniem po kategoriach
@@ -13,7 +17,15 @@ export async function searchProductsTypesense(
   q: string,
   opts: ProductSearchOptions = {}
 ): Promise<Product[]> {
-  const { mainCategorySlug, subCategorySlug, limit = 50 } = opts;
+  const { 
+    mainCategorySlug, 
+    subCategorySlug, 
+    minPrice, 
+    maxPrice, 
+    minRating,
+    sortBy = 'relevance',
+    limit = 50 
+  } = opts;
 
   // Fallback: jeśli Typesense nie skonfigurowany, użyj dotychczasowego wyszukiwania Firestore
   if (!typesenseClient) {
@@ -23,7 +35,26 @@ export async function searchProductsTypesense(
   const filters: string[] = [];
   if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
   if (subCategorySlug) filters.push(`subCategorySlug:=${subCategorySlug}`);
+  if (minPrice !== undefined) filters.push(`price:>=${minPrice}`);
+  if (maxPrice !== undefined) filters.push(`price:<=${maxPrice}`);
+  if (minRating !== undefined) filters.push(`ratingCard.average:>=${minRating}`);
   filters.push(`status:=approved`);
+
+  // Sortowanie
+  let sort_by = '';
+  switch (sortBy) {
+    case 'price_asc':
+      sort_by = 'price:asc';
+      break;
+    case 'price_desc':
+      sort_by = 'price:desc';
+      break;
+    case 'rating':
+      sort_by = 'ratingCard.average:desc';
+      break;
+    default:
+      sort_by = '_text_match:desc'; // relevance
+  }
 
   try {
     const res = await typesenseClient
@@ -33,6 +64,7 @@ export async function searchProductsTypesense(
         q,
         query_by: 'name,description',
         filter_by: filters.join(' && '),
+        sort_by,
         per_page: limit,
       }, {});
 
@@ -48,24 +80,62 @@ export async function searchProductsTypesense(
 export type DealSearchOptions = {
   mainCategorySlug?: string;
   subCategorySlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minTemperature?: number;
   limit?: number;
+  sortBy?: 'relevance' | 'temperature' | 'price_asc' | 'price_desc' | 'newest';
 };
 
 export async function searchDealsTypesense(
   q: string,
   opts: DealSearchOptions = {}
 ): Promise<Deal[]> {
-  const { mainCategorySlug, subCategorySlug, limit = 50 } = opts;
+  const { 
+    mainCategorySlug, 
+    subCategorySlug, 
+    minPrice,
+    maxPrice,
+    minTemperature,
+    sortBy = 'relevance',
+    limit = 50 
+  } = opts;
+  
   if (!typesenseClient) return []; // brak fallbacku, bo nie mamy firestore search dla deals
+  
   const filters: string[] = [];
   if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
   if (subCategorySlug) filters.push(`subCategorySlug:=${subCategorySlug}`);
+  if (minPrice !== undefined) filters.push(`price:>=${minPrice}`);
+  if (maxPrice !== undefined) filters.push(`price:<=${maxPrice}`);
+  if (minTemperature !== undefined) filters.push(`temperature:>=${minTemperature}`);
   filters.push(`status:=approved`);
+  
+  // Sortowanie
+  let sort_by = '';
+  switch (sortBy) {
+    case 'temperature':
+      sort_by = 'temperature:desc';
+      break;
+    case 'price_asc':
+      sort_by = 'price:asc';
+      break;
+    case 'price_desc':
+      sort_by = 'price:desc';
+      break;
+    case 'newest':
+      sort_by = 'postedAt:desc';
+      break;
+    default:
+      sort_by = '_text_match:desc'; // relevance
+  }
+  
   try {
     const res = await typesenseClient.collections('deals').documents().search({
       q,
       query_by: 'title,description,postedBy',
       filter_by: filters.join(' && '),
+      sort_by,
       per_page: limit,
     }, {});
     const hits = (res.hits || []).map((h: any) => ({ id: h.document.id, ...h.document })) as Deal[];
