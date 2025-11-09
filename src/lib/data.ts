@@ -42,12 +42,24 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
 export async function getProductsByCategory(
   mainCategorySlug: string,
   subCategorySlug?: string,
+  subSubCategorySlug?: string,
   count: number = 100
 ): Promise<Product[]> {
   const productsRef = collection(db, "products");
   let q;
-  
-  if (subCategorySlug) {
+
+  if (subSubCategorySlug && subCategorySlug) {
+    // Filtruj po wszystkich trzech poziomach
+    q = query(
+      productsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      where("subCategorySlug", "==", subCategorySlug),
+      where("subSubCategorySlug", "==", subSubCategorySlug),
+      limit(count)
+    );
+  } else if (subCategorySlug) {
+    // Filtruj po kategorii głównej i podkategorii
     q = query(
       productsRef,
       where("status", "==", "approved"),
@@ -56,6 +68,7 @@ export async function getProductsByCategory(
       limit(count)
     );
   } else {
+    // Filtruj tylko po kategorii głównej
     q = query(
       productsRef,
       where("status", "==", "approved"),
@@ -63,20 +76,31 @@ export async function getProductsByCategory(
       limit(count)
     );
   }
-  
+
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-}
-
-export async function getDealsByCategory(
+}export async function getDealsByCategory(
   mainCategorySlug: string,
   subCategorySlug?: string,
+  subSubCategorySlug?: string,
   count: number = 100
 ): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
   let q;
   
-  if (subCategorySlug) {
+  if (subSubCategorySlug && subCategorySlug) {
+    // Filtruj po wszystkich trzech poziomach
+    q = query(
+      dealsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      where("subCategorySlug", "==", subCategorySlug),
+      where("subSubCategorySlug", "==", subSubCategorySlug),
+      orderBy("temperature", "desc"),
+      limit(count)
+    );
+  } else if (subCategorySlug) {
+    // Filtruj po kategorii głównej i podkategorii
     q = query(
       dealsRef,
       where("status", "==", "approved"),
@@ -86,6 +110,7 @@ export async function getDealsByCategory(
       limit(count)
     );
   } else {
+    // Filtruj tylko po kategorii głównej
     q = query(
       dealsRef,
       where("status", "==", "approved"),

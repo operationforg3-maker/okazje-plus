@@ -305,53 +305,88 @@ export function MegaMenu() {
               ) : null}
 
               {activeCategory?.subcategories?.length ? (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="space-y-6">
                   {activeCategory.subcategories.map((subcategory) => {
                     const targetCategory = encodeURIComponent(activeCategory.slug ?? activeCategory.id);
                     const subKey = subcategory.slug ?? subcategory.id ?? subcategory.name;
                     const rawSub = subcategory.slug ?? subcategory.id;
                     const targetSub = rawSub ? encodeURIComponent(rawSub) : null;
+                    
+                    // Link do podkategorii
                     const href = targetSub
                       ? `/products?category=${targetCategory}&subcategory=${targetSub}`
                       : `/products?category=${targetCategory}`;
+                    
+                    // Sprawdź czy ma sub-subkategorie
+                    const hasSubSubcategories = subcategory.subcategories && subcategory.subcategories.length > 0;
+                    
                     return (
-                      <Link
-                        key={`${activeCategory.id}-${subKey}`}
-                        href={href}
-                        className="group relative overflow-hidden rounded-xl border border-border/40 bg-card/80 shadow-sm transition-colors hover:border-primary"
-                      >
-                        {subcategory.image ? (
-                          <Image
-                            src={subcategory.image}
-                            alt={subcategory.name}
-                            width={360}
-                            height={200}
-                            className="h-28 w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="h-28 w-full bg-muted" />
-                        )}
-                        <div className="space-y-1 px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-semibold text-foreground">
-                              {subcategory.name}
-                            </h4>
-                            {subcategory.highlight ? (
-                              <Badge className="text-[10px] uppercase" variant="secondary">
-                                Polecane
-                              </Badge>
-                            ) : null}
+                      <div key={`${activeCategory.id}-${subKey}`} className="space-y-3">
+                        {/* Nagłówek podkategorii */}
+                        <Link
+                          href={href}
+                          className="group flex items-center gap-3 rounded-lg border border-border/40 bg-card/80 p-4 shadow-sm transition-all hover:border-primary hover:bg-card"
+                        >
+                          {subcategory.image ? (
+                            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
+                              <Image
+                                src={subcategory.image}
+                                alt={subcategory.name}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-110"
+                              />
+                            </div>
+                          ) : (
+                            <div className="h-16 w-16 flex-shrink-0 rounded-md bg-muted" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-foreground truncate">
+                                {subcategory.name}
+                              </h4>
+                              {subcategory.highlight && (
+                                <Badge className="text-[10px] uppercase flex-shrink-0" variant="secondary">
+                                  Polecane
+                                </Badge>
+                              )}
+                            </div>
+                            {subcategory.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {subcategory.description}
+                              </p>
+                            )}
                           </div>
-                          {subcategory.description ? (
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {subcategory.description}
-                            </p>
-                          ) : null}
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
-                            Odkryj <ArrowRight className="h-3 w-3" />
-                          </span>
-                        </div>
-                      </Link>
+                          <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                        </Link>
+
+                        {/* Sub-subkategorie (jeśli istnieją) */}
+                        {hasSubSubcategories && (
+                          <div className="grid gap-2 pl-6 md:grid-cols-2 lg:grid-cols-3">
+                            {subcategory.subcategories!.map((subSubcategory) => {
+                              const subSubSlug = subSubcategory.slug ?? subSubcategory.id;
+                              const subSubHref = subSubSlug && targetSub
+                                ? `/products?category=${targetCategory}&subcategory=${targetSub}&subsubcategory=${encodeURIComponent(subSubSlug)}`
+                                : href;
+                              
+                              return (
+                                <Link
+                                  key={`${subKey}-${subSubcategory.slug}`}
+                                  href={subSubHref}
+                                  className="group flex items-center gap-2 rounded-md border border-border/30 bg-background/50 px-3 py-2 text-sm transition-colors hover:border-primary/50 hover:bg-primary/5"
+                                >
+                                  {subSubcategory.icon && (
+                                    <span className="text-base">{subSubcategory.icon}</span>
+                                  )}
+                                  <span className="flex-1 truncate text-foreground group-hover:text-primary">
+                                    {subSubcategory.name}
+                                  </span>
+                                  <ArrowRight className="h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100" />
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>

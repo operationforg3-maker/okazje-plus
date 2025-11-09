@@ -1,5 +1,18 @@
 
 // Nowe interfejsy dla zagnieżdżonych kategorii
+
+// Sub-subkategoria (poziom 3)
+export interface SubSubcategory {
+  name: string;
+  slug: string; // unikalny w ramach podkategorii
+  id?: string;
+  icon?: string;
+  description?: string;
+  sortOrder?: number;
+  image?: string;
+}
+
+// Podkategoria (poziom 2)
 export interface Subcategory {
   name: string;
   slug: string; // unikalny w ramach kategorii nadrzędnej
@@ -9,6 +22,7 @@ export interface Subcategory {
   sortOrder?: number;
   image?: string;
   highlight?: boolean;
+  subcategories?: SubSubcategory[]; // Sub-subkategorie (opcjonalne)
 }
 
 export interface CategoryPromo {
@@ -48,11 +62,16 @@ export interface Deal {
   postedBy: string;
   postedAt: string; // Użyjemy ISO string dla spójności
   voteCount: number;
+  temperature: number;
   commentsCount: number;
+  category: string;
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
-  temperature: number; // System "ciepłoty" dla rankingu
-  status: 'draft' | 'approved' | 'rejected'; // Status moderacji
+  subSubCategorySlug?: string; // NOWE pole dla poziomu 3
+  merchant?: string;
+  shippingCost?: number;
+  status?: 'draft' | 'approved' | 'rejected';
+  createdBy?: string;
 }
 
 // Zaktualizowany interfejs Product
@@ -68,6 +87,7 @@ export interface Product {
   price: number;
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
+  subSubCategorySlug?: string; // NOWE pole dla poziomu 3
   status: 'draft' | 'approved' | 'rejected'; // Status moderacji
   category?: string; // Stara wersja dla kompatybilności
 }

@@ -75,6 +75,7 @@ export default function DealsPage() {
           const categoryDeals = await getDealsByCategory(
             selectedCategory.id,
             selectedSubcategory || undefined,
+            undefined, // subSubCategorySlug - na razie nie używamy
             100
           );
           if (!cancelled) setDeals(categoryDeals);
