@@ -25,6 +25,7 @@ import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MegaMenu } from '@/components/layout/mega-menu';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
+import { NotificationBell } from '@/components/notification-bell';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -98,6 +99,7 @@ export function Navbar() {
           <div className="flex-1 max-w-md ml-auto">
             <AutocompleteSearch />
           </div>
+          <NotificationBell />
           {loading ? (
               <Skeleton className="h-9 w-9 rounded-full" />
             ) : user ? (
