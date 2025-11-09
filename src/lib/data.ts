@@ -228,6 +228,10 @@ export async function getCounts(): Promise<{ products: number; deals: number; us
   };
 }
 
+/**
+ * @deprecated Używaj API endpoint /api/deals/[id]/vote zamiast bezpośredniego wywołania
+ * Stara wersja - nie obsługuje idempotencji ani zmiany głosów
+ */
 export async function voteOnDeal(dealId: string, userId: string, vote: 1 | -1) {
     const voteDocRef = doc(db, "deals", dealId, "votes", userId);
     const dealDocRef = doc(db, "deals", dealId);

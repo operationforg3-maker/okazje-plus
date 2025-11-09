@@ -4,7 +4,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Deal } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
-import { voteOnDeal } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
 import {
   Card,
@@ -18,6 +17,7 @@ import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Cl
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
+import { trackVote } from '@/lib/analytics';
 
 interface DealCardProps {
   deal: Deal;
@@ -44,6 +44,10 @@ export default function DealCard({ deal }: DealCardProps) {
   const { user } = useAuth();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const [temperature, setTemperature] = useState(deal.temperature);
+  const [voteCount, setVoteCount] = useState(deal.voteCount);
+  const [isVoting, setIsVoting] = useState(false);
+  const [userVote, setUserVote] = useState<1 | -1 | null>(null); // Śledzimy głos użytkownika
+  
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
   const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
@@ -66,17 +70,76 @@ export default function DealCard({ deal }: DealCardProps) {
 
   const temperaturePercent = Math.min((temperature / 500) * 100, 100);
 
-  const handleVote = async (vote: 1 | -1) => {
+  const handleVote = async (action: 'up' | 'down') => {
     if (!user) {
       toast.error("Musisz być zalogowany, aby zagłosować.");
       return;
     }
+
+    // Optimistic update
+    const oldTemperature = temperature;
+    const oldVoteCount = voteCount;
+    const oldUserVote = userVote;
+    
+    // Oblicz przewidywane zmiany
+    let tempDelta = 0;
+    let voteDelta = 0;
+    const newVoteValue = action === 'up' ? 1 : -1;
+    
+    if (userVote === null) {
+      // Nowy głos
+      tempDelta = newVoteValue;
+      voteDelta = newVoteValue;
+    } else if (userVote === newVoteValue) {
+      // Ten sam głos - brak zmian (idempotencja)
+      return;
+    } else {
+      // Zmiana głosu
+      tempDelta = newVoteValue - userVote;
+      voteDelta = newVoteValue - userVote;
+    }
+
+    // Optimistic update UI
+    setTemperature(prev => prev + tempDelta);
+    setVoteCount(prev => prev + voteDelta);
+    setUserVote(newVoteValue);
+    setIsVoting(true);
+
     try {
-      await voteOnDeal(deal.id, user.uid, vote);
-      setTemperature(temp => temp + vote);
+      const response = await fetch(`/api/deals/${deal.id}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action,
+          userId: user.uid // TYMCZASOWE - w produkcji token w headerze
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Błąd podczas głosowania');
+      }
+
+      // Aktualizuj do rzeczywistych wartości z serwera
+      setTemperature(data.temperature);
+      setVoteCount(data.voteCount);
+      setUserVote(data.userVote);
+      
+      // Analytics
+      trackVote('deal', deal.id, action);
+      
       toast.success("Dziękujemy za oddanie głosu!");
     } catch (error: any) {
-      toast.error(error.message);
+      // Rollback optimistic update
+      setTemperature(oldTemperature);
+      setVoteCount(oldVoteCount);
+      setUserVote(oldUserVote);
+      
+      toast.error(error.message || "Wystąpił błąd podczas głosowania.");
+      console.error('Vote error:', error);
+    } finally {
+      setIsVoting(false);
     }
   };
 
@@ -182,7 +245,7 @@ export default function DealCard({ deal }: DealCardProps) {
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1" title="Głosy">
               <ArrowUp className="h-3 w-3" />
-              {typeof deal.voteCount === 'number' ? deal.voteCount : 0}
+              {voteCount}
             </span>
             <span className="flex items-center gap-1" title="Komentarze">
               <MessageSquare className="h-3 w-3" />
@@ -194,10 +257,22 @@ export default function DealCard({ deal }: DealCardProps) {
       
       <CardFooter className="flex items-center justify-between gap-2 border-t bg-muted/30 p-3">
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={() => handleVote(1)} aria-label="Głos w górę">
+          <Button 
+            variant={userVote === 1 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => handleVote('up')} 
+            aria-label="Głos w górę"
+            disabled={isVoting}
+          >
             <ArrowUp className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => handleVote(-1)} aria-label="Głos w dół">
+          <Button 
+            variant={userVote === -1 ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => handleVote('down')} 
+            aria-label="Głos w dół"
+            disabled={isVoting}
+          >
             <ArrowDown className="h-4 w-4" />
           </Button>
         </div>
