@@ -20,15 +20,102 @@ import {
   TrendingUp,
   Settings,
   Code,
-  Briefcase
+  Briefcase,
+  Copy,
+  Download
 } from 'lucide-react';
 import type { TestSuiteResult, TestResult } from '@/lib/test-service';
+import { toast } from 'sonner';
 
 export default function TestsTab() {
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState<TestSuiteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const generateSummaryReport = () => {
+    if (!testResults) return '';
+    
+    const failedTests = testResults.results.filter(t => t.status === 'fail');
+    const warningTests = testResults.results.filter(t => t.status === 'warning');
+    const skippedTests = testResults.results.filter(t => t.status === 'skip');
+    
+    const report = `
+# RAPORT TESTÓW - Okazje Plus
+Data: ${new Date(testResults.timestamp).toLocaleString('pl-PL')}
+URL: ${window.location.origin}
+
+## PODSUMOWANIE
+✅ Zaliczone: ${testResults.passed}/${testResults.totalTests} (${((testResults.passed/testResults.totalTests)*100).toFixed(1)}%)
+❌ Niezaliczone: ${testResults.failed}
+⚠️  Ostrzeżenia: ${testResults.warnings}
+⏭️  Pominięte: ${testResults.skipped}
+⏱️  Czas wykonania: ${(testResults.duration / 1000).toFixed(2)}s
+
+${failedTests.length > 0 ? `## ❌ TESTY NIEZALICZONE (${failedTests.length})
+${failedTests.map(t => `
+### ${t.id}: ${t.name}
+- **Kategoria:** ${t.category}
+- **Komunikat:** ${t.message}
+- **Czas:** ${t.duration}ms
+${t.details ? `- **Szczegóły:** ${JSON.stringify(t.details, null, 2)}` : ''}
+`).join('\n')}
+` : ''}
+
+${warningTests.length > 0 ? `## ⚠️  OSTRZEŻENIA (${warningTests.length})
+${warningTests.map(t => `
+### ${t.id}: ${t.name}
+- **Kategoria:** ${t.category}
+- **Komunikat:** ${t.message}
+- **Czas:** ${t.duration}ms
+`).join('\n')}
+` : ''}
+
+${skippedTests.length > 0 ? `## ⏭️  TESTY POMINIĘTE (${skippedTests.length})
+${skippedTests.map(t => `- ${t.id}: ${t.message}`).join('\n')}
+` : ''}
+
+## 📊 SZCZEGÓŁOWA LISTA WSZYSTKICH TESTÓW
+${testResults.results.map(t => {
+  const icon = t.status === 'pass' ? '✅' : t.status === 'fail' ? '❌' : t.status === 'warning' ? '⚠️' : '⏭️';
+  return `${icon} [${t.category.toUpperCase()}] ${t.id}: ${t.name} - ${t.message} (${t.duration}ms)`;
+}).join('\n')}
+
+## 🔍 ANALIZA
+- **Pass Rate:** ${((testResults.passed/testResults.totalTests)*100).toFixed(1)}%
+- **Krytyczne problemy:** ${failedTests.filter(t => t.category === 'technical' || t.id.includes('sec')).length}
+- **Wymagane akcje:** ${failedTests.length > 0 ? 'TAK - zobacz sekcję TESTY NIEZALICZONE' : 'NIE - wszystko działa poprawnie'}
+
+---
+Wygenerowano automatycznie przez panel administracyjny Okazje Plus
+    `.trim();
+    
+    return report;
+  };
+
+  const copyReportToClipboard = () => {
+    const report = generateSummaryReport();
+    navigator.clipboard.writeText(report).then(() => {
+      toast.success('Raport skopiowany do schowka!', {
+        description: 'Możesz teraz wkleić go do narzędzia AI lub dokumentu'
+      });
+    }).catch((err) => {
+      toast.error('Błąd kopiowania', { description: err.message });
+    });
+  };
+
+  const downloadReport = () => {
+    const report = generateSummaryReport();
+    const blob = new Blob([report], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `test-report-${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success('Raport pobrany!');
+  };
   const runTests = async () => {
     setIsRunning(true);
     setError(null);
@@ -120,24 +207,48 @@ export default function TestsTab() {
                 Kompleksowe testy techniczne, funkcjonalne i biznesowe
               </CardDescription>
             </div>
-            <Button 
-              onClick={runTests} 
-              disabled={isRunning}
-              size="lg"
-              className="gap-2"
-            >
-              {isRunning ? (
+            <div className="flex gap-2">
+              {testResults && (
                 <>
-                  <Clock className="h-5 w-5 animate-spin" />
-                  Wykonywanie testów...
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="h-5 w-5" />
-                  Uruchom Testy
+                  <Button
+                    onClick={copyReportToClipboard}
+                    variant="outline"
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Copy className="h-5 w-5" />
+                    Kopiuj Raport
+                  </Button>
+                  <Button
+                    onClick={downloadReport}
+                    variant="outline"
+                    size="lg"
+                    className="gap-2"
+                  >
+                    <Download className="h-5 w-5" />
+                    Pobierz MD
+                  </Button>
                 </>
               )}
-            </Button>
+              <Button 
+                onClick={runTests} 
+                disabled={isRunning}
+                size="lg"
+                className="gap-2"
+              >
+                {isRunning ? (
+                  <>
+                    <Clock className="h-5 w-5 animate-spin" />
+                    Wykonywanie testów...
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle className="h-5 w-5" />
+                    Uruchom Testy
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -173,6 +284,53 @@ export default function TestsTab() {
       {/* Results Summary */}
       {testResults && (
         <>
+          {/* Quick Action Summary */}
+          {(testResults.failed > 0 || testResults.warnings > 0) && (
+            <Card className="border-2 border-amber-300 bg-amber-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  Wymagane Działania
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {testResults.failed > 0 && (
+                    <div className="flex items-start gap-3">
+                      <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-red-900">
+                          {testResults.failed} {testResults.failed === 1 ? 'test niezaliczony' : 'testy niezaliczone'}
+                        </p>
+                        <p className="text-sm text-red-700">
+                          Sprawdź szczegóły poniżej i popraw krytyczne problemy
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {testResults.warnings > 0 && (
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-amber-900">
+                          {testResults.warnings} {testResults.warnings === 1 ? 'ostrzeżenie' : 'ostrzeżenia'}
+                        </p>
+                        <p className="text-sm text-amber-700">
+                          Przejrzyj i rozważ optymalizacje
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="pt-3 border-t border-amber-200">
+                    <p className="text-sm text-amber-800">
+                      💡 <strong>Wskazówka:</strong> Użyj przycisków "Kopiuj Raport" lub "Pobierz MD" aby przekazać wyniki do analizy AI
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
             <Card>
               <CardHeader className="pb-3">
