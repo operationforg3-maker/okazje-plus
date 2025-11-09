@@ -111,50 +111,86 @@ export default function DealsPage() {
     currency: 'PLN',
   });
 
-  // Sidebar Content (reusable for desktop and mobile)
+  // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
   const SidebarContent = () => (
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
-      <ScrollArea className="h-[calc(100vh-200px)] lg:h-[600px]">
+      <ScrollArea className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
         {/* Przycisk "Wszystkie" */}
-        <button
-          onClick={() => {
-            setSelectedCategory(null);
-            setSelectedSubcategory(null);
-            setIsMobileSidebarOpen(false);
-          }}
-          className={cn(
-            "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group mb-2",
-            !selectedCategory
-              ? "bg-primary text-primary-foreground"
-              : "hover:bg-muted"
-          )}
-        >
-          <Flame className="h-5 w-5" />
-          <span className="font-medium flex-1">Wszystkie okazje</span>
-          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
-        
-        {categories.map((category) => (
+        <div className="mb-1">
           <button
-            key={category.id}
             onClick={() => {
-              setSelectedCategory(category);
+              setSelectedCategory(null);
               setSelectedSubcategory(null);
               setIsMobileSidebarOpen(false);
             }}
             className={cn(
               "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
-              selectedCategory?.id === category.id
+              !selectedCategory
                 ? "bg-primary text-primary-foreground"
                 : "hover:bg-muted"
             )}
           >
-            {category.icon && <span className="text-xl">{category.icon}</span>}
-            <span className="font-medium flex-1">{category.name}</span>
-            <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Flame className="h-5 w-5" />
+            <span className="font-medium flex-1">Wszystkie okazje</span>
+            <ChevronRight className={cn(
+              "h-4 w-4 transition-transform",
+              !selectedCategory ? "rotate-90" : "group-hover:translate-x-1"
+            )} />
           </button>
-        ))}
+        </div>
+
+        {categories.map((category) => {
+          const isActive = selectedCategory?.id === category.id;
+          return (
+            <div key={category.id} className="mb-1">
+              <button
+                onClick={() => {
+                  setSelectedCategory(category);
+                  setSelectedSubcategory(null);
+                  setIsMobileSidebarOpen(false);
+                }}
+                className={cn(
+                  "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
+                  isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                )}
+              >
+                {category.icon && <span className="text-xl">{category.icon}</span>}
+                <span className="font-medium flex-1">{category.name}</span>
+                <ChevronRight className={cn(
+                  "h-4 w-4 transition-transform",
+                  isActive ? "rotate-90" : "group-hover:translate-x-1"
+                )} />
+              </button>
+
+              {isActive && category.subcategories.length > 0 && (
+                <div className="mt-1 ml-2 space-y-1 border-l pl-3">
+                  {category.subcategories.map((sub) => {
+                    const subActive = selectedSubcategory === sub.slug;
+                    return (
+                      <button
+                        key={sub.slug}
+                        onClick={() => setSelectedSubcategory(subActive ? null : sub.slug)}
+                        className={cn(
+                          "w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors",
+                          subActive
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        {sub.icon && <span className="text-base">{sub.icon}</span>}
+                        <span className="flex-1 truncate">{sub.name}</span>
+                        {sub.highlight && (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0">Nowość</Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </ScrollArea>
     </div>
   );
