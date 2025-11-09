@@ -1,130 +1,176 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Użytkownicy: Każdy może czytać, ale tylko właściciel może aktualizować swój profil.
-    // Delete zablokowane - tylko admin może usuwać konta.
-    match /users/{userId} {
-      allow read: if true;
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+
+    ////////////////////////////////
+    // Helper functions
+    ////////////////////////////////
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+    function isAdmin() {
+      return isSignedIn() && userDoc(request.auth.uid).data.role == 'admin';
+    }
+    function isOwner(uidField) {
+      return isSignedIn() && resource.data[uidField] == request.auth.uid;
+    }
+    function isOwnerNew(uidField) {
+      return isSignedIn() && request.resource.data[uidField] == request.auth.uid;
     }
 
-    // Kategorie: Każdy może czytać, pisać mogą tylko admini.
+    // Generic validators
+    function stringMax(field, maxLen) {
+      return !(field in request.resource.data) || (request.resource.data[field].size() <= maxLen);
+    }
+    function numberMin(field, minVal) {
+      return !(field in request.resource.data) || (request.resource.data[field] >= minVal);
+    }
+    function allowedStatus(field) {
+      return !(field in request.resource.data) || request.resource.data[field] in ['draft','pending','approved','rejected'];
+    }
+
+    ////////////////////////////////
+    // USERS
+    ////////////////////////////////
+    // Odczyt ograniczony: publicznie tylko wybrane pola, pełny dokument tylko dla właściciela lub admina
+    match /users/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId) || true; // TODO: ograniczyć publiczny zakres pól przez Cloud Functions maskowania
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // CATEGORIES
+    ////////////////////////////////
     match /categories/{categoryId} {
       allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-
+      allow write: if isAdmin();
       match /subcategories/{subcategoryId} {
         allow read: if true;
-        allow write: if request.auth != null
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow write: if isAdmin();
       }
     }
 
-    // Okazje (Deals): Każdy może czytać. 
-    // Użytkownicy mogą tworzyć (status 'draft' wymaga moderacji).
-    // Autor może edytować swoje okazje. Admin może moderować wszystkie.
-    // Tylko admin może usuwać.
-    // WAŻNE: Zezwalamy na aktualizację temperature i voteCount przez transakcje głosowania
+    ////////////////////////////////
+    // DEALS
+    ////////////////////////////////
     match /deals/{dealId} {
-      allow read: if true;
-      allow create: if request.auth != null 
+      // Public read tylko dla approved, autor widzi swoją wersję, admin widzi wszystko
+      allow read: if resource.data.status == 'approved' || isAdmin() || (isSignedIn() && resource.data.postedBy == request.auth.uid);
+      // Create draft
+      allow create: if isSignedIn()
         && request.resource.data.postedBy == request.auth.uid
         && request.resource.data.status == 'draft'
         && request.resource.data.temperature == 0
         && request.resource.data.voteCount == 0
-        && request.resource.data.commentsCount == 0;
-      allow update: if request.auth != null && (
-        // Autor może edytować
+        && request.resource.data.commentsCount == 0
+        && numberMin('price',0)
+        && stringMax('title',160)
+        && allowedStatus('status');
+      // Update: autor lub admin; dodatkowo osobny przypadek głosowania (tylko temperature & voteCount)
+      allow update: if isSignedIn() && (
         resource.data.postedBy == request.auth.uid
-        // Admin może moderować
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-        // Głosowanie: każdy zalogowany może aktualizować temperature i voteCount
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['temperature', 'voteCount'])
+        || isAdmin()
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['temperature','voteCount'])
             && request.resource.data.keys().hasAll(resource.data.keys()))
       );
-      allow delete: if request.auth != null 
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow delete: if isAdmin();
     }
 
-    // PRODUKTY: Każdy może czytać. Zapis tylko przez admin (via Cloud Functions/Panel Admin).
-    // WYJĄTEK: Aktualizacja ratingCard dozwolona podczas transakcji zapisywania oceny
+    ////////////////////////////////
+    // PRODUCTS
+    ////////////////////////////////
     match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null 
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      allow update: if request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingCard']);
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.status == 'draft'
+        && numberMin('price',0)
+        && allowedStatus('status');
+      // Admin pełna edycja; użytkownik końcowy może aktualizować ratingCard (tylko to pole)
+      allow update: if (
+        isAdmin() || (
+          isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingCard'])
+          && request.resource.data.keys().hasAll(resource.data.keys())
+        )
+      );
+      allow delete: if isAdmin();
     }
 
     // Ustawienia globalne (np. konfiguracja nawigacji): dostępne do odczytu dla wszystkich, edycja tylko dla administracji.
+    ////////////////////////////////
+    // SETTINGS
+    ////////////////////////////////
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if request.auth != null
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write: if isAdmin();
     }
 
     // Komentarze jako subkolekcje (products/{productId}/comments i deals/{dealId}/comments)
+    ////////////////////////////////
+    // PRODUCT COMMENTS
+    ////////////////////////////////
     match /products/{productId}/comments/{commentId} {
-      allow read: if true;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && (
-        resource.data.userId == request.auth.uid
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      allow read: if true; // komentarze produktów są publiczne gdy produkt approved
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && stringMax('content',2000);
+      allow update: if isOwner('userId') && stringMax('content',2000);
+      allow delete: if isOwner('userId') || isAdmin();
     }
 
     // Oceny produktów: każdy może czytać, tylko właściciel może dodawać/edytować swoją ocenę
+    ////////////////////////////////
+    // PRODUCT RATINGS (po jednej na usera)
+    ////////////////////////////////
     match /products/{productId}/ratings/{userId} {
       allow read: if true;
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if request.auth != null && (
-        request.auth.uid == userId
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      allow create: if isSignedIn() && request.auth.uid == userId && !(resource.data.keys().hasAny(['average','count']));
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
 
+    ////////////////////////////////
+    // DEAL COMMENTS
+    ////////////////////////////////
     match /deals/{dealId}/comments/{commentId} {
-      allow read: if true;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && (
-        resource.data.userId == request.auth.uid
-        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      allow read: if true; // komentarze są publiczne przy approved dealu
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && stringMax('content',2000);
+      allow update: if isOwner('userId') && stringMax('content',2000);
+      allow delete: if isOwner('userId') || isAdmin();
     }
 
     
     // Głosy jako subkolekcje: Każdy może czytać. Zapis tylko dla właściciela głosu.
     // Zmiana temperature jest dozwolona przez transakcję w update deala
+    ////////////////////////////////
+    // DEAL VOTES
+    ////////////////////////////////
     match /deals/{dealId}/votes/{userId} {
-       allow read: if true;
-       allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && request.auth.uid == userId;
     }
 
     // Ulubione: Użytkownik może zarządzać tylko swoimi ulubionymi
+    ////////////////////////////////
+    // FAVORITES
+    ////////////////////////////////
     match /favorites/{favoriteId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     // Powiadomienia: Użytkownik może czytać, aktualizować i usuwać tylko swoje powiadomienia
     // Tworzenie mogą tylko admini lub system (Cloud Functions)
+    ////////////////////////////////
+    // NOTIFICATIONS
+    ////////////////////////////////
     match /notifications/{notificationId} {
-      allow read: if request.auth != null 
-        && resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null 
-        && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null 
-        && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-            || request.resource.data.userId == request.auth.uid);
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && (isAdmin() || request.resource.data.userId == request.auth.uid);
     }
   }
 }

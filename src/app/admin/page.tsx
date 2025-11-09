@@ -339,7 +339,7 @@ function AdminPage() {
 
       {/* Tabs for detailed views */}
       <Tabs defaultValue="hot-deals" className="space-y-4">
-  <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="hot-deals">
             <Flame className="h-4 w-4 mr-2" />
             Gorące okazje
@@ -355,10 +355,10 @@ function AdminPage() {
           <TabsTrigger value="activity">
             <Activity className="h-4 w-4 mr-2" />
             Aktywność
+          </TabsTrigger>
           <TabsTrigger value="tests">
             <CheckCircle className="h-4 w-4 mr-2" />
             Testy
-          </TabsTrigger>
           </TabsTrigger>
         </TabsList>
 
