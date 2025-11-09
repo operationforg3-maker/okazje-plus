@@ -6,16 +6,19 @@ import { getHotDeals, getCategories, getNavigationShowcase, getProductById, getD
 import { searchDealsTypesense } from '@/lib/search';
 import { Deal, Category, Product } from '@/lib/types';
 import DealCard from '@/components/deal-card';
+import DealListCard from '@/components/deal-list-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Menu } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+
+type ViewMode = 'list' | 'grid';
 
 export default function DealsPage() {
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -26,6 +29,7 @@ export default function DealsPage() {
   const [productOfTheDay, setProductOfTheDay] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   useEffect(() => {
     async function fetchData() {
@@ -267,19 +271,54 @@ export default function DealsPage() {
                   <h3 className="font-headline text-base font-semibold">
                     🔥 Okazje ({filteredDeals.length})
                   </h3>
+                  
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center gap-1 border rounded-lg p-1">
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="h-8 px-3"
+                    >
+                      <List className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Lista</span>
+                    </Button>
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="h-8 px-3"
+                    >
+                      <LayoutGrid className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Kafelki</span>
+                    </Button>
+                  </div>
                 </div>
                 {isLoading ? (
-                  <div className="space-y-4">
+                  <div className={cn(
+                    viewMode === 'list' ? "space-y-4" : "grid grid-cols-1 sm:grid-cols-2 gap-4"
+                  )}>
                     {[...Array(5)].map((_, i) => (
-                      <div key={i} className="h-48 bg-muted animate-pulse rounded-lg" />
+                      <div key={i} className={cn(
+                        "bg-muted animate-pulse rounded-lg",
+                        viewMode === 'list' ? "h-48" : "h-96"
+                      )} />
                     ))}
                   </div>
                 ) : filteredDeals.length > 0 ? (
-                  <div className="space-y-4">
-                    {filteredDeals.slice(0, 20).map((deal) => (
-                      <DealCard key={deal.id} deal={deal} />
-                    ))}
-                  </div>
+                  viewMode === 'list' ? (
+                    <div className="space-y-4">
+                      {filteredDeals.slice(0, 20).map((deal) => (
+                        <DealListCard key={deal.id} deal={deal} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {filteredDeals.slice(0, 20).map((deal) => (
+                        <DealCard key={deal.id} deal={deal} />
+                      ))}
+                    </div>
+                  )
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">Brak okazji w tej kategorii</p>
