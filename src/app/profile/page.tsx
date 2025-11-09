@@ -21,15 +21,26 @@ import {
   Award,
   Activity,
   Flame,
-  Bell
+  Bell,
+  Filter,
+  ArrowUpDown,
+  ExternalLink,
+  Package
 } from 'lucide-react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Comment, Deal, Product } from '@/lib/types';
 import Link from 'next/link';
-import { getFavoriteDeals, getFavoriteProducts } from '@/lib/data';
+import { getFavoriteDeals, getFavoriteProducts, getDealById, getProductById } from '@/lib/data';
 import DealListCard from '@/components/deal-list-card';
 import ProductCard from '@/components/product-card';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type UserActivity = {
   votes: number;
@@ -54,6 +65,14 @@ function ProfilePage() {
   const [favoriteDeals, setFavoriteDeals] = useState<Deal[]>([]);
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
+  
+  // Filtry dla komentarzy
+  const [commentFilter, setCommentFilter] = useState<'all' | 'deals' | 'products'>('all');
+  const [commentSort, setCommentSort] = useState<'newest' | 'oldest'>('newest');
+  const [commentsWithContext, setCommentsWithContext] = useState<Array<Comment & { 
+    itemTitle?: string; 
+    itemType?: 'deal' | 'product';
+  }>>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -119,6 +138,40 @@ function ProfilePage() {
 
     fetchUserData();
   }, [user]);
+
+  // Pobierz kontekst komentarzy (tytuły okazji/produktów)
+  useEffect(() => {
+    if (!user || recentComments.length === 0) return;
+
+    async function enrichComments() {
+      const enriched = await Promise.all(
+        recentComments.map(async (comment) => {
+          try {
+            // Comment ma dealId, sprawdźmy czy to deal czy product
+            // Spróbuj najpierw pobrać jako deal
+            const deal = await getDealById(comment.dealId);
+            if (deal) {
+              return { ...comment, itemTitle: deal.title, itemType: 'deal' as const };
+            }
+            
+            // Jeśli nie deal, to może product
+            const product = await getProductById(comment.dealId); // dealId jest używane dla obu typów
+            if (product) {
+              return { ...comment, itemTitle: product.name, itemType: 'product' as const };
+            }
+            
+            return comment;
+          } catch (error) {
+            console.error('Error enriching comment:', error);
+            return comment;
+          }
+        })
+      );
+      setCommentsWithContext(enriched);
+    }
+
+    enrichComments();
+  }, [recentComments, user]);
 
   // Pobierz ulubione gdy zakładka jest aktywna
   useEffect(() => {
@@ -410,11 +463,41 @@ function ProfilePage() {
         <TabsContent value="comments">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Komentarze
-              </CardTitle>
-              <CardDescription>Historia komentarzy</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Komentarze
+                  </CardTitle>
+                  <CardDescription>Historia komentarzy ({commentsWithContext.length})</CardDescription>
+                </div>
+                
+                {/* Filtry */}
+                <div className="flex gap-2">
+                  <Select value={commentFilter} onValueChange={(value: any) => setCommentFilter(value)}>
+                    <SelectTrigger className="w-[140px]">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Wszystkie</SelectItem>
+                      <SelectItem value="deals">Okazje</SelectItem>
+                      <SelectItem value="products">Produkty</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={commentSort} onValueChange={(value: any) => setCommentSort(value)}>
+                    <SelectTrigger className="w-[140px]">
+                      <ArrowUpDown className="h-4 w-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">Najnowsze</SelectItem>
+                      <SelectItem value="oldest">Najstarsze</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -423,27 +506,77 @@ function ProfilePage() {
                     <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
                   ))}
                 </div>
-              ) : recentComments.length > 0 ? (
+              ) : commentsWithContext.length > 0 ? (
                 <div className="space-y-4">
-                  {recentComments.map((comment) => (
-                    <div key={comment.id} className="p-4 border rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <MessageSquare className="h-5 w-5 text-muted-foreground mt-0.5" />
-                        <div className="flex-1">
-                          <p className="text-sm mb-2">{comment.content}</p>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(comment.createdAt).toLocaleDateString('pl-PL')}
+                  {commentsWithContext
+                    .filter(comment => {
+                      if (commentFilter === 'all') return true;
+                      if (commentFilter === 'deals') return comment.itemType === 'deal';
+                      if (commentFilter === 'products') return comment.itemType === 'product';
+                      return true;
+                    })
+                    .sort((a, b) => {
+                      const dateA = new Date(a.createdAt).getTime();
+                      const dateB = new Date(b.createdAt).getTime();
+                      return commentSort === 'newest' ? dateB - dateA : dateA - dateB;
+                    })
+                    .map((comment) => (
+                      <div key={comment.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            comment.itemType === 'deal' ? 'bg-orange-100 dark:bg-orange-900/20' : 'bg-primary/10'
+                          }`}>
+                            {comment.itemType === 'deal' ? (
+                              <Flame className="h-5 w-5 text-orange-500" />
+                            ) : (
+                              <Package className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            {/* Link do okazji/produktu */}
+                            {comment.itemTitle && (
+                              <Link 
+                                href={comment.itemType === 'deal' ? `/deals/${comment.dealId}` : `/products/${comment.dealId}`}
+                                className="text-sm font-medium text-primary hover:underline mb-2 flex items-center gap-1 group"
+                              >
+                                <span className="truncate">{comment.itemTitle}</span>
+                                <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </Link>
+                            )}
+                            
+                            {/* Treść komentarza */}
+                            <p className="text-sm mb-2 text-foreground">{comment.content}</p>
+                            
+                            {/* Meta info */}
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {new Date(comment.createdAt).toLocaleDateString('pl-PL', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric'
+                                })}
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {comment.itemType === 'deal' ? 'Okazja' : 'Produkt'}
+                              </Badge>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <MessageSquare className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                  <p>Brak komentarzy</p>
+                  <h3 className="font-semibold text-lg mb-2">Brak komentarzy</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Zacznij komentować okazje i produkty
+                  </p>
+                  <Button variant="outline" asChild>
+                    <Link href="/deals">Przeglądaj okazje</Link>
+                  </Button>
                 </div>
               )}
             </CardContent>
