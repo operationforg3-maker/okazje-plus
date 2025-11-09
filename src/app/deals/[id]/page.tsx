@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -34,6 +35,7 @@ import CommentSection from '@/components/comment-section';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { VoteControls } from '@/components/vote-controls';
 import { toast } from 'sonner';
+import ShareButton from '@/components/share-button';
 
 function getRelativeTime(isoDate: string): string {
   const now = new Date();
@@ -235,12 +237,22 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
                   Oszczędzasz {savings}
                 </p>
               )}
-              <Button size="lg" asChild className="w-full bg-primary hover:bg-primary/90">
-                <a href={deal.link} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-2 h-5 w-5" />
-                  Przejdź do okazji
-                </a>
-              </Button>
+              <div className="flex gap-2">
+                <Button size="lg" asChild className="flex-1 bg-primary hover:bg-primary/90">
+                  <a href={deal.link} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-5 w-5" />
+                    Przejdź do okazji
+                  </a>
+                </Button>
+                <ShareButton 
+                  type="deal"
+                  itemId={deal.id}
+                  title={deal.title}
+                  url={`/deals/${deal.id}`}
+                  size="lg"
+                  variant="outline"
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -351,4 +363,60 @@ export default function DealDetailPage({ params }: { params: { id: string } }) {
       )}
     </div>
   );
+}
+
+// Generowanie dynamicznych metadanych dla SEO i Open Graph
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  try {
+    const docRef = doc(db, "deals", params.id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      return {
+        title: 'Okazja nie znaleziona',
+        description: 'Przepraszamy, ta okazja nie istnieje lub została usunięta.',
+      };
+    }
+
+    const deal = { id: docSnap.id, ...docSnap.data() } as Deal;
+    const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
+    const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 
+      ? Math.round(100 - (deal.price / deal.originalPrice) * 100) 
+      : null;
+    
+    const title = `${deal.title}${discount ? ` -${discount}%` : ''} - ${price}`;
+    const description = deal.description || `Sprawdź tę gorącą okazję: ${deal.title} w cenie ${price}. Temperatura: ${deal.temperature}°`;
+    const imageUrl = deal.image || '/og-image.png';
+
+    return {
+      title,
+      description,
+      openGraph: {
+        type: 'article',
+        url: `https://okazje.plus/deals/${params.id}`,
+        title,
+        description,
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: deal.title,
+          },
+        ],
+        siteName: 'Okazje+',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [imageUrl],
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Okazje+',
+      description: 'Najlepsze okazje zakupowe w Polsce',
+    };
+  }
 }

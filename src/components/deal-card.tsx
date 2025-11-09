@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
 import { trackVote } from '@/lib/analytics';
+import ShareButton from '@/components/share-button';
 
 interface DealCardProps {
   deal: Deal;
@@ -276,11 +277,22 @@ export default function DealCard({ deal }: DealCardProps) {
             <ArrowDown className="h-4 w-4" />
           </Button>
         </div>
-        <Button asChild size="sm" className="flex-1">
-          <Link href={`/deals/${deal.id}`}>
-            Zobacz szczegóły
-          </Link>
-        </Button>
+        
+        <div className="flex items-center gap-2 flex-1 justify-end">
+          <ShareButton 
+            type="deal"
+            itemId={deal.id}
+            title={deal.title}
+            url={`/deals/${deal.id}`}
+            variant="ghost"
+            size="sm"
+          />
+          <Button asChild size="sm">
+            <Link href={`/deals/${deal.id}`}>
+              Zobacz szczegóły
+            </Link>
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );

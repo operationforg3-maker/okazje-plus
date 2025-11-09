@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useFavorites } from '@/hooks/use-favorites';
+import ShareButton from '@/components/share-button';
 
 interface ProductCardProps {
   product: Product;
@@ -136,7 +137,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
       </CardContent>
       
-      <CardFooter className="flex items-center justify-between gap-2 border-t bg-muted/30 p-3">
+      <CardFooter className="flex items-center gap-2 border-t bg-muted/30 p-3">
+        <ShareButton 
+          type="product"
+          itemId={product.id}
+          title={product.name}
+          url={`/products/${product.id}`}
+          variant="ghost"
+          size="sm"
+        />
         <Button asChild variant="outline" size="sm" className="flex-1">
           <Link href={`/products/${product.id}`}>
             Szczegóły

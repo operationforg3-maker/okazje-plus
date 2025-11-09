@@ -7,10 +7,42 @@ import { Footer } from '@/components/layout/footer';
 import { AuthProvider } from '@/lib/auth';
 
 export const metadata: Metadata = {
-  title: 'Okazje+',
-  description: 'Zaufana platforma okazji zakupowych w stylu Pepper.pl',
+  title: {
+    default: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
+    template: '%s | Okazje+'
+  },
+  description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
+  keywords: ['okazje', 'promocje', 'wyprzedaże', 'zakupy online', 'najlepsze ceny', 'rabaty', 'kupony'],
+  authors: [{ name: 'Okazje+' }],
+  creator: 'Okazje+',
+  openGraph: {
+    type: 'website',
+    locale: 'pl_PL',
+    url: 'https://okazje.plus',
+    siteName: 'Okazje+',
+    title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
+    description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Okazje+ - Najlepsze okazje zakupowe',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
+    description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże',
+    images: ['/og-image.png'],
+  },
   icons: {
     icon: '/favicon.svg',
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

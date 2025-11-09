@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -29,6 +30,7 @@ import {
 import ProductCard from '@/components/product-card';
 import CommentSection from '@/components/comment-section';
 import RatingInput from '@/components/rating-input';
+import ShareButton from '@/components/share-button';
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const { user } = useAuth();
@@ -194,9 +196,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     Kup teraz
                   </a>
                 </Button>
-                <Button size="lg" variant="outline" className="sm:w-auto">
-                  <ThumbsUp className="h-4 w-4 md:h-5 md:w-5" />
-                </Button>
+                <ShareButton 
+                  type="product"
+                  itemId={product.id}
+                  title={product.name}
+                  url={`/products/${product.id}`}
+                  size="lg"
+                  variant="outline"
+                />
               </div>
               <p className="text-xs text-muted-foreground mt-3 text-center">
                 Link afiliacyjny - wspierasz naszą platformę
@@ -345,4 +352,58 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       )}
     </div>
   );
+}
+
+// Generowanie dynamicznych metadanych dla SEO i Open Graph
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  try {
+    const docRef = doc(db, "products", params.id);
+    const docSnap = await getDoc(docRef);
+    
+    if (!docSnap.exists()) {
+      return {
+        title: 'Produkt nie znaleziony',
+        description: 'Przepraszamy, ten produkt nie istnieje lub został usunięty.',
+      };
+    }
+
+    const product = { id: docSnap.id, ...docSnap.data() } as Product;
+    const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
+    const avgRating = product.ratingCard.average;
+    
+    const title = `${product.name} - ${price}`;
+    const description = product.description || `${product.name} w cenie ${price}. Ocena: ${avgRating.toFixed(1)}⭐ (${product.ratingCard.count} opinii)`;
+    const imageUrl = product.image || '/og-image.png';
+
+    return {
+      title,
+      description,
+      openGraph: {
+        type: 'website',
+        url: `https://okazje.plus/products/${params.id}`,
+        title,
+        description,
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: product.name,
+          },
+        ],
+        siteName: 'Okazje+',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [imageUrl],
+      },
+    };
+  } catch (error) {
+    return {
+      title: 'Okazje+',
+      description: 'Najlepsze produkty w najlepszych cenach',
+    };
+  }
 }
