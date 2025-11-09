@@ -96,6 +96,28 @@ async function runTest(
  * ===========================================
  */
 
+// Helper: logowanie opcjonalne dla testów technicznych (fallback guest)
+async function withOptionalAuth<T>(
+  testFn: () => Promise<T>,
+  opts?: TestAuthOptions
+): Promise<T> {
+  // Próbuj zalogować jako user (preferowany) lub admin, ale jeśli nie udało się – kontynuuj jako guest
+  if (opts?.userEmail && opts?.userPassword) {
+    const login = await authLogin(opts.userEmail, opts.userPassword);
+    if (login.ok) {
+      await ensureTestUser(login.uid, 'user');
+    }
+  } else if (opts?.adminEmail && opts?.adminPassword) {
+    const login = await authLogin(opts.adminEmail, opts.adminPassword);
+    if (login.ok) {
+      await ensureTestUser(login.uid, 'admin');
+    }
+  }
+  const result = await testFn();
+  await authLogout();
+  return result;
+}
+
 async function testFirestoreConnection(): Promise<{ status: 'pass' | 'fail'; message: string }> {
   try {
     // Używamy tylko approved aby nie łamać reguł
@@ -393,17 +415,25 @@ async function testApprovedContent(): Promise<{ status: 'pass' | 'fail' | 'warni
   }
 }
 
-async function testPendingModeration(): Promise<{ status: 'pass' | 'fail' | 'warning'; message: string; details?: any }> {
+async function testPendingModeration(opts?: TestAuthOptions): Promise<{ status: 'pass' | 'fail' | 'warning' | 'skip'; message: string; details?: any }> {
+  // Wymaga admin uprawnień do odczytu draft/pending
+  const login = await authLogin(opts?.adminEmail, opts?.adminPassword);
+  if (!login.ok) {
+    return { status: 'skip', message: 'Moderation queue requires admin credentials' };
+  }
+  await ensureTestUser(login.uid, 'admin');
+  
   try {
-    // Użyj łagodniejszego wariantu: licz tylko approved i traktuj brak uprawnień jako ostrzeżenie
     const [dealsCount, productsCount] = await Promise.all([
-      getCountFromServer(query(collection(db, 'deals'), where('status', '==', 'approved'))),
-      getCountFromServer(query(collection(db, 'products'), where('status', '==', 'approved')))
+      getCountFromServer(query(collection(db, 'deals'), where('status', 'in', ['draft', 'pending']))),
+      getCountFromServer(query(collection(db, 'products'), where('status', 'in', ['draft', 'pending'])))
     ]);
     
     const pendingDeals = dealsCount.data().count;
     const pendingProducts = productsCount.data().count;
     const total = pendingDeals + pendingProducts;
+    
+    await authLogout();
     
     if (total > 50) {
       return {
@@ -419,6 +449,7 @@ async function testPendingModeration(): Promise<{ status: 'pass' | 'fail' | 'war
       details: { deals: pendingDeals, products: pendingProducts }
     };
   } catch (error: any) {
+    await authLogout();
     if (String(error.message).includes('Missing or insufficient permissions')) {
       return { status: 'warning', message: 'Moderation queue requires admin permissions' };
     }
@@ -807,25 +838,25 @@ export async function runAllTests(options?: TestAuthOptions): Promise<TestSuiteR
   
   // TECHNICAL TESTS
   console.log('⚙️  Running technical tests...');
-  results.push(await runTest('tech-001', 'Firestore Connection', 'technical', testFirestoreConnection));
-  results.push(await runTest('tech-002', 'Collections Exist', 'technical', testCollectionsExist));
-  results.push(await runTest('tech-003', 'Firestore Indexes', 'technical', testIndexes));
+  results.push(await runTest('tech-001', 'Firestore Connection', 'technical', () => withOptionalAuth(testFirestoreConnection, options)));
+  results.push(await runTest('tech-002', 'Collections Exist', 'technical', () => withOptionalAuth(testCollectionsExist, options)));
+  results.push(await runTest('tech-003', 'Firestore Indexes', 'technical', () => withOptionalAuth(testIndexes, options)));
   
   // FUNCTIONAL TESTS
   console.log('🔧 Running functional tests...');
-  results.push(await runTest('func-001', 'Deals CRUD Operations', 'functional', testDealsCRUD));
-  results.push(await runTest('func-002', 'Products CRUD Operations', 'functional', testProductsCRUD));
-  results.push(await runTest('func-003', 'Comments Counter Accuracy', 'functional', testCommentsCount));
-  results.push(await runTest('func-004', 'Voting System Logic', 'functional', testVotingSystem));
+  results.push(await runTest('func-001', 'Deals CRUD Operations', 'functional', () => withOptionalAuth(testDealsCRUD, options)));
+  results.push(await runTest('func-002', 'Products CRUD Operations', 'functional', () => withOptionalAuth(testProductsCRUD, options)));
+  results.push(await runTest('func-003', 'Comments Counter Accuracy', 'functional', () => withOptionalAuth(testCommentsCount, options)));
+  results.push(await runTest('func-004', 'Voting System Logic', 'functional', () => withOptionalAuth(testVotingSystem, options)));
   results.push(await runTest('func-005', 'Categories Structure', 'functional', testCategoriesStructure));
   
   // BUSINESS TESTS
   console.log('💼 Running business logic tests...');
-  results.push(await runTest('biz-001', 'Approved Content Availability', 'business', testApprovedContent));
-  results.push(await runTest('biz-002', 'Moderation Queue Status', 'business', testPendingModeration));
-  results.push(await runTest('biz-003', 'User Activity Metrics', 'business', testUserActivity));
-  results.push(await runTest('biz-004', 'Hot Deals Presence', 'business', testHotDeals));
-  results.push(await runTest('biz-005', 'Data Quality Check', 'business', testDataQuality));
+  results.push(await runTest('biz-001', 'Approved Content Availability', 'business', () => withOptionalAuth(testApprovedContent, options)));
+  results.push(await runTest('biz-002', 'Moderation Queue Status', 'business', () => testPendingModeration(options)));
+  results.push(await runTest('biz-003', 'User Activity Metrics', 'business', () => withOptionalAuth(testUserActivity, options)));
+  results.push(await runTest('biz-004', 'Hot Deals Presence', 'business', () => withOptionalAuth(testHotDeals, options)));
+  results.push(await runTest('biz-005', 'Data Quality Check', 'business', () => withOptionalAuth(testDataQuality, options)));
 
   // SECURITY TESTS (read/write matrix)
   console.log('🔐 Running security rules tests...');

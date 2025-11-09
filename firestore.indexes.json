@@ -33,6 +33,14 @@
         {"fieldPath": "temperature", "order": "DESCENDING"},
         {"fieldPath": "__name__", "order": "ASCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "temperature", "order": "DESCENDING"}
+      ]
     }
   ],
   "fieldOverrides": []
