@@ -20,6 +20,9 @@ import {
 } from '@/components/ui/tooltip';
 import { useFavorites } from '@/hooks/use-favorites';
 import ShareButton from '@/components/share-button';
+import { useAuth } from '@/lib/auth';
+import { useEffect } from 'react';
+import { trackFirestoreView, trackFirestoreClick, trackFirestoreShare } from '@/lib/analytics';
 
 interface ProductCardProps {
   product: Product;
@@ -27,6 +30,7 @@ interface ProductCardProps {
 
 export default function ProductCard({ product }: ProductCardProps) {
   const { isFavorited, isLoading, toggleFavorite } = useFavorites(product.id, 'product');
+  const { user } = useAuth();
   
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
   const hasOriginal = typeof (product as any).originalPrice === 'number';
@@ -38,10 +42,23 @@ export default function ProductCard({ product }: ProductCardProps) {
   const avgRating = product.ratingCard.average;
   const ratingCount = product.ratingCard.count;
 
+  useEffect(() => {
+    // track wyświetlenie karty produktu (raz na sesję per element)
+    void trackFirestoreView('product', product.id, user?.uid);
+  }, [product.id, user?.uid]);
+
+  const handleDetailClick = () => {
+    void trackFirestoreClick('product', product.id, user?.uid);
+  };
+
+  const handleAffiliateClick = () => {
+    void trackFirestoreClick('product', product.id, user?.uid);
+  };
+
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
       <CardHeader className="relative p-0">
-        <Link href={`/products/${product.id}`} className="block overflow-hidden">
+        <Link href={`/products/${product.id}`} className="block overflow-hidden" onClick={handleDetailClick}>
           <Image
             src={product.image}
             alt={product.name}
@@ -145,14 +162,15 @@ export default function ProductCard({ product }: ProductCardProps) {
           url={`/products/${product.id}`}
           variant="ghost"
           size="sm"
+          onShared={(platform) => trackFirestoreShare('product', product.id, user?.uid, platform)}
         />
         <Button asChild variant="outline" size="sm" className="flex-1">
-          <Link href={`/products/${product.id}`}>
+          <Link href={`/products/${product.id}`} onClick={handleDetailClick}>
             Szczegóły
           </Link>
         </Button>
         <Button asChild size="sm" className="flex-1 bg-primary hover:bg-primary/90">
-          <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+          <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1" onClick={handleAffiliateClick}>
             <ExternalLink className="h-3.5 w-3.5" />
             Kup teraz
           </a>

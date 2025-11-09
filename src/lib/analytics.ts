@@ -303,6 +303,48 @@ export async function trackFirestoreShare(
   trackShare(resourceType, resourceId, platform || 'unknown');
 }
 
+/**
+ * Śledzi polubienie (favorite add/remove) - traktujemy każde dodanie jako event
+ */
+export async function trackFirestoreFavorite(
+  resourceType: ResourceType,
+  resourceId: string,
+  userId?: string,
+  action: 'add' | 'remove' = 'add'
+): Promise<void> {
+  // Rejestrujemy tylko dodania jako zdarzenia analityczne
+  if (action === 'add') {
+    await trackFirestoreEvent('favorite', resourceType, resourceId, userId, { action });
+    trackEvent('favorite', { content_type: resourceType, item_id: resourceId });
+  }
+}
+
+/**
+ * Śledzi dodanie komentarza
+ */
+export async function trackFirestoreComment(
+  resourceType: ResourceType,
+  resourceId: string,
+  userId?: string,
+  length?: number
+): Promise<void> {
+  await trackFirestoreEvent('comment', resourceType, resourceId, userId, { length });
+  trackComment(resourceType, resourceId);
+}
+
+/**
+ * Śledzi głos (vote) - up/down
+ */
+export async function trackFirestoreVote(
+  resourceType: ResourceType,
+  resourceId: string,
+  userId: string | undefined,
+  direction: 'up' | 'down'
+): Promise<void> {
+  await trackFirestoreEvent('vote', resourceType, resourceId, userId, { direction });
+  trackVote(resourceType, resourceId, direction);
+}
+
 // ===========================================
 // FUNKCJE AGREGACJI DLA ADMINA
 // ===========================================
@@ -326,6 +368,8 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
   totalClicks: number;
   totalShares: number;
   avgConversionRate: number;
+  uniqueUsers: number;
+  uniqueSessions: number;
   viewsByDay: Array<{ date: string; count: number }>;
   topDeals: Array<{ id: string; views: number; clicks: number }>;
   topProducts: Array<{ id: string; views: number; clicks: number }>;
@@ -346,6 +390,14 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
   const totalViews = events.filter(e => e.type === 'view').length;
   const totalClicks = events.filter(e => e.type === 'click').length;
   const totalShares = events.filter(e => e.type === 'share').length;
+
+  // Liczenie unikalnych użytkowników i sesji
+  const uniqueUserIds = new Set<string>();
+  const uniqueSessionIds = new Set<string>();
+  events.forEach(event => {
+    if (event.userId) uniqueUserIds.add(event.userId);
+    if (event.sessionId) uniqueSessionIds.add(event.sessionId);
+  });
 
   const avgConversionRate = totalViews > 0 
     ? Math.round((totalClicks / totalViews) * 1000) / 10 
@@ -397,6 +449,8 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
     totalClicks,
     totalShares,
     avgConversionRate,
+    uniqueUsers: uniqueUserIds.size,
+    uniqueSessions: uniqueSessionIds.size,
     viewsByDay: viewsByDayArray,
     topDeals,
     topProducts

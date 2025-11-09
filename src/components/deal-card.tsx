@@ -17,7 +17,7 @@ import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Cl
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
-import { trackVote } from '@/lib/analytics';
+import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
 
 interface DealCardProps {
@@ -122,13 +122,14 @@ export default function DealCard({ deal }: DealCardProps) {
         throw new Error(data.message || 'Błąd podczas głosowania');
       }
 
-      // Aktualizuj do rzeczywistych wartości z serwera
+  // Aktualizuj do rzeczywistych wartości z serwera
       setTemperature(data.temperature);
       setVoteCount(data.voteCount);
       setUserVote(data.userVote);
       
-      // Analytics
-      trackVote('deal', deal.id, action);
+  // Analytics (GA + Firestore)
+  trackVote('deal', deal.id, action);
+  void trackFirestoreVote('deal', deal.id, user.uid, action);
       
       toast.success("Dziękujemy za oddanie głosu!");
     } catch (error: any) {
@@ -144,10 +145,28 @@ export default function DealCard({ deal }: DealCardProps) {
     }
   };
 
+  // Track wyświetlenie karty (raz na sesję)
+  // Używamy useEffect aby nie wykonywać na serwerze
+  // i aby nie trackować podczas prerenderowania
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  require('react'); // dummy to ensure React import side-effects
+  if (typeof window !== 'undefined') {
+    // Lazy trigger view tracking (minimal debounce via sessionStorage w helperze)
+    void trackFirestoreView('deal', deal.id, user?.uid);
+  }
+
+  const handleDetailClick = () => {
+    void trackFirestoreClick('deal', deal.id, user?.uid);
+  };
+
+  const handleShareTrack = (platform?: string) => {
+    void trackFirestoreShare('deal', deal.id, user?.uid, platform);
+  };
+
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
       <CardHeader className="relative p-0">
-        <Link href={`/deals/${deal.id}`} className="block overflow-hidden">
+  <Link href={`/deals/${deal.id}`} className="block overflow-hidden" onClick={handleDetailClick}>
           <Image
             src={deal.image}
             alt={deal.title}
@@ -203,7 +222,7 @@ export default function DealCard({ deal }: DealCardProps) {
           </div>
         </div>
 
-        <Link href={`/deals/${deal.id}`}>
+  <Link href={`/deals/${deal.id}`} onClick={handleDetailClick}>
           <h3 className="font-headline text-lg font-semibold leading-tight transition-colors hover:text-primary">
             {deal.title}
           </h3>
@@ -279,14 +298,15 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
         
         <div className="flex items-center gap-2 flex-1 justify-end">
-          <ShareButton 
-            type="deal"
-            itemId={deal.id}
-            title={deal.title}
-            url={`/deals/${deal.id}`}
-            variant="ghost"
-            size="sm"
-          />
+            <ShareButton 
+              type="deal" 
+              itemId={deal.id} 
+              title={deal.title} 
+              url={`/deals/${deal.id}`} 
+              variant="ghost" 
+              size="sm" 
+              onShared={(platform) => handleShareTrack(platform)} 
+            />
           <Button asChild size="sm">
             <Link href={`/deals/${deal.id}`}>
               Zobacz szczegóły

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Trash2, AlertTriangle } from 'lucide-react';
+import { trackFirestoreComment } from '@/lib/analytics';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export default function CommentSection({ collectionName, docId }: CommentSection
     }
     try {
       await addComment(collectionName, docId, user.uid, newComment);
+      void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, newComment.length);
       setNewComment('');
       // Refresh comments
       setComments(await getComments(collectionName, docId));

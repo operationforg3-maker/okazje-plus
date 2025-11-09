@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { addToFavorites, removeFromFavorites, isFavorite } from '@/lib/data';
-import { trackShare } from '@/lib/analytics';
+import { trackFirestoreFavorite } from '@/lib/analytics';
 
 interface UseFavoritesReturn {
   isFavorited: boolean;
@@ -56,14 +56,14 @@ export function useFavorites(itemId: string, itemType: 'deal' | 'product'): UseF
         await removeFromFavorites(user.uid, itemId, itemType);
         setIsFavorited(false);
         
-        // Analytics
-        trackShare(itemType, itemId, 'remove_favorite');
+        // Analytics (rejestrujemy remove jako action w metadata, ale nie liczymy do KPI)
+        void trackFirestoreFavorite(itemType, itemId, user.uid, 'remove');
       } else {
         await addToFavorites(user.uid, itemId, itemType);
         setIsFavorited(true);
         
         // Analytics
-        trackShare(itemType, itemId, 'add_favorite');
+        void trackFirestoreFavorite(itemType, itemId, user.uid, 'add');
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);

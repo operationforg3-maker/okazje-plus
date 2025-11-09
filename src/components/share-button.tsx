@@ -19,6 +19,7 @@ interface ShareButtonProps {
   url: string;
   variant?: 'default' | 'ghost' | 'outline';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  onShared?: (method: 'facebook' | 'twitter' | 'copy_link') => void;
 }
 
 export default function ShareButton({ 
@@ -27,12 +28,14 @@ export default function ShareButton({
   title, 
   url,
   variant = 'outline',
-  size = 'sm'
+  size = 'sm',
+  onShared
 }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = (method: 'facebook' | 'twitter' | 'copy_link') => {
     trackShare(type, itemId, method);
+    if (onShared) onShared(method);
 
     const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
     const encodedUrl = encodeURIComponent(fullUrl);
