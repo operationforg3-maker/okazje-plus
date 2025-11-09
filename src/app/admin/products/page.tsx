@@ -35,6 +35,10 @@ import { ProductForm } from '@/components/admin/product-form';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
+import { PaginationControls } from '@/components/ui/pagination-controls';
+import { useTableSort } from '@/hooks/use-table-sort';
+import { usePagination } from '@/hooks/use-pagination';
 
 export default function AdminProductsPage() {
   const { toast } = useToast();
@@ -44,6 +48,28 @@ export default function AdminProductsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Sortowanie
+  const { sortedData, requestSort, sortConfig } = useTableSort<Product>(
+    products,
+    { key: 'name', direction: 'asc' }
+  );
+
+  // Paginacja
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    totalItems,
+    canGoNext,
+    canGoPrev,
+    goToPage,
+    nextPage,
+    prevPage,
+    goToFirstPage,
+    goToLastPage,
+  } = usePagination(sortedData, itemsPerPage);
 
   async function fetchProducts() {
     setLoading(true);
@@ -145,9 +171,28 @@ export default function AdminProductsPage() {
                   <TableHead className="hidden w-[100px] sm:table-cell">
                     <span className="sr-only">Zdjęcie</span>
                   </TableHead>
-                  <TableHead>Nazwa</TableHead>
-                  <TableHead>Kategoria</TableHead>
-                  <TableHead className="hidden md:table-cell">Cena</TableHead>
+                  <SortableTableHead
+                    columnKey="name"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                  >
+                    Nazwa
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="category"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                  >
+                    Kategoria
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="price"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                    className="hidden md:table-cell"
+                  >
+                    Cena
+                  </SortableTableHead>
                   <TableHead className="hidden md:table-cell">Oceny</TableHead>
                   <TableHead>
                     <span className="sr-only">Akcje</span>
@@ -155,7 +200,14 @@ export default function AdminProductsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
+                {paginatedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      Brak produktów. Dodaj pierwszy produkt klikając przycisk "Dodaj produkt".
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedData.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell className="hidden sm:table-cell">
                       <Image
@@ -202,18 +254,33 @@ export default function AdminProductsPage() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
-                {products.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                      Brak produktów. Dodaj pierwszy produkt klikając przycisk "Dodaj produkt".
-                    </TableCell>
-                  </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           )}
         </CardContent>
+        {!loading && totalItems > 0 && (
+          <div className="px-6">
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              canGoPrev={canGoPrev}
+              canGoNext={canGoNext}
+              onPageChange={goToPage}
+              onFirstPage={goToFirstPage}
+              onLastPage={goToLastPage}
+              onPrevPage={prevPage}
+              onNextPage={nextPage}
+              onItemsPerPageChange={(value) => {
+                setItemsPerPage(value);
+                goToPage(1);
+              }}
+            />
+          </div>
+        )}
       </Card>
 
       {/* Dialog dodawania */}
