@@ -30,6 +30,13 @@ export function useTableSort<T>(data: T[], initialSort?: SortConfig<T>) {
           : bValue.localeCompare(aValue, 'pl');
       }
 
+      // Boolean comparison
+      if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+        const aNum = aValue ? 1 : 0;
+        const bNum = bValue ? 1 : 0;
+        return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+
       // Number comparison
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortConfig.direction === 'asc'

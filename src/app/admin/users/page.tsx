@@ -34,6 +34,10 @@ import {
 } from "@/components/ui/dialog";
 import { useEffect, useState } from 'react';
 import { User } from '@/lib/types';
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
+import { PaginationControls } from '@/components/ui/pagination-controls';
+import { useTableSort } from '@/hooks/use-table-sort';
+import { usePagination } from '@/hooks/use-pagination';
 
 interface UserWithMetadata extends User {
   createdAt?: any;
@@ -47,6 +51,28 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserWithMetadata | null>(null);
   const [actionDialog, setActionDialog] = useState<'role' | 'block' | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Sortowanie
+  const { sortedData, requestSort, sortConfig } = useTableSort<UserWithMetadata>(
+    users,
+    { key: 'displayName', direction: 'asc' }
+  );
+
+  // Paginacja
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    totalItems,
+    canGoNext,
+    canGoPrev,
+    goToPage,
+    nextPage,
+    prevPage,
+    goToFirstPage,
+    goToLastPage,
+  } = usePagination(sortedData, itemsPerPage);
 
   useEffect(() => {
     fetchUsers();
@@ -180,23 +206,42 @@ export default function AdminUsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nazwa</TableHead>
-                  <TableHead>Rola</TableHead>
-                  <TableHead className="hidden md:table-cell">Status</TableHead>
+                  <SortableTableHead
+                    columnKey="displayName"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                  >
+                    Nazwa
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="role"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                  >
+                    Rola
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="disabled"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                    className="hidden md:table-cell"
+                  >
+                    Status
+                  </SortableTableHead>
                   <TableHead>
                     <span className="sr-only">Akcje</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.length === 0 ? (
+                {sortedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                       Brak użytkowników w systemie
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => (
+                  paginatedData.map((user) => (
                     <TableRow key={user.uid}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -278,6 +323,25 @@ export default function AdminUsersPage() {
                 )}
               </TableBody>
             </Table>
+          )}
+          {!loading && totalItems > 0 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              canGoPrev={canGoPrev}
+              canGoNext={canGoNext}
+              onPageChange={goToPage}
+              onFirstPage={goToFirstPage}
+              onLastPage={goToLastPage}
+              onPrevPage={prevPage}
+              onNextPage={nextPage}
+              onItemsPerPageChange={(value) => {
+                setItemsPerPage(value);
+                goToPage(1);
+              }}
+            />
           )}
         </CardContent>
       </Card>
