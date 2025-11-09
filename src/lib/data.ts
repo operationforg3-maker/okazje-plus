@@ -1,6 +1,6 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating } from "@/lib/types";
+import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite } from "@/lib/types";
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
@@ -423,3 +423,167 @@ export const users = [
     joined: '2023-11-01T00:00:00.000Z',
   },
 ];
+
+// === SYSTEM ULUBIONYCH ===
+
+/**
+ * Dodaje element do ulubionych użytkownika
+ */
+export async function addToFavorites(userId: string, itemId: string, itemType: 'deal' | 'product'): Promise<void> {
+  const favoritesRef = collection(db, 'favorites');
+  
+  // Sprawdź czy już istnieje
+  const existingQuery = query(
+    favoritesRef,
+    where('userId', '==', userId),
+    where('itemId', '==', itemId),
+    where('itemType', '==', itemType)
+  );
+  
+  const existingSnapshot = await getDocs(existingQuery);
+  
+  if (!existingSnapshot.empty) {
+    throw new Error('Item already in favorites');
+  }
+  
+  await addDoc(favoritesRef, {
+    userId,
+    itemId,
+    itemType,
+    createdAt: serverTimestamp()
+  });
+}
+
+/**
+ * Usuwa element z ulubionych użytkownika
+ */
+export async function removeFromFavorites(userId: string, itemId: string, itemType: 'deal' | 'product'): Promise<void> {
+  const favoritesRef = collection(db, 'favorites');
+  const q = query(
+    favoritesRef,
+    where('userId', '==', userId),
+    where('itemId', '==', itemId),
+    where('itemType', '==', itemType)
+  );
+  
+  const snapshot = await getDocs(q);
+  
+  if (snapshot.empty) {
+    throw new Error('Favorite not found');
+  }
+  
+  // Usuń wszystkie znalezione (powinien być tylko jeden)
+  const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+  await Promise.all(deletePromises);
+}
+
+/**
+ * Sprawdza czy element jest w ulubionych użytkownika
+ */
+export async function isFavorite(userId: string, itemId: string, itemType: 'deal' | 'product'): Promise<boolean> {
+  const favoritesRef = collection(db, 'favorites');
+  const q = query(
+    favoritesRef,
+    where('userId', '==', userId),
+    where('itemId', '==', itemId),
+    where('itemType', '==', itemType),
+    limit(1)
+  );
+  
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+}
+
+/**
+ * Pobiera ulubione okazje użytkownika
+ */
+export async function getFavoriteDeals(userId: string, limitCount: number = 50): Promise<Deal[]> {
+  const favoritesRef = collection(db, 'favorites');
+  const q = query(
+    favoritesRef,
+    where('userId', '==', userId),
+    where('itemType', '==', 'deal'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  
+  const snapshot = await getDocs(q);
+  const dealIds = snapshot.docs.map(doc => doc.data().itemId);
+  
+  if (dealIds.length === 0) {
+    return [];
+  }
+  
+  // Pobierz pełne dane okazji
+  const deals: Deal[] = [];
+  for (const dealId of dealIds) {
+    const deal = await getDealById(dealId);
+    if (deal) {
+      deals.push(deal);
+    }
+  }
+  
+  return deals;
+}
+
+/**
+ * Pobiera ulubione produkty użytkownika
+ */
+export async function getFavoriteProducts(userId: string, limitCount: number = 50): Promise<Product[]> {
+  const favoritesRef = collection(db, 'favorites');
+  const q = query(
+    favoritesRef,
+    where('userId', '==', userId),
+    where('itemType', '==', 'product'),
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
+  
+  const snapshot = await getDocs(q);
+  const productIds = snapshot.docs.map(doc => doc.data().itemId);
+  
+  if (productIds.length === 0) {
+    return [];
+  }
+  
+  // Pobierz pełne dane produktów
+  const products: Product[] = [];
+  for (const productId of productIds) {
+    const product = await getProductById(productId);
+    if (product) {
+      products.push(product);
+    }
+  }
+  
+  return products;
+}
+
+/**
+ * Pobiera liczbę ulubionych użytkownika
+ */
+export async function getFavoritesCount(userId: string): Promise<{ deals: number; products: number }> {
+  const favoritesRef = collection(db, 'favorites');
+  
+  const dealsQuery = query(
+    favoritesRef,
+    where('userId', '==', userId),
+    where('itemType', '==', 'deal')
+  );
+  
+  const productsQuery = query(
+    favoritesRef,
+    where('userId', '==', userId),
+    where('itemType', '==', 'product')
+  );
+  
+  const [dealsCount, productsCount] = await Promise.all([
+    getCountFromServer(dealsQuery),
+    getCountFromServer(productsQuery)
+  ]);
+  
+  return {
+    deals: dealsCount.data().count,
+    products: productsCount.data().count
+  };
+}
+

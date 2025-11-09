@@ -14,9 +14,10 @@ import {
 } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart } from "lucide-react";
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useFavorites } from '@/hooks/use-favorites';
 
 interface DealCardProps {
   deal: Deal;
@@ -41,6 +42,7 @@ function getRelativeTime(isoDate: string): string {
 export default function DealCard({ deal }: DealCardProps) {
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { user } = useAuth();
+  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const [temperature, setTemperature] = useState(deal.temperature);
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
@@ -90,6 +92,22 @@ export default function DealCard({ deal }: DealCardProps) {
             className="aspect-[3/2] w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         </Link>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white hover:scale-110 transition-all"
+          onClick={(e) => {
+            e.preventDefault();
+            toggleFavorite();
+          }}
+          disabled={isFavoriteLoading}
+        >
+          <Heart
+            className={`h-4 w-4 transition-all ${
+              isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'
+            }`}
+          />
+        </Button>
         <div className="absolute right-2 top-2 flex gap-1">
           {isHot && (
             <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg">

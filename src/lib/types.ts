@@ -118,6 +118,14 @@ export interface Comment {
   createdAt: string; // ISO string
 }
 
+export interface Favorite {
+  id: string;
+  userId: string;
+  itemId: string; // ID okazji lub produktu
+  itemType: 'deal' | 'product';
+  createdAt: string; // ISO string
+}
+
 export interface NavigationShowcaseConfig {
   promotedType: 'deals' | 'products';
   promotedIds: string[];

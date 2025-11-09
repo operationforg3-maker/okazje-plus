@@ -25,8 +25,11 @@ import {
 } from 'lucide-react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Comment } from '@/lib/types';
+import { Comment, Deal, Product } from '@/lib/types';
 import Link from 'next/link';
+import { getFavoriteDeals, getFavoriteProducts } from '@/lib/data';
+import DealListCard from '@/components/deal-list-card';
+import ProductCard from '@/components/product-card';
 
 type UserActivity = {
   votes: number;
@@ -48,6 +51,9 @@ function ProfilePage() {
     memberSince: 'Styczeń 2024'
   });
   const [recentComments, setRecentComments] = useState<Comment[]>([]);
+  const [favoriteDeals, setFavoriteDeals] = useState<Deal[]>([]);
+  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -113,6 +119,31 @@ function ProfilePage() {
 
     fetchUserData();
   }, [user]);
+
+  // Pobierz ulubione gdy zakładka jest aktywna
+  useEffect(() => {
+    if (!user || activeTab !== 'favorites') return;
+
+    async function fetchFavorites() {
+      if (!user) return;
+      
+      setFavoritesLoading(true);
+      try {
+        const [deals, products] = await Promise.all([
+          getFavoriteDeals(user.uid, 20),
+          getFavoriteProducts(user.uid, 20)
+        ]);
+        setFavoriteDeals(deals);
+        setFavoriteProducts(products);
+      } catch (error) {
+        console.error('Error fetching favorites:', error);
+      } finally {
+        setFavoritesLoading(false);
+      }
+    }
+
+    fetchFavorites();
+  }, [user, activeTab]);
 
   if (!user) {
     return null;
@@ -317,19 +348,58 @@ function ProfilePage() {
                 <Heart className="h-5 w-5" />
                 Ulubione
               </CardTitle>
-              <CardDescription>Zapisane okazje i produkty</CardDescription>
+              <CardDescription>Zapisane okazje i produkty ({favoriteDeals.length + favoriteProducts.length})</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="font-semibold text-lg mb-2">System ulubionych wkrótce!</h3>
-                <p className="text-muted-foreground mb-4">
-                  Funkcja w przygotowaniu.
-                </p>
-                <Button variant="outline" asChild>
-                  <Link href="/deals">Przeglądaj okazje</Link>
-                </Button>
-              </div>
+              {favoritesLoading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                  <p className="text-muted-foreground">Ładowanie ulubionych...</p>
+                </div>
+              ) : favoriteDeals.length === 0 && favoriteProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="font-semibold text-lg mb-2">Brak ulubionych</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Zacznij dodawać okazje i produkty do ulubionych, klikając ikonę serca.
+                  </p>
+                  <Button variant="outline" asChild>
+                    <Link href="/deals">Przeglądaj okazje</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Ulubione okazje */}
+                  {favoriteDeals.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <Flame className="h-5 w-5 text-orange-500" />
+                        Okazje ({favoriteDeals.length})
+                      </h3>
+                      <div className="space-y-4">
+                        {favoriteDeals.map((deal) => (
+                          <DealListCard key={deal.id} deal={deal} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ulubione produkty */}
+                  {favoriteProducts.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        Produkty ({favoriteProducts.length})
+                      </h3>
+                      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {favoriteProducts.map((product) => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

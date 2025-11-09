@@ -1,6 +1,8 @@
+"use client";
+
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Tag, TrendingUp, ExternalLink } from 'lucide-react';
+import { Star, Tag, TrendingUp, ExternalLink, Heart } from 'lucide-react';
 import type { Product } from '@/lib/types';
 import {
   Card,
@@ -16,12 +18,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useFavorites } from '@/hooks/use-favorites';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { isFavorited, isLoading, toggleFavorite } = useFavorites(product.id, 'product');
+  
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
   const hasOriginal = typeof (product as any).originalPrice === 'number';
   const original = hasOriginal ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format((product as any).originalPrice) : null;
@@ -51,6 +56,22 @@ export default function ProductCard({ product }: ProductCardProps) {
             Top Rated
           </Badge>
         )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white hover:scale-110 transition-all"
+          onClick={(e) => {
+            e.preventDefault();
+            toggleFavorite();
+          }}
+          disabled={isLoading}
+        >
+          <Heart
+            className={`h-4 w-4 transition-all ${
+              isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'
+            }`}
+          />
+        </Button>
       </CardHeader>
       <CardContent className="flex-grow space-y-3 p-4">
         <div className="flex items-center justify-between">
