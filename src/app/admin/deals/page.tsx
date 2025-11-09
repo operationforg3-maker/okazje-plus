@@ -34,6 +34,10 @@ import { DealForm } from '@/components/admin/deal-form';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SortableTableHead } from '@/components/ui/sortable-table-head';
+import { PaginationControls } from '@/components/ui/pagination-controls';
+import { useTableSort } from '@/hooks/use-table-sort';
+import { usePagination } from '@/hooks/use-pagination';
 
 export default function AdminDealsPage() {
   const { toast } = useToast();
@@ -43,6 +47,28 @@ export default function AdminDealsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [deletingDeal, setDeletingDeal] = useState<Deal | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Sortowanie
+  const { sortedData, requestSort, sortConfig } = useTableSort<Deal>(
+    deals,
+    { key: 'temperature', direction: 'desc' }
+  );
+
+  // Paginacja
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    totalItems,
+    canGoNext,
+    canGoPrev,
+    goToPage,
+    nextPage,
+    prevPage,
+    goToFirstPage,
+    goToLastPage,
+  } = usePagination(sortedData, itemsPerPage);
 
   async function fetchDeals() {
     setLoading(true);
@@ -141,18 +167,58 @@ export default function AdminDealsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tytuł</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Cena</TableHead>
-                  <TableHead className="hidden md:table-cell">Oryginalna cena</TableHead>
-                  <TableHead className="hidden md:table-cell">Temperatura</TableHead>
+                  <SortableTableHead
+                    columnKey="title"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                  >
+                    Tytuł
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="status"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                  >
+                    Status
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="price"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                    className="hidden md:table-cell"
+                  >
+                    Cena
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="originalPrice"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                    className="hidden md:table-cell"
+                  >
+                    Oryginalna cena
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="temperature"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                    className="hidden md:table-cell"
+                  >
+                    Temperatura
+                  </SortableTableHead>
                   <TableHead>
                     <span className="sr-only">Akcje</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {deals.map((deal) => (
+                {paginatedData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                      Brak okazji. Dodaj pierwszą okazję klikając przycisk "Dodaj okazję".
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedData.map((deal) => (
                   <TableRow key={deal.id}>
                     <TableCell className="font-medium">{deal.title}</TableCell>
                     <TableCell>
@@ -195,16 +261,29 @@ export default function AdminDealsPage() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))}
-                {deals.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                      Brak okazji. Dodaj pierwszą okazję klikając przycisk "Dodaj okazję".
-                    </TableCell>
-                  </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
+          )}
+          {!loading && totalItems > 0 && (
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              canGoPrev={canGoPrev}
+              canGoNext={canGoNext}
+              onPageChange={goToPage}
+              onFirstPage={goToFirstPage}
+              onLastPage={goToLastPage}
+              onPrevPage={prevPage}
+              onNextPage={nextPage}
+              onItemsPerPageChange={(value) => {
+                setItemsPerPage(value);
+                goToPage(1); // Reset to first page when changing items per page
+              }}
+            />
           )}
         </CardContent>
       </Card>
