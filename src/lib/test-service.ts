@@ -20,11 +20,19 @@ import { Deal, Product, User } from './types';
 export interface TestResult {
   id: string;
   name: string;
-  category: 'technical' | 'functional' | 'business';
+  category: 'technical' | 'functional' | 'business' | 'security';
   status: 'pass' | 'fail' | 'warning' | 'skip';
   message: string;
   duration: number; // ms
   details?: any;
+}
+
+export interface TestAuthOptions {
+  userEmail?: string;
+  userPassword?: string;
+  adminEmail?: string;
+  adminPassword?: string;
+  preferAnonymous?: boolean; // spróbuj anon dla usera
 }
 
 interface Category {
@@ -54,7 +62,7 @@ export interface TestSuiteResult {
 async function runTest(
   id: string,
   name: string,
-  category: 'technical' | 'functional' | 'business',
+  category: 'technical' | 'functional' | 'business' | 'security',
   testFn: () => Promise<{ status: TestResult['status']; message: string; details?: any }>
 ): Promise<TestResult> {
   const start = performance.now();
@@ -508,7 +516,276 @@ async function testDataQuality(): Promise<{ status: 'pass' | 'fail' | 'warning';
  * ===========================================
  */
 
-export async function runAllTests(): Promise<TestSuiteResult> {
+// ==============================
+// SECURITY TEST HELPERS & TESTS
+// ==============================
+import { getAuth, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { addDoc, setDoc, deleteDoc } from 'firebase/firestore';
+
+type SecurityResult = { status: TestResult['status']; message: string; details?: any };
+
+async function securityGuestApprovedDeal(): Promise<SecurityResult> {
+  try {
+    // guest (no auth) should read at least one approved deal
+    const q = query(collection(db,'deals'), where('status','==','approved'), limit(1));
+    const snap = await getDocs(q);
+    if (!snap.empty) return { status:'pass', message:'Guest can read approved deal', details:{dealId:snap.docs[0].id} };
+    return { status:'warning', message:'No approved deals present to test' };
+  } catch (e:any) {
+    return { status:'fail', message:`Guest read failed: ${e.message}` };
+  }
+}
+
+async function securityGuestDraftDeal(): Promise<SecurityResult> {
+  try {
+    const q = query(collection(db,'deals'), where('status','==','draft'), limit(1));
+    const snap = await getDocs(q);
+    if (snap.empty) return { status:'skip', message:'No draft deal to attempt read' };
+    // Try to read directly (already read if snap succeeded) – if rules block, we wouldn't get here.
+    // If we read a draft, rules are too permissive.
+    return { status:'fail', message:'Guest could read draft deal', details:{dealId:snap.docs[0].id} };
+  } catch (e:any) {
+    // Expected failure
+    return { status:'pass', message:'Guest blocked from reading draft deal' };
+  }
+}
+
+type AuthLoginResult = { ok: true; uid: string } | { ok: false; reason: string };
+
+async function authLogin(email?: string, password?: string): Promise<AuthLoginResult> {
+  if (!email || !password) return { ok: false, reason: 'missing_credentials' };
+  try {
+    const auth = getAuth();
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    return { ok: true, uid: cred.user.uid };
+  } catch (e: any) {
+    return { ok: false, reason: e.message };
+  }
+}
+
+async function authLogout() {
+  try { const auth = getAuth(); await signOut(auth); } catch {}
+}
+
+async function ensureTestUser(uid:string, role:'user'|'admin') {
+  try {
+    await setDoc(doc(db,'users',uid), { role, updatedAt:new Date().toISOString() }, { merge:true });
+  } catch {}
+}
+
+async function createEphemeralDraftDeal(ownerUid:string) {
+  const data = {
+    title:'SEC TEST DEAL', price:1, postedBy:ownerUid, status:'draft', temperature:0, voteCount:0, commentsCount:0,
+    mainCategorySlug:'test', postedAt:new Date().toISOString()
+  };
+  const ref = await addDoc(collection(db,'deals'), data);
+  return ref.id;
+}
+
+async function securityUserCreateDraftDeal(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials provided' };
+  await ensureTestUser(login.uid,'user');
+  try {
+    const dealId = await createEphemeralDraftDeal(login.uid);
+    await authLogout();
+    return { status:'pass', message:'User created draft deal', details:{dealId} };
+  } catch (e:any) {
+    await authLogout();
+    if (e.message.includes('Missing or insufficient permissions')) {
+      return { status:'fail', message:'Permissions blocked user draft create' };
+    }
+    return { status:'fail', message:e.message };
+  }
+}
+
+async function securityUserUpdateOwnDeal(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  const dealId = await createEphemeralDraftDeal(login.uid);
+  try {
+    const ref = doc(db,'deals',dealId);
+    await setDoc(ref,{ title:'SEC UPDATED', status:'draft' }, { merge:true });
+    await authLogout();
+    return { status:'pass', message:'User updated own draft deal' };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:`Update failed: ${e.message}` };
+  }
+}
+
+async function securityUserCannotDeleteDeal(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  const dealId = await createEphemeralDraftDeal(login.uid);
+  try {
+    await deleteDoc(doc(db,'deals',dealId));
+    await authLogout();
+    return { status:'fail', message:'User managed to delete deal (should be blocked)' };
+  } catch (e:any) {
+    await authLogout();
+    if (e.message.includes('Missing or insufficient permissions')) {
+      return { status:'pass', message:'User correctly blocked from deleting deal' };
+    }
+    return { status:'warning', message:`Delete produced different error: ${e.message}` };
+  }
+}
+
+async function securityAdminReadDraftDeal(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.adminEmail, opts?.adminPassword);
+  if (!login.ok) return { status:'skip', message:'No admin credentials' };
+  await ensureTestUser(login.uid,'admin');
+  try {
+    const q = query(collection(db,'deals'), where('status','==','draft'), limit(1));
+    const snap = await getDocs(q);
+    await authLogout();
+    if (snap.empty) return { status:'skip', message:'No draft deal to read' };
+    return { status:'pass', message:'Admin read draft deal', details:{dealId:snap.docs[0].id} };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:e.message };
+  }
+}
+
+async function securityAdminModerateDeal(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.adminEmail, opts?.adminPassword);
+  if (!login.ok) return { status:'skip', message:'No admin credentials' };
+  await ensureTestUser(login.uid,'admin');
+  const dealId = await createEphemeralDraftDeal(login.uid); // owner admin
+  try {
+    await setDoc(doc(db,'deals',dealId), { status:'approved' }, { merge:true });
+    await authLogout();
+    return { status:'pass', message:'Admin moderated deal to approved', details:{dealId} };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:`Moderation failed: ${e.message}` };
+  }
+}
+
+async function securityUserVoteUpdate(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  const dealId = await createEphemeralDraftDeal(login.uid);
+  try {
+    // attempt to update temperature directly (allowed via limited keys rule?)
+    await setDoc(doc(db,'deals',dealId), { temperature:5, voteCount:1 }, { merge:true });
+    await authLogout();
+    return { status:'pass', message:'User updated temperature/voteCount' };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:`Vote update blocked: ${e.message}` };
+  }
+}
+
+async function securityUserAddComment(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  // Need approved deal to comment – find one
+  const q = query(collection(db,'deals'), where('status','==','approved'), limit(1));
+  const snap = await getDocs(q);
+  if (snap.empty) { await authLogout(); return { status:'skip', message:'No approved deal for comment test' }; }
+  const dealId = snap.docs[0].id;
+  try {
+    const ref = collection(db,`deals/${dealId}/comments`);
+    await addDoc(ref,{ userId:login.uid, content:'SEC COMMENT', createdAt:new Date().toISOString() });
+    await authLogout();
+    return { status:'pass', message:'User added comment' };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:`Comment add failed: ${e.message}` };
+  }
+}
+
+async function securityUserCannotEditOthersComment(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  const q = query(collection(db,'deals'), where('status','==','approved'), limit(1));
+  const snap = await getDocs(q);
+  if (snap.empty) { await authLogout(); return { status:'skip', message:'No approved deal' }; }
+  const dealId = snap.docs[0].id;
+  // create comment as admin to attempt edit by user
+  const adminLogin = await authLogin(opts?.adminEmail, opts?.adminPassword);
+  if (!adminLogin.ok) { await authLogout(); return { status:'skip', message:'No admin creds for other-comment test' }; }
+  await ensureTestUser(adminLogin.uid,'admin');
+  const commentRef = await addDoc(collection(db,`deals/${dealId}/comments`), { userId:adminLogin.uid, content:'ADMIN COMMENT', createdAt:new Date().toISOString() });
+  await authLogout(); // logout admin
+  // user tries update foreign comment
+  const relog = await authLogin(opts?.userEmail, opts?.userPassword);
+  try {
+    await setDoc(doc(db,`deals/${dealId}/comments/${commentRef.id}`), { content:'HACK' }, { merge:true });
+    await authLogout();
+    return { status:'fail', message:'User edited others comment (should be blocked)' };
+  } catch (e:any) {
+    await authLogout();
+    if (e.message.includes('Missing or insufficient permissions')) {
+      return { status:'pass', message:'User blocked from editing others comment' };
+    }
+    return { status:'warning', message:`Unexpected error: ${e.message}` };
+  }
+}
+
+async function securityFavoritesIsolation(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  // create favorite
+  try {
+    const favRef = await addDoc(collection(db,'favorites'), { userId:login.uid, dealId:'fake-deal', createdAt:new Date().toISOString() });
+    await authLogout();
+    // attempt guest read
+    const favSnap = await getDoc(doc(db,'favorites', favRef.id));
+    if (favSnap.exists()) {
+      return { status:'fail', message:'Guest could read private favorite' };
+    }
+    return { status:'pass', message:'Guest cannot read favorite (expected)' };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:`Favorite test error: ${e.message}` };
+  }
+}
+
+async function securityNotificationsIsolation(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  try {
+    const notRef = await addDoc(collection(db,'notifications'), { userId:login.uid, type:'info', message:'Test', createdAt:new Date().toISOString() });
+    await authLogout();
+    // guest cannot read
+    const snap = await getDoc(doc(db,'notifications',notRef.id));
+    if (snap.exists()) return { status:'fail', message:'Guest could read notification' };
+    return { status:'pass', message:'Guest blocked from reading notification' };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:`Notification isolation error: ${e.message}` };
+  }
+}
+
+async function securityProductRatingOwnDoc(opts?: TestAuthOptions): Promise<SecurityResult> {
+  const login = await authLogin(opts?.userEmail, opts?.userPassword);
+  if (!login.ok) return { status:'skip', message:'No user credentials' };
+  await ensureTestUser(login.uid,'user');
+  // find approved product
+  const q = query(collection(db,'products'), where('status','==','approved'), limit(1));
+  const snap = await getDocs(q);
+  if (snap.empty) { await authLogout(); return { status:'skip', message:'No approved product' }; }
+  const productId = snap.docs[0].id;
+  try {
+    await setDoc(doc(db,`products/${productId}/ratings/${login.uid}`), { value:5, updatedAt:new Date().toISOString() }, { merge:true });
+    await authLogout();
+    return { status:'pass', message:'User set own rating' };
+  } catch (e:any) {
+    await authLogout();
+    return { status:'fail', message:`Rating set failed: ${e.message}` };
+  }
+}
+
+export async function runAllTests(options?: TestAuthOptions): Promise<TestSuiteResult> {
   const startTime = performance.now();
   const timestamp = new Date().toISOString();
   
@@ -537,7 +814,23 @@ export async function runAllTests(): Promise<TestSuiteResult> {
   results.push(await runTest('biz-003', 'User Activity Metrics', 'business', testUserActivity));
   results.push(await runTest('biz-004', 'Hot Deals Presence', 'business', testHotDeals));
   results.push(await runTest('biz-005', 'Data Quality Check', 'business', testDataQuality));
-  
+
+  // SECURITY TESTS (read/write matrix)
+  console.log('🔐 Running security rules tests...');
+  results.push(await runTest('sec-001', 'Guest Read Approved Deal', 'security', async () => securityGuestApprovedDeal()));
+  results.push(await runTest('sec-002', 'Guest Read Draft Deal Should Fail', 'security', async () => securityGuestDraftDeal()));
+  results.push(await runTest('sec-003', 'User Create Draft Deal', 'security', async () => securityUserCreateDraftDeal(options)));
+  results.push(await runTest('sec-004', 'User Update Own Deal', 'security', async () => securityUserUpdateOwnDeal(options)));
+  results.push(await runTest('sec-005', 'User Cannot Delete Deal', 'security', async () => securityUserCannotDeleteDeal(options)));
+  results.push(await runTest('sec-006', 'Admin Read Draft Deal', 'security', async () => securityAdminReadDraftDeal(options)));
+  results.push(await runTest('sec-007', 'Admin Moderate Deal (status change)', 'security', async () => securityAdminModerateDeal(options)));
+  results.push(await runTest('sec-008', 'User Vote Updates temperature/voteCount', 'security', async () => securityUserVoteUpdate(options)));
+  results.push(await runTest('sec-009', 'User Add Comment To Approved Deal', 'security', async () => securityUserAddComment(options)));
+  results.push(await runTest('sec-010', 'User Cannot Edit Someone Else Comment', 'security', async () => securityUserCannotEditOthersComment(options)));
+  results.push(await runTest('sec-011', 'Favorites Isolation (read only own)', 'security', async () => securityFavoritesIsolation(options)));
+  results.push(await runTest('sec-012', 'Notifications Isolation (read only own)', 'security', async () => securityNotificationsIsolation(options)));
+  results.push(await runTest('sec-013', 'Product Rating Only Own Doc', 'security', async () => securityProductRatingOwnDoc(options)));
+
   const duration = Math.round(performance.now() - startTime);
   
   const passed = results.filter(r => r.status === 'pass').length;

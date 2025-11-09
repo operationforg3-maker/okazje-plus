@@ -18,10 +18,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const body = await request.json().catch(() => ({}));
+    const options = {
+      userEmail: body?.userEmail || process.env.TEST_USER_EMAIL,
+      userPassword: body?.userPassword || process.env.TEST_USER_PASSWORD,
+      adminEmail: body?.adminEmail || process.env.TEST_ADMIN_EMAIL,
+      adminPassword: body?.adminPassword || process.env.TEST_ADMIN_PASSWORD,
+      preferAnonymous: body?.preferAnonymous ?? true,
+    };
+
     console.log('🧪 Starting test suite execution...');
     
     // Uruchom wszystkie testy
-    const results = await runAllTests();
+    const results = await runAllTests(options);
     
     console.log(`✅ Test suite completed: ${results.passed}/${results.totalTests} passed`);
     

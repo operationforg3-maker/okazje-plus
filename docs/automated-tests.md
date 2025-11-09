@@ -2,7 +2,7 @@
 
 ## Przegląd
 
-System testów automatycznych umożliwia kompleksowe testowanie aplikacji z poziomu panelu administracyjnego. Testy są podzielone na trzy kategorie: **techniczne**, **funkcjonalne** i **biznesowe**.
+System testów automatycznych umożliwia kompleksowe testowanie aplikacji z poziomu panelu administracyjnego. Testy są podzielone na cztery kategorie: **techniczne**, **funkcjonalne**, **biznesowe** i **security** (bezpieczeństwo Firestore).
 
 ## Architektura
 
@@ -13,11 +13,18 @@ Centralna logika testów. Eksportuje:
 - **`TestResult`** - interfejs wyniku pojedynczego testu
   - `id`: string - unikalny identyfikator
   - `name`: string - nazwa testu
-  - `category`: 'technical' | 'functional' | 'business'
+  - `category`: 'technical' | 'functional' | 'business' | 'security'
   - `status`: 'pass' | 'fail' | 'warning' | 'skip'
   - `message`: string - opis wyniku
   - `duration`: number - czas wykonania w ms
   - `details?`: any - dodatkowe informacje
+
+- **`TestAuthOptions`** - opcje uwierzytelniania dla testów security
+  - `userEmail?`: string - email testowego użytkownika
+  - `userPassword?`: string - hasło testowego użytkownika
+  - `adminEmail?`: string - email testowego admina
+  - `adminPassword?`: string - hasło testowego admina
+  - `preferAnonymous?`: boolean - użyj anonimowego użytkownika
 
 - **`TestSuiteResult`** - interfejs wyniku całego zestawu testów
   - `timestamp`: string - ISO timestamp
@@ -29,7 +36,7 @@ Centralna logika testów. Eksportuje:
   - `skipped`: number - pominięte
   - `results`: TestResult[] - szczegółowe wyniki
 
-- **`runAllTests()`** - główna funkcja uruchamiająca wszystkie testy
+- **`runAllTests(options?: TestAuthOptions)`** - główna funkcja uruchamiająca wszystkie testy
 
 ### 2. API Endpoint (`src/app/api/admin/tests/run/route.ts`)
 
@@ -41,7 +48,21 @@ Endpoint uruchamiający testy. Wymaga autentykacji (header `Authorization`).
 ```bash
 POST /api/admin/tests/run
 Authorization: Bearer admin
+Content-Type: application/json
+
+{
+  "userEmail": "test@example.com",
+  "userPassword": "testpass",
+  "adminEmail": "admin@example.com",
+  "adminPassword": "adminpass"
+}
 ```
+
+**Zmienne środowiskowe (fallback):**
+- `TEST_USER_EMAIL` - email testowego użytkownika
+- `TEST_USER_PASSWORD` - hasło testowego użytkownika
+- `TEST_ADMIN_EMAIL` - email testowego admina
+- `TEST_ADMIN_PASSWORD` - hasło testowego admina
 
 **Response (success):**
 ```json
@@ -50,11 +71,11 @@ Authorization: Bearer admin
   "data": {
     "timestamp": "2024-01-15T10:30:00.000Z",
     "duration": 2340,
-    "totalTests": 14,
-    "passed": 11,
+    "totalTests": 26,
+    "passed": 21,
     "failed": 1,
     "warnings": 2,
-    "skipped": 0,
+    "skipped": 2,
     "results": [...]
   }
 }
@@ -123,7 +144,7 @@ Zakładka "Testy" dodana do głównego panelu administracyjnego jako piąta zak�
    - Fail jeśli brak kategorii (krytyczne dla nawigacji)
    - Zwraca liczby: main categories, subcategories
 
-### Testy Biznesowe (6)
+### Testy Biznesowe (5)
 
 9. **biz-001: Approved Content Availability**
    - Liczba zatwierdzonych deals i products
@@ -147,6 +168,62 @@ Zakładka "Testy" dodana do głównego panelu administracyjnego jako piąta zak�
     - Liczba deals bez opisów
     - Warning jeśli > 30% bez obrazków
 
+### Testy Security (13)
+
+Testują reguły bezpieczeństwa Firestore dla różnych ról użytkowników. **Wymagają poświadczeń testowych użytkowników** (przekazanych przez API lub zmienne środowiskowe).
+
+14. **sec-001: Guest Read Approved Deal**
+    - Gość (niezalogowany) może odczytać zatwierdzone deale
+    - Pass jeśli odczyt się udał
+
+15. **sec-002: Guest Read Draft Deal Should Fail**
+    - Gość NIE może odczytać draft deals
+    - Pass jeśli odczyt zablokowany przez reguły
+
+16. **sec-003: User Create Draft Deal**
+    - Zalogowany user może stworzyć draft deal
+    - Skip jeśli brak poświadczeń użytkownika
+
+17. **sec-004: User Update Own Deal**
+    - User może edytować własny draft deal
+    - Pass jeśli update się udał
+
+18. **sec-005: User Cannot Delete Deal**
+    - User NIE może usunąć deala (nawet własnego)
+    - Pass jeśli delete zablokowany przez reguły
+
+19. **sec-006: Admin Read Draft Deal**
+    - Admin może odczytać dowolny draft deal
+    - Skip jeśli brak poświadczeń admina
+
+20. **sec-007: Admin Moderate Deal**
+    - Admin może zmienić status deala (draft → approved)
+    - Pass jeśli update się udał
+
+21. **sec-008: User Vote Updates**
+    - User może aktualizować temperature/voteCount
+    - Testuje ograniczone update (tylko dozwolone pola)
+
+22. **sec-009: User Add Comment**
+    - User może dodać komentarz do zatwierdzonego deala
+    - Pass jeśli addDoc się udał
+
+23. **sec-010: User Cannot Edit Others Comment**
+    - User NIE może edytować cudzych komentarzy
+    - Pass jeśli update zablokowany przez reguły
+
+24. **sec-011: Favorites Isolation**
+    - Favorites są prywatne (tylko owner może odczytać)
+    - Pass jeśli gość nie może odczytać cudzego favorita
+
+25. **sec-012: Notifications Isolation**
+    - Notyfikacje są prywatne (tylko owner może odczytać)
+    - Pass jeśli gość nie może odczytać cudzej notyfikacji
+
+26. **sec-013: Product Rating Own Doc**
+    - User może ustawić własną ocenę produktu (doc ID = user ID)
+    - Pass jeśli setDoc się udał
+
 ## Użycie
 
 ### Z Panelu Admina
@@ -154,7 +231,7 @@ Zakładka "Testy" dodana do głównego panelu administracyjnego jako piąta zak�
 1. Przejdź do `/admin`
 2. Kliknij zakładkę "Testy"
 3. Kliknij przycisk "Uruchom Testy"
-4. Poczekaj na wyniki (zazwyczaj 2-5 sekund)
+4. Poczekaj na wyniki (zazwyczaj 5-10 sekund z testami security)
 5. Przejrzyj szczegółowe wyniki:
    - Zielone = Pass ✅
    - Czerwone = Fail ❌
@@ -162,12 +239,24 @@ Zakładka "Testy" dodana do głównego panelu administracyjnego jako piąta zak�
    - Szare = Skip ⏭️
 6. Kliknij kartę testu aby zobaczyć szczegóły (details JSON)
 
+**Uwaga:** Testy security będą **skipped** jeśli nie przekażesz poświadczeń testowych użytkowników (przez API POST body lub zmienne środowiskowe).
+
 ### Programowo
 
 ```typescript
 import { runAllTests } from '@/lib/test-service';
 
+// Bez testów security
 const results = await runAllTests();
+
+// Z testami security (pełne)
+const resultsWithSecurity = await runAllTests({
+  userEmail: 'testuser@example.com',
+  userPassword: 'testpass123',
+  adminEmail: 'admin@example.com',
+  adminPassword: 'adminpass123'
+});
+
 console.log(`Passed: ${results.passed}/${results.totalTests}`);
 console.log(`Duration: ${results.duration}ms`);
 
@@ -181,9 +270,31 @@ results.results.forEach(test => {
 ### Przez API
 
 ```bash
+# Bez testów security
 curl -X POST http://localhost:9002/api/admin/tests/run \
   -H "Authorization: Bearer admin" \
   -H "Content-Type: application/json"
+
+# Z testami security (pełna weryfikacja reguł)
+curl -X POST http://localhost:9002/api/admin/tests/run \
+  -H "Authorization: Bearer admin" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userEmail": "testuser@example.com",
+    "userPassword": "testpass123",
+    "adminEmail": "admin@example.com",
+    "adminPassword": "adminpass123"
+  }'
+```
+
+**Zmienne środowiskowe (alternatywa):**
+
+Ustaw w `.env.local` lub environment:
+```bash
+TEST_USER_EMAIL=testuser@example.com
+TEST_USER_PASSWORD=testpass123
+TEST_ADMIN_EMAIL=admin@example.com
+TEST_ADMIN_PASSWORD=adminpass123
 ```
 
 ## Interpretacja Wyników
@@ -193,34 +304,41 @@ curl -X POST http://localhost:9002/api/admin/tests/run \
 - **Pass (green)**: Test zaliczony, wszystko działa poprawnie
 - **Fail (red)**: Test niezaliczony, wymaga natychmiastowej uwagi
 - **Warning (amber)**: Potencjalny problem, nie krytyczny ale warto sprawdzić
-- **Skip (gray)**: Test pominięty, brak danych do przetestowania
+- **Skip (gray)**: Test pominięty, brak danych do przetestowania lub poświadczeń
 
 ### Typowe Scenariusze
 
 #### Wszystko OK
 ```
-Total: 14 | Passed: 14 | Failed: 0 | Warnings: 0 | Skipped: 0
+Total: 26 | Passed: 24 | Failed: 0 | Warnings: 0 | Skipped: 2
 ```
-Aplikacja działa idealnie.
+Aplikacja działa idealnie. Security tests skipped (brak credentials).
+
+#### Pełna Weryfikacja z Security
+```
+Total: 26 | Passed: 26 | Failed: 0 | Warnings: 0 | Skipped: 0
+```
+Wszystkie testy (włącznie z security) zaliczone.
 
 #### Brak Danych Testowych
 ```
-Total: 14 | Passed: 8 | Failed: 0 | Warnings: 4 | Skipped: 2
+Total: 26 | Passed: 12 | Failed: 0 | Warnings: 4 | Skipped: 10
 ```
 Aplikacja działa, ale brakuje danych (normalne w środowisku dev).
 
 #### Problemy Techniczne
 ```
-Total: 14 | Passed: 10 | Failed: 3 | Warnings: 1 | Skipped: 0
+Total: 26 | Passed: 18 | Failed: 4 | Warnings: 2 | Skipped: 2
 ```
 Sprawdź failed tests - mogą wskazywać na:
 - Brak indeksów Firestore
 - Problemy z połączeniem
 - Błędy w logice biznesowej
+- Nieprawidłowe reguły security (jeśli security tests failed)
 
 #### Problemy z Jakością Danych
 ```
-Total: 14 | Passed: 12 | Failed: 0 | Warnings: 2 | Skipped: 0
+Total: 26 | Passed: 20 | Failed: 0 | Warnings: 4 | Skipped: 2
 ```
 Warning zazwyczaj oznacza problemy z contentem:
 - Brak obrazków w deals
@@ -267,7 +385,7 @@ async function testMyFeature(): Promise<{
 2. **Dodaj do `runAllTests()`:**
 
 ```typescript
-export async function runAllTests(): Promise<TestSuiteResult> {
+export async function runAllTests(options?: TestAuthOptions): Promise<TestSuiteResult> {
   // ... existing code ...
   
   results.push(await runTest(
