@@ -166,3 +166,264 @@ export const trackError = (errorName: string, errorMessage?: string) => {
     fatal: false,
   });
 };
+
+// ===========================================
+// Firestore Analytics Tracking (for Admin Dashboard)
+// ===========================================
+
+import { db } from './firebase';
+import { 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  getDocs, 
+  getCountFromServer,
+  orderBy,
+  limit,
+  Timestamp 
+} from 'firebase/firestore';
+
+export type FirestoreEventType = 'view' | 'click' | 'share' | 'favorite' | 'comment' | 'vote';
+export type ResourceType = 'deal' | 'product';
+
+export interface FirestoreAnalyticsEvent {
+  type: FirestoreEventType;
+  resourceType: ResourceType;
+  resourceId: string;
+  userId?: string;
+  sessionId?: string;
+  timestamp: string;
+  metadata?: {
+    source?: string;
+    referrer?: string;
+    userAgent?: string;
+    [key: string]: any;
+  };
+}
+
+/**
+ * Pobiera lub generuje session ID
+ */
+function getSessionId(): string {
+  if (typeof window === 'undefined') return 'server';
+  
+  let sessionId = sessionStorage.getItem('analytics_session_id');
+  if (!sessionId) {
+    sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem('analytics_session_id', sessionId);
+  }
+  return sessionId;
+}
+
+/**
+ * Śledzi zdarzenie w Firestore (dla statystyk admina)
+ */
+export async function trackFirestoreEvent(
+  type: FirestoreEventType,
+  resourceType: ResourceType,
+  resourceId: string,
+  userId?: string,
+  metadata?: FirestoreAnalyticsEvent['metadata']
+): Promise<void> {
+  try {
+    const event: FirestoreAnalyticsEvent = {
+      type,
+      resourceType,
+      resourceId,
+      userId,
+      sessionId: getSessionId(),
+      timestamp: new Date().toISOString(),
+      metadata: {
+        ...metadata,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+        referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+      }
+    };
+
+    await addDoc(collection(db, 'analytics'), event);
+  } catch (error) {
+    // Silent fail - nie przerywamy UX
+    console.warn('Firestore analytics tracking failed:', error);
+  }
+}
+
+/**
+ * Śledzi wyświetlenie (debounced - 1x per session per resource)
+ */
+export async function trackFirestoreView(
+  resourceType: ResourceType,
+  resourceId: string,
+  userId?: string
+): Promise<void> {
+  const viewKey = `viewed_${resourceType}_${resourceId}`;
+  if (typeof window !== 'undefined' && sessionStorage.getItem(viewKey)) {
+    return;
+  }
+  
+  if (typeof window !== 'undefined') {
+    sessionStorage.setItem(viewKey, 'true');
+  }
+  
+  await trackFirestoreEvent('view', resourceType, resourceId, userId);
+  
+  // Track też w GA
+  trackItemView(resourceType, resourceId);
+}
+
+/**
+ * Śledzi kliknięcie w link
+ */
+export async function trackFirestoreClick(
+  resourceType: ResourceType,
+  resourceId: string,
+  userId?: string,
+  url?: string
+): Promise<void> {
+  await trackFirestoreEvent('click', resourceType, resourceId, userId, { destination: url });
+  
+  // Track też w GA
+  if (url) {
+    trackOutboundClick(resourceType, resourceId, url);
+  }
+}
+
+/**
+ * Śledzi udostępnienie
+ */
+export async function trackFirestoreShare(
+  resourceType: ResourceType,
+  resourceId: string,
+  userId?: string,
+  platform?: string
+): Promise<void> {
+  await trackFirestoreEvent('share', resourceType, resourceId, userId, { platform });
+  
+  // Track też w GA
+  trackShare(resourceType, resourceId, platform || 'unknown');
+}
+
+// ===========================================
+// FUNKCJE AGREGACJI DLA ADMINA
+// ===========================================
+
+export interface AnalyticsStats {
+  views: number;
+  clicks: number;
+  shares: number;
+  favorites: number;
+  comments: number;
+  votes: number;
+  conversionRate: number;
+  uniqueUsers: number;
+}
+
+/**
+ * Pobiera globalne statystyki analytics dla dashboardu admina
+ */
+export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
+  totalViews: number;
+  totalClicks: number;
+  totalShares: number;
+  avgConversionRate: number;
+  viewsByDay: Array<{ date: string; count: number }>;
+  topDeals: Array<{ id: string; views: number; clicks: number }>;
+  topProducts: Array<{ id: string; views: number; clicks: number }>;
+}> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - daysBack);
+
+  const analyticsQuery = query(
+    collection(db, 'analytics'),
+    where('timestamp', '>=', startDate.toISOString()),
+    orderBy('timestamp', 'desc'),
+    limit(10000)
+  );
+
+  const snapshot = await getDocs(analyticsQuery);
+  const events = snapshot.docs.map(doc => doc.data() as FirestoreAnalyticsEvent);
+
+  const totalViews = events.filter(e => e.type === 'view').length;
+  const totalClicks = events.filter(e => e.type === 'click').length;
+  const totalShares = events.filter(e => e.type === 'share').length;
+
+  const avgConversionRate = totalViews > 0 
+    ? Math.round((totalClicks / totalViews) * 1000) / 10 
+    : 0;
+
+  // Views by day
+  const viewsByDay: Record<string, number> = {};
+  events.filter(e => e.type === 'view').forEach(event => {
+    const date = event.timestamp.split('T')[0];
+    viewsByDay[date] = (viewsByDay[date] || 0) + 1;
+  });
+
+  const viewsByDayArray = Object.entries(viewsByDay)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  // Top deals
+  const dealStats: Record<string, { views: number; clicks: number }> = {};
+  events.filter(e => e.resourceType === 'deal').forEach(event => {
+    if (!dealStats[event.resourceId]) {
+      dealStats[event.resourceId] = { views: 0, clicks: 0 };
+    }
+    if (event.type === 'view') dealStats[event.resourceId].views++;
+    if (event.type === 'click') dealStats[event.resourceId].clicks++;
+  });
+
+  const topDeals = Object.entries(dealStats)
+    .map(([id, stats]) => ({ id, ...stats }))
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 10);
+
+  // Top products
+  const productStats: Record<string, { views: number; clicks: number }> = {};
+  events.filter(e => e.resourceType === 'product').forEach(event => {
+    if (!productStats[event.resourceId]) {
+      productStats[event.resourceId] = { views: 0, clicks: 0 };
+    }
+    if (event.type === 'view') productStats[event.resourceId].views++;
+    if (event.type === 'click') productStats[event.resourceId].clicks++;
+  });
+
+  const topProducts = Object.entries(productStats)
+    .map(([id, stats]) => ({ id, ...stats }))
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 10);
+
+  return {
+    totalViews,
+    totalClicks,
+    totalShares,
+    avgConversionRate,
+    viewsByDay: viewsByDayArray,
+    topDeals,
+    topProducts
+  };
+}
+
+/**
+ * Pobiera count eventów dla danego typu
+ */
+export async function getEventCount(
+  type: FirestoreEventType,
+  resourceType?: ResourceType,
+  daysBack: number = 7
+): Promise<number> {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - daysBack);
+
+  let q = query(
+    collection(db, 'analytics'),
+    where('type', '==', type),
+    where('timestamp', '>=', startDate.toISOString())
+  );
+
+  if (resourceType) {
+    q = query(q, where('resourceType', '==', resourceType));
+  }
+
+  const countSnapshot = await getCountFromServer(q);
+  return countSnapshot.data().count;
+}

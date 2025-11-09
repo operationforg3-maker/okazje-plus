@@ -49,6 +49,27 @@ interface DashboardStats {
   avgTemperature: number;
   topCategories: Array<{ slug: string; count: number }>;
   recentActivity: number;
+  analytics: {
+    views: {
+      total: number;
+      today: number;
+      trend: number;
+    };
+    clicks: {
+      total: number;
+      today: number;
+      trend: number;
+    };
+    shares: {
+      total: number;
+    };
+    conversionRate: number;
+  };
+  growth: {
+    deals: number;
+    products: number;
+    users: number;
+  };
 }
 
 function AdminPage() {
@@ -142,10 +163,18 @@ function AdminPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.products || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-green-600 inline-flex items-center font-medium">
-                <TrendingUp className="h-3 w-3 mr-1" />
-                +12%
-              </span>
+              {dashboardStats?.growth.products !== undefined && (
+                <span className={`inline-flex items-center font-medium ${
+                  dashboardStats.growth.products >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {dashboardStats.growth.products >= 0 ? (
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1" />
+                  )}
+                  {dashboardStats.growth.products >= 0 ? '+' : ''}{dashboardStats.growth.products}%
+                </span>
+              )}
               {' '}od ostatniego miesiąca
             </p>
           </CardContent>
@@ -159,10 +188,18 @@ function AdminPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.deals || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-green-600 inline-flex items-center font-medium">
-                <TrendingUp className="h-3 w-3 mr-1" />
-                +23%
-              </span>
+              {dashboardStats?.growth.deals !== undefined && (
+                <span className={`inline-flex items-center font-medium ${
+                  dashboardStats.growth.deals >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {dashboardStats.growth.deals >= 0 ? (
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1" />
+                  )}
+                  {dashboardStats.growth.deals >= 0 ? '+' : ''}{dashboardStats.growth.deals}%
+                </span>
+              )}
               {' '}od ostatniego miesiąca
             </p>
           </CardContent>
@@ -176,10 +213,18 @@ function AdminPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.users || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-green-600 inline-flex items-center font-medium">
-                <TrendingUp className="h-3 w-3 mr-1" />
-                +8%
-              </span>
+              {dashboardStats?.growth.users !== undefined && (
+                <span className={`inline-flex items-center font-medium ${
+                  dashboardStats.growth.users >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {dashboardStats.growth.users >= 0 ? (
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3 mr-1" />
+                  )}
+                  {dashboardStats.growth.users >= 0 ? '+' : ''}{dashboardStats.growth.users}%
+                </span>
+              )}
               {' '}od ostatniego miesiąca
             </p>
           </CardContent>
@@ -291,11 +336,18 @@ function AdminPage() {
             <CardDescription>Ostatnie 7 dni</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">45,231</div>
+            <div className="text-3xl font-bold">
+              {dashboardStats?.analytics.views.total.toLocaleString() || 0}
+            </div>
             <div className="flex items-center text-sm text-muted-foreground mt-2">
-              <span className="text-green-600 font-medium">+18%</span>
+              <span className={`font-medium ${
+                (dashboardStats?.analytics.views.trend || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {(dashboardStats?.analytics.views.trend || 0) >= 0 ? '+' : ''}
+                {dashboardStats?.analytics.views.trend || 0}%
+              </span>
               <span className="mx-2">•</span>
-              6,432 dzisiaj
+              {dashboardStats?.analytics.views.today.toLocaleString() || 0} dzisiaj
             </div>
           </CardContent>
         </Card>
@@ -304,16 +356,23 @@ function AdminPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
-              Komentarze
+              Kliknięcia
             </CardTitle>
-            <CardDescription>Ostatnie 7 dni</CardDescription>
+            <CardDescription>W linki zewnętrzne (ostatnie 7 dni)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">892</div>
+            <div className="text-3xl font-bold">
+              {dashboardStats?.analytics.clicks.total.toLocaleString() || 0}
+            </div>
             <div className="flex items-center text-sm text-muted-foreground mt-2">
-              <span className="text-green-600 font-medium">+12%</span>
+              <span className={`font-medium ${
+                (dashboardStats?.analytics.clicks.trend || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {(dashboardStats?.analytics.clicks.trend || 0) >= 0 ? '+' : ''}
+                {dashboardStats?.analytics.clicks.trend || 0}%
+              </span>
               <span className="mx-2">•</span>
-              127 dzisiaj
+              {dashboardStats?.analytics.clicks.today.toLocaleString() || 0} dzisiaj
             </div>
           </CardContent>
         </Card>
@@ -322,16 +381,18 @@ function AdminPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <ThumbsUp className="h-4 w-4 text-primary" />
-              Głosy
+              Konwersja
             </CardTitle>
-            <CardDescription>Ostatnie 7 dni</CardDescription>
+            <CardDescription>Współczynnik kliknięć</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">3,421</div>
+            <div className="text-3xl font-bold">
+              {dashboardStats?.analytics.conversionRate || 0}%
+            </div>
             <div className="flex items-center text-sm text-muted-foreground mt-2">
-              <span className="text-green-600 font-medium">+25%</span>
-              <span className="mx-2">•</span>
-              489 dzisiaj
+              <span className="font-medium text-blue-600">
+                {dashboardStats?.analytics.shares.total || 0} udostępnień
+              </span>
             </div>
           </CardContent>
         </Card>

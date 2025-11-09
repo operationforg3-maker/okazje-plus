@@ -803,6 +803,7 @@ export async function getAdminDashboardStats() {
   const now = new Date();
   const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   // Podstawowe liczniki
   const counts = await getCounts();
@@ -825,11 +826,11 @@ export async function getAdminDashboardStats() {
   // Nowe w ostatnich 24h
   const newDealsQuery = query(
     collection(db, 'deals'),
-    where('createdAt', '>=', last24Hours)
+    where('createdAt', '>=', last24Hours.toISOString())
   );
   const newUsersQuery = query(
     collection(db, 'users'),
-    where('createdAt', '>=', last24Hours)
+    where('createdAt', '>=', last24Hours.toISOString())
   );
 
   const [newDealsCount, newUsersCount] = await Promise.all([
@@ -840,7 +841,7 @@ export async function getAdminDashboardStats() {
   // Aktywne w ostatnich 7 dniach (deals z komentarzami lub głosami)
   const recentDealsQuery = query(
     collection(db, 'deals'),
-    where('updatedAt', '>=', last7Days),
+    where('updatedAt', '>=', last7Days.toISOString()),
     orderBy('updatedAt', 'desc'),
     limit(100)
   );
@@ -872,6 +873,64 @@ export async function getAdminDashboardStats() {
     .slice(0, 5)
     .map(([slug, count]) => ({ slug, count }));
 
+  // Analytics z Firestore (views, clicks)
+  const analyticsQuery = query(
+    collection(db, 'analytics'),
+    where('timestamp', '>=', last7Days.toISOString()),
+    limit(10000)
+  );
+  
+  let totalViews = 0;
+  let totalClicks = 0;
+  let totalShares = 0;
+  let todayViews = 0;
+  let todayClicks = 0;
+  let prev7DaysViews = 0;
+  let prev7DaysClicks = 0;
+  
+  try {
+    const analyticsSnapshot = await getDocs(analyticsQuery);
+    const events = analyticsSnapshot.docs.map(doc => doc.data());
+    
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const prev7DaysStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    
+    events.forEach((event: any) => {
+      const eventDate = new Date(event.timestamp);
+      
+      if (event.type === 'view') {
+        totalViews++;
+        if (eventDate >= todayStart) todayViews++;
+        if (eventDate >= prev7DaysStart && eventDate < last7Days) prev7DaysViews++;
+      }
+      if (event.type === 'click') {
+        totalClicks++;
+        if (eventDate >= todayStart) todayClicks++;
+        if (eventDate >= prev7DaysStart && eventDate < last7Days) prev7DaysClicks++;
+      }
+      if (event.type === 'share') {
+        totalShares++;
+      }
+    });
+  } catch (error) {
+    console.warn('Analytics query failed:', error);
+    // Continue with zeros
+  }
+
+  // Oblicz trendy (porównanie z poprzednim tygodniem)
+  const viewsTrend = prev7DaysViews > 0 
+    ? Math.round(((totalViews - prev7DaysViews) / prev7DaysViews) * 100) 
+    : 0;
+  const clicksTrend = prev7DaysClicks > 0 
+    ? Math.round(((totalClicks - prev7DaysClicks) / prev7DaysClicks) * 100) 
+    : 0;
+
+  // Oblicz growth dla pozostałych metryk (na podstawie danych z ostatnich 30 dni)
+  const dealsGrowth = await calculateGrowth('deals', 30);
+  const productsGrowth = await calculateGrowth('products', 30);
+  const usersGrowth = await calculateGrowth('users', 30);
+
   return {
     totals: counts,
     pending: {
@@ -885,5 +944,61 @@ export async function getAdminDashboardStats() {
     avgTemperature,
     topCategories,
     recentActivity: recentDeals.length,
+    analytics: {
+      views: {
+        total: totalViews,
+        today: todayViews,
+        trend: viewsTrend
+      },
+      clicks: {
+        total: totalClicks,
+        today: todayClicks,
+        trend: clicksTrend
+      },
+      shares: {
+        total: totalShares
+      },
+      conversionRate: totalViews > 0 ? Math.round((totalClicks / totalViews) * 1000) / 10 : 0
+    },
+    growth: {
+      deals: dealsGrowth,
+      products: productsGrowth,
+      users: usersGrowth
+    }
   };
+}
+
+/**
+ * Oblicza wzrost procentowy dla kolekcji w określonym okresie
+ */
+async function calculateGrowth(collectionName: string, daysBack: number): Promise<number> {
+  try {
+    const now = new Date();
+    const periodStart = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+    const prevPeriodStart = new Date(now.getTime() - 2 * daysBack * 24 * 60 * 60 * 1000);
+
+    const currentQuery = query(
+      collection(db, collectionName),
+      where('createdAt', '>=', periodStart.toISOString())
+    );
+    const prevQuery = query(
+      collection(db, collectionName),
+      where('createdAt', '>=', prevPeriodStart.toISOString()),
+      where('createdAt', '<', periodStart.toISOString())
+    );
+
+    const [currentCount, prevCount] = await Promise.all([
+      getCountFromServer(currentQuery),
+      getCountFromServer(prevQuery)
+    ]);
+
+    const current = currentCount.data().count;
+    const prev = prevCount.data().count;
+
+    if (prev === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - prev) / prev) * 100);
+  } catch (error) {
+    console.warn(`Growth calculation failed for ${collectionName}:`, error);
+    return 0;
+  }
 }
