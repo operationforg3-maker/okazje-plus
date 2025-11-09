@@ -31,15 +31,15 @@ export default function DealsPage() {
     async function fetchData() {
       setIsLoading(true);
       try {
-        const [fetchedCategories, showcaseConfig] = await Promise.all([
+        const [fetchedCategories, showcaseConfig, hotDeals] = await Promise.all([
           getCategories(),
           getNavigationShowcase(),
+          getHotDeals(100), // Pobierz gorące okazje na start
         ]);
         
         setCategories(fetchedCategories);
-        if (fetchedCategories.length > 0) {
-          setSelectedCategory(fetchedCategories[0]);
-        }
+        setDeals(hotDeals); // Ustaw deals od razu
+        // NIE ustawiamy selectedCategory - pozostaw null aby pokazać wszystkie
 
         // Pobierz product of the day
         if (showcaseConfig?.productOfTheDayId) {
@@ -59,24 +59,29 @@ export default function DealsPage() {
   useEffect(() => {
     let cancelled = false;
     async function fetchDeals() {
-      if (!selectedCategory) return;
       setIsLoading(true);
       try {
         const q = searchTerm.trim();
         if (q.length > 1) {
+          // Wyszukiwanie
           const results = await searchDealsTypesense(q, {
-            mainCategorySlug: selectedCategory.id,
+            mainCategorySlug: selectedCategory?.id,
             subCategorySlug: selectedSubcategory || undefined,
             limit: 100,
           });
           if (!cancelled) setDeals(results);
-        } else {
+        } else if (selectedCategory) {
+          // Filtrowanie według kategorii
           const categoryDeals = await getDealsByCategory(
             selectedCategory.id,
             selectedSubcategory || undefined,
             100
           );
           if (!cancelled) setDeals(categoryDeals);
+        } else {
+          // Brak filtrów - pokaż gorące okazje
+          const hotDeals = await getHotDeals(100);
+          if (!cancelled) setDeals(hotDeals);
         }
       } catch (error) {
         console.error('Error fetching deals:', error);
@@ -106,6 +111,25 @@ export default function DealsPage() {
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
       <ScrollArea className="h-[calc(100vh-200px)] lg:h-[600px]">
+        {/* Przycisk "Wszystkie" */}
+        <button
+          onClick={() => {
+            setSelectedCategory(null);
+            setSelectedSubcategory(null);
+            setIsMobileSidebarOpen(false);
+          }}
+          className={cn(
+            "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group mb-2",
+            !selectedCategory
+              ? "bg-primary text-primary-foreground"
+              : "hover:bg-muted"
+          )}
+        >
+          <Flame className="h-5 w-5" />
+          <span className="font-medium flex-1">Wszystkie okazje</span>
+          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+        
         {categories.map((category) => (
           <button
             key={category.id}
