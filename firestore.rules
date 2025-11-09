@@ -60,8 +60,14 @@ service cloud.firestore {
     ////////////////////////////////
     match /deals/{dealId} {
       // Public read tylko dla approved, autor widzi swoją wersję, admin widzi wszystko
-      allow read: if resource.data.status == 'approved' || isAdmin() || (isSignedIn() && resource.data.postedBy == request.auth.uid);
+      // Gość widzi tylko approved, autor widzi swoje, admin wszystko
+      allow read: if (
+        resource.data.status == 'approved' ||
+        (isSignedIn() && resource.data.postedBy == request.auth.uid) ||
+        isAdmin()
+      );
       // Create draft
+      // Wymagane pole link
       allow create: if isSignedIn()
         && request.resource.data.postedBy == request.auth.uid
         && request.resource.data.status == 'draft'
@@ -70,7 +76,9 @@ service cloud.firestore {
         && request.resource.data.commentsCount == 0
         && numberMin('price',0)
         && stringMax('title',160)
-        && allowedStatus('status');
+        && allowedStatus('status')
+        // pozwalamy na nazewnictwo link lub dealUrl (frontend używa dealUrl)
+        && (request.resource.data.keys().hasAny(['link']) || request.resource.data.keys().hasAny(['dealUrl']));
       // Update: autor lub admin; dodatkowo osobny przypadek głosowania (tylko temperature & voteCount)
       allow update: if isSignedIn() && (
         resource.data.postedBy == request.auth.uid
@@ -157,7 +165,7 @@ service cloud.firestore {
     // FAVORITES
     ////////////////////////////////
     match /favorites/{favoriteId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+  allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
@@ -168,7 +176,7 @@ service cloud.firestore {
     // NOTIFICATIONS
     ////////////////////////////////
     match /notifications/{notificationId} {
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+  allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && (isAdmin() || request.resource.data.userId == request.auth.uid);
     }

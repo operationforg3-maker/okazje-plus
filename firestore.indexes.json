@@ -24,6 +24,15 @@
         { "fieldPath": "resourceType", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "temperature", "order": "DESCENDING"},
+        {"fieldPath": "__name__", "order": "ASCENDING"}
+      ]
     }
   ],
   "fieldOverrides": []
