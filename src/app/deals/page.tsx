@@ -31,6 +31,61 @@ export default function DealsPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
+  // Wczytaj zapisany tryb widoku przy pierwszym renderze
+  useEffect(() => {
+    try {
+      const savedView = localStorage.getItem('deals_view_mode');
+      if (savedView === 'list' || savedView === 'grid') {
+        setViewMode(savedView);
+      }
+    } catch {}
+  }, []);
+
+  // Wczytaj zapisaną kategorię / podkategorię gdy tylko będą dostępne kategorie
+  useEffect(() => {
+    if (categories.length === 0) return;
+    // Jeśli użytkownik już coś wybrał w tej sesji – nie nadpisuj
+    if (selectedCategory) return;
+    try {
+      const savedCatId = localStorage.getItem('deals_selected_category');
+      if (savedCatId) {
+        const found = categories.find(c => c.id === savedCatId);
+        if (found) {
+          setSelectedCategory(found);
+          const savedSub = localStorage.getItem('deals_selected_subcategory');
+          if (savedSub) setSelectedSubcategory(savedSub);
+        }
+      }
+    } catch {}
+  }, [categories]);
+
+  // Persistuj view mode
+  useEffect(() => {
+    try { localStorage.setItem('deals_view_mode', viewMode); } catch {}
+  }, [viewMode]);
+
+  // Persistuj kategorię
+  useEffect(() => {
+    try {
+      if (selectedCategory) {
+        localStorage.setItem('deals_selected_category', selectedCategory.id);
+      } else {
+        localStorage.removeItem('deals_selected_category');
+      }
+    } catch {}
+  }, [selectedCategory]);
+
+  // Persistuj podkategorię
+  useEffect(() => {
+    try {
+      if (selectedSubcategory) {
+        localStorage.setItem('deals_selected_subcategory', selectedSubcategory);
+      } else {
+        localStorage.removeItem('deals_selected_subcategory');
+      }
+    } catch {}
+  }, [selectedSubcategory]);
+
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
