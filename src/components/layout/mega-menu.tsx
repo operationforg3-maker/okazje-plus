@@ -470,13 +470,16 @@ export function MegaMenu() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Link
-                        href="/profile"
-                        className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary"
-                      >
-                        <span className="flex items-center gap-2">
-                          <UserIcon className="h-4 w-4" /> Profil
-                        </span>
+                      <Link href="/profile" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                        <span className="flex items-center gap-2"><UserIcon className="h-4 w-4" /> Profil</span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                      <Link href="/profile?tab=favorites" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                        <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Ulubione</span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
+                      <Link href="/profile?tab=notifications" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                        <span className="flex items-center gap-2"><Flame className="h-4 w-4" /> Powiadomienia</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </Link>
                       {user.role === "admin" ? (
