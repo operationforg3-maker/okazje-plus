@@ -29,7 +29,7 @@ import { getRecommendedProducts } from '@/lib/data';
 import { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ProductForm } from '@/components/admin/product-form';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -134,6 +134,14 @@ export default function AdminProductsPage() {
     fetchProducts();
   };
 
+  const handleExport = () => {
+    window.open('/api/admin/products/export?status=approved&limit=1000', '_blank');
+    toast({
+      title: 'Eksport rozpoczęty',
+      description: 'Plik CSV zostanie pobrany za chwilę',
+    });
+  };
+
   return (
     <>
       <Card>
@@ -145,10 +153,16 @@ export default function AdminProductsPage() {
                 Zarządzaj listą produktów w swoim serwisie.
               </CardDescription>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Dodaj produkt
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Eksportuj CSV
+              </Button>
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Dodaj produkt
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

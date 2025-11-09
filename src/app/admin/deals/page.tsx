@@ -38,6 +38,7 @@ import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { usePagination } from '@/hooks/use-pagination';
+import { Download } from 'lucide-react';
 
 export default function AdminDealsPage() {
   const { toast } = useToast();
@@ -133,6 +134,15 @@ export default function AdminDealsPage() {
     fetchDeals();
   };
 
+  const handleExport = () => {
+    // Otwórz link do eksportu w nowej karcie
+    window.open('/api/admin/deals/export?status=approved&limit=1000', '_blank');
+    toast({
+      title: 'Eksport rozpoczęty',
+      description: 'Plik CSV zostanie pobrany za chwilę',
+    });
+  };
+
   return (
     <>
       <Card>
@@ -144,10 +154,16 @@ export default function AdminDealsPage() {
                 Zarządzaj listą okazji w swoim serwisie.
               </CardDescription>
             </div>
-            <Button onClick={() => setIsAddDialogOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Dodaj okazję
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="mr-2 h-4 w-4" />
+                Eksportuj CSV
+              </Button>
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Dodaj okazję
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
