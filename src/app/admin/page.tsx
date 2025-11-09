@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
+import TestsTab from '@/components/admin/tests-tab';
 
 interface Stats {
   products: number;
@@ -338,7 +339,7 @@ function AdminPage() {
 
       {/* Tabs for detailed views */}
       <Tabs defaultValue="hot-deals" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+  <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="hot-deals">
             <Flame className="h-4 w-4 mr-2" />
             Gorące okazje
@@ -354,6 +355,10 @@ function AdminPage() {
           <TabsTrigger value="activity">
             <Activity className="h-4 w-4 mr-2" />
             Aktywność
+          <TabsTrigger value="tests">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Testy
+          </TabsTrigger>
           </TabsTrigger>
         </TabsList>
 
@@ -409,6 +414,10 @@ function AdminPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="tests" className="space-y-4">
+          <TestsTab />
         </TabsContent>
 
         <TabsContent value="top-products" className="space-y-4">
