@@ -31,7 +31,7 @@ import {
   AlertCircle,
   Info
 } from 'lucide-react';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs, getDoc, orderBy, limit, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Comment, Deal, Product } from '@/lib/types';
 import Link from 'next/link';
@@ -88,76 +88,65 @@ function ProfilePage() {
       
       setLoading(true);
       try {
-        // NAPRAWIONE: Zbierz komentarze z subkolekcji deals i products
-        const allComments: Array<Comment & { itemTitle?: string; itemType?: 'deal' | 'product' }> = [];
-
-        // 1. Pobierz okazje użytkownika i ich komentarze
-        const userDealsQuery = query(
-          collection(db, 'deals'),
-          where('createdBy', '==', user.uid),
+        // Zbierz komentarze napisane przez użytkownika używając collectionGroup
+        // Dzięki temu nie iterujemy po wszystkich produktach/okazjach ręcznie.
+        const commentsQuery = query(
+          collectionGroup(db, 'comments'),
+          where('userId', '==', user.uid),
+          orderBy('createdAt', 'desc'),
           limit(50)
         );
-        const userDealsSnapshot = await getDocs(userDealsQuery);
-        const userDeals = userDealsSnapshot.docs.length;
+        const commentsSnapshot = await getDocs(commentsQuery);
 
-        for (const dealDoc of userDealsSnapshot.docs) {
-          const dealData = dealDoc.data() as any;
-          const commentsColRef = collection(db, `deals/${dealDoc.id}/comments`);
-          const commentsQuery = query(
-            commentsColRef,
-            where('userId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-          );
-          const commentsSnapshot = await getDocs(commentsQuery);
-          commentsSnapshot.forEach(commentDoc => {
-            const commentData = commentDoc.data();
-            allComments.push({
-              id: commentDoc.id,
-              userId: commentData.userId,
-              content: commentData.content,
-              createdAt: commentData.createdAt?.toDate?.() || new Date(commentData.createdAt),
-              itemTitle: dealData.title,
-              itemType: 'deal',
-            } as Comment & { itemTitle: string; itemType: 'deal' });
-          });
-        }
+        const allComments = await Promise.all(
+          commentsSnapshot.docs.map(async (cDoc) => {
+            const data = cDoc.data();
+            // parent path: e.g. 'deals/{dealId}/comments/{commentId}'
+            const pathParts = cDoc.ref.path.split('/');
+            const parentCollection = pathParts[0];
+            const parentId = pathParts[1];
 
-        // 2. Pobierz produkty i szukaj komentarzy użytkownika
-        const productsColRef = collection(db, 'products');
-        const allProductsSnapshot = await getDocs(productsColRef);
+            let itemTitle: string | undefined;
+            let itemType: 'deal' | 'product' | undefined;
 
-        for (const productDoc of allProductsSnapshot.docs) {
-          const productData = productDoc.data() as any;
-          const commentsColRef = collection(db, `products/${productDoc.id}/comments`);
-          const commentsQuery = query(
-            commentsColRef,
-            where('userId', '==', user.uid),
-            orderBy('createdAt', 'desc')
-          );
-          const commentsSnapshot = await getDocs(commentsQuery);
-          commentsSnapshot.forEach(commentDoc => {
-            const commentData = commentDoc.data();
-            allComments.push({
-              id: commentDoc.id,
-              userId: commentData.userId,
-              content: commentData.content,
-              createdAt: commentData.createdAt?.toDate?.() || new Date(commentData.createdAt),
-              itemTitle: productData.name,
-              itemType: 'product',
-            } as Comment & { itemTitle: string; itemType: 'product' });
-          });
-        }
+            try {
+              if (parentCollection === 'deals') {
+                itemType = 'deal';
+                const dealDoc = await getDoc(doc(db, 'deals', parentId));
+                if (dealDoc && dealDoc.exists()) {
+                  itemTitle = (dealDoc.data() as any).title;
+                } else {
+                  const helperDeal = await getDealById(parentId).catch(() => null);
+                  itemTitle = helperDeal?.title;
+                }
+              } else if (parentCollection === 'products') {
+                itemType = 'product';
+                const productDoc = await getDoc(doc(db, 'products', parentId));
+                if (productDoc && productDoc.exists()) {
+                  itemTitle = (productDoc.data() as any).name;
+                } else {
+                  const helperProduct = await getProductById(parentId).catch(() => null);
+                  itemTitle = helperProduct?.name;
+                }
+              }
+            } catch (err) {
+              console.error('Error fetching parent item for comment:', err);
+            }
 
-        // Posortuj komentarze chronologicznie (najnowsze na górze)
-        const comments = allComments.sort((a, b) => {
-          const getTime = (date: any) => {
-            if (date instanceof Date) return date.getTime();
-            if (typeof date === 'number') return date;
-            if (typeof date === 'string') return new Date(date).getTime();
-            return 0;
-          };
-          return getTime(b.createdAt) - getTime(a.createdAt);
-        }).slice(0, 10);
+            return {
+              id: cDoc.id,
+              userId: data.userId,
+              content: data.content,
+              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
+              itemTitle,
+              itemType,
+              itemId: parentId,
+            } as Comment & { itemTitle?: string; itemType?: 'deal' | 'product'; itemId?: string };
+          })
+        );
+
+        // Sortowane już przez query na serwerze — zachowaj porządek i przytnij
+        const comments = allComments.slice(0, 10);
 
         // Pobierz oceny produktów użytkownika
         const ratingsQuery = query(
@@ -171,9 +160,17 @@ function ProfilePage() {
         // Mock głosy - wymaga query na subkolekcjach
         const voteCount = 15;
 
+        // Pobierz liczbę okazji użytkownika (dealsPosted)
+        const userDealsQuery = query(
+          collection(db, 'deals'),
+          where('createdBy', '==', user.uid),
+        );
+        const userDealsSnapshot = await getDocs(userDealsQuery);
+        const userDeals = userDealsSnapshot.docs.length;
+
         setActivity({
           votes: voteCount,
-          comments: comments.length,
+          comments: commentsSnapshot.size || comments.length,
           dealsPosted: userDeals,
           productsReviewed: ratingsCount,
           memberSince: 'Styczeń 2024'
@@ -198,19 +195,22 @@ function ProfilePage() {
       const enriched = await Promise.all(
         recentComments.map(async (comment) => {
           try {
-            // Comment ma dealId, sprawdźmy czy to deal czy product
-            // Spróbuj najpierw pobrać jako deal
-            const deal = await getDealById(comment.dealId);
-            if (deal) {
-              return { ...comment, itemTitle: deal.title, itemType: 'deal' as const };
+            // Jeśli już mamy itemTitle/itemType, zachowaj
+            if ((comment as any).itemTitle && (comment as any).itemType) return comment;
+
+            const itemId = (comment as any).itemId;
+            if (!itemId) return comment;
+
+            if ((comment as any).itemType === 'deal') {
+              const deal = await getDealById(itemId).catch(() => null);
+              if (deal) return { ...comment, itemTitle: deal.title, itemType: 'deal' as const };
             }
-            
-            // Jeśli nie deal, to może product
-            const product = await getProductById(comment.dealId); // dealId jest używane dla obu typów
-            if (product) {
-              return { ...comment, itemTitle: product.name, itemType: 'product' as const };
+
+            if ((comment as any).itemType === 'product') {
+              const product = await getProductById(itemId).catch(() => null);
+              if (product) return { ...comment, itemTitle: product.name, itemType: 'product' as const };
             }
-            
+
             return comment;
           } catch (error) {
             console.error('Error enriching comment:', error);

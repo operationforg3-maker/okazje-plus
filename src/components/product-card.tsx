@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Tag, TrendingUp, ExternalLink, Heart } from 'lucide-react';
+import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare } from 'lucide-react';
+import { useCommentsCount } from '@/hooks/use-comments-count';
 import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const categoryBadge = product.subCategorySlug || product.mainCategorySlug || product.category;
   const avgRating = product.ratingCard.average;
   const ratingCount = product.ratingCard.count;
+  const liveComments = useCommentsCount('products', product.id, (product as any).commentsCount);
 
   useEffect(() => {
     // track wyświetlenie karty produktu (raz na sesję per element)
@@ -160,6 +162,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           size="sm"
           onShared={(platform) => trackFirestoreShare('product', product.id, user?.uid, platform)}
         />
+        <div className="hidden sm:flex items-center gap-3 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1">
+            <MessageSquare className="h-4 w-4" />
+            <span>{liveComments.count}</span>
+          </div>
+        </div>
         <Button 
           size="sm" 
           className="gap-1 flex-1"
