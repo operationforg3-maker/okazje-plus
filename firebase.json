@@ -13,47 +13,7 @@
       "region": "europe-west1"
     }
   },
-  "apphosting": [
-    {
-      "backendId": "okazje-plus-app",
-      "rootDir": "/",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "functions"
-      ],
-      "alwaysDeployFromSource": true
-    },
-    {
-      "backendId": "okazje-plus-app",
-      "rootDir": "/",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "functions"
-      ]
-    },
-    {
-      "backendId": "okazje-plus-backend",
-      "rootDir": "/",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "functions"
-      ]
-    }
-  ],
   "functions": [
-    {
-      "codebase": "firebase-frameworks-okazje-plus",
-      "source": ".firebase/okazje-plus/functions"
-    },
     {
       "source": "okazje-plus",
       "codebase": "okazje-plus",

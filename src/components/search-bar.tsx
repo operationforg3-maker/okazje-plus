@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import typesenseClient from '@/lib/typesense';
+// Use server-side search proxy for production (safer and works when Typesense
+// isn't exposed to the browser). We still support Typesense client via lib
+// but prefer the API proxy for unified behavior.
 
 // Definicja typów dla wyników wyszukiwania
 interface DealHit {
@@ -35,27 +37,26 @@ const SearchBar = () => {
       }
       setLoading(true);
 
-      if (!typesenseClient) {
-        console.error("Klient Typesense nie jest zainicjowany.");
-        setLoading(false);
-        return;
-      }
-
       try {
-        const searchRequests = {
-          searches: [
-            { collection: 'deals', q: query, query_by: 'title,description,postedBy' },
-            { collection: 'products', q: query, query_by: 'name,description,category' },
-          ],
-        };
-        
-        const searchResults = await typesenseClient.multiSearch.perform(searchRequests);
-        const hits = searchResults.results.flatMap((result: any) => result.hits || []) as SearchHit[];
+        const params = new URLSearchParams();
+        params.set('q', query);
+        params.set('limit', '12');
+        params.set('type', 'all');
+        const res = await fetch(`/api/search?${params.toString()}`);
+        if (!res.ok) {
+          setResults([]);
+          setLoading(false);
+          return;
+        }
+        const body = await res.json();
+        const hits: SearchHit[] = [];
+        (body.deals || []).forEach((d: any) => hits.push({ document: { id: d.id, title: d.title, description: d.description } } as DealHit));
+        (body.products || []).forEach((p: any) => hits.push({ document: { id: p.id, name: p.name || p.title || '', description: p.description } } as ProductHit));
         setResults(hits);
-        console.log('Wyniki wyszukiwania:', hits);
-
+        console.log('Wyniki wyszukiwania (proxy):', hits);
       } catch (error) {
-        console.error('Błąd wyszukiwania:', error);
+        console.error('Błąd wyszukiwania (proxy):', error);
+        setResults([]);
       } finally {
         setLoading(false);
       }

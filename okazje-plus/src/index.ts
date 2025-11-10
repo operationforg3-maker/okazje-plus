@@ -8,7 +8,12 @@ import {onDocumentWritten} from "firebase-functions/v2/firestore";
 import * as https from "https";
 
 // KROK 1: Importuj typy z JEDNEGO źródła prawdy
-import {Deal, Product, User, ProductRatingCard} from "../../src/lib/types";
+import {
+  Deal,
+  Product,
+  User,
+  ProductRatingCard,
+} from "../../src/lib/types";
 
 // --- Typy pomocnicze dla danych wejściowych ---
 // Używamy Partial<T> aby pozwolić na niepełne dane z CSV
@@ -48,7 +53,10 @@ const ensureAdmin = async (auth: {uid: string} | null): Promise<void> => {
 };
 
 /**
- * Pobiera obraz ze zdalnego URL i przesyła do Firebase Storage (server-side).
+ * Pobiera obraz ze zdalnego URL i przesyła do Firebase Storage.
+ * @param {string} remoteUrl URL zdalnego obrazu
+ * @param {string} storagePath Ścieżka zapisu w Storage
+ * @return {Promise<string|null>} URL publiczny lub null
  */
 async function downloadAndUploadImage(
   remoteUrl: string,
@@ -72,9 +80,13 @@ async function downloadAndUploadImage(
             const storage = getStorage();
             const bucket = storage.bucket(storageBucketName);
             const file = bucket.file(storagePath);
-            const contentType = response.headers["content-type"] || "image/jpeg";
-            await file.save(buffer, { contentType });
-            const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucketName}/o/${encodeURIComponent(storagePath)}?alt=media`;
+            const headers = response.headers;
+            const contentType = headers["content-type"] || "image/jpeg";
+            await file.save(buffer, {contentType});
+            const baseUrl = "https://firebasestorage.googleapis.com/v0/b";
+            const encoded = encodeURIComponent(storagePath);
+            const url = `${baseUrl}/${storageBucketName}/o/${encoded}`;
+            const publicUrl = `${url}?alt=media`;
             resolve(publicUrl);
           } catch (e) {
             reject(e);
@@ -83,7 +95,7 @@ async function downloadAndUploadImage(
         response.on("error", reject);
       }).on("error", reject);
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     logger.warn(`Failed to download/upload image from ${remoteUrl}:`, e);
     return null;
   }
@@ -111,12 +123,12 @@ export const batchImportDeals = onCall(async (request) => {
         !deal.subCategorySlug) {
         throw new Error(
           `Wiersz ${index + 1}: Brak tytułu, linku lub pełnej` +
-          ` kategoryzacji.`
+          " kategoryzacji."
         );
       }
 
       const newDealRef = db.collection("deals").doc();
-      
+
       // Poprawny obiekt zgodny z interfejsem Deal
       const newDealData: Omit<Deal, "id"> = {
         title: deal.title,
@@ -188,12 +200,12 @@ export const batchImportProducts = onCall(async (request) => {
         !product.subCategorySlug) {
         throw new Error(
           `Wiersz ${index + 1}: Brak nazwy, linku afiliacyjnego` +
-          ` lub pełnej kategoryzacji.`
+          " lub pełnej kategoryzacji."
         );
       }
 
       const newProductRef = db.collection("products").doc();
-      
+
       // Poprawny obiekt zgodny z interfejsem Product
       const newProductData: Omit<Product, "id"> = {
         name: product.name,
@@ -205,9 +217,9 @@ export const batchImportProducts = onCall(async (request) => {
         imageHint: product.imageHint || "",
         mainCategorySlug: product.mainCategorySlug,
         subCategorySlug: product.subCategorySlug,
-    ratingCard: defaultRatingCard,
-    status: "draft", // Domyślny status do moderacji
-    category: product.mainCategorySlug, // Kompatybilność wsteczna
+        ratingCard: defaultRatingCard,
+        status: "draft", // Domyślny status do moderacji
+        category: product.mainCategorySlug, // Kompatybilność wsteczna
       };
       batch.set(newProductRef, newProductData);
       successCount++;
@@ -232,7 +244,8 @@ export const batchImportProducts = onCall(async (request) => {
 /**
  * Import pojedynczego produktu z AliExpress (wywołanie callable).
  * Wymaga uprawnień administratora.
- * Opcjonalnie przesyła zdalny obraz do Firebase Storage jeśli STORAGE_BUCKET jest skonfigurowany.
+ * Opcjonalnie przesyła obraz do Firebase Storage jeśli STORAGE_BUCKET
+ * jest skonfigurowany.
  */
 export const importAliProduct = onCall(async (request) => {
   await ensureAdmin(request.auth ?? null);
@@ -280,12 +293,13 @@ export const importAliProduct = onCall(async (request) => {
   // Opcjonalnie pobierz i przesyłaj obraz
   let imageUrl = (product.imageUrl || product.image) as string;
   if (storageBucketName && imageUrl) {
-    const storagePath = `aliexpress-products/${externalId}/${Date.now()}-image.jpg`;
+    const ts = Date.now();
+    const path = `aliexpress-products/${externalId}/${ts}-image.jpg`;
     try {
-      const uploadedUrl = await downloadAndUploadImage(imageUrl, storagePath);
+      const uploadedUrl = await downloadAndUploadImage(imageUrl, path);
       if (uploadedUrl) {
         imageUrl = uploadedUrl;
-        logger.info(`Image uploaded to Storage: ${storagePath}`);
+        logger.info(`Image uploaded to Storage: ${path}`);
       }
     } catch (uploadErr) {
       logger.warn(`Image upload failed, using original URL: ${uploadErr}`);
@@ -295,9 +309,9 @@ export const importAliProduct = onCall(async (request) => {
   const newProduct: Record<string, unknown> = {
     title: product.title,
     description: product.description || product.subTitle || "",
-    price: typeof product.price === "number"
-      ? product.price
-      : Number(product.price) || 0,
+    price: typeof product.price === "number" ?
+      product.price :
+      Number(product.price) || 0,
     originalPrice: product.originalPrice || product.listPrice || null,
     currency: product.currency || "PLN",
     link: product.productUrl || product.url || null,
@@ -313,11 +327,12 @@ export const importAliProduct = onCall(async (request) => {
   };
 
   await newRef.set(newProduct);
-  return { ok: true, id: newRef.id };
+  return {ok: true, id: newRef.id};
 });
 
 // Bulk import callable - accepts array of products
-// Obsługuje pobieranie obrazów do Storage jeśli STORAGE_BUCKET jest skonfigurowany
+// Obsługuje pobieranie obrazów do Storage jeśli STORAGE_BUCKET jest
+// skonfigurowany
 export const bulkImportAliProducts = onCall(async (request) => {
   await ensureAdmin(request.auth ?? null);
   const payload = request.data as Record<string, unknown>;
@@ -362,11 +377,12 @@ export const bulkImportAliProducts = onCall(async (request) => {
       // Opcjonalnie pobierz i przesyłaj obraz
       let imageUrl = (product.imageUrl || product.image) as string;
       if (storageBucketName && imageUrl) {
-        const storagePath = `aliexpress-products/${externalId}/${Date.now()}-bulk.jpg`;
+        const ts = Date.now();
+        const path = `aliexpress-products/${externalId}/${ts}-bulk.jpg`;
         try {
-          const uploadedUrl = await downloadAndUploadImage(imageUrl, storagePath);
-          if (uploadedUrl) {
-            imageUrl = uploadedUrl;
+          const uploaded = await downloadAndUploadImage(imageUrl, path);
+          if (uploaded) {
+            imageUrl = uploaded;
           }
         } catch (uploadErr) {
           logger.warn(`Bulk image upload failed for row ${i + 1}:`, uploadErr);
@@ -376,9 +392,9 @@ export const bulkImportAliProducts = onCall(async (request) => {
       const docData: Record<string, unknown> = {
         title: product.title,
         description: product.description || product.subTitle || "",
-        price: typeof product.price === "number"
-          ? product.price
-          : Number(product.price) || 0,
+        price: typeof product.price === "number" ?
+          product.price :
+          Number(product.price) || 0,
         originalPrice: product.originalPrice || product.listPrice || null,
         currency: product.currency || "PLN",
         link: product.productUrl || product.url || null,
@@ -402,7 +418,7 @@ export const bulkImportAliProducts = onCall(async (request) => {
   }
 
   if (created > 0) await batch.commit();
-  return { ok: true, created, errors };
+  return {ok: true, created, errors};
 });
 
 
@@ -429,7 +445,7 @@ export const updateVoteCount = onDocumentWritten(
       logger.info(
         `Aktualizowanie licznika głosów dla ${dealId} na: ${newCount}`
       );
-      transaction.update(dealRef,{voteCount:newCount});
+      transaction.update(dealRef, {voteCount: newCount});
       return newCount;
     });
   },
@@ -446,7 +462,7 @@ export const updateCommentsCountDeals = onDocumentWritten(
     logger.info(
       `Aktualizacja commentsCount (deal) ${dealId} -> ${newCount}`
     );
-    return dealRef.update({commentsCount:newCount});
+    return dealRef.update({commentsCount: newCount});
   }
 );
 
@@ -461,6 +477,6 @@ export const updateCommentsCountProducts = onDocumentWritten(
     logger.info(
       `Aktualizacja commentsCount (product) ${productId} -> ${newCount}`
     );
-    return productRef.update({commentsCount:newCount});
+    return productRef.update({commentsCount: newCount});
   }
 );
