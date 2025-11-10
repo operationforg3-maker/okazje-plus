@@ -232,6 +232,7 @@ export function MegaMenu() {
                       type="button"
                       onMouseEnter={() => setActiveIndex(index)}
                       onFocus={() => setActiveIndex(index)}
+                      onClick={() => setActiveIndex(index)}
                       aria-selected={isActive}
                       className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                         isActive
