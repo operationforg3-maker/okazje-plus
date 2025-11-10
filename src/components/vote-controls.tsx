@@ -42,6 +42,14 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
 
       // Update UI based on server response
       if (typeof json.temperature === 'number') setIsLoading(false);
+      // Notify other components to refresh deal data
+      try {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('deal-voted', { detail: { dealId } }));
+        }
+      } catch (e) {
+        // noop
+      }
       // We don't have direct deal object here; consumer can re-fetch to update values.
       trackVote('deal', dealId, direction);
     } catch (error) {

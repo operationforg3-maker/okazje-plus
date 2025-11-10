@@ -25,17 +25,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCollection } from "react-firebase-hooks/firestore";
-            {importState === 'searching' ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Wyszukiwanie...
-              </>
-            ) : (
-              <>
-                <Search className="h-4 w-4 mr-2" />
-                Szukaj produktów
-              </>
-            )}
+import { collection } from "firebase/firestore";
+import { db, functions } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { Category } from '@/lib/types';
+
+type AliExpressProduct = {
+  id: string;
+  title: string;
+  imageUrl: string;
+  price: number;
+  originalPrice: number;
+  currency: string;
+  productUrl: string;
   rating: number;
   orders: number;
   discount: number;
@@ -275,6 +277,47 @@ export default function AliExpressImporter() {
     }
   };
 
+  // Modal preview state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewProductId, setPreviewProductId] = useState<string | null>(null);
+
+  const openPreview = (productId: string) => {
+    setPreviewProductId(productId);
+    // If details not loaded, load them
+    if (!productDetails[productId]) loadDetails(productId);
+    setPreviewOpen(true);
+  };
+
+  const closePreview = () => {
+    setPreviewOpen(false);
+    setPreviewProductId(null);
+  };
+
+  const importSingle = async (productId: string) => {
+    const mapping = categoryMapping[productId];
+    if (!mapping || !mapping.main || !mapping.sub) {
+      toast.error('Przypisz najpierw kategorię');
+      return;
+    }
+    setImportState('importing');
+    try {
+      const callable = httpsCallable(functions as any, 'importAliProduct');
+      const payload = { product: (productDetails[productId] || searchResults.find(p => p.id === productId)), mainCategorySlug: mapping.main, subCategorySlug: mapping.sub };
+      const res = await callable(payload);
+      if ((res as any).data?.ok) {
+        toast.success('Produkt zaimportowany');
+        closePreview();
+      } else {
+        toast.error('Import nie powiódł się');
+      }
+    } catch (e) {
+      console.error('Import single failed', e);
+      toast.error('Import nieudany');
+    } finally {
+      setImportState('previewing');
+    }
+  };
+
   // Reset
   const handleReset = () => {
     setSearchQuery('');
@@ -373,15 +416,14 @@ export default function AliExpressImporter() {
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Wyszukiwanie...
               </>
-                                </div>
-                                <a
-                                  href={product.productUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-                                >
-                                  Zobacz na AliExpress <ExternalLink className="h-3 w-3" />
-                                </a>
+            ) : (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                Szukaj produktów
+              </>
+            )}
+          </Button>
+        </CardContent>
       </Card>
 
       {/* Results Section */}

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart } from "lucide-react";
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
@@ -162,6 +163,37 @@ export default function DealCard({ deal }: DealCardProps) {
   const handleShareTrack = (platform?: string) => {
     void trackFirestoreShare('deal', deal.id, user?.uid, platform);
   };
+
+  // Listen for global vote events to refresh this card's data
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      try {
+        const detail = (e as CustomEvent)?.detail;
+        if (!detail || detail.dealId !== deal.id) return;
+        // Fetch latest deal document from Firestore
+        const { doc, getDoc } = await import('firebase/firestore');
+        const { db } = await import('@/lib/firebase');
+        const docRef = doc(db, 'deals', deal.id);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const data = snap.data() as any;
+          if (typeof data.temperature === 'number') setTemperature(data.temperature);
+          if (typeof data.voteCount === 'number') setVoteCount(data.voteCount);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('deal-voted', handler as EventListener);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('deal-voted', handler as EventListener);
+      }
+    };
+  }, [deal.id]);
 
   return (
     <Card className="group flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
