@@ -4,12 +4,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Star, Tag, TrendingUp, ExternalLink, Heart } from 'lucide-react';
 import type { Product } from '@/lib/types';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,18 +50,20 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <Card className="group flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-      <CardHeader className="relative p-0">
-        <Link href={`/products/${product.id}`} className="block overflow-hidden" onClick={handleDetailClick}>
-          <Image
-            src={product.image}
-            alt={product.name}
-            data-ai-hint={product.imageHint}
-            width={600}
-            height={400}
-            className="aspect-[3/2] w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        </Link>
+    <Link 
+      href={`/products/${product.id}`} 
+      onClick={handleDetailClick}
+      className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
+    >
+      <div className="relative overflow-hidden">
+        <Image
+          src={product.image}
+          alt={product.name}
+          data-ai-hint={product.imageHint}
+          width={600}
+          height={400}
+          className="aspect-[3/2] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
         {avgRating >= 4.5 && (
           <Badge className="absolute right-2 top-2 bg-gradient-to-r from-yellow-500 to-amber-600 text-white shadow-lg">
             <TrendingUp className="mr-1 h-3 w-3" />
@@ -80,6 +76,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white hover:scale-110 transition-all"
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             toggleFavorite();
           }}
           disabled={isLoading}
@@ -90,8 +87,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             }`}
           />
         </Button>
-      </CardHeader>
-      <CardContent className="flex-grow space-y-3 p-4">
+      </div>
+      
+      <div className="flex-grow space-y-3 p-4">
         <div className="flex items-center justify-between">
           {categoryBadge && (
             <Badge variant="secondary" className="flex w-fit items-center gap-1">
@@ -133,11 +131,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           </TooltipProvider>
         </div>
 
-        <Link href={`/products/${product.id}`}>
-          <h3 className="font-headline text-lg font-semibold leading-tight transition-colors hover:text-primary">
-            {product.name}
-          </h3>
-        </Link>
+        <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
+          {product.name}
+        </h3>
         
         <p className="text-sm text-muted-foreground line-clamp-2">
           {product.description}
@@ -152,9 +148,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             <Badge variant="destructive" className="ml-auto">-{discount}%</Badge>
           )}
         </div>
-      </CardContent>
+      </div>
       
-      <CardFooter className="flex items-center gap-2 border-t bg-muted/30 p-3">
+      <div className="flex items-center justify-between gap-2 border-t bg-muted/30 p-3">
         <ShareButton 
           type="product"
           itemId={product.id}
@@ -164,18 +160,20 @@ export default function ProductCard({ product }: ProductCardProps) {
           size="sm"
           onShared={(platform) => trackFirestoreShare('product', product.id, user?.uid, platform)}
         />
-        <Button asChild variant="outline" size="sm" className="flex-1">
-          <Link href={`/products/${product.id}`} onClick={handleDetailClick}>
-            Szczegóły
-          </Link>
+        <Button 
+          size="sm" 
+          className="gap-1 flex-1"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(product.affiliateUrl, '_blank', 'noopener,noreferrer');
+            handleAffiliateClick();
+          }}
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          Kup teraz
         </Button>
-        <Button asChild size="sm" className="flex-1 bg-primary hover:bg-primary/90">
-          <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1" onClick={handleAffiliateClick}>
-            <ExternalLink className="h-3.5 w-3.5" />
-            Kup teraz
-          </a>
-        </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </Link>
   );
 }
