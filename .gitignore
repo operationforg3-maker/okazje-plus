@@ -53,3 +53,4 @@ src/scripts/serviceAccountKey.json
 
 # project specific
 # Usunięto ignorowanie src/scripts aby móc wersjonować pliki seed / narzędziowe
+serviceAccountKey.json
