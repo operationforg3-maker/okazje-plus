@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Gavel } from 'lucide-react';
+import { LegalPageLayout } from '@/components/layout/legal-page-layout';
 
 export const metadata = {
   title: 'Regulamin - Okazje+',
@@ -9,21 +9,23 @@ export const metadata = {
 
 export default function RegulaminPage() {
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
-      <Button variant="ghost" asChild className="mb-6">
-        <Link href="/">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Powrót do strony głównej
-        </Link>
-      </Button>
+    <LegalPageLayout
+      title="Regulamin Okazje+"
+      description="Szczegółowe zasady korzystania z platformy Okazje+, w tym informacje o moderacji, afiliacji oraz prawach użytkowników."
+      updatedAt="8 listopada 2025"
+      autoGenerateSections
+      heroIcon={<Gavel className="h-8 w-8" />}
+    >
+      <article className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-headline prose-h2:text-xl prose-h3:text-lg prose-ul:list-disc prose-ol:list-decimal">
+        <p>
+          Niniejszy dokument określa warunki świadczenia usług przez platformę Okazje+ oraz zasady
+          publikowania i moderowania treści dodawanych przez społeczność.
+        </p>
 
-      <article className="prose prose-slate dark:prose-invert max-w-none">
-        <h1 className="font-headline">Regulamin świadczenia usług serwisu &quot;okazja+&quot;</h1>
-
-        <section>
+        <section id="definicje" className="scroll-mt-28">
           <h2>§ 1. Definicje</h2>
           <ol>
-            <li><strong>Serwis</strong> – platforma internetowa „okazja+" dostępna pod adresem [okazje-plus.web.app] oraz powiązanymi subdomenami, umożliwiająca użytkownikom dodawanie, ocenę i wyszukiwanie ofert produktów, publikację opinii oraz korzystanie z systemów gamifikacji.</li>
+            <li><strong>Serwis</strong> – platforma internetowa „Okazje+" dostępna pod adresem [okazje-plus.web.app] oraz powiązanymi subdomenami, umożliwiająca użytkownikom dodawanie, ocenę i wyszukiwanie ofert produktów, publikację opinii oraz korzystanie z systemów grywalizacji.</li>
             <li><strong>Usługodawca</strong> – podmiot odpowiedzialny za działanie Serwisu.</li>
             <li><strong>Użytkownik</strong> – osoba korzystająca z Serwisu, w tym użytkownik niezarejestrowany (Gość) oraz użytkownik zarejestrowany (Członek).</li>
             <li><strong>Konto</strong> – indywidualne konto Użytkownika w Serwisie, utworzone poprzez rejestrację.</li>
@@ -33,7 +35,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="postanowienia-ogolne" className="scroll-mt-28">
           <h2>§ 2. Postanowienia Ogólne i Warunki Techniczne</h2>
           <ol>
             <li>Niniejszy Regulamin określa zasady korzystania z Serwisu oraz prawa i obowiązki Użytkowników oraz Usługodawcy.</li>
@@ -51,7 +53,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="model-biznesowy" className="scroll-mt-28">
           <h2>§ 3. Model Biznesowy, Afiliacja i Oznaczanie Treści (Zgodność z UOKiK)</h2>
           <ol>
             <li>Serwis prowadzi działalność w oparciu o <strong>model afiliacyjny</strong>. Publikowane oferty mogą zawierać linki partnerskie prowadzące do zewnętrznych sklepów internetowych.</li>
@@ -62,7 +64,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="ugc" className="scroll-mt-28">
           <h2>§ 4. Treści Generowane przez Użytkownika (UGC) i Licencja</h2>
           <ol>
             <li>Użytkownik, przesyłając treści (komentarze, zdjęcia, opisy produktów, linki, oceny itp.), oświadcza, że:
@@ -84,7 +86,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="grywalizacja" className="scroll-mt-28">
           <h2>§ 5. Grywalizacja i Systemy Ocen</h2>
           <ol>
             <li>Serwis wykorzystuje mechanizmy grywalizacyjne, w tym:
@@ -105,7 +107,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="moderacja" className="scroll-mt-28">
           <h2>§ 6. Moderacja Treści i Akt o Usługach Cyfrowych (DSA)</h2>
           <ol>
             <li>Serwis podlega przepisom <strong>Aktu o Usługach Cyfrowych (Digital Services Act, DSA)</strong>, który nakłada obowiązki związane z moderacją treści i transparentnością decyzji moderacyjnych.</li>
@@ -127,7 +129,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="punkty-kontaktowe" className="scroll-mt-28">
           <h2>§ 7. Punkty Kontaktowe (Wymóg DSA)</h2>
           <ol>
             <li>Zgodnie z DSA, Serwis udostępnia:
@@ -141,7 +143,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="odpowiedzialnosc" className="scroll-mt-28">
           <h2>§ 8. Odpowiedzialność Usługodawcy (Safe Harbor)</h2>
           <ol>
             <li>Usługodawca nie ponosi odpowiedzialności za:
@@ -157,7 +159,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="reklamacje" className="scroll-mt-28">
           <h2>§ 9. Postępowanie Reklamacyjne i Prawo do Odwołania</h2>
           <ol>
             <li>Użytkownik może składać reklamacje dotyczące:
@@ -180,7 +182,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="rodo" className="scroll-mt-28">
           <h2>§ 10. Ochrona Danych Osobowych (RODO)</h2>
           <ol>
             <li>Szczegółowe zasady przetwarzania danych osobowych określa <Link href="/polityka-prywatnosci" className="text-primary hover:underline">Polityka Prywatności</Link>.</li>
@@ -199,7 +201,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="zmiany-regulaminu" className="scroll-mt-28">
           <h2>§ 11. Zmiany Regulaminu</h2>
           <ol>
             <li>Usługodawca zastrzega sobie prawo do zmiany niniejszego Regulaminu w przypadku:
@@ -220,7 +222,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="postanowienia-koncowe" className="scroll-mt-28">
           <h2>§ 12. Postanowienia Końcowe</h2>
           <ol>
             <li>Regulamin wchodzi w życie z dniem publikacji w Serwisie.</li>
@@ -236,10 +238,7 @@ export default function RegulaminPage() {
           </ol>
         </section>
 
-        <p className="text-sm text-muted-foreground mt-8">
-          Data ostatniej aktualizacji: 8 listopada 2025
-        </p>
       </article>
-    </div>
+    </LegalPageLayout>
   );
 }

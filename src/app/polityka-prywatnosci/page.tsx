@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ShieldCheck } from 'lucide-react';
+import { LegalPageLayout } from '@/components/layout/legal-page-layout';
 
 export const metadata = {
   title: 'Polityka Prywatności - Okazje+',
@@ -9,18 +9,21 @@ export const metadata = {
 
 export default function PolitykaPrywatnosciPage() {
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
-      <Button variant="ghost" asChild className="mb-6">
-        <Link href="/">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Powrót do strony głównej
-        </Link>
-      </Button>
+    <LegalPageLayout
+      title="Polityka Prywatności Okazje+"
+      description="Dowiedz się, w jaki sposób przetwarzamy dane osobowe, zabezpieczamy informacje oraz jakie prawa przysługują społeczności Okazje+."
+      updatedAt="8 listopada 2025"
+      autoGenerateSections
+      heroIcon={<ShieldCheck className="h-8 w-8" />}
+    >
+      <article className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-headline prose-h2:text-xl prose-h3:text-lg prose-ul:list-disc prose-ol:list-decimal">
+        <p>
+          Niniejsza Polityka Prywatności wyjaśnia zasady gromadzenia, przetwarzania i przechowywania
+          danych osobowych użytkowników platformy Okazje+. Dokument opisuje także stosowane środki
+          bezpieczeństwa oraz prawa przysługujące naszym użytkownikom.
+        </p>
 
-      <article className="prose prose-slate dark:prose-invert max-w-none">
-        <h1 className="font-headline">Polityka Prywatności Serwisu &quot;okazja+&quot;</h1>
-
-        <section>
+        <section id="postanowienia-ogolne" className="scroll-mt-28">
           <h2>§ 1. Postanowienia Ogólne</h2>
           <ol>
             <li>Niniejsza Polityka Prywatności określa zasady przetwarzania danych osobowych Użytkowników korzystających z Serwisu „okazja+" (dalej: <strong>Serwis</strong>).</li>
@@ -41,7 +44,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="zakres-i-cele" className="scroll-mt-28">
           <h2>§ 2. Zakres i Cele Przetwarzania Danych</h2>
           <h3>2.1. Dane Użytkowników Niezarejestrowanych (Gości)</h3>
           <p><strong>Zakres danych:</strong></p>
@@ -90,7 +93,7 @@ export default function PolitykaPrywatnosciPage() {
           </ul>
         </section>
 
-        <section>
+        <section id="cookies" className="scroll-mt-28">
           <h2>§ 3. Cookies i Podobne Technologie</h2>
           <ol>
             <li>Serwis wykorzystuje <strong>pliki cookies</strong> w celu:
@@ -118,7 +121,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="udostepnianie" className="scroll-mt-28">
           <h2>§ 4. Udostępnianie Danych Osobowych</h2>
           <ol>
             <li>Administrator może udostępniać dane osobowe następującym kategoriom odbiorców:
@@ -134,7 +137,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="okres-przechowywania" className="scroll-mt-28">
           <h2>§ 5. Okres Przechowywania Danych</h2>
           <ol>
             <li><strong>Dane Użytkowników Zarejestrowanych</strong> – do momentu usunięcia konta lub wycofania zgody.</li>
@@ -145,7 +148,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="prawa-uzytkownika" className="scroll-mt-28">
           <h2>§ 6. Prawa Użytkownika (RODO)</h2>
           <p>Użytkownik ma prawo do:</p>
           <ol>
@@ -161,7 +164,7 @@ export default function PolitykaPrywatnosciPage() {
           <p>W celu realizacji powyższych praw należy skontaktować się z Administratorem pod adresem: <a href="mailto:privacy@okazje-plus.pl">privacy@okazje-plus.pl</a>.</p>
         </section>
 
-        <section>
+        <section id="bezpieczenstwo" className="scroll-mt-28">
           <h2>§ 7. Bezpieczeństwo Danych</h2>
           <ol>
             <li>Administrator stosuje środki techniczne i organizacyjne zapewniające bezpieczeństwo danych, w tym:
@@ -182,7 +185,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="marketing" className="scroll-mt-28">
           <h2>§ 8. Marketing i Newsletter</h2>
           <ol>
             <li>Administrator może wysyłać Użytkownikom komunikaty marketingowe (newsletter) wyłącznie za ich <strong>zgodą</strong> (opt-in).</li>
@@ -203,7 +206,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="profilowanie" className="scroll-mt-28">
           <h2>§ 9. Profilowanie i Automatyczne Podejmowanie Decyzji</h2>
           <ol>
             <li>Serwis może wykorzystywać <strong>profilowanie</strong> w celu:
@@ -218,7 +221,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="linki-zewnetrzne" className="scroll-mt-28">
           <h2>§ 10. Linki do Stron Zewnętrznych</h2>
           <ol>
             <li>Serwis może zawierać linki do witryn zewnętrznych (np. sklepy partnerskie, media społecznościowe).</li>
@@ -227,7 +230,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="zmiany-polityki" className="scroll-mt-28">
           <h2>§ 11. Zmiany Polityki Prywatności</h2>
           <ol>
             <li>Administrator zastrzega sobie prawo do zmiany Polityki Prywatności w przypadku:
@@ -248,7 +251,7 @@ export default function PolitykaPrywatnosciPage() {
           </ol>
         </section>
 
-        <section>
+        <section id="kontakt" className="scroll-mt-28">
           <h2>§ 12. Kontakt</h2>
           <p>W sprawach związanych z ochroną danych osobowych prosimy o kontakt:</p>
           <ul>
@@ -258,10 +261,7 @@ export default function PolitykaPrywatnosciPage() {
           <p>Administrator odpowie na zgłoszenie w terminie <strong>30 dni</strong> (zgodnie z art. 12 RODO).</p>
         </section>
 
-        <p className="text-sm text-muted-foreground mt-8">
-          Data ostatniej aktualizacji: 8 listopada 2025
-        </p>
       </article>
-    </div>
+    </LegalPageLayout>
   );
 }
