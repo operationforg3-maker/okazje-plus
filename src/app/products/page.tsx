@@ -93,7 +93,8 @@ function ProductsPageContent() {
           const categoryProducts = await getProductsByCategory(
             selectedCategory.id,
             selectedSubcategory || undefined,
-            "100"
+            undefined,
+            100
           );
           if (!cancelled) setProducts(categoryProducts);
         }
