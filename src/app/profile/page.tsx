@@ -88,31 +88,76 @@ function ProfilePage() {
       
       setLoading(true);
       try {
-        // Pobierz komentarze użytkownika
-        const commentsQuery = query(
-          collection(db, 'comments'),
-          where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc'),
-          limit(10)
-        );
-        const commentsSnapshot = await getDocs(commentsQuery);
-        const comments = commentsSnapshot.docs.map(doc => { 
-          const data = doc.data();
-          return {
-            id: doc.id, 
-            ...data,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date()
-          } as Comment;
-        });
+        // NAPRAWIONE: Zbierz komentarze z subkolekcji deals i products
+        const allComments: Array<Comment & { itemTitle?: string; itemType?: 'deal' | 'product' }> = [];
 
-        // Pobierz dodane okazje użytkownika
+        // 1. Pobierz okazje użytkownika i ich komentarze
         const userDealsQuery = query(
           collection(db, 'deals'),
           where('createdBy', '==', user.uid),
-          limit(10)
+          limit(50)
         );
         const userDealsSnapshot = await getDocs(userDealsQuery);
         const userDeals = userDealsSnapshot.docs.length;
+
+        for (const dealDoc of userDealsSnapshot.docs) {
+          const dealData = dealDoc.data() as any;
+          const commentsColRef = collection(db, `deals/${dealDoc.id}/comments`);
+          const commentsQuery = query(
+            commentsColRef,
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
+          const commentsSnapshot = await getDocs(commentsQuery);
+          commentsSnapshot.forEach(commentDoc => {
+            const commentData = commentDoc.data();
+            allComments.push({
+              id: commentDoc.id,
+              userId: commentData.userId,
+              content: commentData.content,
+              createdAt: commentData.createdAt?.toDate?.() || new Date(commentData.createdAt),
+              itemTitle: dealData.title,
+              itemType: 'deal',
+            } as Comment & { itemTitle: string; itemType: 'deal' });
+          });
+        }
+
+        // 2. Pobierz produkty i szukaj komentarzy użytkownika
+        const productsColRef = collection(db, 'products');
+        const allProductsSnapshot = await getDocs(productsColRef);
+
+        for (const productDoc of allProductsSnapshot.docs) {
+          const productData = productDoc.data() as any;
+          const commentsColRef = collection(db, `products/${productDoc.id}/comments`);
+          const commentsQuery = query(
+            commentsColRef,
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          );
+          const commentsSnapshot = await getDocs(commentsQuery);
+          commentsSnapshot.forEach(commentDoc => {
+            const commentData = commentDoc.data();
+            allComments.push({
+              id: commentDoc.id,
+              userId: commentData.userId,
+              content: commentData.content,
+              createdAt: commentData.createdAt?.toDate?.() || new Date(commentData.createdAt),
+              itemTitle: productData.name,
+              itemType: 'product',
+            } as Comment & { itemTitle: string; itemType: 'product' });
+          });
+        }
+
+        // Posortuj komentarze chronologicznie (najnowsze na górze)
+        const comments = allComments.sort((a, b) => {
+          const getTime = (date: any) => {
+            if (date instanceof Date) return date.getTime();
+            if (typeof date === 'number') return date;
+            if (typeof date === 'string') return new Date(date).getTime();
+            return 0;
+          };
+          return getTime(b.createdAt) - getTime(a.createdAt);
+        }).slice(0, 10);
 
         // Pobierz oceny produktów użytkownika
         const ratingsQuery = query(

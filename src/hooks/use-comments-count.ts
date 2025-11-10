@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, getCountFromServer } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export function useCommentsCount(
   collectionName: 'deals' | 'products',
@@ -12,27 +12,33 @@ export function useCommentsCount(
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    let cancelled = false;
-    async function fetchCount() {
-      try {
-        setLoading(true);
-        const commentsCol = collection(db, `${collectionName}/${docId}/comments`);
-        const snapshot = await getCountFromServer(commentsCol);
-        if (!cancelled) setCount(snapshot.data().count || 0);
-      } catch (e) {
-        // Silent fallback, keep initialCount
-        if (!cancelled && typeof initialCount !== 'number') setCount(0);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+    try {
+      setLoading(true);
+      const commentsCol = collection(db, `${collectionName}/${docId}/comments`);
+      
+      // Real-time listener — automatycznie aktualizuje licznik gdy komentarz zostanie dodany/usunięty
+      const unsubscribe = onSnapshot(
+        commentsCol,
+        (snapshot) => {
+          setCount(snapshot.size);
+          setLoading(false);
+        },
+        (error) => {
+          console.error('Comments listener error:', error);
+          // Fallback do initialCount w przypadku błędu
+          setCount(typeof initialCount === 'number' ? initialCount : 0);
+          setLoading(false);
+        }
+      );
 
-    // Tylko jeśli nie mamy wiarygodnego initialCount albo chcemy odświeżyć
-    if (typeof initialCount !== 'number') {
-      fetchCount();
+      return () => {
+        unsubscribe();
+      };
+    } catch (error) {
+      console.error('Failed to set up comments listener:', error);
+      setCount(typeof initialCount === 'number' ? initialCount : 0);
+      setLoading(false);
     }
-
-    return () => { cancelled = true; };
   }, [collectionName, docId, initialCount]);
 
   return { count, loading };
