@@ -1,9 +1,19 @@
 import Redis from 'ioredis';
 import { LRUCache } from 'lru-cache';
 
-const redis = process.env.REDIS_URL ? new Redis(process.env.REDIS_URL) : null;
-
-if (!redis) {
+let redis: Redis | null = null;
+if (process.env.REDIS_URL) {
+  try {
+    redis = new Redis(process.env.REDIS_URL);
+    // prevent unhandled error events from crashing processes
+    redis.on('error', (err) => {
+      console.warn('Redis client error:', err);
+    });
+  } catch (e) {
+    console.warn('Failed to initialize Redis client, falling back to LRU:', e);
+    redis = null;
+  }
+} else {
   console.info('REDIS_URL not set — using in-memory LRU cache as fallback. For production set REDIS_URL to enable shared caching and rate-limiter.');
 }
 
