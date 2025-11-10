@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 
@@ -8,38 +8,47 @@ export function useCommentsCount(
   docId: string,
   initialCount?: number
 ) {
-  const [count, setCount] = useState<number>(typeof initialCount === 'number' ? initialCount : 0);
+  const [baseCount, setBaseCount] = useState<number>(typeof initialCount === 'number' ? initialCount : 0);
+  const [optimisticDelta, setOptimisticDelta] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     try {
       setLoading(true);
       const commentsCol = collection(db, `${collectionName}/${docId}/comments`);
-      
-      // Real-time listener — automatycznie aktualizuje licznik gdy komentarz zostanie dodany/usunięty
+
       const unsubscribe = onSnapshot(
         commentsCol,
         (snapshot) => {
-          setCount(snapshot.size);
+          // Aktualizuj bazowy count (pochodzący z Firestore)
+          setBaseCount(snapshot.size);
+          // Po otrzymaniu rzeczywistego snapshotu, zresetuj optymistyczny delta
+          setOptimisticDelta(0);
           setLoading(false);
         },
         (error) => {
           console.error('Comments listener error:', error);
-          // Fallback do initialCount w przypadku błędu
-          setCount(typeof initialCount === 'number' ? initialCount : 0);
+          setBaseCount(typeof initialCount === 'number' ? initialCount : 0);
           setLoading(false);
         }
       );
 
-      return () => {
-        unsubscribe();
-      };
+      return () => unsubscribe();
     } catch (error) {
       console.error('Failed to set up comments listener:', error);
-      setCount(typeof initialCount === 'number' ? initialCount : 0);
+      setBaseCount(typeof initialCount === 'number' ? initialCount : 0);
       setLoading(false);
     }
   }, [collectionName, docId, initialCount]);
 
-  return { count, loading };
+  const increment = useCallback((delta = 1) => {
+    setOptimisticDelta((d) => d + delta);
+  }, []);
+
+  const decrement = useCallback((delta = 1) => {
+    setOptimisticDelta((d) => d - delta);
+  }, []);
+
+  const count = baseCount + optimisticDelta;
+  return { count, loading, increment, decrement } as const;
 }

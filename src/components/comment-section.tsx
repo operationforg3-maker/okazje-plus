@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { addComment, getComments } from '@/lib/data';
+import { useCommentsCount } from '@/hooks/use-comments-count';
 import { Comment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,9 +36,12 @@ export default function CommentSection({ collectionName, docId }: CommentSection
   // Sprawdź czy user jest adminem
   const isAdmin = user?.email?.includes('@admin') || false; // Uproszczone - w produkcji sprawdź role w user doc
 
+  // Optymistyczne podbijanie licznika komentarzy
+  const commentsCount = useCommentsCount(collectionName === 'deals' ? 'deals' : 'products', docId, undefined);
+
   useEffect(() => {
     async function fetchComments() {
-      setComments(await getComments(collectionName, docId));
+      setComments(await getComments(collectionName, docId, 50));
     }
     fetchComments();
   }, [collectionName, docId]);
@@ -51,13 +55,29 @@ export default function CommentSection({ collectionName, docId }: CommentSection
       return;
     }
     try {
+      // OPTIMISTIC UI: pokaż lokalnie komentarz i podbij licznik
+      const tempComment: Comment = {
+        id: `tmp-${Date.now()}`,
+        dealId: collectionName === 'deals' ? docId : '',
+        userId: user.uid,
+        userDisplayName: user.displayName || 'Ty',
+        content: newComment,
+        createdAt: new Date().toISOString()
+      };
+      setComments((prev) => [tempComment, ...prev]);
+      commentsCount.increment?.(1);
+      setNewComment('');
+
       await addComment(collectionName, docId, user.uid, newComment);
       void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, newComment.length);
-      setNewComment('');
-      // Refresh comments
-      setComments(await getComments(collectionName, docId));
+
+      // Po zapisie pobierz odświeżone (limitowane) komentarze z serwera
+      setComments(await getComments(collectionName, docId, 50));
       toast.success("Komentarz został dodany.");
     } catch (error) {
+      // rollback optimistic update
+      commentsCount.decrement?.(1);
+      setComments(await getComments(collectionName, docId, 50));
       toast.error("Wystąpił błąd podczas dodawania komentarza.");
     }
   };

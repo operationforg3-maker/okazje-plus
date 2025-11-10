@@ -280,11 +280,11 @@ export async function addComment(collectionName: "products" | "deals", docId: st
     });
 }
 
-export async function getComments(collectionName: "products" | "deals", docId: string): Promise<Comment[]> {
-    const commentsColRef = collection(db, collectionName, docId, "comments");
-    const q = query(commentsColRef, orderBy("createdAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+export async function getComments(collectionName: "products" | "deals", docId: string, limitCount: number = 20): Promise<Comment[]> {
+  const commentsColRef = collection(db, collectionName, docId, "comments");
+  const q = query(commentsColRef, orderBy("createdAt", "desc"), limit(limitCount));
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
 }
 
 // === SYSTEM OCEN PRODUKTÓW ===
