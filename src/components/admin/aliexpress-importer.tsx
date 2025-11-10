@@ -110,13 +110,63 @@ export default function AliExpressImporter() {
     }
 
     setImportState('searching');
-    
-    // Symulacja API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setSearchResults(mockSearchResults);
-    setImportState('previewing');
-    toast.success(`Znaleziono ${mockSearchResults.length} produktów`);
+
+    try {
+      const params = new URLSearchParams();
+      params.set('q', searchQuery);
+      if (searchCategory) params.set('category', searchCategory);
+      if (minPrice) params.set('minPrice', minPrice);
+      if (maxPrice) params.set('maxPrice', maxPrice);
+      params.set('limit', '50');
+
+      const res = await fetch(`/api/admin/aliexpress/search?${params.toString()}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        // If not configured, fallback to mock
+        if (body?.error === 'not_configured') {
+          setSearchResults(mockSearchResults);
+          setImportState('previewing');
+          toast.success(`Tryb developerski: wyświetlono przykładowe dane (${mockSearchResults.length})`);
+          return;
+        }
+        throw new Error(body?.message || `AliExpress API error ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // If proxy returned normalized products
+      if (Array.isArray(data.products) && data.products.length > 0) {
+        // Map provider fields to AliExpressProduct where possible — be tolerant about missing fields
+        const normalized = data.products.map((p: any) => ({
+          id: String(p.id || p.productId || p.itemId || p.sku || Math.random()),
+          title: p.title || p.name || p.productName || p.itemTitle || '',
+          imageUrl: p.imageUrl || p.image || p.thumbnail || 'https://via.placeholder.com/200',
+          price: p.price || p.salePrice || p.currentPrice || 0,
+          originalPrice: p.originalPrice || p.listPrice || p.marketPrice || p.price || 0,
+          currency: p.currency || 'PLN',
+          productUrl: p.productUrl || p.url || p.itemUrl || '',
+          rating: p.rating || p.score || 0,
+          orders: p.orders || p.sold || p.ordersCount || 0,
+          discount: p.discount || Math.round(((p.originalPrice || p.listPrice || p.price || 0) - (p.price || 0)) / (p.originalPrice || p.price || 1) * 100) || 0,
+          shipping: p.shipping || p.shippingInfo || 'Dostawa',
+        } as AliExpressProduct));
+
+        setSearchResults(normalized);
+        setImportState('previewing');
+        toast.success(`Znaleziono ${normalized.length} produktów`);
+        return;
+      }
+
+      // raw fallback
+      setSearchResults(mockSearchResults);
+      setImportState('previewing');
+      toast.success(`Tryb developerski: wyświetlono przykładowe dane (${mockSearchResults.length})`);
+    } catch (err: any) {
+      console.error('AliExpress search failed:', err);
+      setSearchResults(mockSearchResults);
+      setImportState('previewing');
+      toast.error('Błąd połączenia z API AliExpress — użyto przykładowych danych');
+    }
   };
 
   // Toggle product selection
