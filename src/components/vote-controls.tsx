@@ -28,16 +28,22 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
 
     setIsLoading(true);
     try {
-      const voteRef = doc(db, "deals", dealId, "votes", user.uid);
-      await setDoc(voteRef, { direction });
-      
-      // Track vote event w Google Analytics
+      // Use server API to handle voting (transactional, idempotent)
+      const action = direction === 'up' ? 'up' : 'down';
+      const res = await fetch(`/api/deals/${dealId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, userId: user.uid }), // temporary userId for dev
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Vote failed');
+      }
+
+      // Update UI based on server response
+      if (typeof json.temperature === 'number') setIsLoading(false);
+      // We don't have direct deal object here; consumer can re-fetch to update values.
       trackVote('deal', dealId, direction);
-      
-      // Opcjonalnie: można dodać toast.success("Głos został oddany!");
-      // Aktualizacja licznika głosów w UI w czasie rzeczywistym wymagałaby subskrypcji
-      // do kolekcji głosów, co jest bardziej zaawansowane. Na razie licznik
-      // zaktualizuje się po odświeżeniu strony.
     } catch (error) {
       console.error("Błąd podczas głosowania:", error);
       toast.error("Wystąpił błąd podczas głosowania.");

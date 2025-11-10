@@ -99,7 +99,6 @@ export function Navbar() {
           <div className="flex-1 max-w-md ml-auto">
             <AutocompleteSearch />
           </div>
-          <NotificationBell />
           {loading ? (
               <Skeleton className="h-9 w-9 rounded-full" />
             ) : user ? (

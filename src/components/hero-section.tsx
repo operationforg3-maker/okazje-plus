@@ -1,7 +1,9 @@
+"use client";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { TrendingUp, Zap, Flame } from 'lucide-react';
+import { useAuth } from '@/lib/auth';
 
 export default function HeroSection() {
   return (
@@ -62,12 +64,28 @@ export default function HeroSection() {
             <Button asChild size="lg" className="min-w-[200px]">
               <Link href="/deals">Przeglądaj okazje</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="min-w-[200px]">
-              <Link href="/login">Dołącz za darmo</Link>
-            </Button>
+            <AuthCta />
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function AuthCta() {
+  const { user } = useAuth();
+
+  if (user) {
+    return (
+      <Button asChild size="lg" variant="outline" className="min-w-[200px]">
+        <Link href="/add-deal">Dodaj okazję</Link>
+      </Button>
+    );
+  }
+
+  return (
+    <Button asChild size="lg" variant="outline" className="min-w-[200px]">
+      <Link href="/login">Dołącz za darmo</Link>
+    </Button>
   );
 }
