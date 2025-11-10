@@ -31,24 +31,29 @@ export async function GET(request: Request) {
 
   try {
     if (!typesenseServerClient) {
-      // Fallback to Firestore-based autocomplete implemented here
-      const { searchProducts, getHotDeals } = await import('@/lib/data');
+      // Fallback to Firestore-based autocomplete implemented here. Use a broader
+      // candidate set (recommended/hot lists) and filter in-memory to support
+      // substring matches — this improves recall when Typesense isn't present.
+      const { getRecommendedProducts, getHotDeals } = await import('@/lib/data');
       const normalizedQuery = q.toLowerCase().trim();
-      const [products, deals] = await Promise.all([
-        searchProducts(q).then(p => p.slice(0, limit)),
-        getHotDeals(limit),
+
+      // Fetch larger candidate pools and then filter locally
+      const [productsCandidates, dealsCandidates] = await Promise.all([
+        getRecommendedProducts(200).catch(() => []),
+        getHotDeals(200).catch(() => []),
       ]);
 
       const out: any[] = [];
-      products
-        .filter(p => p.name.toLowerCase().includes(normalizedQuery) || p.description?.toLowerCase().includes(normalizedQuery))
-        .slice(0, limit)
-        .forEach(p => out.push({ type: 'product', id: p.id, label: p.name, subLabel: p.description }));
 
-      deals
-        .filter(d => d.title.toLowerCase().includes(normalizedQuery) || d.description?.toLowerCase().includes(normalizedQuery))
+      productsCandidates
+        .filter((p: any) => ((p.name || '') + ' ' + (p.description || '')).toLowerCase().includes(normalizedQuery))
+        .slice(0, limit)
+        .forEach((p: any) => out.push({ type: 'product', id: p.id, label: p.name, subLabel: p.description }));
+
+      dealsCandidates
+        .filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(normalizedQuery))
         .slice(0, Math.max(0, limit - out.length))
-        .forEach(d => out.push({ type: 'deal', id: d.id, label: d.title, subLabel: d.description }));
+        .forEach((d: any) => out.push({ type: 'deal', id: d.id, label: d.title, subLabel: d.description }));
 
       await cacheSet(key, out, DEFAULT_TTL);
       return NextResponse.json(out);
