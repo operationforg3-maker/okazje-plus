@@ -25,18 +25,17 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCollection } from "react-firebase-hooks/firestore";
-import { collection } from "firebase/firestore";
-import { db } from '@/lib/firebase';
-import { Category } from '@/lib/types';
-
-type AliExpressProduct = {
-  id: string;
-  title: string;
-  imageUrl: string;
-  price: number;
-  originalPrice: number;
-  currency: string;
-  productUrl: string;
+            {importState === 'searching' ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Wyszukiwanie...
+              </>
+            ) : (
+              <>
+                <Search className="h-4 w-4 mr-2" />
+                Szukaj produktów
+              </>
+            )}
   rating: number;
   orders: number;
   discount: number;
@@ -54,6 +53,8 @@ export default function AliExpressImporter() {
   const [searchResults, setSearchResults] = useState<AliExpressProduct[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [categoryMapping, setCategoryMapping] = useState<{ [productId: string]: { main: string; sub: string } }>({});
+  const [productDetails, setProductDetails] = useState<{ [productId: string]: any }>({});
+  const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
 
   // Pobieranie kategorii
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
@@ -228,14 +229,50 @@ export default function AliExpressImporter() {
 
     setImportState('importing');
 
-    // TODO: Wywołanie Firebase Cloud Function do zapisania produktów
-    // const createProduct = httpsCallable(functions, 'createProduct');
-    // await createProduct({ products: productsToImport.map(...) });
+    try {
+      // Use callable Cloud Function importAliProduct if available
+      const callable = httpsCallable(functions as any, 'importAliProduct');
+      let success = 0;
+      for (const p of productsToImport) {
+        const mapping = categoryMapping[p.id];
+        const payload = { product: p, mainCategorySlug: mapping.main, subCategorySlug: mapping.sub };
+        try {
+          const res = await callable(payload);
+          if ((res as any).data?.ok) success++;
+        } catch (err: any) {
+          console.error('Import failed for', p.id, err);
+        }
+      }
+      setImportState('completed');
+      toast.success(`Zaimportowano ${success} z ${productsToImport.length} produktów!`);
+    } catch (err) {
+      console.error('Bulk import failed:', err);
+      toast.error('Import nieudany');
+      setImportState('previewing');
+    }
+  };
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    setImportState('completed');
-    toast.success(`Zaimportowano ${productsToImport.length} produktów!`);
+  const loadDetails = async (productId: string, itemId?: string) => {
+    if (loadingDetails.has(productId)) return;
+    setLoadingDetails(prev => new Set(prev).add(productId));
+    try {
+      const id = itemId || productId;
+      const res = await fetch(`/api/admin/aliexpress/item?id=${encodeURIComponent(id)}`);
+      if (!res.ok) throw new Error('Upstream error');
+      const body = await res.json();
+      const product = body.product || body.item || body.data || body.raw || null;
+      setProductDetails(prev => ({ ...prev, [productId]: product }));
+      toast.success('Pobrano szczegóły produktu');
+    } catch (e) {
+      console.error('Load details failed', e);
+      toast.error('Nie udało się pobrać szczegółów');
+    } finally {
+      setLoadingDetails(prev => {
+        const copy = new Set(prev);
+        copy.delete(productId);
+        return copy;
+      });
+    }
   };
 
   // Reset
@@ -336,14 +373,15 @@ export default function AliExpressImporter() {
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Wyszukiwanie...
               </>
-            ) : (
-              <>
-                <Search className="h-4 w-4 mr-2" />
-                Szukaj produktów
-              </>
-            )}
-          </Button>
-        </CardContent>
+                                </div>
+                                <a
+                                  href={product.productUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                                >
+                                  Zobacz na AliExpress <ExternalLink className="h-3 w-3" />
+                                </a>
       </Card>
 
       {/* Results Section */}
@@ -444,14 +482,23 @@ export default function AliExpressImporter() {
                                   </span>
                                   <Badge variant="destructive">-{product.discount}%</Badge>
                                 </div>
-                                <a
-                                  href={product.productUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-                                >
-                                  Zobacz na AliExpress <ExternalLink className="h-3 w-3" />
-                                </a>
+                                <div className="flex gap-2">
+                                  <a
+                                    href={product.productUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline inline-flex items-center gap-1"
+                                  >
+                                    Zobacz na AliExpress <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                  <Button size="sm" variant="outline" onClick={() => loadDetails(product.id, product.id)}>
+                                    {loadingDetails.has(product.id) ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      'Załaduj szczegóły'
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
 
