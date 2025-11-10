@@ -11,6 +11,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "seed": "ts-node src/scripts/seed.ts",
+    "seed:interactions": "ts-node src/scripts/seed-interactions.ts",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts"
   },
   "dependencies": {
