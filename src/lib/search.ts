@@ -27,6 +27,22 @@ export async function searchProductsTypesense(
     limit = 50 
   } = opts;
 
+  // If running in browser, prefer server-side API (centralized caching / rate-limiting)
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams();
+      params.set('q', q);
+      params.set('type', 'products');
+      params.set('limit', String(limit));
+      const res = await fetch(`/api/search?${params.toString()}`);
+      if (!res.ok) return [];
+      const body = await res.json();
+      return body.products || [];
+    } catch (e) {
+      console.warn('Client-side search proxy failed, falling back to local Typesense/fallback:', e);
+    }
+  }
+
   // Fallback: jeśli Typesense nie skonfigurowany, użyj dotychczasowego wyszukiwania Firestore
   if (!typesenseClient) {
     return fallbackSearch(q);
@@ -101,7 +117,33 @@ export async function searchDealsTypesense(
     limit = 50 
   } = opts;
   
-  if (!typesenseClient) return []; // brak fallbacku, bo nie mamy firestore search dla deals
+  // If running in browser, prefer server-side API (centralized caching / rate-limiting)
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams();
+      params.set('q', q);
+      params.set('type', 'deals');
+      params.set('limit', String(limit));
+      const res = await fetch(`/api/search?${params.toString()}`);
+      if (!res.ok) return [];
+      const body = await res.json();
+      return body.deals || [];
+    } catch (e) {
+      console.warn('Client-side search proxy failed, falling back to local Typesense/fallback:', e);
+    }
+  }
+
+  if (!typesenseClient) {
+    // Brak Typesense — użyj Firestore fallback (searchDeals z data.ts)
+    try {
+      const { searchDeals } = await import('@/lib/data');
+      const fallbackResults = await searchDeals(q);
+      return fallbackResults;
+    } catch (e) {
+      console.warn('Firestore fallback for deals search failed:', e);
+      return [];
+    }
+  }
   
   const filters: string[] = [];
   if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
@@ -154,7 +196,22 @@ export type Suggestion = {
 };
 
 export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
-  // Fallback: jeśli Typesense nie skonfigurowany, użyj Firestore
+  // If running in browser, always use server-side autocomplete endpoint
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams();
+      params.set('q', q);
+      params.set('limit', String(limit));
+      const res = await fetch(`/api/search/autocomplete?${params.toString()}`);
+      if (!res.ok) return [];
+      return (await res.json()) as Suggestion[];
+    } catch (e) {
+      console.warn('Autocomplete proxy failed, falling back to Firestore:', e);
+      return getFirestoreAutocompleteSuggestions(q, limit);
+    }
+  }
+
+  // Server-side: try Typesense client, otherwise Firestore fallback
   if (!typesenseClient) {
     return getFirestoreAutocompleteSuggestions(q, limit);
   }

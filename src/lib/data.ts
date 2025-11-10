@@ -191,8 +191,9 @@ export async function getProductsByCategory(
 export async function searchProducts(searchTerm: string): Promise<Product[]> {
   const productsRef = collection(db, "products");
   const nameQuery = query(productsRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'));
-  const categoryQuery = query(productsRef, where('category', '>=', searchTerm), where('category', '<=', searchTerm + '\uf8ff'));
-  const subcategoryQuery = query(productsRef, where('subcategory', '>=', searchTerm), where('subcategory', '<=', searchTerm + '\uf8ff'));
+  // Use category slug fields from the new data model
+  const categoryQuery = query(productsRef, where('mainCategorySlug', '>=', searchTerm), where('mainCategorySlug', '<=', searchTerm + '\uf8ff'));
+  const subcategoryQuery = query(productsRef, where('subCategorySlug', '>=', searchTerm), where('subCategorySlug', '<=', searchTerm + '\uf8ff'));
 
   const [nameSnapshot, categorySnapshot, subcategorySnapshot] = await Promise.all([
     getDocs(nameQuery),
@@ -212,6 +213,21 @@ export async function searchProducts(searchTerm: string): Promise<Product[]> {
   });
 
   return Object.values(results).filter(p => p.status === 'approved');
+}
+
+export async function searchDeals(searchTerm: string): Promise<Deal[]> {
+  const dealsRef = collection(db, "deals");
+  const titleQuery = query(dealsRef, where('title', '>=', searchTerm), where('title', '<=', searchTerm + '\uf8ff'));
+  const [titleSnapshot] = await Promise.all([
+    getDocs(titleQuery),
+  ]);
+
+  const results: { [id: string]: Deal } = {};
+  titleSnapshot.forEach(doc => {
+    results[doc.id] = { id: doc.id, ...doc.data() } as Deal;
+  });
+
+  return Object.values(results).filter(d => d.status === 'approved');
 }
 
 // Statystyki: liczba produktów, okazji i użytkowników
