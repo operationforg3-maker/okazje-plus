@@ -41,19 +41,48 @@ export default function RatingInput({ productId, existingRating, onRatingSubmitt
       return;
     }
 
-    if (rating === 0) {
+    // Zabezpieczenie: waliduj ocenę główną
+    if (!rating || rating === 0) {
       toast.error('Wybierz ocenę gwiazdkową (1-5).');
+      return;
+    }
+
+    // Zabezpieczenie: waliduj wszystkie oceny szczegółowe
+    if (!durability || durability === 0 || durability < 1 || durability > 5) {
+      toast.error('Trwałość: Wybierz wartość od 1 do 5.');
+      return;
+    }
+
+    if (!easeOfUse || easeOfUse === 0 || easeOfUse < 1 || easeOfUse > 5) {
+      toast.error('Łatwość użycia: Wybierz wartość od 1 do 5.');
+      return;
+    }
+
+    if (!valueForMoney || valueForMoney === 0 || valueForMoney < 1 || valueForMoney > 5) {
+      toast.error('Stosunek jakości do ceny: Wybierz wartość od 1 do 5.');
+      return;
+    }
+
+    if (!versatility || versatility === 0 || versatility < 1 || versatility > 5) {
+      toast.error('Wszechstronność: Wybierz wartość od 1 do 5.');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Fallback wartości — jeśli z jakiegoś powodu walidacja przejdzie, użyj domyślnych
+      const safeRating = Math.max(1, Math.min(5, rating || 3));
+      const safeDurability = Math.max(1, Math.min(5, durability || 3));
+      const safeEaseOfUse = Math.max(1, Math.min(5, easeOfUse || 3));
+      const safeValueForMoney = Math.max(1, Math.min(5, valueForMoney || 3));
+      const safeVersatility = Math.max(1, Math.min(5, versatility || 3));
+
       await submitProductRating(productId, user.uid, {
-        rating,
-        durability,
-        easeOfUse,
-        valueForMoney,
-        versatility,
+        rating: safeRating,
+        durability: safeDurability,
+        easeOfUse: safeEaseOfUse,
+        valueForMoney: safeValueForMoney,
+        versatility: safeVersatility,
         review: review.trim() || undefined,
         userDisplayName: user.displayName || undefined,
       });
@@ -62,7 +91,7 @@ export default function RatingInput({ productId, existingRating, onRatingSubmitt
       onRatingSubmitted?.();
     } catch (error: any) {
       console.error('Błąd podczas zapisywania oceny:', error);
-      toast.error('Wystąpił błąd podczas zapisywania oceny.');
+      toast.error(`Błąd: ${error?.message || 'Nie udało się zapisać oceny.'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -197,7 +226,23 @@ export default function RatingInput({ productId, existingRating, onRatingSubmitt
 
         <Button
           onClick={handleSubmit}
-          disabled={isSubmitting || rating === 0}
+          disabled={
+            isSubmitting ||
+            !rating ||
+            rating === 0 ||
+            !durability ||
+            !easeOfUse ||
+            !valueForMoney ||
+            !versatility ||
+            durability < 1 ||
+            durability > 5 ||
+            easeOfUse < 1 ||
+            easeOfUse > 5 ||
+            valueForMoney < 1 ||
+            valueForMoney > 5 ||
+            versatility < 1 ||
+            versatility > 5
+          }
           className="w-full"
           size="lg"
         >

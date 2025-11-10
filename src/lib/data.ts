@@ -302,51 +302,73 @@ export async function submitProductRating(
         userDisplayName?: string;
     }
 ) {
-    const ratingDocRef = doc(db, "products", productId, "ratings", userId);
-    const productDocRef = doc(db, "products", productId);
+    // Zabezpieczenie: waliduj wszystkie oceny przed wysłaniem
+    const validateRating = (val: any, fieldName: string): number => {
+        const num = Number(val);
+        if (isNaN(num) || num < 1 || num > 5) {
+            throw new Error(`${fieldName}: Wartość musi być liczbą od 1 do 5, otrzymano: ${val}`);
+        }
+        return num;
+    };
 
     try {
+        const validatedRating = {
+            rating: validateRating(ratingData.rating, 'Ocena główna'),
+            durability: validateRating(ratingData.durability, 'Trwałość'),
+            easeOfUse: validateRating(ratingData.easeOfUse, 'Łatwość użycia'),
+            valueForMoney: validateRating(ratingData.valueForMoney, 'Stosunek jakości do ceny'),
+            versatility: validateRating(ratingData.versatility, 'Wszechstronność'),
+            review: ratingData.review?.trim() || undefined,
+            userDisplayName: ratingData.userDisplayName || 'Użytkownik anonimowy',
+        };
+
+        const ratingDocRef = doc(db, "products", productId, "ratings", userId);
+        const productDocRef = doc(db, "products", productId);
+
         await runTransaction(db, async (transaction) => {
+            // Pobierz istniejącą ocenę (w kontekście transakcji)
             const existingRating = await transaction.get(ratingDocRef);
             
             // Zapisz lub aktualizuj ocenę użytkownika
             transaction.set(ratingDocRef, {
-                ...ratingData,
+                ...validatedRating,
                 productId,
                 userId,
-                createdAt: new Date().toISOString(),
+                createdAt: existingRating.exists() ? existingRating.data().createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
             });
 
-            // Pobierz wszystkie oceny po zapisaniu
-            const ratingsRef = collection(db, "products", productId, "ratings");
-            const ratingsSnapshot = await getDocs(ratingsRef);
-            
-            // Przelicz średnie
-            let totalRating = 0;
-            let totalDurability = 0;
-            let totalEaseOfUse = 0;
-            let totalValueForMoney = 0;
-            let totalVersatility = 0;
-            const count = ratingsSnapshot.size;
+            // Pobierz wszystkie oceny — WAŻNE: to nie zadziała w transakcji, więc robimy to poza
+        });
 
-            ratingsSnapshot.forEach(doc => {
-                const data = doc.data();
-                totalRating += data.rating || 0;
-                totalDurability += data.durability || 0;
-                totalEaseOfUse += data.easeOfUse || 0;
-                totalValueForMoney += data.valueForMoney || 0;
-                totalVersatility += data.versatility || 0;
-            });
+        // Po transakcji — pobierz i przelicz średnie
+        const ratingsRef = collection(db, "products", productId, "ratings");
+        const ratingsSnapshot = await getDocs(ratingsRef);
+        
+        let totalRating = 0;
+        let totalDurability = 0;
+        let totalEaseOfUse = 0;
+        let totalValueForMoney = 0;
+        let totalVersatility = 0;
+        const count = ratingsSnapshot.size;
 
-            // Aktualizuj ratingCard produktu
-            transaction.update(productDocRef, {
-                'ratingCard.average': count > 0 ? totalRating / count : 0,
-                'ratingCard.count': count,
-                'ratingCard.durability': count > 0 ? totalDurability / count : 0,
-                'ratingCard.easeOfUse': count > 0 ? totalEaseOfUse / count : 0,
-                'ratingCard.valueForMoney': count > 0 ? totalValueForMoney / count : 0,
-                'ratingCard.versatility': count > 0 ? totalVersatility / count : 0,
-            });
+        ratingsSnapshot.forEach(doc => {
+            const data = doc.data();
+            totalRating += Number(data.rating) || 0;
+            totalDurability += Number(data.durability) || 0;
+            totalEaseOfUse += Number(data.easeOfUse) || 0;
+            totalValueForMoney += Number(data.valueForMoney) || 0;
+            totalVersatility += Number(data.versatility) || 0;
+        });
+
+        // Aktualizuj ratingCard produktu — osobna operacja po transakcji
+        await updateDoc(productDocRef, {
+            'ratingCard.average': count > 0 ? totalRating / count : 0,
+            'ratingCard.count': count,
+            'ratingCard.durability': count > 0 ? totalDurability / count : 0,
+            'ratingCard.easeOfUse': count > 0 ? totalEaseOfUse / count : 0,
+            'ratingCard.valueForMoney': count > 0 ? totalValueForMoney / count : 0,
+            'ratingCard.versatility': count > 0 ? totalVersatility / count : 0,
         });
     } catch (e) {
         console.error("Błąd podczas zapisywania oceny: ", e);
