@@ -74,6 +74,13 @@ npm run build
 npm start
 ```
 
+## 🔔 Ostatnie zmiany (2025-11-10)
+
+- Usprawnienia systemu komentarzy: real-time licznik, optymistyczne UI przy dodawaniu komentarza oraz paginacja dla pobierania komentarzy.
+- Testy zostały zaktualizowane aby korzystać z `collectionGroup('comments')` — testy są teraz bardziej odporne i wydajne.
+- Szczegóły zmian i instrukcje testowe znajdziesz w: `docs/updates/2025-11-10-comments-and-pagination.md`
+
+
 ## 🏗️ Architektura
 
 ### Stack Technologiczny
