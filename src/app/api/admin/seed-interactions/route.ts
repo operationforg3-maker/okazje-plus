@@ -1,34 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
+import * as fs from 'fs';
+import * as path from 'path';
 
-// Initialize Firebase Admin SDK if not already initialized
-if (!admin.apps.length) {
+// Lazy initialization function
+function initializeFirebaseAdmin() {
+  if (admin.apps.length > 0) {
+    return admin.app(); // Already initialized
+  }
+
   try {
-    // Try env vars first (for App Hosting)
+    // Try env vars first (for App Hosting with proper credentials)
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-      admin.initializeApp({
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/gm, '\n').replace(/^"(.*)"$/, '$1');
+
+      return admin.initializeApp({
         credential: admin.credential.cert({
           projectId: process.env.FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          privateKey: privateKey,
         }),
       });
-      console.log('✓ Initialized with env vars credentials');
     } else {
-      // Fallback: Application Default Credentials (production)
-      admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-      });
-      console.log('✓ Initialized with ADC');
+      // Try local service account file (for local development)
+      try {
+        const serviceAccountPath = path.join(process.cwd(), 'serviceAccountKey.json');
+        const serviceAccountJson = fs.readFileSync(serviceAccountPath, 'utf8');
+        const serviceAccount = JSON.parse(serviceAccountJson);
+        return admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+        });
+      } catch (fileError) {
+        // Fallback: Application Default Credentials (production)
+        return admin.initializeApp({
+          credential: admin.credential.applicationDefault(),
+        });
+      }
     }
   } catch (error) {
     console.error('Failed to initialize Firebase Admin:', error);
     throw error;
   }
 }
-
-const db = admin.firestore();
-const auth = admin.auth();
 
 // Test users configuration
 const testUsers = [
@@ -57,6 +70,11 @@ const testUsers = [
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Firebase Admin
+    initializeFirebaseAdmin();
+    const db = admin.firestore();
+    const auth = admin.auth();
+
     const results = {
       users: [] as any[],
       deals: [] as any[],
