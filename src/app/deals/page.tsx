@@ -38,7 +38,9 @@ export default function DealsPage() {
       if (savedView === 'list' || savedView === 'grid') {
         setViewMode(savedView);
       }
-    } catch {}
+    } catch {
+      // localStorage może być niedostępny w trybie incognito - ignoruj
+    }
   }, []);
 
   // Wczytaj zapisaną kategorię / podkategorię gdy tylko będą dostępne kategorie
@@ -61,7 +63,11 @@ export default function DealsPage() {
 
   // Persistuj view mode
   useEffect(() => {
-    try { localStorage.setItem('deals_view_mode', viewMode); } catch {}
+    try { 
+      localStorage.setItem('deals_view_mode', viewMode); 
+    } catch {
+      // localStorage może być niedostępny - ignoruj
+    }
   }, [viewMode]);
 
   // Persistuj kategorię
@@ -72,7 +78,9 @@ export default function DealsPage() {
       } else {
         localStorage.removeItem('deals_selected_category');
       }
-    } catch {}
+    } catch {
+      // localStorage może być niedostępny - ignoruj
+    }
   }, [selectedCategory]);
 
   // Persistuj podkategorię
@@ -83,7 +91,9 @@ export default function DealsPage() {
       } else {
         localStorage.removeItem('deals_selected_subcategory');
       }
-    } catch {}
+    } catch {
+      // localStorage może być niedostępny - ignoruj
+    }
   }, [selectedSubcategory]);
 
   useEffect(() => {

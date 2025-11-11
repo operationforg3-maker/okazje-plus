@@ -35,7 +35,12 @@ export default function Home() {
         const res = await fetch('/api/trending', { cache: 'no-store' });
         const data = await res.json();
         if (data?.items) setAiTrending(data.items);
-      } catch {}
+      } catch (error) {
+        // AI trending is optional feature - fail silently but log for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to fetch AI trending:', error);
+        }
+      }
     }
     fetchAiTrending();
   }, []);
