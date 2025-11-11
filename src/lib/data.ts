@@ -1,8 +1,13 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification } from "@/lib/types";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
+  const cacheKey = `hot_deals:${count}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) return cached;
+  
   const dealsRef = collection(db, "deals");
   const q = query(
     dealsRef,
@@ -11,24 +16,44 @@ export async function getHotDeals(count: number): Promise<Deal[]> {
     limit(count)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  const deals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  
+  // Cache for 2 minutes
+  await cacheSet(cacheKey, deals, 120);
+  return deals;
 }
 
 // Pobiera kilka losowych okazji (np. do sekcji trending AI porównawczych) - fallback gdy mało danych
+// Optymalizacja: używa limit(count * 2) zamiast count * 5 i dodaje cache
 export async function getRandomDeals(count: number): Promise<Deal[]> {
+  const cacheKey = `random_deals:${count}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) return cached;
+  
   const dealsRef = collection(db, "deals");
-  const q = query(dealsRef, where("status", "==", "approved"), limit(count * 5));
+  // Zredukowano z count * 5 do count * 2 dla lepszej wydajności
+  const q = query(dealsRef, where("status", "==", "approved"), limit(Math.min(count * 2, 100)));
   const snapshot = await getDocs(q);
   const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
-  // prosty shuffle
+  
+  // Fisher-Yates shuffle
   for (let i = all.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [all[i], all[j]] = [all[j], all[i]];
   }
-  return all.slice(0, count);
+  
+  const result = all.slice(0, count);
+  
+  // Cache for 5 minutes (random results don't need to be super fresh)
+  await cacheSet(cacheKey, result, 300);
+  return result;
 }
 
 export async function getRecommendedProducts(count: number): Promise<Product[]> {
+    const cacheKey = `recommended_products:${count}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) return cached;
+    
     const productsRef = collection(db, "products");
     const q = query(
       productsRef,
@@ -36,7 +61,11 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       limit(count)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    
+    // Cache for 5 minutes
+    await cacheSet(cacheKey, products, 300);
+    return products;
 }
 
 // Funkcje do moderacji - pobieranie treści oczekujących
@@ -326,8 +355,58 @@ export async function submitProductRating(
         const productDocRef = doc(db, "products", productId);
 
         await runTransaction(db, async (transaction) => {
-            // Pobierz istniejącą ocenę (w kontekście transakcji)
+            // Pobierz istniejącą ocenę i produkt w kontekście transakcji
             const existingRating = await transaction.get(ratingDocRef);
+            const productSnap = await transaction.get(productDocRef);
+            
+            if (!productSnap.exists()) {
+                throw new Error('Product not found');
+            }
+            
+            const productData = productSnap.data();
+            const currentRatingCard = productData.ratingCard || {
+                average: 0,
+                count: 0,
+                durability: 0,
+                easeOfUse: 0,
+                valueForMoney: 0,
+                versatility: 0,
+            };
+            
+            // Optymalizacja: oblicz nowe średnie incrementalnie
+            let newCount = currentRatingCard.count;
+            let oldRatingValues = null;
+            
+            if (existingRating.exists()) {
+                // Aktualizacja - odejmij stare wartości
+                const oldData = existingRating.data();
+                oldRatingValues = {
+                    rating: Number(oldData.rating) || 0,
+                    durability: Number(oldData.durability) || 0,
+                    easeOfUse: Number(oldData.easeOfUse) || 0,
+                    valueForMoney: Number(oldData.valueForMoney) || 0,
+                    versatility: Number(oldData.versatility) || 0,
+                };
+            } else {
+                // Nowa ocena
+                newCount += 1;
+            }
+            
+            // Oblicz nowe sumy
+            const calculateNewAverage = (currentAvg: number, currentCount: number, oldVal: number | null, newVal: number, newCount: number) => {
+                const currentSum = currentAvg * currentCount;
+                const adjustedSum = oldVal !== null ? currentSum - oldVal + newVal : currentSum + newVal;
+                return newCount > 0 ? adjustedSum / newCount : 0;
+            };
+            
+            const newRatingCard = {
+                average: calculateNewAverage(currentRatingCard.average, currentRatingCard.count, oldRatingValues?.rating || null, validatedRating.rating, newCount),
+                count: newCount,
+                durability: calculateNewAverage(currentRatingCard.durability, currentRatingCard.count, oldRatingValues?.durability || null, validatedRating.durability, newCount),
+                easeOfUse: calculateNewAverage(currentRatingCard.easeOfUse, currentRatingCard.count, oldRatingValues?.easeOfUse || null, validatedRating.easeOfUse, newCount),
+                valueForMoney: calculateNewAverage(currentRatingCard.valueForMoney, currentRatingCard.count, oldRatingValues?.valueForMoney || null, validatedRating.valueForMoney, newCount),
+                versatility: calculateNewAverage(currentRatingCard.versatility, currentRatingCard.count, oldRatingValues?.versatility || null, validatedRating.versatility, newCount),
+            };
             
             // Zapisz lub aktualizuj ocenę użytkownika
             transaction.set(ratingDocRef, {
@@ -337,38 +416,11 @@ export async function submitProductRating(
                 createdAt: existingRating.exists() ? existingRating.data().createdAt : new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             });
-
-            // Pobierz wszystkie oceny — WAŻNE: to nie zadziała w transakcji, więc robimy to poza
-        });
-
-        // Po transakcji — pobierz i przelicz średnie
-        const ratingsRef = collection(db, "products", productId, "ratings");
-        const ratingsSnapshot = await getDocs(ratingsRef);
-        
-        let totalRating = 0;
-        let totalDurability = 0;
-        let totalEaseOfUse = 0;
-        let totalValueForMoney = 0;
-        let totalVersatility = 0;
-        const count = ratingsSnapshot.size;
-
-        ratingsSnapshot.forEach(doc => {
-            const data = doc.data();
-            totalRating += Number(data.rating) || 0;
-            totalDurability += Number(data.durability) || 0;
-            totalEaseOfUse += Number(data.easeOfUse) || 0;
-            totalValueForMoney += Number(data.valueForMoney) || 0;
-            totalVersatility += Number(data.versatility) || 0;
-        });
-
-        // Aktualizuj ratingCard produktu — osobna operacja po transakcji
-        await updateDoc(productDocRef, {
-            'ratingCard.average': count > 0 ? totalRating / count : 0,
-            'ratingCard.count': count,
-            'ratingCard.durability': count > 0 ? totalDurability / count : 0,
-            'ratingCard.easeOfUse': count > 0 ? totalEaseOfUse / count : 0,
-            'ratingCard.valueForMoney': count > 0 ? totalValueForMoney / count : 0,
-            'ratingCard.versatility': count > 0 ? totalVersatility / count : 0,
+            
+            // Aktualizuj ratingCard produktu w tej samej transakcji
+            transaction.update(productDocRef, {
+                ratingCard: newRatingCard,
+            });
         });
     } catch (e) {
         console.error("Błąd podczas zapisywania oceny: ", e);
@@ -410,6 +462,10 @@ export async function searchProductsForLinking(searchText: string): Promise<Prod
 }
 
 export async function getCategories(): Promise<Category[]> {
+  const cacheKey = 'categories:all';
+  const cached = await cacheGet(cacheKey);
+  if (cached) return cached;
+  
   const categoriesRef = collection(db, "categories");
   const snapshot = await getDocs(categoriesRef);
 
@@ -478,7 +534,11 @@ export async function getCategories(): Promise<Category[]> {
     })
   );
 
-  return categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const sorted = categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  
+  // Cache for 10 minutes (categories rarely change)
+  await cacheSet(cacheKey, sorted, 600);
+  return sorted;
 }
 
 export async function getDealById(dealId: string): Promise<Deal | null> {
@@ -627,6 +687,7 @@ export async function isFavorite(userId: string, itemId: string, itemType: 'deal
 
 /**
  * Pobiera ulubione okazje użytkownika
+ * Optymalizacja: używa batched reads zamiast N+1 queries
  */
 export async function getFavoriteDeals(userId: string, limitCount: number = 50): Promise<Deal[]> {
   const favoritesRef = collection(db, 'favorites');
@@ -645,20 +706,31 @@ export async function getFavoriteDeals(userId: string, limitCount: number = 50):
     return [];
   }
   
-  // Pobierz pełne dane okazji
+  // Pobierz pełne dane okazji w partiach po 10 (limit Firestore dla 'in' queries)
   const deals: Deal[] = [];
-  for (const dealId of dealIds) {
-    const deal = await getDealById(dealId);
-    if (deal) {
-      deals.push(deal);
-    }
+  const batchSize = 10;
+  
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batchIds = dealIds.slice(i, i + batchSize);
+    const dealsRef = collection(db, 'deals');
+    const batchQuery = query(dealsRef, where(documentId(), 'in', batchIds));
+    const batchSnapshot = await getDocs(batchQuery);
+    
+    batchSnapshot.docs.forEach(doc => {
+      deals.push({ id: doc.id, ...doc.data() } as Deal);
+    });
   }
+  
+  // Zachowaj kolejność z favorites (sort by original order)
+  const orderMap = new Map(dealIds.map((id, index) => [id, index]));
+  deals.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0));
   
   return deals;
 }
 
 /**
  * Pobiera ulubione produkty użytkownika
+ * Optymalizacja: używa batched reads zamiast N+1 queries
  */
 export async function getFavoriteProducts(userId: string, limitCount: number = 50): Promise<Product[]> {
   const favoritesRef = collection(db, 'favorites');
@@ -677,14 +749,24 @@ export async function getFavoriteProducts(userId: string, limitCount: number = 5
     return [];
   }
   
-  // Pobierz pełne dane produktów
+  // Pobierz pełne dane produktów w partiach po 10 (limit Firestore dla 'in' queries)
   const products: Product[] = [];
-  for (const productId of productIds) {
-    const product = await getProductById(productId);
-    if (product) {
-      products.push(product);
-    }
+  const batchSize = 10;
+  
+  for (let i = 0; i < productIds.length; i += batchSize) {
+    const batchIds = productIds.slice(i, i + batchSize);
+    const productsRef = collection(db, 'products');
+    const batchQuery = query(productsRef, where(documentId(), 'in', batchIds));
+    const batchSnapshot = await getDocs(batchQuery);
+    
+    batchSnapshot.docs.forEach(doc => {
+      products.push({ id: doc.id, ...doc.data() } as Product);
+    });
   }
+  
+  // Zachowaj kolejność z favorites (sort by original order)
+  const orderMap = new Map(productIds.map((id, index) => [id, index]));
+  products.sort((a, b) => (orderMap.get(a.id) || 0) - (orderMap.get(b.id) || 0));
   
   return products;
 }
@@ -836,8 +918,13 @@ export async function getUnreadNotificationsCount(userId: string): Promise<numbe
 
 /**
  * Pobiera statystyki dashboardu admina
+ * Optymalizacja: dodano cache (2 minuty) aby zmniejszyć obciążenie przy częstych odświeżeniach
  */
 export async function getAdminDashboardStats() {
+  const cacheKey = 'admin_dashboard_stats';
+  const cached = await cacheGet(cacheKey);
+  if (cached) return cached;
+  
   const now = new Date();
   const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -891,11 +978,11 @@ export async function getAdminDashboardStats() {
     ? Math.round(recentDeals.reduce((sum, deal) => sum + (deal.temperature || 0), 0) / recentDeals.length)
     : 0;
 
-  // Top kategorie (z approved deals)
+  // Top kategorie (z approved deals) - ograniczono z 500 do 300
   const allDealsQuery = query(
     collection(db, 'deals'),
     where('status', '==', 'approved'),
-    limit(500)
+    limit(300)
   );
   const allDealsSnapshot = await getDocs(allDealsQuery);
   const allDeals = allDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
@@ -911,11 +998,11 @@ export async function getAdminDashboardStats() {
     .slice(0, 5)
     .map(([slug, count]) => ({ slug, count }));
 
-  // Analytics z Firestore (views, clicks)
+  // Analytics z Firestore (views, clicks) - ograniczono z 10000 do 5000
   const analyticsQuery = query(
     collection(db, 'analytics'),
     where('timestamp', '>=', last7Days.toISOString()),
-    limit(10000)
+    limit(5000)
   );
   
   let totalViews = 0;
@@ -965,11 +1052,13 @@ export async function getAdminDashboardStats() {
     : 0;
 
   // Oblicz growth dla pozostałych metryk (na podstawie danych z ostatnich 30 dni)
-  const dealsGrowth = await calculateGrowth('deals', 30);
-  const productsGrowth = await calculateGrowth('products', 30);
-  const usersGrowth = await calculateGrowth('users', 30);
+  const [dealsGrowth, productsGrowth, usersGrowth] = await Promise.all([
+    calculateGrowth('deals', 30),
+    calculateGrowth('products', 30),
+    calculateGrowth('users', 30)
+  ]);
 
-  return {
+  const result = {
     totals: counts,
     pending: {
       deals: pendingDealsCount.data().count,
@@ -1004,6 +1093,10 @@ export async function getAdminDashboardStats() {
       users: usersGrowth
     }
   };
+  
+  // Cache for 2 minutes
+  await cacheSet(cacheKey, result, 120);
+  return result;
 }
 
 /**
