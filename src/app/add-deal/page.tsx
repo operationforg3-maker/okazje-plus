@@ -34,7 +34,7 @@ export default function AddDealPage() {
   const [originalPrice, setOriginalPrice] = useState('');
   const [link, setLink] = useState('');
   const [image, setImage] = useState('');
-  const [linkedProductId, setLinkedProductId] = useState<string | null>(null);
+  // const [linkedProductId, setLinkedProductId] = useState<string | null>(null); // TODO: Implement product linking
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

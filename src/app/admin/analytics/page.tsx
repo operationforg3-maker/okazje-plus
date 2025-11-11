@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { getGlobalAnalytics } from '@/lib/analytics';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Eye, TrendingUp, Clock, BarChart3, Globe, Smartphone, Monitor } from 'lucide-react';
+import { Eye, TrendingUp, Clock, BarChart3, Globe } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -39,8 +39,8 @@ function AnalyticsPage() {
       try {
         const analytics = await getGlobalAnalytics(days);
         if (active) setData(analytics);
-      } catch (e: any) {
-        if (active) setError(e.message || 'Nie udało się pobrać danych analitycznych');
+      } catch (e: unknown) {
+        if (active) setError((e as Error).message || 'Nie udało się pobrać danych analitycznych');
       } finally {
         if (active) setLoading(false);
       }

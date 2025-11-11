@@ -2,13 +2,6 @@
 
 export const dynamic = 'force-dynamic';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
 import PredictionForm from './prediction-form';
 import { BrainCircuit } from 'lucide-react';
 

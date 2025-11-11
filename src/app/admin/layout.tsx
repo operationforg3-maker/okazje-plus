@@ -13,7 +13,6 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   LayoutDashboard,

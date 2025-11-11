@@ -230,7 +230,7 @@ export default function AdminDealsPage() {
                 {paginatedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                      Brak okazji. Dodaj pierwszą okazję klikając przycisk "Dodaj okazję".
+                      Brak okazji. Dodaj pierwszą okazję klikając przycisk &quot;Dodaj okazję&quot;.
                     </TableCell>
                   </TableRow>
                 ) : (

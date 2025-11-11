@@ -217,7 +217,7 @@ export default function AdminProductsPage() {
                 {paginatedData.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                      Brak produktów. Dodaj pierwszy produkt klikając przycisk "Dodaj produkt".
+                      Brak produktów. Dodaj pierwszy produkt klikając przycisk &quot;Dodaj produkt&quot;.
                     </TableCell>
                   </TableRow>
                 ) : (
