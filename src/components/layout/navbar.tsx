@@ -25,7 +25,7 @@ import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MegaMenu } from '@/components/layout/mega-menu';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
-import { NotificationBell } from '@/components/notification-bell';
+import { NotificationBell } from '@/components/auth/notification-bell';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);

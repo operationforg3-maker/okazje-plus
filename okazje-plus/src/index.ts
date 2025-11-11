@@ -2,9 +2,9 @@
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {getStorage} from "firebase-admin/storage";
-import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onCall, HttpsError, CallableRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-import {onDocumentWritten} from "firebase-functions/v2/firestore";
+import {onDocumentWritten, FirestoreEvent} from "firebase-functions/v2/firestore";
 import * as https from "https";
 
 // KROK 1: Importuj typy z JEDNEGO źródła prawdy
@@ -105,7 +105,7 @@ async function downloadAndUploadImage(
  * Importuje wsadowo listę OKAZJI (Deals) do kolekcji 'deals'.
  * Wymaga uprawnień administratora.
  */
-export const batchImportDeals = onCall(async (request) => {
+export const batchImportDeals = onCall(async (request: CallableRequest<{ deals: ImportDealData[] }>) => {
   await ensureAdmin(request.auth ?? null);
 
   const dealsToImport = request.data.deals as ImportDealData[];
@@ -172,7 +172,7 @@ export const batchImportDeals = onCall(async (request) => {
  * Importuje wsadowo listę PRODUKTÓW (Products) do kolekcji 'products'.
  * Wymaga uprawnień administratora.
  */
-export const batchImportProducts = onCall(async (request) => {
+export const batchImportProducts = onCall(async (request: CallableRequest<{ products: ImportProductData[] }>) => {
   await ensureAdmin(request.auth ?? null);
 
   const productsToImport = request.data.products as ImportProductData[];
@@ -247,11 +247,17 @@ export const batchImportProducts = onCall(async (request) => {
  * Opcjonalnie przesyła obraz do Firebase Storage jeśli STORAGE_BUCKET
  * jest skonfigurowany.
  */
-export const importAliProduct = onCall(async (request) => {
+interface ImportAliProductData {
+  product: Record<string, unknown>;
+  mainCategorySlug: string;
+  subCategorySlug: string;
+}
+
+export const importAliProduct = onCall(async (request: CallableRequest<ImportAliProductData>) => {
   await ensureAdmin(request.auth ?? null);
 
-  const payload = request.data as Record<string, unknown>;
-  const product = payload.product as Record<string, unknown>;
+  const payload = request.data;
+  const product = payload.product;
   const mainCategorySlug = payload.mainCategorySlug;
   const subCategorySlug = payload.subCategorySlug;
 
@@ -333,12 +339,16 @@ export const importAliProduct = onCall(async (request) => {
 // Bulk import callable - accepts array of products
 // Obsługuje pobieranie obrazów do Storage jeśli STORAGE_BUCKET jest
 // skonfigurowany
-export const bulkImportAliProducts = onCall(async (request) => {
+interface BulkImportAliProductsData {
+  products: Array<Record<string, unknown>>;
+  mainCategorySlug: string;
+  subCategorySlug: string;
+}
+
+export const bulkImportAliProducts = onCall(async (request: CallableRequest<BulkImportAliProductsData>) => {
   await ensureAdmin(request.auth ?? null);
-  const payload = request.data as Record<string, unknown>;
-  const products: Array<Record<string, unknown>> = Array.isArray(
-    payload.products
-  ) ? (payload.products as Array<Record<string, unknown>>) : [];
+  const payload = request.data;
+  const products = Array.isArray(payload.products) ? payload.products : [];
   if (products.length === 0) {
     throw new HttpsError("invalid-argument", "No products provided");
   }
@@ -426,8 +436,8 @@ export const bulkImportAliProducts = onCall(async (request) => {
 
 export const updateVoteCount = onDocumentWritten(
   "/deals/{dealId}/votes/{userId}",
-  async (event) => {
-    const dealId = event.params.dealId;
+  async (event: FirestoreEvent<unknown>) => {
+    const dealId = event.params.dealId as string;
     const dealRef = db.doc(`deals/${dealId}`);
 
     // Użyj transakcji do odczytu i zapisu dla spójności
@@ -453,8 +463,8 @@ export const updateVoteCount = onDocumentWritten(
 
 export const updateCommentsCountDeals = onDocumentWritten(
   "/deals/{dealId}/comments/{commentId}",
-  async (event) => {
-    const dealId = event.params.dealId;
+  async (event: FirestoreEvent<unknown>) => {
+    const dealId = event.params.dealId as string;
     const dealRef = db.doc(`deals/${dealId}`);
     const commentsColRef = dealRef.collection("comments");
     const commentsSnapshot = await commentsColRef.get();
@@ -468,8 +478,8 @@ export const updateCommentsCountDeals = onDocumentWritten(
 
 export const updateCommentsCountProducts = onDocumentWritten(
   "/products/{productId}/comments/{commentId}",
-  async (event) => {
-    const productId = event.params.productId;
+  async (event: FirestoreEvent<unknown>) => {
+    const productId = event.params.productId as string;
     const productRef = db.doc(`products/${productId}`);
     const commentsColRef = productRef.collection("comments");
     const commentsSnapshot = await commentsColRef.get();
