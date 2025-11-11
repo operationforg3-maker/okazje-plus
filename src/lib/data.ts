@@ -918,8 +918,13 @@ export async function getUnreadNotificationsCount(userId: string): Promise<numbe
 
 /**
  * Pobiera statystyki dashboardu admina
+ * Optymalizacja: dodano cache (2 minuty) aby zmniejszyć obciążenie przy częstych odświeżeniach
  */
 export async function getAdminDashboardStats() {
+  const cacheKey = 'admin_dashboard_stats';
+  const cached = await cacheGet(cacheKey);
+  if (cached) return cached;
+  
   const now = new Date();
   const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -973,11 +978,11 @@ export async function getAdminDashboardStats() {
     ? Math.round(recentDeals.reduce((sum, deal) => sum + (deal.temperature || 0), 0) / recentDeals.length)
     : 0;
 
-  // Top kategorie (z approved deals)
+  // Top kategorie (z approved deals) - ograniczono z 500 do 300
   const allDealsQuery = query(
     collection(db, 'deals'),
     where('status', '==', 'approved'),
-    limit(500)
+    limit(300)
   );
   const allDealsSnapshot = await getDocs(allDealsQuery);
   const allDeals = allDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
@@ -993,11 +998,11 @@ export async function getAdminDashboardStats() {
     .slice(0, 5)
     .map(([slug, count]) => ({ slug, count }));
 
-  // Analytics z Firestore (views, clicks)
+  // Analytics z Firestore (views, clicks) - ograniczono z 10000 do 5000
   const analyticsQuery = query(
     collection(db, 'analytics'),
     where('timestamp', '>=', last7Days.toISOString()),
-    limit(10000)
+    limit(5000)
   );
   
   let totalViews = 0;
@@ -1047,11 +1052,13 @@ export async function getAdminDashboardStats() {
     : 0;
 
   // Oblicz growth dla pozostałych metryk (na podstawie danych z ostatnich 30 dni)
-  const dealsGrowth = await calculateGrowth('deals', 30);
-  const productsGrowth = await calculateGrowth('products', 30);
-  const usersGrowth = await calculateGrowth('users', 30);
+  const [dealsGrowth, productsGrowth, usersGrowth] = await Promise.all([
+    calculateGrowth('deals', 30),
+    calculateGrowth('products', 30),
+    calculateGrowth('users', 30)
+  ]);
 
-  return {
+  const result = {
     totals: counts,
     pending: {
       deals: pendingDealsCount.data().count,
@@ -1086,6 +1093,10 @@ export async function getAdminDashboardStats() {
       users: usersGrowth
     }
   };
+  
+  // Cache for 2 minutes
+  await cacheSet(cacheKey, result, 120);
+  return result;
 }
 
 /**
