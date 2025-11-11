@@ -41,6 +41,135 @@
         {"fieldPath": "status", "order": "ASCENDING"},
         {"fieldPath": "temperature", "order": "DESCENDING"}
       ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "mainCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "temperature", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "mainCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "subCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "temperature", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "mainCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "subCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "subSubCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "temperature", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "updatedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "mainCategorySlug", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "mainCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "subCategorySlug", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "mainCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "subCategorySlug", "order": "ASCENDING"},
+        {"fieldPath": "subSubCategorySlug", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "status", "order": "ASCENDING"},
+        {"fieldPath": "updatedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "favorites",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "itemType", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "favorites",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "itemId", "order": "ASCENDING"},
+        {"fieldPath": "itemType", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "read", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
     }
   ],
   "fieldOverrides": []
