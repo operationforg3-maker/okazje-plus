@@ -8,7 +8,7 @@
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "NODE_ENV=production next build",
     "start": "next start",
-  "lint": "echo \"Skipping ESLint (temporary)\"",
+  "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
