@@ -23,6 +23,21 @@ export interface Subcategory {
   image?: string;
   highlight?: boolean;
   subcategories?: SubSubcategory[]; // Sub-subkategorie (opcjonalne)
+  // Rozszerzenia konfiguracyjne (opcjonalne)
+  bestSellingIds?: string[]; // ręcznie przypięte bestsellery
+  topRatedIds?: string[]; // ręcznie przypięte najwyżej oceniane
+  // Kafelki promocyjne dla danej (pod)kategorii
+  tiles?: CategoryTile[];
+  /**
+   * Metryki dynamiczne generowane automatycznie (np. CRON/Functions)
+   * Mogą być używane jako szybki cache do renderowania showcase.
+   */
+  dynamicMetrics?: {
+    updatedAt?: string | number; // ISO lub epoch ms
+    topProductIds?: string[];
+    hotDealIds?: string[];
+    trendingDealIds?: string[];
+  };
 }
 
 export interface CategoryPromo {
@@ -61,6 +76,18 @@ export interface Category {
   promo?: CategoryPromo;
   tiles?: CategoryTile[]; // dodatkowe kafelki prezentacyjne
   subcategories: Subcategory[]; // Tablica obiektów podkategorii
+  // Rozszerzenia konfiguracyjne na poziomie kategorii
+  bestSellingIds?: string[];
+  topRatedIds?: string[];
+  /**
+   * Metryki dynamiczne generowane automatycznie (np. przez funkcję agregującą)
+   */
+  dynamicMetrics?: {
+    updatedAt?: string | number;
+    topProductIds?: string[];
+    hotDealIds?: string[];
+    trendingDealIds?: string[];
+  };
 }
 
 // Zaktualizowany interfejs Deal
