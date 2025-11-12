@@ -36,6 +36,19 @@ export interface CategoryPromo {
   color?: string;
 }
 
+// Kafelek promocyjny kategorii (konfigurowalny w panelu admina)
+export interface CategoryTile {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  image?: string;
+  link?: string;
+  badge?: string;
+  color?: string;
+  // Typ kafelka, pozwala na automatyczne wypełnianie
+  type?: 'custom' | 'top-rated' | 'best-selling' | 'hot-deals' | 'category';
+}
+
 export interface Category {
   id: string; // ID dokumentu (slug kategorii głównej)
   name: string;
@@ -46,6 +59,7 @@ export interface Category {
   accentColor?: string;
   heroImage?: string;
   promo?: CategoryPromo;
+  tiles?: CategoryTile[]; // dodatkowe kafelki prezentacyjne
   subcategories: Subcategory[]; // Tablica obiektów podkategorii
 }
 

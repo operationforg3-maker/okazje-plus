@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification } from "@/lib/types";
+import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile } from "@/lib/types";
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
@@ -37,6 +37,62 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+}
+
+// Najwyżej oceniane produkty w kategorii (fallback: sortowanie po ratingCard.count)
+export async function getTopProductsByCategory(mainCategorySlug: string, count: number = 3): Promise<Product[]> {
+  const productsRef = collection(db, "products");
+  // Najpierw spróbuj po average + count
+  try {
+    const q1 = query(
+      productsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      orderBy("ratingCard.average", "desc"),
+      orderBy("ratingCard.count", "desc"),
+      limit(count)
+    );
+    const snap = await getDocs(q1);
+    if (!snap.empty) return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+  } catch (_) {
+    // możliwy brak indeksu – przejdź do fallbacku
+  }
+  // Fallback: tylko count
+  try {
+    const q2 = query(
+      productsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      orderBy("ratingCard.count", "desc"),
+      limit(count)
+    );
+    const snap2 = await getDocs(q2);
+    if (!snap2.empty) return snap2.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+  } catch (_) {}
+  // Ostatecznie: pierwsze N
+  const q3 = query(productsRef, where("status", "==", "approved"), where("mainCategorySlug", "==", mainCategorySlug), limit(count));
+  const snap3 = await getDocs(q3);
+  return snap3.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+}
+
+// Najgorętsze okazje w kategorii
+export async function getHotDealsByCategory(mainCategorySlug: string, count: number = 3): Promise<Deal[]> {
+  const dealsRef = collection(db, "deals");
+  try {
+    const q1 = query(
+      dealsRef,
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      orderBy("temperature", "desc"),
+      limit(count)
+    );
+    const snap = await getDocs(q1);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+  } catch (_) {
+    const q2 = query(dealsRef, where("status", "==", "approved"), where("mainCategorySlug", "==", mainCategorySlug), limit(count));
+    const snap2 = await getDocs(q2);
+    return snap2.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+  }
 }
 
 // Funkcje do moderacji - pobieranie treści oczekujących
@@ -463,6 +519,18 @@ export async function getCategories(): Promise<Category[]> {
           }
         : undefined;
 
+      // Wczytaj opcjonalne kafelki z podkolekcji categories/{id}/tiles
+      let tiles: CategoryTile[] = [];
+      try {
+        const tilesRef = collection(db, "categories", categoryDoc.id, "tiles");
+        const tilesSnap = await getDocs(tilesRef);
+        if (!tilesSnap.empty) {
+          tiles = tilesSnap.docs.map((t) => ({ id: t.id, ...(t.data() as CategoryTile) }));
+        }
+      } catch (_) {
+        tiles = [];
+      }
+
       return {
         id: categoryDoc.id,
         name: data.name ?? categoryDoc.id,
@@ -473,6 +541,7 @@ export async function getCategories(): Promise<Category[]> {
         accentColor: data.accentColor,
         heroImage: data.heroImage,
         promo,
+        tiles,
         subcategories,
       } satisfies Category;
     })
