@@ -9,7 +9,10 @@ function formatTimestamp(d = new Date()) {
 // Create signature for AliExpress AOP-like APIs
 // Algorithm: MD5( appSecret + concat(sortedParams key+value) + appSecret )
 // Returns uppercase hex string (common convention)
-export function createAliSign(params: Record<string, string>, appSecret: string) {
+export function createAliSign(
+  params: Record<string, string | null | undefined>,
+  appSecret: string
+) {
   const keys = Object.keys(params).filter(k => params[k] !== undefined && params[k] !== null && params[k] !== '').sort();
   let concatenated = '';
   for (const k of keys) concatenated += `${k}${params[k]}`;
