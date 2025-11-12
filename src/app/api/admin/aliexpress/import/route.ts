@@ -96,7 +96,26 @@ export async function POST(request: NextRequest) {
       postedAt: admin.firestore.FieldValue.serverTimestamp(),
       mainCategorySlug: mainCategory || null,
       subCategorySlug: subCategory || null,
-      status: 'approved',
+      // Domyślnie zapisujemy jako draft — wymaga moderacji
+      status: 'draft',
+      // denormalizacja % zniżki (jeśli możliwa)
+      discountPercent: (() => {
+        const op = Number(product.originalPrice || product.listPrice || 0);
+        const p = Number(product.price || 0);
+        if (op > 0 && p >= 0 && p < op) {
+          return Math.round(((op - p) / op) * 100);
+        }
+        return null;
+      })(),
+      metadata: {
+        source: 'aliexpress',
+        originalId: externalId || null,
+        importedAt: admin.firestore.FieldValue.serverTimestamp(),
+        orders: product.orders || null,
+        shipping: product.shipping || null,
+        merchant: product.merchant || null,
+        rawDataStored: false,
+      },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 

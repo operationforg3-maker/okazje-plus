@@ -16,9 +16,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ products: [] });
   }
 
+  // Konfiguracja AliExpress – wartości muszą być dostarczone wyłącznie po stronie serwera (ENV, nie NEXT_PUBLIC)
   const API_BASE = process.env.ALIEXPRESS_API_BASE;
-  const APP_KEY = process.env.ALIEXPRESS_APP_KEY || process.env.ALIEXPRESS_API_KEY;
+  const APP_KEY = process.env.ALIEXPRESS_APP_KEY || process.env.ALIEXPRESS_API_KEY; // alias kompatybilności
   const APP_SECRET = process.env.ALIEXPRESS_APP_SECRET;
+  const AFFILIATE_ID = process.env.ALIEXPRESS_AFFILIATE_ID;
+
+  // Dodatkowa walidacja aby nie dopuścić przypadkowego wycieku kluczy (np. błędnie prefiksowana zmienna)
+  if (typeof (APP_KEY as any) === 'string' && (APP_KEY as string).startsWith('NEXT_PUBLIC')) {
+    console.error('[AliExpress] APP_KEY wygląda na ujawnioną zmienną publiczną – przerwano.');
+    return NextResponse.json({ error: 'misconfiguration', message: 'Klucz konfiguracyjny nie może być publiczny.' }, { status: 500 });
+  }
+  if (typeof (APP_SECRET as any) === 'string' && (APP_SECRET as string).startsWith('NEXT_PUBLIC')) {
+    console.error('[AliExpress] APP_SECRET wygląda na ujawnioną zmienną publiczną – przerwano.');
+    return NextResponse.json({ error: 'misconfiguration', message: 'Sekret konfiguracyjny nie może być publiczny.' }, { status: 500 });
+  }
 
   if (!API_BASE) {
     return NextResponse.json({ error: 'not_configured', message: 'Set ALIEXPRESS_API_BASE in server env to enable real import.' }, { status: 503 });
@@ -32,6 +44,10 @@ export async function GET(request: Request) {
       maxPrice,
       limit,
     };
+    if (AFFILIATE_ID) {
+      // Zależnie od dostawcy/warstwy proxy nazwa parametru może się różnić
+      userParams[process.env.ALIEXPRESS_AFFILIATE_PARAM || 'affId'] = AFFILIATE_ID;
+    }
 
     let forwardUrlStr: string;
 

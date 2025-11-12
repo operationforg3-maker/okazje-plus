@@ -39,3 +39,13 @@ env:
     secret: TEST_ADMIN_EMAIL
   - variable: TEST_ADMIN_PASSWORD
     secret: TEST_ADMIN_PASSWORD
+
+  # AliExpress integration (server-side only)
+  - variable: ALIEXPRESS_API_BASE
+    secret: ALIEXPRESS_API_BASE
+  - variable: ALIEXPRESS_APP_KEY
+    secret: ALIEXPRESS_APP_KEY
+  - variable: ALIEXPRESS_APP_SECRET
+    secret: ALIEXPRESS_APP_SECRET
+  - variable: ALIEXPRESS_AFFILIATE_ID
+    secret: ALIEXPRESS_AFFILIATE_ID

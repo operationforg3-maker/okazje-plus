@@ -50,6 +50,13 @@ NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY=your_search_key
 
 # Google AI dla Genkit
 GOOGLE_GENAI_API_KEY=your_google_ai_key
+
+# AliExpress (serwer – bez NEXT_PUBLIC)
+# Ustaw lokalnie na potrzeby developmentu (w produkcji użyj App Hosting Secrets)
+# ALIEXPRESS_API_BASE=https://api.aliexpress.example/search
+# ALIEXPRESS_APP_KEY=your_app_key
+# ALIEXPRESS_APP_SECRET=your_app_secret
+# ALIEXPRESS_AFFILIATE_ID=your_affiliate_id
 ```
 
 ### Uruchomienie projektu
@@ -221,6 +228,15 @@ Zasady w `firestore.rules` kontrolują dostęp:
 - Publiczny odczyt zatwierdzonych treści
 - Autoryzacja dla głosowania i komentarzy
 - Admin role dla zarządzania treścią
+
+### AliExpress – konfiguracja sekretów (Firebase App Hosting)
+Sekrety dodaj jako zmienne środowiskowe w `apphosting.yaml` (już zdefiniowane jako sekrety):
+- `ALIEXPRESS_API_BASE`
+- `ALIEXPRESS_APP_KEY`
+- `ALIEXPRESS_APP_SECRET`
+- `ALIEXPRESS_AFFILIATE_ID`
+
+Następnie ustaw ich wartości w Firebase Console lub CLI (sekcje App Hosting Secrets). Endpoint `GET /api/admin/aliexpress/search` automatycznie podpisze żądania i doda affiliate ID jeśli są dostępne.
 
 ## 🔍 Search (Typesense)
 

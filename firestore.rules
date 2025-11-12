@@ -103,12 +103,19 @@ service cloud.firestore {
         && request.resource.data.status == 'draft'
         && numberMin('price',0)
         && allowedStatus('status');
-      // Admin pełna edycja; użytkownik końcowy może aktualizować ratingCard (tylko to pole)
+      // Update:
+      //  - Admin: pełna edycja
+      //  - Użytkownik: może edytować tylko ratingCard
+      //  - Moderacja: przejście draft->approved / rejected wymaga admina (role=admin)
       allow update: if (
         isAdmin() || (
           isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingCard'])
-          && request.resource.data.keys().hasAll(resource.data.keys())
+            && request.resource.data.keys().hasAll(resource.data.keys())
         )
+      )
+      && (
+        // Jeśli zmieniamy status, tylko admin
+        !(request.resource.data.status in ['approved','rejected']) || isAdmin()
       );
       allow delete: if isAdmin();
     }

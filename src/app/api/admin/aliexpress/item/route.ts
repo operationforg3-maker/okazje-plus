@@ -10,11 +10,15 @@ export async function GET(request: Request) {
   const API_BASE = process.env.ALIEXPRESS_API_BASE;
   const APP_KEY = process.env.ALIEXPRESS_APP_KEY || process.env.ALIEXPRESS_API_KEY;
   const APP_SECRET = process.env.ALIEXPRESS_APP_SECRET;
+  const AFFILIATE_ID = process.env.ALIEXPRESS_AFFILIATE_ID;
 
   if (!API_BASE) return NextResponse.json({ error: 'not_configured' }, { status: 503 });
 
   try {
     const userParams: Record<string, string | number | boolean> = { itemId: id };
+    if (AFFILIATE_ID) {
+      userParams[process.env.ALIEXPRESS_AFFILIATE_PARAM || 'affId'] = AFFILIATE_ID;
+    }
     let forwardUrlStr: string;
 
     if (APP_KEY && APP_SECRET) {

@@ -322,8 +322,25 @@ export const importAliProduct = onCall(async (request) => {
     postedAt: now,
     mainCategorySlug: mainCategorySlug || null,
     subCategorySlug: subCategorySlug || null,
-    status: "draft",
+    status: "draft", // wymaga moderacji
     createdAt: now,
+    discountPercent: (() => {
+      const op = Number(product.originalPrice || product.listPrice || 0);
+      const p = Number(product.price || 0);
+      if (op > 0 && p >= 0 && p < op) {
+        return Math.round(((op - p) / op) * 100);
+      }
+      return null;
+    })(),
+    metadata: {
+      source: "aliexpress",
+      originalId: externalId || null,
+      importedAt: now,
+      orders: product.orders || null,
+      shipping: product.shipping || null,
+      merchant: product.merchant || null,
+      rawDataStored: false,
+    },
   };
 
   await newRef.set(newProduct);
@@ -405,8 +422,25 @@ export const bulkImportAliProducts = onCall(async (request) => {
         postedAt: now,
         mainCategorySlug: product.mainCategorySlug || null,
         subCategorySlug: product.subCategorySlug || null,
-        status: "draft",
+        status: "draft", // wymaga moderacji
         createdAt: now,
+        discountPercent: (() => {
+          const op = Number(product.originalPrice || product.listPrice || 0);
+          const p = Number(product.price || 0);
+          if (op > 0 && p >= 0 && p < op) {
+            return Math.round(((op - p) / op) * 100);
+          }
+          return null;
+        })(),
+        metadata: {
+          source: "aliexpress",
+          originalId: externalId || null,
+          importedAt: now,
+          orders: product.orders || null,
+          shipping: product.shipping || null,
+          merchant: product.merchant || null,
+          rawDataStored: false,
+        },
       };
 
       batch.set(docRef, docData);
@@ -480,3 +514,78 @@ export const updateCommentsCountProducts = onDocumentWritten(
     return productRef.update({commentsCount: newCount});
   }
 );
+
+// --- Stuby funkcji AI / Audytów ---
+
+/**
+ * Tworzy zadania AI typu enrich_product dla przekazanych produktów.
+ */
+export const enrichProductBatch = onCall(async (request) => {
+  await ensureAdmin(request.auth ?? null);
+  const productIds = (request.data?.productIds as string[]) || [];
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    throw new HttpsError("invalid-argument", "productIds: [] jest wymagane");
+  }
+  let created = 0;
+  const batch = db.batch();
+  for (const id of productIds) {
+    const ref = db.collection("ai_jobs").doc();
+    batch.set(ref, {
+      id: ref.id,
+      kind: "enrich_product",
+      status: "pending",
+      inputRef: {collection: "products", id},
+      progress: 0,
+      startedAt: null,
+      createdAt: new Date().toISOString(),
+    });
+    created++;
+  }
+  await batch.commit();
+  return {ok: true, created};
+});
+
+/**
+ * Tworzy zadania AI typu expand_category dla wskazanych kategorii.
+ */
+export const autoFillCategories = onCall(async (request) => {
+  await ensureAdmin(request.auth ?? null);
+  const categories = (request.data?.categories as string[]) || [];
+  if (!Array.isArray(categories) || categories.length === 0) {
+    throw new HttpsError("invalid-argument", "categories: [] jest wymagane");
+  }
+  let created = 0;
+  const batch = db.batch();
+  for (const categoryId of categories) {
+    const ref = db.collection("ai_jobs").doc();
+    batch.set(ref, {
+      id: ref.id,
+      kind: "expand_category",
+      status: "pending",
+      inputRef: {collection: "categories", id: categoryId},
+      progress: 0,
+      startedAt: null,
+      createdAt: new Date().toISOString(),
+    });
+    created++;
+  }
+  await batch.commit();
+  return {ok: true, created};
+});
+
+/**
+ * Tworzy szkic raportu pokrycia treści w kolekcji system_reports.
+ */
+export const scheduleAudit = onCall(async (request) => {
+  await ensureAdmin(request.auth ?? null);
+  const ref = db.collection("system_reports").doc();
+  await ref.set({
+    id: ref.id,
+    type: "coverage",
+    createdAt: new Date().toISOString(),
+    details: [],
+    resolved: false,
+    triggeredBy: "manual",
+  });
+  return {ok: true, id: ref.id};
+});
