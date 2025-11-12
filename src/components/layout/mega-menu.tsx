@@ -60,6 +60,214 @@ type DealHighlight = {
   description?: string;
 };
 
+// Prosty cache w module (mini-cache) – pamięta wyniki dla slugów w sesji przeglądarki
+const smartCache: Record<string, { tops: Product[]; hots: Deal[]; ts: number }> = {};
+
+function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
+  categories: Category[];
+  activeIndex: number;
+  setActiveIndex: (i: number) => void;
+}) {
+  return (
+  <ScrollArea className="max-h-[70vh] pr-2">
+      <nav className="space-y-2" aria-label="Kategorie">
+        {categories.map((category, index) => {
+          const isActive = index === activeIndex;
+          return (
+            <button
+              key={category.id}
+              type="button"
+              onMouseEnter={() => setActiveIndex(index)}
+              onFocus={() => setActiveIndex(index)}
+              onClick={() => setActiveIndex(index)}
+              aria-selected={isActive}
+              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                isActive
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-transparent bg-card/70 hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                {category.icon ? (
+                  <span className="text-lg" aria-hidden>
+                    {category.icon}
+                  </span>
+                ) : (
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="font-medium">{category.name}</span>
+              </span>
+              <ChevronRight className="h-4 w-4 opacity-70" />
+            </button>
+          );
+        })}
+      </nav>
+    </ScrollArea>
+  );
+}
+
+function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="space-y-2">
+        <nav className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+          <Link href="/" className="transition-colors hover:text-primary">
+            Strona główna
+          </Link>
+          <span className="opacity-60">/</span>
+          {activeCategory ? (
+            <span className="text-primary">{activeCategory.name}</span>
+          ) : (
+            <span>Kategorie</span>
+          )}
+        </nav>
+        {activeCategory?.description && (
+          <p className="text-sm text-muted-foreground">{activeCategory.description}</p>
+        )}
+      </div>
+
+      {activeCategory?.heroImage ? (
+        <Link
+          href={`/products?mainCategory=${encodeURIComponent(activeCategory.slug ?? activeCategory.id)}`}
+          className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm"
+        >
+          <Image
+            src={activeCategory.heroImage}
+            alt={activeCategory.name}
+            width={960}
+            height={320}
+            className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-background/10" />
+          <div className="absolute inset-0 flex flex-col justify-end gap-2 p-6">
+            <Badge className="w-fit bg-background/80 text-xs uppercase text-muted-foreground" variant="secondary">
+              Kolekcja
+            </Badge>
+            <h3 className="text-xl font-semibold text-foreground">{activeCategory.name}</h3>
+            {activeCategory.description && (
+              <p className="max-w-xl text-sm text-muted-foreground">
+                {activeCategory.description}
+              </p>
+            )}
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">
+              Zobacz wszystkie <ArrowRight className="h-4 w-4" />
+            </span>
+          </div>
+        </Link>
+      ) : null}
+
+      {activeCategory?.subcategories?.length ? (
+        <div className="space-y-6">
+          {activeCategory.subcategories.map((subcategory) => {
+            const targetCategory = encodeURIComponent(activeCategory.slug ?? activeCategory.id);
+            const subKey = subcategory.slug ?? subcategory.id ?? subcategory.name;
+            const rawSub = subcategory.slug ?? subcategory.id;
+            const targetSub = rawSub ? encodeURIComponent(rawSub) : null;
+            const href = targetSub
+              ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}`
+              : `/products?mainCategory=${targetCategory}`;
+            const hasSubSubcategories = subcategory.subcategories && subcategory.subcategories.length > 0;
+
+            return (
+              <div key={`${activeCategory.id}-${subKey}`} className="space-y-3">
+                <Link
+                  href={href}
+                  className="group flex items-center gap-3 rounded-lg border border-border/40 bg-card/80 p-4 shadow-sm transition-all hover:border-primary hover:bg-card"
+                >
+                  {subcategory.image ? (
+                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
+                      <Image src={subcategory.image} alt={subcategory.name} fill className="object-cover transition-transform duration-300 group-hover:scale-110" />
+                    </div>
+                  ) : (
+                    <div className="h-16 w-16 flex-shrink-0 rounded-md bg-muted" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold text-foreground truncate">{subcategory.name}</h4>
+                      {subcategory.highlight && (
+                        <Badge className="text-[10px] uppercase flex-shrink-0" variant="secondary">Polecane</Badge>
+                      )}
+                    </div>
+                    {subcategory.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">{subcategory.description}</p>
+                    )}
+                  </div>
+                  <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                </Link>
+
+                {hasSubSubcategories && (
+                  <div className="grid gap-2 pl-6 md:grid-cols-2 lg:grid-cols-3">
+                    {subcategory.subcategories!.map((subSubcategory) => {
+                      const subSubSlug = subSubcategory.slug ?? subSubcategory.id;
+                      const subSubHref = subSubSlug && targetSub
+                        ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}&subSubCategory=${encodeURIComponent(subSubSlug)}`
+                        : href;
+
+                      return (
+                        <Link
+                          key={`${subKey}-${subSubcategory.slug}`}
+                          href={subSubHref}
+                          className="group flex items-center gap-2 rounded-md border border-border/30 bg-background/50 px-3 py-2 text-sm transition-colors hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          {subSubcategory.icon && (
+                            <span className="text-base">{subSubcategory.icon}</span>
+                          )}
+                          <span className="flex-1 truncate text-foreground group-hover:text-primary">{subSubcategory.name}</span>
+                          <ArrowRight className="h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100" />
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border/60 p-6 text-sm text-muted-foreground">Brak podkategorii w tej kategorii.</div>
+      )}
+
+      {activeCategory?.promo ? (
+        <Link href={activeCategory.promo.link ?? "/deals"} className="group relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-r from-background via-background/70 to-background/40 p-[1px]">
+          <div className="flex flex-col gap-4 overflow-hidden rounded-[0.95rem] bg-card/90 p-5 md:flex-row">
+            <div className="flex-1 space-y-2">
+              {activeCategory.promo.badge ? (
+                <Badge className="w-fit" style={{ backgroundColor: activeCategory.promo.color ?? undefined }}>{activeCategory.promo.badge}</Badge>
+              ) : null}
+              <h3 className="text-lg font-semibold leading-tight text-foreground">{activeCategory.promo.title}</h3>
+              {activeCategory.promo.subtitle ? (<p className="text-sm font-medium text-primary/80">{activeCategory.promo.subtitle}</p>) : null}
+              {activeCategory.promo.description ? (<p className="text-sm text-muted-foreground">{activeCategory.promo.description}</p>) : null}
+              <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">{activeCategory.promo.cta ?? "Zobacz więcej"}<ArrowRight className="h-4 w-4" /></span>
+            </div>
+            {activeCategory.promo.image ? (
+              <div className="relative h-40 w-full max-w-xs overflow-hidden rounded-xl">
+                <Image src={activeCategory.promo.image} alt={activeCategory.promo.title} fill sizes="(max-width: 768px) 60vw, 240px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+              </div>
+            ) : null}
+          </div>
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function DynamicShowcaseColumn({ activeCategory, smartLoading, smartTopProducts, smartHotDeals }: {
+  activeCategory: Category | null;
+  smartLoading: boolean;
+  smartTopProducts: Product[];
+  smartHotDeals: Deal[];
+}) {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Twoje konto</p>
+        {/* ... przeniesione poniżej w głównym komponencie (bez zmian) */}
+      </div>
+      {/* Kafelki i inteligentne sekcje renderowane w głównym komponencie jak dotąd */}
+    </div>
+  );
+}
+
 export function MegaMenu() {
   const { user, loading: authLoading, logout } = useAuth();
   const [categories, setCategories] = React.useState<Category[]>([]);
@@ -209,7 +417,7 @@ export function MegaMenu() {
   const activeCategory = categories[activeIndex] ?? null;
   const dealOfTheDayPrice = formatCurrency(dealOfTheDay?.price);
 
-  // Ładowanie inteligentnych bannerów dla aktywnej kategorii
+  // Ładowanie inteligentnych bannerów dla aktywnej kategorii z mini-cache
   React.useEffect(() => {
     let cancelled = false;
     async function loadSmart() {
@@ -220,13 +428,24 @@ export function MegaMenu() {
       }
       setSmartLoading(true);
       try {
-        const [tops, hots] = await Promise.all([
-          getTopProductsByCategory(activeCategory.slug ?? activeCategory.id, 3),
-          getHotDealsByCategory(activeCategory.slug ?? activeCategory.id, 3),
-        ]);
-        if (!cancelled) {
-          setSmartTopProducts(tops);
-          setSmartHotDeals(hots);
+        const key = activeCategory.slug ?? activeCategory.id;
+        const now = Date.now();
+        const cached = smartCache[key];
+        if (cached && now - cached.ts < 60_000) {
+          if (!cancelled) {
+            setSmartTopProducts(cached.tops);
+            setSmartHotDeals(cached.hots);
+          }
+        } else {
+          const [tops, hots] = await Promise.all([
+            getTopProductsByCategory(key, 3),
+            getHotDealsByCategory(key, 3),
+          ]);
+          if (!cancelled) {
+            setSmartTopProducts(tops);
+            setSmartHotDeals(hots);
+            smartCache[key] = { tops, hots, ts: now };
+          }
         }
       } catch (e) {
         if (!cancelled) {
@@ -259,40 +478,9 @@ export function MegaMenu() {
           </div>
         ) : (
           <div className="grid gap-6 px-4 py-8 md:grid-cols-[minmax(220px,1fr)_minmax(520px,2.5fr)_minmax(260px,1.2fr)] md:px-12">
-            <ScrollArea className="max-h-[70vh] pr-2">
-              <nav className="space-y-2" aria-label="Kategorie">
-                {categories.map((category, index) => {
-                  const isActive = index === activeIndex;
-                  return (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onMouseEnter={() => setActiveIndex(index)}
-                      onFocus={() => setActiveIndex(index)}
-                      onClick={() => setActiveIndex(index)}
-                      aria-selected={isActive}
-                      className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                        isActive
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-transparent bg-card/70 hover:border-primary/40 hover:text-primary"
-                      }`}
-                    >
-                      <span className="flex items-center gap-3">
-                        {category.icon ? (
-                          <span className="text-lg" aria-hidden>
-                            {category.icon}
-                          </span>
-                        ) : (
-                          <Sparkles className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="font-medium">{category.name}</span>
-                      </span>
-                      <ChevronRight className="h-4 w-4 opacity-70" />
-                    </button>
-                  );
-                })}
-              </nav>
-            </ScrollArea>
+            <CategoryColumn categories={categories} activeIndex={activeIndex} setActiveIndex={setActiveIndex} />
+
+            <SubTreeColumn activeCategory={activeCategory} />
 
             <div className="flex flex-col gap-6">
               <div className="space-y-2">
@@ -508,8 +696,41 @@ export function MegaMenu() {
                 </div>
               ) : null}
 
-              {/* Inteligentne banery (automatyczne) */}
-              {(smartTopProducts.length > 0 || smartHotDeals.length > 0) && (
+              {/* Inteligentne banery (automatyczne) + skeletony */}
+              {smartLoading ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border/60 bg-card/90 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-5 w-12" />
+                    </div>
+                    {[1,2,3].map(i => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-12 w-12 rounded" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-3 w-40" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-card/90 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-5 w-12" />
+                    </div>
+                    {[1,2,3].map(i => (
+                      <div key={i} className="flex items-center gap-3">
+                        <Skeleton className="h-12 w-12 rounded" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-3 w-40" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (smartTopProducts.length > 0 || smartHotDeals.length > 0) && (
                 <div className="grid gap-4 md:grid-cols-2">
                   {smartTopProducts.length > 0 && (
                     <div className="rounded-xl border border-border/60 bg-card/90 p-4">
@@ -556,7 +777,6 @@ export function MegaMenu() {
                 </div>
               )}
             </div>
-
             <div className="flex flex-col gap-6">
               <div className="rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Twoje konto</p>
