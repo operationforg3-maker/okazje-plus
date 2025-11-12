@@ -81,6 +81,8 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
               onFocus={() => setActiveIndex(index)}
               onClick={() => setActiveIndex(index)}
               aria-selected={isActive}
+              aria-current={isActive ? 'true' : undefined}
+              aria-label={`Wybierz kategorię ${category.name}`}
               className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
                 isActive
                   ? "border-primary bg-primary/10 text-primary"
