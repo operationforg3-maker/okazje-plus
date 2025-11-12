@@ -18,6 +18,13 @@ export async function GET(request: Request) {
   const q = url.searchParams.get('q') || '';
   const type = url.searchParams.get('type') || 'all'; // products|deals|all
   const limit = Number(url.searchParams.get('limit') || '50');
+  // optional filters
+  const mainCategorySlug = url.searchParams.get('mainCategorySlug') || '';
+  const subCategorySlug = url.searchParams.get('subCategorySlug') || '';
+  const minPrice = url.searchParams.get('minPrice');
+  const maxPrice = url.searchParams.get('maxPrice');
+  const minTemperature = url.searchParams.get('minTemperature');
+  const sort = url.searchParams.get('sort') || '';
 
   if (!q || q.trim().length < 1) return NextResponse.json({ products: [], deals: [] });
 
@@ -26,7 +33,7 @@ export async function GET(request: Request) {
   const allowed = await rateLimit(ip, 60, 60);
   if (!allowed) return NextResponse.json({ error: 'rate_limited', message: 'Too many requests' }, { status: 429 });
 
-  const key = `search:${type}:${q}:${limit}`;
+  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${minPrice}:${maxPrice}:${minTemperature}:${sort}`;
   const cached = await cacheGet(key);
   if (cached) return NextResponse.json(cached as any);
 
@@ -66,7 +73,31 @@ export async function GET(request: Request) {
         if (!deals || deals.length === 0) {
           const candidates = await getHotDeals(200);
           const nq = q.toLowerCase();
-          deals = candidates.filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(nq)).slice(0, limit);
+          // Apply optional filters for fallback path
+          let filtered = candidates.filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(nq));
+          if (mainCategorySlug) filtered = filtered.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
+          if (subCategorySlug) filtered = filtered.filter((d: any) => d.subCategorySlug === subCategorySlug);
+          if (minPrice) filtered = filtered.filter((d: any) => typeof d.price === 'number' && d.price >= Number(minPrice));
+          if (maxPrice) filtered = filtered.filter((d: any) => typeof d.price === 'number' && d.price <= Number(maxPrice));
+          if (minTemperature) filtered = filtered.filter((d: any) => typeof d.temperature === 'number' && d.temperature >= Number(minTemperature));
+
+          // Sort fallback
+          if (sort) {
+            filtered.sort((a: any, b: any) => {
+              switch (sort) {
+                case 'temperature': return (b.temperature||0) - (a.temperature||0);
+                case 'price_asc': return (a.price||0) - (b.price||0);
+                case 'price_desc': return (b.price||0) - (a.price||0);
+                case 'newest': {
+                  const ta = a.postedAt?.seconds ? a.postedAt.seconds*1000 : Date.parse(a.postedAt||0);
+                  const tb = b.postedAt?.seconds ? b.postedAt.seconds*1000 : Date.parse(b.postedAt||0);
+                  return (tb||0) - (ta||0);
+                }
+                default: return 0;
+              }
+            });
+          }
+          deals = filtered.slice(0, limit);
         } else {
           deals = deals.slice(0, limit);
         }
@@ -84,7 +115,32 @@ export async function GET(request: Request) {
       tasks.push(Promise.resolve({ hits: [] }));
     }
     if (type === 'deals' || type === 'all') {
-      tasks.push(typesenseServerClient.collections('deals').documents().search({ q, query_by: 'title,description', per_page: limit }, {}));
+      // Build filters
+      const filters: string[] = [];
+      if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
+      if (subCategorySlug) filters.push(`subCategorySlug:=${subCategorySlug}`);
+      if (minPrice) filters.push(`price:>=${Number(minPrice)}`);
+      if (maxPrice) filters.push(`price:<=${Number(maxPrice)}`);
+      if (minTemperature) filters.push(`temperature:>=${Number(minTemperature)}`);
+      filters.push(`status:=approved`);
+
+      // Sorting
+      let sort_by = '';
+      switch (sort) {
+        case 'temperature': sort_by = 'temperature:desc'; break;
+        case 'price_asc': sort_by = 'price:asc'; break;
+        case 'price_desc': sort_by = 'price:desc'; break;
+        case 'newest': sort_by = 'postedAt:desc'; break;
+        default: sort_by = '_text_match:desc';
+      }
+
+      tasks.push(typesenseServerClient.collections('deals').documents().search({ 
+        q, 
+        query_by: 'title,description', 
+        per_page: limit,
+        filter_by: filters.join(' && '),
+        sort_by
+      }, {}));
     } else {
       tasks.push(Promise.resolve({ hits: [] }));
     }

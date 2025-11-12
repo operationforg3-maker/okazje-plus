@@ -64,6 +64,23 @@ export default function DealsPage() {
   const [displayLimit, setDisplayLimit] = useState(20);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
 
+  // Helper: unify postedAt to timestamp (ms)
+  const toTimestamp = (value: any): number => {
+    if (!value) return 0;
+    // Firestore Timestamp
+    if (typeof value === 'object') {
+      if (typeof (value as any).toDate === 'function') {
+        try { return (value as any).toDate().getTime(); } catch {}
+      }
+      if (typeof (value as any).seconds === 'number') {
+        return ((value as any).seconds * 1000) + Math.floor(((value as any).nanoseconds || 0) / 1e6);
+      }
+    }
+    // ISO string or number
+    const num = Date.parse(value);
+    return isNaN(num) ? 0 : num;
+  };
+
   // Wczytaj zapisany tryb widoku przy pierwszym renderze
   useEffect(() => {
     try {
@@ -213,9 +230,11 @@ export default function DealsPage() {
         if (discount < 50) return false;
       }
       if (quickFilters.today) {
-        const today = new Date().toDateString();
-        const dealDate = new Date(deal.postedAt).toDateString();
-        if (today !== dealDate) return false;
+        const ts = toTimestamp((deal as any).postedAt);
+        if (!ts) return false;
+        const today = new Date();
+        const d = new Date(ts);
+        if (today.getFullYear() !== d.getFullYear() || today.getMonth() !== d.getMonth() || today.getDate() !== d.getDate()) return false;
       }
       if (quickFilters.verified && !deal.merchant) return false;
       
@@ -229,7 +248,7 @@ export default function DealsPage() {
         case 'hottest':
           return b.temperature - a.temperature;
         case 'newest':
-          return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
+          return toTimestamp((b as any).postedAt) - toTimestamp((a as any).postedAt);
         case 'price_asc':
           return a.price - b.price;
         case 'price_desc':

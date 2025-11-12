@@ -124,6 +124,12 @@ export async function searchDealsTypesense(
       params.set('q', q);
       params.set('type', 'deals');
       params.set('limit', String(limit));
+      if (mainCategorySlug) params.set('mainCategorySlug', String(mainCategorySlug));
+      if (subCategorySlug) params.set('subCategorySlug', String(subCategorySlug));
+      if (minPrice !== undefined) params.set('minPrice', String(minPrice));
+      if (maxPrice !== undefined) params.set('maxPrice', String(maxPrice));
+      if (minTemperature !== undefined) params.set('minTemperature', String(minTemperature));
+      if (sortBy) params.set('sort', sortBy);
       const res = await fetch(`/api/search?${params.toString()}`);
       if (!res.ok) return [];
       const body = await res.json();
