@@ -56,7 +56,18 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Okazje+. Wszelkie prawa zastrzeżone.</p>
+          <p>
+            &copy; {new Date().getFullYear()} Okazje+. Wszelkie prawa zastrzeżone.
+          </p>
+          <p className="mt-1">
+            Wersja: v{process.env.NEXT_PUBLIC_APP_VERSION}
+            {process.env.NEXT_PUBLIC_GIT_SHA && (
+              <>
+                {' '}
+                (<abbr title={process.env.NEXT_PUBLIC_GIT_SHA}>#{process.env.NEXT_PUBLIC_GIT_SHA.slice(0,7)}</abbr>)
+              </>
+            )}
+          </p>
         </div>
       </div>
     </footer>

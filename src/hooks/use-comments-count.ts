@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, getCountFromServer } from 'firebase/firestore';
 
 export function useCommentsCount(
   collectionName: 'deals' | 'products',
@@ -13,32 +13,68 @@ export function useCommentsCount(
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    try {
-      setLoading(true);
-      const commentsCol = collection(db, `${collectionName}/${docId}/comments`);
+    let unsub: (() => void) | undefined;
+    let cancelled = false;
+    async function setup() {
+      try {
+        setLoading(true);
+        const commentsCol = collection(db, `${collectionName}/${docId}/comments`);
 
-      const unsubscribe = onSnapshot(
-        commentsCol,
-        (snapshot) => {
-          // Aktualizuj bazowy count (pochodzący z Firestore)
-          setBaseCount(snapshot.size);
-          // Po otrzymaniu rzeczywistego snapshotu, zresetuj optymistyczny delta
-          setOptimisticDelta(0);
-          setLoading(false);
-        },
-        (error) => {
-          console.error('Comments listener error:', error);
-          setBaseCount(typeof initialCount === 'number' ? initialCount : 0);
-          setLoading(false);
+        // 1) Spróbuj ustawić real-time listener
+        unsub = onSnapshot(
+          commentsCol,
+          (snapshot) => {
+            if (cancelled) return;
+            setBaseCount(snapshot.size);
+            setOptimisticDelta(0);
+            setLoading(false);
+          },
+          async (error) => {
+            console.error('Comments listener error:', error);
+            // 2) Fallback: jeśli mamy initialCount użyj, dodatkowo spróbuj jednorazowego zliczenia z serwera
+            const fallback = typeof initialCount === 'number' ? initialCount : 0;
+            setBaseCount(fallback);
+            try {
+              const agg = await getCountFromServer(commentsCol);
+              if (!cancelled) {
+                const srvCount = (agg.data() as any).count as number;
+                setBaseCount(typeof srvCount === 'number' ? srvCount : fallback);
+              }
+            } catch (e) {
+              // Ignoruj jeśli brak uprawnień/indeksów
+              console.warn('getCountFromServer failed, using fallback count');
+            } finally {
+              if (!cancelled) setLoading(false);
+            }
+          }
+        );
+
+        // 3) Jeśli nie dostarczono initialCount, zainicjalizuj licznik jednorazowo zanim przyjdzie snapshot
+        if (typeof initialCount !== 'number') {
+          try {
+            const agg = await getCountFromServer(commentsCol);
+            if (!cancelled) {
+              const srvCount = (agg.data() as any).count as number;
+              if (typeof srvCount === 'number') setBaseCount(srvCount);
+            }
+          } catch {
+            // brak dostępu – zostaw 0 do czasu snapshota lub fallbacku
+          } finally {
+            if (!cancelled) setLoading(false);
+          }
         }
-      );
-
-      return () => unsubscribe();
-    } catch (error) {
-      console.error('Failed to set up comments listener:', error);
-      setBaseCount(typeof initialCount === 'number' ? initialCount : 0);
-      setLoading(false);
+      } catch (error) {
+        console.error('Failed to set up comments listener:', error);
+        setBaseCount(typeof initialCount === 'number' ? initialCount : 0);
+        setLoading(false);
+      }
     }
+
+    void setup();
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+    };
   }, [collectionName, docId, initialCount]);
 
   const increment = useCallback((delta = 1) => {
