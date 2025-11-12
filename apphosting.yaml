@@ -43,9 +43,17 @@ env:
   # AliExpress integration (server-side only)
   - variable: ALIEXPRESS_API_BASE
     secret: ALIEXPRESS_API_BASE
+    availability:
+      - RUNTIME
   - variable: ALIEXPRESS_APP_KEY
     secret: ALIEXPRESS_APP_KEY
+    availability:
+      - RUNTIME
   - variable: ALIEXPRESS_APP_SECRET
     secret: ALIEXPRESS_APP_SECRET
+    availability:
+      - RUNTIME
   - variable: ALIEXPRESS_AFFILIATE_ID
     secret: ALIEXPRESS_AFFILIATE_ID
+    availability:
+      - RUNTIME
