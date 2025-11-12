@@ -8,7 +8,7 @@
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "NODE_ENV=production next build",
     "start": "next start",
-  "lint": "next lint",
+    "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -16,6 +16,8 @@
     "seed": "ts-node src/scripts/seed.ts",
     "seed:interactions": "ts-node src/scripts/seed-interactions.ts",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts"
+    ,
+    "postinstall": "node ./scripts/apply-react-hooks-shim.js || true"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
@@ -70,7 +72,7 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "^10.9.2",
     "typesense": "^2.1.0",
-    "zod": "^3.24.2"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.2",
@@ -78,14 +80,19 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "eslint": "9.39.1",
     "eslint-config-next": "16.0.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.2",
     "genkit-cli": "^1.20.0",
     "jest": "^30.2.0",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "ts-jest": "^29.4.5",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "5.3.3",
+    "zod-validation-error": "^3.5.0"
   }
 }

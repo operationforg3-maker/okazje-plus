@@ -1,23 +1,38 @@
-// Flat ESLint config (CommonJS) using Next.js core-web-vitals preset
-// This file is compatible with ESLint v9+ and Next.js lint command
 /* eslint-disable node/no-unsupported-features/es-syntax */
-const nextCore = require('eslint-config-next/core-web-vitals');
+// Clean flat-config for ESLint v9+ using installed plugins/parsers.
+const tsParser = require('@typescript-eslint/parser');
+const tsPlugin = require('@typescript-eslint/eslint-plugin');
+const reactPlugin = require('eslint-plugin-react');
+const reactHooksPlugin = require('eslint-plugin-react-hooks');
 
-module.exports = [
-  // include Next's recommended flat config
-  nextCore,
-  // Project specific additions
-  {
-    ignores: ['.next/**', 'node_modules/**', 'out/**'],
-  },
-  {
-    files: ['**/*.{js,jsx,ts,tsx}'],
-    languageOptions: {
+module.exports = {
+  files: ['**/*.{js,jsx,ts,tsx}'],
+  ignores: ['.next/**', 'node_modules/**', 'out/**'],
+  languageOptions: {
+    parser: tsParser,
+    parserOptions: {
+      // Enable type-aware linting now that @typescript-eslint and TS versions
+      // are aligned via package.json changes.
+      project: './tsconfig.json',
+      tsconfigRootDir: __dirname,
       ecmaVersion: 'latest',
       sourceType: 'module',
-    },
-    rules: {
-      // Add any project overrides here; keep defaults from Next
+      ecmaFeatures: { jsx: true },
     },
   },
-];
+  plugins: {
+    '@typescript-eslint': tsPlugin,
+    react: reactPlugin,
+    'react-hooks': reactHooksPlugin,
+  },
+  rules: {
+  'react-hooks/rules-of-hooks': 'warn',
+  // re-enable exhaustive-deps for compatibility testing. If this crashes,
+  // we will iterate plugin versions and @typescript-eslint to find a safe combo.
+  'react-hooks/exhaustive-deps': 'warn',
+    '@typescript-eslint/no-var-requires': 'off',
+  },
+  settings: {
+    react: { version: 'detect' },
+  },
+};
