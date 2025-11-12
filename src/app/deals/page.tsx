@@ -13,14 +13,35 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/lib/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 type ViewMode = 'list' | 'grid';
+type SortOption = 'hottest' | 'newest' | 'price_asc' | 'price_desc' | 'discount';
+
+interface SavedFilter {
+  name: string;
+  sortBy: SortOption;
+  priceRange: [number, number];
+  quickFilters: {
+    freeShipping: boolean;
+    bigDiscount: boolean;
+    today: boolean;
+    verified: boolean;
+  };
+  categoryId?: string;
+  subcategorySlug?: string;
+}
 
 export default function DealsPage() {
+  const { user } = useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -30,6 +51,18 @@ export default function DealsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [sortBy, setSortBy] = useState<SortOption>('hottest');
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(10000);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
+  const [quickFilters, setQuickFilters] = useState({
+    freeShipping: false,
+    bigDiscount: false,
+    today: false,
+    verified: false,
+  });
+  const [displayLimit, setDisplayLimit] = useState(20);
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
 
   // Wczytaj zapisany tryb widoku przy pierwszym renderze
   useEffect(() => {
@@ -40,6 +73,23 @@ export default function DealsPage() {
       }
     } catch {}
   }, []);
+
+  // Załaduj zapisane filtry użytkownika
+  useEffect(() => {
+    if (!user?.uid) return;
+    async function loadSavedFilters() {
+      try {
+        const docRef = doc(db, 'users', user!.uid, 'preferences', 'dealFilters');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setSavedFilters(docSnap.data().filters || []);
+        }
+      } catch (error) {
+        console.error('Error loading saved filters:', error);
+      }
+    }
+    loadSavedFilters();
+  }, [user]);
 
   // Wczytaj zapisaną kategorię / podkategorię gdy tylko będą dostępne kategorie
   useEffect(() => {
@@ -153,18 +203,130 @@ export default function DealsPage() {
     return () => { cancelled = true; clearTimeout(t); };
   }, [selectedCategory, selectedSubcategory, searchTerm]);
 
-  const filteredDeals = deals.filter(deal => {
-    const matchesSearch = !searchTerm || 
-      deal.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      deal.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  });
+  // Sortowanie i filtrowanie lokalne (po pobraniu z API)
+  const filteredAndSortedDeals = deals
+    .filter(deal => {
+      // Quick filters
+      if (quickFilters.freeShipping && deal.shippingCost !== 0) return false;
+      if (quickFilters.bigDiscount && deal.originalPrice) {
+        const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
+        if (discount < 50) return false;
+      }
+      if (quickFilters.today) {
+        const today = new Date().toDateString();
+        const dealDate = new Date(deal.postedAt).toDateString();
+        if (today !== dealDate) return false;
+      }
+      if (quickFilters.verified && !deal.merchant) return false;
+      
+      // Price range
+      if (deal.price < priceRange[0] || deal.price > priceRange[1]) return false;
+      
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'hottest':
+          return b.temperature - a.temperature;
+        case 'newest':
+          return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
+        case 'price_asc':
+          return a.price - b.price;
+        case 'price_desc':
+          return b.price - a.price;
+        case 'discount':
+          const discountA = a.originalPrice ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0;
+          const discountB = b.originalPrice ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0;
+          return discountB - discountA;
+        default:
+          return 0;
+      }
+    });
+
+  // Statystyki
+  const stats = {
+    total: filteredAndSortedDeals.length,
+    avgDiscount: filteredAndSortedDeals.reduce((acc, deal) => {
+      if (!deal.originalPrice) return acc;
+      const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
+      return acc + discount;
+    }, 0) / filteredAndSortedDeals.length || 0,
+    bestDeal: filteredAndSortedDeals.reduce((best, deal) => {
+      if (!deal.originalPrice) return best;
+      const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
+      const bestDiscount = best?.originalPrice ? ((best.originalPrice - best.price) / best.originalPrice) * 100 : 0;
+      return discount > bestDiscount ? deal : best;
+    }, filteredAndSortedDeals[0]),
+  };
 
   const priceFormatter = new Intl.NumberFormat('pl-PL', {
     style: 'currency',
     currency: 'PLN',
   });
+
+  // Funkcja zapisywania filtrów
+  const saveCurrentFilter = async () => {
+    if (!user?.uid) {
+      toast.error('Zaloguj się, aby zapisać filtry');
+      return;
+    }
+
+    const filterName = prompt('Podaj nazwę dla tego zestawu filtrów:');
+    if (!filterName) return;
+
+    const newFilter: SavedFilter = {
+      name: filterName,
+      sortBy,
+      priceRange,
+      quickFilters,
+      categoryId: selectedCategory?.id,
+      subcategorySlug: selectedSubcategory || undefined,
+    };
+
+    try {
+      const updatedFilters = [...savedFilters, newFilter];
+      const docRef = doc(db, 'users', user.uid, 'preferences', 'dealFilters');
+      await setDoc(docRef, { filters: updatedFilters });
+      setSavedFilters(updatedFilters);
+      toast.success(`Filtr "${filterName}" został zapisany!`);
+    } catch (error) {
+      console.error('Error saving filter:', error);
+      toast.error('Nie udało się zapisać filtra');
+    }
+  };
+
+  // Funkcja wczytywania zapisanego filtra
+  const loadSavedFilter = (filter: SavedFilter) => {
+    setSortBy(filter.sortBy);
+    setPriceRange(filter.priceRange);
+    setQuickFilters(filter.quickFilters);
+    
+    if (filter.categoryId) {
+      const cat = categories.find(c => c.id === filter.categoryId);
+      if (cat) setSelectedCategory(cat);
+    }
+    if (filter.subcategorySlug) {
+      setSelectedSubcategory(filter.subcategorySlug);
+    }
+    
+    toast.success(`Załadowano filtr: ${filter.name}`);
+  };
+
+  // Funkcja usuwania zapisanego filtra
+  const deleteSavedFilter = async (filterName: string) => {
+    if (!user?.uid) return;
+
+    try {
+      const updatedFilters = savedFilters.filter(f => f.name !== filterName);
+      const docRef = doc(db, 'users', user.uid, 'preferences', 'dealFilters');
+      await setDoc(docRef, { filters: updatedFilters });
+      setSavedFilters(updatedFilters);
+      toast.success('Filtr został usunięty');
+    } catch (error) {
+      console.error('Error deleting filter:', error);
+      toast.error('Nie udało się usunąć filtra');
+    }
+  };
 
   // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
   const SidebarContent = () => (
@@ -316,51 +478,197 @@ export default function DealsPage() {
                 </div>
               </div>
 
-              {/* Subcategories */}
-              {selectedCategory && (
-                <div className="mb-4 lg:mb-6">
-                  <h3 className="font-headline text-base font-semibold mb-3">
-                    {selectedCategory.name}
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {selectedCategory.subcategories.map((sub) => (
-                      <button
-                        key={sub.slug}
-                        onClick={() => setSelectedSubcategory(
-                          selectedSubcategory === sub.slug ? null : sub.slug
-                        )}
-                        className={cn(
-                          "p-3 rounded-lg border text-left transition-all duration-200 hover:border-primary",
-                          selectedSubcategory === sub.slug
-                            ? "border-primary bg-primary/5"
-                            : "border-border"
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          {sub.icon && <span className="text-lg">{sub.icon}</span>}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{sub.name}</p>
-                            {sub.description && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {sub.description}
-                              </p>
-                            )}
-                          </div>
-                          {sub.highlight && (
-                            <Badge variant="secondary" className="text-xs">Nowość</Badge>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+              {/* Statystyki */}
+              {stats.total > 0 && (
+                <div className="mb-4 lg:mb-6 grid grid-cols-3 gap-2">
+                  <Card className="p-3">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Okazje</p>
+                        <p className="text-lg font-bold">{stats.total}</p>
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-green-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Śr. zniżka</p>
+                        <p className="text-lg font-bold">{stats.avgDiscount.toFixed(0)}%</p>
+                      </div>
+                    </div>
+                  </Card>
+                  <Card className="p-3">
+                    <div className="flex items-center gap-2">
+                      <Flame className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Najlepszy</p>
+                        <p className="text-lg font-bold">
+                          {stats.bestDeal?.originalPrice ? 
+                            `${(((stats.bestDeal.originalPrice - stats.bestDeal.price) / stats.bestDeal.originalPrice) * 100).toFixed(0)}%` 
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
                 </div>
               )}
+
+              {/* Filtry i sortowanie */}
+              <div className="mb-4 space-y-3">
+                {/* Sortowanie */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Sortuj według" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hottest">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4" />
+                          Najgorętsze
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="newest">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Najnowsze
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="price_asc">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4" />
+                          Cena: rosnąco
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="price_desc">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4" />
+                          Cena: malejąco
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="discount">
+                        <div className="flex items-center gap-2">
+                          <Tag className="h-4 w-4" />
+                          Największa zniżka
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Zakres ceny */}
+                  <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Cena:</span>
+                    <Input
+                      type="number"
+                      placeholder="Min"
+                      value={priceRange[0]}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        setPriceRange([val, priceRange[1]]);
+                      }}
+                      className="h-8 w-20 text-xs"
+                    />
+                    <span className="text-muted-foreground">-</span>
+                    <Input
+                      type="number"
+                      placeholder="Max"
+                      value={priceRange[1]}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 10000;
+                        setPriceRange([priceRange[0], val]);
+                      }}
+                      className="h-8 w-20 text-xs"
+                    />
+                    <span className="text-sm">zł</span>
+                  </div>
+                </div>
+
+                {/* Quick filters - chipy */}
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    variant={quickFilters.freeShipping ? 'default' : 'outline'}
+                    className="cursor-pointer hover:bg-primary/10 transition-colors"
+                    onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
+                  >
+                    <Truck className="h-3 w-3 mr-1" />
+                    Darmowa dostawa
+                  </Badge>
+                  <Badge
+                    variant={quickFilters.bigDiscount ? 'default' : 'outline'}
+                    className="cursor-pointer hover:bg-primary/10 transition-colors"
+                    onClick={() => setQuickFilters(prev => ({ ...prev, bigDiscount: !prev.bigDiscount }))}
+                  >
+                    <Tag className="h-3 w-3 mr-1" />
+                    Zniżka &gt;50%
+                  </Badge>
+                  <Badge
+                    variant={quickFilters.today ? 'default' : 'outline'}
+                    className="cursor-pointer hover:bg-primary/10 transition-colors"
+                    onClick={() => setQuickFilters(prev => ({ ...prev, today: !prev.today }))}
+                  >
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Tylko dziś
+                  </Badge>
+                  <Badge
+                    variant={quickFilters.verified ? 'default' : 'outline'}
+                    className="cursor-pointer hover:bg-primary/10 transition-colors"
+                    onClick={() => setQuickFilters(prev => ({ ...prev, verified: !prev.verified }))}
+                  >
+                    <Star className="h-3 w-3 mr-1" />
+                    Sprawdzone sklepy
+                  </Badge>
+                </div>
+
+                {/* Zapisane filtry */}
+                {user && savedFilters.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Bookmark className="h-3 w-3" />
+                      Zapisane:
+                    </span>
+                    {savedFilters.map((filter) => (
+                      <Badge
+                        key={filter.name}
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-secondary/80 transition-colors group"
+                      >
+                        <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteSavedFilter(filter.name);
+                          }}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* Przycisk zapisywania filtra */}
+                {user && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={saveCurrentFilter}
+                    className="w-full sm:w-auto"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Zapisz obecne filtry
+                  </Button>
+                )}
+              </div>
 
               {/* Deals List */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-headline text-base font-semibold">
-                    🔥 Okazje ({filteredDeals.length})
+                    🔥 Okazje ({filteredAndSortedDeals.length})
                   </h3>
                   
                   {/* View Mode Toggle */}
@@ -396,16 +704,16 @@ export default function DealsPage() {
                       )} />
                     ))}
                   </div>
-                ) : filteredDeals.length > 0 ? (
+                ) : filteredAndSortedDeals.length > 0 ? (
                   viewMode === 'list' ? (
                     <div className="space-y-4">
-                      {filteredDeals.slice(0, 20).map((deal) => (
+                      {filteredAndSortedDeals.slice(0, displayLimit).map((deal) => (
                         <DealListCard key={deal.id} deal={deal} />
                       ))}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {filteredDeals.slice(0, 20).map((deal) => (
+                      {filteredAndSortedDeals.slice(0, displayLimit).map((deal) => (
                         <DealCard key={deal.id} deal={deal} />
                       ))}
                     </div>
@@ -413,6 +721,24 @@ export default function DealsPage() {
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">Brak okazji w tej kategorii</p>
+                  </div>
+                )}
+
+                {/* Load More Button */}
+                {filteredAndSortedDeals.length > displayLimit && (
+                  <div className="mt-6 text-center">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setDisplayLimit(prev => prev + 20)}
+                      className="w-full sm:w-auto"
+                    >
+                      Załaduj więcej okazji
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Pokazujesz {Math.min(displayLimit, filteredAndSortedDeals.length)} z {filteredAndSortedDeals.length} okazji
+                    </p>
                   </div>
                 )}
               </div>
