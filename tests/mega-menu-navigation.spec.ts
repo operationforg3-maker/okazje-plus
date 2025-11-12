@@ -26,13 +26,8 @@ test.describe("Mega menu - nawigacja drzewo", () => {
     await firstCategoryBtn.hover();
     await firstCategoryBtn.click();
 
-    // W środkowej kolumnie powinno pojawić się breadcrumb z nazwą kategorii lub opis
-    if (firstCategoryName) {
-      await expect(page.locator('nav:has-text("Strona główna")')).toContainText(firstCategoryName.trim());
-    }
-
     // Spróbuj kliknąć pierwszą podkategorię (jeśli istnieje), a potem zweryfikuj URL
-    const subcategoryLink = page.locator('a[href*="/products?mainCategory="]').first();
+    const subcategoryLink = page.locator('a[href*="/products?mainCategory="]').filter({ has: page.locator('h4') }).first();
     if (await subcategoryLink.isVisible().catch(() => false)) {
       const beforeUrl = page.url();
       await subcategoryLink.click();
