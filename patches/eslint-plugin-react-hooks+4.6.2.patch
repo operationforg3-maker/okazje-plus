@@ -1,0 +1,218 @@
+diff --git a/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.development.js b/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.development.js
+index 441442f..48718d0 100644
+--- a/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.development.js
++++ b/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.development.js
+@@ -10,6 +10,16 @@
+ 
+ 'use strict';
+ 
++
++// Compatibility helper inserted by project (apply-react-hooks-shim.js)
++function getSourceTextFromContext(context, node) {
++  try {
++    if (typeof context.getSource === 'function') return getSourceTextFromContext(context,node);
++    const sc = context.getSourceCode && context.getSourceCode();
++    if (sc && typeof sc.getText === 'function') return sc.getText(node);
++  } catch (e) { /* swallow */ }
++  return '';
++}
+ if (process.env.NODE_ENV !== "production") {
+   (function() {
+ 'use strict';
+@@ -23,6 +33,21 @@ function _unsupportedIterableToArray(o, minLen) {
+   if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+ }
+ 
++// Helper to support older/newer ESLint RuleContext APIs. Some plugin builds
++// call `getSourceTextFromContext(context,...)` while the RuleContext in this environment
++// exposes `getSourceCode().getText(...)`. Provide a small shim so we can
++// safely obtain source text from either API surface.
++function getSourceTextFromContext(context, node) {
++  try {
++    if (typeof context.getSource === 'function') return getSourceTextFromContext(context,node);
++    var sc = context.getSourceCode && context.getSourceCode();
++    if (sc && typeof sc.getText === 'function') return sc.getText(node);
++  } catch (e) {
++    // swallow and return empty string on unexpected failures
++  }
++  return '';
++}
++
+ function _arrayLikeToArray(arr, len) {
+   if (len == null || len > arr.length) len = arr.length;
+ 
+@@ -563,7 +588,7 @@ var RulesOfHooks = {
+                 if (cycled) {
+                   context.report({
+                     node: hook,
+-                    message: "React Hook \"" + context.getSource(hook) + "\" may be executed " + 'more than once. Possibly because it is called in a loop. ' + 'React Hooks must be called in the exact same order in ' + 'every component render.'
++                    message: "React Hook \"" + getSourceTextFromContext(context, hook) + "\" may be executed " + 'more than once. Possibly because it is called in a loop. ' + 'React Hooks must be called in the exact same order in ' + 'every component render.'
+                   });
+                 } // If this is not a valid code path for React hooks then we need to
+                 // log a warning for every hook in this code path.
+@@ -578,7 +603,7 @@ var RulesOfHooks = {
+                   //
+                   // Special case when we think there might be an early return.
+                   if (!cycled && pathsFromStartToEnd !== allPathsFromStartToEnd) {
+-                    var message = "React Hook \"" + context.getSource(hook) + "\" is called " + 'conditionally. React Hooks must be called in the exact ' + 'same order in every component render.' + (possiblyHasEarlyReturn ? ' Did you accidentally call a React Hook after an' + ' early return?' : '');
++                    var message = "React Hook \"" + getSourceTextFromContext(context, hook) + "\" is called " + 'conditionally. React Hooks must be called in the exact ' + 'same order in every component render.' + (possiblyHasEarlyReturn ? ' Did you accidentally call a React Hook after an' + ' early return?' : '');
+                     context.report({
+                       node: hook,
+                       message: message
+@@ -586,7 +611,7 @@ var RulesOfHooks = {
+                   }
+                 } else if (codePathNode.parent && (codePathNode.parent.type === 'MethodDefinition' || codePathNode.parent.type === 'ClassProperty') && codePathNode.parent.value === codePathNode) {
+                   // Custom message for hooks inside a class
+-                  var _message = "React Hook \"" + context.getSource(hook) + "\" cannot be called " + 'in a class component. React Hooks must be called in a ' + 'React function component or a custom React Hook function.';
++                  var _message = "React Hook \"" + getSourceTextFromContext(context, hook) + "\" cannot be called " + 'in a class component. React Hooks must be called in a ' + 'React function component or a custom React Hook function.';
+ 
+                   context.report({
+                     node: hook,
+@@ -594,7 +619,7 @@ var RulesOfHooks = {
+                   });
+                 } else if (codePathFunctionName) {
+                   // Custom message if we found an invalid function name.
+-                  var _message2 = "React Hook \"" + context.getSource(hook) + "\" is called in " + ("function \"" + context.getSource(codePathFunctionName) + "\" ") + 'that is neither a React function component nor a custom ' + 'React Hook function.' + ' React component names must start with an uppercase letter.' + ' React Hook names must start with the word "use".';
++                  var _message2 = "React Hook \"" + getSourceTextFromContext(context, hook) + "\" is called in " + ("function \"" + getSourceTextFromContext(context, codePathFunctionName) + "\" ") + 'that is neither a React function component nor a custom ' + 'React Hook function.' + ' React component names must start with an uppercase letter.' + ' React Hook names must start with the word "use".';
+ 
+                   context.report({
+                     node: hook,
+@@ -602,7 +627,7 @@ var RulesOfHooks = {
+                   });
+                 } else if (codePathNode.type === 'Program') {
+                   // These are dangerous if you have inline requires enabled.
+-                  var _message3 = "React Hook \"" + context.getSource(hook) + "\" cannot be called " + 'at the top level. React Hooks must be called in a ' + 'React function component or a custom React Hook function.';
++                  var _message3 = "React Hook \"" + getSourceTextFromContext(context, hook) + "\" cannot be called " + 'at the top level. React Hooks must be called in a ' + 'React function component or a custom React Hook function.';
+ 
+                   context.report({
+                     node: hook,
+@@ -615,7 +640,7 @@ var RulesOfHooks = {
+                   // enough in the common case that the incorrect message in
+                   // uncommon cases doesn't matter.
+                   if (isSomewhereInsideComponentOrHook) {
+-                    var _message4 = "React Hook \"" + context.getSource(hook) + "\" cannot be called " + 'inside a callback. React Hooks must be called in a ' + 'React function component or a custom React Hook function.';
++                    var _message4 = "React Hook \"" + getSourceTextFromContext(context, hook) + "\" cannot be called " + 'inside a callback. React Hooks must be called in a ' + 'React function component or a custom React Hook function.';
+ 
+                     context.report({
+                       node: hook,
+@@ -1183,7 +1208,7 @@ var ExhaustiveDeps = {
+         staleAssignments.add(key);
+         reportProblem({
+           node: writeExpr,
+-          message: "Assignments to the '" + key + "' variable from inside React Hook " + (context.getSource(reactiveHook) + " will be lost after each ") + "render. To preserve the value over time, store it in a useRef " + "Hook and keep the mutable value in the '.current' property. " + "Otherwise, you can move this variable directly inside " + (context.getSource(reactiveHook) + ".")
++          message: "Assignments to the '" + key + "' variable from inside React Hook " + (getSourceTextFromContext(context, reactiveHook) + " will be lost after each ") + "render. To preserve the value over time, store it in a useRef " + "Hook and keep the mutable value in the '.current' property. " + "Otherwise, you can move this variable directly inside " + (getSourceTextFromContext(context, reactiveHook) + ".")
+         });
+       } // Remember which deps are stable and report bad usage first.
+ 
+@@ -1282,7 +1307,7 @@ var ExhaustiveDeps = {
+         // the user this in an error.
+         reportProblem({
+           node: declaredDependenciesNode,
+-          message: "React Hook " + context.getSource(reactiveHook) + " was passed a " + 'dependency list that is not an array literal. This means we ' + "can't statically verify whether you've passed the correct " + 'dependencies.'
++          message: "React Hook " + getSourceTextFromContext(context, reactiveHook) + " was passed a " + 'dependency list that is not an array literal. This means we ' + "can't statically verify whether you've passed the correct " + 'dependencies.'
+         });
+       } else {
+         declaredDependenciesNode.elements.forEach(function (declaredDependencyNode) {
+@@ -1295,7 +1320,7 @@ var ExhaustiveDeps = {
+           if (declaredDependencyNode.type === 'SpreadElement') {
+             reportProblem({
+               node: declaredDependencyNode,
+-              message: "React Hook " + context.getSource(reactiveHook) + " has a spread " + "element in its dependency array. This means we can't " + "statically verify whether you've passed the " + 'correct dependencies.'
++              message: "React Hook " + getSourceTextFromContext(context, reactiveHook) + " has a spread " + "element in its dependency array. This means we can't " + "statically verify whether you've passed the " + 'correct dependencies.'
+             });
+             return;
+           } // Try to normalize the declared dependency. If we can't then an error
+@@ -1323,7 +1348,7 @@ var ExhaustiveDeps = {
+               } else {
+                 reportProblem({
+                   node: declaredDependencyNode,
+-                  message: "React Hook " + context.getSource(reactiveHook) + " has a " + "complex expression in the dependency array. " + 'Extract it to a separate variable so it can be statically checked.'
++                  message: "React Hook " + getSourceTextFromContext(context, reactiveHook) + " has a " + "complex expression in the dependency array. " + 'Extract it to a separate variable so it can be statically checked.'
+                 });
+               }
+ 
+@@ -1556,7 +1581,7 @@ var ExhaustiveDeps = {
+         }
+ 
+         if (isPropsOnlyUsedInMembers) {
+-          extraWarning = " However, 'props' will change when *any* prop changes, so the " + "preferred fix is to destructure the 'props' object outside of " + ("the " + reactiveHookName + " call and refer to those specific props ") + ("inside " + context.getSource(reactiveHook) + ".");
++          extraWarning = " However, 'props' will change when *any* prop changes, so the " + "preferred fix is to destructure the 'props' object outside of " + ("the " + reactiveHookName + " call and refer to those specific props ") + ("inside " + getSourceTextFromContext(context, reactiveHook) + ".");
+         }
+       }
+ 
+@@ -1701,7 +1726,7 @@ var ExhaustiveDeps = {
+ 
+       reportProblem({
+         node: declaredDependenciesNode,
+-        message: "React Hook " + context.getSource(reactiveHook) + " has " + ( // To avoid a long message, show the next actionable item.
++  message: "React Hook " + getSourceTextFromContext(context, reactiveHook) + " has " + ( // To avoid a long message, show the next actionable item.
+         getWarningMessage(missingDependencies, 'a', 'missing', 'include') || getWarningMessage(unnecessaryDependencies, 'an', 'unnecessary', 'exclude') || getWarningMessage(duplicateDependencies, 'a', 'duplicate', 'omit')) + extraWarning,
+         suggest: [{
+           desc: "Update the dependencies array to be: [" + suggestedDeps.map(formatDependency).join(', ') + "]",
+diff --git a/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.production.min.js b/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.production.min.js
+index c9ee73a..dfb19ee 100644
+--- a/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.production.min.js
++++ b/node_modules/eslint-plugin-react-hooks/cjs/eslint-plugin-react-hooks.production.min.js
+@@ -1,3 +1,23 @@
++
++// Compatibility helper inserted by project (apply-react-hooks-shim.js)
++function getSourceTextFromContext(context, node) {
++  try {
++    if (typeof context.getSource === 'function') return getSourceTextFromContext(context,node);
++    const sc = context.getSourceCode && context.getSourceCode();
++    if (sc && typeof sc.getText === 'function') return sc.getText(node);
++  } catch (e) { /* swallow */ }
++  return '';
++}
++
++// Compatibility helper inserted by project (apply-react-hooks-shim.js)
++function getSourceTextFromContext(context, node) {
++  try {
++    if (typeof context.getSource === 'function') return getSourceTextFromContext(context,node);
++    const sc = context.getSourceCode && context.getSourceCode();
++    if (sc && typeof sc.getText === 'function') return sc.getText(node);
++  } catch (e) { /* swallow */ }
++  return '';
++}
+ /**
+  * @license React
+  * eslint-plugin-react-hooks.production.min.js
+@@ -31,10 +51,10 @@ exports.rules={"rules-of-hooks":{meta:{type:"problem",docs:{description:"enforce
+ 1);a=D(a);var l;try{for(a.s();!(l=a.n()).done;)E.add(l.value)}catch(u){a.e(u)}finally{a.f()}return BigInt("0")}c.add(a.id);if(void 0!==f)return f;if(b.thrownSegments.includes(a))f=BigInt("0");else if(0===a.prevSegments.length)f=BigInt("1");else{f=BigInt("0");l=D(a.prevSegments);var r;try{for(l.s();!(r=l.n()).done;)f+=d(r.value,c)}catch(u){l.e(u)}finally{l.f()}}a.reachable&&f===BigInt("0")?e.delete(a.id):e.set(a.id,f);return f}function g(a,c){var d=g.cache,e=d.get(a.id);c=new Set(c);if(c.has(a.id)){d=
+ Array.from(c);a=d.slice(d.indexOf(a.id)+1);a=D(a);var f;try{for(a.s();!(f=a.n()).done;)E.add(f.value)}catch(u){a.e(u)}finally{a.f()}return BigInt("0")}c.add(a.id);if(void 0!==e)return e;if(b.thrownSegments.includes(a))e=BigInt("0");else if(0===a.nextSegments.length)e=BigInt("1");else{e=BigInt("0");f=D(a.nextSegments);var r;try{for(f.s();!(r=f.n()).done;)e+=g(r.value,c)}catch(u){f.e(u)}finally{f.f()}}d.set(a.id,e);return e}function w(a){var c=w.cache,b=c.get(a.id);if(null===b)return Infinity;if(void 0!==
+ b)return b;c.set(a.id,null);if(0===a.prevSegments.length)b=1;else{b=Infinity;var d=D(a.prevSegments),e;try{for(d.s();!(e=d.n()).done;){var f=w(e.value);f<b&&(b=f)}}catch(u){d.e(u)}finally{d.f()}b+=1}c.set(a.id,b);return b}var m=c.pop();if(0!==m.size){var E=new Set;d.cache=new Map;g.cache=new Map;w.cache=new Map;var x=g(b.initialSegment),r=na(f),e=ma(f),C=r?ea(r)||G(r):ha(f)||ia(f),t=Infinity,h=D(b.finalSegments),ja;try{for(h.s();!(ja=h.n()).done;){var ka=ja.value;if(ka.reachable){var la=w(ka);la<
+-t&&(t=la)}}}catch(l){h.e(l)}finally{h.f()}m=D(m);var A;try{for(m.s();!(A=m.n()).done;){var F=A.value,q=F[0],B=F[1];if(q.reachable){var N=0===q.nextSegments.length?t<=w(q):t<w(q),T=d(q)*g(q),U=E.has(q.id),J=D(B),y;try{for(J.s();!(y=J.n()).done;){var z=y.value;U&&a.report({node:z,message:'React Hook "'+a.getSource(z)+'" may be executed more than once. Possibly because it is called in a loop. React Hooks must be called in the exact same order in every component render.'});if(C){if(!U&&T!==x){var O='React Hook "'+
+-a.getSource(z)+'" is called conditionally. React Hooks must be called in the exact same order in every component render.'+(N?" Did you accidentally call a React Hook after an early return?":"");a.report({node:z,message:O})}}else if(f.parent&&("MethodDefinition"===f.parent.type||"ClassProperty"===f.parent.type)&&f.parent.value===f){var M='React Hook "'+a.getSource(z)+'" cannot be called in a class component. React Hooks must be called in a React function component or a custom React Hook function.';
+-a.report({node:z,message:M})}else if(r){var K='React Hook "'+a.getSource(z)+'" is called in function "'+(a.getSource(r)+'" that is neither a React function component nor a custom React Hook function. React component names must start with an uppercase letter. React Hook names must start with the word "use".');a.report({node:z,message:K})}else if("Program"===f.type){var L='React Hook "'+a.getSource(z)+'" cannot be called at the top level. React Hooks must be called in a React function component or a custom React Hook function.';
+-a.report({node:z,message:L})}else if(e){var n='React Hook "'+a.getSource(z)+'" cannot be called inside a callback. React Hooks must be called in a React function component or a custom React Hook function.';a.report({node:z,message:n})}}}catch(l){J.e(l)}finally{J.f()}}}}catch(l){m.e(l)}finally{m.f()}}},CallExpression:function(a){if(G(a.callee)){var d=c[c.length-1],p=b[b.length-1],g=d.get(p);g||(g=[],d.set(p,g));g.push(a.callee)}}}}},"exhaustive-deps":{meta:{type:"suggestion",docs:{description:"verifies the list of dependencies for Hooks like useEffect and similar",
++t&&(t=la)}}}catch(l){h.e(l)}finally{h.f()}m=D(m);var A;try{for(m.s();!(A=m.n()).done;){var F=A.value,q=F[0],B=F[1];if(q.reachable){var N=0===q.nextSegments.length?t<=w(q):t<w(q),T=d(q)*g(q),U=E.has(q.id),J=D(B),y;try{for(J.s();!(y=J.n()).done;){var z=y.value;U&&a.report({node:z,message:'React Hook "'+getSourceTextFromContext(a,z)+'" may be executed more than once. Possibly because it is called in a loop. React Hooks must be called in the exact same order in every component render.'});if(C){if(!U&&T!==x){var O='React Hook "'+
++getSourceTextFromContext(a,z)+'" is called conditionally. React Hooks must be called in the exact same order in every component render.'+(N?" Did you accidentally call a React Hook after an early return?":"");a.report({node:z,message:O})}}else if(f.parent&&("MethodDefinition"===f.parent.type||"ClassProperty"===f.parent.type)&&f.parent.value===f){var M='React Hook "'+getSourceTextFromContext(a,z)+'" cannot be called in a class component. React Hooks must be called in a React function component or a custom React Hook function.';
++a.report({node:z,message:M})}else if(r){var K='React Hook "'+getSourceTextFromContext(a,z)+'" is called in function "'+(getSourceTextFromContext(a,r)+'" that is neither a React function component nor a custom React Hook function. React component names must start with an uppercase letter. React Hook names must start with the word "use".');a.report({node:z,message:K})}else if("Program"===f.type){var L='React Hook "'+getSourceTextFromContext(a,z)+'" cannot be called at the top level. React Hooks must be called in a React function component or a custom React Hook function.';
++a.report({node:z,message:L})}else if(e){var n='React Hook "'+getSourceTextFromContext(a,z)+'" cannot be called inside a callback. React Hooks must be called in a React function component or a custom React Hook function.';a.report({node:z,message:n})}}}catch(l){J.e(l)}finally{J.f()}}}}catch(l){m.e(l)}finally{m.f()}}},CallExpression:function(a){if(G(a.callee)){var d=c[c.length-1],p=b[b.length-1],g=d.get(p);g||(g=[],d.set(p,g));g.push(a.callee)}}}}},"exhaustive-deps":{meta:{type:"suggestion",docs:{description:"verifies the list of dependencies for Hooks like useEffect and similar",
+ recommended:!0,url:"https://github.com/facebook/react/issues/14920"},fixable:"code",hasSuggestions:!0,schema:[{type:"object",additionalProperties:!1,enableDangerousAutofixThisMayCauseInfiniteLoops:!1,properties:{additionalHooks:{type:"string"},enableDangerousAutofixThisMayCauseInfiniteLoops:{type:"boolean"}}}]},create:function(a){function c(c){f&&Array.isArray(c.suggest)&&0<c.suggest.length&&(c.fix=c.suggest[0].fix);a.report(c)}function b(a,c){return function(b){if(c.has(b))return c.get(b);var d=
+ a(b);c.set(b,d);return d}}function d(d,e,f,t,h){function r(a){var c=D(a.references),b;try{for(c.s();!(b=c.n()).done;){var k=b.value;if(k.resolved&&F.has(k.resolved.scope)){var f=Y(d,k.identifier),e=sa(f),g=X(e,z),t;if(t=h&&"Identifier"===e.type&&("MemberExpression"===e.parent.type||"OptionalMemberExpression"===e.parent.type)&&!e.parent.computed&&"Identifier"===e.parent.property.type&&"current"===e.parent.property.name){for(var l=k.from,n=!1;l.block!==d;)"function"===l.type&&(n=null!=l.block.parent&&
+ "ReturnStatement"===l.block.parent.type),l=l.upper;t=n}t&&J.set(g,{reference:k,dependencyNode:e});if("TSTypeQuery"!==e.parent.type&&"TSTypeReference"!==e.parent.type){var C=k.resolved.defs[0];if(null!=C&&(null==C.node||C.node.init!==d.parent)&&"TypeParameter"!==C.type)if(y.has(g))y.get(g).references.push(k);else{var p=k.resolved,q=T(p)||U(p);y.set(g,{isStable:q,references:[k]})}}}}}catch(aa){c.e(aa)}finally{c.f()}a=D(a.childScopes);var m;try{for(a.s();!(m=a.n()).done;)r(m.value)}catch(aa){a.e(aa)}finally{a.f()}}
+@@ -44,18 +64,18 @@ null===b.value))return!0;if("CallExpression"!==b.type)return!1;b=b.callee;"Membe
+ b)return!1;w.set(a[d].identifier,c.elements[0])}return!0}if(c.elements[0]===a.identifiers[0]&&"useState"===b)for(a=a.references,c=0;c<a.length;c++)m.add(a[c].identifier)}}else if("useTransition"===b&&"ArrayPattern"===c.type&&2===c.elements.length&&Array.isArray(a.identifiers)&&c.elements[1]===a.identifiers[0])return!0;return!1},E),U=b(function(a){if(!N(a.defs))return!1;a=a.defs[0];if(null==a||null==a.node||null==a.node.id)return!1;var c=a.node,b=q.childScopes;a=null;var d;for(d=0;d<b.length;d++){var e=
+ b[d],k=e.block;if("FunctionDeclaration"===c.type&&k===c||"VariableDeclarator"===c.type&&k.parent===c){a=e;break}}if(null==a)return!1;for(d=0;d<a.through.length;d++)if(c=a.through[d],null!=c.resolved&&F.has(c.resolved.scope)&&!T(c.resolved))return!1;return!0},x),J=new Map,y=new Map,z=new Map;r(A);J.forEach(function(a,b){var d=a.dependencyNode;a=a.reference.resolved.references;for(var e=!1,f=0;f<a.length;f++){var k=a[f].identifier.parent;if(null!=k&&"MemberExpression"===k.type&&!k.computed&&"Identifier"===
+ k.property.type&&"current"===k.property.name&&"AssignmentExpression"===k.parent.type&&k.parent.left===k){e=!0;break}}e||c({node:d.parent.property,message:"The ref value '"+b+".current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy '"+(b+".current' to a variable inside the effect, and use that variable in the cleanup function.")})});var O=new Set,M=new Set;y.forEach(function(b,d){var e=b.references;b.isStable&&M.add(d);
+-e.forEach(function(b){b.writeExpr&&(b=b.writeExpr,O.has(d)||(O.add(d),c({node:b,message:"Assignments to the '"+d+"' variable from inside React Hook "+(a.getSource(f)+" will be lost after each render. To preserve the value over time, store it in a useRef Hook and keep the mutable value in the '.current' property. Otherwise, you can move this variable directly inside ")+(a.getSource(f)+".")})))})});if(!(0<O.size))if(e){var K=[],L=new Set;"ArrayExpression"!==e.type?c({node:e,message:"React Hook "+a.getSource(f)+
+-" was passed a dependency list that is not an array literal. This means we can't statically verify whether you've passed the correct dependencies."}):e.elements.forEach(function(b){if(null!==b)if("SpreadElement"===b.type)c({node:b,message:"React Hook "+a.getSource(f)+" has a spread element in its dependency array. This means we can't statically verify whether you've passed the correct dependencies."});else{try{var d=X(b,null)}catch(ra){if(/Unsupported node type/.test(ra.message)){"Literal"===b.type?
+-y.has(b.value)?c({node:b,message:"The "+b.raw+" literal is not a valid dependency because it never changes. Did you mean to include "+(b.value+" in the array instead?")}):c({node:b,message:"The "+b.raw+" literal is not a valid dependency because it never changes. You can safely remove it."}):c({node:b,message:"React Hook "+a.getSource(f)+" has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked."});return}throw ra;}for(var e=b;"MemberExpression"===
++e.forEach(function(b){b.writeExpr&&(b=b.writeExpr,O.has(d)||(O.add(d),c({node:b,message:"Assignments to the '"+d+"' variable from inside React Hook "+(getSourceTextFromContext(a,f)+" will be lost after each render. To preserve the value over time, store it in a useRef Hook and keep the mutable value in the '.current' property. Otherwise, you can move this variable directly inside ")+(getSourceTextFromContext(a,f)+".")})))})});if(!(0<O.size))if(e){var K=[],L=new Set;"ArrayExpression"!==e.type?c({node:e,message:"React Hook "+getSourceTextFromContext(a,f)+
++" was passed a dependency list that is not an array literal. This means we can't statically verify whether you've passed the correct dependencies."}):e.elements.forEach(function(b){if(null!==b)if("SpreadElement"===b.type)c({node:b,message:"React Hook "+getSourceTextFromContext(a,f)+" has a spread element in its dependency array. This means we can't statically verify whether you've passed the correct dependencies."});else{try{var d=X(b,null)}catch(ra){if(/Unsupported node type/.test(ra.message)){"Literal"===b.type?
++y.has(b.value)?c({node:b,message:"The "+b.raw+" literal is not a valid dependency because it never changes. Did you mean to include "+(b.value+" in the array instead?")}):c({node:b,message:"The "+b.raw+" literal is not a valid dependency because it never changes. You can safely remove it."}):c({node:b,message:"React Hook "+getSourceTextFromContext(a,f)+" has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked."});return}throw ra;}for(var e=b;"MemberExpression"===
+ e.type||"OptionalMemberExpression"===e.type||"ChainExpression"===e.type;)e=e.object||e.expression.object;var k=!q.through.some(function(a){return a.identifier===e});K.push({key:d,node:b});k||L.add(d)}});var n=H({dependencies:y,declaredDependencies:K,stableDependencies:M,externalDependencies:L,isEffect:h});B=n.unnecessaryDependencies;var l=n.missingDependencies,qa=n.duplicateDependencies,R=n.suggestedDependencies;if(0===qa.size+l.size+B.size)oa({declaredDependencies:K,declaredDependenciesNode:e,componentScope:q,
+ scope:A}).forEach(function(a){var b=a.construction,d=a.isUsedOutsideOfHook;a=a.depType;var f="function"===a?"useCallback":"useMemo",k="function"===a?"definition":"initialization",h="wrap the "+k+" of '"+b.name.name+"' in its own "+f+"() Hook.";h="The '"+b.name.name+"' "+a+" "+("conditional"===a||"logical expression"===a?"could make":"makes")+" the dependencies of "+(t+" Hook (at line "+e.loc.start.line+") change on every render. ")+(d?"To fix this, "+h:"Move it inside the "+t+" callback. Alternatively, "+
+ h);var g;d&&"Variable"===b.type&&"function"===a&&(g=[{desc:"Wrap the "+k+" of '"+b.name.name+"' in its own "+f+"() Hook.",fix:function(a){var c="useMemo"===f?["useMemo(() => { return ","; })"]:["useCallback(",")"],d=c[1];return[a.insertTextBefore(b.node.init,c[0]),a.insertTextAfter(b.node.init,d)]}}]);c({node:b.node,message:h,suggest:g})});else{!h&&0<l.size&&(R=H({dependencies:y,declaredDependencies:[],stableDependencies:M,externalDependencies:L,isEffect:h}).suggestedDependencies);(function(){if(0===
+ K.length)return!0;var a=K.map(function(a){return a.key}),b=a.slice().sort();return a.join(",")===b.join(",")})()&&R.sort();n="";if(0<B.size){var S=null;Array.from(B.keys()).forEach(function(a){null===S&&a.endsWith(".current")&&(S=a)});if(null!==S)n=" Mutable values like '"+S+"' aren't valid dependencies because mutating them doesn't re-render the component.";else if(0<L.size){var I=Array.from(L)[0];A.set.has(I)||(n=" Outer scope values like '"+I+"' aren't valid dependencies because mutating them doesn't re-render the component.")}}if(!n&&
+-l.has("props")){A=y.get("props");if(null==A)return;A=A.references;if(!Array.isArray(A))return;I=!0;for(var Z=0;Z<A.length;Z++){var u=Y(q.block,A[Z].identifier);if(!u){I=!1;break}u=u.parent;if(null==u){I=!1;break}if("MemberExpression"!==u.type&&"OptionalMemberExpression"!==u.type){I=!1;break}}I&&(n=" However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the "+(t+" call and refer to those specific props inside ")+(a.getSource(f)+"."))}if(!n&&
++l.has("props")){A=y.get("props");if(null==A)return;A=A.references;if(!Array.isArray(A))return;I=!0;for(var Z=0;Z<A.length;Z++){var u=Y(q.block,A[Z].identifier);if(!u){I=!1;break}u=u.parent;if(null==u){I=!1;break}if("MemberExpression"!==u.type&&"OptionalMemberExpression"!==u.type){I=!1;break}}I&&(n=" However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the "+(t+" call and refer to those specific props inside ")+(getSourceTextFromContext(a,f)+"."))}if(!n&&
+ 0<l.size){var V=null;l.forEach(function(a){if(!V){var b=q.set.get(a),c=y.get(a);if(c.references[0].resolved===b&&(b=b.defs[0],null!=b&&null!=b.name&&"Parameter"===b.type)){b=!1;for(var d,e=0;e<c.references.length;e++)if(d=c.references[e].identifier,null!=d&&null!=d.parent&&("CallExpression"===d.parent.type||"OptionalCallExpression"===d.parent.type)&&d.parent.callee===d){b=!0;break}b&&(V=a)}}});null!==V&&(n=" If '"+V+"' changes too often, find the parent component that defines it and wrap that definition in useCallback.")}if(!n&&
+ 0<l.size){var v=null;l.forEach(function(a){if(null===v)for(var b=y.get(a).references,c,d,e=0;e<b.length;e++){c=b[e].identifier;for(d=c.parent;null!=d&&d!==q.block;){if("CallExpression"===d.type){var f=w.get(d.callee);if(null!=f){f.name===a?v={missingDep:a,setter:d.callee.name,form:"updater"}:m.has(c)?v={missingDep:a,setter:d.callee.name,form:"reducer"}:(c=b[e].resolved,null!=c&&(c=c.defs[0],null!=c&&"Parameter"===c.type&&(v={missingDep:a,setter:d.callee.name,form:"inlineReducer"})));break}}d=d.parent}if(null!==
+ v)break}});if(null!==v)switch(v.form){case "reducer":n=" You can also replace multiple useState variables with useReducer if '"+(v.setter+"' needs the current value of '")+(v.missingDep+"'.");break;case "inlineReducer":n=" If '"+v.setter+"' needs the current value of '"+(v.missingDep+"', you can also switch to useReducer instead of useState and read '")+(v.missingDep+"' in the reducer.");break;case "updater":n=" You can also do a functional update '"+v.setter+"("+v.missingDep.substring(0,1)+" => ...)' if you only need '"+
+-v.missingDep+"' in the '"+(v.setter+"' call.");break;default:throw Error("Unknown case.");}}c({node:e,message:"React Hook "+a.getSource(f)+" has "+(p(l,"a","missing","include")||p(B,"an","unnecessary","exclude")||p(qa,"a","duplicate","omit"))+n,suggest:[{desc:"Update the dependencies array to be: ["+R.map(C).join(", ")+"]",fix:function(a){return a.replaceText(e,"["+R.map(C).join(", ")+"]")}}]})}}else{var P=null;y.forEach(function(a,b){P||a.references.forEach(function(a){if(!P&&w.has(a.identifier)){for(a=
++v.missingDep+"' in the '"+(v.setter+"' call.");break;default:throw Error("Unknown case.");}}c({node:e,message:"React Hook "+getSourceTextFromContext(a,f)+" has "+(p(l,"a","missing","include")||p(B,"an","unnecessary","exclude")||p(qa,"a","duplicate","omit"))+n,suggest:[{desc:"Update the dependencies array to be: ["+R.map(C).join(", ")+"]",fix:function(a){return a.replaceText(e,"["+R.map(C).join(", ")+"]")}}]})}}else{var P=null;y.forEach(function(a,b){P||a.references.forEach(function(a){if(!P&&w.has(a.identifier)){for(a=
+ a.from;"function"!==a.type;)a=a.upper;a.block===d&&(P=b)}})});if(P){var ba=H({dependencies:y,declaredDependencies:[],stableDependencies:M,externalDependencies:new Set,isEffect:!0}).suggestedDependencies;c({node:f,message:"React Hook "+t+" contains a call to '"+P+"'. Without a list of dependencies, this can lead to an infinite chain of updates. To fix this, pass ["+ba.join(", ")+("] as a second argument to the "+t+" Hook."),suggest:[{desc:"Add dependencies array: ["+ba.join(", ")+"]",fix:function(a){return a.insertTextAfter(d,
+ ", ["+ba.join(", ")+"]")}}]})}}}}var f=a.options&&a.options[0]&&a.options[0].enableDangerousAutofixThisMayCauseInfiniteLoops||!1,p={additionalHooks:a.options&&a.options[0]&&a.options[0].additionalHooks?new RegExp(a.options[0].additionalHooks):void 0,enableDangerousAutofixThisMayCauseInfiniteLoops:f},g=a.getSourceCode().scopeManager,w=new WeakMap,m=new WeakSet,E=new WeakMap,x=new WeakMap;return{CallExpression:function(b){var e=ua(b.callee,p);if(-1!==e){var f=b.arguments[e],g=b.callee,h=ta(g).name,
+ m=b.arguments[e+1];b=/Effect($|[^a-z])/g.test(h);if(f)if(m||b){switch(f.type){case "FunctionExpression":case "ArrowFunctionExpression":d(f,m,g,h,b);return;case "Identifier":if(!m||m.elements&&m.elements.some(function(a){return a&&"Identifier"===a.type&&a.name===f.name}))return;e=a.getScope().set.get(f.name);if(null==e||null==e.defs)return;e=e.defs[0];if(!e||!e.node)break;if("Variable"!==e.type&&"FunctionName"!==e.type)break;switch(e.node.type){case "FunctionDeclaration":d(e.node,m,g,h,b);return;case "VariableDeclarator":if(e=

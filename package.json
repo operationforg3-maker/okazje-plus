@@ -17,7 +17,7 @@
     "seed:interactions": "ts-node src/scripts/seed-interactions.ts",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts"
     ,
-    "postinstall": "node ./scripts/apply-react-hooks-shim.js || true"
+    "postinstall": "node ./scripts/apply-react-hooks-shim.js || true && patch-package"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
