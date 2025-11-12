@@ -53,6 +53,11 @@ service cloud.firestore {
         allow read: if true;
         allow write: if isAdmin();
       }
+      // Kafelki promocyjne kategorii
+      match /tiles/{tileId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
 
     ////////////////////////////////
