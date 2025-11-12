@@ -41,6 +41,24 @@ export default function RatingInput({ productId, existingRating, onRatingSubmitt
       return;
     }
 
+    // Ustal nazwę użytkownika: displayName -> email (przed @) -> skrót UID
+    const deriveDisplayName = (): string => {
+      if (user.displayName && user.displayName.trim().length > 0) return user.displayName.trim();
+      if (user.email && user.email.trim().length > 0) {
+        const local = user.email.split('@')[0];
+        if (local) {
+          // Zamień np. "jan.kowalski" na "Jan Kowalski" lub "jankowalski" na "Jankowalski"
+          const pretty = local
+            .replace(/[._-]+/g, ' ')
+            .split(' ')
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
+          return pretty;
+        }
+      }
+      return `Użytkownik ${user.uid.substring(0, 6)}`;
+    };
+
     // Zabezpieczenie: waliduj ocenę główną
     if (!rating || rating === 0) {
       toast.error('Wybierz ocenę gwiazdkową (1-5).');
@@ -84,7 +102,7 @@ export default function RatingInput({ productId, existingRating, onRatingSubmitt
         valueForMoney: safeValueForMoney,
         versatility: safeVersatility,
         review: review.trim() || undefined,
-        userDisplayName: user.displayName || undefined,
+        userDisplayName: deriveDisplayName(),
       });
 
       toast.success(existingRating ? 'Ocena została zaktualizowana!' : 'Dziękujemy za ocenę!');
