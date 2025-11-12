@@ -489,9 +489,35 @@ export async function getCategories(): Promise<Category[]> {
       const subSnapshot = await getDocs(subcategoriesRef);
 
       if (!subSnapshot.empty) {
-        subcategories = subSnapshot.docs
-          .map((subDoc) => {
+        subcategories = await Promise.all(
+          subSnapshot.docs.map(async (subDoc) => {
             const subData = subDoc.data() as Partial<Subcategory>;
+            
+            // Wczytaj sub-subkategorie (poziom 3) z embedded array lub subcollection
+            let subSubcategories = subData.subcategories ?? [];
+            
+            // Spróbuj również załadować z podkolekcji (jeśli istnieje)
+            try {
+              const subSubRef = collection(db, "categories", categoryDoc.id, "subcategories", subDoc.id, "subcategories");
+              const subSubSnap = await getDocs(subSubRef);
+              if (!subSubSnap.empty) {
+                subSubcategories = subSubSnap.docs.map((ssDoc) => {
+                  const ssData = ssDoc.data();
+                  return {
+                    name: ssData.name ?? ssDoc.id,
+                    slug: ssData.slug ?? ssDoc.id,
+                    id: ssDoc.id,
+                    icon: ssData.icon,
+                    description: ssData.description,
+                    sortOrder: ssData.sortOrder,
+                    image: ssData.image,
+                  };
+                }).sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+              }
+            } catch (_) {
+              // Jeśli subcollection nie istnieje, zostaw embedded array
+            }
+
             return {
               id: subDoc.id,
               name: subData.name ?? subDoc.id,
@@ -501,9 +527,11 @@ export async function getCategories(): Promise<Category[]> {
               sortOrder: subData.sortOrder,
               image: subData.image,
               highlight: subData.highlight,
+              subcategories: subSubcategories,
             } satisfies Subcategory;
           })
-          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        );
+        subcategories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
       }
 
       const promo = data.promo
