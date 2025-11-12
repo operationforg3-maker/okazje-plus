@@ -22,6 +22,8 @@ import {
   getHotDeals,
   getNavigationShowcase,
   getProductById,
+  getTopProductsByCategory,
+  getHotDealsByCategory,
 } from "@/lib/data";
 import { Category, Deal, Product } from "@/lib/types";
 
@@ -65,6 +67,9 @@ export function MegaMenu() {
   const [promotedItems, setPromotedItems] = React.useState<ShowcaseItem[]>([]);
   const [dealOfTheDay, setDealOfTheDay] = React.useState<DealHighlight | null>(null);
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [smartTopProducts, setSmartTopProducts] = React.useState<Product[]>([]);
+  const [smartHotDeals, setSmartHotDeals] = React.useState<Deal[]>([]);
+  const [smartLoading, setSmartLoading] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
@@ -203,6 +208,38 @@ export function MegaMenu() {
 
   const activeCategory = categories[activeIndex] ?? null;
   const dealOfTheDayPrice = formatCurrency(dealOfTheDay?.price);
+
+  // Ładowanie inteligentnych bannerów dla aktywnej kategorii
+  React.useEffect(() => {
+    let cancelled = false;
+    async function loadSmart() {
+      if (!activeCategory) {
+        setSmartTopProducts([]);
+        setSmartHotDeals([]);
+        return;
+      }
+      setSmartLoading(true);
+      try {
+        const [tops, hots] = await Promise.all([
+          getTopProductsByCategory(activeCategory.slug ?? activeCategory.id, 3),
+          getHotDealsByCategory(activeCategory.slug ?? activeCategory.id, 3),
+        ]);
+        if (!cancelled) {
+          setSmartTopProducts(tops);
+          setSmartHotDeals(hots);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setSmartTopProducts([]);
+          setSmartHotDeals([]);
+        }
+      } finally {
+        if (!cancelled) setSmartLoading(false);
+      }
+    }
+    void loadSmart();
+    return () => { cancelled = true; };
+  }, [activeCategory?.id, activeCategory?.slug]);
 
   return (
     <NavigationMenuItem>
@@ -442,6 +479,82 @@ export function MegaMenu() {
                   </div>
                 </Link>
               ) : null}
+
+              {/* Kafelki konfigurowalne (admin) */}
+              {activeCategory?.tiles && activeCategory.tiles.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {activeCategory.tiles.slice(0, 4).map((tile) => (
+                    <Link key={tile.id ?? tile.title} href={tile.link ?? '#'}
+                      className="group relative overflow-hidden rounded-xl border border-border/40 bg-card/90 p-4 hover:border-primary/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-muted">
+                          {tile.image ? (
+                            <Image src={tile.image} alt={tile.title} fill className="object-cover" />
+                          ) : null}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          {tile.badge ? (
+                            <Badge className="mb-1" style={{ backgroundColor: tile.color ?? undefined }}>{tile.badge}</Badge>
+                          ) : null}
+                          <p className="font-semibold leading-tight line-clamp-2">{tile.title}</p>
+                          {tile.subtitle ? (
+                            <p className="text-xs text-muted-foreground line-clamp-1">{tile.subtitle}</p>
+                          ) : null}
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Inteligentne banery (automatyczne) */}
+              {(smartTopProducts.length > 0 || smartHotDeals.length > 0) && (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {smartTopProducts.length > 0 && (
+                    <div className="rounded-xl border border-border/60 bg-card/90 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-sm font-semibold">Najwyżej oceniane</p>
+                        <Badge variant="secondary">Auto</Badge>
+                      </div>
+                      <div className="space-y-3">
+                        {smartTopProducts.map((p) => (
+                          <Link key={p.id} href={`/products/${p.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
+                            <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
+                              {p.image ? <Image src={p.image} alt={p.name} fill className="object-cover" /> : null}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">{p.name}</p>
+                              <p className="text-xs text-muted-foreground">{(p.ratingCard?.average ?? 0).toFixed(1)} ★</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {smartHotDeals.length > 0 && (
+                    <div className="rounded-xl border border-border/60 bg-card/90 p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="text-sm font-semibold">Gorące teraz</p>
+                        <Badge variant="secondary">Auto</Badge>
+                      </div>
+                      <div className="space-y-3">
+                        {smartHotDeals.map((d) => (
+                          <Link key={d.id} href={`/deals/${d.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
+                            <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
+                              {d.image ? <Image src={d.image} alt={d.title} fill className="object-cover" /> : null}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium">{d.title}</p>
+                              <p className="text-xs text-muted-foreground">{d.temperature} pkt</p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-6">
