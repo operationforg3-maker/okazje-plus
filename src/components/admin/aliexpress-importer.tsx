@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +57,34 @@ export default function AliExpressImporter() {
   const [categoryMapping, setCategoryMapping] = useState<{ [productId: string]: { main: string; sub: string } }>({});
   const [productDetails, setProductDetails] = useState<{ [productId: string]: any }>({});
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
+
+  // Health check state
+  const [health, setHealth] = useState<{
+    loading: boolean;
+    ok?: boolean;
+    configured?: boolean;
+    hasAppKeySecret?: boolean;
+    hasAffiliateId?: boolean;
+    mode?: 'signed' | 'api-key' | 'mock';
+    issues?: string[];
+    error?: string;
+  }>({ loading: true });
+
+  const fetchHealth = async () => {
+    setHealth(prev => ({ ...prev, loading: true }));
+    try {
+      const res = await fetch('/api/admin/aliexpress/health', { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'health_failed');
+      setHealth({ loading: false, ...data });
+    } catch (e: any) {
+      setHealth({ loading: false, ok: false, error: String(e) });
+    }
+  };
+
+  useEffect(() => {
+    fetchHealth();
+  }, []);
 
   // Pobieranie kategorii
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
@@ -333,15 +361,51 @@ export default function AliExpressImporter() {
   return (
     <div className="space-y-6">
       {/* API Configuration Status */}
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Integracja w fazie rozwoju</AlertTitle>
-        <AlertDescription>
-          Import z AliExpress API wymaga konfiguracji kluczy API. 
-          Skonfiguruj App Key, App Secret i Tracking ID w ustawieniach, aby aktywować tę funkcję.
-          Obecnie wyświetlane są przykładowe dane.
-        </AlertDescription>
-      </Alert>
+      <div className="grid gap-3">
+        {health.loading ? (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertTitle>Sprawdzanie konfiguracji AliExpress…</AlertTitle>
+            <AlertDescription>Weryfikuję obecność sekretów i tryb pracy.</AlertDescription>
+          </Alert>
+        ) : health.ok ? (
+          <Alert>
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle>Integracja aktywna</AlertTitle>
+            <AlertDescription className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">Tryb: {health.mode}</Badge>
+              {health.hasAppKeySecret ? (
+                <Badge className="bg-green-600">APP KEY/SECRET</Badge>
+              ) : (
+                <Badge variant="outline">API KEY</Badge>
+              )}
+              {health.hasAffiliateId ? (
+                <Badge className="bg-green-600">Affiliate ID</Badge>
+              ) : (
+                <Badge variant="outline">Brak Affiliate ID</Badge>
+              )}
+              <Button size="sm" variant="outline" onClick={fetchHealth} className="ml-auto">Sprawdź ponownie</Button>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Integracja nieaktywna</AlertTitle>
+            <AlertDescription className="space-y-1">
+              <p>Import z AliExpress wymaga konfiguracji sekretów po stronie serwera.</p>
+              {health.issues && health.issues.length > 0 && (
+                <ul className="list-disc list-inside text-sm">
+                  {health.issues.map((i) => (<li key={i}>{i}</li>))}
+                </ul>
+              )}
+              <div className="flex items-center gap-2 pt-2">
+                <Badge variant="outline">Tryb: mock</Badge>
+                <Button size="sm" variant="outline" onClick={fetchHealth}>Sprawdź ponownie</Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
 
       {/* Search Section */}
       <Card>
