@@ -134,7 +134,7 @@ service cloud.firestore {
     ////////////////////////////////
     match /products/{productId}/ratings/{userId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.auth.uid == userId && !(resource.data.keys().hasAny(['average','count']));
+      allow create: if isSignedIn() && request.auth.uid == userId && !request.resource.data.keys().hasAny(['average','count']);
       allow update: if isSignedIn() && request.auth.uid == userId;
       allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
     }
