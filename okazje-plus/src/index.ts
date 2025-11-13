@@ -589,3 +589,123 @@ export const scheduleAudit = onCall(async (request) => {
   });
   return {ok: true, id: ref.id};
 });
+
+// ============================================
+// AliExpress Integration Functions (M1)
+// ============================================
+
+/**
+ * Scheduled function to sync AliExpress products
+ * 
+ * This function runs on a schedule (configured in Firebase Console)
+ * and processes all enabled import profiles sequentially.
+ * 
+ * TODO M2:
+ * - Add parallel processing with rate limiting
+ * - Add better error recovery
+ * - Add metrics collection
+ * - Add alerts for failed imports
+ * - Store logs in Cloud Storage
+ * 
+ * @schedule Every day at 2 AM (Europe/Warsaw timezone)
+ * @region europe-west1
+ */
+import {onSchedule} from "firebase-functions/v2/scheduler";
+
+export const scheduleAliExpressSync = onSchedule(
+  {
+    schedule: "0 2 * * *", // Daily at 2 AM
+    timeZone: "Europe/Warsaw",
+    region: "europe-west1",
+    // TODO M2: Adjust memory/timeout based on actual import volume
+    memory: "512MiB",
+    timeoutSeconds: 540, // 9 minutes (max for scheduled functions)
+  },
+  async (event) => {
+    logger.info("Starting scheduled AliExpress sync");
+
+    try {
+      // Get all enabled import profiles
+      const profilesSnapshot = await db
+        .collection("importProfiles")
+        .where("enabled", "==", true)
+        .get();
+
+      if (profilesSnapshot.empty) {
+        logger.info("No enabled import profiles found");
+        return;
+      }
+
+      logger.info(`Found ${profilesSnapshot.size} enabled import profiles`);
+
+      // Process each profile sequentially
+      // TODO M2: Consider parallel processing with proper rate limiting
+      for (const profileDoc of profilesSnapshot.docs) {
+        const profile = {id: profileDoc.id, ...profileDoc.data()};
+        logger.info(`Processing import profile: ${profile.id}`, {
+          name: profile.name,
+        });
+
+        try {
+          // Create import run record
+          const importRunRef = db.collection("importRuns").doc();
+          await importRunRef.set({
+            id: importRunRef.id,
+            profileId: profile.id,
+            vendorId: profile.vendorId,
+            status: "running",
+            dryRun: false,
+            stats: {
+              fetched: 0,
+              created: 0,
+              updated: 0,
+              duplicates: 0,
+              errors: 0,
+            },
+            startedAt: new Date().toISOString(),
+            triggeredBy: "scheduled",
+          });
+
+          // TODO M2: Call actual import logic
+          // For M1, we just log and mark as completed
+          // In M2, integrate with src/integrations/aliexpress/ingest.ts
+          logger.info(
+            `Import run ${importRunRef.id} created for profile ${profile.id}`
+          );
+
+          // TODO M2: Replace this with actual import call:
+          // const result = await runImport(profile.id, {
+          //   triggeredBy: 'scheduled',
+          //   maxItems: profile.maxItemsPerRun
+          // });
+
+          // Mark as completed (stub for M1)
+          await importRunRef.update({
+            status: "completed",
+            finishedAt: new Date().toISOString(),
+            durationMs: 0,
+          });
+
+          logger.info(`Import run ${importRunRef.id} completed successfully`);
+        } catch (error: unknown) {
+          logger.error(
+            `Error processing profile ${profile.id}:`,
+            error instanceof Error ? error.message : error
+          );
+          // Continue with next profile even if one fails
+        }
+
+        // TODO M2: Add rate limiting delay between profiles
+        // await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
+      logger.info("Scheduled AliExpress sync completed");
+    } catch (error: unknown) {
+      logger.error(
+        "Failed to run scheduled AliExpress sync:",
+        error instanceof Error ? error.message : error
+      );
+      throw error; // Re-throw to mark function as failed
+    }
+  }
+);
