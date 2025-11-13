@@ -33,12 +33,20 @@ env:
       - BUILD
   - variable: TEST_USER_EMAIL
     secret: TEST_USER_EMAIL
+    availability:
+      - RUNTIME
   - variable: TEST_USER_PASSWORD
     secret: TEST_USER_PASSWORD
+    availability:
+      - RUNTIME
   - variable: TEST_ADMIN_EMAIL
     secret: TEST_ADMIN_EMAIL
+    availability:
+      - RUNTIME
   - variable: TEST_ADMIN_PASSWORD
     secret: TEST_ADMIN_PASSWORD
+    availability:
+      - RUNTIME
 
   # AliExpress integration (server-side only)
   - variable: ALIEXPRESS_API_BASE
