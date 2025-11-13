@@ -224,7 +224,7 @@ export interface User {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: 'admin' | 'user';
+  role: 'admin' | 'moderator' | 'specjalista' | 'user';
 }
 
 export interface Vote {
@@ -328,4 +328,130 @@ export interface AiJob {
   startedAt?: string;
   finishedAt?: string;
   error?: string;
+}
+
+// ============================================
+// AliExpress Integration Data Models (M1)
+// ============================================
+
+/**
+ * Vendor - stores metadata about external vendors like AliExpress
+ */
+export interface Vendor {
+  id: string;
+  name: string; // e.g., "AliExpress"
+  slug: string; // e.g., "aliexpress"
+  enabled: boolean;
+  lastSyncAt?: string; // ISO timestamp
+  config?: {
+    apiEndpoint?: string;
+    apiVersion?: string;
+    rateLimitPerMinute?: number;
+    // TODO: OAuth credentials will be stored in Secret Manager
+  };
+  stats?: {
+    totalProducts?: number;
+    totalDeals?: number;
+    lastImportCount?: number;
+    failedImportsCount?: number;
+  };
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * ImportProfile - defines rules for importing from a vendor
+ */
+export interface ImportProfile {
+  id: string;
+  vendorId: string; // Reference to Vendor
+  name: string; // Human-readable name
+  enabled: boolean;
+  schedule?: string; // Cron expression for scheduled imports
+  filters: {
+    searchQuery?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minRating?: number;
+    minOrders?: number;
+    minDiscount?: number;
+    categoryFilter?: string;
+    shippingType?: 'free' | 'paid' | 'any';
+  };
+  mapping: {
+    targetMainCategory: string; // Slug of target category
+    targetSubCategory: string; // Slug of target subcategory
+    targetSubSubCategory?: string; // Optional level 3
+    priceMarkup?: number; // Percentage markup to apply
+    defaultStatus?: 'draft' | 'approved'; // Default status for imported items
+  };
+  deduplicationStrategy: 'skip' | 'update' | 'create_new';
+  maxItemsPerRun?: number; // Limit for safety
+  createdAt: string;
+  updatedAt?: string;
+  createdBy: string; // UID of admin who created
+}
+
+/**
+ * ImportRun - tracks execution of an import job
+ */
+export interface ImportRun {
+  id: string;
+  profileId: string; // Reference to ImportProfile
+  vendorId: string; // Reference to Vendor
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  dryRun: boolean; // If true, no actual writes were made
+  stats: {
+    fetched: number; // Items fetched from API
+    created: number; // New items created
+    updated: number; // Existing items updated
+    skipped: number; // Items skipped (duplicates, filters, etc)
+    errors: number; // Items that failed to process
+    duplicates?: number; // Detected duplicates
+  };
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  errorSummary?: ImportError[];
+  logsRef?: string; // Reference to detailed logs (e.g., Storage path)
+  triggeredBy: 'scheduled' | 'manual';
+  triggeredByUid?: string; // If manual
+}
+
+/**
+ * ImportError - categorized error type for import failures
+ */
+export interface ImportError {
+  code: 'NETWORK' | 'RATE_LIMIT' | 'MAPPING' | 'VALIDATION' | 'UNKNOWN';
+  message: string;
+  itemId?: string; // Original item ID from vendor
+  timestamp: string;
+  details?: any; // Additional error context
+}
+
+/**
+ * AuditLog - tracks administrative actions (stub for M1)
+ */
+export interface AuditLog {
+  id: string;
+  action: string; // e.g., "import_run_started", "profile_created"
+  userId: string;
+  userEmail?: string;
+  resourceType: string; // e.g., "import_profile", "import_run"
+  resourceId: string;
+  changes?: Record<string, any>; // Before/after snapshots
+  timestamp: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * MetricsEvent - tracks metrics for analytics (stub for M1)
+ */
+export interface MetricsEvent {
+  id: string;
+  eventType: string; // e.g., "import_completed", "api_call"
+  category: string; // e.g., "import", "api"
+  value?: number; // Numeric value for aggregation
+  metadata?: Record<string, any>;
+  timestamp: string;
 }
