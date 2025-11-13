@@ -1,4 +1,6 @@
-import { ai, defineFlow, runFlow } from '@/ai/genkit';
+'use server';
+
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 /**
@@ -40,7 +42,7 @@ const reviewAnalysisOutputSchema = z.object({
 /**
  * Genkit flow for analyzing product reviews
  */
-export const analyzeReviewsFlow = defineFlow(
+export const analyzeReviewsFlow = ai.defineFlow(
   {
     name: 'analyzeReviews',
     inputSchema: reviewAnalysisInputSchema,
@@ -117,7 +119,7 @@ export async function analyzeProductReviews(
   productId: string,
   reviews: Array<{ text: string; rating: number; date?: string }>
 ): Promise<z.infer<typeof reviewAnalysisOutputSchema>> {
-  return await runFlow(analyzeReviewsFlow, {
+  return await analyzeReviewsFlow({
     productId,
     reviews,
     language: 'pl',
@@ -156,7 +158,7 @@ const sentimentAspectOutputSchema = z.object({
 /**
  * Genkit flow for detailed sentiment analysis by aspect
  */
-export const analyzeSentimentAspectsFlow = defineFlow(
+export const analyzeSentimentAspectsFlow = ai.defineFlow(
   {
     name: 'analyzeSentimentAspects',
     inputSchema: sentimentAspectSchema,
@@ -235,7 +237,7 @@ export async function analyzeSentimentByAspects(
   productId: string,
   reviews: Array<{ text: string; rating: number }>
 ): Promise<z.infer<typeof sentimentAspectOutputSchema>> {
-  return await runFlow(analyzeSentimentAspectsFlow, {
+  return await analyzeSentimentAspectsFlow({
     productId,
     reviews,
   });

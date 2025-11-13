@@ -30,7 +30,6 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { ai } from '@/ai/genkit';
-import { logger } from '@/lib/logging';
 
 /**
  * Add item to moderation queue
