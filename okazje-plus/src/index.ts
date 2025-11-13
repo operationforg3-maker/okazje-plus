@@ -641,9 +641,9 @@ export const scheduleAliExpressSync = onSchedule(
       // Process each profile sequentially
       // TODO M2: Consider parallel processing with proper rate limiting
       for (const profileDoc of profilesSnapshot.docs) {
-        const profile = {id: profileDoc.id, ...profileDoc.data()};
+        const profile = {id: profileDoc.id, ...profileDoc.data()} as any;
         logger.info(`Processing import profile: ${profile.id}`, {
-          name: profile.name,
+          name: profile.name || 'Unknown',
         });
 
         try {
@@ -652,13 +652,14 @@ export const scheduleAliExpressSync = onSchedule(
           await importRunRef.set({
             id: importRunRef.id,
             profileId: profile.id,
-            vendorId: profile.vendorId,
+            vendorId: profile.vendorId || 'unknown',
             status: "running",
             dryRun: false,
             stats: {
               fetched: 0,
               created: 0,
               updated: 0,
+              skipped: 0,
               duplicates: 0,
               errors: 0,
             },

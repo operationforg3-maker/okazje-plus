@@ -34,6 +34,7 @@ export interface IngestResult {
     wouldUpdate?: number; // For dry-run
     created?: number; // For actual run
     updated?: number; // For actual run
+    skipped: number; // Items skipped (duplicates, filters, etc)
     duplicates: number;
     errors: number;
   };
@@ -162,6 +163,7 @@ export async function runImport(
             reason: validation.reason
           });
           result.stats.errors++;
+          result.stats.skipped++;
           result.errors?.push({
             code: 'VALIDATION',
             message: validation.reason || 'Validation failed',
@@ -181,6 +183,7 @@ export async function runImport(
         
         if (isDuplicate) {
           result.stats.duplicates++;
+          result.stats.skipped++;
           importLogger.debug('Duplicate detected', { productId: aliProduct.item_id });
           
           if (profile.deduplicationStrategy === 'skip') {

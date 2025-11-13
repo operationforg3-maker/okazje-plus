@@ -47,35 +47,35 @@ const WIZARD_STEPS = [
     title: '1. Połącz z AliExpress',
     description: 'Autoryzuj dostęp do AliExpress API',
     icon: LinkIcon,
-    status: 'todo' as const
+    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
   },
   {
     id: WizardStep.CONFIGURE,
     title: '2. Skonfiguruj profil importu',
     description: 'Ustaw filtry, kategorie i zasady mapowania',
     icon: Settings,
-    status: 'todo' as const
+    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
   },
   {
     id: WizardStep.TEST,
     title: '3. Testuj import',
     description: 'Wykonaj test importu (dry-run) bez zapisywania',
     icon: Play,
-    status: 'todo' as const
+    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
   },
   {
     id: WizardStep.SCHEDULE,
     title: '4. Zaplanuj synchronizację',
     description: 'Ustaw harmonogram automatycznych importów',
     icon: Database,
-    status: 'todo' as const
+    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
   },
   {
     id: WizardStep.MONITOR,
     title: '5. Monitoruj wyniki',
     description: 'Zobacz historię i statystyki importów',
     icon: FileText,
-    status: 'todo' as const
+    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
   }
 ];
 
