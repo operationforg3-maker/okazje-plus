@@ -1,8 +1,29 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile } from "@/lib/types";
+import { cacheGet, cacheSet } from "@/lib/cache";
+
+/**
+ * Helper function to split an array into chunks
+ * @param arr Array to chunk
+ * @param size Chunk size (max 30 for Firestore 'in' operator)
+ */
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
+  // Cache hot deals for 5 minutes
+  const cacheKey = `deals:hot:${count}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    return cached as Deal[];
+  }
+
   const dealsRef = collection(db, "deals");
   const q = query(
     dealsRef,
@@ -11,7 +32,12 @@ export async function getHotDeals(count: number): Promise<Deal[]> {
     limit(count)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  const deals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  
+  // Cache for 5 minutes (300 seconds)
+  await cacheSet(cacheKey, deals, 300);
+  
+  return deals;
 }
 
 // Pobiera kilka losowych okazji (np. do sekcji trending AI porównawczych) - fallback gdy mało danych
@@ -29,6 +55,13 @@ export async function getRandomDeals(count: number): Promise<Deal[]> {
 }
 
 export async function getRecommendedProducts(count: number): Promise<Product[]> {
+    // Cache recommended products for 10 minutes
+    const cacheKey = `products:recommended:${count}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      return cached as Product[];
+    }
+
     const productsRef = collection(db, "products");
     const q = query(
       productsRef,
@@ -36,7 +69,12 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       limit(count)
     );
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    
+    // Cache for 10 minutes (600 seconds)
+    await cacheSet(cacheKey, products, 600);
+    
+    return products;
 }
 
 // Najwyżej oceniane produkty w kategorii (fallback: sortowanie po ratingCard.count)
@@ -345,6 +383,10 @@ export async function getComments(collectionName: "products" | "deals", docId: s
 
 // === SYSTEM OCEN PRODUKTÓW ===
 
+/**
+ * Submits or updates a product rating
+ * Optimized to use incremental aggregation instead of recalculating all ratings
+ */
 export async function submitProductRating(
     productId: string, 
     userId: string, 
@@ -382,10 +424,52 @@ export async function submitProductRating(
         const productDocRef = doc(db, "products", productId);
 
         await runTransaction(db, async (transaction) => {
-            // Pobierz istniejącą ocenę (w kontekście transakcji)
+            // Get existing rating and product data
             const existingRating = await transaction.get(ratingDocRef);
+            const productDoc = await transaction.get(productDocRef);
             
-            // Zapisz lub aktualizuj ocenę użytkownika
+            if (!productDoc.exists()) {
+                throw new Error('Product not found');
+            }
+
+            const productData = productDoc.data();
+            const currentRatingCard = productData.ratingCard || {
+                average: 0,
+                count: 0,
+                durability: 0,
+                easeOfUse: 0,
+                valueForMoney: 0,
+                versatility: 0,
+            };
+
+            let newCount = currentRatingCard.count;
+            let totalRating = currentRatingCard.average * currentRatingCard.count;
+            let totalDurability = currentRatingCard.durability * currentRatingCard.count;
+            let totalEaseOfUse = currentRatingCard.easeOfUse * currentRatingCard.count;
+            let totalValueForMoney = currentRatingCard.valueForMoney * currentRatingCard.count;
+            let totalVersatility = currentRatingCard.versatility * currentRatingCard.count;
+
+            // If updating existing rating, subtract old values first
+            if (existingRating.exists()) {
+                const oldData = existingRating.data();
+                totalRating -= Number(oldData.rating) || 0;
+                totalDurability -= Number(oldData.durability) || 0;
+                totalEaseOfUse -= Number(oldData.easeOfUse) || 0;
+                totalValueForMoney -= Number(oldData.valueForMoney) || 0;
+                totalVersatility -= Number(oldData.versatility) || 0;
+            } else {
+                // New rating, increment count
+                newCount += 1;
+            }
+
+            // Add new values
+            totalRating += validatedRating.rating;
+            totalDurability += validatedRating.durability;
+            totalEaseOfUse += validatedRating.easeOfUse;
+            totalValueForMoney += validatedRating.valueForMoney;
+            totalVersatility += validatedRating.versatility;
+
+            // Save the rating
             transaction.set(ratingDocRef, {
                 ...validatedRating,
                 productId,
@@ -394,37 +478,15 @@ export async function submitProductRating(
                 updatedAt: new Date().toISOString(),
             });
 
-            // Pobierz wszystkie oceny — WAŻNE: to nie zadziała w transakcji, więc robimy to poza
-        });
-
-        // Po transakcji — pobierz i przelicz średnie
-        const ratingsRef = collection(db, "products", productId, "ratings");
-        const ratingsSnapshot = await getDocs(ratingsRef);
-        
-        let totalRating = 0;
-        let totalDurability = 0;
-        let totalEaseOfUse = 0;
-        let totalValueForMoney = 0;
-        let totalVersatility = 0;
-        const count = ratingsSnapshot.size;
-
-        ratingsSnapshot.forEach(doc => {
-            const data = doc.data();
-            totalRating += Number(data.rating) || 0;
-            totalDurability += Number(data.durability) || 0;
-            totalEaseOfUse += Number(data.easeOfUse) || 0;
-            totalValueForMoney += Number(data.valueForMoney) || 0;
-            totalVersatility += Number(data.versatility) || 0;
-        });
-
-        // Aktualizuj ratingCard produktu — osobna operacja po transakcji
-        await updateDoc(productDocRef, {
-            'ratingCard.average': count > 0 ? totalRating / count : 0,
-            'ratingCard.count': count,
-            'ratingCard.durability': count > 0 ? totalDurability / count : 0,
-            'ratingCard.easeOfUse': count > 0 ? totalEaseOfUse / count : 0,
-            'ratingCard.valueForMoney': count > 0 ? totalValueForMoney / count : 0,
-            'ratingCard.versatility': count > 0 ? totalVersatility / count : 0,
+            // Update aggregated rating card in product
+            transaction.update(productDocRef, {
+                'ratingCard.average': newCount > 0 ? totalRating / newCount : 0,
+                'ratingCard.count': newCount,
+                'ratingCard.durability': newCount > 0 ? totalDurability / newCount : 0,
+                'ratingCard.easeOfUse': newCount > 0 ? totalEaseOfUse / newCount : 0,
+                'ratingCard.valueForMoney': newCount > 0 ? totalValueForMoney / newCount : 0,
+                'ratingCard.versatility': newCount > 0 ? totalVersatility / newCount : 0,
+            });
         });
     } catch (e) {
         console.error("Błąd podczas zapisywania oceny: ", e);
@@ -466,6 +528,13 @@ export async function searchProductsForLinking(searchText: string): Promise<Prod
 }
 
 export async function getCategories(): Promise<Category[]> {
+  // Check cache first - categories rarely change, so cache for 1 hour
+  const cacheKey = 'categories:all';
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    return cached as Category[];
+  }
+
   const categoriesRef = collection(db, "categories");
   const snapshot = await getDocs(categoriesRef);
 
@@ -575,7 +644,12 @@ export async function getCategories(): Promise<Category[]> {
     })
   );
 
-  return categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const sortedCategories = categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  
+  // Cache the result for 1 hour (3600 seconds)
+  await cacheSet(cacheKey, sortedCategories, 3600);
+  
+  return sortedCategories;
 }
 
 export async function getDealById(dealId: string): Promise<Deal | null> {
@@ -597,6 +671,13 @@ export async function getProductById(productId: string): Promise<Product | null>
 }
 
 export async function getNavigationShowcase(): Promise<NavigationShowcaseConfig | null> {
+  // Cache navigation showcase for 30 minutes
+  const cacheKey = 'navigation:showcase';
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    return cached as NavigationShowcaseConfig | null;
+  }
+
   const configRef = doc(db, "settings", "navigationShowcase");
   const snapshot = await getDoc(configRef);
 
@@ -617,11 +698,16 @@ export async function getNavigationShowcase(): Promise<NavigationShowcaseConfig 
   const promotedType = rawData.promotedType === "products" ? "products" : "deals";
   const dealOfTheDayId = typeof rawData.dealOfTheDayId === "string" ? rawData.dealOfTheDayId : null;
 
-  return {
+  const config = {
     promotedType,
     promotedIds,
     dealOfTheDayId,
   };
+
+  // Cache for 30 minutes (1800 seconds)
+  await cacheSet(cacheKey, config, 1800);
+
+  return config;
 }
 
 // Placeholder data for users to fix build error
@@ -724,6 +810,7 @@ export async function isFavorite(userId: string, itemId: string, itemType: 'deal
 
 /**
  * Pobiera ulubione okazje użytkownika
+ * Optimized to avoid N+1 queries by batching document fetches
  */
 export async function getFavoriteDeals(userId: string, limitCount: number = 50): Promise<Deal[]> {
   const favoritesRef = collection(db, 'favorites');
@@ -742,20 +829,33 @@ export async function getFavoriteDeals(userId: string, limitCount: number = 50):
     return [];
   }
   
-  // Pobierz pełne dane okazji
+  // Batch fetch deals using 'in' operator (max 30 items per query)
+  // This reduces N queries to ceil(N/30) queries
+  const dealsRef = collection(db, 'deals');
+  const chunks = chunkArray(dealIds, 30); // Firestore 'in' operator limit is 30
+  
+  const dealSnapshots = await Promise.all(
+    chunks.map(chunk => 
+      getDocs(query(dealsRef, where(documentId(), 'in', chunk)))
+    )
+  );
+  
+  // Flatten results and map to Deal objects
   const deals: Deal[] = [];
-  for (const dealId of dealIds) {
-    const deal = await getDealById(dealId);
-    if (deal) {
-      deals.push(deal);
-    }
+  for (const snapshot of dealSnapshots) {
+    snapshot.docs.forEach(doc => {
+      deals.push({ id: doc.id, ...doc.data() } as Deal);
+    });
   }
   
-  return deals;
+  // Maintain original order from favorites
+  const dealMap = new Map(deals.map(deal => [deal.id, deal]));
+  return dealIds.map(id => dealMap.get(id)).filter((deal): deal is Deal => deal !== undefined);
 }
 
 /**
  * Pobiera ulubione produkty użytkownika
+ * Optimized to avoid N+1 queries by batching document fetches
  */
 export async function getFavoriteProducts(userId: string, limitCount: number = 50): Promise<Product[]> {
   const favoritesRef = collection(db, 'favorites');
@@ -774,16 +874,28 @@ export async function getFavoriteProducts(userId: string, limitCount: number = 5
     return [];
   }
   
-  // Pobierz pełne dane produktów
+  // Batch fetch products using 'in' operator (max 30 items per query)
+  // This reduces N queries to ceil(N/30) queries
+  const productsRef = collection(db, 'products');
+  const chunks = chunkArray(productIds, 30); // Firestore 'in' operator limit is 30
+  
+  const productSnapshots = await Promise.all(
+    chunks.map(chunk => 
+      getDocs(query(productsRef, where(documentId(), 'in', chunk)))
+    )
+  );
+  
+  // Flatten results and map to Product objects
   const products: Product[] = [];
-  for (const productId of productIds) {
-    const product = await getProductById(productId);
-    if (product) {
-      products.push(product);
-    }
+  for (const snapshot of productSnapshots) {
+    snapshot.docs.forEach(doc => {
+      products.push({ id: doc.id, ...doc.data() } as Product);
+    });
   }
   
-  return products;
+  // Maintain original order from favorites
+  const productMap = new Map(products.map(product => [product.id, product]));
+  return productIds.map(id => productMap.get(id)).filter((product): product is Product => product !== undefined);
 }
 
 /**
@@ -933,8 +1045,16 @@ export async function getUnreadNotificationsCount(userId: string): Promise<numbe
 
 /**
  * Pobiera statystyki dashboardu admina
+ * Cached for 15 minutes to reduce load
  */
 export async function getAdminDashboardStats() {
+  // Cache admin stats for 15 minutes
+  const cacheKey = 'admin:dashboard:stats';
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const now = new Date();
   const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -1101,6 +1221,11 @@ export async function getAdminDashboardStats() {
       users: usersGrowth
     }
   };
+
+  // Cache stats for 15 minutes (900 seconds)
+  await cacheSet(cacheKey, stats, 900);
+
+  return stats;
 }
 
 /**
