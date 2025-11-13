@@ -335,7 +335,7 @@ export interface AiJob {
 // ============================================
 
 /**
- * Vendor - stores metadata about external vendors like AliExpress
+ * Vendor - stores metadata about external vendors like AliExpress (M2 enhanced)
  */
 export interface Vendor {
   id: string;
@@ -347,27 +347,30 @@ export interface Vendor {
     apiEndpoint?: string;
     apiVersion?: string;
     rateLimitPerMinute?: number;
-    // TODO: OAuth credentials will be stored in Secret Manager
+    supportsOAuth?: boolean; // M2: OAuth support flag
+    oauthConfigId?: string; // M2: Reference to OAuthConfig
   };
   stats?: {
     totalProducts?: number;
     totalDeals?: number;
     lastImportCount?: number;
     failedImportsCount?: number;
+    activeTokensCount?: number; // M2: Number of active OAuth tokens
   };
   createdAt: string;
   updatedAt?: string;
 }
 
 /**
- * ImportProfile - defines rules for importing from a vendor
+ * ImportProfile - defines rules for importing from a vendor (M2 enhanced)
  */
 export interface ImportProfile {
   id: string;
   vendorId: string; // Reference to Vendor
   name: string; // Human-readable name
   enabled: boolean;
-  schedule?: string; // Cron expression for scheduled imports
+  schedule?: string; // Cron expression for scheduled imports (deprecated - use scheduleConfig)
+  scheduleConfig?: ImportScheduleConfig; // M2: Advanced scheduling
   filters: {
     searchQuery?: string;
     minPrice?: number;
@@ -385,11 +388,24 @@ export interface ImportProfile {
     priceMarkup?: number; // Percentage markup to apply
     defaultStatus?: 'draft' | 'approved'; // Default status for imported items
   };
-  deduplicationStrategy: 'skip' | 'update' | 'create_new';
+  deduplicationStrategy: 'skip' | 'update' | 'create_new' | 'ai_merge'; // M2: Added ai_merge
   maxItemsPerRun?: number; // Limit for safety
+  cacheConfig?: CacheConfig; // M2: HTTP cache configuration
+  rateLimitConfig?: RateLimitConfig; // M2: Rate limiting
   createdAt: string;
   updatedAt?: string;
   createdBy: string; // UID of admin who created
+  // M2: Usage statistics
+  stats?: {
+    totalRuns: number;
+    successfulRuns: number;
+    failedRuns: number;
+    totalItemsImported: number;
+    averageDurationMs: number;
+    lastRunAt?: string;
+    cacheHitRate?: number;
+    apiCallsSaved?: number; // Via caching
+  };
 }
 
 /**
@@ -454,4 +470,326 @@ export interface MetricsEvent {
   value?: number; // Numeric value for aggregation
   metadata?: Record<string, any>;
   timestamp: string;
+}
+
+// ============================================
+// M2: OAuth & Token Management
+// ============================================
+
+/**
+ * OAuthToken - Stores OAuth tokens for vendor API access
+ */
+export interface OAuthToken {
+  id: string;
+  vendorId: string; // Reference to Vendor
+  accountName?: string; // Human-readable name for multi-account support
+  accessToken: string;
+  refreshToken?: string;
+  tokenType: string; // e.g., "Bearer"
+  expiresAt: string; // ISO timestamp when token expires
+  obtainedAt: string; // ISO timestamp when token was obtained
+  scope?: string[]; // OAuth scopes granted
+  status: 'active' | 'expired' | 'revoked';
+  lastUsedAt?: string;
+  lastRefreshedAt?: string;
+  createdBy: string; // UID of admin who authorized
+  createdAt: string;
+  updatedAt?: string;
+  metadata?: {
+    authorizationCode?: string; // For debugging
+    userAgent?: string;
+    ipAddress?: string;
+  };
+}
+
+/**
+ * OAuthConfig - Configuration for OAuth flow
+ */
+export interface OAuthConfig {
+  id: string;
+  vendorId: string;
+  clientId: string;
+  clientSecret: string; // Should be encrypted/stored in Secret Manager
+  authorizationUrl: string;
+  tokenUrl: string;
+  redirectUri: string;
+  scope: string[];
+  enabled: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// ============================================
+// M2: Deduplication Engine
+// ============================================
+
+/**
+ * ProductEmbedding - Stores embeddings for similarity comparison
+ */
+export interface ProductEmbedding {
+  id: string; // Same as product ID
+  productId: string;
+  titleEmbedding: number[]; // Vector embedding of normalized title
+  descriptionEmbedding?: number[]; // Vector embedding of description
+  imageEmbedding?: number[]; // Vector embedding of primary image (future)
+  combinedEmbedding: number[]; // Weighted combination for quick comparison
+  embeddingVersion: string; // Model version used (e.g., "gemini-2.5-flash-v1")
+  generatedAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * DuplicateGroup - Groups of similar/duplicate products
+ */
+export interface DuplicateGroup {
+  id: string;
+  canonicalProductId: string; // The "main" product in the group
+  alternativeProductIds: string[]; // Similar/duplicate products
+  similarityScores: Record<string, number>; // productId -> similarity score (0-1)
+  status: 'pending_review' | 'confirmed' | 'rejected' | 'merged';
+  detectedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string; // UID of moderator
+  mergeStrategy?: 'keep_canonical' | 'merge_attributes' | 'keep_both';
+  notes?: string;
+  aiSuggestion?: {
+    confidence: number;
+    reasoning: string;
+    recommendedCanonical: string;
+  };
+}
+
+/**
+ * MergeLog - Audit trail for product merges
+ */
+export interface MergeLog {
+  id: string;
+  duplicateGroupId: string;
+  canonicalProductId: string;
+  mergedProductIds: string[];
+  mergeStrategy: 'keep_canonical' | 'merge_attributes' | 'keep_both';
+  preservedFields: Record<string, any>; // Fields kept from merged products
+  changes: {
+    field: string;
+    before: any;
+    after: any;
+    source: 'canonical' | 'merged' | 'manual';
+  }[];
+  mergedBy: string; // UID of admin
+  mergedAt: string;
+  snapshot: {
+    canonical: Partial<Product>;
+    merged: Partial<Product>[];
+  };
+}
+
+// ============================================
+// M2: Advanced Moderation Workflow
+// ============================================
+
+/**
+ * ModerationQueue - Items awaiting moderation
+ */
+export interface ModerationQueueItem {
+  id: string;
+  itemId: string;
+  itemType: 'product' | 'deal';
+  status: 'pending' | 'in_review' | 'approved' | 'rejected';
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  submittedAt: string;
+  submittedBy?: string; // UID of submitter (for manual submissions)
+  source: 'import' | 'manual' | 'ai_flagged';
+  assignedTo?: string; // UID of moderator
+  assignedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  aiScore?: ModerationAIScore;
+  flags: string[]; // e.g., ["offensive_content", "spam", "duplicate"]
+  notes?: ModerationNote[];
+  tags?: string[]; // Custom tags for filtering
+  changes?: {
+    // Track changes made during moderation
+    field: string;
+    before: any;
+    after: any;
+    timestamp: string;
+  }[];
+}
+
+/**
+ * ModerationAIScore - AI-powered content scoring
+ */
+export interface ModerationAIScore {
+  overallScore: number; // 0-100
+  contentQuality: number;
+  priceQuality: number;
+  trustworthiness: number;
+  suspicionFlags: string[]; // e.g., ["suspiciously_high_discount", "poor_description"]
+  recommendation: 'approve' | 'review' | 'reject';
+  confidence: number; // 0-1
+  reasoning: string;
+  generatedAt: string;
+  modelVersion: string;
+}
+
+/**
+ * ModerationNote - Notes added by moderators
+ */
+export interface ModerationNote {
+  id: string;
+  userId: string;
+  userDisplayName?: string;
+  content: string;
+  createdAt: string;
+  visibility: 'internal' | 'public'; // Internal notes only visible to mods
+}
+
+/**
+ * ModerationStats - Statistics for moderation performance
+ */
+export interface ModerationStats {
+  userId: string;
+  period: 'day' | 'week' | 'month' | 'all_time';
+  startDate: string;
+  endDate: string;
+  totalReviewed: number;
+  totalApproved: number;
+  totalRejected: number;
+  averageReviewTimeMs: number;
+  productivityScore: number; // Items reviewed per hour
+  accuracyScore?: number; // Based on appeals/overturns
+  generatedAt: string;
+}
+
+// ============================================
+// M2: Enhanced Import Profile with Cache
+// ============================================
+
+/**
+ * CacheConfig - HTTP cache configuration for imports
+ */
+export interface CacheConfig {
+  enabled: boolean;
+  ttl: number; // Time-to-live in seconds
+  useETag: boolean; // Use ETag headers for conditional requests
+  useCacheControl: boolean; // Respect Cache-Control headers
+  lastETag?: string;
+  lastModified?: string;
+  cacheHitRate?: number; // Percentage of requests served from cache
+}
+
+/**
+ * RateLimitConfig - Rate limiting per vendor
+ */
+export interface RateLimitConfig {
+  requestsPerMinute: number;
+  requestsPerHour: number;
+  requestsPerDay: number;
+  burstLimit?: number; // Max burst requests allowed
+  adaptiveWindow?: boolean; // Adjust based on API response times
+}
+
+/**
+ * ImportScheduleConfig - Advanced scheduling configuration
+ */
+export interface ImportScheduleConfig {
+  cronExpression: string;
+  timezone: string; // e.g., "Europe/Warsaw"
+  enabled: boolean;
+  windowStart?: string; // e.g., "02:00" - only run during this window
+  windowEnd?: string; // e.g., "06:00"
+  maxDurationMinutes?: number; // Kill import if exceeds duration
+  retryOnFailure: boolean;
+  retryDelayMinutes?: number;
+  maxRetries?: number;
+}
+
+// ============================================
+// M2: Typesense Indexing
+// ============================================
+
+/**
+ * IndexingJob - Tracks batch indexing operations
+ */
+export interface IndexingJob {
+  id: string;
+  collection: 'products' | 'deals';
+  operation: 'create' | 'update' | 'delete' | 'reindex';
+  itemIds: string[];
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  batchSize: number;
+  processedCount: number;
+  successCount: number;
+  failureCount: number;
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  errors?: {
+    itemId: string;
+    error: string;
+  }[];
+  triggeredBy: 'manual' | 'import' | 'moderation' | 'scheduled';
+  triggeredByUid?: string;
+}
+
+/**
+ * SearchFacet - Faceting configuration for search
+ */
+export interface SearchFacet {
+  field: string; // e.g., "mainCategorySlug", "priceRange", "rating"
+  label: string; // Display name
+  type: 'category' | 'range' | 'boolean' | 'multi_select';
+  enabled: boolean;
+  sortOrder: number;
+  ranges?: { // For range facets (price, rating)
+    label: string;
+    min: number;
+    max: number;
+  }[];
+  values?: string[]; // For category/multi-select facets
+}
+
+// ============================================
+// M2: Enhanced Audit Log
+// ============================================
+
+/**
+ * ProductSnapshot - Historical snapshot of product state
+ */
+export interface ProductSnapshot {
+  id: string;
+  productId: string;
+  snapshot: Partial<Product>;
+  version: number; // Incremental version number
+  createdAt: string;
+  createdBy: string; // UID of user who made the change
+  changeType: 'created' | 'updated' | 'approved' | 'rejected' | 'merged' | 'deleted';
+  changeSummary: string;
+  parentVersion?: number; // Previous version number
+}
+
+/**
+ * DealSnapshot - Historical snapshot of deal state
+ */
+export interface DealSnapshot {
+  id: string;
+  dealId: string;
+  snapshot: Partial<Deal>;
+  version: number;
+  createdAt: string;
+  createdBy: string;
+  changeType: 'created' | 'updated' | 'approved' | 'rejected' | 'expired' | 'deleted';
+  changeSummary: string;
+  parentVersion?: number;
+}
+
+/**
+ * Enhanced AuditLog with detailed change tracking
+ */
+export interface DetailedAuditLog extends AuditLog {
+  snapshotId?: string; // Reference to snapshot
+  ipAddress?: string;
+  userAgent?: string;
+  duration?: number; // Duration of operation in ms
+  stackTrace?: string; // For error tracking
 }
