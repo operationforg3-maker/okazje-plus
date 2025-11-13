@@ -70,6 +70,7 @@ export async function runImport(
       fetched: 0,
       duplicates: 0,
       errors: 0,
+      skipped: 0,
       ...(dryRun 
         ? { wouldCreate: 0, wouldUpdate: 0 } 
         : { created: 0, updated: 0 }
@@ -99,7 +100,14 @@ export async function runImport(
       vendorId: profile.vendorId,
       status: 'running',
       dryRun,
-      stats: result.stats,
+      stats: {
+        fetched: 0,
+        created: 0,
+        updated: 0,
+        skipped: 0,
+        errors: 0,
+        duplicates: 0
+      },
       startedAt: new Date().toISOString(),
       triggeredBy: options.triggeredBy || 'manual',
       triggeredByUid: options.triggeredByUid
@@ -254,7 +262,14 @@ export async function runImport(
     const durationMs = Date.now() - startTime;
     await updateDoc(importRunRef, {
       status: 'completed',
-      stats: result.stats,
+      stats: {
+        fetched: result.stats.fetched,
+        created: result.stats.created || result.stats.wouldCreate || 0,
+        updated: result.stats.updated || result.stats.wouldUpdate || 0,
+        skipped: result.stats.skipped,
+        errors: result.stats.errors,
+        duplicates: result.stats.duplicates
+      },
       finishedAt: new Date().toISOString(),
       durationMs,
       errorSummary: result.errors
@@ -286,7 +301,14 @@ export async function runImport(
       try {
         await updateDoc(doc(db, 'importRuns', result.importRunId), {
           status: 'failed',
-          stats: result.stats,
+          stats: {
+            fetched: result.stats.fetched,
+            created: result.stats.created || result.stats.wouldCreate || 0,
+            updated: result.stats.updated || result.stats.wouldUpdate || 0,
+            skipped: result.stats.skipped,
+            errors: result.stats.errors,
+            duplicates: result.stats.duplicates
+          },
           finishedAt: new Date().toISOString(),
           errorSummary: result.errors
         });
