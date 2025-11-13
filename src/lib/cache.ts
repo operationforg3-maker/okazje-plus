@@ -1,12 +1,18 @@
-import Redis from 'ioredis';
 import { LRUCache } from 'lru-cache';
 
-let redis: Redis | null = null;
+// Lazy-load ioredis at runtime only when REDIS_URL is configured.
+// This avoids bundling Node-only modules (net/dns/tls) into the client/server build.
+let redis: any = null;
 if (process.env.REDIS_URL) {
   try {
-    redis = new Redis(process.env.REDIS_URL);
+    // Require at runtime so bundlers don't try to resolve node-only deps during client builds.
+  // Load ioredis via an indirection so bundlers don't statically analyze the 'ioredis' import
+  const ioredisName = 'ioredis';
+  const RedisModule = require(ioredisName);
+    const RedisCtor = RedisModule?.default ?? RedisModule;
+    redis = new RedisCtor(process.env.REDIS_URL);
     // prevent unhandled error events from crashing processes
-    redis.on('error', (err) => {
+    redis.on('error', (err: any) => {
       console.warn('Redis client error:', err);
     });
   } catch (e) {

@@ -695,10 +695,11 @@ export async function getNavigationShowcase(): Promise<NavigationShowcaseConfig 
     ? rawData.promotedIds.filter((value): value is string => typeof value === "string")
     : [];
 
-  const promotedType = rawData.promotedType === "products" ? "products" : "deals";
+  const promotedType: NavigationShowcaseConfig['promotedType'] =
+    rawData.promotedType === "products" ? "products" : "deals";
   const dealOfTheDayId = typeof rawData.dealOfTheDayId === "string" ? rawData.dealOfTheDayId : null;
 
-  const config = {
+  const config: NavigationShowcaseConfig = {
     promotedType,
     promotedIds,
     dealOfTheDayId,
@@ -1186,7 +1187,7 @@ export async function getAdminDashboardStats() {
   const productsGrowth = await calculateGrowth('products', 30);
   const usersGrowth = await calculateGrowth('users', 30);
 
-  return {
+  const stats = {
     totals: counts,
     pending: {
       deals: pendingDealsCount.data().count,
