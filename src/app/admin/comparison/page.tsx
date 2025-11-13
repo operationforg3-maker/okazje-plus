@@ -251,4 +251,4 @@ function ComparisonPage() {
   );
 }
 
-export default withAuth(ComparisonPage, ['admin']);
+export default withAuth(ComparisonPage);

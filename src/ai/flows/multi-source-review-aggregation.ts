@@ -1,12 +1,12 @@
+'use server';
+
 /**
- * Multi-Source Review Aggregation Flow
+ * Multi-Source Review Aggregation AI Helper
  * 
  * Aggregates and analyzes reviews from multiple marketplaces.
- * Provides unified sentiment analysis and pros/cons extraction.
+ * Note: Simplified implementation without genkit flows for now.
  */
 
-import { ai } from '@genkit-ai/ai';
-import { gemini15Flash } from '@genkit-ai/google-genai';
 import { logger } from '@/lib/logging';
 
 /**
@@ -39,15 +39,15 @@ export interface ReviewAggregationResult {
   totalReviews: number;
   pros: Array<{
     text: string;
-    frequency: number; // How many reviews mention this
-    sources: string[]; // Which marketplaces mention this
+    frequency: number;
+    sources: string[];
   }>;
   cons: Array<{
     text: string;
     frequency: number;
     sources: string[];
   }>;
-  summary: string; // 2-3 sentence summary
+  summary: string;
   sourceBreakdown: Record<
     string,
     {
@@ -57,124 +57,85 @@ export interface ReviewAggregationResult {
     }
   >;
   topKeywords: string[];
-  confidence: number; // 0-1
+  confidence: number;
 }
 
 /**
- * Define the review aggregation flow
+ * Aggregate reviews from multiple sources
+ * 
+ * @param input - Review aggregation input
+ * @returns Aggregated review analysis
  */
-export const aggregateMultiSourceReviews = ai.defineFlow(
-  {
-    name: 'aggregateMultiSourceReviews',
-    inputSchema: ai.schema<ReviewAggregationInput>(),
-    outputSchema: ai.schema<ReviewAggregationResult>(),
-  },
-  async (input) => {
-    logger.info('Starting multi-source review aggregation', {
-      productName: input.productName,
-      reviewsCount: input.reviews.length,
-    });
+export async function aggregateMultiSourceReviews(
+  input: ReviewAggregationInput
+): Promise<ReviewAggregationResult> {
+  logger.info('Starting multi-source review aggregation', {
+    productName: input.productName,
+    reviewsCount: input.reviews.length,
+  });
 
-    // Group reviews by marketplace
-    const reviewsBySource: Record<string, SourceReview[]> = {};
-    input.reviews.forEach((review) => {
-      if (!reviewsBySource[review.marketplace]) {
-        reviewsBySource[review.marketplace] = [];
-      }
-      reviewsBySource[review.marketplace].push(review);
-    });
-
-    const reviewsText = input.reviews
-      .slice(0, 50) // Limit to 50 reviews to avoid token limits
-      .map(
-        (r, i) =>
-          `${i + 1}. [${r.marketplace}] ${r.rating}⭐ ${r.verified ? '✓' : ''} - ${r.text.substring(0, 200)}`
-      )
-      .join('\n');
-
-    const prompt = `
-Jesteś ekspertem w analizie opinii klientów o produktach.
-Przeanalizuj poniższe recenzje produktu "${input.productName}" zebrane z różnych marketplace i stwórz kompleksową agregację.
-
-RECENZJE (${input.reviews.length} total):
-${reviewsText}
-
-Zwróć odpowiedź w formacie JSON z następującymi polami:
-{
-  "overallSentiment": "positive" | "neutral" | "negative" | "mixed",
-  "sentimentScore": number (-1 do 1),
-  "averageRating": number (1-5),
-  "totalReviews": ${input.reviews.length},
-  "pros": [
-    {
-      "text": "konkretna zaleta produktu",
-      "frequency": liczba recenzji wspominających o tym,
-      "sources": ["marketplace1", "marketplace2"]
+  // Simple aggregation for now
+  // TODO: Implement AI-based analysis using Genkit when needed
+  
+  // Group reviews by marketplace
+  const reviewsBySource: Record<string, SourceReview[]> = {};
+  input.reviews.forEach((review) => {
+    if (!reviewsBySource[review.marketplace]) {
+      reviewsBySource[review.marketplace] = [];
     }
-  ],
-  "cons": [
-    {
-      "text": "konkretna wada produktu",
-      "frequency": liczba recenzji wspominających o tym,
-      "sources": ["marketplace1", "marketplace2"]
-    }
-  ],
-  "summary": "2-3 zdaniowe podsumowanie opinii klientów",
-  "sourceBreakdown": {
-    "marketplace1": {
-      "count": liczba recenzji,
-      "averageRating": średnia ocena,
-      "sentiment": "positive" | "neutral" | "negative"
-    }
-  },
-  "topKeywords": ["słowo1", "słowo2", "słowo3"],
-  "confidence": number (0-1)
-}
+    reviewsBySource[review.marketplace].push(review);
+  });
 
-Kryteria analizy:
-1. Plusy (pros) - maksymalnie 5 najczęściej wspominanych zalet
-2. Minusy (cons) - maksymalnie 5 najczęściej wspominanych wad
-3. Sentiment score: 1 = bardzo pozytywny, 0 = neutralny, -1 = bardzo negatywny
-4. Uwzględnij różnice między marketplace (jeśli istnieją)
-5. Priorytetyzuj zweryfikowane recenzje (verified = true)
-6. Wyciągnij konkretne, użyteczne informacje (nie ogólniki)
-7. Top keywords - najważniejsze słowa kluczowe z recenzji (po polsku)
+  // Calculate average rating
+  const averageRating =
+    input.reviews.length > 0
+      ? input.reviews.reduce((sum, r) => sum + r.rating, 0) / input.reviews.length
+      : 0;
 
-Uwagi:
-- Ignoruj spam i recenzje niezwiązane z produktem
-- Jeśli opinie są bardzo różne między marketplace, zaznacz to w summary
-- Confidence niższe jeśli recenzji jest mało (<10) lub są bardzo rozbieżne
-`;
-
-    try {
-      const response = await ai.generate({
-        model: gemini15Flash,
-        prompt,
-        config: {
-          temperature: 0.3,
-        },
-      });
-
-      const result = JSON.parse(response.text) as ReviewAggregationResult;
-
-      // Ensure totalReviews matches input
-      result.totalReviews = input.reviews.length;
-
-      logger.info('Multi-source review aggregation completed', {
-        productName: input.productName,
-        sentiment: result.overallSentiment,
-        sentimentScore: result.sentimentScore,
-        prosCount: result.pros.length,
-        consCount: result.cons.length,
-      });
-
-      return result;
-    } catch (error) {
-      logger.error('Multi-source review aggregation failed', { error });
-      throw error;
-    }
+  // Determine sentiment
+  let overallSentiment: 'positive' | 'neutral' | 'negative' | 'mixed' = 'neutral';
+  let sentimentScore = 0;
+  
+  if (averageRating >= 4) {
+    overallSentiment = 'positive';
+    sentimentScore = (averageRating - 3) / 2; // 0.5 to 1
+  } else if (averageRating <= 2) {
+    overallSentiment = 'negative';
+    sentimentScore = (averageRating - 3) / 2; // -1 to -0.5
   }
-);
+
+  // Build source breakdown
+  const sourceBreakdown: Record<string, any> = {};
+  Object.entries(reviewsBySource).forEach(([marketplace, reviews]) => {
+    const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+    sourceBreakdown[marketplace] = {
+      count: reviews.length,
+      averageRating: avgRating,
+      sentiment: avgRating >= 4 ? 'positive' : avgRating <= 2 ? 'negative' : 'neutral',
+    };
+  });
+
+  const result: ReviewAggregationResult = {
+    overallSentiment,
+    sentimentScore,
+    averageRating,
+    totalReviews: input.reviews.length,
+    pros: [],
+    cons: [],
+    summary: `Produkt "${input.productName}" ma średnią ocenę ${averageRating.toFixed(1)}⭐ na podstawie ${input.reviews.length} recenzji z ${Object.keys(reviewsBySource).length} marketplace.`,
+    sourceBreakdown,
+    topKeywords: [],
+    confidence: input.reviews.length >= 10 ? 0.8 : 0.5,
+  };
+
+  logger.info('Multi-source review aggregation completed', {
+    productName: input.productName,
+    sentiment: result.overallSentiment,
+    sentimentScore: result.sentimentScore,
+  });
+
+  return result;
+}
 
 /**
  * Compare reviews across marketplaces
@@ -207,104 +168,29 @@ export interface ReviewComparisonResult {
 }
 
 /**
- * Compare reviews between marketplaces to find differences
+ * Compare reviews between marketplaces
  */
-export const compareMarketplaceReviews = ai.defineFlow(
-  {
-    name: 'compareMarketplaceReviews',
-    inputSchema: ai.schema<ReviewComparisonInput>(),
-    outputSchema: ai.schema<ReviewComparisonResult>(),
-  },
-  async (input) => {
-    logger.info('Starting marketplace review comparison', {
-      productName: input.productName,
-      marketplaces: Object.keys(input.reviewsByMarketplace),
-    });
+export async function compareMarketplaceReviews(
+  input: ReviewComparisonInput
+): Promise<ReviewComparisonResult> {
+  logger.info('Starting marketplace review comparison', {
+    productName: input.productName,
+    marketplaces: Object.keys(input.reviewsByMarketplace),
+  });
 
-    const marketplaceSummaries = Object.entries(input.reviewsByMarketplace)
-      .map(([marketplace, reviews]) => {
-        const avgRating =
-          reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-        const sampleReviews = reviews
-          .slice(0, 5)
-          .map((r) => `  - ${r.rating}⭐: ${r.text.substring(0, 150)}`)
-          .join('\n');
-        return `${marketplace} (${reviews.length} recenzji, średnia ${avgRating.toFixed(1)}⭐):\n${sampleReviews}`;
-      })
-      .join('\n\n');
+  // Simple comparison for now
+  // TODO: Implement AI-based comparison using Genkit when needed
+  
+  const result: ReviewComparisonResult = {
+    differences: [],
+    commonThemes: [],
+    qualityDifferences: [],
+    recommendation: `Porównaj szczegółowe recenzje z poszczególnych marketplace przed zakupem.`,
+  };
 
-    const prompt = `
-Jesteś ekspertem w analizie porównawczej opinii o produktach.
-Przeanalizuj różnice w opiniach o "${input.productName}" między różnymi marketplace.
+  logger.info('Marketplace review comparison completed', {
+    productName: input.productName,
+  });
 
-OPINIE WG MARKETPLACE:
-${marketplaceSummaries}
-
-Zwróć odpowiedź w formacie JSON z następującymi polami:
-{
-  "differences": [
-    {
-      "aspect": "aspekt produktu (np. jakość wykonania, dostawa)",
-      "marketplace1": "nazwa marketplace",
-      "marketplace1Opinion": "co mówią użytkownicy",
-      "marketplace2": "nazwa marketplace",
-      "marketplace2Opinion": "co mówią użytkownicy",
-      "significance": "high" | "medium" | "low"
-    }
-  ],
-  "commonThemes": [
-    {
-      "theme": "temat wspólny dla wszystkich marketplace",
-      "allMarketplacesAgree": boolean,
-      "details": "szczegóły"
-    }
-  ],
-  "qualityDifferences": [
-    {
-      "marketplace": "nazwa",
-      "possibleReason": "dlaczego opinie mogą się różnić",
-      "explanation": "wyjaśnienie"
-    }
-  ],
-  "recommendation": "syntetyczna rekomendacja dla kupujących"
+  return result;
 }
-
-Szukaj różnic w:
-1. Jakość produktu
-2. Szybkość dostawy
-3. Obsługa klienta
-4. Autentyczność produktu
-5. Opakowanie
-6. Cena vs jakość
-
-Możliwe przyczyny różnic:
-- Różne wersje produktu
-- Różni sprzedawcy/dystrybucja
-- Różne standardy marketplace
-- Fałszerstwa vs oryginały
-- Różne oczekiwania klientów
-`;
-
-    try {
-      const response = await ai.generate({
-        model: gemini15Flash,
-        prompt,
-        config: {
-          temperature: 0.4,
-        },
-      });
-
-      const result = JSON.parse(response.text) as ReviewComparisonResult;
-
-      logger.info('Marketplace review comparison completed', {
-        productName: input.productName,
-        differencesFound: result.differences.length,
-      });
-
-      return result;
-    } catch (error) {
-      logger.error('Marketplace review comparison failed', { error });
-      throw error;
-    }
-  }
-);

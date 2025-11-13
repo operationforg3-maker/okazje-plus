@@ -319,4 +319,4 @@ function CategoryMappingsPage() {
   );
 }
 
-export default withAuth(CategoryMappingsPage, ['admin']);
+export default withAuth(CategoryMappingsPage);

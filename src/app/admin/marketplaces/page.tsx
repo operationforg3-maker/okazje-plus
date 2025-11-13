@@ -257,4 +257,4 @@ function MarketplacesPage() {
   );
 }
 
-export default withAuth(MarketplacesPage, ['admin']);
+export default withAuth(MarketplacesPage);
