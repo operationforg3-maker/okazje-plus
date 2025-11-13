@@ -144,3 +144,5 @@ export function createFunctionLogger(functionName: string): Logger {
     module: 'firebase-function'
   });
 }
+
+// Note: unified Logger implementation above; removed duplicate simple logger to avoid conflicts.

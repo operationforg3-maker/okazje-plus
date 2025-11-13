@@ -1,4 +1,3 @@
-
 // Nowe interfejsy dla zagnieżdżonych kategorii
 
 // Sub-subkategoria (poziom 3)
@@ -543,19 +542,19 @@ export interface ProductEmbedding {
  */
 export interface DuplicateGroup {
   id: string;
-  canonicalProductId: string; // The "main" product in the group
-  alternativeProductIds: string[]; // Similar/duplicate products
-  similarityScores: Record<string, number>; // productId -> similarity score (0-1)
-  status: 'pending_review' | 'confirmed' | 'rejected' | 'merged';
+  canonicalProductId: string;
+  alternativeProductIds: string[];
+  similarityScores: Record<string, number>;
+  status: 'pending_review' | 'merged' | 'rejected';
   detectedAt: string;
   reviewedAt?: string;
-  reviewedBy?: string; // UID of moderator
+  reviewedBy?: string;
   mergeStrategy?: 'keep_canonical' | 'merge_attributes' | 'keep_both';
   notes?: string;
   aiSuggestion?: {
+    recommendedCanonical: string;
     confidence: number;
     reasoning: string;
-    recommendedCanonical: string;
   };
 }
 
@@ -568,18 +567,18 @@ export interface MergeLog {
   canonicalProductId: string;
   mergedProductIds: string[];
   mergeStrategy: 'keep_canonical' | 'merge_attributes' | 'keep_both';
-  preservedFields: Record<string, any>; // Fields kept from merged products
-  changes: {
+  preservedFields: Record<string, any>;
+  changes: Array<{
     field: string;
     before: any;
     after: any;
-    source: 'canonical' | 'merged' | 'manual';
-  }[];
-  mergedBy: string; // UID of admin
+    source: string;
+  }>;
+  mergedBy: string;
   mergedAt: string;
   snapshot: {
-    canonical: Partial<Product>;
-    merged: Partial<Product>[];
+    canonical: Product;
+    merged: Product[];
   };
 }
 
