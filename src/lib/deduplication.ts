@@ -22,8 +22,8 @@ import {
   updateDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { generate } from '@genkit-ai/ai';
-import { gemini15Flash } from '@genkit-ai/google-genai';
+import { ai } from '@/ai/genkit';
+import { logger } from '@/lib/logging';
 
 /**
  * Similarity threshold for considering products as duplicates
@@ -151,8 +151,7 @@ Return a JSON object with:
 }
 `;
     
-    const result = await generate({
-      model: gemini15Flash,
+    const result = await ai.generate({
       prompt,
     });
     

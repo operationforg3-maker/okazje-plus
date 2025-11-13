@@ -29,8 +29,8 @@ import {
   Timestamp,
   writeBatch,
 } from 'firebase/firestore';
-import { generate } from '@genkit-ai/ai';
-import { gemini15Flash } from '@genkit-ai/google-genai';
+import { ai } from '@/ai/genkit';
+import { logger } from '@/lib/logging';
 
 /**
  * Add item to moderation queue
@@ -145,8 +145,7 @@ Return JSON:
 }
 `;
 
-    const result = await generate({
-      model: gemini15Flash,
+    const result = await ai.generate({
       prompt,
     });
 

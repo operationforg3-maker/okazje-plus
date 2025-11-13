@@ -5,8 +5,7 @@
  * Uses Google Gemini for embedding generation via Genkit
  */
 
-import { generate } from '@genkit-ai/ai';
-import { gemini15Flash } from '@genkit-ai/google-genai';
+import { ai } from '@/ai/genkit';
 import { logger } from '@/lib/logging';
 import { Product, ProductEmbedding } from '@/lib/types';
 import { db } from '@/lib/firebase';
@@ -25,8 +24,7 @@ async function generateTextEmbedding(text: string): Promise<number[]> {
   try {
     // Use Gemini to generate embedding
     // Note: This is a simplified version. In production, use dedicated embedding model
-    const result = await generate({
-      model: gemini15Flash,
+    const result = await ai.generate({
       prompt: `Generate a semantic embedding vector for the following text. Return only the vector as a JSON array of numbers: ${text}`,
     });
     
