@@ -1,18 +1,20 @@
 /**
- * AliExpress API Client
+ * AliExpress API Client (M2 Enhanced)
  * 
  * Handles authentication, request signing, and API calls to AliExpress.
  * 
- * TODO M2:
- * - Implement real OAuth flow (currently stub)
- * - Add token refresh logic
- * - Implement request signing for authenticated endpoints
- * - Add retry logic with exponential backoff
- * - Add rate limiting
- * - Add request/response logging
+ * M2 Enhancements:
+ * ✅ Real OAuth token integration
+ * ✅ Automatic token refresh
+ * ✅ Multi-account support via vendorId
+ * - Implement request signing for authenticated endpoints (TODO)
+ * - Add retry logic with exponential backoff (TODO)
+ * - Add request/response logging (partial)
  */
 
 import { logger } from '@/lib/logging';
+import { getValidToken } from '@/lib/oauth';
+import { OAuthToken } from '@/lib/types';
 import {
   AliExpressClientConfig,
   AliExpressSearchParams,
@@ -34,62 +36,70 @@ const DEFAULT_CONFIG: Partial<AliExpressClientConfig> = {
 };
 
 /**
- * AliExpress API Client class
+ * AliExpress API Client class (M2 Enhanced)
  */
 export class AliExpressClient {
   private config: AliExpressClientConfig;
-  private token: AliExpressOAuthToken | null = null;
+  private vendorId: string;
+  private accountName?: string;
+  private token: OAuthToken | null = null;
   private lastRequestTime: number = 0;
   private requestCount: number = 0;
   private requestCountResetTime: number = Date.now();
 
-  constructor(config: AliExpressClientConfig) {
+  constructor(config: AliExpressClientConfig, vendorId: string = 'aliexpress', accountName?: string) {
     this.config = {
       ...DEFAULT_CONFIG,
       ...config
     };
+    this.vendorId = vendorId;
+    this.accountName = accountName;
   }
 
   /**
-   * Ensure we have a valid access token
+   * Ensure we have a valid access token (M2 Enhanced)
    * 
-   * TODO M2: Implement real OAuth flow
-   * - Check token expiration
-   * - Refresh if needed
-   * - Store token in Secret Manager or Firestore
+   * Now integrates with OAuth token management system:
+   * - Fetches token from Firestore
+   * - Automatically refreshes if expired
+   * - Supports multi-account
    */
   private async ensureToken(): Promise<void> {
-    logger.debug('Ensuring valid access token (stub)');
+    logger.debug('Ensuring valid access token', {
+      vendorId: this.vendorId,
+      accountName: this.accountName,
+    });
     
-    // TODO M2: Implement token validation and refresh
-    // For now, create a stub token
-    if (!this.token) {
-      this.token = {
-        access_token: 'STUB_TOKEN',
-        expires_in: 3600,
-        token_type: 'Bearer',
-        obtained_at: Date.now()
-      };
-      logger.warn('Using stub OAuth token - implement real OAuth in M2');
+    try {
+      // Get valid token (will refresh if needed)
+      this.token = await getValidToken(this.vendorId, this.accountName);
+      
+      if (!this.token) {
+        throw new Error(
+          `No valid OAuth token available for vendor ${this.vendorId}` +
+          (this.accountName ? ` (account: ${this.accountName})` : '')
+        );
+      }
+      
+      logger.debug('Valid token obtained', {
+        tokenId: this.token.id,
+        expiresAt: this.token.expiresAt,
+      });
+    } catch (error) {
+      logger.error('Failed to obtain valid token', { error });
+      throw error;
     }
-    
-    // TODO M2: Check if token is expired
-    // const now = Date.now();
-    // const tokenAge = (now - this.token.obtained_at) / 1000;
-    // if (tokenAge >= this.token.expires_in - 300) { // Refresh 5 min before expiry
-    //   await this.refreshToken();
-    // }
   }
 
   /**
-   * Refresh OAuth token
+   * Refresh OAuth token (M2 - Deprecated)
    * 
-   * TODO M2: Implement token refresh logic
+   * Token refresh is now handled automatically by getValidToken()
+   * This method is kept for backwards compatibility but is no longer used
    */
   private async refreshToken(): Promise<void> {
-    logger.warn('Token refresh not implemented - stub');
-    // TODO M2: Implement OAuth refresh flow
-    throw new Error('Token refresh not implemented');
+    logger.info('Token refresh is handled automatically by OAuth service');
+    await this.ensureToken();
   }
 
   /**
@@ -119,12 +129,10 @@ export class AliExpressClient {
   }
 
   /**
-   * Make an API request
+   * Make an API request (M2 Enhanced)
    * 
-   * TODO M2:
-   * - Add request signing
-   * - Add retry logic
-   * - Add error handling
+   * Now uses real OAuth token with automatic refresh
+   * TODO M2: Add request signing, retry logic
    */
   private async request<T>(
     endpoint: string,
@@ -133,66 +141,88 @@ export class AliExpressClient {
     await this.ensureToken();
     await this.applyRateLimit();
     
-    logger.debug('Making API request (stub)', { endpoint, params });
+    if (!this.token) {
+      throw new Error('No valid token available');
+    }
     
-    // TODO M2: Implement actual API call
-    // const url = `${this.config.apiEndpoint}${endpoint}`;
-    // const response = await fetch(url, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${this.token!.access_token}`,
-    //     'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify(params),
-    //   signal: AbortSignal.timeout(this.config.timeout || 30000)
-    // });
-    // 
-    // if (!response.ok) {
-    //   throw new Error(`API request failed: ${response.statusText}`);
-    // }
-    // 
-    // return response.json();
+    logger.debug('Making API request', { endpoint, params });
     
-    // For now, return stub response
-    throw new Error('API request not implemented - stub');
+    const url = `${this.config.apiEndpoint}${endpoint}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `${this.token.tokenType} ${this.token.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+        signal: AbortSignal.timeout(this.config.timeout || 30000),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('API request failed', {
+          status: response.status,
+          error: errorText,
+        });
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      logger.debug('API request successful', { endpoint });
+      
+      return data;
+    } catch (error) {
+      logger.error('API request error', { endpoint, error });
+      throw error;
+    }
   }
 
   /**
-   * Search for products
+   * Search for products (M2 Enhanced)
    * 
-   * TODO M2: Implement real API call
+   * Now makes real API calls with OAuth token
    */
   async searchProducts(params: AliExpressSearchParams): Promise<AliExpressSearchResponse> {
-    logger.info('Searching products (stub)', { query: params.q });
+    logger.info('Searching products', { query: params.q });
     
-    // TODO M2: Call actual API
-    // return this.request<AliExpressSearchResponse>('/product/search', params);
-    
-    // Return stub response for testing
-    return {
-      success: true,
-      total: 0,
-      page: params.page || 1,
-      page_size: params.limit || 50,
-      products: []
-    };
+    try {
+      return await this.request<AliExpressSearchResponse>('/product/search', params);
+    } catch (error) {
+      logger.error('Product search failed', { error });
+      
+      // Return empty result on error for graceful degradation
+      return {
+        success: false,
+        total: 0,
+        page: params.page || 1,
+        page_size: params.limit || 50,
+        products: [],
+        error: {
+          code: 'SEARCH_FAILED',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      };
+    }
   }
 
   /**
-   * Get product details
+   * Get product details (M2 Enhanced)
    * 
-   * TODO M2: Implement real API call
+   * Now makes real API calls with OAuth token
    */
   async getProductDetails(
     params: AliExpressProductDetailsParams
   ): Promise<AliExpressProductDetailsResponse> {
-    logger.info('Getting product details (stub)', { productId: params.productId });
+    logger.info('Getting product details', { productId: params.productId });
     
-    // TODO M2: Call actual API
-    // return this.request<AliExpressProductDetailsResponse>('/product/details', params);
-    
-    // Return stub response
-    throw new Error('Product details not implemented - stub');
+    try {
+      return await this.request<AliExpressProductDetailsResponse>('/product/details', params);
+    } catch (error) {
+      logger.error('Product details fetch failed', { error });
+      throw error;
+    }
   }
 
   /**
@@ -204,16 +234,17 @@ export class AliExpressClient {
 }
 
 /**
- * Create a new AliExpress client instance
+ * Create a new AliExpress client instance (M2 Enhanced)
  * 
  * Configuration is read from environment variables:
  * - ALIEXPRESS_APP_KEY
  * - ALIEXPRESS_APP_SECRET
  * - ALIEXPRESS_API_ENDPOINT (optional)
  * 
- * TODO M2: Load from Secret Manager instead
+ * M2: Now supports multi-account via accountName parameter
+ * Tokens are managed via OAuth system, no longer using env vars
  */
-export function createAliExpressClient(): AliExpressClient {
+export function createAliExpressClient(accountName?: string): AliExpressClient {
   const appKey = process.env.ALIEXPRESS_APP_KEY;
   const appSecret = process.env.ALIEXPRESS_APP_SECRET;
   
@@ -234,5 +265,5 @@ export function createAliExpressClient(): AliExpressClient {
       : undefined
   };
   
-  return new AliExpressClient(config);
+  return new AliExpressClient(config, 'aliexpress', accountName);
 }
