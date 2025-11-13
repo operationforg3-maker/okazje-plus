@@ -1,0 +1,48 @@
+name: Build Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run TypeScript check
+        run: npm run typecheck
+      
+      - name: Run tests
+        run: npm run test
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'test-key' }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: test.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: test-project
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: test.appspot.com
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '123456789012'
+          NEXT_PUBLIC_FIREBASE_APP_ID: '1:123456789012:web:test'
+          GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY || 'test-key' }}
+      
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: okazje-plus.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: okazje-plus
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: okazje-plus.firebasestorage.app
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '298894101105'
+          NEXT_PUBLIC_FIREBASE_APP_ID: 1:298894101105:web:20a99f74b145cdf3ee29d0
+          GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY || 'placeholder-key' }}
