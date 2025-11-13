@@ -1385,3 +1385,260 @@ export interface ReviewSource {
     verified: boolean;
   }[];
 }
+
+// ============================================
+// M5: Personalization Engine & User Analytics
+// ============================================
+
+/**
+ * UserSegment - Classification of user behavior patterns
+ */
+export interface UserSegment {
+  id: string;
+  userId: string;
+  segmentType: 'price_sensitive' | 'fast_delivery' | 'brand_lover' | 'deal_hunter' | 'quality_seeker' | 'impulse_buyer';
+  confidence: number; // 0-1 score
+  characteristics: {
+    avgPricePoint?: number; // Average price they engage with
+    categoryPreferences: string[]; // Top categories
+    dealPreferences: string[]; // discount, free_shipping, brand, etc.
+    activityLevel: 'low' | 'medium' | 'high';
+    conversionRate?: number; // Click-through rate
+    avgSessionDuration?: number; // Seconds
+  };
+  generatedAt: string;
+  updatedAt: string;
+  version: number; // For tracking changes over time
+}
+
+/**
+ * UserBehaviorScore - Scoring for different behavioral patterns
+ */
+export interface UserBehaviorScore {
+  userId: string;
+  scores: {
+    pricesensitivity: number; // 0-100
+    brandLoyalty: number; // 0-100
+    qualityFocus: number; // 0-100
+    speedPriority: number; // 0-100 (fast delivery preference)
+    engagementLevel: number; // 0-100 (overall activity)
+    conversionPotential: number; // 0-100 (likelihood to click deals)
+  };
+  basedOnInteractions: number;
+  calculatedAt: string;
+  updatedAt: string;
+}
+
+/**
+ * SessionMetrics - Detailed session tracking
+ */
+export interface SessionMetrics {
+  id: string;
+  sessionId: string;
+  userId?: string;
+  startTime: string;
+  endTime?: string;
+  durationSeconds?: number;
+  pageViews: number;
+  interactions: {
+    views: number;
+    clicks: number;
+    votes: number;
+    comments: number;
+    shares: number;
+    favorites: number;
+  };
+  entryPage: string;
+  exitPage?: string;
+  referrer?: string;
+  device: 'mobile' | 'tablet' | 'desktop' | 'unknown';
+  converted: boolean; // Did user click external link
+  metadata?: {
+    userAgent?: string;
+    screenResolution?: string;
+    language?: string;
+  };
+}
+
+/**
+ * KPISnapshot - Point-in-time KPI measurements
+ */
+export interface KPISnapshot {
+  id: string;
+  period: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  timestamp: string;
+  startDate: string;
+  endDate: string;
+  metrics: {
+    totalUsers: number;
+    activeUsers: number;
+    newUsers: number;
+    returningUsers: number;
+    totalSessions: number;
+    avgSessionDuration: number;
+    pageViews: number;
+    uniquePageViews: number;
+    bounceRate: number; // Percentage
+    avgPagesPerSession: number;
+    totalInteractions: number;
+    ctr: number; // Click-through rate percentage
+    conversionRate: number; // Percentage
+    retentionRate: number; // Percentage (7-day)
+    churnRate: number; // Percentage
+  };
+  topContent: {
+    topDeals: Array<{ id: string; views: number; clicks: number }>;
+    topProducts: Array<{ id: string; views: number; clicks: number }>;
+    topCategories: Array<{ slug: string; views: number }>;
+  };
+  generatedAt: string;
+}
+
+/**
+ * HeatmapData - Aggregated interaction heatmap
+ */
+export interface HeatmapData {
+  id: string;
+  pageType: 'home' | 'deal' | 'product' | 'category' | 'search';
+  pageId?: string; // Specific page identifier (deal ID, category slug, etc.)
+  period: 'daily' | 'weekly' | 'monthly';
+  startDate: string;
+  endDate: string;
+  clicks: Array<{
+    x: number; // Relative position (0-1)
+    y: number; // Relative position (0-1)
+    count: number;
+    element?: string; // Element identifier (button, link, etc.)
+  }>;
+  scrollDepth: Array<{
+    depth: number; // Percentage (0-100)
+    userCount: number;
+  }>;
+  generatedAt: string;
+}
+
+/**
+ * BigQueryExportJob - Tracks data exports to BigQuery
+ */
+export interface BigQueryExportJob {
+  id: string;
+  dataType: 'interactions' | 'sessions' | 'kpis' | 'segments' | 'full';
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  startDate: string;
+  endDate: string;
+  recordCount?: number;
+  bytesExported?: number;
+  bigQueryTable: string; // Target table name
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  error?: string;
+  triggeredBy: 'scheduled' | 'manual';
+  triggeredByUid?: string;
+}
+
+/**
+ * PersonalizedFeedConfig - Per-user feed configuration
+ */
+export interface PersonalizedFeedConfig {
+  userId: string;
+  enabled: boolean;
+  boostCategories: string[]; // Categories to boost in feed
+  suppressCategories: string[]; // Categories to suppress
+  priceRangeFilter?: {
+    min?: number;
+    max?: number;
+  };
+  merchantFilters: {
+    preferred: string[];
+    excluded: string[];
+  };
+  contentTypes: {
+    showDeals: boolean;
+    showProducts: boolean;
+    dealToProductRatio?: number; // 0-1 (0 = all deals, 1 = all products)
+  };
+  freshness: 'all' | 'recent' | 'today'; // How fresh content should be
+  minTemperature?: number; // Minimum temperature for deals
+  updatedAt: string;
+}
+
+/**
+ * BehavioralTrigger - Automated action based on behavior
+ */
+export interface BehavioralTrigger {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  conditions: {
+    segmentTypes?: UserSegment['segmentType'][];
+    minEngagementLevel?: number;
+    categoryFilter?: string[];
+    timeWindow?: number; // Minutes
+    eventType?: 'view' | 'click' | 'search' | 'favorite';
+    eventCount?: number; // Minimum events in time window
+  };
+  actions: {
+    type: 'boost_content' | 'send_notification' | 'show_popup' | 'personalize_feed';
+    config: Record<string, any>;
+  }[];
+  priority: number; // Higher priority triggers first
+  cooldownMinutes?: number; // Prevent repeated triggering
+  stats?: {
+    totalTriggers: number;
+    lastTriggered?: string;
+    avgConversion?: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+/**
+ * ContentPromotion - Promoted content based on behavior
+ */
+export interface ContentPromotion {
+  id: string;
+  itemId: string;
+  itemType: 'deal' | 'product';
+  targetSegments: UserSegment['segmentType'][];
+  boostScore: number; // Multiplier for ranking (1.0 = no boost)
+  startDate: string;
+  endDate: string;
+  active: boolean;
+  reason: string;
+  triggeredBy: 'manual' | 'behavioral_trigger' | 'ai_suggestion';
+  stats?: {
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    ctr?: number;
+  };
+  createdAt: string;
+  createdBy?: string;
+}
+
+/**
+ * ABTestResult - Results of an A/B test
+ */
+export interface ABTestResult {
+  id: string;
+  testName: string;
+  variantId: string;
+  variantName: string;
+  metrics: {
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    ctr: number; // Percentage
+    conversionRate: number; // Percentage
+    avgEngagementTime: number; // Seconds
+    bounceRate: number; // Percentage
+  };
+  startDate: string;
+  endDate?: string;
+  isWinner?: boolean;
+  confidence?: number; // Statistical confidence (0-1)
+  recordedAt: string;
+}

@@ -267,3 +267,218 @@ export async function findSimilarProducts(
     throw error;
   }
 }
+
+// ============================================
+// M5: User Embeddings for Personalization
+// ============================================
+
+import { UserEmbedding, UserInteraction, Deal } from '@/lib/types';
+import { collection, getDocs, query, where, orderBy as firestoreOrderBy, limit as firestoreLimit } from 'firebase/firestore';
+
+/**
+ * Generate user embedding based on their interaction history
+ * Creates a vector representation of user preferences
+ */
+export async function generateUserEmbedding(userId: string): Promise<UserEmbedding> {
+  try {
+    logger.info('Generating user embedding', { userId });
+
+    // Get user's recent interactions
+    const interactionsRef = collection(db, 'user_interactions');
+    const q = query(
+      interactionsRef,
+      where('userId', '==', userId),
+      firestoreOrderBy('timestamp', 'desc'),
+      firestoreLimit(100)
+    );
+
+    const snapshot = await getDocs(q);
+    const interactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserInteraction));
+
+    if (interactions.length === 0) {
+      // Create default embedding for new users
+      const defaultEmbedding = new Array(128).fill(0);
+      
+      const userEmbedding: UserEmbedding = {
+        userId,
+        embedding: defaultEmbedding,
+        embeddingVersion: EMBEDDING_MODEL_VERSION,
+        basedOnInteractions: 0,
+        generatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      await setDoc(doc(db, 'user_embeddings', userId), userEmbedding);
+      return userEmbedding;
+    }
+
+    // Build weighted feature vector based on interactions
+    // Categories, price ranges, interaction types, etc.
+    const categoryWeights = new Map<string, number>();
+    const interactionTypeWeights = new Map<string, number>();
+    const priceRanges = new Map<string, number>(); // <100, 100-500, 500-1000, >1000
+
+    // Weight multipliers for different interaction types
+    const typeWeights = {
+      view: 1,
+      click: 3,
+      favorite: 5,
+      vote: 2,
+      comment: 4,
+      share: 4,
+    };
+
+    for (const interaction of interactions) {
+      const weight = typeWeights[interaction.interactionType] || 1;
+
+      // Track interaction types
+      const typeCount = interactionTypeWeights.get(interaction.interactionType) || 0;
+      interactionTypeWeights.set(interaction.interactionType, typeCount + weight);
+
+      // Track categories
+      if (interaction.metadata?.categorySlug) {
+        const catCount = categoryWeights.get(interaction.metadata.categorySlug) || 0;
+        categoryWeights.set(interaction.metadata.categorySlug, catCount + weight);
+      }
+
+      // Track price ranges (fetch item details)
+      try {
+        if (interaction.itemType === 'deal') {
+          const dealRef = doc(db, 'deals', interaction.itemId);
+          const dealSnap = await getDoc(dealRef);
+          if (dealSnap.exists()) {
+            const deal = dealSnap.data() as Deal;
+            const priceRange = 
+              deal.price < 100 ? '<100' :
+              deal.price < 500 ? '100-500' :
+              deal.price < 1000 ? '500-1000' : '>1000';
+            
+            const rangeCount = priceRanges.get(priceRange) || 0;
+            priceRanges.set(priceRange, rangeCount + weight);
+          }
+        }
+      } catch (error) {
+        // Ignore errors
+      }
+    }
+
+    // Create feature vector (simplified - in production would use proper embeddings)
+    // For now, create a 128-dimensional vector with normalized weights
+    const embedding = new Array(128).fill(0);
+
+    // Fill first 32 dimensions with interaction type patterns
+    let idx = 0;
+    const maxInteractionWeight = Math.max(...Array.from(interactionTypeWeights.values()), 1);
+    for (const [type, weight] of interactionTypeWeights) {
+      if (idx < 32) {
+        embedding[idx] = weight / maxInteractionWeight;
+        idx++;
+      }
+    }
+
+    // Fill next 64 dimensions with category preferences (normalized)
+    idx = 32;
+    const maxCategoryWeight = Math.max(...Array.from(categoryWeights.values()), 1);
+    for (const [category, weight] of categoryWeights) {
+      if (idx < 96) {
+        embedding[idx] = weight / maxCategoryWeight;
+        idx++;
+      }
+    }
+
+    // Fill last 32 dimensions with price range preferences
+    idx = 96;
+    const maxPriceWeight = Math.max(...Array.from(priceRanges.values()), 1);
+    for (const [range, weight] of priceRanges) {
+      if (idx < 128) {
+        embedding[idx] = weight / maxPriceWeight;
+        idx++;
+      }
+    }
+
+    const userEmbedding: UserEmbedding = {
+      userId,
+      embedding,
+      embeddingVersion: EMBEDDING_MODEL_VERSION,
+      basedOnInteractions: interactions.length,
+      generatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Store in Firestore
+    await setDoc(doc(db, 'user_embeddings', userId), userEmbedding);
+
+    logger.info('User embedding generated', {
+      userId,
+      basedOnInteractions: interactions.length,
+    });
+
+    return userEmbedding;
+  } catch (error) {
+    logger.error('Failed to generate user embedding', { userId, error });
+    throw error;
+  }
+}
+
+/**
+ * Get user embedding (cached or generate new)
+ */
+export async function getUserEmbedding(
+  userId: string,
+  regenerate: boolean = false
+): Promise<UserEmbedding> {
+  try {
+    if (!regenerate) {
+      const embeddingRef = doc(db, 'user_embeddings', userId);
+      const embeddingSnap = await getDoc(embeddingRef);
+
+      if (embeddingSnap.exists()) {
+        const data = embeddingSnap.data();
+
+        // Check if embedding is recent (less than 7 days)
+        const updatedAt = new Date(data.updatedAt);
+        const daysSinceUpdate = (Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24);
+
+        if (daysSinceUpdate < 7 && data.embeddingVersion === EMBEDDING_MODEL_VERSION) {
+          logger.debug('Using cached user embedding', { userId });
+          return {
+            userId,
+            ...data,
+          } as UserEmbedding;
+        }
+
+        logger.info('User embedding is stale, regenerating', { userId, daysSinceUpdate });
+      }
+    }
+
+    return await generateUserEmbedding(userId);
+  } catch (error) {
+    logger.error('Failed to get user embedding', { userId, error });
+    throw error;
+  }
+}
+
+/**
+ * Calculate similarity between user and item embeddings
+ * Returns score between 0 (not similar) and 1 (very similar)
+ */
+export function calculateUserItemSimilarity(
+  userEmbedding: number[],
+  itemEmbedding: number[]
+): number {
+  try {
+    // Ensure embeddings are same length (pad if needed)
+    const maxLength = Math.max(userEmbedding.length, itemEmbedding.length);
+    const paddedUserEmb = [...userEmbedding, ...new Array(maxLength - userEmbedding.length).fill(0)];
+    const paddedItemEmb = [...itemEmbedding, ...new Array(maxLength - itemEmbedding.length).fill(0)];
+
+    // Calculate cosine similarity
+    const similarity = cosineSimilarity(paddedUserEmb, paddedItemEmb);
+
+    // Normalize to 0-1 range
+    return (similarity + 1) / 2;
+  } catch (error) {
+    logger.error('Failed to calculate user-item similarity', { error });
+    return 0;
+  }
+}
