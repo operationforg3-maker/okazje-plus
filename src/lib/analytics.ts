@@ -181,7 +181,9 @@ import {
   getCountFromServer,
   orderBy,
   limit,
-  Timestamp 
+  Timestamp,
+  updateDoc,
+  doc as firestoreDoc,
 } from 'firebase/firestore';
 
 export type FirestoreEventType = 'view' | 'click' | 'share' | 'favorite' | 'comment' | 'vote';
@@ -480,4 +482,412 @@ export async function getEventCount(
 
   const countSnapshot = await getCountFromServer(q);
   return countSnapshot.data().count;
+}
+
+// ============================================
+// M5: Enhanced Analytics & Session Tracking
+// ============================================
+
+import { SessionMetrics, KPISnapshot, HeatmapData } from './types';
+
+/**
+ * Start tracking a user session
+ */
+export async function startSession(userId?: string): Promise<string> {
+  try {
+    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('analytics_session_id', sessionId);
+      sessionStorage.setItem('session_start_time', new Date().toISOString());
+      sessionStorage.setItem('session_page_views', '0');
+    }
+
+    const session: Omit<SessionMetrics, 'id'> = {
+      sessionId,
+      userId,
+      startTime: new Date().toISOString(),
+      pageViews: 0,
+      interactions: {
+        views: 0,
+        clicks: 0,
+        votes: 0,
+        comments: 0,
+        shares: 0,
+        favorites: 0,
+      },
+      entryPage: typeof window !== 'undefined' ? window.location.pathname : '/',
+      referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+      device: getDeviceType(),
+      converted: false,
+    };
+
+    await addDoc(collection(db, 'session_metrics'), session);
+    return sessionId;
+  } catch (error) {
+    console.warn('Failed to start session tracking:', error);
+    return 'error';
+  }
+}
+
+/**
+ * End a user session
+ */
+export async function endSession(sessionId: string): Promise<void> {
+  try {
+    const sessionsRef = collection(db, 'session_metrics');
+    const q = query(sessionsRef, where('sessionId', '==', sessionId), firestoreLimit(1));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const sessionDoc = snapshot.docs[0];
+      const session = sessionDoc.data() as SessionMetrics;
+      
+      const endTime = new Date().toISOString();
+      const startTime = new Date(session.startTime);
+      const durationSeconds = Math.floor((new Date(endTime).getTime() - startTime.getTime()) / 1000);
+
+      await updateDoc(firestoreDoc(db, 'session_metrics', sessionDoc.id), {
+        endTime,
+        durationSeconds,
+        exitPage: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      });
+    }
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('analytics_session_id');
+      sessionStorage.removeItem('session_start_time');
+      sessionStorage.removeItem('session_page_views');
+    }
+  } catch (error) {
+    console.warn('Failed to end session:', error);
+  }
+}
+
+/**
+ * Record page view in current session
+ */
+export async function recordPageView(sessionId: string, page: string): Promise<void> {
+  try {
+    if (typeof window !== 'undefined') {
+      const pageViews = parseInt(sessionStorage.getItem('session_page_views') || '0') + 1;
+      sessionStorage.setItem('session_page_views', String(pageViews));
+    }
+
+    const sessionsRef = collection(db, 'session_metrics');
+    const q = query(sessionsRef, where('sessionId', '==', sessionId), firestoreLimit(1));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const sessionDoc = snapshot.docs[0];
+      const session = sessionDoc.data() as SessionMetrics;
+
+      await updateDoc(firestoreDoc(db, 'session_metrics', sessionDoc.id), {
+        pageViews: (session.pageViews || 0) + 1,
+      });
+    }
+  } catch (error) {
+    console.warn('Failed to record page view:', error);
+  }
+}
+
+/**
+ * Record interaction in current session
+ */
+export async function recordSessionInteraction(
+  sessionId: string,
+  type: 'view' | 'click' | 'vote' | 'comment' | 'share' | 'favorite'
+): Promise<void> {
+  try {
+    const sessionsRef = collection(db, 'session_metrics');
+    const q = query(sessionsRef, where('sessionId', '==', sessionId), firestoreLimit(1));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const sessionDoc = snapshot.docs[0];
+      const session = sessionDoc.data() as SessionMetrics;
+
+      const updatedInteractions = { ...session.interactions };
+      updatedInteractions[type] = (updatedInteractions[type] || 0) + 1;
+
+      const updates: any = {
+        interactions: updatedInteractions,
+      };
+
+      // Mark as converted if click occurred
+      if (type === 'click') {
+        updates.converted = true;
+      }
+
+      await updateDoc(firestoreDoc(db, 'session_metrics', sessionDoc.id), updates);
+    }
+  } catch (error) {
+    console.warn('Failed to record session interaction:', error);
+  }
+}
+
+/**
+ * Get device type from user agent
+ */
+function getDeviceType(): 'mobile' | 'tablet' | 'desktop' | 'unknown' {
+  if (typeof navigator === 'undefined') return 'unknown';
+  
+  const ua = navigator.userAgent.toLowerCase();
+  
+  if (/mobile|android|iphone|ipod|blackberry|iemobile|opera mini/i.test(ua)) {
+    return 'mobile';
+  } else if (/tablet|ipad/i.test(ua)) {
+    return 'tablet';
+  } else if (/windows|macintosh|linux/i.test(ua)) {
+    return 'desktop';
+  }
+  
+  return 'unknown';
+}
+
+/**
+ * Calculate KPI snapshot for a given period
+ */
+export async function calculateKPISnapshot(
+  period: 'hourly' | 'daily' | 'weekly' | 'monthly',
+  startDate: Date,
+  endDate: Date
+): Promise<KPISnapshot> {
+  try {
+    const startISO = startDate.toISOString();
+    const endISO = endDate.toISOString();
+
+    // Get all sessions in period
+    const sessionsRef = collection(db, 'session_metrics');
+    const sessionsQuery = query(
+      sessionsRef,
+      where('startTime', '>=', startISO),
+      where('startTime', '<', endISO)
+    );
+    const sessionsSnapshot = await getDocs(sessionsQuery);
+    const sessions = sessionsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    } as SessionMetrics));
+
+    // Get all analytics events in period
+    const analyticsQuery = query(
+      collection(db, 'analytics'),
+      where('timestamp', '>=', startISO),
+      where('timestamp', '<', endISO)
+    );
+    const analyticsSnapshot = await getDocs(analyticsQuery);
+    const events = analyticsSnapshot.docs.map(doc => doc.data() as FirestoreAnalyticsEvent);
+
+    // Calculate metrics
+    const uniqueUserIds = new Set<string>();
+    const newUserIds = new Set<string>();
+    const returningUserIds = new Set<string>();
+    
+    let totalPageViews = 0;
+    let totalSessionDuration = 0;
+    let sessionsWithDuration = 0;
+    let bounced = 0;
+    let totalInteractions = 0;
+
+    sessions.forEach(session => {
+      if (session.userId) {
+        uniqueUserIds.add(session.userId);
+        // Would need historical data to determine new vs returning
+      }
+      
+      totalPageViews += session.pageViews || 0;
+      
+      if (session.durationSeconds) {
+        totalSessionDuration += session.durationSeconds;
+        sessionsWithDuration++;
+      }
+
+      // Bounce = single page view and < 30 seconds
+      if (session.pageViews === 1 && (session.durationSeconds || 0) < 30) {
+        bounced++;
+      }
+
+      // Count interactions
+      const interactions = session.interactions || {
+        views: 0, clicks: 0, votes: 0, comments: 0, shares: 0, favorites: 0
+      };
+      totalInteractions += Object.values(interactions).reduce((a, b) => a + b, 0);
+    });
+
+    const totalSessions = sessions.length;
+    const avgSessionDuration = sessionsWithDuration > 0
+      ? totalSessionDuration / sessionsWithDuration
+      : 0;
+    const bounceRate = totalSessions > 0 ? (bounced / totalSessions) * 100 : 0;
+    const avgPagesPerSession = totalSessions > 0 ? totalPageViews / totalSessions : 0;
+
+    // Calculate CTR and conversion
+    const views = events.filter(e => e.type === 'view').length;
+    const clicks = events.filter(e => e.type === 'click').length;
+    const ctr = views > 0 ? (clicks / views) * 100 : 0;
+    const conversionRate = totalSessions > 0 ? (clicks / totalSessions) * 100 : 0;
+
+    // Get top content
+    const dealStats: Record<string, { views: number; clicks: number }> = {};
+    const productStats: Record<string, { views: number; clicks: number }> = {};
+    const categoryStats: Record<string, number> = {};
+
+    events.forEach(event => {
+      if (event.resourceType === 'deal') {
+        if (!dealStats[event.resourceId]) {
+          dealStats[event.resourceId] = { views: 0, clicks: 0 };
+        }
+        if (event.type === 'view') dealStats[event.resourceId].views++;
+        if (event.type === 'click') dealStats[event.resourceId].clicks++;
+      } else if (event.resourceType === 'product') {
+        if (!productStats[event.resourceId]) {
+          productStats[event.resourceId] = { views: 0, clicks: 0 };
+        }
+        if (event.type === 'view') productStats[event.resourceId].views++;
+        if (event.type === 'click') productStats[event.resourceId].clicks++;
+      }
+
+      if (event.metadata?.categorySlug) {
+        categoryStats[event.metadata.categorySlug] = 
+          (categoryStats[event.metadata.categorySlug] || 0) + 1;
+      }
+    });
+
+    const topDeals = Object.entries(dealStats)
+      .map(([id, stats]) => ({ id, ...stats }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    const topProducts = Object.entries(productStats)
+      .map(([id, stats]) => ({ id, ...stats }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    const topCategories = Object.entries(categoryStats)
+      .map(([slug, views]) => ({ slug, views }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+
+    const snapshot: Omit<KPISnapshot, 'id'> = {
+      period,
+      timestamp: new Date().toISOString(),
+      startDate: startISO,
+      endDate: endISO,
+      metrics: {
+        totalUsers: uniqueUserIds.size,
+        activeUsers: uniqueUserIds.size,
+        newUsers: newUserIds.size,
+        returningUsers: returningUserIds.size,
+        totalSessions,
+        avgSessionDuration,
+        pageViews: totalPageViews,
+        uniquePageViews: totalPageViews, // Simplified
+        bounceRate,
+        avgPagesPerSession,
+        totalInteractions,
+        ctr,
+        conversionRate,
+        retentionRate: 0, // Would need historical cohort analysis
+        churnRate: 0, // Would need historical cohort analysis
+      },
+      topContent: {
+        topDeals,
+        topProducts,
+        topCategories,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+
+    // Store snapshot
+    const snapshotDoc = await addDoc(collection(db, 'kpi_snapshots'), snapshot);
+    
+    return {
+      id: snapshotDoc.id,
+      ...snapshot,
+    } as KPISnapshot;
+  } catch (error) {
+    console.error('Failed to calculate KPI snapshot:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get latest KPI snapshot
+ */
+export async function getLatestKPISnapshot(
+  period: 'hourly' | 'daily' | 'weekly' | 'monthly'
+): Promise<KPISnapshot | null> {
+  try {
+    const snapshotsRef = collection(db, 'kpi_snapshots');
+    const q = query(
+      snapshotsRef,
+      where('period', '==', period),
+      orderBy('timestamp', 'desc'),
+      firestoreLimit(1)
+    );
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+
+    return {
+      id: snapshot.docs[0].id,
+      ...snapshot.docs[0].data(),
+    } as KPISnapshot;
+  } catch (error) {
+    console.error('Failed to get latest KPI snapshot:', error);
+    return null;
+  }
+}
+
+/**
+ * Record heatmap click data
+ */
+export async function recordHeatmapClick(
+  pageType: HeatmapData['pageType'],
+  pageId: string | undefined,
+  x: number,
+  y: number,
+  element?: string
+): Promise<void> {
+  try {
+    // Store click in temporary collection for aggregation
+    await addDoc(collection(db, 'heatmap_clicks'), {
+      pageType,
+      pageId,
+      x,
+      y,
+      element,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.warn('Failed to record heatmap click:', error);
+  }
+}
+
+/**
+ * Record scroll depth
+ */
+export async function recordScrollDepth(
+  pageType: HeatmapData['pageType'],
+  pageId: string | undefined,
+  depth: number
+): Promise<void> {
+  try {
+    const sessionId = typeof window !== 'undefined'
+      ? sessionStorage.getItem('analytics_session_id')
+      : null;
+
+    if (sessionId) {
+      await addDoc(collection(db, 'scroll_depths'), {
+        sessionId,
+        pageType,
+        pageId,
+        depth,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    console.warn('Failed to record scroll depth:', error);
+  }
 }
