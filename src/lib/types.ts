@@ -793,3 +793,595 @@ export interface DetailedAuditLog extends AuditLog {
   duration?: number; // Duration of operation in ms
   stackTrace?: string; // For error tracking
 }
+
+// ============================================
+// M3: Price Monitoring & Alerts
+// ============================================
+
+/**
+ * PriceSnapshot - Historical price point for a product or deal
+ */
+export interface PriceSnapshot {
+  id: string;
+  itemId: string; // Product or Deal ID
+  itemType: 'product' | 'deal';
+  price: number;
+  originalPrice?: number;
+  currency: string; // e.g., "PLN"
+  discountPercent?: number;
+  source: string; // e.g., "aliexpress", "manual", "scraper"
+  availability: 'in_stock' | 'out_of_stock' | 'low_stock' | 'unknown';
+  timestamp: string; // ISO timestamp when price was recorded
+  metadata?: {
+    shippingCost?: number;
+    couponCode?: string;
+    couponDiscount?: number;
+    stockLevel?: number;
+    url?: string;
+  };
+}
+
+/**
+ * PriceHistory - Aggregated price history for an item
+ */
+export interface PriceHistory {
+  id: string; // Same as itemId
+  itemId: string;
+  itemType: 'product' | 'deal';
+  currentPrice: number;
+  lowestPrice: number;
+  highestPrice: number;
+  averagePrice: number;
+  priceDropCount: number; // Number of times price decreased
+  lastUpdated: string;
+  snapshots: PriceSnapshot[]; // Recent snapshots (last 30 days)
+  chartData?: {
+    date: string;
+    price: number;
+    originalPrice?: number;
+  }[];
+}
+
+/**
+ * PriceAlert - User subscription for price notifications
+ */
+export interface PriceAlert {
+  id: string;
+  userId: string;
+  itemId: string;
+  itemType: 'product' | 'deal';
+  alertType: 'price_drop' | 'target_price' | 'back_in_stock' | 'coupon_expiry';
+  targetPrice?: number; // For target_price alerts
+  dropPercentage?: number; // For price_drop alerts (e.g., 10 for 10% drop)
+  status: 'active' | 'triggered' | 'expired' | 'cancelled';
+  createdAt: string;
+  triggeredAt?: string;
+  expiresAt?: string;
+  notificationSent: boolean;
+  metadata?: {
+    itemName?: string;
+    itemImage?: string;
+    currentPrice?: number;
+  };
+}
+
+/**
+ * PriceChangeNotification - Notification for price changes
+ */
+export interface PriceChangeNotification {
+  id: string;
+  alertId: string;
+  userId: string;
+  itemId: string;
+  itemType: 'product' | 'deal';
+  changeType: 'price_drop' | 'target_reached' | 'back_in_stock';
+  oldPrice: number;
+  newPrice: number;
+  percentageChange: number;
+  message: string;
+  link: string;
+  sentAt: string;
+  read: boolean;
+}
+
+// ============================================
+// M3: AI Review Summaries & Topic Modeling
+// ============================================
+
+/**
+ * ReviewSummary - AI-generated summary of product reviews
+ */
+export interface ReviewSummary {
+  id: string; // Same as productId
+  productId: string;
+  overallSentiment: 'positive' | 'neutral' | 'negative' | 'mixed';
+  sentimentScore: number; // -1 to 1 (negative to positive)
+  reviewCount: number; // Number of reviews analyzed
+  pros: string[]; // Top positive points (max 5)
+  cons: string[]; // Top negative points (max 5)
+  topicTags: TopicTag[]; // Extracted topics
+  summary: string; // 2-3 sentence summary
+  confidence: number; // 0-1 confidence score
+  generatedAt: string;
+  modelVersion: string;
+  language: string; // e.g., "pl", "en"
+}
+
+/**
+ * TopicTag - Extracted topic from reviews
+ */
+export interface TopicTag {
+  topic: string; // e.g., "battery_life", "build_quality", "customer_service"
+  label: string; // Human-readable label (Polish)
+  sentiment: 'positive' | 'neutral' | 'negative';
+  frequency: number; // How many reviews mention this (0-1)
+  keywords: string[]; // Related keywords
+}
+
+/**
+ * SentimentAnalysis - Detailed sentiment breakdown
+ */
+export interface SentimentAnalysis {
+  id: string;
+  productId: string;
+  overall: number; // -1 to 1
+  aspects: {
+    quality: number;
+    value: number;
+    shipping: number;
+    customerService: number;
+    accuracy: number; // Description vs reality
+  };
+  distribution: {
+    positive: number; // Percentage (0-100)
+    neutral: number;
+    negative: number;
+  };
+  trendOverTime?: {
+    month: string;
+    sentiment: number;
+  }[];
+  generatedAt: string;
+}
+
+/**
+ * ReviewAnalysisJob - Tracks AI review analysis jobs
+ */
+export interface ReviewAnalysisJob {
+  id: string;
+  productId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  reviewCount: number;
+  startedAt: string;
+  finishedAt?: string;
+  durationMs?: number;
+  error?: string;
+  triggeredBy: 'manual' | 'scheduled' | 'threshold'; // threshold = new reviews reached
+}
+
+// ============================================
+// M3: Community Gamification & Reputation
+// ============================================
+
+/**
+ * UserPoints - Point balance and history for a user
+ */
+export interface UserPoints {
+  userId: string;
+  totalPoints: number;
+  currentLevel: number;
+  pointsToNextLevel: number;
+  lifetimePoints: number; // Total ever earned (doesn't decrease)
+  rank?: number; // Global rank
+  lastUpdated: string;
+  breakdown: {
+    dealSubmissions: number;
+    productReviews: number;
+    comments: number;
+    votes: number;
+    reports: number;
+    moderationActions: number;
+  };
+}
+
+/**
+ * PointTransaction - Individual point earning/spending event
+ */
+export interface PointTransaction {
+  id: string;
+  userId: string;
+  amount: number; // Can be negative for penalties
+  type: 'earn' | 'spend' | 'bonus' | 'penalty';
+  action: string; // e.g., "deal_submitted", "review_written", "spam_reported"
+  reason: string; // Human-readable description
+  relatedItemId?: string;
+  relatedItemType?: 'deal' | 'product' | 'comment' | 'review';
+  timestamp: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Badge - Achievement badge definition
+ */
+export interface Badge {
+  id: string;
+  name: string;
+  nameEn: string;
+  description: string;
+  icon: string; // Emoji or icon identifier
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+  category: 'contribution' | 'engagement' | 'quality' | 'milestone' | 'special';
+  criteria: {
+    type: string; // e.g., "deal_count", "review_quality", "consecutive_days"
+    threshold: number;
+    timeframe?: string; // e.g., "30d", "all_time"
+  };
+  points: number; // Points awarded when earned
+  color?: string;
+  sortOrder?: number;
+}
+
+/**
+ * UserBadge - Badge earned by a user
+ */
+export interface UserBadge {
+  id: string;
+  userId: string;
+  badgeId: string;
+  earnedAt: string;
+  progress?: number; // For progressive badges (0-100)
+  level?: number; // For multi-level badges
+  displayOnProfile: boolean;
+}
+
+/**
+ * ReputationLevel - Defines reputation tiers
+ */
+export interface ReputationLevel {
+  level: number;
+  name: string;
+  minPoints: number;
+  maxPoints?: number;
+  icon: string;
+  color: string;
+  perks: string[]; // Benefits of this level
+}
+
+/**
+ * Leaderboard - Tracks top contributors
+ */
+export interface Leaderboard {
+  id: string;
+  type: 'weekly' | 'monthly' | 'all_time' | 'category';
+  category?: string; // For category-specific leaderboards
+  entries: LeaderboardEntry[];
+  periodStart: string;
+  periodEnd?: string;
+  lastUpdated: string;
+}
+
+/**
+ * LeaderboardEntry - Individual leaderboard position
+ */
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  displayName: string;
+  photoURL?: string;
+  points: number;
+  contributionCount: number;
+  badges?: string[]; // Badge IDs to display
+  change?: number; // Position change from previous period
+}
+
+/**
+ * UserActivity - User activity history
+ */
+export interface UserActivity {
+  id: string;
+  userId: string;
+  activityType: 'deal_submitted' | 'product_reviewed' | 'comment_posted' | 
+                'vote_cast' | 'report_submitted' | 'badge_earned' | 'level_up';
+  description: string;
+  points?: number; // Points earned for this activity
+  relatedItemId?: string;
+  relatedItemType?: 'deal' | 'product' | 'comment' | 'review' | 'badge';
+  timestamp: string;
+  visibility: 'public' | 'private'; // Some activities may be private
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Report - User report for issues, duplicates, spam, etc.
+ */
+export interface Report {
+  id: string;
+  reportedBy: string;
+  itemId: string;
+  itemType: 'deal' | 'product' | 'comment' | 'review' | 'user';
+  reportType: 'spam' | 'duplicate' | 'incorrect_info' | 'offensive' | 'expired' | 'other';
+  description: string;
+  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
+  priority: 'low' | 'medium' | 'high';
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  resolution?: string;
+  pointsAwarded?: number; // If report was helpful
+}
+
+// ============================================
+// M3: Personalization
+// ============================================
+
+/**
+ * UserPreferences - User's personalization preferences
+ */
+export interface UserPreferences {
+  userId: string;
+  favoriteCategories: string[]; // Category slugs
+  subscribedTopics: string[]; // Topic tags
+  priceRange?: {
+    min?: number;
+    max?: number;
+  };
+  preferredMerchants?: string[];
+  excludedMerchants?: string[];
+  notificationSettings: {
+    priceAlerts: boolean;
+    newDealsInCategories: boolean;
+    reviewResponses: boolean;
+    badgesAndAchievements: boolean;
+    weeklyDigest: boolean;
+  };
+  feedPreferences: {
+    showPersonalized: boolean;
+    includeFollowedUsers: boolean;
+    sortBy: 'trending' | 'newest' | 'price' | 'discount';
+  };
+  updatedAt: string;
+}
+
+/**
+ * UserInteraction - Tracks user interactions for recommendations
+ */
+export interface UserInteraction {
+  id: string;
+  userId: string;
+  itemId: string;
+  itemType: 'deal' | 'product';
+  interactionType: 'view' | 'click' | 'favorite' | 'vote' | 'comment' | 'share';
+  timestamp: string;
+  duration?: number; // Time spent (for views)
+  metadata?: {
+    source?: string; // Where they found it (search, feed, category)
+    position?: number; // Position in list when clicked
+    categorySlug?: string;
+  };
+}
+
+/**
+ * UserEmbedding - Vector embedding of user preferences/behavior
+ */
+export interface UserEmbedding {
+  userId: string;
+  embedding: number[]; // Vector representation
+  embeddingVersion: string;
+  basedOnInteractions: number; // Number of interactions used
+  generatedAt: string;
+  updatedAt: string;
+}
+
+/**
+ * FeedRecommendation - Personalized recommendation for user feed
+ */
+export interface FeedRecommendation {
+  id: string;
+  userId: string;
+  itemId: string;
+  itemType: 'deal' | 'product';
+  score: number; // Relevance score (0-1)
+  reason: string; // Why this was recommended
+  algorithm: 'embedding' | 'collaborative' | 'content' | 'trending' | 'hybrid';
+  generatedAt: string;
+  expiresAt: string;
+  shown: boolean;
+  clicked: boolean;
+  metadata?: {
+    similarItems?: string[];
+    matchingCategories?: string[];
+    confidence?: number;
+  };
+}
+
+/**
+ * ABTestVariant - A/B test configuration
+ */
+export interface ABTestVariant {
+  id: string;
+  testName: string;
+  variantName: string;
+  description: string;
+  isControl: boolean;
+  trafficPercentage: number; // 0-100
+  config: Record<string, any>; // Variant-specific configuration
+  enabled: boolean;
+  startDate: string;
+  endDate?: string;
+}
+
+/**
+ * ABTestAssignment - User assignment to A/B test variant
+ */
+export interface ABTestAssignment {
+  userId: string;
+  testName: string;
+  variantId: string;
+  assignedAt: string;
+  sticky: boolean; // Keep user in same variant
+}
+
+// ============================================
+// M3: Multi-Marketplace Integration
+// ============================================
+
+/**
+ * Marketplace - Definition of a marketplace/source
+ */
+export interface Marketplace {
+  id: string;
+  name: string;
+  slug: string; // e.g., "aliexpress", "amazon", "allegro"
+  country: string; // e.g., "CN", "US", "PL"
+  currency: string;
+  enabled: boolean;
+  logo?: string;
+  color?: string;
+  config: {
+    apiEndpoint?: string;
+    rateLimitPerMinute?: number;
+    supportsReviews: boolean;
+    supportsPriceHistory: boolean;
+    supportsTracking: boolean;
+  };
+  stats?: {
+    totalProducts: number;
+    totalDeals: number;
+    averageRating?: number;
+  };
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * CategoryMapping - Maps platform categories to marketplace categories
+ */
+export interface CategoryMapping {
+  id: string;
+  platformCategory: {
+    mainSlug: string;
+    subSlug?: string;
+    subSubSlug?: string;
+  };
+  marketplaceId: string;
+  marketplaceCategory: {
+    id: string;
+    name: string;
+    path?: string[]; // Category hierarchy
+  };
+  confidence: number; // 0-1 mapping quality
+  verified: boolean; // Manually verified by admin
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * PriceComparison - Aggregated price comparison across marketplaces
+ */
+export interface PriceComparison {
+  id: string; // Canonical product ID
+  productName: string;
+  canonicalImage: string;
+  prices: MarketplacePrice[];
+  lowestPrice: number;
+  highestPrice: number;
+  averagePrice: number;
+  priceSpread: number; // Difference between highest and lowest
+  lastUpdated: string;
+}
+
+/**
+ * MarketplacePrice - Price from a specific marketplace
+ */
+export interface MarketplacePrice {
+  marketplaceId: string;
+  marketplaceName: string;
+  productId: string; // ID on that marketplace
+  price: number;
+  currency: string;
+  originalPrice?: number;
+  inStock: boolean;
+  shippingCost?: number;
+  estimatedDelivery?: string;
+  rating?: number;
+  reviewCount?: number;
+  url: string;
+  lastChecked: string;
+}
+
+/**
+ * MultiSourceProduct - Product aggregated from multiple marketplaces
+ */
+export interface MultiSourceProduct {
+  id: string;
+  canonicalName: string;
+  canonicalImage: string;
+  category: {
+    mainSlug: string;
+    subSlug: string;
+    subSubSlug?: string;
+  };
+  sources: ProductSource[];
+  aggregatedRating: {
+    average: number;
+    count: number;
+    breakdown: Record<string, number>; // marketplace -> rating
+  };
+  priceRange: {
+    min: number;
+    max: number;
+    currency: string;
+  };
+  bestOffer?: {
+    marketplaceId: string;
+    price: number;
+    url: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * ProductSource - Individual product from a marketplace
+ */
+export interface ProductSource {
+  marketplaceId: string;
+  productId: string; // ID on that marketplace
+  name: string;
+  url: string;
+  price: number;
+  inStock: boolean;
+  rating?: number;
+  reviewCount?: number;
+  lastSynced: string;
+}
+
+/**
+ * ReviewAggregation - Aggregated reviews from multiple sources
+ */
+export interface ReviewAggregation {
+  id: string; // Canonical product ID
+  productId: string;
+  totalReviews: number;
+  averageRating: number;
+  sources: ReviewSource[];
+  combinedSummary?: ReviewSummary; // AI summary across all sources
+  lastAggregated: string;
+}
+
+/**
+ * ReviewSource - Reviews from a specific marketplace
+ */
+export interface ReviewSource {
+  marketplaceId: string;
+  reviewCount: number;
+  averageRating: number;
+  sentiment?: 'positive' | 'neutral' | 'negative';
+  lastFetched: string;
+  reviews?: {
+    text: string;
+    rating: number;
+    date: string;
+    verified: boolean;
+  }[];
+}
