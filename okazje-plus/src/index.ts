@@ -596,17 +596,17 @@ export const scheduleAudit = onCall(async (request) => {
 
 /**
  * Scheduled function to sync AliExpress products
- * 
+ *
  * This function runs on a schedule (configured in Firebase Console)
  * and processes all enabled import profiles sequentially.
- * 
+ *
  * TODO M2:
  * - Add parallel processing with rate limiting
  * - Add better error recovery
  * - Add metrics collection
  * - Add alerts for failed imports
  * - Store logs in Cloud Storage
- * 
+ *
  * @schedule Every day at 2 AM (Europe/Warsaw timezone)
  * @region europe-west1
  */
@@ -643,7 +643,7 @@ export const scheduleAliExpressSync = onSchedule(
       for (const profileDoc of profilesSnapshot.docs) {
         const profile = {id: profileDoc.id, ...profileDoc.data()} as any;
         logger.info(`Processing import profile: ${profile.id}`, {
-          name: profile.name || 'Unknown',
+          name: profile.name || "Unknown",
         });
 
         try {
@@ -652,7 +652,7 @@ export const scheduleAliExpressSync = onSchedule(
           await importRunRef.set({
             id: importRunRef.id,
             profileId: profile.id,
-            vendorId: profile.vendorId || 'unknown',
+            vendorId: profile.vendorId || "unknown",
             status: "running",
             dryRun: false,
             stats: {
