@@ -31,6 +31,14 @@ env:
     value: 1:298894101105:web:20a99f74b145cdf3ee29d0
     availability:
       - BUILD
+  
+  # Google AI for Genkit (required for build-time flow initialization)
+  - variable: GOOGLE_GENAI_API_KEY
+    secret: GOOGLE_GENAI_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  
   - variable: TEST_USER_EMAIL
     secret: TEST_USER_EMAIL
     availability:
