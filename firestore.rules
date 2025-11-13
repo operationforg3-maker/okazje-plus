@@ -192,5 +192,146 @@ service cloud.firestore {
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && (isAdmin() || request.resource.data.userId == request.auth.uid);
     }
+
+    ////////////////////////////////
+    // M3: PRICE MONITORING
+    ////////////////////////////////
+    match /price_snapshots/{snapshotId} {
+      allow read: if true; // Public read for price history
+      allow write: if isAdmin();
+    }
+
+    match /price_alerts/{alertId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /price_change_notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: AI REVIEW SUMMARIES
+    ////////////////////////////////
+    match /review_summaries/{summaryId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /sentiment_analysis/{analysisId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /review_analysis_jobs/{jobId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: GAMIFICATION
+    ////////////////////////////////
+    match /user_points/{userId} {
+      allow read: if true; // Public read for leaderboards
+      allow write: if isAdmin();
+    }
+
+    match /point_transactions/{transactionId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /user_badges/{userBadgeId} {
+      allow read: if true; // Public read for profiles
+      allow write: if isAdmin();
+    }
+
+    match /leaderboards/{leaderboardId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /user_activities/{activityId} {
+      allow read: if resource.data.visibility == 'public' || 
+                     (isSignedIn() && resource.data.userId == request.auth.uid) ||
+                     isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isSignedIn() && (resource.data.reportedBy == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.reportedBy == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: PERSONALIZATION
+    ////////////////////////////////
+    match /user_preferences/{userId} {
+      allow read: if isSignedIn() && (userId == request.auth.uid || isAdmin());
+      allow write: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    match /user_interactions/{interactionId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    match /user_embeddings/{userId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /feed_recommendations/{recommendationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    match /ab_test_variants/{variantId} {
+      allow read: if true; // Public read for client-side tests
+      allow write: if isAdmin();
+    }
+
+    match /ab_test_assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: MULTI-MARKETPLACE
+    ////////////////////////////////
+    match /marketplaces/{marketplaceId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /category_mappings/{mappingId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /price_comparisons/{comparisonId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /multi_source_products/{productId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /review_aggregations/{aggregationId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
   }
 }

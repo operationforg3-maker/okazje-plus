@@ -23,7 +23,6 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { ai } from '@/ai/genkit';
-import { logger } from '@/lib/logging';
 
 /**
  * Similarity threshold for considering products as duplicates
