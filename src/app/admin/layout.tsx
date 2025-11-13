@@ -42,6 +42,7 @@ const pathNames: Record<string, string> = {
   '/admin/categories': 'Kategorie',
   '/admin/moderation': 'Moderacja',
   '/admin/import': 'Import danych',
+  '/admin/imports/aliexpress': 'Import AliExpress',
   '/admin/analytics': 'Analityka',
   '/admin/trending-prediction': 'Predykcja AI',
   '/admin/users': 'Użytkownicy',
