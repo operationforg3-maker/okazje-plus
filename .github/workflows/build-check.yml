@@ -45,4 +45,5 @@ jobs:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: okazje-plus.firebasestorage.app
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '298894101105'
           NEXT_PUBLIC_FIREBASE_APP_ID: 1:298894101105:web:20a99f74b145cdf3ee29d0
+          NEXT_PUBLIC_SITE_URL: https://okazje-plus.web.app
           GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY || 'placeholder-key' }}

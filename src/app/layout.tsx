@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/footer';
 import { AuthProvider } from '@/lib/auth';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazje-plus.web.app'),
   title: {
     default: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
     template: '%s | Okazje+'

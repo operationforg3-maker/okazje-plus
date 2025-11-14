@@ -32,6 +32,13 @@ env:
     availability:
       - BUILD
   
+  # Site URL for metadata/OG images
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://okazje-plus.web.app
+    availability:
+      - BUILD
+      - RUNTIME
+  
   # Google AI for Genkit (required for build-time flow initialization)
   - variable: GOOGLE_GENAI_API_KEY
     secret: GOOGLE_GENAI_API_KEY
