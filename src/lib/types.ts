@@ -330,6 +330,52 @@ export interface AiJob {
 }
 
 // ============================================
+// Forum (wątki i posty)
+// ============================================
+
+export interface ForumCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  sortOrder?: number;
+  createdAt?: string;
+}
+
+export type PostAttachment =
+  | { type: 'deal'; id: string }
+  | { type: 'product'; id: string };
+
+export interface ForumThread {
+  id: string;
+  title: string;
+  authorUid: string;
+  authorDisplayName?: string | null;
+  categoryId?: string | null;
+  tags?: string[];
+  summary?: string; // pierwsze 200 znaków pierwszego posta
+  attachments?: PostAttachment[]; // np. załączony deal lub produkt
+  postsCount: number;
+  createdAt: string; // ISO
+  updatedAt?: string; // ISO
+  lastPostAt?: string; // ISO
+}
+
+export interface ForumPost {
+  id: string;
+  threadId: string;
+  authorUid: string;
+  authorDisplayName?: string | null;
+  content: string;
+  attachments?: PostAttachment[];
+  parentId?: string | null; // dla odpowiedzi zagnieżdżonych (M2)
+  upvotes?: number;
+  downvotes?: number;
+  createdAt: string; // ISO
+  updatedAt?: string; // ISO
+}
+
+// ============================================
 // AliExpress Integration Data Models (M1)
 // ============================================
 

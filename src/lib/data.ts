@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile } from "@/lib/types";
+import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
 /**
@@ -1262,4 +1262,120 @@ async function calculateGrowth(collectionName: string, daysBack: number): Promis
     console.warn(`Growth calculation failed for ${collectionName}:`, error);
     return 0;
   }
+}
+
+// ================================
+// Forum: funkcje dostępu do danych
+// ================================
+
+// Kategorie forum
+export async function listForumCategories(): Promise<ForumCategory[]> {
+  const ref = collection(db, 'forum_categories');
+  const snap = await getDocs(query(ref, orderBy('sortOrder', 'asc')));
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumCategory));
+}
+
+// Lista wątków (z sortowaniem po ostatniej aktywności)
+export async function listForumThreads(limitCount: number = 20, categoryId?: string): Promise<ForumThread[]> {
+  const ref = collection(db, 'forum_threads');
+  let qBase;
+  try {
+    qBase = categoryId
+      ? query(ref, where('categoryId', '==', categoryId), orderBy('lastPostAt', 'desc'), limit(limitCount))
+      : query(ref, orderBy('lastPostAt', 'desc'), limit(limitCount));
+  } catch {
+    // fallback jeśli brak indeksu
+    qBase = categoryId
+      ? query(ref, where('categoryId', '==', categoryId), orderBy('createdAt', 'desc'), limit(limitCount))
+      : query(ref, orderBy('createdAt', 'desc'), limit(limitCount));
+  }
+  const snap = await getDocs(qBase);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumThread));
+}
+
+export async function getForumThread(threadId: string): Promise<ForumThread | null> {
+  const ref = doc(db, 'forum_threads', threadId);
+  const d = await getDoc(ref);
+  if (!d.exists()) return null;
+  return { id: d.id, ...(d.data() as any) } as ForumThread;
+}
+
+export async function listForumPosts(threadId: string, limitCount: number = 100): Promise<ForumPost[]> {
+  const ref = collection(db, 'forum_threads', threadId, 'posts');
+  const snap = await getDocs(query(ref, orderBy('createdAt', 'asc'), limit(limitCount)));
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumPost));
+}
+
+export async function createForumThread(params: {
+  title: string;
+  content: string;
+  categoryId?: string | null;
+  attachments?: PostAttachment[];
+  authorUid: string;
+  authorDisplayName?: string | null;
+}): Promise<string> {
+  const now = new Date().toISOString();
+  // Najpierw utwórz wątek
+  const thread: Omit<ForumThread, 'id'> = {
+    title: params.title,
+    authorUid: params.authorUid,
+    authorDisplayName: params.authorDisplayName ?? null,
+    categoryId: params.categoryId ?? null,
+    tags: [],
+    summary: params.content.slice(0, 200),
+    attachments: params.attachments,
+    postsCount: 1,
+    createdAt: now,
+    updatedAt: now,
+    lastPostAt: now,
+  };
+  const threadRef = await addDoc(collection(db, 'forum_threads'), thread as any);
+
+  // Następnie dodaj pierwszy post do subkolekcji
+  const post: Omit<ForumPost, 'id'> = {
+    threadId: threadRef.id,
+    authorUid: params.authorUid,
+    authorDisplayName: params.authorDisplayName ?? null,
+    content: params.content,
+    attachments: params.attachments,
+    parentId: null,
+    upvotes: 0,
+    downvotes: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await addDoc(collection(db, 'forum_threads', threadRef.id, 'posts'), post as any);
+
+  return threadRef.id;
+}
+
+export async function addForumPost(params: {
+  threadId: string;
+  content: string;
+  attachments?: PostAttachment[];
+  authorUid: string;
+  authorDisplayName?: string | null;
+  parentId?: string | null;
+}): Promise<string> {
+  const now = new Date().toISOString();
+  const post: Omit<ForumPost, 'id'> = {
+    threadId: params.threadId,
+    authorUid: params.authorUid,
+    authorDisplayName: params.authorDisplayName ?? null,
+    content: params.content,
+    attachments: params.attachments,
+    parentId: params.parentId ?? null,
+    upvotes: 0,
+    downvotes: 0,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const ref = await addDoc(collection(db, 'forum_threads', params.threadId, 'posts'), post as any);
+  // Aktualizuj licznik i lastPostAt
+  await updateDoc(doc(db, 'forum_threads', params.threadId), {
+    postsCount: increment(1),
+    lastPostAt: now,
+    updatedAt: now,
+  });
+  return ref.id;
 }

@@ -63,6 +63,7 @@ export function Navbar() {
               <Link href="/" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Strona główna</Link>
               <Link href="/deals" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Okazje</Link>
               <Link href="/products" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Katalog</Link>
+              <Link href="/forum" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Forum</Link>
             </div>
           </SheetContent>
         </Sheet>
@@ -88,6 +89,13 @@ export function Navbar() {
               <Link href="/deals" legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Okazje
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <Link href="/forum" legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Forum
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
