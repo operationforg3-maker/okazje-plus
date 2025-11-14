@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -13,6 +14,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -29,15 +39,54 @@ import {
   Sparkles,
   Settings
 } from 'lucide-react';
-import { getEnabledMarketplaces, getMarketplaceMappings } from '@/lib/multi-marketplace';
+import { getEnabledMarketplaces, getMarketplaceMappings, createCategoryMapping } from '@/lib/multi-marketplace';
 import { Marketplace, CategoryMapping } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 function CategoryMappingsPage() {
+  const { toast } = useToast();
   const [marketplaces, setMarketplaces] = useState<Marketplace[]>([]);
   const [selectedMarketplace, setSelectedMarketplace] = useState<string>('');
   const [mappings, setMappings] = useState<CategoryMapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [platformCategories, setPlatformCategories] = useState<any[]>([]);
+  
+  // New mapping form state
+  const [newMapping, setNewMapping] = useState({
+    mainSlug: '',
+    subSlug: '',
+    marketplaceId: '',
+    marketplaceCategoryId: '',
+    marketplaceCategoryName: '',
+    confidence: 1.0,
+  });
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const mps = await getEnabledMarketplaces();
+        setMarketplaces(mps);
+        if (mps.length > 0) {
+          setSelectedMarketplace(mps[0].id);
+          setNewMapping(prev => ({ ...prev, marketplaceId: mps[0].id }));
+        }
+
+        // Fetch platform categories
+        const catsSnapshot = await getDocs(collection(db, 'categories'));
+        const cats = catsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setPlatformCategories(cats);
+      } catch (error) {
+        console.error('Error fetching marketplaces:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -70,6 +119,59 @@ function CategoryMappingsPage() {
     fetchMappings();
   }, [selectedMarketplace]);
 
+  const handleAddMapping = async () => {
+    if (!newMapping.mainSlug || !newMapping.marketplaceId || !newMapping.marketplaceCategoryId) {
+      toast({
+        title: 'Błąd',
+        description: 'Wypełnij wszystkie wymagane pola',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await createCategoryMapping(
+        {
+          mainSlug: newMapping.mainSlug,
+          subSlug: newMapping.subSlug || undefined,
+        },
+        newMapping.marketplaceId,
+        {
+          id: newMapping.marketplaceCategoryId,
+          name: newMapping.marketplaceCategoryName,
+        },
+        newMapping.confidence,
+        false // not verified by default
+      );
+
+      toast({
+        title: 'Sukces',
+        description: 'Mapowanie zostało dodane',
+      });
+
+      // Refresh mappings
+      const data = await getMarketplaceMappings(selectedMarketplace);
+      setMappings(data);
+
+      // Reset form and close dialog
+      setNewMapping({
+        mainSlug: '',
+        subSlug: '',
+        marketplaceId: selectedMarketplace,
+        marketplaceCategoryId: '',
+        marketplaceCategoryName: '',
+        confidence: 1.0,
+      });
+      setShowAddDialog(false);
+    } catch (error: any) {
+      toast({
+        title: 'Błąd',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const filteredMappings = mappings.filter((mapping) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -97,10 +199,131 @@ function CategoryMappingsPage() {
             Zarządzaj mapowaniem kategorii marketplace na kategorie platformy
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Dodaj mapowanie
-        </Button>
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Dodaj mapowanie
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Dodaj nowe mapowanie</DialogTitle>
+              <DialogDescription>
+                Zmapuj kategorię marketplace na kategorię platformy
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="marketplace">Marketplace</Label>
+                <Select
+                  value={newMapping.marketplaceId}
+                  onValueChange={(value) =>
+                    setNewMapping({ ...newMapping, marketplaceId: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wybierz marketplace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {marketplaces.map((mp) => (
+                      <SelectItem key={mp.id} value={mp.id}>
+                        {mp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="mainSlug">Kategoria główna (slug)</Label>
+                <Select
+                  value={newMapping.mainSlug}
+                  onValueChange={(value) =>
+                    setNewMapping({ ...newMapping, mainSlug: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Wybierz kategorię główną" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {platformCategories.map((cat: any) => (
+                      <SelectItem key={cat.id} value={cat.slug}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="subSlug">Podkategoria (slug) - opcjonalne</Label>
+                <Input
+                  id="subSlug"
+                  placeholder="np. smartfony"
+                  value={newMapping.subSlug}
+                  onChange={(e) =>
+                    setNewMapping({ ...newMapping, subSlug: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="marketplaceCategoryId">ID kategorii marketplace</Label>
+                <Input
+                  id="marketplaceCategoryId"
+                  placeholder="np. 123456"
+                  value={newMapping.marketplaceCategoryId}
+                  onChange={(e) =>
+                    setNewMapping({
+                      ...newMapping,
+                      marketplaceCategoryId: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="marketplaceCategoryName">Nazwa kategorii marketplace</Label>
+                <Input
+                  id="marketplaceCategoryName"
+                  placeholder="np. Electronics > Phones"
+                  value={newMapping.marketplaceCategoryName}
+                  onChange={(e) =>
+                    setNewMapping({
+                      ...newMapping,
+                      marketplaceCategoryName: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="confidence">Pewność (0-1)</Label>
+                <Input
+                  id="confidence"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={newMapping.confidence}
+                  onChange={(e) =>
+                    setNewMapping({
+                      ...newMapping,
+                      confidence: parseFloat(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+                Anuluj
+              </Button>
+              <Button onClick={handleAddMapping}>Dodaj</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Stats Cards */}

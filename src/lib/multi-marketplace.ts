@@ -384,3 +384,29 @@ export async function getBestOffer(productId: string): Promise<MarketplacePrice 
     return currentTotal < bestTotal ? current : best;
   });
 }
+
+/**
+ * Searches price comparisons by product name
+ */
+export async function searchPriceComparisons(searchQuery: string): Promise<PriceComparison[]> {
+  const comparisonsRef = collection(db, 'price_comparisons');
+  
+  // Firestore doesn't support full-text search, so we'll get all and filter client-side
+  // For production, consider using Typesense or Algolia
+  const snapshot = await getDocs(comparisonsRef);
+  
+  const allComparisons = snapshot.docs.map(
+    (doc) => ({ id: doc.id, ...doc.data() } as PriceComparison)
+  );
+
+  if (!searchQuery.trim()) {
+    return allComparisons.slice(0, 20); // Return first 20 if no query
+  }
+
+  const query = searchQuery.toLowerCase();
+  const filtered = allComparisons.filter((comparison) =>
+    comparison.productName.toLowerCase().includes(query)
+  );
+
+  return filtered.slice(0, 20); // Return top 20 matches
+}

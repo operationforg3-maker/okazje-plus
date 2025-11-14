@@ -23,6 +23,7 @@ import {
   Package
 } from 'lucide-react';
 import { PriceComparison } from '@/lib/types';
+import { searchPriceComparisons } from '@/lib/multi-marketplace';
 
 function ComparisonPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,12 +35,11 @@ function ComparisonPage() {
     
     setLoading(true);
     try {
-      // TODO: Implement search API
-      // const results = await searchPriceComparisons(searchQuery);
-      // setComparisons(results);
-      console.log('Searching for:', searchQuery);
+      const results = await searchPriceComparisons(searchQuery);
+      setComparisons(results);
     } catch (error) {
       console.error('Search failed:', error);
+      setComparisons([]);
     } finally {
       setLoading(false);
     }

@@ -1,24 +1,11 @@
 'use client';
 
-/**
- * AliExpress Import Wizard - Admin UI (M1 Placeholder)
- * 
- * This is a skeleton implementation for M1. It shows the wizard steps
- * but does not implement full functionality yet.
- * 
- * TODO M2:
- * - Implement OAuth connection flow
- * - Add profile creation form
- * - Add live import preview
- * - Add import run history
- * - Add category mapping interface
- * - Add bulk actions for import runs
- */
-
 import { withAuth } from '@/components/auth/withAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   Settings, 
   Play, 
@@ -27,59 +14,97 @@ import {
   FileText,
   Link as LinkIcon,
   Filter,
-  Database
+  Database,
+  Search,
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
-
-/**
- * Wizard steps for AliExpress import configuration
- */
-export enum WizardStep {
-  CONNECT = 'connect',
-  CONFIGURE = 'configure',
-  TEST = 'test',
-  SCHEDULE = 'schedule',
-  MONITOR = 'monitor'
-}
-
-const WIZARD_STEPS = [
-  {
-    id: WizardStep.CONNECT,
-    title: '1. Połącz z AliExpress',
-    description: 'Autoryzuj dostęp do AliExpress API',
-    icon: LinkIcon,
-    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
-  },
-  {
-    id: WizardStep.CONFIGURE,
-    title: '2. Skonfiguruj profil importu',
-    description: 'Ustaw filtry, kategorie i zasady mapowania',
-    icon: Settings,
-    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
-  },
-  {
-    id: WizardStep.TEST,
-    title: '3. Testuj import',
-    description: 'Wykonaj test importu (dry-run) bez zapisywania',
-    icon: Play,
-    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
-  },
-  {
-    id: WizardStep.SCHEDULE,
-    title: '4. Zaplanuj synchronizację',
-    description: 'Ustaw harmonogram automatycznych importów',
-    icon: Database,
-    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
-  },
-  {
-    id: WizardStep.MONITOR,
-    title: '5. Monitoruj wyniki',
-    description: 'Zobacz historię i statystyki importów',
-    icon: FileText,
-    status: 'todo' as 'todo' | 'in_progress' | 'completed' | 'error'
-  }
-];
+import { useState } from 'react';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 function AliExpressImportWizard() {
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      toast({
+        title: 'Błąd',
+        description: 'Wprowadź frazę do wyszukania',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/aliexpress/search?query=${encodeURIComponent(searchQuery)}&pageSize=10`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Nie udało się wyszukać produktów');
+      }
+
+      const data = await response.json();
+      setSearchResults(data.products || []);
+      
+      toast({
+        title: 'Sukces',
+        description: `Znaleziono ${data.products?.length || 0} produktów`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Błąd',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setSearchResults([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportProduct = async (productId: string) => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/aliexpress/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId,
+          skipDuplicates: true,
+          autoApprove: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Nie udało się zaimportować produktu');
+      }
+
+      const data = await response.json();
+      
+      toast({
+        title: 'Sukces',
+        description: `Produkt został zaimportowany (ID: ${data.productId})`,
+      });
+      
+      setSelectedProduct(null);
+    } catch (error: any) {
+      toast({
+        title: 'Błąd',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -88,153 +113,165 @@ function AliExpressImportWizard() {
           🛍️ Import z AliExpress
         </h2>
         <p className="text-muted-foreground mt-2">
-          Automatyczny import produktów i okazji z platformy AliExpress
+          Wyszukaj i importuj produkty z platformy AliExpress
         </p>
       </div>
 
-      {/* Status Alert - M1 Implementation Notice */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+      {/* OAuth Status */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold text-blue-900">
-                Milestone 1 - Wersja podstawowa
-              </h3>
-              <p className="text-sm text-blue-800 mt-1">
-                To jest szkielet interfejsu importu AliExpress. Pełna funkcjonalność
-                będzie dostępna w kolejnych etapach (M2, M3).
-              </p>
-              <ul className="text-sm text-blue-700 mt-2 space-y-1 ml-4 list-disc">
-                <li>OAuth i autoryzacja API - W przygotowaniu (M2)</li>
-                <li>Testowy import (dry-run) - Zaimplementowano</li>
-                <li>Harmonogram automatyczny - Funkcja utworzona</li>
-                <li>Pełny interfejs konfiguracji - W przygotowaniu (M2)</li>
-              </ul>
+              <CardTitle>1. Połączenie OAuth</CardTitle>
+              <CardDescription>
+                Zarządzaj tokenem dostępu do AliExpress API
+              </CardDescription>
             </div>
+            <Button asChild variant="outline">
+              <Link href="/admin/settings/oauth">
+                <Settings className="mr-2 h-4 w-4" />
+                Zarządzaj tokenami
+              </Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <span>Przejdź do ustawień OAuth aby skonfigurować dostęp do AliExpress</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Wizard Steps Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {WIZARD_STEPS.map((step) => {
-          const Icon = step.icon;
-          const statusColors = {
-            todo: 'bg-gray-100 text-gray-700',
-            in_progress: 'bg-blue-100 text-blue-700',
-            completed: 'bg-green-100 text-green-700',
-            error: 'bg-red-100 text-red-700'
-          };
-
-          return (
-            <Card key={step.id} className="relative">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">
-                        {step.title}
-                      </CardTitle>
-                    </div>
-                  </div>
-                  <Badge 
-                    variant="outline" 
-                    className={statusColors[step.status]}
-                  >
-                    {step.status === 'todo' && 'Oczekuje'}
-                    {step.status === 'completed' && 'Gotowe'}
-                    {step.status === 'in_progress' && 'W toku'}
-                    {step.status === 'error' && 'Błąd'}
-                  </Badge>
-                </div>
-                <CardDescription className="mt-2">
-                  {step.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full"
-                  disabled
-                >
-                  Przejdź do kroku
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Quick Actions */}
+      {/* Search Products */}
       <Card>
         <CardHeader>
-          <CardTitle>Szybkie akcje</CardTitle>
+          <CardTitle>2. Wyszukaj produkty</CardTitle>
           <CardDescription>
-            Najczęściej używane operacje importu
+            Wprowadź frazę aby wyszukać produkty na AliExpress
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Button className="w-full justify-start" variant="outline" disabled>
-            <Play className="h-4 w-4 mr-2" />
-            Uruchom testowy import (dry-run)
-          </Button>
-          <Button className="w-full justify-start" variant="outline" disabled>
-            <Database className="h-4 w-4 mr-2" />
-            Utwórz nowy profil importu
-          </Button>
-          <Button className="w-full justify-start" variant="outline" disabled>
-            <FileText className="h-4 w-4 mr-2" />
-            Zobacz historię importów
-          </Button>
-          <Button className="w-full justify-start" variant="outline" disabled>
-            <Settings className="h-4 w-4 mr-2" />
-            Zarządzaj profilami
-          </Button>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Label htmlFor="search">Fraza wyszukiwania</Label>
+              <Input
+                id="search"
+                placeholder="np. wireless headphones"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button onClick={handleSearch} disabled={loading}>
+                {loading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="mr-2 h-4 w-4" />
+                )}
+                Szukaj
+              </Button>
+            </div>
+          </div>
+
+          {searchResults.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold">
+                Wyniki ({searchResults.length})
+              </h4>
+              <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
+                {searchResults.map((product: any) => (
+                  <div
+                    key={product.productId}
+                    className="p-3 flex items-center justify-between hover:bg-muted/50"
+                  >
+                    <div className="flex-1">
+                      <h5 className="text-sm font-medium line-clamp-1">
+                        {product.productTitle}
+                      </h5>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {product.targetSalePrice} {product.targetSalePriceCurrency}
+                        </Badge>
+                        {product.productId && (
+                          <span className="text-xs text-muted-foreground">
+                            ID: {product.productId}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {product.productDetailUrl && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          asChild
+                        >
+                          <a
+                            href={product.productDetailUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          handleImportProduct(product.productId)
+                        }
+                        disabled={loading}
+                      >
+                        Importuj
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Documentation */}
       <Card>
         <CardHeader>
-          <CardTitle>📚 Dokumentacja</CardTitle>
+          <CardTitle>📚 Dokumentacja i zasoby</CardTitle>
           <CardDescription>
             Przewodniki i informacje techniczne
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-3">
           <div className="text-sm">
-            <h4 className="font-semibold mb-1">Dostępne zasoby:</h4>
+            <h4 className="font-semibold mb-2">Dostępne zasoby:</h4>
             <ul className="space-y-1 text-muted-foreground">
               <li>• <code className="text-xs bg-muted px-1 py-0.5 rounded">docs/integration/aliexpress.md</code> - Pełna dokumentacja</li>
               <li>• <code className="text-xs bg-muted px-1 py-0.5 rounded">src/integrations/aliexpress/</code> - Kod integracji</li>
-              <li>• <code className="text-xs bg-muted px-1 py-0.5 rounded">src/ai/flows/aliexpress/</code> - Przepływy AI</li>
+              <li>• Cloud Function: <code className="text-xs bg-muted px-1 py-0.5 rounded">scheduleAliExpressSync</code> - Automatyczna synchronizacja</li>
             </ul>
           </div>
           <div className="pt-2 border-t">
-            <p className="text-xs text-muted-foreground">
-              W razie pytań lub problemów, sprawdź dokumentację lub skontaktuj się z zespołem rozwoju.
-            </p>
+            <h4 className="font-semibold text-sm mb-2">Backend API:</h4>
+            <div className="grid gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono">GET</Badge>
+                <code className="text-muted-foreground">/api/admin/aliexpress/search</code>
+                <CheckCircle className="h-3 w-3 text-green-600" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono">GET</Badge>
+                <code className="text-muted-foreground">/api/admin/aliexpress/item</code>
+                <CheckCircle className="h-3 w-3 text-green-600" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono">POST</Badge>
+                <code className="text-muted-foreground">/api/admin/aliexpress/import</code>
+                <CheckCircle className="h-3 w-3 text-green-600" />
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Technical Info (for developers) */}
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-sm">🔧 Informacje techniczne (M1)</CardTitle>
-        </CardHeader>
-        <CardContent className="text-xs text-muted-foreground space-y-1">
-          <p>• Interfejsy danych: <code>Vendor, ImportProfile, ImportRun</code> w <code>types.ts</code></p>
-          <p>• RBAC: Rozszerzone role użytkowników (admin, moderator, specjalista, user)</p>
-          <p>• Logging: Struktura logowania w <code>src/lib/logging.ts</code></p>
-          <p>• Typesense: Stubowe funkcje kolejkowania w <code>src/search/typesenseQueue.ts</code></p>
-          <p>• Firebase Function: <code>scheduleAliExpressSync</code> uruchamiana codziennie o 2:00</p>
-          <p>• AI Flows (stubs): aiSuggestCategory, aiNormalizeTitlePL, aiDealQualityScore</p>
         </CardContent>
       </Card>
     </div>
