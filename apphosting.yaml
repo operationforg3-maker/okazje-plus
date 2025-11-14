@@ -34,7 +34,7 @@ env:
   
   # Site URL for metadata/OG images
   - variable: NEXT_PUBLIC_SITE_URL
-    value: https://okazje-plus.web.app
+    value: https://okazje-plus-backend--okazje-plus.europe-west4.hosted.app
     availability:
       - BUILD
       - RUNTIME
