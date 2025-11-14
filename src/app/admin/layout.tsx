@@ -29,7 +29,13 @@ import {
   CheckSquare,
   BarChart3,
   Home,
-  ChevronRight
+  ChevronRight,
+  Store,
+  Scale,
+  GitBranch,
+  Copy,
+  Navigation,
+  Wrench
 } from 'lucide-react';
 import { UserNav } from '@/components/auth/user-nav';
 import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
@@ -40,11 +46,17 @@ const pathNames: Record<string, string> = {
   '/admin/products': 'Produkty',
   '/admin/deals': 'Okazje',
   '/admin/categories': 'Kategorie',
+  '/admin/navigation': 'Nawigacja',
   '/admin/moderation': 'Moderacja',
   '/admin/import': 'Import danych',
   '/admin/imports/aliexpress': 'Import AliExpress',
+  '/admin/marketplaces': 'Marketplace',
+  '/admin/comparison': 'Porównanie cen',
+  '/admin/category-mappings': 'Mapowanie kategorii',
+  '/admin/duplicates': 'Duplikaty',
   '/admin/analytics': 'Analityka',
   '/admin/trending-prediction': 'Predykcja AI',
+  '/admin/m3-tools': 'M3 Tools',
   '/admin/users': 'Użytkownicy',
   '/admin/settings': 'Ustawienia',
 };
@@ -148,6 +160,19 @@ export default function AdminLayout({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
+                    isActive={isActive('/admin/navigation')}
+                    tooltip={{ children: 'Nawigacja' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/navigation">
+                      <Navigation />
+                      <span className="group-data-[collapsible=icon]:hidden">Nawigacja</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
                     isActive={isActive('/admin/moderation')}
                     tooltip={{ children: 'Moderacja' }}
                     className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
@@ -155,6 +180,64 @@ export default function AdminLayout({
                     <Link href="/admin/moderation">
                       <CheckSquare />
                       <span className="group-data-[collapsible=icon]:hidden">Moderacja</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                <Separator className="my-2" />
+                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
+                  Marketplace
+                </div>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/marketplaces')}
+                    tooltip={{ children: 'Marketplace' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/marketplaces">
+                      <Store />
+                      <span className="group-data-[collapsible=icon]:hidden">Marketplace</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/comparison')}
+                    tooltip={{ children: 'Porównanie cen' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/comparison">
+                      <Scale />
+                      <span className="group-data-[collapsible=icon]:hidden">Porównanie cen</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/category-mappings')}
+                    tooltip={{ children: 'Mapowanie kategorii' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/category-mappings">
+                      <GitBranch />
+                      <span className="group-data-[collapsible=icon]:hidden">Mapowanie kategorii</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/duplicates')}
+                    tooltip={{ children: 'Duplikaty' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/duplicates">
+                      <Copy />
+                      <span className="group-data-[collapsible=icon]:hidden">Duplikaty</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -175,6 +258,19 @@ export default function AdminLayout({
                     <Link href="/admin/import">
                       <FileUp />
                       <span className="group-data-[collapsible=icon]:hidden">Import danych</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/imports/aliexpress')}
+                    tooltip={{ children: 'Import AliExpress' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/imports/aliexpress">
+                      <ShoppingBag />
+                      <span className="group-data-[collapsible=icon]:hidden">Import AliExpress</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -208,6 +304,19 @@ export default function AdminLayout({
                     <Link href="/admin/trending-prediction">
                       <BrainCircuit />
                       <span className="group-data-[collapsible=icon]:hidden">Predykcja AI</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/m3-tools')}
+                    tooltip={{ children: 'M3 Tools' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/m3-tools">
+                      <Wrench />
+                      <span className="group-data-[collapsible=icon]:hidden">M3 Tools</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
