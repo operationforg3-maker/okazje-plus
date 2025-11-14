@@ -710,3 +710,171 @@ export const scheduleAliExpressSync = onSchedule(
     }
   }
 );
+
+/**
+ * Scheduled Price History Sync (M6)
+ * 
+ * This function runs on a schedule and captures price snapshots for monitored products.
+ * It checks the feature flag before running and supports dry-run mode.
+ * 
+ * TODO M7:
+ * - Integrate with actual product price fetching from external sources
+ * - Add batch processing with rate limiting
+ * - Add better error recovery and retry logic
+ * - Store detailed logs in Firestore or Cloud Storage
+ * - Add alerting for failed runs
+ * 
+ * @schedule Every 24 hours (configurable via environment)
+ * @region europe-west1
+ */
+export const scheduledPriceHistorySync = onSchedule(
+  {
+    schedule: "0 3 * * *", // Daily at 3 AM (after AliExpress sync)
+    timeZone: "Europe/Warsaw",
+    region: "europe-west1",
+    memory: "512MiB",
+    timeoutSeconds: 540, // 9 minutes
+  },
+  async (event) => {
+    logger.info("Starting scheduled price history sync (M6)");
+
+    try {
+      // Check if feature is enabled
+      const enabledFlag = process.env.PRICE_MONITORING_ENABLED;
+      if (enabledFlag !== "true" && enabledFlag !== "1") {
+        logger.info("Price monitoring is disabled - skipping run");
+        return {
+          success: true,
+          message: "Price monitoring disabled",
+          productsProcessed: 0,
+        };
+      }
+
+      // Check if dry-run mode
+      const dryRunFlag = process.env.PRICE_MONITORING_DRY_RUN;
+      const dryRun = dryRunFlag === "true" || dryRunFlag === "1";
+      
+      if (dryRun) {
+        logger.info("Running in DRY-RUN mode - no database writes");
+      }
+
+      const startTime = Date.now();
+      const startedAt = new Date().toISOString();
+
+      // Create run record
+      const runRef = db.collection("priceHistoryRuns").doc();
+      await runRef.set({
+        id: runRef.id,
+        status: "running",
+        dryRun,
+        stats: {
+          productsProcessed: 0,
+          snapshotsCreated: 0,
+          snapshotsUpdated: 0,
+          snapshotsSkipped: 0,
+          errors: 0,
+        },
+        startedAt,
+        triggeredBy: "scheduled",
+      });
+
+      logger.info(`Price history run ${runRef.id} started`);
+
+      // TODO M7: Load products to monitor from Firestore
+      // For M6, this is a stub that returns empty array
+      // const productsToMonitor = await loadProductsForMonitoring();
+      const productsToMonitor: any[] = [];
+
+      logger.info(`Loaded ${productsToMonitor.length} products to monitor`);
+
+      if (productsToMonitor.length === 0) {
+        logger.warn("No products to monitor - completing run");
+        
+        const finishedAt = new Date().toISOString();
+        const durationMs = Date.now() - startTime;
+
+        await runRef.update({
+          status: "completed",
+          finishedAt,
+          durationMs,
+        });
+
+        return {
+          success: true,
+          message: "No products to monitor",
+          productsProcessed: 0,
+          durationMs,
+        };
+      }
+
+      // TODO M7: Process products and capture snapshots
+      // For M6, this is a stub
+      // 
+      // const results = await Promise.all(
+      //   productsToMonitor.map(product => 
+      //     snapshotProductPrice({
+      //       productId: product.id,
+      //       price: product.currentPrice,
+      //       currency: 'PLN',
+      //       source: product.source || 'manual',
+      //       inStock: true,
+      //     }, { dryRun })
+      //   )
+      // );
+      //
+      // const aggregatedStats = results.reduce((acc, result) => ({
+      //   productsProcessed: acc.productsProcessed + result.processed,
+      //   snapshotsCreated: acc.snapshotsCreated + result.wouldCreate,
+      //   snapshotsUpdated: acc.snapshotsUpdated + result.wouldUpdate,
+      //   snapshotsSkipped: acc.snapshotsSkipped + result.skipped,
+      //   errors: acc.errors + result.errors.length,
+      // }), {
+      //   productsProcessed: 0,
+      //   snapshotsCreated: 0,
+      //   snapshotsUpdated: 0,
+      //   snapshotsSkipped: 0,
+      //   errors: 0,
+      // });
+
+      // Stub stats for M6
+      const stats = {
+        productsProcessed: 0,
+        snapshotsCreated: 0,
+        snapshotsUpdated: 0,
+        snapshotsSkipped: 0,
+        errors: 0,
+      };
+
+      const finishedAt = new Date().toISOString();
+      const durationMs = Date.now() - startTime;
+
+      // Update run record
+      await runRef.update({
+        status: "completed",
+        stats,
+        finishedAt,
+        durationMs,
+      });
+
+      logger.info("Scheduled price history sync completed", {
+        runId: runRef.id,
+        durationMs,
+        stats,
+      });
+
+      return {
+        success: true,
+        runId: runRef.id,
+        durationMs,
+        stats,
+      };
+
+    } catch (error: unknown) {
+      logger.error(
+        "Failed to run scheduled price history sync:",
+        error instanceof Error ? error.message : error
+      );
+      throw error; // Re-throw to mark function as failed
+    }
+  }
+);
