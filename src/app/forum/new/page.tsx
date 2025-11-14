@@ -4,13 +4,14 @@ import { withAuth } from '@/components/auth/withAuth';
 import { useAuth } from '@/lib/auth';
 import { useState } from 'react';
 import { createForumThread, listForumCategories } from '@/lib/data';
-import { ForumCategory, PostAttachment } from '@/lib/types';
+import { ForumCategory, PostAttachment, Deal, Product } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+import { SearchableAttachmentPicker } from '@/components/forum/searchable-attachment-picker';
+import { AttachmentCard } from '@/components/forum/attachment-card';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -22,7 +23,7 @@ function NewThreadPageImpl() {
   const [categoryId, setCategoryId] = useState<string>('');
   const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [attachmentType, setAttachmentType] = useState<'none' | 'deal' | 'product'>('none');
-  const [attachmentId, setAttachmentId] = useState('');
+  const [selectedAttachment, setSelectedAttachment] = useState<Deal | Product | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,9 +37,9 @@ function NewThreadPageImpl() {
     setLoading(true);
     try {
       const attachments: PostAttachment[] | undefined =
-        attachmentType === 'none' || !attachmentId.trim()
+        attachmentType === 'none' || !selectedAttachment
           ? undefined
-          : [{ type: attachmentType, id: attachmentId } as PostAttachment];
+          : [{ type: attachmentType, id: selectedAttachment.id } as PostAttachment];
 
       const id = await createForumThread({
         title,
@@ -94,20 +95,21 @@ function NewThreadPageImpl() {
       <Card>
         <CardHeader>
           <CardTitle>Załączniki (opcjonalnie)</CardTitle>
-          <CardDescription>Możesz podpiąć istniejący produkt lub okazję</CardDescription>
+          <CardDescription>Możesz podpiąć istniejący produkt lub okazję. W treści możesz również użyć @deal:id lub @product:id.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
-            <Button variant={attachmentType === 'none' ? 'default' : 'outline'} onClick={() => setAttachmentType('none')}>Brak</Button>
-            <Button variant={attachmentType === 'deal' ? 'default' : 'outline'} onClick={() => setAttachmentType('deal')}>Okazja</Button>
-            <Button variant={attachmentType === 'product' ? 'default' : 'outline'} onClick={() => setAttachmentType('product')}>Produkt</Button>
+            <Button variant={attachmentType === 'none' ? 'default' : 'outline'} onClick={() => { setAttachmentType('none'); setSelectedAttachment(null); }}>Brak</Button>
+            <Button variant={attachmentType === 'deal' ? 'default' : 'outline'} onClick={() => { setAttachmentType('deal'); setSelectedAttachment(null); }}>Okazja</Button>
+            <Button variant={attachmentType === 'product' ? 'default' : 'outline'} onClick={() => { setAttachmentType('product'); setSelectedAttachment(null); }}>Produkt</Button>
           </div>
           {attachmentType !== 'none' && (
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">ID elementu</label>
-              <Input value={attachmentId} onChange={(e) => setAttachmentId(e.target.value)} placeholder="Wpisz ID produktu/okazji" />
-              <p className="text-xs text-muted-foreground">W przyszłości dodamy wygodną wyszukiwarkę. Teraz możesz wkleić ID ręcznie.</p>
-            </div>
+            <SearchableAttachmentPicker
+              type={attachmentType}
+              onSelect={(item) => setSelectedAttachment(item)}
+              selected={selectedAttachment}
+              onClear={() => setSelectedAttachment(null)}
+            />
           )}
         </CardContent>
       </Card>
