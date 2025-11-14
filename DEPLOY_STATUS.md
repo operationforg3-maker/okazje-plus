@@ -4,7 +4,7 @@
 
 **Deploy zakończony sukcesem!**
 
-- 🌐 Production URL: https://okazje-plus.web.app
+- 🌐 Production URL: https://okazje-plus-backend--okazje-plus.europe-west4.hosted.app
 - ⚡ Firebase Hosting: ✅ Aktywny
 - 🔥 Cloud Functions: ✅ Wdrożone (8 funkcji)
 - 📊 Firestore: ✅ Reguły i indeksy zaktualizowane
@@ -181,4 +181,4 @@ Wszystkie komponenty UI dostępne w `src/components/ui/`:
 
 **Ostatni deploy**: 14 Listopada 2025  
 **Status**: ✅ PRODUCTION READY  
-**URL**: https://okazje-plus.web.app
+**URL**: https://okazje-plus-backend--okazje-plus.europe-west4.hosted.app
