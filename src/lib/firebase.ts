@@ -6,21 +6,14 @@ import { getFunctions } from "firebase/functions";
 const isServer = typeof window === 'undefined';
 const isTestEnv = process.env.NODE_ENV === 'test';
 
-function resolveEnv(key: string, fallback: string): string | undefined {
-  const value = process.env[key];
-  if (value && value.length > 0) {
-    return value;
-  }
-  return isTestEnv ? fallback : undefined;
-}
-
+// Client-side Firebase config from NEXT_PUBLIC_ env vars (inline during build)
 const defaultClientConfig = {
-  apiKey: resolveEnv('NEXT_PUBLIC_FIREBASE_API_KEY', 'test-api-key'),
-  authDomain: resolveEnv('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN', 'test-app.firebaseapp.com'),
-  projectId: resolveEnv('NEXT_PUBLIC_FIREBASE_PROJECT_ID', 'test-project'),
-  storageBucket: resolveEnv('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET', 'test-app.appspot.com'),
-  messagingSenderId: resolveEnv('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID', '123456789012'),
-  appId: resolveEnv('NEXT_PUBLIC_FIREBASE_APP_ID', '1:123456789012:web:testapp'),
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || (isTestEnv ? 'test-api-key' : ''),
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || (isTestEnv ? 'test-app.firebaseapp.com' : ''),
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || (isTestEnv ? 'test-project' : ''),
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || (isTestEnv ? 'test-app.appspot.com' : ''),
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || (isTestEnv ? '123456789012' : ''),
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || (isTestEnv ? '1:123456789012:web:testapp' : ''),
 };
 
 // Na serwerze używamy konfiguracji z App Hosting, na kliencie z publicznych zmiennych
