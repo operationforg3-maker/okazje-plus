@@ -15,6 +15,8 @@ import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Category } from '@/lib/types';
+import { convertToPLN } from '@/lib/currency';
+import { useAuth } from '@/lib/auth';
 
 interface AliProduct {
   id: string;
@@ -26,10 +28,12 @@ interface AliProduct {
   rating?: number;
   orders?: number;
   discount?: number;
+  currency?: string;
 }
 
 function AliExpressImportPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -155,35 +159,50 @@ function AliExpressImportPage() {
 
     setImporting(true);
     let successCount = 0;
+    const errors: string[] = [];
 
     try {
       for (const product of toImport) {
         const map = categoryMapping[product.id];
+        
+        // Konwersja cen do PLN jeśli potrzebna
+        const currency = product.currency || 'USD';
+        const pricePLN = currency !== 'PLN' ? convertToPLN(product.price, currency) : product.price;
+        const originalPricePLN = product.originalPrice && currency !== 'PLN' 
+          ? convertToPLN(product.originalPrice, currency) 
+          : product.originalPrice;
+        
+        // Przygotowanie payloadu zgodnie ze specyfikacją
         const payload = {
-          name: product.title,
-          description: product.title,
-          longDescription: product.title,
-          price: product.price,
-          originalPrice: product.originalPrice || product.price,
+          name: product.title.slice(0, 200), // Max 200 znaków
+          description: product.title.slice(0, 300), // Pierwsze 300 znaków
+          longDescription: product.title, // Pełny opis
+          price: pricePLN,
+          originalPrice: originalPricePLN || pricePLN,
           image: product.imageUrl,
-          imageHint: '',
+          imageHint: '', // TODO: AI-generated alt text
           affiliateUrl: product.productUrl,
           mainCategorySlug: map.main,
           subCategorySlug: map.sub,
-          status: 'draft',
+          status: 'draft', // Zawsze draft przy imporcie
           ratingCard: {
             average: product.rating || 0,
             count: product.orders || 0,
-            durability: 0,
-            easeOfUse: 0,
-            valueForMoney: 0,
-            versatility: 0,
+            durability: product.rating || 0,
+            easeOfUse: product.rating || 0,
+            valueForMoney: product.rating || 0,
+            versatility: product.rating || 0,
           },
           metadata: {
             source: 'aliexpress',
             originalId: product.id,
             importedAt: new Date().toISOString(),
-            orders: product.orders,
+            importedBy: user?.uid || 'unknown',
+            originalPrice: product.price,
+            currency: currency,
+            discount: product.discount || 0,
+            orders: product.orders || 0,
+            shippingInfo: 'AliExpress',
           },
         };
 
@@ -196,19 +215,33 @@ function AliExpressImportPage() {
 
           if (res.ok) {
             successCount++;
+          } else {
+            const error = await res.json();
+            errors.push(`${product.title.slice(0, 30)}: ${error.error || 'Unknown error'}`);
           }
         } catch (err) {
           console.error('Import product failed:', err);
+          errors.push(`${product.title.slice(0, 30)}: ${String(err)}`);
         }
       }
 
-      toast({ title: 'Sukces', description: `Zaimportowano ${successCount} z ${toImport.length} produktów` });
+      if (errors.length > 0) {
+        console.error('Import errors:', errors);
+      }
+
+      toast({ 
+        title: successCount > 0 ? 'Sukces' : 'Błąd', 
+        description: `Zaimportowano ${successCount} z ${toImport.length} produktów${errors.length > 0 ? `. Błędy: ${errors.length}` : ''}`,
+        variant: successCount === 0 ? 'destructive' : 'default',
+      });
       
-      // Reset
-      setResults([]);
-      setSelected(new Set());
-      setCategoryMapping({});
-      setSearchQuery('');
+      // Reset tylko przy sukcesie
+      if (successCount > 0) {
+        setResults([]);
+        setSelected(new Set());
+        setCategoryMapping({});
+        setSearchQuery('');
+      }
     } catch (err) {
       console.error('Bulk import failed:', err);
       toast({ title: 'Błąd', description: 'Import nie powiódł się', variant: 'destructive' });
