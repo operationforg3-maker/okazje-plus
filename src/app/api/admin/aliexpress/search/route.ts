@@ -64,11 +64,17 @@ export async function GET(request: Request) {
     const body = toQueryString(signed);
     
     console.log('[AliExpress] Calling API:', {
+      endpoint: API_BASE,
       method: apiParams.method,
       keywords: q,
       page: page,
       limit: apiParams.page_size,
+      app_key: APP_KEY,
+      timestamp: signed.timestamp,
+      sign: signed.sign?.slice(0, 10) + '...',
     });
+    
+    console.log('[AliExpress] Request body (first 200 chars):', body.slice(0, 200));
     
     const res = await fetch(API_BASE, {
       method: 'POST',
@@ -79,9 +85,16 @@ export async function GET(request: Request) {
       next: { revalidate: 300 }, // Cache 5 minutes
     });
 
+    console.log('[AliExpress] Response status:', res.status, res.statusText);
+
     if (!res.ok) {
       const text = await res.text();
-      console.error('[AliExpress] API error:', { status: res.status, body: text });
+      console.error('[AliExpress] API error:', { 
+        status: res.status, 
+        statusText: res.statusText,
+        body: text.slice(0, 500),
+        headers: Object.fromEntries(res.headers.entries()),
+      });
       return NextResponse.json({ 
         error: 'upstream_error', 
         status: res.status, 
@@ -90,7 +103,21 @@ export async function GET(request: Request) {
       }, { status: 502 });
     }
 
-    const data = await res.json();
+    const responseText = await res.text();
+    console.log('[AliExpress] Response body (first 500 chars):', responseText.slice(0, 500));
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('[AliExpress] JSON parse error:', parseError);
+      console.error('[AliExpress] Response was:', responseText.slice(0, 1000));
+      return NextResponse.json({
+        error: 'invalid_response',
+        message: 'AliExpress returned non-JSON response',
+        details: responseText.slice(0, 500),
+      }, { status: 502 });
+    }
     
     // Parse AliExpress response structure
     // Response format: { aliexpress_affiliate_productquery_response: { resp_result: { result: { products: { product: [...] } } } } }

@@ -1,9 +1,11 @@
 import crypto from 'crypto';
 
-// Build timestamp in format yyyy-MM-dd HH:mm:ss expected by many AOP implementations
+// Build timestamp in format yyyy-MM-dd HH:mm:ss in UTC
+// AliExpress API expects timestamps in specific format
 function formatTimestamp(d = new Date()) {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  // Use UTC time for consistency
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 }
 
 // Create signature for AliExpress AOP-like APIs
