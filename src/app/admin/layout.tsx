@@ -49,7 +49,8 @@ const pathNames: Record<string, string> = {
   '/admin/navigation': 'Nawigacja',
   '/admin/moderation': 'Moderacja',
   '/admin/import': 'Import danych',
-  '/admin/imports/aliexpress': 'Import AliExpress',
+  '/admin/aliexpress-import': 'AliExpress Import',
+  '/admin/imports/aliexpress': 'Import AliExpress (stary)',
   '/admin/marketplaces': 'Marketplace',
   '/admin/comparison': 'Porównanie cen',
   '/admin/category-mappings': 'Mapowanie kategorii',
@@ -264,13 +265,26 @@ export default function AdminLayout({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
+                    isActive={isActive('/admin/aliexpress-import')}
+                    tooltip={{ children: 'AliExpress Import' }}
+                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                  >
+                    <Link href="/admin/aliexpress-import">
+                      <ShoppingBag />
+                      <span className="group-data-[collapsible=icon]:hidden">AliExpress Import</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
                     isActive={isActive('/admin/imports/aliexpress')}
-                    tooltip={{ children: 'Import AliExpress' }}
+                    tooltip={{ children: 'Import AliExpress (stary)' }}
                     className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
                   >
                     <Link href="/admin/imports/aliexpress">
                       <ShoppingBag />
-                      <span className="group-data-[collapsible=icon]:hidden">Import AliExpress</span>
+                      <span className="group-data-[collapsible=icon]:hidden">Import AliExpress (stary)</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
