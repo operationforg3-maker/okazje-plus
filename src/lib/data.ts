@@ -1,7 +1,26 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
-import { cacheGet, cacheSet } from "@/lib/cache";
+// Uwaga: cache (Redis / LRU) ładowany leniwie tylko na serwerze; klient otrzymuje no-op.
+let _cacheModule: any = null;
+async function getCacheModule() {
+  if (_cacheModule) return _cacheModule;
+  if (typeof window !== 'undefined') return null; // klient – brak cache
+  try {
+    _cacheModule = await import('@/lib/cache');
+    return _cacheModule;
+  } catch (_) {
+    return null;
+  }
+}
+async function cacheGet(key: string) {
+  const mod = await getCacheModule();
+  return mod ? mod.cacheGet(key) : null;
+}
+async function cacheSet(key: string, value: any, ttl?: number) {
+  const mod = await getCacheModule();
+  if (mod) return mod.cacheSet(key, value, ttl);
+}
 
 /**
  * Helper function to split an array into chunks
@@ -17,11 +36,20 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 }
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
-  // Cache hot deals for 5 minutes
+  // Lazy import cache tylko na serwerze; dla klienta funkcja i tak zwykle nie będzie używana.
+  let cacheGetFn: any = null, cacheSetFn: any = null;
+  if (typeof window === 'undefined') {
+    try {
+      const mod = await import('@/lib/cache');
+      cacheGetFn = mod.cacheGet;
+      cacheSetFn = mod.cacheSet;
+    } catch (_) {}
+  }
+
   const cacheKey = `deals:hot:${count}`;
-  const cached = await cacheGet(cacheKey);
-  if (cached) {
-    return cached as Deal[];
+  if (cacheGetFn) {
+    const cached = await cacheGetFn(cacheKey);
+    if (cached) return cached as Deal[];
   }
 
   const dealsRef = collection(db, "deals");
@@ -34,8 +62,9 @@ export async function getHotDeals(count: number): Promise<Deal[]> {
   const querySnapshot = await getDocs(q);
   const deals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
   
-  // Cache for 5 minutes (300 seconds)
-  await cacheSet(cacheKey, deals, 300);
+  if (cacheSetFn) {
+    await cacheSetFn(cacheKey, deals, 300);
+  }
   
   return deals;
 }
@@ -55,11 +84,19 @@ export async function getRandomDeals(count: number): Promise<Deal[]> {
 }
 
 export async function getRecommendedProducts(count: number): Promise<Product[]> {
-    // Cache recommended products for 10 minutes
+    let cacheGetFn: any = null, cacheSetFn: any = null;
+    if (typeof window === 'undefined') {
+      try {
+        const mod = await import('@/lib/cache');
+        cacheGetFn = mod.cacheGet;
+        cacheSetFn = mod.cacheSet;
+      } catch (_) {}
+    }
+
     const cacheKey = `products:recommended:${count}`;
-    const cached = await cacheGet(cacheKey);
-    if (cached) {
-      return cached as Product[];
+    if (cacheGetFn) {
+      const cached = await cacheGetFn(cacheKey);
+      if (cached) return cached as Product[];
     }
 
     const productsRef = collection(db, "products");
@@ -71,8 +108,9 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
     const querySnapshot = await getDocs(q);
     const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
     
-    // Cache for 10 minutes (600 seconds)
-    await cacheSet(cacheKey, products, 600);
+    if (cacheSetFn) {
+      await cacheSetFn(cacheKey, products, 600);
+    }
     
     return products;
 }
@@ -197,89 +235,89 @@ export async function getRecentlyModerated(status: "approved" | "rejected", days
   return all;
 }
 
-export async function getProductsByCategory(
-  mainCategorySlug: string,
-  subCategorySlug?: string,
-  subSubCategorySlug?: string,
-  count: number = 100
-): Promise<Product[]> {
-  const productsRef = collection(db, "products");
-  let q;
-
-  if (subSubCategorySlug && subCategorySlug) {
-    // Filtruj po wszystkich trzech poziomach
-    q = query(
-      productsRef,
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-      where("subCategorySlug", "==", subCategorySlug),
-      where("subSubCategorySlug", "==", subSubCategorySlug),
-      limit(count)
-    );
-  } else if (subCategorySlug) {
-    // Filtruj po kategorii głównej i podkategorii
-    q = query(
-      productsRef,
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-      where("subCategorySlug", "==", subCategorySlug),
-      limit(count)
-    );
-  } else {
-    // Filtruj tylko po kategorii głównej
-    q = query(
-      productsRef,
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-      limit(count)
-    );
-  }
-
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-}export async function getDealsByCategory(
+export async function getDealsByCategory(
   mainCategorySlug: string,
   subCategorySlug?: string,
   subSubCategorySlug?: string,
   count: number = 100
 ): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
-  let q;
-  
-  if (subSubCategorySlug && subCategorySlug) {
-    // Filtruj po wszystkich trzech poziomach
-    q = query(
-      dealsRef,
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-      where("subCategorySlug", "==", subCategorySlug),
-      where("subSubCategorySlug", "==", subSubCategorySlug),
-      orderBy("temperature", "desc"),
-      limit(count)
-    );
-  } else if (subCategorySlug) {
-    // Filtruj po kategorii głównej i podkategorii
-    q = query(
-      dealsRef,
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-      where("subCategorySlug", "==", subCategorySlug),
-      orderBy("temperature", "desc"),
-      limit(count)
-    );
-  } else {
-    // Filtruj tylko po kategorii głównej
-    q = query(
-      dealsRef,
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-      orderBy("temperature", "desc"),
-      limit(count)
-    );
+
+  // Budujemy główną próbę z sortowaniem po temperaturze (wymaga często indeksów kompozytowych)
+  const buildPrimaryQuery = () => {
+    if (subSubCategorySlug && subCategorySlug) {
+      return query(
+        dealsRef,
+        where("status", "==", "approved"),
+        where("mainCategorySlug", "==", mainCategorySlug),
+        where("subCategorySlug", "==", subCategorySlug),
+        where("subSubCategorySlug", "==", subSubCategorySlug),
+        orderBy("temperature", "desc"),
+        limit(count)
+      );
+    } else if (subCategorySlug) {
+      return query(
+        dealsRef,
+        where("status", "==", "approved"),
+        where("mainCategorySlug", "==", mainCategorySlug),
+        where("subCategorySlug", "==", subCategorySlug),
+        orderBy("temperature", "desc"),
+        limit(count)
+      );
+    } else {
+      return query(
+        dealsRef,
+        where("status", "==", "approved"),
+        where("mainCategorySlug", "==", mainCategorySlug),
+        orderBy("temperature", "desc"),
+        limit(count)
+      );
+    }
+  };
+
+  // Fallback bez sortowania po temperaturze (mniejsza szansa na wymaganie indeksu)
+  const buildFallbackQuery = () => {
+    if (subSubCategorySlug && subCategorySlug) {
+      return query(
+        dealsRef,
+        where("status", "==", "approved"),
+        where("mainCategorySlug", "==", mainCategorySlug),
+        where("subCategorySlug", "==", subCategorySlug),
+        where("subSubCategorySlug", "==", subSubCategorySlug),
+        limit(count)
+      );
+    } else if (subCategorySlug) {
+      return query(
+        dealsRef,
+        where("status", "==", "approved"),
+        where("mainCategorySlug", "==", mainCategorySlug),
+        where("subCategorySlug", "==", subCategorySlug),
+        limit(count)
+      );
+    } else {
+      return query(
+        dealsRef,
+        where("status", "==", "approved"),
+        where("mainCategorySlug", "==", mainCategorySlug),
+        limit(count)
+      );
+    }
+  };
+
+  try {
+    const primarySnap = await getDocs(buildPrimaryQuery());
+    return primarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+  } catch (err: any) {
+    // Missing index lub permission – spróbuj fallback bez sortowania
+    console.warn("getDealsByCategory primary query failed – fallback", err?.message || err);
+    try {
+      const fbSnap = await getDocs(buildFallbackQuery());
+      return fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+    } catch (inner: any) {
+      console.error("getDealsByCategory fallback failed", inner?.message || inner);
+      return [];
+    }
   }
-  
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
 }
 
 export async function searchProducts(searchTerm: string): Promise<Product[]> {
@@ -326,16 +364,22 @@ export async function searchDeals(searchTerm: string): Promise<Deal[]> {
 
 // Statystyki: liczba produktów, okazji i użytkowników
 export async function getCounts(): Promise<{ products: number; deals: number; users: number }> {
-  const [productsSnap, dealsSnap, usersSnap] = await Promise.all([
-    getCountFromServer(collection(db, 'products')),
-    getCountFromServer(collection(db, 'deals')),
-    getCountFromServer(collection(db, 'users')),
-  ]);
-  return {
-    products: productsSnap.data().count,
-    deals: dealsSnap.data().count,
-    users: usersSnap.data().count,
-  };
+  try {
+    const [productsSnap, dealsSnap, usersSnap] = await Promise.all([
+      getCountFromServer(collection(db, 'products')),
+      getCountFromServer(collection(db, 'deals')),
+      getCountFromServer(collection(db, 'users')),
+    ]);
+    return {
+      products: productsSnap.data().count,
+      deals: dealsSnap.data().count,
+      users: usersSnap.data().count,
+    };
+  } catch (err: any) {
+    // Brak uprawnień (permission-denied) lub inny błąd agregacji – zwróć bezpieczny fallback
+    console.warn('getCounts failed – returning fallback zeros', err?.message || err);
+    return { products: 0, deals: 0, users: 0 };
+  }
 }
 
 /**

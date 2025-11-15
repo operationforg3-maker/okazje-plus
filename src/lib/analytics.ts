@@ -227,11 +227,11 @@ export async function trackFirestoreEvent(
   metadata?: FirestoreAnalyticsEvent['metadata']
 ): Promise<void> {
   try {
-    const event: FirestoreAnalyticsEvent = {
+    // Nie zapisuj pól z wartością undefined (Firestore tego nie akceptuje)
+    const baseEvent: FirestoreAnalyticsEvent = {
       type,
       resourceType,
       resourceId,
-      userId,
       sessionId: getSessionId(),
       timestamp: new Date().toISOString(),
       metadata: {
@@ -239,7 +239,13 @@ export async function trackFirestoreEvent(
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
         referrer: typeof document !== 'undefined' ? document.referrer : undefined,
       }
-    };
+    } as any;
+
+    if (userId) {
+      (baseEvent as any).userId = userId;
+    }
+
+    const event: FirestoreAnalyticsEvent = baseEvent;
 
     await addDoc(collection(db, 'analytics'), event);
   } catch (error) {
