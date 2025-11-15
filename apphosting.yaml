@@ -97,8 +97,19 @@ env:
     availability:
       - BUILD
       - RUNTIME
-  # Search-only API key (nie prefiksujemy NEXT_PUBLIC_ by ograniczyć ekspozycję – używane serwerowo)
+  # Search-only API key (public dla klienta wyszukiwania; bezpieczny read-only)
+  - variable: NEXT_PUBLIC_TYPESENSE_SEARCH_ONLY_API_KEY
+    secret: TYPESENSE_SEARCH_ONLY_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  # Server-side search-only key (fallback dla API routes)
   - variable: TYPESENSE_SEARCH_ONLY_API_KEY
     secret: TYPESENSE_SEARCH_ONLY_API_KEY
+    availability:
+      - RUNTIME
+  # Admin API key (pełny dostęp do indeksowania; tylko runtime, server-side)
+  - variable: TYPESENSE_ADMIN_API_KEY
+    secret: TYPESENSE_ADMIN_API_KEY
     availability:
       - RUNTIME
