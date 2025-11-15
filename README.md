@@ -2,6 +2,8 @@
 
 Polska platforma agregująca okazje i produkty, zbudowana z Next.js 15, Firebase i Genkit AI. Aplikacja inspirowana serwisami takimi jak Pepper/MyDealz, umożliwiająca użytkownikom odkrywanie, głosowanie i komentowanie najlepszych okazji.
 
+<!-- Last config update: 2025-11-15 - Typesense integration complete -->
+
 ## 🚀 Szybki Start
 
 ### Wymagania wstępne
