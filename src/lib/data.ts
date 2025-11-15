@@ -320,6 +320,89 @@ export async function getDealsByCategory(
   }
 }
 
+// Produkty wg kategorii (z prostym fallbackiem na brak indeksu / orderBy). Primary próbuje sortować po createdAt.
+export async function getProductsByCategory(
+  mainCategorySlug: string,
+  subCategorySlug?: string,
+  subSubCategorySlug?: string,
+  count: number = 100
+): Promise<Product[]> {
+  const productsRef = collection(db, 'products');
+
+  const buildPrimaryQuery = () => {
+    if (subSubCategorySlug && subCategorySlug) {
+      return query(
+        productsRef,
+        where('status', '==', 'approved'),
+        where('mainCategorySlug', '==', mainCategorySlug),
+        where('subCategorySlug', '==', subCategorySlug),
+        where('subSubCategorySlug', '==', subSubCategorySlug),
+        orderBy('createdAt', 'desc'),
+        limit(count)
+      );
+    } else if (subCategorySlug) {
+      return query(
+        productsRef,
+        where('status', '==', 'approved'),
+        where('mainCategorySlug', '==', mainCategorySlug),
+        where('subCategorySlug', '==', subCategorySlug),
+        orderBy('createdAt', 'desc'),
+        limit(count)
+      );
+    } else {
+      return query(
+        productsRef,
+        where('status', '==', 'approved'),
+        where('mainCategorySlug', '==', mainCategorySlug),
+        orderBy('createdAt', 'desc'),
+        limit(count)
+      );
+    }
+  };
+
+  const buildFallbackQuery = () => {
+    if (subSubCategorySlug && subCategorySlug) {
+      return query(
+        productsRef,
+        where('status', '==', 'approved'),
+        where('mainCategorySlug', '==', mainCategorySlug),
+        where('subCategorySlug', '==', subCategorySlug),
+        where('subSubCategorySlug', '==', subSubCategorySlug),
+        limit(count)
+      );
+    } else if (subCategorySlug) {
+      return query(
+        productsRef,
+        where('status', '==', 'approved'),
+        where('mainCategorySlug', '==', mainCategorySlug),
+        where('subCategorySlug', '==', subCategorySlug),
+        limit(count)
+      );
+    } else {
+      return query(
+        productsRef,
+        where('status', '==', 'approved'),
+        where('mainCategorySlug', '==', mainCategorySlug),
+        limit(count)
+      );
+    }
+  };
+
+  try {
+    const primarySnap = await getDocs(buildPrimaryQuery());
+    return primarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+  } catch (err: any) {
+    console.warn('getProductsByCategory primary query failed – fallback', err?.message || err);
+    try {
+      const fbSnap = await getDocs(buildFallbackQuery());
+      return fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+    } catch (inner: any) {
+      console.error('getProductsByCategory fallback failed', inner?.message || inner);
+      return [];
+    }
+  }
+}
+
 export async function searchProducts(searchTerm: string): Promise<Product[]> {
   const productsRef = collection(db, "products");
   const nameQuery = query(productsRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'));

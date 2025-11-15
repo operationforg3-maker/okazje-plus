@@ -227,23 +227,28 @@ export async function trackFirestoreEvent(
   metadata?: FirestoreAnalyticsEvent['metadata']
 ): Promise<void> {
   try {
-    // Nie zapisuj pól z wartością undefined (Firestore tego nie akceptuje)
+    // Helper: usuń wszystkie właściwości z wartością undefined, aby uniknąć błędów Firestore
+    const stripUndefined = (obj: Record<string, any> | undefined): Record<string, any> | undefined => {
+      if (!obj) return undefined;
+      return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined));
+    };
+
+    const meta = stripUndefined({
+      ...(metadata || {}),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+      referrer: typeof document !== 'undefined' ? document.referrer : undefined,
+    });
+
     const baseEvent: FirestoreAnalyticsEvent = {
       type,
       resourceType,
       resourceId,
       sessionId: getSessionId(),
       timestamp: new Date().toISOString(),
-      metadata: {
-        ...metadata,
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
-        referrer: typeof document !== 'undefined' ? document.referrer : undefined,
-      }
-    } as any;
+      ...(meta ? { metadata: meta } : {}),
+    } as FirestoreAnalyticsEvent;
 
-    if (userId) {
-      (baseEvent as any).userId = userId;
-    }
+    if (userId) (baseEvent as any).userId = userId;
 
     const event: FirestoreAnalyticsEvent = baseEvent;
 
@@ -286,7 +291,9 @@ export async function trackFirestoreClick(
   userId?: string,
   url?: string
 ): Promise<void> {
-  await trackFirestoreEvent('click', resourceType, resourceId, userId, { destination: url });
+  // Jeśli brak URL, metadata będzie pominięta (aby nie dodawać destination: undefined)
+  const meta = url ? { destination: url } : undefined;
+  await trackFirestoreEvent('click', resourceType, resourceId, userId, meta);
   
   // Track też w GA
   if (url) {
