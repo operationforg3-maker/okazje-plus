@@ -1,6 +1,14 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
+// Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
+const _warnedOnce = new Set<string>();
+function warnOnce(key: string, ...args: any[]) {
+  if (!_warnedOnce.has(key)) {
+    console.warn(...args);
+    _warnedOnce.add(key);
+  }
+}
 // Uwaga: cache (Redis / LRU) ładowany leniwie tylko na serwerze; klient otrzymuje no-op.
 let _cacheModule: any = null;
 async function getCacheModule() {
@@ -309,7 +317,7 @@ export async function getDealsByCategory(
     return primarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
   } catch (err: any) {
     // Missing index lub permission – spróbuj fallback bez sortowania
-    console.warn("getDealsByCategory primary query failed – fallback", err?.message || err);
+  warnOnce("getDealsByCategory-primary", "getDealsByCategory primary query failed – fallback", err?.message || err);
     try {
       const fbSnap = await getDocs(buildFallbackQuery());
       return fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
@@ -392,7 +400,7 @@ export async function getProductsByCategory(
     const primarySnap = await getDocs(buildPrimaryQuery());
     return primarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
   } catch (err: any) {
-    console.warn('getProductsByCategory primary query failed – fallback', err?.message || err);
+  warnOnce('getProductsByCategory-primary', 'getProductsByCategory primary query failed – fallback', err?.message || err);
     try {
       const fbSnap = await getDocs(buildFallbackQuery());
       return fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
