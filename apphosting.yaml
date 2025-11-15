@@ -80,3 +80,25 @@ env:
     secret: ALIEXPRESS_AFFILIATE_ID
     availability:
       - RUNTIME
+
+  # Typesense (wyszukiwarka) – host/port/protocol używane także w build (embed do klienta)
+  - variable: NEXT_PUBLIC_TYPESENSE_HOST
+    secret: TYPESENSE_HOST
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_TYPESENSE_PORT
+    secret: TYPESENSE_PORT
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_TYPESENSE_PROTOCOL
+    secret: TYPESENSE_PROTOCOL
+    availability:
+      - BUILD
+      - RUNTIME
+  # Search-only API key (nie prefiksujemy NEXT_PUBLIC_ by ograniczyć ekspozycję – używane serwerowo)
+  - variable: TYPESENSE_SEARCH_ONLY_API_KEY
+    secret: TYPESENSE_SEARCH_ONLY_API_KEY
+    availability:
+      - RUNTIME
