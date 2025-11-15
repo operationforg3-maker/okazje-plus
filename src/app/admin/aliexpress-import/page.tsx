@@ -59,13 +59,18 @@ function AliExpressImportPage() {
       if (minPrice) params.set('minPrice', minPrice);
       if (maxPrice) params.set('maxPrice', maxPrice);
 
+      console.log('[AliExpress Import] Searching with params:', Object.fromEntries(params));
+
       const res = await fetch(`/api/admin/aliexpress/search?${params.toString()}`);
       
       if (!res.ok) {
-        throw new Error(`API error: ${res.status}`);
+        const errorData = await res.json();
+        console.error('[AliExpress Import] API error:', errorData);
+        throw new Error(`API error: ${res.status} - ${errorData.message || errorData.error}`);
       }
 
       const data = await res.json();
+      console.log('[AliExpress Import] API response:', data);
       
       // Normalizacja wyników z różnych formatów API
       let products: AliProduct[] = [];
@@ -81,20 +86,28 @@ function AliExpressImportPage() {
           rating: p.rating || p.evaluate_rate || 0,
           orders: p.orders || p.volume || p.lastest_volume || 0,
           discount: p.discount || 0,
+          currency: p.currency || 'USD',
         }));
       }
 
       if (products.length === 0) {
+        console.warn('[AliExpress Import] No products returned, using mock data');
         // Fallback do mocka dla celów testowych
         products = generateMockProducts(searchQuery);
         toast({ title: 'Tryb demo', description: `Pokazano ${products.length} przykładowych produktów` });
       } else {
+        console.log('[AliExpress Import] Products fetched:', products.length);
         toast({ title: 'Sukces', description: `Znaleziono ${products.length} produktów` });
       }
 
       setResults(products);
     } catch (err) {
-      console.error('Search failed:', err);
+      console.error('[AliExpress Import] Search failed:', err);
+      toast({ 
+        title: 'Błąd wyszukiwania', 
+        description: String(err), 
+        variant: 'destructive' 
+      });
       // Fallback do mocka
       const mockProducts = generateMockProducts(searchQuery);
       setResults(mockProducts);
@@ -147,12 +160,19 @@ function AliExpressImportPage() {
 
   const handleImport = async () => {
     const toImport = results.filter(p => selected.has(p.id));
+    
+    console.log('[AliExpress Import] Starting import:', {
+      selected: toImport.length,
+      products: toImport.map(p => ({ id: p.id, title: p.title.slice(0, 30) }))
+    });
+    
     const invalid = toImport.filter(p => {
       const map = categoryMapping[p.id];
       return !map || !map.main || !map.sub;
     });
 
     if (invalid.length > 0) {
+      console.error('[AliExpress Import] Invalid products (missing category):', invalid.map(p => p.id));
       toast({ title: 'Błąd', description: 'Wszystkie wybrane produkty muszą mieć przypisaną kategorię', variant: 'destructive' });
       return;
     }
@@ -206,6 +226,13 @@ function AliExpressImportPage() {
           },
         };
 
+        console.log('[AliExpress Import] Importing product:', {
+          id: product.id,
+          title: product.title.slice(0, 50),
+          price: `${product.price} ${currency} → ${pricePLN} PLN`,
+          category: `${map.main}/${map.sub}`,
+        });
+
         try {
           const res = await fetch('/api/admin/products', {
             method: 'POST',
@@ -214,19 +241,24 @@ function AliExpressImportPage() {
           });
 
           if (res.ok) {
+            const result = await res.json();
+            console.log('[AliExpress Import] Product imported successfully:', result);
             successCount++;
           } else {
             const error = await res.json();
+            console.error('[AliExpress Import] Product import failed:', error);
             errors.push(`${product.title.slice(0, 30)}: ${error.error || 'Unknown error'}`);
           }
         } catch (err) {
-          console.error('Import product failed:', err);
+          console.error('[AliExpress Import] Product import exception:', err);
           errors.push(`${product.title.slice(0, 30)}: ${String(err)}`);
         }
       }
 
       if (errors.length > 0) {
-        console.error('Import errors:', errors);
+        console.error('[AliExpress Import] Import completed with errors:', errors);
+      } else {
+        console.log('[AliExpress Import] All products imported successfully');
       }
 
       toast({ 
