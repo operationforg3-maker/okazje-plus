@@ -65,6 +65,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       <Button
         variant="ghost"
         size="icon"
+        aria-label="Głosuj za"
         onClick={() => handleVote('up')}
         disabled={isLoading}
       >
@@ -74,6 +75,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       <Button
         variant="ghost"
         size="icon"
+        aria-label="Głosuj przeciw"
         onClick={() => handleVote('down')}
         disabled={isLoading}
       >
