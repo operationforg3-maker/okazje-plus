@@ -6,7 +6,12 @@ import { useEffect } from 'react';
 
 export function withAuth<P extends object>(Component: React.ComponentType<P>) {
   return function WithAuth(props: P) {
-    const { user, loading } = useAuth();
+    // Defensywnie: jeśli context nie jest dostępny (edge case przed inicjalizacją Provider), traktuj jak loading
+    let { user, loading } = useAuth() as any;
+    if (typeof loading !== 'boolean') {
+      loading = true;
+      user = null;
+    }
     const router = useRouter();
 
     useEffect(() => {

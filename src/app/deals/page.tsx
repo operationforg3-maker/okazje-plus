@@ -100,9 +100,22 @@ export default function DealsPage() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setSavedFilters(docSnap.data().filters || []);
+        } else {
+          // Brak dokumentu – nie loguj głośno
+          if (process.env.NODE_ENV === 'development') {
+            console.info('[savedFilters] brak dokumentu dealFilters – pomijam');
+          }
         }
-      } catch (error) {
-        console.error('Error loading saved filters:', error);
+      } catch (error: any) {
+        const msg = error?.message || String(error);
+        // Permission / brak indeksu – tylko jednorazowo
+        // Dodaj symbol na window z bezpiecznym rzutowaniem
+        const w: any = window as any;
+        if (!w.__filtersWarned) w.__filtersWarned = new Set();
+        if (!w.__filtersWarned.has('loadSavedFilters')) {
+          console.warn('[savedFilters] nie udało się wczytać filtrów (cichy fallback):', msg);
+          w.__filtersWarned.add('loadSavedFilters');
+        }
       }
     }
     loadSavedFilters();
@@ -124,7 +137,7 @@ export default function DealsPage() {
         }
       }
     } catch {}
-  }, [categories]);
+  }, [categories, selectedCategory]);
 
   // Persistuj view mode
   useEffect(() => {

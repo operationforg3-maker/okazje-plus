@@ -42,6 +42,10 @@ service cloud.firestore {
       allow update: if isSignedIn() && request.auth.uid == userId;
       allow delete: if isAdmin();
     }
+    // Preferencje / zapisane filtry użytkownika (subkolekcja preferences)
+    match /users/{userId}/preferences/{prefId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
 
     ////////////////////////////////
     // CATEGORIES
