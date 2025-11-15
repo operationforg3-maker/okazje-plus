@@ -1,5 +1,6 @@
 # Settings for Backend (on Cloud Run).
 # See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+# Updated: 2025-11-15 21:52 - IAM permissions fixed
 runConfig:
   minInstances: 0
 
