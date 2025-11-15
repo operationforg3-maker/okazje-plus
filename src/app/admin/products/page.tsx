@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -71,7 +71,7 @@ export default function AdminProductsPage() {
     goToLastPage,
   } = usePagination(sortedData, itemsPerPage);
 
-  async function fetchProducts() {
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
       const recommendedProducts = await getRecommendedProducts(50);
@@ -86,11 +86,11 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [toast]);
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
@@ -124,6 +124,26 @@ export default function AdminProductsPage() {
       });
     } finally {
       setDeletingProduct(null);
+    }
+  };
+
+  const handleCreateDealFromProduct = async (product: Product) => {
+    try {
+      const res = await fetch('/api/admin/deals/from-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: product.id })
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || 'Błąd tworzenia okazji');
+      }
+      toast({ title: 'Utworzono okazję', description: `ID: ${data.id}` });
+      // Opcjonalnie: otwórz listę okazji
+      // window.open('/admin/deals', '_blank');
+    } catch (error) {
+      console.error('Create deal from product failed:', error);
+      toast({ title: 'Błąd', description: 'Nie udało się utworzyć okazji', variant: 'destructive' });
     }
   };
 
@@ -256,6 +276,10 @@ export default function AdminProductsPage() {
                           <DropdownMenuItem onClick={() => handleEdit(product)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edytuj
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCreateDealFromProduct(product)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Utwórz okazję
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => setDeletingProduct(product)}
