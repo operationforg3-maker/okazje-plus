@@ -132,6 +132,14 @@ export interface Product {
   imageHint: string;
   affiliateUrl: string;
   ratingCard: ProductRatingCard;
+  /**
+   * Rozdzielone źródła ocen:
+   * - editorial: ocena redakcji / administracji (ustawiana ręcznie)
+   * - users: agregowana ocena naszych użytkowników (wyliczana z kolekcji ratings/)
+   * - external: ocena z zewnętrznego źródła (np. AliExpress) wraz z licznością jeśli dostępna
+   * Zachowujemy ratingCard dla kompatybilności (aktualnie odzwierciedla users lub external fallback).
+   */
+  ratingSources?: ProductRatingSources;
   price: number;
   originalPrice?: number;
   discountPercent?: number; // denormalizacja wyliczona (originalPrice - price)/originalPrice
@@ -201,6 +209,25 @@ export interface ProductRatingCard {
   easeOfUse: number;
   valueForMoney: number;
   versatility: number;
+}
+
+export interface ProductRatingSources {
+  editorial?: {
+    average: number;
+    count?: number; // liczba recenzji redakcyjnych (często 1)
+    updatedAt?: string;
+  };
+  users?: {
+    average: number;
+    count: number; // liczba ocen użytkowników
+    updatedAt?: string;
+  };
+  external?: {
+    average: number;
+    count?: number; // np. liczba zamówień lub liczba recenzji w źródle
+    source?: string; // np. 'aliexpress'
+    updatedAt?: string;
+  };
 }
 
 // Nowy interfejs dla pojedynczej oceny użytkownika

@@ -95,6 +95,10 @@ export async function POST(request: NextRequest) {
       return undefined;
     })();
 
+    const images: string[] = Array.isArray(product.images)
+      ? product.images.filter((u: any) => typeof u === 'string').slice(0, 10)
+      : []; // limit 10 dla bezpieczeństwa
+
     const docData: any = {
       name: product.title,
       description: product.description || product.subTitle || product.title || '',
@@ -109,6 +113,19 @@ export async function POST(request: NextRequest) {
         easeOfUse: Number(product.rating || 0),
         valueForMoney: Number(product.rating || 0),
         versatility: Number(product.rating || 0),
+      },
+      ratingSources: {
+        external: {
+          average: Number(product.rating || 0),
+          count: Number(product.orders || 0) || undefined,
+          source: 'aliexpress',
+          updatedAt: new Date().toISOString(),
+        },
+        users: {
+          average: 0,
+          count: 0,
+          updatedAt: new Date().toISOString(),
+        },
       },
       price,
       originalPrice: originalPrice ?? undefined,
@@ -128,6 +145,17 @@ export async function POST(request: NextRequest) {
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
+
+    if (images.length) {
+      docData.gallery = images.map((url, idx) => ({
+        id: `img_${idx}`,
+        type: 'url',
+        src: url,
+        isPrimary: idx === 0,
+        source: 'aliexpress',
+        addedAt: new Date().toISOString(),
+      }));
+    }
 
     await docRef.set(docData);
 

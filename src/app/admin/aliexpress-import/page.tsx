@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Download, ExternalLink, Star } from 'lucide-react';
+import { Loader2, Search, Download, ExternalLink, Star, CheckSquare, ChevronRight } from 'lucide-react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -42,6 +42,10 @@ function AliExpressImportPage() {
   const [results, setResults] = useState<AliProduct[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [categoryMapping, setCategoryMapping] = useState<Record<string, { main: string; sub: string }>>({});
+  const [step, setStep] = useState<'search' | 'review' | 'import'>('search');
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [details, setDetails] = useState<Record<string, any>>({});
+  const [fieldSelection, setFieldSelection] = useState<Record<string, { title: boolean; description: boolean; images: boolean; price: boolean; rating: boolean }>>({});
 
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
   const categories: Category[] = categoriesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() } as Category)) || [];
@@ -138,6 +142,41 @@ function AliExpressImportPage() {
     });
   };
 
+  const gotoReview = async () => {
+    const toImport = results.filter(p => selected.has(p.id));
+    if (toImport.length === 0) {
+      toast({ title: 'Brak wyboru', description: 'Zaznacz co najmniej jeden produkt' });
+      return;
+    }
+    // Validate categories first
+    const invalid = toImport.filter(p => !categoryMapping[p.id]?.main || !categoryMapping[p.id]?.sub);
+    if (invalid.length > 0) {
+      toast({ title: 'Błąd', description: 'Każdy produkt musi mieć wybraną kategorię', variant: 'destructive' });
+      return;
+    }
+    setReviewLoading(true);
+    setStep('review');
+    try {
+      const loaded: Record<string, any> = {};
+      const selections: Record<string, any> = {};
+      await Promise.all(toImport.map(async (p) => {
+        try {
+          const r = await fetch(`/api/admin/aliexpress/item?id=${encodeURIComponent(p.id)}`);
+          const j = await r.json();
+          loaded[p.id] = j.product || j.raw || {};
+          selections[p.id] = { title: true, description: true, images: true, price: true, rating: true };
+        } catch (e) {
+          console.error('Detail fetch failed', p.id, e);
+          selections[p.id] = { title: true, description: false, images: true, price: true, rating: true };
+        }
+      }));
+      setDetails(loaded);
+      setFieldSelection(selections);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const handleImport = async () => {
     const toImport = results.filter(p => selected.has(p.id));
     
@@ -172,26 +211,63 @@ function AliExpressImportPage() {
           ? convertToPLN(product.originalPrice, currency) 
           : product.originalPrice;
         
+        // Merge selection with details for richer import
+        const det = details[product.id] || {};
+        const sel = fieldSelection[product.id] || { title: true, description: true, images: true, price: true, rating: true };
+
+        const chosenTitle = sel.title ? (det.title || product.title) : product.title;
+        const chosenImage = sel.images ? (det.mainImage || (Array.isArray(det.images) && det.images[0]) || product.imageUrl) : product.imageUrl;
+        const chosenPrice = sel.price ? (Number(det.price || det.sale_price || product.price) || product.price) : product.price;
+        const chosenOriginal = sel.price ? (Number(det.originalPrice || det.original_price || product.originalPrice) || product.originalPrice || null) : (product.originalPrice || null);
+        const chosenRating = sel.rating ? (det.rating != null ? Number(det.rating) : product.rating) : product.rating;
+        const chosenOrders = sel.rating ? (det.orders != null ? Number(det.orders) : product.orders) : product.orders;
+        const chosenDescription = sel.description ? (det.descriptionHtml || det.description || product.title) : product.title;
+
         // Przygotowanie payloadu zgodnie ze specyfikacją
+        // Przygotuj listę obrazów (limit 10) jeśli zaznaczono import zdjęć
+        const imageArray: string[] = sel.images && Array.isArray(det.images)
+          ? det.images.filter((u: any) => typeof u === 'string').slice(0, 10)
+          : [chosenImage];
+
         const payload = {
-          name: product.title.slice(0, 200), // Max 200 znaków
-          description: product.title.slice(0, 300), // Pierwsze 300 znaków
-          longDescription: product.title, // Pełny opis
-          price: pricePLN,
-          originalPrice: originalPricePLN || pricePLN,
-          image: product.imageUrl,
+          name: String(chosenTitle || product.title).slice(0, 200), // Max 200 znaków
+          description: String(chosenDescription || chosenTitle || product.title).slice(0, 300),
+          longDescription: String(chosenDescription || chosenTitle || product.title),
+          price: currency !== 'PLN' ? convertToPLN(chosenPrice, currency) : chosenPrice,
+          originalPrice: (() => {
+            const base = chosenOriginal ?? chosenPrice;
+            return currency !== 'PLN' ? convertToPLN(base as number, currency) : base;
+          })(),
+          image: chosenImage,
+          gallery: imageArray.map((url, idx) => ({
+            id: `img_${idx}`,
+            type: 'url',
+            src: url,
+            isPrimary: idx === 0,
+            source: 'aliexpress',
+            addedAt: new Date().toISOString(),
+          })),
           imageHint: '', // TODO: AI-generated alt text
           affiliateUrl: product.productUrl,
           mainCategorySlug: map.main,
           subCategorySlug: map.sub,
           status: 'draft', // Zawsze draft przy imporcie
           ratingCard: {
-            average: product.rating || 0,
-            count: product.orders || 0,
-            durability: product.rating || 0,
-            easeOfUse: product.rating || 0,
-            valueForMoney: product.rating || 0,
-            versatility: product.rating || 0,
+            average: chosenRating || 0,
+            count: chosenOrders || 0,
+            durability: chosenRating || 0,
+            easeOfUse: chosenRating || 0,
+            valueForMoney: chosenRating || 0,
+            versatility: chosenRating || 0,
+          },
+          ratingSources: {
+            external: {
+              average: chosenRating || 0,
+              count: chosenOrders || undefined,
+              source: 'aliexpress',
+              updatedAt: new Date().toISOString(),
+            },
+            users: { average: 0, count: 0, updatedAt: new Date().toISOString() },
           },
           metadata: {
             source: 'aliexpress',
@@ -201,8 +277,8 @@ function AliExpressImportPage() {
             originalPrice: product.price,
             currency: currency,
             discount: product.discount || 0,
-            orders: product.orders || 0,
-            shippingInfo: 'AliExpress',
+            orders: chosenOrders || 0,
+            shippingInfo: det.shipping || 'AliExpress',
           },
         };
 
@@ -230,6 +306,7 @@ function AliExpressImportPage() {
               currency: 'PLN',
               productUrl: payload.affiliateUrl,
               imageUrl: payload.image,
+              images: imageArray,
               orders: payload.metadata?.orders,
               shipping: payload.metadata?.shippingInfo,
               merchant: 'AliExpress'
@@ -285,7 +362,8 @@ function AliExpressImportPage() {
         <p className="text-muted-foreground">Wyszukaj i zaimportuj produkty z AliExpress</p>
       </div>
 
-      {/* Wyszukiwarka */}
+      {/* Krok 1: Wyszukiwarka */}
+      {step === 'search' && (
       <Card>
         <CardHeader>
           <CardTitle>Wyszukiwanie produktów</CardTitle>
@@ -329,9 +407,10 @@ function AliExpressImportPage() {
           </Button>
         </CardContent>
       </Card>
+      )}
 
-      {/* Wyniki */}
-      {results.length > 0 && (
+      {/* Krok 1: Wyniki */}
+      {step === 'search' && results.length > 0 && (
         <>
           <Card>
             <CardHeader>
@@ -420,14 +499,80 @@ function AliExpressImportPage() {
                 <Button variant="outline" onClick={() => { setResults([]); setSelected(new Set()); }}>
                   Nowe wyszukiwanie
                 </Button>
-                <Button onClick={handleImport} disabled={selected.size === 0 || importing} size="lg">
-                  {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                  Importuj wybrane ({selected.size})
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={gotoReview} disabled={selected.size === 0} size="lg">
+                    <ChevronRight className="h-4 w-4 mr-2" />
+                    Przejdź do przeglądu ({selected.size})
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Krok 2: Przegląd szczegółów i wybór pól */}
+      {step === 'review' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Przegląd i wybór pól</CardTitle>
+            <CardDescription>Sprawdź szczegóły z AliExpress i wybierz, co zaimportować</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {reviewLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Pobieranie szczegółów...
+              </div>
+            ) : (
+              results.filter(p => selected.has(p.id)).map(p => {
+                const det = details[p.id] || {};
+                const sel = fieldSelection[p.id] || { title: true, description: true, images: true, price: true, rating: true };
+                return (
+                  <Card key={p.id}>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start gap-4">
+                        <img src={(det.mainImage || p.imageUrl) as string} className="w-20 h-20 object-cover rounded" alt="" />
+                        <div className="flex-1">
+                          <div className="font-medium line-clamp-2">{det.title || p.title}</div>
+                          <div className="text-sm text-muted-foreground line-clamp-2" dangerouslySetInnerHTML={{ __html: (det.descriptionHtml || '').slice(0, 200) }} />
+                        </div>
+                      </div>
+                      <div className="grid md:grid-cols-5 gap-3">
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox checked={sel.title} onCheckedChange={() => setFieldSelection(s => ({...s, [p.id]: {...sel, title: !sel.title}}))} />
+                          Tytuł
+                        </label>
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox checked={sel.description} onCheckedChange={() => setFieldSelection(s => ({...s, [p.id]: {...sel, description: !sel.description}}))} />
+                          Opis (HTML)
+                        </label>
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox checked={sel.images} onCheckedChange={() => setFieldSelection(s => ({...s, [p.id]: {...sel, images: !sel.images}}))} />
+                          Zdjęcia
+                        </label>
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox checked={sel.price} onCheckedChange={() => setFieldSelection(s => ({...s, [p.id]: {...sel, price: !sel.price}}))} />
+                          Cena
+                        </label>
+                        <label className="flex items-center gap-2 text-sm">
+                          <Checkbox checked={sel.rating} onCheckedChange={() => setFieldSelection(s => ({...s, [p.id]: {...sel, rating: !sel.rating}}))} />
+                          Oceny/Zamówienia
+                        </label>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep('search')}>Wstecz</Button>
+              <Button onClick={handleImport} disabled={importing}>
+                {importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckSquare className="h-4 w-4 mr-2" />}
+                Importuj zaznaczone pola
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

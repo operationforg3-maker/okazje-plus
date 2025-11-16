@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare } from 'lucide-react';
+import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split } from 'lucide-react';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -34,8 +34,23 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? Math.round(100 - (product.price / (product as any).originalPrice) * 100)
     : null;
   const categoryBadge = product.subCategorySlug || product.mainCategorySlug || product.category;
-  const avgRating = product.ratingCard.average;
-  const ratingCount = product.ratingCard.count;
+  // Rozdzielone źródła ocen
+  const externalAvg = product.ratingSources?.external?.average;
+  const externalCount = product.ratingSources?.external?.count;
+  const usersAvg = product.ratingSources?.users?.average;
+  const usersCount = product.ratingSources?.users?.count;
+  const editorialAvg = product.ratingSources?.editorial?.average;
+  // Wylicz główną wyświetlaną wartość (preferujemy oceny użytkowników > redakcja > zewnętrzne)
+  const avgRating = typeof usersAvg === 'number' && usersCount && usersCount > 0
+    ? usersAvg
+    : typeof editorialAvg === 'number'
+      ? editorialAvg
+      : typeof externalAvg === 'number'
+        ? externalAvg
+        : product.ratingCard.average;
+  const ratingCount = usersCount && usersCount > 0
+    ? usersCount
+    : externalCount || product.ratingCard.count;
   const liveComments = useCommentsCount('products', product.id, (product as any).commentsCount);
 
   useEffect(() => {
@@ -109,7 +124,23 @@ export default function ProductCard({ product }: ProductCardProps) {
                 </div>
               </TooltipTrigger>
               <TooltipContent className="space-y-2 p-3">
-                <p className="text-xs font-semibold">Szczegóły ocen:</p>
+                <p className="text-xs font-semibold flex items-center gap-1">
+                  <Split className="h-3 w-3" /> Źródła ocen
+                </p>
+                <div className="space-y-1 text-xs">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span>Użytkownicy: {typeof usersAvg === 'number' ? usersAvg.toFixed(1) : '—'} {usersCount ? `(${usersCount})` : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-violet-400 text-violet-400" />
+                    <span>Redakcja: {typeof editorialAvg === 'number' ? editorialAvg.toFixed(1) : '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-cyan-400 text-cyan-400" />
+                    <span>Zewnętrzne ({product.ratingSources?.external?.source || '—'}): {typeof externalAvg === 'number' ? externalAvg.toFixed(1) : '—'} {externalCount ? `(${externalCount})` : ''}</span>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <div className="flex items-center gap-1">
                     <Star className="h-3 w-3 fill-amber-400 text-amber-400" />

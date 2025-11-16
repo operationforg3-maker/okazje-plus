@@ -708,14 +708,23 @@ export async function submitProductRating(
             });
 
             // Update aggregated rating card in product
-            transaction.update(productDocRef, {
-                'ratingCard.average': newCount > 0 ? totalRating / newCount : 0,
-                'ratingCard.count': newCount,
-                'ratingCard.durability': newCount > 0 ? totalDurability / newCount : 0,
-                'ratingCard.easeOfUse': newCount > 0 ? totalEaseOfUse / newCount : 0,
-                'ratingCard.valueForMoney': newCount > 0 ? totalValueForMoney / newCount : 0,
-                'ratingCard.versatility': newCount > 0 ? totalVersatility / newCount : 0,
-            });
+      const avg = newCount > 0 ? totalRating / newCount : 0;
+      const durabilityAvg = newCount > 0 ? totalDurability / newCount : 0;
+      const easeAvg = newCount > 0 ? totalEaseOfUse / newCount : 0;
+      const valueAvg = newCount > 0 ? totalValueForMoney / newCount : 0;
+      const versatilityAvg = newCount > 0 ? totalVersatility / newCount : 0;
+
+      transaction.update(productDocRef, {
+        'ratingCard.average': avg,
+        'ratingCard.count': newCount,
+        'ratingCard.durability': durabilityAvg,
+        'ratingCard.easeOfUse': easeAvg,
+        'ratingCard.valueForMoney': valueAvg,
+        'ratingCard.versatility': versatilityAvg,
+        'ratingSources.users.average': avg,
+        'ratingSources.users.count': newCount,
+        'ratingSources.users.updatedAt': new Date().toISOString(),
+      });
         });
     } catch (e) {
         console.error("Błąd podczas zapisywania oceny: ", e);
