@@ -908,6 +908,49 @@ export async function getProductById(productId: string): Promise<Product | null>
   return { id: snapshot.id, ...(snapshot.data() as Omit<Product, "id">) };
 }
 
+// === POWIĄZANIA DEAL ↔ PRODUCT ===
+/**
+ * Tworzy powiązanie między dealem a produktem (bidirectional, future-proof).
+ * - Dodaje productId do deal.linkedProductIds (bez duplikatów)
+ * - Dodaje dealId do product.linkedDealIds (bez duplikatów)
+ */
+export async function linkDealToProduct(dealId: string, productId: string): Promise<void> {
+  const dealRef = doc(db, 'deals', dealId);
+  const productRef = doc(db, 'products', productId);
+  await runTransaction(db, async (tx) => {
+    const dealSnap = await tx.get(dealRef);
+    const productSnap = await tx.get(productRef);
+    if (!dealSnap.exists()) throw new Error('Deal not found');
+    if (!productSnap.exists()) throw new Error('Product not found');
+    const dealData = dealSnap.data() as any;
+    const productData = productSnap.data() as any;
+    const linkedProductIds: string[] = Array.isArray(dealData.linkedProductIds) ? dealData.linkedProductIds : [];
+    const linkedDealIds: string[] = Array.isArray(productData.linkedDealIds) ? productData.linkedDealIds : [];
+    if (!linkedProductIds.includes(productId)) linkedProductIds.push(productId);
+    if (!linkedDealIds.includes(dealId)) linkedDealIds.push(dealId);
+    tx.update(dealRef, { linkedProductIds });
+    tx.update(productRef, { linkedDealIds });
+  });
+}
+
+/**
+ * Usuwa powiązanie między dealem a produktem.
+ */
+export async function unlinkDealFromProduct(dealId: string, productId: string): Promise<void> {
+  const dealRef = doc(db, 'deals', dealId);
+  const productRef = doc(db, 'products', productId);
+  await runTransaction(db, async (tx) => {
+    const dealSnap = await tx.get(dealRef);
+    const productSnap = await tx.get(productRef);
+    if (!dealSnap.exists() || !productSnap.exists()) return; // silent no-op
+    const dealData = dealSnap.data() as any;
+    const productData = productSnap.data() as any;
+    const linkedProductIds: string[] = (dealData.linkedProductIds || []).filter((id: string) => id !== productId);
+    const linkedDealIds: string[] = (productData.linkedDealIds || []).filter((id: string) => id !== dealId);
+    tx.update(dealRef, { linkedProductIds });
+    tx.update(productRef, { linkedDealIds });
+  });
+}
 export async function getNavigationShowcase(): Promise<NavigationShowcaseConfig | null> {
   // Cache navigation showcase for 30 minutes
   const cacheKey = 'navigation:showcase';

@@ -120,6 +120,17 @@ export interface Deal {
   shippingCost?: number;
   status?: 'draft' | 'approved' | 'rejected';
   createdBy?: string;
+  /**
+   * Powiązanie z produktami (future-proof: wiele produktów może być powiązanych z jednym dealem — np. różne warianty).
+   * Zwykle będzie 0 lub 1 ID.
+   */
+  linkedProductIds?: string[];
+  /**
+   * Oryginalny identyfikator zewnętrzny jeśli deal pochodzi z importu marketplace (np. AliExpress product_id / item_id).
+   */
+  externalOriginalId?: string;
+  /** Źródło pochodzenia dealu (manual, aliexpress, csv, other). */
+  source?: 'manual' | 'aliexpress' | 'csv' | 'other';
 }
 
 // Zaktualizowany interfejs Product
@@ -153,6 +164,11 @@ export interface Product {
   ai?: ProductAiMeta; // Dane analityczne AI (duplikaty, propozycje)
   moderation?: ProductModerationState; // Informacje o procesie moderacji
   metadata?: ProductImportMetadata; // Źródło importu i dane oryginalne
+  /**
+   * Future-proof dwukierunkowe powiązanie: lista dealId powiązanych z tym produktem.
+   * Aktualizowana transakcyjnie przy dodaniu/usunięciu powiązania.
+   */
+  linkedDealIds?: string[];
 }
 
 // Galeria obrazów produktu

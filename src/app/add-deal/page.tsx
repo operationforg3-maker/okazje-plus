@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import { getFunctions, httpsCallable, FunctionsError } from 'firebase/functions';
@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import ProductSuggestion from '@/components/product-suggestion';
+import { searchProductsForLinking } from '@/lib/data';
+import { linkDealToProduct } from '@/lib/data';
 import { toast } from 'sonner';
 
 // Typ dla danych nowej okazji wysyłanych do Cloud Function
@@ -35,6 +37,26 @@ export default function AddDealPage() {
   const [link, setLink] = useState('');
   const [image, setImage] = useState('');
   const [linkedProductId, setLinkedProductId] = useState<string | null>(null);
+  const [productQuery, setProductQuery] = useState('');
+  const [productResults, setProductResults] = useState<any[]>([]);
+  const [productSearchLoading, setProductSearchLoading] = useState(false);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!productQuery.trim()) { setProductResults([]); return; }
+      setProductSearchLoading(true);
+      try {
+        const results = await searchProductsForLinking(productQuery.trim());
+        setProductResults(results.slice(0, 8));
+      } catch (e) {
+        console.warn('Search products failed', e);
+      } finally {
+        setProductSearchLoading(false);
+      }
+    };
+    const t = setTimeout(run, 400); // debounce
+    return () => clearTimeout(t);
+  }, [productQuery]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,7 +85,18 @@ export default function AddDealPage() {
 
     try {
         const result = await createDealCallable(newDealData);
-        toast.success(`Okazja została pomyślnie dodana! ID: ${result.data.dealId}`);
+        const dealId = result.data.dealId;
+        // Linkowanie z produktem jeśli wybrano
+        if (dealId && linkedProductId) {
+          try {
+            await linkDealToProduct(dealId, linkedProductId);
+            toast.success('Powiązano produkt z okazją');
+          } catch (e) {
+            console.error('Linking failed', e);
+            toast.warning('Okazja dodana, ale powiązanie produktu nie powiodło się');
+          }
+        }
+        toast.success(`Okazja została pomyślnie dodana! ID: ${dealId}`);
         router.push('/deals');
     } catch (error) {
         console.error('Błąd podczas wywoływania funkcji createDeal: ', error);
@@ -107,9 +140,34 @@ export default function AddDealPage() {
           <Label htmlFor="image">Link do obrazka</Label>
           <Input id="image" type="url" value={image} onChange={(e) => setImage(e.target.value)} required disabled={isLoading} />
         </div>
-        <div>
-            <Label>Połącz z produktem (opcjonalnie)</Label>
-            <ProductSuggestion dealTitle={title} onProductSelect={setLinkedProductId} />
+        <div className="space-y-2">
+          <Label htmlFor="linkedProduct">Połącz z produktem (opcjonalnie)</Label>
+          <Input
+            id="linkedProduct"
+            placeholder="Wyszukaj produkt po nazwie..."
+            value={productQuery}
+            onChange={e => setProductQuery(e.target.value)}
+            disabled={isLoading}
+          />
+          {productSearchLoading && <p className="text-xs text-muted-foreground">Szukam...</p>}
+          {productResults.length > 0 && (
+            <div className="border rounded-md divide-y">
+              {productResults.map(p => (
+                <button
+                  type="button"
+                  key={p.id}
+                  onClick={() => { setLinkedProductId(p.id); setProductQuery(p.name); }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-muted flex justify-between ${linkedProductId===p.id ? 'bg-primary/10' : ''}`}
+                >
+                  <span className="line-clamp-1">{p.name}</span>
+                  {linkedProductId===p.id && <span className="text-primary text-xs">Wybrano</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {linkedProductId && (
+            <p className="text-xs text-green-600">Powiązany produkt ID: {linkedProductId}</p>
+          )}
         </div>
         <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
             {isLoading ? 'Dodawanie...' : 'Dodaj okazję'}
