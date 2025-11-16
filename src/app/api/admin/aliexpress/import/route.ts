@@ -69,48 +69,58 @@ export async function POST(request: NextRequest) {
 
     const app = initializeFirebaseAdmin();
     const db = admin.firestore();
+    const decoded = idToken ? await admin.auth().verifyIdToken(idToken) : null;
 
     // Deduplication: look for existing by externalId or link
     const externalId = product.id || product.externalId || null;
     if (externalId) {
-      const q = await db.collection('products').where('externalId', '==', externalId).limit(1).get();
+      const q = await db.collection('products').where('metadata.originalId', '==', externalId).limit(1).get();
       if (!q.empty) return NextResponse.json({ ok: false, reason: 'already_exists' }, { status: 409 });
     }
 
     if (product.productUrl) {
-      const q2 = await db.collection('products').where('link', '==', product.productUrl).limit(1).get();
+      const q2 = await db.collection('products').where('affiliateUrl', '==', product.productUrl).limit(1).get();
       if (!q2.empty) return NextResponse.json({ ok: false, reason: 'already_exists' }, { status: 409 });
     }
 
     const docRef = db.collection('products').doc();
+    const price = Number(product.price || 0);
+    const originalPrice = product.originalPrice != null ? Number(product.originalPrice) : null;
+    const discountPercent = (() => {
+      const op = Number(originalPrice || 0);
+      const p = Number(price || 0);
+      if (op > 0 && p >= 0 && p < op) {
+        return Math.round(((op - p) / op) * 100);
+      }
+      return undefined;
+    })();
+
     const docData: any = {
-      title: product.title,
-      description: product.description || product.subTitle || '',
-      price: product.price || 0,
-      originalPrice: product.originalPrice || product.listPrice || null,
-      currency: product.currency || 'PLN',
-      link: product.productUrl || product.url || null,
+      name: product.title,
+      description: product.description || product.subTitle || product.title || '',
+      longDescription: product.description || product.title || '',
       image: product.imageUrl || product.image || null,
-      externalId: externalId,
-      postedBy: (await admin.auth().getUser((await admin.auth().verifyIdToken(idToken || '')).uid)).uid || 'admin',
-      postedAt: admin.firestore.FieldValue.serverTimestamp(),
+      imageHint: '',
+      affiliateUrl: product.productUrl || product.url || null,
+      ratingCard: {
+        average: Number(product.rating || 0),
+        count: Number(product.orders || 0),
+        durability: Number(product.rating || 0),
+        easeOfUse: Number(product.rating || 0),
+        valueForMoney: Number(product.rating || 0),
+        versatility: Number(product.rating || 0),
+      },
+      price,
+      originalPrice: originalPrice ?? undefined,
+      discountPercent,
       mainCategorySlug: mainCategory || null,
       subCategorySlug: subCategory || null,
-      // Domyślnie zapisujemy jako draft — wymaga moderacji
       status: 'draft',
-      // denormalizacja % zniżki (jeśli możliwa)
-      discountPercent: (() => {
-        const op = Number(product.originalPrice || product.listPrice || 0);
-        const p = Number(product.price || 0);
-        if (op > 0 && p >= 0 && p < op) {
-          return Math.round(((op - p) / op) * 100);
-        }
-        return null;
-      })(),
       metadata: {
         source: 'aliexpress',
         originalId: externalId || null,
         importedAt: admin.firestore.FieldValue.serverTimestamp(),
+        importedBy: decoded?.uid || 'admin',
         orders: product.orders || null,
         shipping: product.shipping || null,
         merchant: product.merchant || null,

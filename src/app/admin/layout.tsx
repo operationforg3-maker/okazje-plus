@@ -267,10 +267,10 @@ export default function AdminLayout({
                     asChild
                     isActive={isActive('/admin/aliexpress-import')}
                     tooltip={{ children: 'AliExpress Import' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                    className="data-[active=true]:bg-green-600 data-[active=true]:text-primary-foreground hover:bg-green-600/80 border-l-4 border-transparent data-[active=true]:border-green-400"
                   >
                     <Link href="/admin/aliexpress-import">
-                      <ShoppingBag />
+                      <ShoppingBag className={isActive('/admin/aliexpress-import') ? 'text-white' : ''} />
                       <span className="group-data-[collapsible=icon]:hidden">AliExpress Import</span>
                     </Link>
                   </SidebarMenuButton>

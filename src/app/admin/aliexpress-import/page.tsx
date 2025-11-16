@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, Download, ExternalLink, Star } from 'lucide-react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { Category } from '@/lib/types';
 import { convertToPLN } from '@/lib/currency';
 import { useAuth } from '@/lib/auth';
@@ -91,10 +91,8 @@ function AliExpressImportPage() {
       }
 
       if (products.length === 0) {
-        console.warn('[AliExpress Import] No products returned, using mock data');
-        // Fallback do mocka dla celów testowych
-        products = generateMockProducts(searchQuery);
-        toast({ title: 'Tryb demo', description: `Pokazano ${products.length} przykładowych produktów` });
+        console.warn('[AliExpress Import] No products returned');
+        toast({ title: 'Brak wyników', description: 'Brak pasujących produktów dla podanych kryteriów' });
       } else {
         console.log('[AliExpress Import] Products fetched:', products.length);
         toast({ title: 'Sukces', description: `Znaleziono ${products.length} produktów` });
@@ -108,27 +106,9 @@ function AliExpressImportPage() {
         description: String(err), 
         variant: 'destructive' 
       });
-      // Fallback do mocka
-      const mockProducts = generateMockProducts(searchQuery);
-      setResults(mockProducts);
-      toast({ title: 'Tryb demo', description: 'Pokazano przykładowe produkty' });
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateMockProducts = (query: string): AliProduct[] => {
-    return Array.from({ length: 10 }, (_, i) => ({
-      id: `mock-${i}`,
-      title: `${query} - Produkt ${i + 1} (przykładowy)`,
-      price: Math.round(Math.random() * 500 + 50),
-      originalPrice: Math.round(Math.random() * 1000 + 100),
-      imageUrl: `https://via.placeholder.com/200?text=Product${i + 1}`,
-      productUrl: `https://aliexpress.com/item/${i}`,
-      rating: Number((Math.random() * 2 + 3).toFixed(1)),
-      orders: Math.round(Math.random() * 10000),
-      discount: Math.round(Math.random() * 70 + 10),
-    }));
   };
 
   const toggleSelect = (id: string) => {
@@ -234,10 +214,26 @@ function AliExpressImportPage() {
         });
 
         try {
-          const res = await fetch('/api/admin/products', {
+          const idToken = await auth.currentUser?.getIdToken();
+          if (!idToken) {
+            throw new Error('Brak tokenu uwierzytelniającego. Zaloguj się ponownie.');
+          }
+          const res = await fetch('/api/admin/aliexpress/import', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ product: {
+              id: product.id,
+              title: payload.name,
+              description: payload.description,
+              price: payload.price,
+              originalPrice: payload.originalPrice,
+              currency: 'PLN',
+              productUrl: payload.affiliateUrl,
+              imageUrl: payload.image,
+              orders: payload.metadata?.orders,
+              shipping: payload.metadata?.shippingInfo,
+              merchant: 'AliExpress'
+            }, mainCategory: payload.mainCategorySlug, subCategory: payload.subCategorySlug }),
           });
 
           if (res.ok) {
