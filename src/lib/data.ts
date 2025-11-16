@@ -94,27 +94,95 @@ export async function getRandomDeals(count: number): Promise<Deal[]> {
 // Admin: pobierz produkty z opcjonalnym filtrem statusu
 export async function getProductsForAdmin(status?: string, maxCount: number = 200): Promise<Product[]> {
   const productsRef = collection(db, "products");
-  let q;
-  if (status && status !== 'all') {
-    q = query(productsRef, where("status", "==", status), orderBy("createdAt", "desc"), limit(maxCount));
-  } else {
-    q = query(productsRef, orderBy("createdAt", "desc"), limit(maxCount));
+
+  const resultsMap = new Map<string, Product>();
+
+  // Primary: order by createdAt desc (new records usually have this field)
+  try {
+    let primaryQ;
+    if (status && status !== 'all') {
+      primaryQ = query(productsRef, where("status", "==", status), orderBy("createdAt", "desc"), limit(maxCount));
+    } else {
+      primaryQ = query(productsRef, orderBy("createdAt", "desc"), limit(maxCount));
+    }
+    const snap = await getDocs(primaryQ);
+    for (const d of snap.docs) resultsMap.set(d.id, { id: d.id, ...d.data() } as Product);
+  } catch (err: any) {
+    warnOnce('getProductsForAdmin-primary', 'getProductsForAdmin primary query failed – fallback', err?.message || err);
   }
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+
+  // Fallback A: same filter without orderBy (includes docs without createdAt)
+  try {
+    let fallbackQ;
+    if (status && status !== 'all') {
+      fallbackQ = query(productsRef, where("status", "==", status), limit(maxCount));
+    } else {
+      fallbackQ = query(productsRef, limit(maxCount));
+    }
+    const snap = await getDocs(fallbackQ);
+    for (const d of snap.docs) {
+      if (!resultsMap.has(d.id)) resultsMap.set(d.id, { id: d.id, ...d.data() } as Product);
+      if (resultsMap.size >= maxCount) break;
+    }
+  } catch (inner: any) {
+    console.error('getProductsForAdmin fallback failed', inner?.message || inner);
+  }
+
+  // Optional: sort by createdAt desc when available, otherwise by name
+  const all = Array.from(resultsMap.values());
+  all.sort((a: any, b: any) => {
+    const aTs = (a.createdAt as any)?.toMillis ? (a.createdAt as any).toMillis() : 0;
+    const bTs = (b.createdAt as any)?.toMillis ? (b.createdAt as any).toMillis() : 0;
+    if (aTs !== bTs) return bTs - aTs;
+    const an = (a.name || '').localeCompare?.(b.name || '') ?? 0;
+    return an;
+  });
+  return all.slice(0, maxCount);
 }
 
 // Admin: pobierz deale z opcjonalnym filtrem statusu
 export async function getDealsForAdmin(status?: string, maxCount: number = 200): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
-  let q;
-  if (status && status !== 'all') {
-    q = query(dealsRef, where("status", "==", status), orderBy("postedAt", "desc"), limit(maxCount));
-  } else {
-    q = query(dealsRef, orderBy("postedAt", "desc"), limit(maxCount));
+  const resultsMap = new Map<string, Deal>();
+
+  // Primary order by postedAt
+  try {
+    let primaryQ;
+    if (status && status !== 'all') {
+      primaryQ = query(dealsRef, where("status", "==", status), orderBy("postedAt", "desc"), limit(maxCount));
+    } else {
+      primaryQ = query(dealsRef, orderBy("postedAt", "desc"), limit(maxCount));
+    }
+    const snap = await getDocs(primaryQ);
+    for (const d of snap.docs) resultsMap.set(d.id, { id: d.id, ...d.data() } as Deal);
+  } catch (err: any) {
+    warnOnce('getDealsForAdmin-primary', 'getDealsForAdmin primary query failed – fallback', err?.message || err);
   }
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+
+  // Fallback without orderBy to include docs missing postedAt
+  try {
+    let fallbackQ;
+    if (status && status !== 'all') {
+      fallbackQ = query(dealsRef, where("status", "==", status), limit(maxCount));
+    } else {
+      fallbackQ = query(dealsRef, limit(maxCount));
+    }
+    const snap = await getDocs(fallbackQ);
+    for (const d of snap.docs) {
+      if (!resultsMap.has(d.id)) resultsMap.set(d.id, { id: d.id, ...d.data() } as Deal);
+      if (resultsMap.size >= maxCount) break;
+    }
+  } catch (inner: any) {
+    console.error('getDealsForAdmin fallback failed', inner?.message || inner);
+  }
+
+  const all = Array.from(resultsMap.values());
+  all.sort((a: any, b: any) => {
+    const aTs = (a.postedAt as any)?.toMillis ? (a.postedAt as any).toMillis() : 0;
+    const bTs = (b.postedAt as any)?.toMillis ? (b.postedAt as any).toMillis() : 0;
+    return bTs - aTs;
+  });
+  return all.slice(0, maxCount);
 }
 
 export async function getRecommendedProducts(count: number): Promise<Product[]> {
