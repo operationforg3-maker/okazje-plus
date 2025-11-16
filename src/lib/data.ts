@@ -91,6 +91,32 @@ export async function getRandomDeals(count: number): Promise<Deal[]> {
   return all.slice(0, count);
 }
 
+// Admin: pobierz produkty z opcjonalnym filtrem statusu
+export async function getProductsForAdmin(status?: string, maxCount: number = 200): Promise<Product[]> {
+  const productsRef = collection(db, "products");
+  let q;
+  if (status && status !== 'all') {
+    q = query(productsRef, where("status", "==", status), orderBy("createdAt", "desc"), limit(maxCount));
+  } else {
+    q = query(productsRef, orderBy("createdAt", "desc"), limit(maxCount));
+  }
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+}
+
+// Admin: pobierz deale z opcjonalnym filtrem statusu
+export async function getDealsForAdmin(status?: string, maxCount: number = 200): Promise<Deal[]> {
+  const dealsRef = collection(db, "deals");
+  let q;
+  if (status && status !== 'all') {
+    q = query(dealsRef, where("status", "==", status), orderBy("postedAt", "desc"), limit(maxCount));
+  } else {
+    q = query(dealsRef, orderBy("postedAt", "desc"), limit(maxCount));
+  }
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+}
+
 export async function getRecommendedProducts(count: number): Promise<Product[]> {
     let cacheGetFn: any = null, cacheSetFn: any = null;
     if (typeof window === 'undefined') {

@@ -27,7 +27,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { getRecommendedProducts } from '@/lib/data';
+import { getRecommendedProducts, getProductsForAdmin } from '@/lib/data';
 import { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
@@ -43,6 +43,7 @@ import { useTableSort } from '@/hooks/use-table-sort';
 import { usePagination } from '@/hooks/use-pagination';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
 
 export default function AdminProductsPage() {
@@ -57,6 +58,7 @@ export default function AdminProductsPage() {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Product>(
@@ -82,8 +84,8 @@ export default function AdminProductsPage() {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const recommendedProducts = await getRecommendedProducts(50);
-      setProducts(recommendedProducts);
+      const allProducts = await getProductsForAdmin(statusFilter === 'all' ? undefined : statusFilter, 200);
+      setProducts(allProducts);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -94,7 +96,7 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, statusFilter]);
 
   useEffect(() => {
     fetchProducts();
@@ -250,6 +252,24 @@ export default function AdminProductsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex items-center gap-4">
+            <Label htmlFor="status-filter" className="whitespace-nowrap">Filtruj status:</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger id="status-filter" className="w-[200px]">
+                <SelectValue placeholder="Wszystkie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">
+              Znaleziono: {products.length}
+            </span>
+          </div>
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (

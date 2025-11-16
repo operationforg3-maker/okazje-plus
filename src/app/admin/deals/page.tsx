@@ -27,7 +27,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { getHotDeals } from '@/lib/data';
+import { getHotDeals, getDealsForAdmin } from '@/lib/data';
 import { Deal } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download, AlertTriangle } from 'lucide-react';
@@ -42,6 +42,7 @@ import { useTableSort } from '@/hooks/use-table-sort';
 import { usePagination } from '@/hooks/use-pagination';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
 
 export default function AdminDealsPage() {
@@ -56,6 +57,7 @@ export default function AdminDealsPage() {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Deal>(
@@ -81,8 +83,8 @@ export default function AdminDealsPage() {
   async function fetchDeals() {
     setLoading(true);
     try {
-      const hotDeals = await getHotDeals(50);
-      setDeals(hotDeals);
+      const allDeals = await getDealsForAdmin(statusFilter === 'all' ? undefined : statusFilter, 200);
+      setDeals(allDeals);
     } catch (error) {
       console.error('Error fetching deals:', error);
       toast({
@@ -98,7 +100,7 @@ export default function AdminDealsPage() {
   useEffect(() => {
     fetchDeals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [statusFilter]);
 
   const handleEdit = (deal: Deal) => {
     setEditingDeal(deal);
@@ -231,6 +233,24 @@ export default function AdminDealsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex items-center gap-4">
+            <Label htmlFor="status-filter-deals" className="whitespace-nowrap">Filtruj status:</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger id="status-filter-deals" className="w-[200px]">
+                <SelectValue placeholder="Wszystkie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Wszystkie</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">
+              Znaleziono: {deals.length}
+            </span>
+          </div>
           {loading ? (
             <div className="space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
