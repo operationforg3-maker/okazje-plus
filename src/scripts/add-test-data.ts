@@ -5,13 +5,22 @@
 
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import serviceAccount from './serviceAccountKey.json';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Inicjalizacja Firebase Admin
 if (!getApps().length) {
-  initializeApp({
-    credential: cert(serviceAccount as any),
-  });
+  const serviceAccountPath = path.join(process.cwd(), 'serviceAccountKey.json');
+  
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf-8'));
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
+  } else {
+    // Fallback to application default credentials (works in Cloud environment)
+    initializeApp();
+  }
 }
 
 const db = getFirestore();

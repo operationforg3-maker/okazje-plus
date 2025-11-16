@@ -2,9 +2,10 @@
 import {initializeApp} from "firebase-admin/app";
 import {getFirestore, Timestamp} from "firebase-admin/firestore";
 import {getStorage} from "firebase-admin/storage";
-import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onCall, HttpsError, CallableRequest} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-import {onDocumentWritten} from "firebase-functions/v2/firestore";
+import {onDocumentWritten, FirestoreEvent} from "firebase-functions/v2/firestore";
+import {onSchedule, ScheduledEvent} from "firebase-functions/v2/scheduler";
 import * as https from "https";
 
 // KROK 1: Importuj typy z JEDNEGO źródła prawdy
@@ -105,7 +106,7 @@ async function downloadAndUploadImage(
  * Importuje wsadowo listę OKAZJI (Deals) do kolekcji 'deals'.
  * Wymaga uprawnień administratora.
  */
-export const batchImportDeals = onCall(async (request) => {
+export const batchImportDeals = onCall(async (request: CallableRequest<{deals: ImportDealData[]}>) => {
   await ensureAdmin(request.auth ?? null);
 
   const dealsToImport = request.data.deals as ImportDealData[];
@@ -172,7 +173,7 @@ export const batchImportDeals = onCall(async (request) => {
  * Importuje wsadowo listę PRODUKTÓW (Products) do kolekcji 'products'.
  * Wymaga uprawnień administratora.
  */
-export const batchImportProducts = onCall(async (request) => {
+export const batchImportProducts = onCall(async (request: CallableRequest<{products: ImportProductData[]}>) => {
   await ensureAdmin(request.auth ?? null);
 
   const productsToImport = request.data.products as ImportProductData[];
@@ -247,7 +248,7 @@ export const batchImportProducts = onCall(async (request) => {
  * Opcjonalnie przesyła obraz do Firebase Storage jeśli STORAGE_BUCKET
  * jest skonfigurowany.
  */
-export const importAliProduct = onCall(async (request) => {
+export const importAliProduct = onCall(async (request: CallableRequest<any>) => {
   await ensureAdmin(request.auth ?? null);
 
   const payload = request.data as Record<string, unknown>;
@@ -350,7 +351,7 @@ export const importAliProduct = onCall(async (request) => {
 // Bulk import callable - accepts array of products
 // Obsługuje pobieranie obrazów do Storage jeśli STORAGE_BUCKET jest
 // skonfigurowany
-export const bulkImportAliProducts = onCall(async (request) => {
+export const bulkImportAliProducts = onCall(async (request: CallableRequest<{products: any[]}>) => {
   await ensureAdmin(request.auth ?? null);
   const payload = request.data as Record<string, unknown>;
   const products: Array<Record<string, unknown>> = Array.isArray(
@@ -460,7 +461,7 @@ export const bulkImportAliProducts = onCall(async (request) => {
 
 export const updateVoteCount = onDocumentWritten(
   "/deals/{dealId}/votes/{userId}",
-  async (event) => {
+  async (event: FirestoreEvent<any>) => {
     const dealId = event.params.dealId;
     const dealRef = db.doc(`deals/${dealId}`);
 
@@ -487,7 +488,7 @@ export const updateVoteCount = onDocumentWritten(
 
 export const updateCommentsCountDeals = onDocumentWritten(
   "/deals/{dealId}/comments/{commentId}",
-  async (event) => {
+  async (event: FirestoreEvent<any>) => {
     const dealId = event.params.dealId;
     const dealRef = db.doc(`deals/${dealId}`);
     const commentsColRef = dealRef.collection("comments");
@@ -502,7 +503,7 @@ export const updateCommentsCountDeals = onDocumentWritten(
 
 export const updateCommentsCountProducts = onDocumentWritten(
   "/products/{productId}/comments/{commentId}",
-  async (event) => {
+  async (event: FirestoreEvent<any>) => {
     const productId = event.params.productId;
     const productRef = db.doc(`products/${productId}`);
     const commentsColRef = productRef.collection("comments");
@@ -520,7 +521,7 @@ export const updateCommentsCountProducts = onDocumentWritten(
 /**
  * Tworzy zadania AI typu enrich_product dla przekazanych produktów.
  */
-export const enrichProductBatch = onCall(async (request) => {
+export const enrichProductBatch = onCall(async (request: CallableRequest<{productIds: string[]}>) => {
   await ensureAdmin(request.auth ?? null);
   const productIds = (request.data?.productIds as string[]) || [];
   if (!Array.isArray(productIds) || productIds.length === 0) {
@@ -548,7 +549,7 @@ export const enrichProductBatch = onCall(async (request) => {
 /**
  * Tworzy zadania AI typu expand_category dla wskazanych kategorii.
  */
-export const autoFillCategories = onCall(async (request) => {
+export const autoFillCategories = onCall(async (request: CallableRequest<{collection: string; categories?: string[]}>) => {
   await ensureAdmin(request.auth ?? null);
   const categories = (request.data?.categories as string[]) || [];
   if (!Array.isArray(categories) || categories.length === 0) {
@@ -576,7 +577,7 @@ export const autoFillCategories = onCall(async (request) => {
 /**
  * Tworzy szkic raportu pokrycia treści w kolekcji system_reports.
  */
-export const scheduleAudit = onCall(async (request) => {
+export const scheduleAudit = onCall(async (request: CallableRequest) => {
   await ensureAdmin(request.auth ?? null);
   const ref = db.collection("system_reports").doc();
   await ref.set({
@@ -610,7 +611,6 @@ export const scheduleAudit = onCall(async (request) => {
  * @schedule Every day at 2 AM (Europe/Warsaw timezone)
  * @region europe-west1
  */
-import {onSchedule} from "firebase-functions/v2/scheduler";
 
 export const scheduleAliExpressSync = onSchedule(
   {
@@ -621,7 +621,7 @@ export const scheduleAliExpressSync = onSchedule(
     memory: "512MiB",
     timeoutSeconds: 540, // 9 minutes (max for scheduled functions)
   },
-  async (event) => {
+  async (event: ScheduledEvent) => {
     logger.info("Starting scheduled AliExpress sync");
 
     try {
