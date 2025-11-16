@@ -2,14 +2,23 @@ import Link from 'next/link';
 import { ShoppingBag, Twitter, Facebook, Instagram } from 'lucide-react';
 import pkg from '../../../package.json';
 import { getUptimeMs } from '@/lib/uptime';
+import { buildInfo } from '@/lib/build-info';
 
 export function Footer() {
-  // Oblicz uproszczony uptime od startu procesu serwera (resetuje się przy redeploy).
+  // Uptime procesu (od ostatniego startu serwera)
   const uptimeMs = getUptimeMs();
-  const hours = Math.floor(uptimeMs / 3_600_000);
-  const days = Math.floor(hours / 24);
-  const uptimeHuman = days > 0 ? `${days}d ${hours % 24}h` : `${hours}h`;
+  const uptimeMinutes = Math.floor(uptimeMs / 60_000);
+  const uptimeSeconds = Math.floor((uptimeMs % 60_000) / 1000);
+  const uptimeHuman = `${uptimeMinutes} min ${uptimeSeconds} s`;
+
+  // Build info (commit i czas zbudowania)
+  const { commitShort, builtAt } = buildInfo;
+  const builtDate = new Date(builtAt);
+  const builtLocal = isNaN(builtDate.getTime()) ? builtAt : builtDate.toLocaleString('pl-PL');
+
+  // Wersja aplikacji (package.json fallback)
   const version = process.env.NEXT_PUBLIC_APP_VERSION || pkg.version;
+
   return (
     <footer className="border-t bg-card">
       <div className="container mx-auto px-6 py-8">
@@ -68,12 +77,7 @@ export function Footer() {
             &copy; {new Date().getFullYear()} Okazje+. Wszelkie prawa zastrzeżone.
           </p>
           <p className="mt-1">
-            Wersja: v{version}
-            {process.env.NEXT_PUBLIC_GIT_SHA && (
-              <>
-                {' '}(<abbr title={process.env.NEXT_PUBLIC_GIT_SHA}>#{process.env.NEXT_PUBLIC_GIT_SHA.slice(0,7)}</abbr>)
-              </>
-            )} · Uptime: {uptimeHuman}
+            Wersja: v{version} (commit <abbr title={buildInfo.commit}>#{commitShort}</abbr>) · Zbudowano: {builtLocal} · Runtime: {uptimeHuman}
           </p>
         </div>
       </div>
