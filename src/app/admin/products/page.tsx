@@ -24,12 +24,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { getRecommendedProducts } from '@/lib/data';
 import { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download, AlertTriangle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ProductForm } from '@/components/admin/product-form';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -39,6 +41,9 @@ import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { usePagination } from '@/hooks/use-pagination';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { auth } from '@/lib/firebase';
 
 export default function AdminProductsPage() {
   const { toast } = useToast();
@@ -49,6 +54,9 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState('');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Product>(
@@ -162,6 +170,58 @@ export default function AdminProductsPage() {
     });
   };
 
+  const handleBulkDelete = async () => {
+    if (bulkDeleteConfirmation !== 'DELETE_ALL_PRODUCTS') {
+      toast({
+        title: 'Błąd',
+        description: 'Nieprawidłowe potwierdzenie',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setBulkDeleting(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        throw new Error('Brak tokenu uwierzytelniającego');
+      }
+
+      const response = await fetch('/api/admin/products/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ confirmation: 'DELETE_ALL_PRODUCTS' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Błąd podczas usuwania');
+      }
+
+      toast({
+        title: 'Usunięto wszystkie produkty',
+        description: `Usunięto ${data.deleted} produktów`,
+      });
+
+      setIsBulkDeleteDialogOpen(false);
+      setBulkDeleteConfirmation('');
+      fetchProducts();
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      toast({
+        title: 'Błąd',
+        description: error instanceof Error ? error.message : 'Nie udało się usunąć produktów',
+        variant: 'destructive',
+      });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -177,6 +237,10 @@ export default function AdminProductsPage() {
               <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
                 Eksportuj CSV
+              </Button>
+              <Button variant="destructive" onClick={() => setIsBulkDeleteDialogOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Usuń wszystkie
               </Button>
               <Button onClick={() => setIsAddDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -362,6 +426,57 @@ export default function AdminProductsPage() {
         cancelText="Anuluj"
         destructive
       />
+
+      {/* Dialog masowego usuwania */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Usuń wszystkie produkty
+            </DialogTitle>
+            <DialogDescription>
+              Ta operacja usunie wszystkie produkty z bazy danych. Tej operacji nie można cofnąć!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="confirmation">
+                Wpisz <code className="bg-muted px-2 py-1 rounded text-sm">DELETE_ALL_PRODUCTS</code> aby potwierdzić:
+              </Label>
+              <Input
+                id="confirmation"
+                value={bulkDeleteConfirmation}
+                onChange={(e) => setBulkDeleteConfirmation(e.target.value)}
+                placeholder="DELETE_ALL_PRODUCTS"
+                disabled={bulkDeleting}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Wszystkie produkty ({products.length}) zostaną trwale usunięte.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsBulkDeleteDialogOpen(false);
+                setBulkDeleteConfirmation('');
+              }}
+              disabled={bulkDeleting}
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteConfirmation !== 'DELETE_ALL_PRODUCTS' || bulkDeleting}
+            >
+              {bulkDeleting ? 'Usuwanie...' : 'Usuń wszystkie produkty'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

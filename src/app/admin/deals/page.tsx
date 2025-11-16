@@ -24,11 +24,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { getHotDeals } from '@/lib/data';
 import { Deal } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download, AlertTriangle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { DealForm } from '@/components/admin/deal-form';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -38,7 +40,9 @@ import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 import { useTableSort } from '@/hooks/use-table-sort';
 import { usePagination } from '@/hooks/use-pagination';
-import { Download } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { auth } from '@/lib/firebase';
 
 export default function AdminDealsPage() {
   const { toast } = useToast();
@@ -49,6 +53,9 @@ export default function AdminDealsPage() {
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [deletingDeal, setDeletingDeal] = useState<Deal | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState('');
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Deal>(
@@ -90,6 +97,7 @@ export default function AdminDealsPage() {
 
   useEffect(() => {
     fetchDeals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleEdit = (deal: Deal) => {
@@ -143,6 +151,58 @@ export default function AdminDealsPage() {
     });
   };
 
+  const handleBulkDelete = async () => {
+    if (bulkDeleteConfirmation !== 'DELETE_ALL_DEALS') {
+      toast({
+        title: 'Błąd',
+        description: 'Nieprawidłowe potwierdzenie',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setBulkDeleting(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        throw new Error('Brak tokenu uwierzytelniającego');
+      }
+
+      const response = await fetch('/api/admin/deals/bulk-delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ confirmation: 'DELETE_ALL_DEALS' }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Błąd podczas usuwania');
+      }
+
+      toast({
+        title: 'Usunięto wszystkie okazje',
+        description: `Usunięto ${data.deleted} okazji`,
+      });
+
+      setIsBulkDeleteDialogOpen(false);
+      setBulkDeleteConfirmation('');
+      fetchDeals();
+    } catch (error) {
+      console.error('Bulk delete failed:', error);
+      toast({
+        title: 'Błąd',
+        description: error instanceof Error ? error.message : 'Nie udało się usunąć okazji',
+        variant: 'destructive',
+      });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -158,6 +218,10 @@ export default function AdminDealsPage() {
               <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
                 Eksportuj CSV
+              </Button>
+              <Button variant="destructive" onClick={() => setIsBulkDeleteDialogOpen(true)}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Usuń wszystkie
               </Button>
               <Button onClick={() => setIsAddDialogOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -345,6 +409,57 @@ export default function AdminDealsPage() {
         cancelText="Anuluj"
         destructive
       />
+
+      {/* Dialog masowego usuwania */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Usuń wszystkie okazje
+            </DialogTitle>
+            <DialogDescription>
+              Ta operacja usunie wszystkie okazje z bazy danych. Tej operacji nie można cofnąć!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="confirmation">
+                Wpisz <code className="bg-muted px-2 py-1 rounded text-sm">DELETE_ALL_DEALS</code> aby potwierdzić:
+              </Label>
+              <Input
+                id="confirmation"
+                value={bulkDeleteConfirmation}
+                onChange={(e) => setBulkDeleteConfirmation(e.target.value)}
+                placeholder="DELETE_ALL_DEALS"
+                disabled={bulkDeleting}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Wszystkie okazje ({deals.length}) zostaną trwale usunięte.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsBulkDeleteDialogOpen(false);
+                setBulkDeleteConfirmation('');
+              }}
+              disabled={bulkDeleting}
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteConfirmation !== 'DELETE_ALL_DEALS' || bulkDeleting}
+            >
+              {bulkDeleting ? 'Usuwanie...' : 'Usuń wszystkie okazje'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
