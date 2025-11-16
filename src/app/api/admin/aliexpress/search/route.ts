@@ -42,7 +42,8 @@ export async function GET(request: Request) {
     // Method: aliexpress.affiliate.productquery
     // https://developers.aliexpress.com/en/doc.htm?docId=45801&docType=2
     const apiParams: Record<string, string | number> = {
-      method: 'aliexpress.affiliate.productquery',
+      // Correct method name per AliExpress Affiliate API
+      method: 'aliexpress.affiliate.product.query',
       keywords: q,
       page_size: Math.min(limit, 50), // Max 50 per AliExpress API
       page_no: page,
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
     if (minOrders) apiParams.min_lastest_volume = minOrders;
 
     // Build signed params (app_key, timestamp, sign, format, v)
-    const signed = buildSignedParams(apiParams, String(APP_KEY), String(APP_SECRET));
+  const signed = buildSignedParams({ ...apiParams, sign_method: 'md5' }, String(APP_KEY), String(APP_SECRET));
     
     // AliExpress Open Platform requires POST with form-urlencoded
     const body = toQueryString(signed);

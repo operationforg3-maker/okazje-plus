@@ -35,6 +35,8 @@ export function buildSignedParams(userParams: Record<string, string | number | b
   params.timestamp = formatTimestamp();
   params.format = params.format || 'json';
   params.v = params.v || '2.0';
+  // Explicitly set sign method (AliExpress AOP)
+  params.sign_method = params.sign_method || 'md5';
 
   const sign = createAliSign(params, appSecret);
   params.sign = sign;
