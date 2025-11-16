@@ -457,8 +457,8 @@ export async function searchDeals(searchTerm: string): Promise<Deal[]> {
 export async function getCounts(): Promise<{ products: number; deals: number; users: number }> {
   try {
     const [productsSnap, dealsSnap, usersSnap] = await Promise.all([
-      getCountFromServer(collection(db, 'products')),
-      getCountFromServer(collection(db, 'deals')),
+      getCountFromServer(query(collection(db, 'products'), where('status', '==', 'approved'))),
+      getCountFromServer(query(collection(db, 'deals'), where('status', '==', 'approved'))),
       getCountFromServer(collection(db, 'users')),
     ]);
     return {

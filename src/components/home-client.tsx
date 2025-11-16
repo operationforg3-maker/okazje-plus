@@ -6,6 +6,7 @@ import DealCard from '@/components/deal-card';
 import ProductCard from '@/components/product-card';
 import { trackFirestoreView } from '@/lib/analytics';
 import HeroSection from '@/components/hero-section';
+import { StatsStrip } from '@/components/stats-strip';
 
 interface HomeClientProps {
   initialHotDeals: Deal[];
@@ -22,6 +23,9 @@ export default function HomeClient({ initialHotDeals, initialRecommendedProducts
     <div className="space-y-10">
       {/* Hero z wyszukiwarką */}
       <HeroSection />
+
+      {/* Statystyki portalu */}
+      <StatsStrip />
 
       <div className="px-4 py-6 max-w-7xl mx-auto">
       <section>
