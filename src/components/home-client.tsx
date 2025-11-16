@@ -5,6 +5,7 @@ import { Deal, Product } from '@/lib/types';
 import DealCard from '@/components/deal-card';
 import ProductCard from '@/components/product-card';
 import { trackFirestoreView } from '@/lib/analytics';
+import HeroSection from '@/components/hero-section';
 
 interface HomeClientProps {
   initialHotDeals: Deal[];
@@ -18,7 +19,11 @@ export default function HomeClient({ initialHotDeals, initialRecommendedProducts
   const [recommendedProducts] = useState<Product[]>(initialRecommendedProducts);
 
   return (
-    <div className="space-y-10 px-4 py-6 max-w-7xl mx-auto">
+    <div className="space-y-10">
+      {/* Hero z wyszukiwarką */}
+      <HeroSection />
+
+      <div className="px-4 py-6 max-w-7xl mx-auto">
       <section>
         <h2 className="text-xl font-semibold mb-4">Gorące okazje</h2>
         {hotDeals.length === 0 && <p className="text-sm text-muted-foreground">Brak zaakceptowanych okazji do wyświetlenia.</p>}
@@ -42,6 +47,7 @@ export default function HomeClient({ initialHotDeals, initialRecommendedProducts
           ))}
         </div>
       </section>
+      </div>
     </div>
   );
 }
