@@ -41,12 +41,15 @@ export async function GET(request: Request) {
     // Build AliExpress Affiliate API parameters
     // Method: aliexpress.affiliate.productquery
     // https://developers.aliexpress.com/en/doc.htm?docId=45801&docType=2
+    const primaryMethod = 'aliexpress.affiliate.product.query';
+    const secondaryMethod = 'aliexpress.affiliate.product.search';
     const apiParams: Record<string, string | number> = {
-      // Correct method name per AliExpress Affiliate API
-      method: 'aliexpress.affiliate.product.query',
+      method: primaryMethod,
       keywords: q,
       page_size: Math.min(limit, 50), // Max 50 per AliExpress API
       page_no: page,
+      target_language: 'EN',
+      ship_to_country: 'PL',
     };
 
     if (category) apiParams.category_ids = category;
@@ -125,49 +128,74 @@ export async function GET(request: Request) {
     let products: any[] = [];
     let total = 0;
     
-    const responseWrapper = data.aliexpress_affiliate_productquery_response;
-    if (responseWrapper?.resp_result?.result) {
-      const result = responseWrapper.resp_result.result;
-      const rawProducts = result.products?.product || [];
-      
-      total = result.total_record_count || rawProducts.length;
-      
-      // Map AliExpress fields to our format (as per spec)
-      products = rawProducts.map((p: any) => ({
-        id: String(p.product_id || p.productId),
-        title: p.product_title || p.title || '',
-        price: Number(p.target_sale_price || p.sale_price || 0),
-        originalPrice: Number(p.target_original_price || p.original_price || null),
-        imageUrl: p.product_main_image_url || p.image_url || '',
-        productUrl: p.promotion_link || p.product_detail_url || '',
-        rating: p.evaluate_rate ? parseFloat(p.evaluate_rate) / 20 : 0, // Convert to 0-5 scale
-        orders: p.lastest_volume || p.volume || 0,
-        discount: p.discount ? parseInt(p.discount) : 0,
-        shipping: p.first_level_category_name || '',
-        currency: 'USD', // AliExpress typically returns USD
-      })).filter((p: any) => 
-        // Filter per spec requirements
-        p.title.length >= 10 &&
-        p.imageUrl &&
-        p.price > 0 &&
-        p.rating >= 3.5 &&
-        p.orders >= 10 &&
-        !p.title.match(/fake|replica|scam/i)
-      );
-      
-      console.log(`[AliExpress] Fetched ${products.length}/${total} products (filtered)`);
-    } else {
-      console.warn('[AliExpress] Unexpected response structure:', JSON.stringify(data).slice(0, 500));
-      
-      // Check for error in response
-      if (data.error_response) {
-        return NextResponse.json({
-          error: 'api_error',
-          message: data.error_response.msg || 'AliExpress API error',
-          code: data.error_response.code,
-        }, { status: 400 });
+    function extractProducts(wrapper: any) {
+      if (!wrapper) return { products: [], total: 0 };
+      const respResult = wrapper.resp_result?.result || wrapper.result;
+      if (!respResult) return { products: [], total: 0 };
+      const rawProducts = respResult.products?.product || respResult.products || [];
+      const total = respResult.total_record_count || rawProducts.length || 0;
+      return { rawProducts, total };
+    }
+
+    let responseWrapper = (data as any).aliexpress_affiliate_productquery_response || (data as any).aliexpress_affiliate_product_query_response;
+    const firstExtraction = extractProducts(responseWrapper);
+    if (firstExtraction.rawProducts && firstExtraction.rawProducts.length) {
+      total = firstExtraction.total;
+      products = firstExtraction.rawProducts;
+    }
+
+    // Fallback: try secondary method if no products
+    if (products.length === 0) {
+      console.warn('[AliExpress] Primary method returned 0 products. Attempting fallback method:', secondaryMethod);
+      const fallbackParams = { ...apiParams, method: secondaryMethod };
+      const fallbackSigned = buildSignedParams({ ...fallbackParams, sign_method: 'md5' }, String(APP_KEY), String(APP_SECRET));
+      const fallbackBody = toQueryString(fallbackSigned);
+      const fallbackRes = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+        body: fallbackBody,
+      });
+      console.log('[AliExpress] Fallback response status:', fallbackRes.status, fallbackRes.statusText);
+      const fallbackText = await fallbackRes.text();
+      let fallbackJson: any = null;
+      try { fallbackJson = JSON.parse(fallbackText); } catch {}
+      if (fallbackJson) {
+        responseWrapper = fallbackJson.aliexpress_affiliate_product_search_response || fallbackJson.aliexpress_affiliate_productsearch_response;
+        const secondExtraction = extractProducts(responseWrapper);
+        if (secondExtraction.rawProducts && secondExtraction.rawProducts.length) {
+          total = secondExtraction.total;
+          products = secondExtraction.rawProducts;
+          console.log(`[AliExpress] Fallback succeeded with ${products.length} products.`);
+        } else {
+          console.warn('[AliExpress] Fallback also returned 0 products. Raw snippet:', fallbackText.slice(0, 300));
+        }
+      } else {
+        console.warn('[AliExpress] Fallback non-JSON response:', fallbackText.slice(0, 300));
       }
     }
+
+    // Normalize & filter
+    products = products.map((p: any) => ({
+      id: String(p.product_id || p.productId || p.item_id || p.itemId || ''),
+      title: p.product_title || p.title || p.item_title || '',
+      price: Number(p.target_sale_price || p.sale_price || p.sale_price_amount || p.target_app_sale_price || 0),
+      originalPrice: Number(p.target_original_price || p.original_price || p.original_price_amount || null),
+      imageUrl: p.product_main_image_url || p.image_url || p.product_image || p.item_main_image || '',
+      productUrl: p.promotion_link || p.product_detail_url || p.target_url || '',
+      rating: p.evaluate_rate ? parseFloat(p.evaluate_rate) / 20 : (p.product_rating ? Number(p.product_rating) : 0),
+      orders: p.lastest_volume || p.volume || p.orders || p.trade_volume || 0,
+      discount: p.discount ? parseInt(p.discount) : 0,
+      shipping: p.first_level_category_name || p.category_name || '',
+      currency: 'USD',
+    })).filter((p: any) => 
+      p.title && p.title.length >= 6 &&
+      p.imageUrl &&
+      p.price > 0 &&
+      p.orders >= 0 && // relax orders for initial import visibility
+      !p.title.match(/fake|replica|scam|pirate/i)
+    );
+
+    console.log(`[AliExpress] Final normalized products count: ${products.length}/${total}`);
 
     return NextResponse.json({ 
       products,
