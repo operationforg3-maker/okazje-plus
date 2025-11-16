@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { ShoppingBag, Twitter, Facebook, Instagram } from 'lucide-react';
-import pkg from '../../../package.json';
 import { getUptimeMs } from '@/lib/uptime';
 import { buildInfo } from '@/lib/build-info';
 
@@ -11,13 +10,10 @@ export function Footer() {
   const uptimeSeconds = Math.floor((uptimeMs % 60_000) / 1000);
   const uptimeHuman = `${uptimeMinutes} min ${uptimeSeconds} s`;
 
-  // Build info (commit i czas zbudowania)
-  const { commitShort, builtAt } = buildInfo;
+  // Build info (wersja, commit i czas zbudowania)
+  const { version, commitShort, builtAt } = buildInfo;
   const builtDate = new Date(builtAt);
   const builtLocal = isNaN(builtDate.getTime()) ? builtAt : builtDate.toLocaleString('pl-PL');
-
-  // Wersja aplikacji (package.json fallback)
-  const version = process.env.NEXT_PUBLIC_APP_VERSION || pkg.version;
 
   return (
     <footer className="border-t bg-card">
