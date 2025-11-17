@@ -348,5 +348,24 @@ service cloud.firestore {
       allow create: if true; // Allow anonymous tracking
       allow update, delete: if false; // Immutable events
     }
+
+    ////////////////////////////////
+    // SECRET PAGES (Tajne strony promocyjne)
+    ////////////////////////////////
+    match /secret_pages/{pageId} {
+      // Publiczny odczyt tylko aktywnych stron (dla renderowania strony)
+      allow read: if resource.data.isActive == true || isAdmin();
+      // Tylko admin może tworzyć, edytować i usuwać
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Historia zakręceń koła fortuny
+    match /secret_page_spins/{spinId} {
+      // Publiczny zapis (anonimowe zakręcenia)
+      allow create: if true;
+      // Tylko admin może czytać statystyki
+      allow read: if isAdmin();
+      allow update, delete: if false; // Immutable
+    }
   }
 }
