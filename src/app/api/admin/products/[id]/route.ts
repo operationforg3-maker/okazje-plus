@@ -12,12 +12,15 @@ export async function PUT(
     const { id } = params;
     const data = await request.json();
 
-    // Walidacja wymaganych pól
-    if (!data.name || !data.description || !data.price || !data.image || !data.affiliateUrl) {
-      return NextResponse.json(
-        { error: 'Brakuje wymaganych pól' },
-        { status: 400 }
-      );
+    // Jeśli to tylko aktualizacja statusu lub częściowa edycja, nie wymagaj wszystkich pól
+    // Walidacja tylko jeśli próbujemy edytować główne pola
+    if (data.name !== undefined || data.description !== undefined || data.price !== undefined) {
+      if (!data.name || !data.description || data.price === undefined) {
+        return NextResponse.json(
+          { error: 'Brakuje wymaganych pól' },
+          { status: 400 }
+        );
+      }
     }
 
     const productRef = doc(db, 'products', id);

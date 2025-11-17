@@ -175,19 +175,42 @@ export async function GET(request: Request) {
     }
 
     // Normalize & filter
-    products = products.map((p: any) => ({
-      id: String(p.product_id || p.productId || p.item_id || p.itemId || ''),
-      title: p.product_title || p.title || p.item_title || '',
-      price: Number(p.target_sale_price || p.sale_price || p.sale_price_amount || p.target_app_sale_price || 0),
-      originalPrice: Number(p.target_original_price || p.original_price || p.original_price_amount || null),
-      imageUrl: p.product_main_image_url || p.image_url || p.product_image || p.item_main_image || '',
-      productUrl: p.promotion_link || p.product_detail_url || p.target_url || '',
-      rating: p.evaluate_rate ? parseFloat(p.evaluate_rate) / 20 : (p.product_rating ? Number(p.product_rating) : 0),
-      orders: p.lastest_volume || p.volume || p.orders || p.trade_volume || 0,
-      discount: p.discount ? parseInt(p.discount) : 0,
-      shipping: p.first_level_category_name || p.category_name || '',
-      currency: 'USD',
-    })).filter((p: any) => 
+    products = products.map((p: any) => {
+      // Extract images array from various possible fields
+      const images: string[] = [];
+      
+      // Main image first
+      const mainImage = p.product_main_image_url || p.image_url || p.product_image || p.item_main_image || '';
+      if (mainImage) images.push(mainImage);
+      
+      // Additional images from various fields
+      if (p.product_small_image_urls?.string) {
+        const additionalImages = Array.isArray(p.product_small_image_urls.string) 
+          ? p.product_small_image_urls.string 
+          : [p.product_small_image_urls.string];
+        images.push(...additionalImages.filter((url: string) => url && !images.includes(url)));
+      }
+      
+      // Some APIs return product_video_url - we skip video for now
+      
+      return {
+        id: String(p.product_id || p.productId || p.item_id || p.itemId || ''),
+        title: p.product_title || p.title || p.item_title || '',
+        description: p.product_description || p.description || p.short_description || '',
+        price: Number(p.target_sale_price || p.sale_price || p.sale_price_amount || p.target_app_sale_price || 0),
+        originalPrice: Number(p.target_original_price || p.original_price || p.original_price_amount || null),
+        imageUrl: mainImage,
+        images: images.slice(0, 10), // Limit to 10 images
+        productUrl: p.promotion_link || p.product_detail_url || p.target_url || '',
+        rating: p.evaluate_rate ? parseFloat(p.evaluate_rate) / 20 : (p.product_rating ? Number(p.product_rating) : 0),
+        orders: p.lastest_volume || p.volume || p.orders || p.trade_volume || 0,
+        discount: p.discount ? parseInt(p.discount) : 0,
+        shipping: p.first_level_category_name || p.category_name || '',
+        currency: 'USD',
+        merchant: p.shop_title || p.shop_name || '',
+        categoryId: p.first_level_category_id || p.category_id || '',
+      };
+    }).filter((p: any) => 
       p.title && p.title.length >= 6 &&
       p.imageUrl &&
       p.price > 0 &&
