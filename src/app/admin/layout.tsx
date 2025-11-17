@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -13,8 +13,15 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  useSidebar,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -30,16 +37,14 @@ import {
   BarChart3,
   Home,
   ChevronRight,
-  Store,
-  Scale,
-  GitBranch,
-  Copy,
-  Navigation,
-  Wrench
+  ChevronDown,
+  TrendingUp,
+  Zap,
 } from 'lucide-react';
 import { UserNav } from '@/components/auth/user-nav';
 import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 const pathNames: Record<string, string> = {
   '/admin': 'Dashboard',
@@ -48,16 +53,9 @@ const pathNames: Record<string, string> = {
   '/admin/categories': 'Kategorie',
   '/admin/navigation': 'Nawigacja',
   '/admin/moderation': 'Moderacja',
-  '/admin/import': 'Import danych',
-  '/admin/aliexpress-import': 'AliExpress Import',
-  '/admin/imports/aliexpress': 'Import AliExpress (stary)',
-  '/admin/marketplaces': 'Marketplace',
-  '/admin/comparison': 'Porównanie cen',
-  '/admin/category-mappings': 'Mapowanie kategorii',
-  '/admin/duplicates': 'Duplikaty',
+  '/admin/aliexpress-import': 'Import AliExpress',
   '/admin/analytics': 'Analityka',
-  '/admin/trending-prediction': 'Predykcja AI',
-  '/admin/m3-tools': 'M3 Tools',
+  '/admin/stats': 'Statystyki',
   '/admin/users': 'Użytkownicy',
   '/admin/settings': 'Ustawienia',
 };
@@ -68,8 +66,10 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [contentOpen, setContentOpen] = useState(true);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   
-  // Ulepszony isActive - sprawdza również nested routes
   const isActive = (path: string) => {
     if (path === '/admin') {
       return pathname === '/admin';
@@ -79,7 +79,6 @@ export default function AdminLayout({
   
   const currentPageName = pathNames[pathname] || 'Panel Administratora';
 
-  // Auto-scroll do góry przy zmianie strony
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [pathname]);
@@ -89,258 +88,241 @@ export default function AdminLayout({
       <SidebarProvider>
         <div className="flex min-h-screen">
           <Sidebar className="border-r border-border/60">
-            <SidebarHeader className="border-b border-border/60 bg-card/50">
-              <Link href="/" className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded-lg transition-colors">
-                <ShoppingBag className="h-6 w-6 text-primary" />
-                <span className="font-bold font-headline text-lg group-data-[collapsible=icon]:hidden">
-                  Okazje+
-                </span>
+            <SidebarHeader className="border-b border-border/60 bg-gradient-to-r from-primary/10 to-purple-500/10">
+              <Link href="/" className="flex items-center gap-3 p-3 hover:bg-muted/50 rounded-lg transition-all group">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                  <ShoppingBag className="h-5 w-5 text-white" />
+                </div>
+                <div className="group-data-[collapsible=icon]:hidden">
+                  <span className="font-bold font-headline text-lg block">Okazje+</span>
+                  <span className="text-xs text-muted-foreground">Panel Admina</span>
+                </div>
               </Link>
             </SidebarHeader>
+            
             <SidebarContent className="p-2">
               <SidebarMenu>
+                {/* Dashboard */}
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive('/admin')}
                     tooltip={{ children: 'Dashboard' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-primary data-[active=true]:to-purple-600 data-[active=true]:text-white hover:bg-muted/80 transition-all"
                   >
                     <Link href="/admin">
                       <LayoutDashboard />
-                      <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
+                      <span className="group-data-[collapsible=icon]:hidden font-medium">Dashboard</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 
-                {/* Separator */}
-                <Separator className="my-2" />
-                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-                  Zarządzanie treścią
-                </div>
+                <Separator className="my-3" />
                 
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/products')}
-                    tooltip={{ children: 'Produkty' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/products">
-                      <ShoppingCart />
-                      <span className="group-data-[collapsible=icon]:hidden">Produkty</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/deals')}
-                    tooltip={{ children: 'Okazje' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/deals">
-                      <Flame />
-                      <span className="group-data-[collapsible=icon]:hidden">Okazje</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/categories')}
-                    tooltip={{ children: 'Kategorie' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/categories">
-                      <FolderTree />
-                      <span className="group-data-[collapsible=icon]:hidden">Kategorie</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/navigation')}
-                    tooltip={{ children: 'Nawigacja' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/navigation">
-                      <Navigation />
-                      <span className="group-data-[collapsible=icon]:hidden">Nawigacja</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/moderation')}
-                    tooltip={{ children: 'Moderacja' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/moderation">
-                      <CheckSquare />
-                      <span className="group-data-[collapsible=icon]:hidden">Moderacja</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {/* Zarządzanie treścią - COLLAPSIBLE */}
+                <Collapsible open={contentOpen} onOpenChange={setContentOpen} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton className="w-full hover:bg-muted/80">
+                        <Zap className="h-4 w-4" />
+                        <span className="flex-1 text-left font-semibold group-data-[collapsible=icon]:hidden">
+                          Zarządzanie
+                        </span>
+                        <ChevronDown className={cn(
+                          "h-4 w-4 transition-transform group-data-[collapsible=icon]:hidden",
+                          contentOpen && "rotate-180"
+                        )} />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/products')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                          >
+                            <Link href="/admin/products">
+                              <ShoppingCart className="h-4 w-4" />
+                              <span>Produkty</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/deals')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                          >
+                            <Link href="/admin/deals">
+                              <Flame className="h-4 w-4" />
+                              <span>Okazje</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/categories')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                          >
+                            <Link href="/admin/categories">
+                              <FolderTree className="h-4 w-4" />
+                              <span>Kategorie</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/moderation')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                          >
+                            <Link href="/admin/moderation">
+                              <CheckSquare className="h-4 w-4" />
+                              <span>Moderacja</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
 
-                <Separator className="my-2" />
-                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-                  Marketplace
-                </div>
-
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/marketplaces')}
-                    tooltip={{ children: 'Marketplace' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/marketplaces">
-                      <Store />
-                      <span className="group-data-[collapsible=icon]:hidden">Marketplace</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/comparison')}
-                    tooltip={{ children: 'Porównanie cen' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/comparison">
-                      <Scale />
-                      <span className="group-data-[collapsible=icon]:hidden">Porównanie cen</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/category-mappings')}
-                    tooltip={{ children: 'Mapowanie kategorii' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/category-mappings">
-                      <GitBranch />
-                      <span className="group-data-[collapsible=icon]:hidden">Mapowanie kategorii</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/duplicates')}
-                    tooltip={{ children: 'Duplikaty' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/duplicates">
-                      <Copy />
-                      <span className="group-data-[collapsible=icon]:hidden">Duplikaty</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                
-                {/* Separator */}
-                <Separator className="my-2" />
-                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-                  Import
-                </div>
-                
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/import')}
-                    tooltip={{ children: 'Import danych' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/import">
-                      <FileUp />
-                      <span className="group-data-[collapsible=icon]:hidden">Import danych</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {/* Import - pojedynczy najważniejszy */}
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive('/admin/aliexpress-import')}
-                    tooltip={{ children: 'AliExpress Import' }}
-                    className="data-[active=true]:bg-green-600 data-[active=true]:text-primary-foreground hover:bg-green-600/80 border-l-4 border-transparent data-[active=true]:border-green-400"
+                    tooltip={{ children: 'Import AliExpress' }}
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-green-600 data-[active=true]:to-emerald-600 data-[active=true]:text-white hover:bg-muted/80 border-l-4 border-transparent data-[active=true]:border-green-400 transition-all"
                   >
                     <Link href="/admin/aliexpress-import">
-                      <ShoppingBag className={isActive('/admin/aliexpress-import') ? 'text-white' : ''} />
-                      <span className="group-data-[collapsible=icon]:hidden">AliExpress Import</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/imports/aliexpress')}
-                    tooltip={{ children: 'Import AliExpress (stary)' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/imports/aliexpress">
                       <ShoppingBag />
-                      <span className="group-data-[collapsible=icon]:hidden">Import AliExpress (stary)</span>
+                      <span className="group-data-[collapsible=icon]:hidden font-medium">Import AliExpress</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+
+                <Separator className="my-3" />
                 
-                {/* Separator */}
-                <Separator className="my-2" />
-                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-                  Analityka
-                </div>
+                {/* Analityka - COLLAPSIBLE */}
+                <Collapsible open={analyticsOpen} onOpenChange={setAnalyticsOpen} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton className="w-full hover:bg-muted/80">
+                        <BarChart3 className="h-4 w-4" />
+                        <span className="flex-1 text-left font-semibold group-data-[collapsible=icon]:hidden">
+                          Analityka
+                        </span>
+                        <ChevronDown className={cn(
+                          "h-4 w-4 transition-transform group-data-[collapsible=icon]:hidden",
+                          analyticsOpen && "rotate-180"
+                        )} />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/analytics')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                          >
+                            <Link href="/admin/analytics">
+                              <BarChart3 className="h-4 w-4" />
+                              <span>Analityka</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/stats')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                          >
+                            <Link href="/admin/stats">
+                              <TrendingUp className="h-4 w-4" />
+                              <span>Statystyki</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+
+                <Separator className="my-3" />
+
+                {/* Zaawansowane - COLLAPSIBLE (mało używane funkcje) */}
+                <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton className="w-full hover:bg-muted/80 opacity-70">
+                        <Settings className="h-4 w-4" />
+                        <span className="flex-1 text-left text-sm group-data-[collapsible=icon]:hidden">
+                          Zaawansowane
+                        </span>
+                        <ChevronDown className={cn(
+                          "h-4 w-4 transition-transform group-data-[collapsible=icon]:hidden",
+                          advancedOpen && "rotate-180"
+                        )} />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/navigation')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/navigation">
+                              <span>Nawigacja</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/import')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/import">
+                              <span>Import CSV</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/trending-prediction')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/trending-prediction">
+                              <span>Predykcja AI</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/m3-tools')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/m3-tools">
+                              <span>M3 Tools</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+
+                <Separator className="my-3" />
                 
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/analytics')}
-                    tooltip={{ children: 'Analityka' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/analytics">
-                      <BarChart3 />
-                      <span className="group-data-[collapsible=icon]:hidden">Analityka</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/trending-prediction')}
-                    tooltip={{ children: 'Predykcja AI' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/trending-prediction">
-                      <BrainCircuit />
-                      <span className="group-data-[collapsible=icon]:hidden">Predykcja AI</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive('/admin/m3-tools')}
-                    tooltip={{ children: 'M3 Tools' }}
-                    className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
-                  >
-                    <Link href="/admin/m3-tools">
-                      <Wrench />
-                      <span className="group-data-[collapsible=icon]:hidden">M3 Tools</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                
-                {/* Separator */}
-                <Separator className="my-2" />
-                <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">
-                  System
-                </div>
-                
+                {/* System */}
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -370,8 +352,9 @@ export default function AdminLayout({
               </SidebarMenu>
             </SidebarContent>
           </Sidebar>
+          
           <SidebarInset className="flex flex-1 flex-col">
-            <header className="flex h-16 items-center gap-4 border-b border-border/60 bg-background/95 backdrop-blur px-4 md:px-6 sticky top-0 z-30">
+            <header className="flex h-16 items-center gap-4 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6 sticky top-0 z-30 shadow-sm">
               <div className="flex items-center gap-4 flex-1">
                 <SidebarTrigger className="md:hidden">
                   <PanelLeft />
@@ -379,8 +362,8 @@ export default function AdminLayout({
                 
                 {/* Breadcrumbs */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1">
-                    <Home className="h-4 w-4" />
+                  <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1.5 group">
+                    <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
                     <span className="hidden sm:inline">Strona główna</span>
                   </Link>
                   <ChevronRight className="h-4 w-4" />
@@ -395,12 +378,14 @@ export default function AdminLayout({
                   )}
                 </div>
               </div>
-              <div className="ml-auto">
-                <UserNav />
-              </div>
+
+              <UserNav />
             </header>
-            <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30">
-              {children}
+
+            <main className="flex-1 overflow-y-auto">
+              <div className="container mx-auto p-4 md:p-6 lg:p-8">
+                {children}
+              </div>
             </main>
           </SidebarInset>
         </div>
