@@ -10,7 +10,7 @@ import { ShoppingBag, Flame, Users, Zap, Clock, Mail, CheckCircle2 } from "lucid
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 
-const BETA_RELEASE = new Date("2025-11-20T10:00:00+01:00");
+const BETA_RELEASE = new Date("2025-11-19T10:00:00+01:00");
 const PUBLIC_RELEASE = new Date("2025-11-21T19:00:00+01:00");
 
 interface TimeLeft {
@@ -146,7 +146,7 @@ export default function Home() {
                       <span className="font-semibold uppercase tracking-wide">Beta Release</span>
                     </div>
                     <p className="text-2xl md:text-3xl font-bold font-headline">
-                      Środa, 20 listopada · 10:00
+                      Środa, 19 listopada · 10:00
                     </p>
                   </div>
                   <div className="flex gap-3">

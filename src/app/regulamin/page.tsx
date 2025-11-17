@@ -134,8 +134,8 @@ export default function RegulaminPage() {
           <ol>
             <li>Zgodnie z DSA, Serwis udostępnia:
               <ul>
-                <li><strong>Punkt kontaktowy dla użytkowników</strong> – adres e-mail: <a href="mailto:kontakt@okazje-plus.pl">kontakt@okazje-plus.pl</a></li>
-                <li><strong>Punkt kontaktowy dla organów państwowych</strong> – adres e-mail: <a href="mailto:legal@okazje-plus.pl">legal@okazje-plus.pl</a></li>
+                <li><strong>Punkt kontaktowy dla użytkowników</strong> – adres e-mail: <a href="mailto:business@okazjeplus.pl">business@okazjeplus.pl</a></li>
+                <li><strong>Punkt kontaktowy dla organów państwowych</strong> – adres e-mail: <a href="mailto:business@okazjeplus.pl">business@okazjeplus.pl</a></li>
               </ul>
             </li>
             <li>Zgłoszenia dotyczące treści nielegalnych można składać również poprzez <strong>formularz w Serwisie</strong> (jeśli dostępny) lub bezpośrednio na powyższe adresy e-mail.</li>
@@ -169,7 +169,7 @@ export default function RegulaminPage() {
                 <li>naruszeń Regulaminu przez innych Użytkowników.</li>
               </ul>
             </li>
-            <li>Reklamacje należy kierować na adres: <a href="mailto:kontakt@okazje-plus.pl">kontakt@okazje-plus.pl</a> z dopiskiem „Reklamacja".</li>
+            <li>Reklamacje należy kierować na adres: <a href="mailto:business@okazjeplus.pl">business@okazjeplus.pl</a> z dopiskiem „Reklamacja".</li>
             <li>Reklamacja powinna zawierać:
               <ul>
                 <li>dane Użytkownika (adres e-mail, ID konta),</li>
@@ -197,7 +197,7 @@ export default function RegulaminPage() {
                 <li>cofnięcia zgody (jeśli przetwarzanie opiera się na zgodzie).</li>
               </ul>
             </li>
-            <li>W celu realizacji powyższych praw należy skontaktować się z Administratorem Danych pod adresem: <a href="mailto:privacy@okazje-plus.pl">privacy@okazje-plus.pl</a>.</li>
+            <li>W celu realizacji powyższych praw należy skontaktować się z Administratorem Danych pod adresem: <a href="mailto:business@okazjeplus.pl">business@okazjeplus.pl</a>.</li>
           </ol>
         </section>
 

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ShoppingBag, Twitter, Facebook, Instagram } from 'lucide-react';
+import { ShoppingBag, Facebook, Instagram } from 'lucide-react';
 import { getUptimeMs } from '@/lib/uptime';
 import { buildInfo } from '@/lib/build-info';
 
@@ -32,9 +32,6 @@ export function Footer() {
           <div>
             <h3 className="font-headline font-semibold">Nawigacja</h3>
             <div className="mt-4 flex flex-col space-y-2">
-              <Link href="/deals" className="text-sm text-muted-foreground hover:text-primary transition-colors">Gorące okazje</Link>
-              <Link href="/products" className="text-sm text-muted-foreground hover:text-primary transition-colors">Produkty</Link>
-              <Link href="/login" className="text-sm text-muted-foreground hover:text-primary transition-colors">Logowanie / Rejestracja</Link>
               <Link href="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors">Panel Admina</Link>
             </div>
           </div>
@@ -43,28 +40,24 @@ export function Footer() {
             <h3 className="font-headline font-semibold">Informacje</h3>
             <div className="mt-4 flex flex-col space-y-2">
               <Link href="/#o-projekcie" className="text-sm text-muted-foreground hover:text-primary transition-colors">O nas</Link>
-              <Link href="mailto:kontakt@okazje-plus.pl" className="text-sm text-muted-foreground hover:text-primary transition-colors">Kontakt</Link>
+              <Link href="mailto:business@okazjeplus.pl" className="text-sm text-muted-foreground hover:text-primary transition-colors">Kontakt</Link>
               <Link href="/polityka-prywatnosci" className="text-sm text-muted-foreground hover:text-primary transition-colors">Polityka prywatności</Link>
               <Link href="/regulamin" className="text-sm text-muted-foreground hover:text-primary transition-colors">Regulamin</Link>
             </div>
           </div>
           
           <div>
-            <h3 className="font-headline font-semibold">Social Media</h3>
-            <div className="mt-4 flex space-x-4">
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    <Twitter className="h-6 w-6" />
-                    <span className="sr-only">Twitter</span>
-                </Link>
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    <Facebook className="h-6 w-6" />
-                    <span className="sr-only">Facebook</span>
-                </Link>
-                <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    <Instagram className="h-6 w-6" />
-                    <span className="sr-only">Instagram</span>
-                </Link>
-            </div>
+      <h3 className="font-headline font-semibold">Social Media</h3>
+      <div className="mt-4 flex space-x-4">
+        <Link href="https://www.facebook.com/people/Okazje-Plus/61583646609859" className="text-muted-foreground hover:text-primary transition-colors" target="_blank" rel="noopener noreferrer">
+          <Facebook className="h-6 w-6" />
+          <span className="sr-only">Facebook</span>
+        </Link>
+        <Link href="https://www.instagram.com/okazje_plus/" className="text-muted-foreground hover:text-primary transition-colors" target="_blank" rel="noopener noreferrer">
+          <Instagram className="h-6 w-6" />
+          <span className="sr-only">Instagram</span>
+        </Link>
+      </div>
           </div>
         </div>
 

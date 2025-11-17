@@ -155,8 +155,8 @@ export default function ActivatePage() {
 
         <p className="text-xs text-center text-muted-foreground mt-6">
           Masz problem z aktywacją?{" "}
-          <a href="mailto:pomoc@okazje.plus" className="text-primary hover:underline">
-            Skontaktuj się z nami
+           <a href="mailto:business@okazjeplus.pl" className="text-primary hover:underline">
+             Skontaktuj się z nami
           </a>
         </p>
       </Card>

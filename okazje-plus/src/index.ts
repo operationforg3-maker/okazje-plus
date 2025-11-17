@@ -890,7 +890,7 @@ async function sendInvitationEmail(
       <hr style="margin:30px 0;border:none;border-top:1px solid #e0e0e0;">
       
       <p><strong>Potrzebujesz pomocy?</strong><br>
-      Skontaktuj się z nami: <a href="mailto:pomoc@okazje.plus">pomoc@okazje.plus</a></p>
+  Skontaktuj się z nami: <a href="mailto:business@okazjeplus.pl">business@okazjeplus.pl</a></p>
     </div>
     <div class="footer">
       <p>Okazje+ © 2025 · Najlepsze okazje w jednym miejscu</p>
