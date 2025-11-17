@@ -267,6 +267,9 @@ export interface User {
   displayName: string | null;
   photoURL: string | null;
   role: 'admin' | 'moderator' | 'specjalista' | 'user';
+  betaRole?: 'pioneer' | 'beta'; // Rola z pre-rejestracji (opcjonalna)
+  betaNumber?: number; // Numer rejestracji (opcjonalny)
+  createdAt?: string; // Data utworzenia konta
 }
 
 export interface Vote {

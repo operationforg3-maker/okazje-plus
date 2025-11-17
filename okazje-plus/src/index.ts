@@ -21,6 +21,8 @@ import {
   onSchedule,
 } from "firebase-functions/v2/scheduler";
 import * as https from "https";
+import * as jwt from "jsonwebtoken";
+import * as sgMail from "@sendgrid/mail";
 
 // KROK 1: Importuj typy z JEDNEGO źródła prawdy
 import {
@@ -756,6 +758,309 @@ export const scheduleAliExpressSync = onSchedule(
         error instanceof Error ? error.message : error
       );
       throw error; // Re-throw to mark function as failed
+    }
+  }
+);
+
+// =============================================================================
+// PRE-REGISTRATION INVITATION SYSTEM
+// =============================================================================
+
+const JWT_SECRET = process.env.JWT_SECRET || "changeme-in-production";
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
+const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@okazje.plus";
+const SITE_URL = process.env.SITE_URL || "https://okazje.plus";
+
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
+
+interface ActivationTokenPayload {
+  preRegId: string;
+  email: string;
+  registrationNumber: number;
+  role: "pioneer" | "beta";
+  exp: number; // Unix timestamp (sekundy)
+}
+
+/**
+ * Generuje JWT token aktywacyjny ważny 7 dni
+ */
+function generateActivationToken(
+  preRegId: string,
+  email: string,
+  registrationNumber: number,
+  role: "pioneer" | "beta"
+): string {
+  const payload: ActivationTokenPayload = {
+    preRegId,
+    email,
+    registrationNumber,
+    role,
+    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 7 dni
+  };
+  return jwt.sign(payload, JWT_SECRET);
+}
+
+/**
+ * Weryfikuje JWT token i zwraca payload
+ */
+export function verifyActivationToken(
+  token: string
+): ActivationTokenPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as ActivationTokenPayload;
+  } catch (error) {
+    logger.error("Token verification failed", error);
+    return null;
+  }
+}
+
+/**
+ * Wysyła email z zaproszeniem beta
+ */
+async function sendInvitationEmail(
+  email: string,
+  name: string,
+  registrationNumber: number,
+  role: "pioneer" | "beta",
+  activationToken: string
+): Promise<void> {
+  if (!SENDGRID_API_KEY) {
+    logger.warn("SENDGRID_API_KEY not set, skipping email");
+    return;
+  }
+
+  const isPioneer = role === "pioneer";
+  const roleLabel = isPioneer ? "🏆 Pionier" : "🚀 Beta Tester";
+  const activationUrl = `${SITE_URL}/activate/${activationToken}`;
+
+  const msg = {
+    to: email,
+    from: FROM_EMAIL,
+    subject: `${isPioneer ? "🏆" : "🚀"} Zaproszenie do Okazje+ Beta ${isPioneer ? `(Pionier #${registrationNumber})` : ""}`,
+    html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; }
+    .content { background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; }
+    .button { display: inline-block; padding: 14px 28px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+    .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+    .badge { display: inline-block; padding: 4px 12px; background: ${isPioneer ? "#fbbf24" : "#3b82f6"}; color: white; border-radius: 4px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 style="margin:0;">🎉 Okazje+</h1>
+      <p style="margin:5px 0 0 0;">Witamy w Beta Release!</p>
+    </div>
+    <div class="content">
+      <h2>Witaj ${name}!</h2>
+      <p>Gratulacje! Zostałeś zaakceptowany jako <span class="badge">${roleLabel} #${registrationNumber}</span> na platformie <strong>Okazje+</strong>.</p>
+      
+      ${isPioneer ? `
+        <p style="background:#fef3c7;padding:15px;border-left:4px solid #fbbf24;border-radius:4px;">
+          <strong>🏆 Jesteś jednym z pierwszych 100 pionierów!</strong><br>
+          Jako pionier otrzymujesz specjalny dostęp i wyróżnienie na platformie.
+        </p>
+      ` : ""}
+      
+      <h3>Co dalej?</h3>
+      <ol>
+        <li>Kliknij przycisk poniżej aby aktywować konto</li>
+        <li>Ustaw hasło i dokończ profil</li>
+        <li>Zacznij odkrywać najlepsze okazje!</li>
+      </ol>
+      
+      <div style="text-align:center;">
+        <a href="${activationUrl}" class="button">Aktywuj konto</a>
+      </div>
+      
+      <p style="font-size:12px;color:#666;margin-top:20px;">
+        Link aktywacyjny ważny przez 7 dni.<br>
+        Jeśli przycisk nie działa, skopiuj link: <a href="${activationUrl}">${activationUrl}</a>
+      </p>
+      
+      <hr style="margin:30px 0;border:none;border-top:1px solid #e0e0e0;">
+      
+      <p><strong>Potrzebujesz pomocy?</strong><br>
+      Skontaktuj się z nami: <a href="mailto:pomoc@okazje.plus">pomoc@okazje.plus</a></p>
+    </div>
+    <div class="footer">
+      <p>Okazje+ © 2025 · Najlepsze okazje w jednym miejscu</p>
+      <p>Nie odpowiadaj na tego maila – to automatyczna wiadomość.</p>
+    </div>
+  </div>
+</body>
+</html>
+    `,
+  };
+
+  await sgMail.send(msg);
+  logger.info(`Invitation email sent to ${email}`);
+}
+
+/**
+ * Cloud Function: Wysyła zaproszenia beta do wszystkich pre-rejestracji
+ * Wywołanie: POST https://region-project.cloudfunctions.net/sendBetaInvitations
+ * Auth: wymaga admina
+ */
+export const sendBetaInvitations = onCall(
+  {region: "europe-west1"},
+  async (request: CallableRequest) => {
+    await ensureAdmin(request.auth || null);
+
+    try {
+      const preRegsSnapshot = await db
+        .collection("pre_registrations")
+        .where("status", "==", "pending")
+        .orderBy("registrationNumber", "asc")
+        .get();
+
+      if (preRegsSnapshot.empty) {
+        return {success: true, message: "Brak oczekujących rejestracji", sent: 0};
+      }
+
+      let sent = 0;
+      let errors = 0;
+
+      for (const doc of preRegsSnapshot.docs) {
+        try {
+          const data = doc.data();
+          const {email, name, registrationNumber, role} = data;
+
+          // Generuj token
+          const token = generateActivationToken(
+            doc.id,
+            email,
+            registrationNumber,
+            role
+          );
+
+          // Wyślij email
+          await sendInvitationEmail(
+            email,
+            name,
+            registrationNumber,
+            role,
+            token
+          );
+
+          // Zaktualizuj status
+          await doc.ref.update({
+            status: "invited",
+            invitedAt: new Date().toISOString(),
+            activationToken: token, // Opcjonalnie dla debugowania
+          });
+
+          sent++;
+          logger.info(`Invitation sent to ${email} (${role} #${registrationNumber})`);
+        } catch (error) {
+          errors++;
+          logger.error(`Failed to send invitation to ${doc.id}`, error);
+        }
+      }
+
+      return {
+        success: true,
+        message: `Wysłano ${sent} zaproszeń (${errors} błędów)`,
+        sent,
+        errors,
+      };
+    } catch (error) {
+      logger.error("Error sending beta invitations", error);
+      throw new HttpsError(
+        "internal",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
+);
+
+/**
+ * Cloud Function: Weryfikuje token aktywacyjny i tworzy użytkownika
+ * Wywołanie: POST https://region-project.cloudfunctions.net/activatePreRegistration
+ * Body: { token: string, password: string }
+ */
+export const activatePreRegistration = onCall(
+  {region: "europe-west1"},
+  async (request: CallableRequest<{token: string; password: string}>) => {
+    const {token, password} = request.data;
+
+    if (!token || !password) {
+      throw new HttpsError("invalid-argument", "Token i hasło są wymagane");
+    }
+
+    // Weryfikuj token
+    const payload = verifyActivationToken(token);
+    if (!payload) {
+      throw new HttpsError("invalid-argument", "Nieprawidłowy lub wygasły token");
+    }
+
+    const {preRegId, email, registrationNumber, role} = payload;
+
+    try {
+      // Sprawdź status pre-rejestracji
+      const preRegDoc = await db.collection("pre_registrations").doc(preRegId).get();
+      if (!preRegDoc.exists) {
+        throw new HttpsError("not-found", "Pre-rejestracja nie istnieje");
+      }
+
+      const preRegData = preRegDoc.data();
+      if (preRegData?.status === "confirmed") {
+        throw new HttpsError("already-exists", "Konto już aktywowane");
+      }
+
+      // Utwórz użytkownika w Firebase Auth
+      const {getAuth} = await import("firebase-admin/auth");
+      const auth = getAuth();
+
+      const userRecord = await auth.createUser({
+        email,
+        password,
+        emailVerified: true, // Beta testers są automatycznie weryfikowani
+        displayName: preRegData?.name || email.split("@")[0],
+      });
+
+      // Utwórz dokument użytkownika w Firestore
+      await db.collection("users").doc(userRecord.uid).set({
+        uid: userRecord.uid,
+        email,
+        displayName: preRegData?.name || email.split("@")[0],
+        photoURL: null,
+        role: "user",
+        betaRole: role, // Zachowaj informację o roli beta
+        betaNumber: registrationNumber,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Zaktualizuj status pre-rejestracji
+      await preRegDoc.ref.update({
+        status: "confirmed",
+        confirmedAt: new Date().toISOString(),
+        userId: userRecord.uid,
+      });
+
+      logger.info(`User ${userRecord.uid} activated from pre-registration ${preRegId}`);
+
+      return {
+        success: true,
+        message: "Konto aktywowane pomyślnie",
+        uid: userRecord.uid,
+      };
+    } catch (error) {
+      logger.error("Error activating pre-registration", error);
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError(
+        "internal",
+        error instanceof Error ? error.message : "Unknown error"
+      );
     }
   }
 );

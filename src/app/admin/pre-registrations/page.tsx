@@ -14,14 +14,16 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { PreRegistration } from "@/lib/types";
-import { Trophy, Users, Download, Search } from "lucide-react";
+import { Trophy, Users, Download, Search, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 export default function PreRegistrationsPage() {
   const { toast } = useToast();
   const [registrations, setRegistrations] = useState<PreRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sending, setSending] = useState(false);
 
   const loadRegistrations = async () => {
     try {
@@ -76,6 +78,38 @@ export default function PreRegistrationsPage() {
 
   const pioneers = registrations.filter(r => r.role === "pioneer");
   const betaTesters = registrations.filter(r => r.role === "beta");
+  const pendingCount = registrations.filter(r => r.status === "pending").length;
+
+  const handleSendInvitations = async () => {
+    if (!confirm(`Czy na pewno chcesz wysłać ${pendingCount} zaproszeń beta? Ta operacja nie może być cofnięta.`)) {
+      return;
+    }
+
+    setSending(true);
+    try {
+      const functions = getFunctions(undefined, 'europe-west1');
+      const sendBetaInvitations = httpsCallable(functions, 'sendBetaInvitations');
+      const result = await sendBetaInvitations();
+      const data = result.data as { success: boolean; message: string; sent: number; errors: number };
+      
+      toast({
+        title: "Sukces!",
+        description: data.message,
+      });
+      
+      // Odśwież listę
+      await loadRegistrations();
+    } catch (error) {
+      console.error("Error sending invitations:", error);
+      toast({
+        title: "Błąd",
+        description: error instanceof Error ? error.message : "Nie udało się wysłać zaproszeń",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -86,10 +120,20 @@ export default function PreRegistrationsPage() {
             Zarządzaj listą wczesnych testerów platformy
           </p>
         </div>
-        <Button onClick={exportToCSV} disabled={registrations.length === 0}>
-          <Download className="mr-2 h-4 w-4" />
-          Eksportuj CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleSendInvitations} 
+            disabled={sending || pendingCount === 0}
+            variant="default"
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            {sending ? "Wysyłanie..." : `Wyślij zaproszenia (${pendingCount})`}
+          </Button>
+          <Button onClick={exportToCSV} disabled={registrations.length === 0} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Eksportuj CSV
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
