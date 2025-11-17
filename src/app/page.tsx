@@ -30,6 +30,8 @@ export default function Home() {
   const [currentCount, setCurrentCount] = useState(0);
   const [betaTimeLeft, setBetaTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [publicTimeLeft, setPublicTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  // Hydration guard to avoid text mismatch (React error #418)
+  const [hydrated, setHydrated] = useState(false);
 
   const calculateTimeLeft = (targetDate: Date): TimeLeft => {
     const now = new Date();
@@ -45,19 +47,23 @@ export default function Home() {
   };
 
   useEffect(() => {
+    setHydrated(true);
     const fetchCount = async () => {
       try {
-        const res = await fetch("/api/pre-register/count");
-        if (res.ok) {
-          const data = await res.json();
-          setCurrentCount(data.count || 0);
+        const res = await fetch("/api/pre-register/count", { cache: "no-store" });
+        if (!res.ok) {
+          console.warn("[landing] count endpoint status", res.status);
+          return;
         }
+        const data = await res.json();
+        if (typeof data.count === 'number') setCurrentCount(data.count);
       } catch (error) {
         console.error("Error fetching count:", error);
       }
     };
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
+    // Poll rzadziej aby zmniejszyć obciążenie
+    const interval = setInterval(fetchCount, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -143,7 +149,7 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex gap-3">
-                    {[
+                    {hydrated && [
                       { label: "Dni", value: betaTimeLeft.days },
                       { label: "Godz", value: betaTimeLeft.hours },
                       { label: "Min", value: betaTimeLeft.minutes },
@@ -158,6 +164,18 @@ export default function Home() {
                         <div className="text-xs text-muted-foreground mt-1">{label}</div>
                       </div>
                     ))}
+                    {!hydrated && (
+                      <div className="flex gap-3" suppressHydrationWarning>
+                        {['Dni','Godz','Min','Sek'].map(label => (
+                          <div key={label} className="text-center">
+                            <div className="bg-primary/5 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">
+                              <div className="text-2xl md:text-4xl font-bold text-primary/50 font-headline">--</div>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -175,7 +193,7 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex gap-3">
-                    {[
+                    {hydrated && [
                       { label: "Dni", value: publicTimeLeft.days },
                       { label: "Godz", value: publicTimeLeft.hours },
                       { label: "Min", value: publicTimeLeft.minutes },
@@ -190,6 +208,18 @@ export default function Home() {
                         <div className="text-xs text-muted-foreground mt-1">{label}</div>
                       </div>
                     ))}
+                    {!hydrated && (
+                      <div className="flex gap-3" suppressHydrationWarning>
+                        {['Dni','Godz','Min','Sek'].map(label => (
+                          <div key={label} className="text-center">
+                            <div className="bg-accent/5 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">
+                              <div className="text-2xl md:text-4xl font-bold text-accent/50 font-headline">--</div>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
