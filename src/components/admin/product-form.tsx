@@ -143,6 +143,8 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         },
       };
 
+      console.log('[ProductForm] Saving product:', { id: product?.id, data: productData });
+
       const url = product
         ? `/api/admin/products/${product.id}`
         : '/api/admin/products';
@@ -155,8 +157,11 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         body: JSON.stringify(productData),
       });
 
+      const responseData = await response.json();
+      console.log('[ProductForm] Response:', { status: response.status, data: responseData });
+
       if (!response.ok) {
-        throw new Error('Błąd podczas zapisywania produktu');
+        throw new Error(responseData.error || 'Błąd podczas zapisywania produktu');
       }
 
       toast({
@@ -169,10 +174,10 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       reset();
       onSuccess?.();
     } catch (error) {
-      console.error('Error saving product:', error);
+      console.error('[ProductForm] Error saving product:', error);
       toast({
         title: 'Błąd',
-        description: 'Nie udało się zapisać produktu. Spróbuj ponownie.',
+        description: error instanceof Error ? error.message : 'Nie udało się zapisać produktu. Spróbuj ponownie.',
         variant: 'destructive',
       });
     } finally {
