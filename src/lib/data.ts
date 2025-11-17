@@ -1660,3 +1660,130 @@ export async function addForumPost(params: {
   });
   return ref.id;
 }
+
+// ============================================
+// Secret Promotional Pages
+// ============================================
+
+/**
+ * Get secret page by slug
+ */
+export async function getSecretPageBySlug(slug: string) {
+  const cacheKey = `secret-page:${slug}`;
+  const cached = await cacheGet(cacheKey);
+  if (cached) return cached;
+
+  const secretPagesRef = collection(db, "secret_pages");
+  const q = query(secretPagesRef, where("slug", "==", slug), where("isActive", "==", true), limit(1));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) return null;
+
+  const data = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+  await cacheSet(cacheKey, data, 300); // 5min cache
+  return data;
+}
+
+/**
+ * Get all secret pages (admin)
+ */
+export async function getAllSecretPages() {
+  const secretPagesRef = collection(db, "secret_pages");
+  const q = query(secretPagesRef, orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+/**
+ * Get secret page by ID
+ */
+export async function getSecretPageById(id: string) {
+  const docRef = doc(db, "secret_pages", id);
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
+}
+
+/**
+ * Create secret page
+ */
+export async function createSecretPage(data: any) {
+  const secretPagesRef = collection(db, "secret_pages");
+  const docRef = await addDoc(secretPagesRef, {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    stats: {
+      totalViews: 0,
+      totalSpins: 0,
+      uniqueVisitors: 0,
+    },
+  });
+  return docRef.id;
+}
+
+/**
+ * Update secret page
+ */
+export async function updateSecretPage(id: string, data: any) {
+  const docRef = doc(db, "secret_pages", id);
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+  
+  // Clear cache
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    const slug = docSnap.data().slug;
+    await cacheSet(`secret-page:${slug}`, null);
+  }
+}
+
+/**
+ * Delete secret page
+ */
+export async function deleteSecretPage(id: string) {
+  const docRef = doc(db, "secret_pages", id);
+  const docSnap = await getDoc(docRef);
+  
+  if (docSnap.exists()) {
+    const slug = docSnap.data().slug;
+    await cacheSet(`secret-page:${slug}`, null);
+  }
+  
+  await deleteDoc(docRef);
+}
+
+/**
+ * Record page view
+ */
+export async function recordSecretPageView(pageId: string, ipAddress: string) {
+  const docRef = doc(db, "secret_pages", pageId);
+  await updateDoc(docRef, {
+    "stats.totalViews": increment(1),
+  });
+
+  // Track unique visitor (simplified - could use separate collection)
+  // For now just increment totalViews
+}
+
+/**
+ * Record spin
+ */
+export async function recordSecretPageSpin(pageId: string, prizeId: string, prizeLabel: string, userId?: string) {
+  const spinsRef = collection(db, "secret_page_spins");
+  await addDoc(spinsRef, {
+    pageId,
+    prizeId,
+    prizeLabel,
+    userId: userId || null,
+    timestamp: serverTimestamp(),
+  });
+
+  // Increment spin counter
+  const docRef = doc(db, "secret_pages", pageId);
+  await updateDoc(docRef, {
+    "stats.totalSpins": increment(1),
+  });
+}

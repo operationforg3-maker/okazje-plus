@@ -57,6 +57,7 @@ const pathNames: Record<string, string> = {
   '/admin/analytics': 'Analityka',
   '/admin/stats': 'Statystyki',
   '/admin/users': 'Użytkownicy',
+  '/admin/secret-pages': 'Tajne strony',
   '/admin/settings': 'Ustawienia',
 };
 
@@ -333,6 +334,19 @@ export default function AdminLayout({
                     <Link href="/admin/users">
                       <Users />
                       <span className="group-data-[collapsible=icon]:hidden">Użytkownicy</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/secret-pages')}
+                    tooltip={{ children: 'Tajne strony' }}
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-purple-600 data-[active=true]:to-pink-600 data-[active=true]:text-white hover:bg-muted/80 transition-all"
+                  >
+                    <Link href="/admin/secret-pages">
+                      <Zap />
+                      <span className="group-data-[collapsible=icon]:hidden">Tajne strony</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

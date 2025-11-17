@@ -1473,3 +1473,66 @@ export interface ReviewSource {
     verified: boolean;
   }[];
 }
+
+// ============================================
+// Secret Promotional Pages
+// ============================================
+
+/**
+ * WheelPrize - Prize configuration for the fortune wheel
+ */
+export interface WheelPrize {
+  id: string;
+  label: string;
+  description?: string;
+  probability: number; // 0-100 percentage chance
+  color?: string; // Hex color for the wheel segment
+  icon?: string; // Emoji or icon
+  isSpecial?: boolean; // Highlighted prize
+  link?: string; // Optional redirect after winning
+}
+
+/**
+ * SecretPage - Secret promotional page with fortune wheel
+ */
+export interface SecretPage {
+  id: string;
+  slug: string; // e.g., "super-okazja-tomek"
+  title: string;
+  description?: string;
+  heroImage?: string;
+  heroText?: string;
+  isActive: boolean;
+  wheelEnabled: boolean;
+  wheelTitle?: string;
+  wheelPrizes: WheelPrize[];
+  content?: string; // Additional HTML/markdown content
+  backgroundColor?: string;
+  textColor?: string;
+  spinLimit?: number; // Max spins per user (null = unlimited)
+  requiresAuth?: boolean; // Must be logged in to spin
+  expiresAt?: string; // Optional expiration date
+  createdAt: string;
+  createdBy: string;
+  updatedAt?: string;
+  stats?: {
+    totalViews: number;
+    totalSpins: number;
+    uniqueVisitors: number;
+  };
+}
+
+/**
+ * SecretPageSpin - Record of user spin
+ */
+export interface SecretPageSpin {
+  id: string;
+  pageId: string;
+  userId?: string; // Optional if not requiring auth
+  sessionId?: string; // For anonymous users
+  prizeId: string;
+  prizeLabel: string;
+  timestamp: string;
+  ipAddress?: string;
+  userAgent?: string;
+}

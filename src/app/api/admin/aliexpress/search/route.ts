@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { buildSignedParams, toQueryString } from '@/lib/aliexpress';
+import { expandQueryWithSynonyms, rankProductsByRelevance } from '@/lib/search-helpers';
 
 // Official AliExpress Affiliate API integration
 // Uses aliexpress.affiliate.productquery method
@@ -38,6 +39,16 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Expand query with synonyms for better results
+    const synonyms = expandQueryWithSynonyms(q);
+    const expandedQuery = synonyms.slice(0, 3).join(' '); // Use top 3 terms max
+    
+    console.log('[AliExpress] Query expansion:', {
+      original: q,
+      synonyms,
+      expanded: expandedQuery,
+    });
+    
     // Build AliExpress Affiliate API parameters
     // Method: aliexpress.affiliate.productquery
     // https://developers.aliexpress.com/en/doc.htm?docId=45801&docType=2
@@ -45,7 +56,7 @@ export async function GET(request: Request) {
     const secondaryMethod = 'aliexpress.affiliate.product.search';
     const apiParams: Record<string, string | number> = {
       method: primaryMethod,
-      keywords: q,
+      keywords: expandedQuery, // Use expanded query with synonyms
       page_size: Math.min(limit, 50), // Max 50 per AliExpress API
       page_no: page,
       target_language: 'EN',
@@ -259,11 +270,25 @@ export async function GET(request: Request) {
 
     console.log(`[AliExpress] Final products after all filters: ${products.length}/${total}`);
 
+    // RANK BY RELEVANCE using fuzzy matching
+    const rankedProducts = rankProductsByRelevance(products, q);
+    console.log('[AliExpress] Ranked by relevance. Top 3 scores:', 
+      rankedProducts.slice(0, 3).map(p => ({ 
+        title: p.title.slice(0, 50), 
+        score: p.relevanceScore.toFixed(2) 
+      }))
+    );
+
     return NextResponse.json({ 
-      products,
+      products: rankedProducts,
       total,
       page,
       pageSize: apiParams.page_size,
+      query: {
+        original: q,
+        expanded: expandedQuery,
+        synonyms,
+      },
     });
   } catch (e) {
     console.error('[AliExpress] Request failed:', e);
