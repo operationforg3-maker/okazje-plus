@@ -369,5 +369,25 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow update, delete: if false; // Immutable
     }
+
+    // Pre-rejestracje beta/pioneer (max 5000)
+    match /pre_registrations/{registrationId} {
+      // Publiczny zapis z podstawową walidacją
+      allow create: if request.resource.data.keys().hasAll(['email', 'name', 'role', 'status', 'registrationNumber', 'createdAt'])
+                    && request.resource.data.email is string
+                    && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 2
+                    && request.resource.data.role in ['beta', 'pioneer']
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.registrationNumber is int
+                    && request.resource.data.registrationNumber > 0
+                    && request.resource.data.registrationNumber <= 5000;
+      
+      // Tylko admin może czytać listę i edytować statusy
+      allow read, update: if isAdmin();
+      allow delete: if false; // Nie można usuwać rejestracji
+    }
   }
 }
+

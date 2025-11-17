@@ -1787,3 +1787,88 @@ export async function recordSecretPageSpin(pageId: string, prizeId: string, priz
     "stats.totalSpins": increment(1),
   });
 }
+
+// =============================================================================
+// PRE-REGISTRATION FUNCTIONS
+// =============================================================================
+
+/**
+ * Get current pre-registration count
+ */
+export async function getPreRegistrationCount(): Promise<number> {
+  const snapshot = await getDocs(collection(db, "pre_registrations"));
+  return snapshot.size;
+}
+
+/**
+ * Check if email already registered
+ */
+export async function checkPreRegistrationExists(email: string): Promise<boolean> {
+  const q = query(
+    collection(db, "pre_registrations"),
+    where("email", "==", email.toLowerCase())
+  );
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+}
+
+/**
+ * Create pre-registration (max 5000)
+ */
+export async function createPreRegistration(data: {
+  email: string;
+  name: string;
+  ipAddress?: string;
+  userAgent?: string;
+  referralSource?: string;
+}): Promise<{ success: boolean; registrationNumber?: number; error?: string }> {
+  const email = data.email.toLowerCase().trim();
+  
+  // Check if already registered
+  const exists = await checkPreRegistrationExists(email);
+  if (exists) {
+    return { success: false, error: "Ten adres email jest już zarejestrowany" };
+  }
+
+  // Check limit
+  const currentCount = await getPreRegistrationCount();
+  if (currentCount >= 5000) {
+    return { success: false, error: "Osiągnięto limit 5000 rejestracji" };
+  }
+
+  const registrationNumber = currentCount + 1;
+  const role = registrationNumber <= 100 ? "pioneer" : "beta";
+
+  const docRef = await addDoc(collection(db, "pre_registrations"), {
+    email,
+    name: data.name.trim(),
+    role,
+    status: "pending",
+    registrationNumber,
+    createdAt: serverTimestamp(),
+    ipAddress: data.ipAddress || null,
+    userAgent: data.userAgent || null,
+    referralSource: data.referralSource || null,
+  });
+
+  return { success: true, registrationNumber };
+}
+
+/**
+ * Get all pre-registrations (admin only)
+ */
+export async function getAllPreRegistrations() {
+  const q = query(
+    collection(db, "pre_registrations"),
+    orderBy("registrationNumber", "asc")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: doc.data().createdAt?.toDate().toISOString(),
+    confirmedAt: doc.data().confirmedAt?.toDate().toISOString(),
+    invitedAt: doc.data().invitedAt?.toDate().toISOString(),
+  }));
+}
+

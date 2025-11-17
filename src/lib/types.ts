@@ -1536,3 +1536,21 @@ export interface SecretPageSpin {
   ipAddress?: string;
   userAgent?: string;
 }
+
+/**
+ * PreRegistration - Beta/Pioneer pre-registration
+ */
+export interface PreRegistration {
+  id: string;
+  email: string;
+  name: string;
+  role: 'beta' | 'pioneer'; // beta = beta release, pioneer = early access
+  status: 'pending' | 'confirmed' | 'invited';
+  registrationNumber: number; // Unique sequential number (1-5000)
+  createdAt: string;
+  confirmedAt?: string;
+  invitedAt?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  referralSource?: string;
+}
