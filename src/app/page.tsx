@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingBag, Flame, Users, Zap, Clock, Mail, CheckCircle2 } from "lucide-react";
+import { ShoppingBag, Flame, Users, Zap, Clock, Mail, CheckCircle2, Trophy, Rocket, Sparkles, Gift } from "lucide-react";
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 
@@ -246,6 +246,13 @@ export default function Home() {
                   />
                 </div>
 
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span>
+                    Zapisz się teraz — liczba miejsc ograniczona. {isPioneer ? 'Pionierzy otrzymują specjalną odznakę w profilu.' : 'Dołącz do listy Beta i zyskaj wcześniejszy dostęp.'}
+                  </span>
+                </div>
+
                 {!registered ? (
                   <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="grid md:grid-cols-2 gap-4">
@@ -299,6 +306,51 @@ export default function Home() {
                     <p className="text-sm text-muted-foreground">Zaproszenie wysłano na {email}</p>
                   </div>
                 )}
+              </div>
+            </Card>
+
+            {/* Dlaczego warto dołączyć teraz? */}
+            <Card className="p-6 md:p-8">
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 text-accent text-xs font-semibold">
+                    <Zap className="h-3.5 w-3.5" />
+                    Early Access
+                  </div>
+                  <h2 className="text-2xl md:text-3xl font-headline font-bold">Dlaczego warto dołączyć teraz?</h2>
+                  <p className="text-muted-foreground">Zyskaj przewagę i pomóż nam współtworzyć najlepsze miejsce z okazjami w Polsce.</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+                  <div className="flex items-start gap-3 p-4 rounded-lg border bg-card/50">
+                    <Trophy className="h-6 w-6 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-semibold">Odznaka Pioniera/Beta</p>
+                      <p className="text-sm text-muted-foreground">Unikalna odznaka w profilu oraz na liście użytkowników – pokaż, że byłeś z nami od początku.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-4 rounded-lg border bg-card/50">
+                    <Rocket className="h-6 w-6 text-accent mt-0.5" />
+                    <div>
+                      <p className="font-semibold">Wcześniejszy dostęp do funkcji</p>
+                      <p className="text-sm text-muted-foreground">Testuj nowości przed innymi i zgłaszaj uwagi, zanim trafią do publicznej wersji.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-4 rounded-lg border bg-card/50">
+                    <Sparkles className="h-6 w-6 text-primary mt-0.5" />
+                    <div>
+                      <p className="font-semibold">Realny wpływ na rozwój</p>
+                      <p className="text-sm text-muted-foreground">Głosuj na pomysły, sugeruj poprawki i kształtuj roadmapę Okazje+.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-4 rounded-lg border bg-card/50">
+                    <Gift className="h-6 w-6 text-accent mt-0.5" />
+                    <div>
+                      <p className="font-semibold">Niespodzianki dla pierwszych</p>
+                      <p className="text-sm text-muted-foreground">Specjalne aktywacje i okazjonalne bonusy przygotowane dla early adopters.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </Card>
           </div>
