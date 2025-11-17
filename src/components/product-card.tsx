@@ -16,8 +16,10 @@ import {
 import { useFavorites } from '@/hooks/use-favorites';
 import ShareButton from '@/components/share-button';
 import { useAuth } from '@/lib/auth';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { trackFirestoreView, trackFirestoreClick, trackFirestoreShare } from '@/lib/analytics';
+import AdminEditButton from '@/components/admin/admin-edit-button';
+import ProductEditDialog from '@/components/admin/product-edit-dialog';
 
 interface ProductCardProps {
   product: Product;
@@ -26,6 +28,7 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const { isFavorited, isLoading, toggleFavorite } = useFavorites(product.id, 'product');
   const { user } = useAuth();
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
   const hasOriginal = typeof (product as any).originalPrice === 'number';
@@ -104,7 +107,23 @@ export default function ProductCard({ product }: ProductCardProps) {
             }`}
           />
         </Button>
+        
+        {/* Admin Edit Button - prawy dolny róg obrazka */}
+        <div className="absolute right-2 bottom-2">
+          <AdminEditButton
+            onClick={() => setEditDialogOpen(true)}
+            className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+            tooltip="Edytuj produkt (admin)"
+          />
+        </div>
       </div>
+      
+      {/* Edit Dialog */}
+      <ProductEditDialog
+        product={product}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
       
       <div className="flex-grow space-y-3 p-4">
         <div className="flex items-center justify-between">

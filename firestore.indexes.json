@@ -77,6 +77,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
         { "fieldPath": "ratingCard.average", "order": "DESCENDING" },
         { "fieldPath": "ratingCard.count", "order": "DESCENDING" }

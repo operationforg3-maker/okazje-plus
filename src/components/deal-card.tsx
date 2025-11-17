@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
+import AdminEditButton from '@/components/admin/admin-edit-button';
+import DealEditDialog from '@/components/admin/deal-edit-dialog';
 
 interface DealCardProps {
   deal: Deal;
@@ -43,6 +45,7 @@ export default function DealCard({ deal }: DealCardProps) {
   const [voteCount, setVoteCount] = useState(deal.voteCount);
   const [isVoting, setIsVoting] = useState(false);
   const [userVote, setUserVote] = useState<1 | -1 | null>(null); // Śledzimy głos użytkownika
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
@@ -143,7 +146,6 @@ export default function DealCard({ deal }: DealCardProps) {
   // Track wyświetlenie karty (raz na sesję)
   // Używamy useEffect aby nie wykonywać na serwerze
   // i aby nie trackować podczas prerenderowania
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   require('react'); // dummy to ensure React import side-effects
   if (typeof window !== 'undefined') {
     // Lazy trigger view tracking (minimal debounce via sessionStorage w helperze)
@@ -234,7 +236,23 @@ export default function DealCard({ deal }: DealCardProps) {
             </Badge>
           )}
         </div>
+        
+        {/* Admin Edit Button - prawy dolny róg obrazka */}
+        <div className="absolute right-2 bottom-2">
+          <AdminEditButton
+            onClick={() => setEditDialogOpen(true)}
+            className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+            tooltip="Edytuj deal (admin)"
+          />
+        </div>
       </div>
+      
+      {/* Edit Dialog */}
+      <DealEditDialog
+        deal={deal}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
       
       <div className="flex-grow space-y-3 p-4">
         <div className="flex items-center justify-between text-xs text-muted-foreground">

@@ -337,5 +337,16 @@ service cloud.firestore {
       allow read: if true; // Public read
       allow write: if isAdmin();
     }
+
+    ////////////////////////////////
+    // ANALYTICS
+    ////////////////////////////////
+    // Write-only for all users (authenticated or anonymous)
+    // Only admins can read (for dashboard/reports)
+    match /analytics/{eventId} {
+      allow read: if isAdmin();
+      allow create: if true; // Allow anonymous tracking
+      allow update, delete: if false; // Immutable events
+    }
   }
 }

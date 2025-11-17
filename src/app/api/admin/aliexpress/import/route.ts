@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       ratingSources: {
         external: {
           average: Number(product.rating || 0),
-          count: Number(product.orders || 0) || undefined,
+          count: Number(product.orders || 0),
           source: 'aliexpress',
           updatedAt: new Date().toISOString(),
         },
@@ -128,8 +128,6 @@ export async function POST(request: NextRequest) {
         },
       },
       price,
-      originalPrice: originalPrice ?? undefined,
-      discountPercent,
       mainCategorySlug: mainCategory || null,
       subCategorySlug: subCategory || null,
       status: 'draft',
@@ -145,6 +143,14 @@ export async function POST(request: NextRequest) {
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
+
+    // Add optional fields only if they have valid values
+    if (originalPrice !== null && originalPrice !== undefined) {
+      docData.originalPrice = originalPrice;
+    }
+    if (discountPercent !== null && discountPercent !== undefined) {
+      docData.discountPercent = discountPercent;
+    }
 
     if (images.length) {
       docData.gallery = images.map((url, idx) => ({

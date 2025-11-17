@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
 import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import AdminEditButton from '@/components/admin/admin-edit-button';
+import DealEditDialog from '@/components/admin/deal-edit-dialog';
 
 interface DealListCardProps {
   deal: Deal;
@@ -29,6 +32,7 @@ function getRelativeTime(isoDate: string): string {
 
 export default function DealListCard({ deal }: DealListCardProps) {
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
   const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
@@ -77,7 +81,23 @@ export default function DealListCard({ deal }: DealListCardProps) {
             </Badge>
           )}
         </div>
+        
+        {/* Admin Edit Button - prawy dolny róg obrazka */}
+        <div className="absolute right-2 bottom-2">
+          <AdminEditButton
+            onClick={() => setEditDialogOpen(true)}
+            className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+            tooltip="Edytuj deal (admin)"
+          />
+        </div>
       </Link>
+      
+      {/* Edit Dialog */}
+      <DealEditDialog
+        deal={deal}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
       
       <div className="flex flex-col flex-grow min-w-0 justify-between">
         <div className="space-y-2">
