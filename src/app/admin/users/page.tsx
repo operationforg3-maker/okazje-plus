@@ -33,6 +33,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useEffect, useState } from 'react';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { User } from '@/lib/types';
 import { SortableTableHead } from '@/components/ui/sortable-table-head';
 import { PaginationControls } from '@/components/ui/pagination-controls';
@@ -74,26 +75,56 @@ export default function AdminUsersPage() {
     goToLastPage,
   } = usePagination(sortedData, itemsPerPage);
 
+  // Ładujemy użytkowników dopiero gdy mamy zalogowanego admina (token potrzebny w nagłówku)
   useEffect(() => {
-    fetchUsers();
+    const auth = getAuth();
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+      await fetchUsers(firebaseUser);
+    });
+    return () => unsub();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (firebaseUser?: ReturnType<typeof getAuth>['currentUser']) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/users');
+      const auth = getAuth();
+      const user = firebaseUser || auth.currentUser;
+      if (!user) {
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/admin/users', {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
       const data = await response.json();
       
       if (data.success) {
         setUsers(data.users);
       } else {
-        throw new Error(data.message);
+        // Specjalne komunikaty dla auth
+        if (response.status === 401) {
+          throw new Error('Brak autoryzacji do pobrania listy użytkowników.');
+        }
+        if (response.status === 403) {
+          throw new Error('Brak uprawnień (wymagana rola admin).');
+        }
+        throw new Error(data.message || 'Nieznany błąd');
       }
     } catch (error) {
       console.error('Błąd podczas pobierania użytkowników:', error);
       toast({
         title: 'Błąd',
-        description: 'Nie udało się pobrać listy użytkowników',
+        description: (error as Error).message || 'Nie udało się pobrać listy użytkowników',
         variant: 'destructive',
       });
     } finally {

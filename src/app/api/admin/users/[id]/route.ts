@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function PUT(
   request: NextRequest,
@@ -17,10 +16,29 @@ export async function PUT(
       );
     }
 
-    const userRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userRef);
+    // Autoryzacja: wymagany Bearer token admina
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, message: 'Brak nagłówka Authorization' }, { status: 401 });
+    }
+    const idToken = authHeader.substring('Bearer '.length).trim();
+    const { getAuth } = await import('firebase-admin/auth');
+    let decoded;
+    try {
+      decoded = await getAuth().verifyIdToken(idToken);
+    } catch (e) {
+      console.error('[PUT /api/admin/users/:id] Token verify error', e);
+      return NextResponse.json({ success: false, message: 'Nieprawidłowy token' }, { status: 401 });
+    }
+    const adminDoc = await adminDb.collection('users').doc(decoded.uid).get();
+    if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
+      return NextResponse.json({ success: false, message: 'Brak uprawnień' }, { status: 403 });
+    }
 
-    if (!userDoc.exists()) {
+    const userRef = adminDb.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+  if (!userDoc.exists) {
       return NextResponse.json(
         { success: false, message: "Użytkownik nie istnieje" },
         { status: 404 }
@@ -43,7 +61,7 @@ export async function PUT(
       updateData.disabled = disabled;
     }
 
-    await updateDoc(userRef, updateData);
+  await userRef.update(updateData);
 
     return NextResponse.json(
       {
@@ -75,10 +93,29 @@ export async function DELETE(
       );
     }
 
-    const userRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userRef);
+    // Autoryzacja: wymagany Bearer token admina
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, message: 'Brak nagłówka Authorization' }, { status: 401 });
+    }
+    const idToken = authHeader.substring('Bearer '.length).trim();
+    const { getAuth } = await import('firebase-admin/auth');
+    let decoded;
+    try {
+      decoded = await getAuth().verifyIdToken(idToken);
+    } catch (e) {
+      console.error('[DELETE /api/admin/users/:id] Token verify error', e);
+      return NextResponse.json({ success: false, message: 'Nieprawidłowy token' }, { status: 401 });
+    }
+    const adminDoc = await adminDb.collection('users').doc(decoded.uid).get();
+    if (!adminDoc.exists || adminDoc.data()?.role !== 'admin') {
+      return NextResponse.json({ success: false, message: 'Brak uprawnień' }, { status: 403 });
+    }
 
-    if (!userDoc.exists()) {
+    const userRef = adminDb.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+
+  if (!userDoc.exists) {
       return NextResponse.json(
         { success: false, message: "Użytkownik nie istnieje" },
         { status: 404 }
@@ -86,9 +123,7 @@ export async function DELETE(
     }
 
     // Zamiast usuwać, oznaczamy jako disabled
-    await updateDoc(userRef, {
-      disabled: true,
-    });
+    await userRef.update({ disabled: true });
 
     return NextResponse.json(
       {
