@@ -2,8 +2,15 @@ import Link from 'next/link';
 import { ShoppingBag, Facebook, Instagram } from 'lucide-react';
 import { getUptimeMs } from '@/lib/uptime';
 import { buildInfo } from '@/lib/build-info';
+import { useState, useEffect } from 'react';
 
 export function Footer() {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
   // Uptime procesu (od ostatniego startu serwera)
   const uptimeMs = getUptimeMs();
   const uptimeMinutes = Math.floor(uptimeMs / 60_000);
@@ -13,7 +20,9 @@ export function Footer() {
   // Build info (wersja, commit i czas zbudowania)
   const { version, commitShort, builtAt } = buildInfo;
   const builtDate = new Date(builtAt);
-  const builtLocal = isNaN(builtDate.getTime()) ? builtAt : builtDate.toLocaleString('pl-PL');
+  const builtLocal = hydrated && !isNaN(builtDate.getTime()) 
+    ? builtDate.toLocaleString('pl-PL') 
+    : builtAt;
 
   return (
     <footer className="border-t bg-card">
