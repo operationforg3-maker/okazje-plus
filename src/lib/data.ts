@@ -645,9 +645,14 @@ export async function submitProductRating(
             easeOfUse: validateRating(ratingData.easeOfUse, 'Łatwość użycia'),
             valueForMoney: validateRating(ratingData.valueForMoney, 'Stosunek jakości do ceny'),
             versatility: validateRating(ratingData.versatility, 'Wszechstronność'),
-            review: ratingData.review?.trim() || undefined,
             userDisplayName: ratingData.userDisplayName || 'Użytkownik anonimowy',
         };
+
+        // Review jest opcjonalne - dodaj tylko jeśli istnieje (Firestore nie akceptuje undefined)
+        const reviewText = ratingData.review?.trim();
+        const ratingPayload = reviewText 
+            ? { ...validatedRating, review: reviewText }
+            : validatedRating;
 
         const ratingDocRef = doc(db, "products", productId, "ratings", userId);
         const productDocRef = doc(db, "products", productId);
@@ -698,9 +703,9 @@ export async function submitProductRating(
             totalValueForMoney += validatedRating.valueForMoney;
             totalVersatility += validatedRating.versatility;
 
-            // Save the rating
+            // Save the rating (bez undefined - używamy ratingPayload)
             transaction.set(ratingDocRef, {
-                ...validatedRating,
+                ...ratingPayload,
                 productId,
                 userId,
                 createdAt: existingRating.exists() ? existingRating.data().createdAt : new Date().toISOString(),

@@ -912,7 +912,10 @@ async function sendInvitationEmail(
  * Auth: wymaga admina
  */
 export const sendBetaInvitations = onCall(
-  {region: "europe-west1"},
+  {
+    region: "europe-west1",
+    cors: true, // Włącz CORS dla wszystkich origin
+  },
   async (request: CallableRequest) => {
     await ensureAdmin(request.auth || null);
 
@@ -989,7 +992,10 @@ export const sendBetaInvitations = onCall(
  * Body: { token: string, password: string }
  */
 export const activatePreRegistration = onCall(
-  {region: "europe-west1"},
+  {
+    region: "europe-west1",
+    cors: true, // Włącz CORS
+  },
   async (request: CallableRequest<{token: string; password: string}>) => {
     const {token, password} = request.data;
 
