@@ -13,7 +13,6 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { getAllPreRegistrations } from "@/lib/data";
 import { PreRegistration } from "@/lib/types";
 import { Trophy, Users, Download, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -27,8 +26,10 @@ export default function PreRegistrationsPage() {
   const loadRegistrations = async () => {
     try {
       setLoading(true);
-      const data = await getAllPreRegistrations();
-      setRegistrations(data as PreRegistration[]);
+      const res = await fetch('/api/admin/pre-registrations');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data = await res.json();
+      setRegistrations(data.registrations || []);
     } catch (error) {
       console.error("Error loading registrations:", error);
       toast({
