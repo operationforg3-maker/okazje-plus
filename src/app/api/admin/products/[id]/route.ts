@@ -37,10 +37,18 @@ export async function PUT(
     // Usuń pola które nie powinny być w Firestore
     const { id: _, ...updateData } = data;
     
+    // Przygotuj dane do aktualizacji
+    const firestoreData: any = {};
+    
+    // Skopiuj wszystkie pola oprócz ratingCard
+    for (const [key, value] of Object.entries(updateData)) {
+      if (key !== 'ratingCard') {
+        firestoreData[key] = value;
+      }
+    }
+    
     // Konwertuj ratingCard na dot notation dla Firestore
-    const firestoreData: any = { ...updateData };
     if (updateData.ratingCard) {
-      delete firestoreData.ratingCard;
       firestoreData['ratingCard.average'] = updateData.ratingCard.average ?? 0;
       firestoreData['ratingCard.count'] = updateData.ratingCard.count ?? 0;
       firestoreData['ratingCard.durability'] = updateData.ratingCard.durability ?? 0;
@@ -49,11 +57,11 @@ export async function PUT(
       firestoreData['ratingCard.versatility'] = updateData.ratingCard.versatility ?? 0;
     }
     
+    // Dodaj timestamp
+    firestoreData.updatedAt = Timestamp.now();
+    
     // Zaktualizuj
-    await updateDoc(productRef, {
-      ...firestoreData,
-      updatedAt: Timestamp.now(),
-    });
+    await updateDoc(productRef, firestoreData);
 
     return NextResponse.json(
       { 
