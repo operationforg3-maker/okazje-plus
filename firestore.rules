@@ -353,8 +353,10 @@ service cloud.firestore {
     // SECRET PAGES (Tajne strony promocyjne)
     ////////////////////////////////
     match /secret_pages/{pageId} {
-      // Publiczny odczyt tylko aktywnych stron (dla renderowania strony)
-      allow read: if resource.data.isActive == true || isAdmin();
+      // Admin może czytać wszystko
+      allow read: if isAdmin();
+      // Publiczny odczyt tylko aktywnych stron (dla renderowania pojedynczej strony)
+      allow get: if resource.data.isActive == true;
       // Tylko admin może tworzyć, edytować i usuwać
       allow create, update, delete: if isAdmin();
     }

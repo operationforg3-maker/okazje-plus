@@ -37,7 +37,7 @@ function AliExpressImportPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('__all__');
   const [aliCategories, setAliCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -72,7 +72,7 @@ function AliExpressImportPage() {
       const params = new URLSearchParams({ q: searchQuery, limit: '50' });
       if (minPrice) params.set('minPrice', minPrice);
       if (maxPrice) params.set('maxPrice', maxPrice);
-      if (selectedCategory) params.set('category', selectedCategory);
+      if (selectedCategory && selectedCategory !== '__all__') params.set('category', selectedCategory);
 
       console.log('[AliExpress Import] Searching with params:', Object.fromEntries(params));
 
@@ -418,7 +418,7 @@ function AliExpressImportPage() {
                   <SelectValue placeholder="Wszystkie kategorie" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Wszystkie kategorie</SelectItem>
+                  <SelectItem value="__all__">Wszystkie kategorie</SelectItem>
                   {aliCategories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.icon} {cat.name}
