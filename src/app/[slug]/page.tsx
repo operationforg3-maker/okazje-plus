@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { getSecretPageBySlug, recordSecretPageView } from "@/lib/data";
-import { WheelOfFortune } from "@/components/wheel-of-fortune";
-import { WheelPrize } from "@/lib/types";
+import { WheelOfFortuneClient } from "@/components/wheel-of-fortune-client";
 import { headers } from "next/headers";
 
 interface SecretPageProps {
@@ -107,50 +106,5 @@ export default async function SecretPage({ params }: SecretPageProps) {
         )}
       </div>
     </div>
-  );
-}
-
-// Client component for wheel interaction
-"use client";
-
-function WheelOfFortuneClient({
-  prizes,
-  pageId,
-  requiresAuth,
-}: {
-  prizes: WheelPrize[];
-  pageId: string;
-  requiresAuth: boolean;
-}) {
-  const handleSpinComplete = async (prize: WheelPrize) => {
-    try {
-      // Record spin
-      await fetch("/api/secret-pages/spin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          pageId,
-          prizeId: prize.id,
-          prizeLabel: prize.label,
-        }),
-      });
-
-      // Redirect if prize has link
-      if (prize.link) {
-        setTimeout(() => {
-          window.location.href = prize.link!;
-        }, 3000);
-      }
-    } catch (error) {
-      console.error("Failed to record spin:", error);
-    }
-  };
-
-  return (
-    <WheelOfFortune
-      prizes={prizes}
-      onSpinComplete={handleSpinComplete}
-      spinButtonText="Zakręć kołem fortuny!"
-    />
   );
 }
