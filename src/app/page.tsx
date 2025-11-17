@@ -83,24 +83,25 @@ export default function Home() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/pre-register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/pre-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.success) {
         setRegistered(true);
         setRegistrationNumber(data.registrationNumber);
         toast({
-          title: "Sukces!",
-          description: `Zarejestrowano jako ${data.registrationNumber <= 100 ? "PIONIER" : "BETA TESTER"} #${data.registrationNumber}`,
+          title: 'Sukces!',
+          description: `Zarejestrowano jako ${data.registrationNumber <= 100 ? 'PIONIER' : 'BETA TESTER'} #${data.registrationNumber}`,
         });
       } else {
-        toast({ title: "Błąd", description: data.error || "Nie udało się zarejestrować", variant: "destructive" });
+        const msg = data.error || (data.issues ? 'Niepoprawne dane formularza' : 'Nie udało się zarejestrować');
+        toast({ title: 'Błąd', description: msg, variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: "Błąd", description: "Wystąpił problem z rejestracją", variant: "destructive" });
+      toast({ title: 'Błąd', description: 'Wystąpił problem z rejestracją', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
