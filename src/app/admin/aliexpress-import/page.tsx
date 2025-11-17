@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,8 @@ function AliExpressImportPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [aliCategories, setAliCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState<AliProduct[]>([]);
@@ -50,6 +52,14 @@ function AliExpressImportPage() {
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
   const categories: Category[] = categoriesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() } as Category)) || [];
 
+  // Fetch AliExpress categories on mount
+  useEffect(() => {
+    fetch('/api/admin/aliexpress/categories')
+      .then(res => res.json())
+      .then(data => setAliCategories(data.categories || []))
+      .catch(err => console.error('Failed to load AliExpress categories:', err));
+  }, []);
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       toast({ title: 'Błąd', description: 'Wpisz frazę wyszukiwania', variant: 'destructive' });
@@ -62,6 +72,7 @@ function AliExpressImportPage() {
       const params = new URLSearchParams({ q: searchQuery, limit: '50' });
       if (minPrice) params.set('minPrice', minPrice);
       if (maxPrice) params.set('maxPrice', maxPrice);
+      if (selectedCategory) params.set('category', selectedCategory);
 
       console.log('[AliExpress Import] Searching with params:', Object.fromEntries(params));
 
@@ -399,6 +410,22 @@ function AliExpressImportPage() {
                 onChange={e => setMaxPrice(e.target.value)}
                 placeholder="1000"
               />
+            </div>
+            <div className="md:col-span-2 space-y-2">
+              <Label>Kategoria AliExpress (opcjonalne)</Label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wszystkie kategorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Wszystkie kategorie</SelectItem>
+                  {aliCategories.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <Button onClick={handleSearch} disabled={loading || !searchQuery.trim()} className="w-full">
