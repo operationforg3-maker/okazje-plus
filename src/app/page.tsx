@@ -250,10 +250,10 @@ export default function Home() {
                   <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Imię i nazwisko</Label>
+                        <Label htmlFor="name">Imię lub nick</Label>
                         <Input
                           id="name"
-                          placeholder="Jan Kowalski"
+                          placeholder="Jan lub TwójNick"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           required
