@@ -353,6 +353,19 @@ export default function AdminLayout({
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
+                    isActive={isActive('/admin/pre-registrations')}
+                    tooltip={{ children: 'Pre-rejestracje' }}
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-orange-600 data-[active=true]:to-amber-600 data-[active=true]:text-white hover:bg-muted/80 transition-all"
+                  >
+                    <Link href="/admin/pre-registrations">
+                      <Users />
+                      <span className="group-data-[collapsible=icon]:hidden">Pre-rejestracje</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
                     isActive={isActive('/admin/settings')}
                     tooltip={{ children: 'Ustawienia' }}
                     className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground hover:bg-muted/80"
