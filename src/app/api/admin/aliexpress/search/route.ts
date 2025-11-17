@@ -175,6 +175,8 @@ export async function GET(request: Request) {
     }
 
     // Normalize & filter
+    console.log(`[AliExpress] Raw products from API: ${products.length}`);
+    
     products = products.map((p: any) => {
       // Extract images array from various possible fields
       const images: string[] = [];
@@ -210,7 +212,12 @@ export async function GET(request: Request) {
         merchant: p.shop_title || p.shop_name || '',
         categoryId: p.first_level_category_id || p.category_id || '',
       };
-    }).filter((p: any) => 
+    });
+
+    console.log(`[AliExpress] After normalization: ${products.length} products`);
+
+    // Basic quality filters
+    products = products.filter((p: any) => 
       p.title && p.title.length >= 6 &&
       p.imageUrl &&
       p.price > 0 &&
@@ -218,7 +225,39 @@ export async function GET(request: Request) {
       !p.title.match(/fake|replica|scam|pirate/i)
     );
 
-    console.log(`[AliExpress] Final normalized products count: ${products.length}/${total}`);
+    console.log(`[AliExpress] After quality filters: ${products.length} products`);
+
+    // CLIENT-SIDE PRICE FILTERING (since AliExpress API ignores min/max price params)
+    const minPriceNum = minPrice ? parseFloat(minPrice) : null;
+    const maxPriceNum = maxPrice ? parseFloat(maxPrice) : null;
+    
+    if (minPriceNum !== null || maxPriceNum !== null) {
+      const beforePriceFilter = products.length;
+      products = products.filter((p: any) => {
+        if (minPriceNum !== null && p.price < minPriceNum) return false;
+        if (maxPriceNum !== null && p.price > maxPriceNum) return false;
+        return true;
+      });
+      console.log(`[AliExpress] Price filter applied (${minPriceNum || 0}-${maxPriceNum || '∞'}): ${beforePriceFilter} → ${products.length} products`);
+    }
+
+    // CLIENT-SIDE RATING FILTERING
+    const minRatingNum = minRating ? parseFloat(minRating) : null;
+    if (minRatingNum !== null) {
+      const beforeRatingFilter = products.length;
+      products = products.filter((p: any) => p.rating >= minRatingNum);
+      console.log(`[AliExpress] Rating filter applied (>=${minRatingNum}): ${beforeRatingFilter} → ${products.length} products`);
+    }
+
+    // CLIENT-SIDE ORDERS FILTERING
+    const minOrdersNum = minOrders ? parseInt(minOrders) : null;
+    if (minOrdersNum !== null) {
+      const beforeOrdersFilter = products.length;
+      products = products.filter((p: any) => p.orders >= minOrdersNum);
+      console.log(`[AliExpress] Orders filter applied (>=${minOrdersNum}): ${beforeOrdersFilter} → ${products.length} products`);
+    }
+
+    console.log(`[AliExpress] Final products after all filters: ${products.length}/${total}`);
 
     return NextResponse.json({ 
       products,
