@@ -37,9 +37,21 @@ export async function PUT(
     // Usuń pola które nie powinny być w Firestore
     const { id: _, ...updateData } = data;
     
+    // Konwertuj ratingCard na dot notation dla Firestore
+    const firestoreData: any = { ...updateData };
+    if (updateData.ratingCard) {
+      delete firestoreData.ratingCard;
+      firestoreData['ratingCard.average'] = updateData.ratingCard.average ?? 0;
+      firestoreData['ratingCard.count'] = updateData.ratingCard.count ?? 0;
+      firestoreData['ratingCard.durability'] = updateData.ratingCard.durability ?? 0;
+      firestoreData['ratingCard.easeOfUse'] = updateData.ratingCard.easeOfUse ?? 0;
+      firestoreData['ratingCard.valueForMoney'] = updateData.ratingCard.valueForMoney ?? 0;
+      firestoreData['ratingCard.versatility'] = updateData.ratingCard.versatility ?? 0;
+    }
+    
     // Zaktualizuj
     await updateDoc(productRef, {
-      ...updateData,
+      ...firestoreData,
       updatedAt: Timestamp.now(),
     });
 
@@ -51,9 +63,17 @@ export async function PUT(
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error updating product:', error);
+    console.error('[PUT /api/admin/products/[id]] Error updating product:', error);
+    console.error('[PUT /api/admin/products/[id]] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      code: (error as any).code,
+    });
     return NextResponse.json(
-      { error: 'Błąd podczas aktualizacji produktu' },
+      { 
+        error: 'Błąd podczas aktualizacji produktu',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
