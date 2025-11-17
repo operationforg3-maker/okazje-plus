@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from 'sonner';
-import { Navbar } from '@/components/layout/navbar';
-import { Footer } from '@/components/layout/footer';
+import { ConditionalNav } from '@/components/layout/conditional-nav';
 import { AuthProvider } from '@/lib/auth';
 
 export const metadata: Metadata = {
@@ -73,11 +72,7 @@ export default function RootLayout({
       </head>
       <body className={cn('min-h-screen bg-background font-body antialiased')}>
         <AuthProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <ConditionalNav>{children}</ConditionalNav>
           <Toaster />
         </AuthProvider>
       </body>
