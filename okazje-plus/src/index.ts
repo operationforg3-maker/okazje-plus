@@ -785,6 +785,11 @@ interface ActivationTokenPayload {
 
 /**
  * Generuje JWT token aktywacyjny ważny 7 dni
+ * @param {string} preRegId - ID dokumentu pre-rejestracji
+ * @param {string} email - Email użytkownika
+ * @param {number} registrationNumber - Numer rejestracji (1-5000)
+ * @param {"pioneer"|"beta"} role - Rola użytkownika
+ * @return {string} JWT token
  */
 function generateActivationToken(
   preRegId: string,
@@ -804,6 +809,8 @@ function generateActivationToken(
 
 /**
  * Weryfikuje JWT token i zwraca payload
+ * @param {string} token - JWT token do weryfikacji
+ * @return {ActivationTokenPayload|null} Payload lub null jeśli błąd
  */
 export function verifyActivationToken(
   token: string
@@ -818,6 +825,12 @@ export function verifyActivationToken(
 
 /**
  * Wysyła email z zaproszeniem beta
+ * @param {string} email - Adres email odbiorcy
+ * @param {string} name - Imię/nick użytkownika
+ * @param {number} registrationNumber - Numer rejestracji
+ * @param {"pioneer"|"beta"} role - Rola
+ * @param {string} activationToken - Token aktywacyjny JWT
+ * @return {Promise<void>}
  */
 async function sendInvitationEmail(
   email: string,
@@ -838,20 +851,63 @@ async function sendInvitationEmail(
   const msg = {
     to: email,
     from: FROM_EMAIL,
-    subject: `${isPioneer ? "🏆" : "🚀"} Zaproszenie do Okazje+ Beta ${isPioneer ? `(Pionier #${registrationNumber})` : ""}`,
+    subject: `${isPioneer ? "🏆" : "🚀"} Zaproszenie do Okazje+ Beta ${
+      isPioneer ? `(Pionier #${registrationNumber})` : ""
+    }`,
     html: `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px 8px 0 0; }
-    .content { background: #fff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; }
-    .button { display: inline-block; padding: 14px 28px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-    .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
-    .badge { display: inline-block; padding: 4px 12px; background: ${isPioneer ? "#fbbf24" : "#3b82f6"}; color: white; border-radius: 4px; font-weight: bold; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont,
+        'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: #333;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px 8px 0 0;
+    }
+    .content {
+      background: #fff;
+      padding: 30px;
+      border: 1px solid #e0e0e0;
+      border-top: none;
+    }
+    .button {
+      display: inline-block;
+      padding: 14px 28px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      background: ${isPioneer ? "#fbbf24" : "#3b82f6"};
+      color: white;
+      border-radius: 4px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -862,14 +918,23 @@ async function sendInvitationEmail(
     </div>
     <div class="content">
       <h2>Witaj ${name}!</h2>
-      <p>Gratulacje! Zostałeś zaakceptowany jako <span class="badge">${roleLabel} #${registrationNumber}</span> na platformie <strong>Okazje+</strong>.</p>
+      <p>Gratulacje! Zostałeś zaakceptowany jako 
+      <span class="badge">${roleLabel} #${registrationNumber}</span> 
+      na platformie <strong>Okazje+</strong>.</p>
       
-      ${isPioneer ? `
-        <p style="background:#fef3c7;padding:15px;border-left:4px solid #fbbf24;border-radius:4px;">
-          <strong>🏆 Jesteś jednym z pierwszych 100 pionierów!</strong><br>
-          Jako pionier otrzymujesz specjalny dostęp i wyróżnienie na platformie.
+      ${
+  isPioneer ?
+    `
+        <p style="background:#fef3c7;padding:15px;
+        border-left:4px solid #fbbf24;border-radius:4px;">
+          <strong>🏆 Jesteś jednym z pierwszych 100 
+          pionierów!</strong><br>
+          Jako pionier otrzymujesz specjalny dostęp 
+          i wyróżnienie na platformie.
         </p>
-      ` : ""}
+      ` :
+    ""
+}
       
       <h3>Co dalej?</h3>
       <ol>
@@ -884,13 +949,17 @@ async function sendInvitationEmail(
       
       <p style="font-size:12px;color:#666;margin-top:20px;">
         Link aktywacyjny ważny przez 7 dni.<br>
-        Jeśli przycisk nie działa, skopiuj link: <a href="${activationUrl}">${activationUrl}</a>
+        Jeśli przycisk nie działa, skopiuj link: 
+        <a href="${activationUrl}">${activationUrl}</a>
       </p>
       
-      <hr style="margin:30px 0;border:none;border-top:1px solid #e0e0e0;">
+      <hr style="margin:30px 0;border:none;
+      border-top:1px solid #e0e0e0;">
       
       <p><strong>Potrzebujesz pomocy?</strong><br>
-  Skontaktuj się z nami: <a href="mailto:business@okazjeplus.pl">business@okazjeplus.pl</a></p>
+  Skontaktuj się z nami: 
+  <a href="mailto:business@okazjeplus.pl">
+  business@okazjeplus.pl</a></p>
     </div>
     <div class="footer">
       <p>Okazje+ © 2025 · Najlepsze okazje w jednym miejscu</p>
@@ -927,7 +996,11 @@ export const sendBetaInvitations = onCall(
         .get();
 
       if (preRegsSnapshot.empty) {
-        return {success: true, message: "Brak oczekujących rejestracji", sent: 0};
+        return {
+          success: true,
+          message: "Brak oczekujących rejestracji",
+          sent: 0,
+        };
       }
 
       let sent = 0;
@@ -963,7 +1036,9 @@ export const sendBetaInvitations = onCall(
           });
 
           sent++;
-          logger.info(`Invitation sent to ${email} (${role} #${registrationNumber})`);
+          logger.info(
+            `Invitation sent to ${email} (${role} #${registrationNumber})`
+          );
         } catch (error) {
           errors++;
           logger.error(`Failed to send invitation to ${doc.id}`, error);
@@ -1000,22 +1075,34 @@ export const activatePreRegistration = onCall(
     const {token, password} = request.data;
 
     if (!token || !password) {
-      throw new HttpsError("invalid-argument", "Token i hasło są wymagane");
+      throw new HttpsError(
+        "invalid-argument",
+        "Token i hasło są wymagane"
+      );
     }
 
     // Weryfikuj token
     const payload = verifyActivationToken(token);
     if (!payload) {
-      throw new HttpsError("invalid-argument", "Nieprawidłowy lub wygasły token");
+      throw new HttpsError(
+        "invalid-argument",
+        "Nieprawidłowy lub wygasły token"
+      );
     }
 
     const {preRegId, email, registrationNumber, role} = payload;
 
     try {
       // Sprawdź status pre-rejestracji
-      const preRegDoc = await db.collection("pre_registrations").doc(preRegId).get();
+      const preRegDoc = await db
+        .collection("pre_registrations")
+        .doc(preRegId)
+        .get();
       if (!preRegDoc.exists) {
-        throw new HttpsError("not-found", "Pre-rejestracja nie istnieje");
+        throw new HttpsError(
+          "not-found",
+          "Pre-rejestracja nie istnieje"
+        );
       }
 
       const preRegData = preRegDoc.data();
@@ -1053,7 +1140,10 @@ export const activatePreRegistration = onCall(
         userId: userRecord.uid,
       });
 
-      logger.info(`User ${userRecord.uid} activated from pre-registration ${preRegId}`);
+      logger.info(
+        `User ${userRecord.uid} activated from ` +
+        `pre-registration ${preRegId}`
+      );
 
       return {
         success: true,
