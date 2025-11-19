@@ -1,14 +1,9 @@
 /**
- * AliExpress ingestion pipeline
+ * AliExpress ingestion pipeline (M2 Enhanced with AI)
  * 
  * Orchestrates the import process: fetch, transform, validate, and store products/deals
- * 
- * TODO M2:
- * - Implement deduplication logic (check for existing products)
- * - Add AI-based category suggestion
- * - Add embedding-based similarity detection
- * - Implement batch processing for large imports
- * - Add progress tracking for long-running imports
+ * Now includes AI-powered quality scoring, title normalization, category suggestion,
+ * and SEO description generation.
  */
 
 'use server';
@@ -21,6 +16,12 @@ import { mapToProduct, mapToDeal, validateProduct, MapperConfig } from './mapper
 import { AliExpressSearchParams } from './types';
 import { logger, createImportLogger } from '@/lib/logging';
 import { queueProductForIndexing, queueDealForIndexing } from '@/search/typesenseQueue';
+
+// AI flows
+import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
+import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { aiSuggestCategory } from '@/ai/flows/aliexpress/aiSuggestCategory';
+import { aiGenerateSEODescription } from '@/ai/flows/aliexpress/aiGenerateSEODescription';
 
 /**
  * Result of an import run
@@ -184,6 +185,148 @@ export async function runImport(
         // Map to internal types
         const product = mapToProduct(aliProduct, mapperConfig);
         const deal = mapToDeal(aliProduct, mapperConfig, profile.createdBy);
+        
+        // === AI PROCESSING PIPELINE (M2) ===
+        
+        // Step 1: AI Quality Score
+        importLogger.debug('Running AI quality score', {
+          productId: aliProduct.item_id,
+        });
+        
+        const qualityResult = await aiDealQualityScore({
+          title: product.name,
+          description: product.description,
+          price: product.price,
+          originalPrice: product.originalPrice,
+          discountPercent: product.discountPercent,
+          rating: product.ratingCard?.average,
+          reviewCount: product.ratingCard?.count,
+          merchantName: product.metadata?.merchant,
+        });
+        
+        // Attach quality score to product metadata
+        if (!product.ai) product.ai = {};
+        
+        product.ai.quality = {
+          score: qualityResult.score,
+          recommendation: qualityResult.recommendation,
+          factors: qualityResult.factors,
+          warnings: qualityResult.warnings,
+          reasoning: qualityResult.reasoning,
+          scoredAt: new Date().toISOString(),
+        };
+        
+        // Skip low-quality products (score < 70 or reject recommendation)
+        if (
+          qualityResult.recommendation === 'reject' ||
+          qualityResult.score < 70
+        ) {
+          importLogger.info('Product rejected by AI quality score', {
+            productId: aliProduct.item_id,
+            score: qualityResult.score,
+            recommendation: qualityResult.recommendation,
+          });
+          
+          result.stats.skipped++;
+          continue;
+        }
+        
+        // Step 2: AI Title Normalization
+        importLogger.debug('Running AI title normalization', {
+          originalTitle: product.name,
+        });
+        
+        const titleResult = await aiNormalizeTitlePL({
+          title: product.name,
+          language: 'en', // Assume AliExpress is English by default
+        });
+        
+        product.name = titleResult.normalizedTitle;
+        
+        if (!product.ai) product.ai = {};
+        product.ai.titleNormalization = {
+          originalTitle: aliProduct.item_id, // Store item_id as fallback
+          normalizedTitle: titleResult.normalizedTitle,
+          translated: titleResult.translated,
+          changes: titleResult.changes,
+        };
+        
+        // Step 3: AI Category Suggestion
+        importLogger.debug('Running AI category suggestion', {
+          title: product.name,
+        });
+        
+        const categoryResult = await aiSuggestCategory({
+          title: product.name,
+          description: product.description,
+          aliexpressCategory: '', // AliExpressProduct doesn't have category_name
+          price: product.price, // Use price instead of currentPrice
+        });
+        
+        // Override category mapping with AI suggestion if confidence >= 0.6
+        if (categoryResult.confidence >= 0.6) {
+          product.mainCategorySlug = categoryResult.mainCategorySlug;
+          product.subCategorySlug = categoryResult.subCategorySlug;
+          if (categoryResult.subSubCategorySlug) {
+            product.subSubCategorySlug = categoryResult.subSubCategorySlug;
+          }
+          
+          if (!product.ai) product.ai = {};
+          product.ai.categoryMapping = {
+            suggestedPath: [
+              categoryResult.mainCategorySlug,
+              categoryResult.subCategorySlug,
+              categoryResult.subSubCategorySlug,
+            ].filter(Boolean) as string[],
+            confidence: categoryResult.confidence,
+            reasoning: categoryResult.reasoning,
+          };
+        } else {
+          // Low confidence - keep manual mapping from profile but log suggestion
+          importLogger.warn('Low confidence AI category suggestion - using manual mapping', {
+            aiSuggestion: categoryResult,
+            manualMapping: mapperConfig.targetMainCategory,
+          });
+        }
+        
+        // Step 4: AI SEO Description Generation
+        importLogger.debug('Generating AI SEO description', {
+          title: product.name,
+        });
+        
+        const seoResult = await aiGenerateSEODescription({
+          normalizedTitle: product.name,
+          mainCategorySlug: product.mainCategorySlug,
+          subCategorySlug: product.subCategorySlug,
+          subSubCategorySlug: product.subSubCategorySlug,
+          price: product.price,
+          rating: product.ratingCard?.average,
+          reviewCount: product.ratingCard?.count,
+          attributes: {}, // Product doesn't have attributes field - use empty object
+        });
+        
+        // Enrich product with AI-generated SEO content
+        product.description = seoResult.description;
+        product.seoKeywords = seoResult.keywords;
+        product.metaTitle = seoResult.metaTitle;
+        product.metaDescription = seoResult.metaDescription;
+        
+        if (!product.ai) product.ai = {};
+        product.ai.seo = {
+          generatedDescription: seoResult.description,
+          keywords: seoResult.keywords,
+          generatedAt: new Date().toISOString(),
+        };
+        
+        importLogger.info('AI processing complete', {
+          productId: aliProduct.item_id,
+          qualityScore: qualityResult.score,
+          normalizedTitle: product.name,
+          category: `${product.mainCategorySlug}/${product.subCategorySlug}`,
+          seoKeywordCount: seoResult.keywords.length,
+        });
+        
+        // === END AI PIPELINE ===
         
         // Check for duplicates
         // TODO M2: Implement proper deduplication

@@ -1,143 +1,158 @@
+'use server';
+
 /**
- * AI Deal Quality Score Flow (Stub for M1)
+ * AI Deal Quality Score Flow
  * 
  * Evaluates the quality of a deal/product for automatic approval
- * or prioritization in moderation queue.
- * 
- * TODO M2:
- * - Implement actual Genkit AI flow
- * - Analyze price history and discount legitimacy
- * - Check product reviews and ratings
- * - Detect fake/scam products
- * - Evaluate merchant reputation
- * - Score based on category standards
+ * or prioritization in moderation queue using Genkit AI.
  */
 
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import { logger } from '@/lib/logging';
 
 /**
- * Input for deal quality scoring
+ * Input schema for deal quality scoring
  */
-export interface DealQualityInput {
-  title: string;
-  description?: string;
-  price: number;
-  originalPrice?: number;
-  discountPercent?: number;
-  rating?: number;
-  reviewCount?: number;
-  salesCount?: number;
-  merchantName?: string;
-  category?: string;
-}
+const DealQualityInputSchema = z.object({
+  title: z.string().describe('Product title'),
+  description: z.string().optional().describe('Product description'),
+  price: z.number().describe('Current price in PLN'),
+  originalPrice: z.number().optional().describe('Original price in PLN'),
+  discountPercent: z.number().optional().describe('Discount percentage'),
+  rating: z.number().optional().describe('Average rating (0-5)'),
+  reviewCount: z.number().optional().describe('Number of reviews'),
+  salesCount: z.number().optional().describe('Number of sales'),
+  merchantName: z.string().optional().describe('Merchant/seller name'),
+  category: z.string().optional().describe('Product category'),
+});
+
+export type DealQualityInput = z.infer<typeof DealQualityInputSchema>;
 
 /**
- * Output from deal quality scoring
+ * Output schema from deal quality scoring
  */
-export interface DealQualityOutput {
-  score: number; // 0-100
-  recommendation: 'approve' | 'review' | 'reject';
-  factors: {
-    priceQuality: number; // 0-100
-    discountLegitimacy: number; // 0-100
-    merchantTrust: number; // 0-100
-    productPopularity: number; // 0-100
-    contentQuality: number; // 0-100
-  };
-  warnings: string[];
-  reasoning: string;
-}
+const DealQualityOutputSchema = z.object({
+  score: z
+    .number()
+    .describe('Overall quality score (0-100)'),
+  recommendation: z
+    .enum(['approve', 'review', 'reject'])
+    .describe('Recommendation: approve (score >=70), review (40-69), reject (<40)'),
+  factors: z.object({
+    priceQuality: z.number().describe('Price reasonableness (0-100)'),
+    discountLegitimacy: z.number().describe('Discount authenticity (0-100)'),
+    merchantTrust: z.number().describe('Merchant reputation (0-100)'),
+    productPopularity: z.number().describe('Product popularity (0-100)'),
+    contentQuality: z.number().describe('Content quality (0-100)'),
+  }),
+  warnings: z
+    .array(z.string())
+    .describe('List of warnings/red flags detected'),
+  reasoning: z
+    .string()
+    .describe('Brief explanation of the score and recommendation'),
+});
+
+export type DealQualityOutput = z.infer<typeof DealQualityOutputSchema>;
+
+/**
+ * AI prompt for quality scoring
+ */
+const qualityPrompt = ai.definePrompt({
+  name: 'dealQualityScorePrompt',
+  input: { schema: DealQualityInputSchema },
+  output: { schema: DealQualityOutputSchema },
+  prompt: `You are an expert e-commerce quality analyst for a Polish deals platform.
+
+Analyze the following product and provide a quality score (0-100):
+
+**Product Details:**
+- Title: {{{title}}}
+{{#if description}}- Description: {{{description}}}{{/if}}
+- Price: {{{price}}} PLN
+{{#if originalPrice}}- Original Price: {{{originalPrice}}} PLN{{/if}}
+{{#if discountPercent}}- Discount: {{{discountPercent}}}%{{/if}}
+{{#if rating}}- Rating: {{{rating}}}/5 ({{{reviewCount}}} reviews){{/if}}
+{{#if salesCount}}- Sales: {{{salesCount}}}{{/if}}
+{{#if merchantName}}- Merchant: {{{merchantName}}}{{/if}}
+{{#if category}}- Category: {{{category}}}{{/if}}
+
+**Evaluation Criteria:**
+
+1. **Price Quality (0-100)**: Is the price reasonable for the product category?
+2. **Discount Legitimacy (0-100)**: If discount exists, is it authentic (not fake inflated original price)?
+3. **Merchant Trust (0-100)**: Does the merchant appear trustworthy based on name and reputation signals?
+4. **Product Popularity (0-100)**: Based on ratings, reviews, and sales count.
+5. **Content Quality (0-100)**: Title and description quality (clear, not spammy, professional).
+
+**Red Flags to Check:**
+- Unrealistic discounts (>90%)
+- Very low price with no reviews/ratings (potential scam)
+- Spammy title (excessive caps, emojis, "FREE!!!", etc.)
+- Suspicious merchant names
+- Missing critical product information
+
+**Recommendation Guidelines:**
+- **approve**: score >= 70 (high quality, auto-publish)
+- **review**: score 40-69 (moderate quality, manual review)
+- **reject**: score < 40 (low quality, likely spam/scam)
+
+Provide detailed factor scores, list any warnings detected, and explain your reasoning in Polish.`,
+});
+
+/**
+ * Genkit flow for deal quality scoring
+ */
+const qualityFlow = ai.defineFlow(
+  {
+    name: 'dealQualityScoreFlow',
+    inputSchema: DealQualityInputSchema,
+    outputSchema: DealQualityOutputSchema,
+  },
+  async (input) => {
+    const { output } = await qualityPrompt(input);
+    return output!;
+  }
+);
 
 /**
  * Evaluate deal quality using AI
  * 
  * @param input Deal information
  * @returns Quality score and recommendation
- * 
- * TODO M2: Implement actual AI flow
  */
 export async function aiDealQualityScore(
   input: DealQualityInput
 ): Promise<DealQualityOutput> {
-  logger.debug('AI deal quality scoring (stub)', { title: input.title });
+  logger.debug('AI deal quality scoring', { title: input.title });
   
-  // TODO M2: Implement Genkit flow
-  // - Analyze price reasonableness
-  // - Check discount authenticity (not fake inflated original price)
-  // - Evaluate product ratings and reviews
-  // - Check merchant reputation
-  // - Detect suspicious patterns
-  // - Compare against category standards
-  
-  // For now, use simple heuristics
-  const warnings: string[] = [];
-  const factors = {
-    priceQuality: 50,
-    discountLegitimacy: 50,
-    merchantTrust: 50,
-    productPopularity: 50,
-    contentQuality: 50
-  };
-  
-  // Price quality - prefer mid-range prices
-  if (input.price > 0 && input.price < 10) {
-    factors.priceQuality = 30;
-    warnings.push('Very low price - may indicate low quality');
-  } else if (input.price > 1000) {
-    factors.priceQuality = 40;
-    warnings.push('High price - needs careful verification');
-  } else {
-    factors.priceQuality = 70;
+  try {
+    const result = await qualityFlow(input);
+    
+    logger.info('Deal quality score completed', {
+      title: input.title,
+      score: result.score,
+      recommendation: result.recommendation,
+    });
+    
+    return result;
+  } catch (error) {
+    logger.error('AI deal quality scoring failed', { error, input });
+    
+    // Fallback: return conservative score requiring manual review
+    return {
+      score: 50,
+      recommendation: 'review',
+      factors: {
+        priceQuality: 50,
+        discountLegitimacy: 50,
+        merchantTrust: 50,
+        productPopularity: 50,
+        contentQuality: 50,
+      },
+      warnings: ['AI scoring failed - manual review required'],
+      reasoning: 'Błąd AI - produkt wymaga ręcznej weryfikacji',
+    };
   }
-  
-  // Discount legitimacy
-  if (input.discountPercent && input.discountPercent > 70) {
-    factors.discountLegitimacy = 20;
-    warnings.push('Suspiciously high discount - verify legitimacy');
-  } else if (input.discountPercent && input.discountPercent >= 20) {
-    factors.discountLegitimacy = 80;
-  }
-  
-  // Product popularity
-  if (input.rating && input.rating >= 4.5 && input.reviewCount && input.reviewCount >= 100) {
-    factors.productPopularity = 90;
-  } else if (input.rating && input.rating < 3) {
-    factors.productPopularity = 20;
-    warnings.push('Low product rating');
-  }
-  
-  // Content quality - basic check
-  if (input.title && input.title.length > 20 && input.description && input.description.length > 50) {
-    factors.contentQuality = 70;
-  } else {
-    factors.contentQuality = 40;
-    warnings.push('Poor content quality - needs enrichment');
-  }
-  
-  // Calculate overall score
-  const score = Math.round(
-    (factors.priceQuality +
-     factors.discountLegitimacy +
-     factors.merchantTrust +
-     factors.productPopularity +
-     factors.contentQuality) / 5
-  );
-  
-  // Determine recommendation
-  let recommendation: 'approve' | 'review' | 'reject';
-  if (score >= 70 && warnings.length === 0) {
-    recommendation = 'approve';
-  } else if (score >= 40) {
-    recommendation = 'review';
-  } else {
-    recommendation = 'reject';
-  }
-  
-  return {
-    score,
-    recommendation,
-    factors,
-    warnings,
-    reasoning: `Stub scoring based on simple heuristics. Score: ${score}/100. Recommendation: ${recommendation}.`
-  };
 }

@@ -161,6 +161,9 @@ export interface Product {
   category?: string; // Stara wersja dla kompatybilności
   gallery?: ProductImageEntry[]; // Pełna galeria
   seo?: ProductSeoMeta; // Meta dane generowane przez AI / modyfikowane ręcznie
+  seoKeywords?: string[]; // M2: SEO keywords dla search indexing
+  metaTitle?: string; // M2: Meta title for SEO
+  metaDescription?: string; // M2: Meta description for SEO
   ai?: ProductAiMeta; // Dane analityczne AI (duplikaty, propozycje)
   moderation?: ProductModerationState; // Informacje o procesie moderacji
   metadata?: ProductImportMetadata; // Źródło importu i dane oryginalne
@@ -196,6 +199,44 @@ export interface ProductAiMeta {
   softDuplicateScore?: number; // 0..1 podobieństwo
   enrichmentConfidence?: number; // 0..1
   flags?: string[]; // np. ['enrichment_failed','duplicate_suspected']
+  
+  // M2: AI Quality Score metadata
+  quality?: {
+    score: number; // 0-100
+    recommendation: 'approve' | 'review' | 'reject';
+    factors: {
+      priceQuality: number;
+      discountLegitimacy: number;
+      merchantTrust: number;
+      productPopularity: number;
+      contentQuality: number;
+    };
+    warnings: string[];
+    reasoning: string;
+    scoredAt: string;
+  };
+  
+  // M2: Title Normalization metadata
+  titleNormalization?: {
+    originalTitle: string;
+    normalizedTitle: string;
+    translated: boolean;
+    changes: string[];
+  };
+  
+  // M2: Category Mapping metadata
+  categoryMapping?: {
+    suggestedPath: string[];
+    confidence: number;
+    reasoning?: string;
+  };
+  
+  // M2: SEO Generation metadata
+  seo?: {
+    generatedDescription: string;
+    keywords: string[];
+    generatedAt: string;
+  };
 }
 
 export interface ProductModerationState {
