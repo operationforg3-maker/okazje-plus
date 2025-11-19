@@ -48,6 +48,7 @@ function AliExpressImportPage() {
   const [reviewLoading, setReviewLoading] = useState(false);
   const [details, setDetails] = useState<Record<string, any>>({});
   const [fieldSelection, setFieldSelection] = useState<Record<string, { title: boolean; description: boolean; images: boolean; price: boolean; rating: boolean }>>({});
+  const [aiTestLoading, setAiTestLoading] = useState(false);
 
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
   const categories: Category[] = categoriesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() } as Category)) || [];
@@ -133,6 +134,51 @@ function AliExpressImportPage() {
       else next.add(id);
       return next;
     });
+  };
+
+  // AI Pipeline Test (NEW - requires ImportProfile)
+  const testAIPipeline = async () => {
+    setAiTestLoading(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error('Brak tokena autoryzacji');
+
+      toast({
+        title: '🤖 AI Pipeline Info',
+        description: 'Nowy endpoint /api/admin/products/ingest wymaga ImportProfile. Zobacz console log dla szczegółów.',
+      });
+
+      console.log('=== AI IMPORT SYSTEM ===');
+      console.log('Endpoint: POST /api/admin/products/ingest');
+      console.log('Auth: Bearer token (admin role required)');
+      console.log('Body: { profileId, dryRun?, maxItems? }');
+      console.log('');
+      console.log('🔥 AI Pipeline Stages:');
+      console.log('1. Quality Score (0-100) → skip if < 70');
+      console.log('2. Title Normalization → clean Polish title');
+      console.log('3. Category Mapping → auto 3-level categorization');
+      console.log('4. SEO Generation → unique 300-500 word descriptions');
+      console.log('');
+      console.log('📊 Check imported products:');
+      console.log('  - product.ai.quality.score');
+      console.log('  - product.ai.titleNormalization');
+      console.log('  - product.ai.categoryMapping');
+      console.log('  - product.ai.seo');
+      console.log('');
+      console.log('📍 To create ImportProfile, add to Firestore:');
+      console.log('Collection: importProfiles');
+      console.log('Example: { name: "Test", vendorId: "aliexpress", enabled: true, ... }');
+
+    } catch (error) {
+      console.error('[AI Test]', error);
+      toast({
+        title: 'Błąd',
+        description: error instanceof Error ? error.message : 'Nieznany błąd',
+        variant: 'destructive',
+      });
+    } finally {
+      setAiTestLoading(false);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -372,6 +418,73 @@ function AliExpressImportPage() {
         <h2 className="text-3xl font-bold">Import AliExpress</h2>
         <p className="text-muted-foreground">Wyszukaj i zaimportuj produkty z AliExpress</p>
       </div>
+
+      {/* NEW: AI Pipeline Info Card */}
+      <Card className="border-blue-200 bg-blue-50/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span className="text-2xl">🤖</span>
+            <span>AI-Powered Import System (NOWE!)</span>
+          </CardTitle>
+          <CardDescription>
+            Zaimplementowano automatyczny system importu z 4-stopniowym AI pipeline
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <Badge variant="secondary">1</Badge>
+                <div>
+                  <div className="font-medium">Quality Score</div>
+                  <div className="text-muted-foreground">Ocena jakości 0-100, skip jeśli &lt; 70</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Badge variant="secondary">2</Badge>
+                <div>
+                  <div className="font-medium">Title Normalization</div>
+                  <div className="text-muted-foreground">Czysty polski tytuł, usunięcie spamu</div>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <Badge variant="secondary">3</Badge>
+                <div>
+                  <div className="font-medium">Category Mapping</div>
+                  <div className="text-muted-foreground">Auto-kategoryzacja 3-poziomowa</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Badge variant="secondary">4</Badge>
+                <div>
+                  <div className="font-medium">SEO Generation</div>
+                  <div className="text-muted-foreground">Unikalne opisy 300-500 słów PL</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button 
+              onClick={testAIPipeline} 
+              disabled={aiTestLoading}
+              variant="outline"
+              size="sm"
+            >
+              {aiTestLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <span className="mr-2">ℹ️</span>
+              )}
+              Pokaż info AI Pipeline
+            </Button>
+            <Badge variant="outline" className="text-xs">
+              Endpoint: /api/admin/products/ingest
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Krok 1: Wyszukiwarka */}
       {step === 'search' && (
