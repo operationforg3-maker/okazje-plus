@@ -28,6 +28,7 @@ import {
   Flame,
   Users,
   BrainCircuit,
+  Sparkles,
   ShoppingBag,
   PanelLeft,
   FolderTree,
@@ -54,6 +55,7 @@ const pathNames: Record<string, string> = {
   '/admin/navigation': 'Nawigacja',
   '/admin/moderation': 'Moderacja',
   '/admin/aliexpress-import': 'Import AliExpress',
+  '/admin/bulk-import': 'Bulk AI Import',
   '/admin/analytics': 'Analityka',
   '/admin/stats': 'Statystyki',
   '/admin/users': 'Użytkownicy',
@@ -201,6 +203,21 @@ export default function AdminLayout({
                     <Link href="/admin/aliexpress-import">
                       <ShoppingBag />
                       <span className="group-data-[collapsible=icon]:hidden font-medium">Import AliExpress</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {/* Bulk AI Import */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/bulk-import')}
+                    tooltip={{ children: 'Bulk AI Import' }}
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-blue-600 data-[active=true]:to-indigo-600 data-[active=true]:text-white hover:bg-muted/80 border-l-4 border-transparent data-[active=true]:border-blue-400 transition-all"
+                  >
+                    <Link href="/admin/bulk-import">
+                      <Sparkles />
+                      <span className="group-data-[collapsible=icon]:hidden font-medium">Bulk AI Import</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
