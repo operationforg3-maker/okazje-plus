@@ -1,20 +1,32 @@
+import {NextResponse} from 'next/server';
+import type {NextRequest} from 'next/server';
 import createMiddleware from 'next-intl/middleware';
 import {locales, defaultLocale} from './i18n';
 
-export default createMiddleware({
-  // A list of all locales that are supported
+const intlMiddleware = createMiddleware({
+  // Supported locales
   locales,
-
-  // Used when no locale matches
+  // Default when no locale matches
   defaultLocale,
-
-  // Use 'always' - all locales require prefix
-  // Polish: /pl/, English: /en/, German: /de/
+  // Require locale prefix always
   localePrefix: 'always',
-  
   // Force Polish for now regardless of Accept-Language
   localeDetection: false,
 });
+
+export default function middleware(request: NextRequest) {
+  const {nextUrl} = request;
+  const {pathname, search} = nextUrl;
+
+  // Redirect non-PL locales to PL equivalent path (temporary 302)
+  if (/^\/(en|de)(\/|$)/.test(pathname)) {
+    const plPath = pathname.replace(/^\/(en|de)/, '/pl');
+    const url = new URL(plPath + search, nextUrl.origin);
+    return NextResponse.redirect(url, 302);
+  }
+
+  return intlMiddleware(request);
+}
 
 export const config = {
   // Match all pathnames except for
