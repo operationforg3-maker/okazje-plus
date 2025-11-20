@@ -8,10 +8,9 @@ export default createMiddleware({
   // Used when no locale matches
   defaultLocale,
 
-  // Use 'as-needed' - show prefix only for non-default locales
-  // Polish (pl) will be accessible at / and /pl
-  // English and German require /en and /de
-  localePrefix: 'as-needed',
+  // Use 'always' - all locales require prefix
+  // Polish: /pl/, English: /en/, German: /de/
+  localePrefix: 'always',
   
   // Automatically detect user locale from Accept-Language header
   localeDetection: true,
