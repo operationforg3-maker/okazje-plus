@@ -5,6 +5,7 @@ import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 import { aiSuggestCategory } from '@/ai/flows/aliexpress/aiSuggestCategory';
 import { aiGenerateSEODescription } from '@/ai/flows/aliexpress/aiGenerateSEODescription';
+import { aiTranslateProduct } from '@/ai/flows/aiTranslateProduct';
 
 /**
  * POST /api/admin/bulk-import/preview
@@ -152,6 +153,18 @@ export async function POST(request: NextRequest) {
               reviewCount: rawProduct.rating?.count,
             });
 
+            // Stage 5: Multi-language Translation (EN, DE)
+            console.log(`[Bulk Preview] 🌍 Translating product to EN, DE...`);
+            const translationResult = await aiTranslateProduct({
+              name: titleResult.normalizedTitle,
+              description: seoResult.description,
+              longDescription: seoResult.description, // Use same for now
+              seoKeywords: seoResult.keywords,
+              metaTitle: seoResult.metaTitle,
+              metaDescription: seoResult.metaDescription,
+              targetLanguages: ['en', 'de'],
+            });
+
             console.log(`[Bulk Preview] 📦 Adding product to results: ${titleResult.normalizedTitle.slice(0, 60)}`);
 
             // Build preview product object
@@ -180,6 +193,7 @@ export async function POST(request: NextRequest) {
                 titleNormalization: titleResult,
                 categoryMapping: categoryResult,
                 seo: seoResult,
+                translations: translationResult, // Add translations to metadata
               },
               // Store raw product for commit
               _rawProduct: rawProduct,

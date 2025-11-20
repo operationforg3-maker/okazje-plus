@@ -56,6 +56,9 @@ export async function POST(request: NextRequest) {
           imageHint: '',
           affiliateUrl: rawProduct.product_url,
           
+          // Multi-language translations
+          translations: aiMetadata.translations || {},
+          
           // Category (3-level)
           mainCategorySlug: finalCategory.mainSlug,
           subCategorySlug: finalCategory.subSlug,

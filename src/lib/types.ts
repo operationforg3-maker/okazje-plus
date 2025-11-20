@@ -7,6 +7,13 @@ export interface SubSubcategory {
   id?: string;
   icon?: string;
   description?: string;
+  
+  // Multi-language support
+  translations?: {
+    en?: { name: string; description?: string };
+    de?: { name: string; description?: string };
+  };
+  
   sortOrder?: number;
   image?: string;
 }
@@ -18,6 +25,13 @@ export interface Subcategory {
   id?: string; // identyfikator dokumentu, jeśli przechowywany w osobnej kolekcji
   icon?: string;
   description?: string;
+  
+  // Multi-language support
+  translations?: {
+    en?: { name: string; description?: string };
+    de?: { name: string; description?: string };
+  };
+  
   sortOrder?: number;
   image?: string;
   highlight?: boolean;
@@ -72,6 +86,19 @@ export interface Category {
   path?: string[]; // pełna ścieżka slugów [main, sub, subSub]
   icon?: string;
   description?: string;
+  
+  // Multi-language support (i18n)
+  translations?: {
+    en?: {
+      name: string;
+      description?: string;
+    };
+    de?: {
+      name: string;
+      description?: string;
+    };
+  };
+  
   sortOrder?: number;
   accentColor?: string;
   heroImage?: string;
@@ -142,6 +169,28 @@ export interface Product {
   image: string;
   imageHint: string;
   affiliateUrl: string;
+  
+  // Multi-language support (i18n)
+  translations?: {
+    en?: {
+      name: string;
+      description: string;
+      longDescription?: string;
+      seoKeywords?: string[];
+      metaTitle?: string;
+      metaDescription?: string;
+    };
+    de?: {
+      name: string;
+      description: string;
+      longDescription?: string;
+      seoKeywords?: string[];
+      metaTitle?: string;
+      metaDescription?: string;
+    };
+    // Możliwość rozszerzenia o inne języki (fr, es, etc.)
+  };
+  
   ratingCard: ProductRatingCard;
   /**
    * Rozdzielone źródła ocen:
