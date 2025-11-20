@@ -101,7 +101,7 @@ Odpowiedz w formacie JSON zgodnym z następującym schematem:
 Generuj etykiety po polsku. Bądź obiektywny i konkretny.`;
 
     const result = await ai.generate({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash', // Fixed: was gemini-2.5-flash
       prompt,
       output: {
         schema: reviewAnalysisOutputSchema,
@@ -219,7 +219,7 @@ Odpowiedz w formacie JSON zgodnym ze schematem:
 }`;
 
     const result = await ai.generate({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash', // Fixed: was gemini-2.5-flash
       prompt,
       output: {
         schema: sentimentAspectOutputSchema,

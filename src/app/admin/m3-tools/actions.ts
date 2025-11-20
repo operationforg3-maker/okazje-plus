@@ -70,7 +70,7 @@ export async function analyzeReviewsAction(productId: string) {
       summary: result.summary,
       confidence: result.confidence,
       generatedAt: new Date().toISOString(),
-      modelVersion: 'gemini-2.5-flash',
+      modelVersion: 'gemini-1.5-flash', // Fixed: was gemini-2.5-flash
       language: 'pl',
     };
 

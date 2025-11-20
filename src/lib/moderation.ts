@@ -160,7 +160,7 @@ Return JSON:
       confidence: score.confidence,
       reasoning: score.reasoning,
       generatedAt: new Date().toISOString(),
-      modelVersion: 'gemini-2.5-flash-v1',
+      modelVersion: 'gemini-1.5-flash-v1', // Fixed: was gemini-2.5-flash-v1
     };
 
     logger.info('Moderation score generated', {

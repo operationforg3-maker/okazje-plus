@@ -15,7 +15,7 @@ import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
  * Model version for embeddings
  * Change this when model changes to invalidate old embeddings
  */
-const EMBEDDING_MODEL_VERSION = 'gemini-2.5-flash-v1';
+const EMBEDDING_MODEL_VERSION = 'gemini-1.5-flash-v1'; // Fixed: was gemini-2.5-flash-v1
 
 /**
  * Generate embedding for text using Gemini
