@@ -56,10 +56,12 @@ export default async function RootLayout({
   params: { locale: string };
 }>) {
   const locale = params.locale;
-  const messages = await getMessages();
+  // Wymuszamy polskie tłumaczenia niezależnie od parametru, dopóki EN/DE nie gotowe
+  const effectiveLocale = 'pl';
+  const messages = await getMessages({locale: effectiveLocale});
   
   return (
-    <html lang={locale} suppressHydrationWarning>
+  <html lang={effectiveLocale} suppressHydrationWarning>
       <head>
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-4M4NQB0PQD"></script>
@@ -83,7 +85,7 @@ export default async function RootLayout({
   <link rel="alternate" href="https://okazjeplus.pl/en/" hrefLang="en" />
   <link rel="alternate" href="https://okazjeplus.pl/de/" hrefLang="de" />
   <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="x-default" />
-        <NextIntlClientProvider locale={locale} messages={messages}>
+  <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
             <ConditionalNav>{children}</ConditionalNav>
             <Toaster />

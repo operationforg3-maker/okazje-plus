@@ -12,8 +12,8 @@ export default createMiddleware({
   // Polish: /pl/, English: /en/, German: /de/
   localePrefix: 'always',
   
-  // Automatically detect user locale from Accept-Language header
-  localeDetection: true,
+  // Force Polish for now regardless of Accept-Language
+  localeDetection: false,
 });
 
 export const config = {
