@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Play, CheckCircle, XCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, Play, CheckCircle, XCircle, AlertCircle, Sparkles, Zap } from 'lucide-react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -252,6 +252,40 @@ function BulkImportPage() {
     );
   };
 
+  // Auto-import: Configure all categories with "bestseller" query
+  const handleAutoImportBest = () => {
+    const enabledCount = categoryConfigs.filter(c => c.enabled).length;
+    
+    if (enabledCount === 0) {
+      toast({
+        title: '🚀 Auto-Import: 10 Best',
+        description: 'Konfigurowanie wszystkich kategorii...',
+      });
+
+      // Enable all categories with "bestseller" query
+      setCategoryConfigs(prev =>
+        prev.map(c => ({
+          ...c,
+          enabled: true,
+          searchQuery: 'bestseller',
+          productsCount: 10,
+        }))
+      );
+
+      toast({
+        title: '✅ Skonfigurowano!',
+        description: `${categoryConfigs.length} kategorii z query "bestseller" i 10 produktami każda`,
+      });
+    } else {
+      // Already configured, just generate preview
+      toast({
+        title: '🤖 Generowanie podglądu...',
+        description: `${enabledCount} kategorii już skonfigurowanych`,
+      });
+      handleGeneratePreview();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -305,11 +339,41 @@ function BulkImportPage() {
             </CardContent>
           </Card>
 
+          {/* Auto-Import Best Products Button */}
+          <Card className="border-2 border-blue-500 bg-blue-50/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-blue-600" />
+                Auto-Import: 10 Best
+              </CardTitle>
+              <CardDescription>
+                Automatycznie skonfiguruj wszystkie kategorie z najlepiej sprzedającymi się produktami (bestseller)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                size="lg"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                onClick={handleAutoImportBest}
+                disabled={loading}
+              >
+                <Zap className="mr-2 h-5 w-5" />
+                {categoryConfigs.filter(c => c.enabled).length === 0
+                  ? 'Skonfiguruj i Generuj Podgląd'
+                  : 'Generuj Podgląd AI'
+                }
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                {categoryConfigs.length} kategorii × 10 produktów = {categoryConfigs.length * 10} produktów (przed filtrowaniem AI)
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Kategorie ({categoryConfigs.filter(c => c.enabled).length} zaznaczonych)</CardTitle>
               <CardDescription>
-                Zaznacz kategorie i wpisz search queries dla każdej
+                Zaznacz kategorie i wpisz search queries dla każdej (lub użyj Auto-Import powyżej)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
