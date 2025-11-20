@@ -87,6 +87,8 @@ export async function POST(request: NextRequest) {
         }
 
         // AI enrichment pipeline for each product
+        console.log(`[Bulk Preview] Starting AI enrichment for ${searchResult.products.length} products from: ${config.searchQuery}`);
+        
         for (const rawProduct of searchResult.products) {
           try {
             // Stage 1: Quality Score
@@ -102,11 +104,15 @@ export async function POST(request: NextRequest) {
               merchantName: rawProduct.merchant?.name || 'Unknown',
             });
 
-            // Skip low quality
-            if (qualityResult.score < 70) {
-              console.log(`[Bulk Preview] Skipped low quality (${qualityResult.score}): ${rawProduct.title?.slice(0, 50)}`);
+            console.log(`[Bulk Preview] Quality score: ${qualityResult.score} for "${rawProduct.title?.slice(0, 40)}..."`);
+
+            // Skip low quality (threshold lowered to 40 for testing)
+            if (qualityResult.score < 40) {
+              console.log(`[Bulk Preview] ❌ Skipped (score ${qualityResult.score} < 40): ${rawProduct.title?.slice(0, 50)}`);
               continue;
             }
+            
+            console.log(`[Bulk Preview] ✅ Passed quality check (score ${qualityResult.score})`);
 
             // Stage 2: Title Normalization
             const titleResult = await aiNormalizeTitlePL({
@@ -146,6 +152,8 @@ export async function POST(request: NextRequest) {
               reviewCount: rawProduct.rating?.count,
             });
 
+            console.log(`[Bulk Preview] 📦 Adding product to results: ${titleResult.normalizedTitle.slice(0, 60)}`);
+
             // Build preview product object
             allProducts.push({
               id: `preview-${rawProduct.item_id}-${Date.now()}`,
@@ -183,6 +191,7 @@ export async function POST(request: NextRequest) {
             });
 
             totalPassed++;
+            console.log(`[Bulk Preview] ✅ Total products passed so far: ${totalPassed}`);
           } catch (productError) {
             console.error(`[Bulk Preview] Error processing product:`, productError);
             // Continue with next product
