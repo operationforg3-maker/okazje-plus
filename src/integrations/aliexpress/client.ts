@@ -272,7 +272,8 @@ export class AliExpressClient {
       const responseData = result[responseKey];
       
       // Check response code (can be string "200" or number 200)
-      const respCode = responseData?.resp_result?.resp_code;
+      // Response structure: { resp_code: 200, resp_msg: "...", result: {...} }
+      const respCode = responseData?.resp_code;
       if (!responseData || (respCode !== 200 && respCode !== '200')) {
         logger.warn('TOP API returned error', { responseData });
         return {
@@ -282,14 +283,14 @@ export class AliExpressClient {
           page_size: pageSize,
           products: [],
           error: {
-            code: responseData?.resp_result?.resp_code || 'UNKNOWN',
-            message: responseData?.resp_result?.resp_msg || 'API error',
+            code: responseData?.resp_code || 'UNKNOWN',
+            message: responseData?.resp_msg || 'API error',
           },
         };
       }
       
-      // Response structure: { resp_result: { result: { products: [...], total_record_count: N } } }
-      const resultData = responseData.resp_result.result;
+      // Response structure: { resp_code: 200, result: { products: [...], total_record_count: N } }
+      const resultData = responseData.result;
       const products = Array.isArray(resultData.products) ? resultData.products : [];
       
       logger.info(`TOP API returned ${products.length} products`, { 
