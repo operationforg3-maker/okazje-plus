@@ -45,5 +45,10 @@ if (!getApps().length) {
   adminApp = getApps()[0];
 }
 
-export const adminDb = getFirestore(adminApp);
-export { adminApp };
+// Configure Firestore with ignoreUndefinedProperties for better dev experience
+const adminDb = getFirestore(adminApp);
+adminDb.settings({
+  ignoreUndefinedProperties: true,
+});
+
+export { adminDb, adminApp };

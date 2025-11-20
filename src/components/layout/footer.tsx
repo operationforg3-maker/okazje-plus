@@ -75,7 +75,7 @@ export function Footer() {
             &copy; {new Date().getFullYear()} Okazje+. Wszelkie prawa zastrzeżone.
           </p>
           <p className="mt-1">
-            Wersja: v{version} (commit <abbr title={buildInfo.commit}>#{commitShort}</abbr>) · Zbudowano: {builtLocal} · Runtime: {uptimeHuman}
+            Wersja: v{version} (commit <abbr title={buildInfo.commit}>#{commitShort}</abbr>) · Zbudowano: {builtLocal} · Runtime: <span suppressHydrationWarning>{hydrated ? uptimeHuman : '0 min 0 s'}</span>
           </p>
         </div>
       </div>
