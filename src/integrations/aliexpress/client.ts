@@ -63,6 +63,9 @@ export class AliExpressClient {
    * - Fetches token from Firestore
    * - Automatically refreshes if expired
    * - Supports multi-account
+   * 
+   * FALLBACK: If no OAuth token exists, client can still work
+   * with APP_KEY/APP_SECRET for non-authenticated endpoints
    */
   private async ensureToken(): Promise<void> {
     logger.debug('Ensuring valid access token', {
@@ -71,23 +74,26 @@ export class AliExpressClient {
     });
     
     try {
-      // Get valid token (will refresh if needed)
+      // Try to get valid OAuth token (will refresh if needed)
       this.token = await getValidToken(this.vendorId, this.accountName);
       
-      if (!this.token) {
-        throw new Error(
-          `No valid OAuth token available for vendor ${this.vendorId}` +
-          (this.accountName ? ` (account: ${this.accountName})` : '')
-        );
+      if (this.token) {
+        logger.debug('Valid OAuth token obtained', {
+          tokenId: this.token.id,
+          expiresAt: this.token.expiresAt,
+        });
+        return;
       }
       
-      logger.debug('Valid token obtained', {
-        tokenId: this.token.id,
-        expiresAt: this.token.expiresAt,
+      // FALLBACK: No OAuth token - log warning but continue
+      // Client will use APP_KEY/APP_SECRET for public endpoints
+      logger.warn('No OAuth token available - using APP_KEY/APP_SECRET fallback', {
+        vendorId: this.vendorId,
+        accountName: this.accountName,
       });
     } catch (error) {
-      logger.error('Failed to obtain valid token', { error });
-      throw error;
+      // OAuth system error - log but continue with fallback
+      logger.warn('OAuth token fetch failed - using APP_KEY/APP_SECRET fallback', { error });
     }
   }
 
