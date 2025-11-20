@@ -68,6 +68,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Initialize countdown immediately on mount
+    setBetaTimeLeft(calculateTimeLeft(BETA_RELEASE));
+    setPublicTimeLeft(calculateTimeLeft(PUBLIC_RELEASE));
+    
     const timer = setInterval(() => {
       setBetaTimeLeft(calculateTimeLeft(BETA_RELEASE));
       setPublicTimeLeft(calculateTimeLeft(PUBLIC_RELEASE));
@@ -150,33 +154,21 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex gap-3">
-                    {hydrated && [
-                      { label: "Dni", value: betaTimeLeft.days },
-                      { label: "Godz", value: betaTimeLeft.hours },
-                      { label: "Min", value: betaTimeLeft.minutes },
-                      { label: "Sek", value: betaTimeLeft.seconds },
+                    {[
+                      { label: "Dni", value: hydrated ? betaTimeLeft.days : 0 },
+                      { label: "Godz", value: hydrated ? betaTimeLeft.hours : 0 },
+                      { label: "Min", value: hydrated ? betaTimeLeft.minutes : 0 },
+                      { label: "Sek", value: hydrated ? betaTimeLeft.seconds : 0 },
                     ].map(({ label, value }) => (
                       <div key={label} className="text-center">
                         <div className="bg-primary/10 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">
-                          <div className="text-2xl md:text-4xl font-bold text-primary font-headline">
-                            {value.toString().padStart(2, "0")}
+                          <div className="text-2xl md:text-4xl font-bold text-primary font-headline" suppressHydrationWarning>
+                            {hydrated ? value.toString().padStart(2, "0") : "--"}
                           </div>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">{label}</div>
                       </div>
                     ))}
-                    {!hydrated && (
-                      <div className="flex gap-3" suppressHydrationWarning>
-                        {['Dni','Godz','Min','Sek'].map(label => (
-                          <div key={label} className="text-center">
-                            <div className="bg-primary/5 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">
-                              <div className="text-2xl md:text-4xl font-bold text-primary/50 font-headline">--</div>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">{label}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               </Card>
@@ -194,33 +186,21 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex gap-3">
-                    {hydrated && [
-                      { label: "Dni", value: publicTimeLeft.days },
-                      { label: "Godz", value: publicTimeLeft.hours },
-                      { label: "Min", value: publicTimeLeft.minutes },
-                      { label: "Sek", value: publicTimeLeft.seconds },
+                    {[
+                      { label: "Dni", value: hydrated ? publicTimeLeft.days : 0 },
+                      { label: "Godz", value: hydrated ? publicTimeLeft.hours : 0 },
+                      { label: "Min", value: hydrated ? publicTimeLeft.minutes : 0 },
+                      { label: "Sek", value: hydrated ? publicTimeLeft.seconds : 0 },
                     ].map(({ label, value }) => (
                       <div key={label} className="text-center">
                         <div className="bg-accent/10 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">
-                          <div className="text-2xl md:text-4xl font-bold text-accent font-headline">
-                            {value.toString().padStart(2, "0")}
+                          <div className="text-2xl md:text-4xl font-bold text-accent font-headline" suppressHydrationWarning>
+                            {hydrated ? value.toString().padStart(2, "0") : "--"}
                           </div>
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">{label}</div>
                       </div>
                     ))}
-                    {!hydrated && (
-                      <div className="flex gap-3" suppressHydrationWarning>
-                        {['Dni','Godz','Min','Sek'].map(label => (
-                          <div key={label} className="text-center">
-                            <div className="bg-accent/5 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">
-                              <div className="text-2xl md:text-4xl font-bold text-accent/50 font-headline">--</div>
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1">{label}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               </Card>
