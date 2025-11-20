@@ -7,7 +7,7 @@
  * ✅ Real OAuth token integration
  * ✅ Automatic token refresh
  * ✅ Multi-account support via vendorId
- * - Implement request signing for authenticated endpoints (TODO)
+ * ✅ TOP API signature authentication (fallback when no OAuth)
  * - Add retry logic with exponential backoff (TODO)
  * - Add request/response logging (partial)
  */
@@ -15,6 +15,7 @@
 import { logger } from '@/lib/logging';
 import { getValidToken } from '@/lib/oauth';
 import { OAuthToken } from '@/lib/types';
+import { createHash } from 'crypto';
 import {
   AliExpressClientConfig,
   AliExpressSearchParams,
@@ -98,6 +99,28 @@ export class AliExpressClient {
   }
 
   /**
+   * Generate signature for TOP API (gateway.do) requests
+   * 
+   * AliExpress TOP API uses HMAC-MD5 signature authentication:
+   * sign = MD5(app_secret + sorted_params + app_secret).toUpperCase()
+   */
+  private generateSignature(params: Record<string, any>): string {
+    // Sort parameters alphabetically
+    const sortedKeys = Object.keys(params).sort();
+    
+    // Concatenate key-value pairs
+    let signString = this.config.appSecret || '';
+    for (const key of sortedKeys) {
+      signString += key + params[key];
+    }
+    signString += this.config.appSecret || '';
+    
+    // MD5 hash and uppercase
+    const hash = createHash('md5').update(signString).digest('hex');
+    return hash.toUpperCase();
+  }
+
+  /**
    * Refresh OAuth token (M2 - Deprecated)
    * 
    * Token refresh is now handled automatically by getValidToken()
@@ -137,64 +160,223 @@ export class AliExpressClient {
   /**
    * Make an API request (M2 Enhanced)
    * 
-   * Now uses real OAuth token with automatic refresh
-   * TODO M2: Add request signing, retry logic
+   * Supports two authentication methods:
+   * 1. OAuth token (new API: api-sg.aliexpress.com)
+   * 2. Signature auth (TOP API: openapi.aliexpress.com/gateway.do)
+   * 
+   * Falls back to signature auth if no OAuth token available
    */
   private async request<T>(
-    endpoint: string,
+    method: string,
     params: Record<string, any>
   ): Promise<T> {
     await this.ensureToken();
     await this.applyRateLimit();
     
-    if (!this.token) {
-      throw new Error('No valid token available');
-    }
+    logger.debug('Making API request', { method, params });
     
-    logger.debug('Making API request', { endpoint, params });
+    // Determine authentication method
+    const useOAuth = !!this.token;
+    const apiBase = this.config.apiEndpoint || process.env.ALIEXPRESS_API_BASE || 'https://openapi.aliexpress.com/gateway.do';
     
-    const url = `${this.config.apiEndpoint}${endpoint}`;
-    
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `${this.token.tokenType} ${this.token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-        signal: AbortSignal.timeout(this.config.timeout || 30000),
-      });
+    if (useOAuth) {
+      // New API with OAuth
+      logger.debug('Using OAuth authentication');
+      const url = `${apiBase}${method}`;
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        logger.error('API request failed', {
-          status: response.status,
-          error: errorText,
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `${this.token!.tokenType} ${this.token!.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(params),
+          signal: AbortSignal.timeout(this.config.timeout || 30000),
         });
-        throw new Error(`API request failed: ${response.status} - ${errorText}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          logger.error('OAuth API request failed', {
+            status: response.status,
+            error: errorText,
+          });
+          throw new Error(`API request failed: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        logger.debug('OAuth API request successful');
+        return data;
+      } catch (error) {
+        logger.error('OAuth API request error', { method, error });
+        throw error;
+      }
+    } else {
+      // TOP API with signature auth (fallback)
+      logger.debug('Using signature authentication (TOP API)');
+      
+      const requestParams: Record<string, any> = {
+        method,
+        app_key: this.config.appKey,
+        sign_method: 'md5',
+        timestamp: new Date().getTime().toString(),
+        format: 'json',
+        v: '2.0',
+        simplify: 'true',
+        ...params,
+      };
+      
+      // Generate signature
+      const sign = this.generateSignature(requestParams);
+      requestParams.sign = sign;
+      
+      // Build query string
+      const queryString = Object.keys(requestParams)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(requestParams[key])}`)
+        .join('&');
+      
+      const url = `${apiBase}?${queryString}`;
+      
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          signal: AbortSignal.timeout(this.config.timeout || 30000),
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          logger.error('TOP API request failed', {
+            status: response.status,
+            error: errorText,
+          });
+          throw new Error(`API request failed: ${response.status} - ${errorText}`);
+        }
+        
+        const data = await response.json();
+        logger.debug('TOP API request successful', { data });
+        return data;
+      } catch (error) {
+        logger.error('TOP API request error', { method, error });
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Transform TOP API response to our standard format
+   */
+  private transformTopApiResponse(result: any, page: number, pageSize: number): AliExpressSearchResponse {
+    try {
+      // TOP API wraps response in method-specific key
+      const responseKey = Object.keys(result)[0]; // e.g., 'aliexpress_affiliate_product_query_response'
+      const responseData = result[responseKey];
+      
+      if (!responseData || responseData.resp_result?.resp_code !== '200') {
+        logger.warn('TOP API returned error', { responseData });
+        return {
+          success: false,
+          total: 0,
+          page,
+          page_size: pageSize,
+          products: [],
+          error: {
+            code: responseData?.resp_result?.resp_code || 'UNKNOWN',
+            message: responseData?.resp_result?.resp_msg || 'API error',
+          },
+        };
       }
       
-      const data = await response.json();
-      logger.debug('API request successful', { endpoint });
+      const resultData = JSON.parse(responseData.resp_result.result);
+      const products = resultData.products?.product || [];
       
-      return data;
+      logger.info(`TOP API returned ${products.length} products`);
+      
+      // Transform products to our format
+      const transformedProducts = products.map((p: any) => ({
+        item_id: p.product_id || p.item_id,
+        title: p.product_title || p.title,
+        image_urls: [p.product_main_image_url || p.image_url].filter(Boolean),
+        price: {
+          current: parseFloat(p.target_sale_price || p.sale_price || '0'),
+          original: parseFloat(p.target_original_price || p.original_price || '0'),
+          currency: 'USD',
+        },
+        product_url: p.promotion_link || p.product_detail_url,
+        discount_percent: p.discount ? parseFloat(p.discount) : undefined,
+        rating: p.evaluate_rate ? {
+          score: parseFloat(p.evaluate_rate),
+          count: 0,
+        } : undefined,
+        shipping: {
+          free: p.ship_to_days === '0',
+          cost: 0,
+        },
+      }));
+      
+      return {
+        success: true,
+        total: resultData.total_record_count || products.length,
+        page,
+        page_size: pageSize,
+        products: transformedProducts,
+      };
     } catch (error) {
-      logger.error('API request error', { endpoint, error });
-      throw error;
+      logger.error('Failed to transform TOP API response', { error, result });
+      return {
+        success: false,
+        total: 0,
+        page,
+        page_size: pageSize,
+        products: [],
+        error: {
+          code: 'TRANSFORM_ERROR',
+          message: error instanceof Error ? error.message : 'Failed to parse response',
+        },
+      };
     }
   }
 
   /**
    * Search for products (M2 Enhanced)
    * 
-   * Now makes real API calls with OAuth token
+   * Supports both OAuth API and TOP API with signature auth
+   * TOP API method: aliexpress.affiliate.product.query
    */
   async searchProducts(params: AliExpressSearchParams): Promise<AliExpressSearchResponse> {
-    logger.info('Searching products', { query: params.q });
+    logger.info('Searching products', { 
+      query: params.q,
+      minPrice: params.minPrice,
+      maxPrice: params.maxPrice,
+      limit: params.limit 
+    });
     
     try {
-      return await this.request<AliExpressSearchResponse>('/product/search', params);
+      // Map params to TOP API format
+      const topApiParams: Record<string, any> = {
+        keywords: params.q,
+        page_no: params.page || 1,
+        page_size: Math.min(params.limit || 20, 50), // TOP API max 50
+      };
+      
+      // Add optional filters
+      if (params.minPrice) {
+        topApiParams.min_price = params.minPrice;
+      }
+      if (params.maxPrice) {
+        topApiParams.max_price = params.maxPrice;
+      }
+      if (params.sort) {
+        // Map sort param if needed
+        topApiParams.sort = params.sort;
+      }
+      
+      const result = await this.request<any>('aliexpress.affiliate.product.query', topApiParams);
+      
+      // Transform TOP API response to our format
+      // TOP API response structure: { aliexpress_affiliate_product_query_response: { resp_result: { result: { products: [] } } } }
+      logger.debug('Raw API response', { result });
+      
+      return this.transformTopApiResponse(result, topApiParams.page_no, topApiParams.page_size);
     } catch (error) {
       logger.error('Product search failed', { error });
       
