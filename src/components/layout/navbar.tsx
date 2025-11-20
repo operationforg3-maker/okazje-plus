@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import {useParams} from 'next/navigation';
 import { Menu, Search, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,9 @@ export function Navbar() {
     router.push(`/search?q=${searchQuery}`);
   };
 
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
+  const prefix = `/${locale}`;
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 max-w-screen-2xl items-center gap-4">
@@ -54,23 +58,23 @@ export function Navbar() {
           <SheetContent side="left">
             <SheetHeader>
               <SheetTitle>
-                <Link href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                <Link href={`${prefix}/`} className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
                   <ShoppingBag className="h-6 w-6 text-primary" />
                   <span className="font-bold font-headline text-xl">Okazje+</span>
                 </Link>
               </SheetTitle>
             </SheetHeader>
             <div className="flex flex-col space-y-4 py-6">
-              <Link href="/" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Strona główna</Link>
-              <Link href="/deals" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Okazje</Link>
-              <Link href="/products" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Katalog</Link>
-              <Link href="/forum" className="text-lg font-medium" onClick={() => setIsOpen(false)}>Forum</Link>
+              <Link href={`${prefix}/`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Strona główna</Link>
+              <Link href={`${prefix}/deals`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Okazje</Link>
+              <Link href={`${prefix}/products`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Katalog</Link>
+              <Link href={`${prefix}/forum`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Forum</Link>
             </div>
           </SheetContent>
         </Sheet>
         
         {/* Desktop Nav */}
-        <Link href="/" className="mr-6 hidden items-center space-x-2 md:flex">
+  <Link href={`${prefix}/`} className="mr-6 hidden items-center space-x-2 md:flex">
           <ShoppingBag className="h-6 w-6 text-primary" />
           <span className="hidden font-bold font-headline sm:inline-block text-lg">
             Okazje+
@@ -80,21 +84,21 @@ export function Navbar() {
         <NavigationMenu className="hidden md:flex">
           <NavigationMenuList>
             <NavigationMenuItem>
-              <Link href="/" legacyBehavior passHref>
+              <Link href={`${prefix}/`} legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Strona główna
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link href="/deals" legacyBehavior passHref>
+              <Link href={`${prefix}/deals`} legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Okazje
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link href="/forum" legacyBehavior passHref>
+              <Link href={`${prefix}/forum`} legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Forum
                 </NavigationMenuLink>
@@ -114,7 +118,7 @@ export function Navbar() {
             ) : user ? (
               <UserNav />
             ) : (
-              <Link href="/login">
+              <Link href={`${prefix}/login`}>
                 <Button variant="outline">Zaloguj się</Button>
               </Link>
             )}

@@ -1,11 +1,15 @@
 "use client";
 import Link from 'next/link';
+import {useParams} from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { TrendingUp, Zap, Flame } from 'lucide-react';
 import { useAuth } from '@/lib/auth';
 
 export default function HeroSection() {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
+  const prefix = `/${locale}`;
   return (
     <section className="relative w-full bg-gradient-to-br from-primary/5 via-accent/5 to-background py-16 md:py-24 lg:py-32">
       <div className="container mx-auto px-4 md:px-6 z-10">
@@ -62,9 +66,9 @@ export default function HeroSection() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
             <Button asChild size="lg" className="min-w-[200px]">
-              <Link href="/deals">Przeglądaj okazje</Link>
+              <Link href={`${prefix}/deals`}>Przeglądaj okazje</Link>
             </Button>
-            <AuthCta />
+            <AuthCta prefix={prefix} />
           </div>
         </div>
       </div>
@@ -72,20 +76,18 @@ export default function HeroSection() {
   );
 }
 
-function AuthCta() {
+function AuthCta({prefix}:{prefix:string}) {
   const { user } = useAuth();
-
   if (user) {
     return (
       <Button asChild size="lg" variant="outline" className="min-w-[200px]">
-        <Link href="/add-deal">Dodaj okazję</Link>
+        <Link href={`${prefix}/add-deal`}>Dodaj okazję</Link>
       </Button>
     );
   }
-
   return (
     <Button asChild size="lg" variant="outline" className="min-w-[200px]">
-      <Link href="/login">Dołącz za darmo</Link>
+      <Link href={`${prefix}/login`}>Dołącz za darmo</Link>
     </Button>
   );
 }

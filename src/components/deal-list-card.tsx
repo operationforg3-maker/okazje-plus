@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import {useParams} from 'next/navigation';
 import type { Deal } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,9 @@ function getRelativeTime(isoDate: string): string {
 }
 
 export default function DealListCard({ deal }: DealListCardProps) {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
+  const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
@@ -57,7 +61,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
 
   return (
     <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-      <Link href={`/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
+  <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
         <div className="relative w-40 h-32">
           <Image
             src={deal.image}
@@ -102,7 +106,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
       <div className="flex flex-col flex-grow min-w-0 justify-between">
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <Link href={`/deals/${deal.id}`} className="group/title">
+            <Link href={`${prefix}/deals/${deal.id}`} className="group/title">
               <h3 className="font-headline text-xl font-semibold group-hover/title:text-primary transition-colors line-clamp-2">
                 {deal.title}
               </h3>

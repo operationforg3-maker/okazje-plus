@@ -78,6 +78,11 @@ export default async function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className={cn('min-h-screen bg-background font-body antialiased')}>
+        {/* hreflang alternate links */}
+  <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="pl" />
+  <link rel="alternate" href="https://okazjeplus.pl/en/" hrefLang="en" />
+  <link rel="alternate" href="https://okazjeplus.pl/de/" hrefLang="de" />
+  <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="x-default" />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <AuthProvider>
             <ConditionalNav>{children}</ConditionalNav>

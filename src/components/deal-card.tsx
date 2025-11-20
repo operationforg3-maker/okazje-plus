@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import {useParams} from 'next/navigation';
 import type { Deal } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useAuth } from '@/lib/auth';
@@ -38,6 +39,9 @@ function getRelativeTime(isoDate: string): string {
 }
 
 export default function DealCard({ deal }: DealCardProps) {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
+  const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { user } = useAuth();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
@@ -193,7 +197,7 @@ export default function DealCard({ deal }: DealCardProps) {
 
   return (
     <Link 
-      href={`/deals/${deal.id}`} 
+      href={`${prefix}/deals/${deal.id}`} 
       onClick={handleDetailClick}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
     >

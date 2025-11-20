@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split } from 'lucide-react';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import type { Product } from '@/lib/types';
@@ -26,6 +27,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
+  const prefix = `/${locale}`;
   const { isFavorited, isLoading, toggleFavorite } = useFavorites(product.id, 'product');
   const { user } = useAuth();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -71,7 +75,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link 
-      href={`/products/${product.id}`} 
+      href={`${prefix}/products/${product.id}`} 
       onClick={handleDetailClick}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
     >
