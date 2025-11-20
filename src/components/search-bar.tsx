@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 // Use server-side search proxy for production (safer and works when Typesense
 // isn't exposed to the browser). We still support Typesense client via lib
 // but prefer the API proxy for unified behavior.
@@ -25,6 +26,7 @@ interface ProductHit {
 type SearchHit = DealHit | ProductHit;
 
 const SearchBar = () => {
+  const t = useTranslations('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchHit[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,10 +77,10 @@ const SearchBar = () => {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Szukaj okazji i produktów..."
+        placeholder={t('placeholder')}
         className="border p-2 rounded w-full"
       />
-      {loading && <p className="absolute top-full mt-2">Ładowanie...</p>}
+      {loading && <p className="absolute top-full mt-2">{t('searching')}</p>}
       {query && !loading && (
         <ul className="absolute top-full mt-1 w-full bg-white border rounded shadow-lg z-10">
           {results.length > 0 ? (
@@ -100,7 +102,7 @@ const SearchBar = () => {
               </li>
             ))
           ) : (
-            <li className="p-2 text-gray-500">Brak wyników</li>
+            <li className="p-2 text-gray-500">{t('noResults')}</li>
           )}
         </ul>
       )}

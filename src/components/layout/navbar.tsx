@@ -26,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MegaMenu } from '@/components/layout/mega-menu';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { NotificationBell } from '@/components/notification-bell';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -107,6 +108,7 @@ export function Navbar() {
           <div className="flex-1 max-w-md ml-auto">
             <AutocompleteSearch />
           </div>
+          <LanguageSwitcher />
           {loading ? (
               <Skeleton className="h-9 w-9 rounded-full" />
             ) : user ? (
