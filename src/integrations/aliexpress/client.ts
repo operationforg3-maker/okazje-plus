@@ -271,7 +271,9 @@ export class AliExpressClient {
       const responseKey = Object.keys(result)[0]; // e.g., 'aliexpress_affiliate_product_query_response'
       const responseData = result[responseKey];
       
-      if (!responseData || responseData.resp_result?.resp_code !== '200') {
+      // Check response code (can be string "200" or number 200)
+      const respCode = responseData?.resp_result?.resp_code;
+      if (!responseData || (respCode !== 200 && respCode !== '200')) {
         logger.warn('TOP API returned error', { responseData });
         return {
           success: false,
@@ -286,10 +288,14 @@ export class AliExpressClient {
         };
       }
       
-      const resultData = JSON.parse(responseData.resp_result.result);
-      const products = resultData.products?.product || [];
+      // Response structure: { resp_result: { result: { products: [...], total_record_count: N } } }
+      const resultData = responseData.resp_result.result;
+      const products = Array.isArray(resultData.products) ? resultData.products : [];
       
-      logger.info(`TOP API returned ${products.length} products`);
+      logger.info(`TOP API returned ${products.length} products`, { 
+        total: resultData.total_record_count,
+        page,
+      });
       
       // Transform products to our format
       const transformedProducts = products.map((p: any) => ({
