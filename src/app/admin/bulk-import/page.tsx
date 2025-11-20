@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
+import { auth } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Play, CheckCircle, XCircle, AlertCircle, Sparkles, Zap } from 'lucide-react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { Category } from '@/lib/types';
 
 interface CategoryConfig {
@@ -50,6 +51,7 @@ interface PreviewProduct {
 
 function BulkImportPage() {
   const { toast } = useToast();
+  // Note: useAuth() is provided by withAuth HOC wrapper, not needed here
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
 
   const [categoryConfigs, setCategoryConfigs] = useState<CategoryConfig[]>([]);
@@ -118,7 +120,11 @@ function BulkImportPage() {
 
     setLoading(true);
     try {
-      const token = await auth.currentUser?.getIdToken();
+      // Get Firebase token - user is guaranteed to be logged in by withAuth HOC
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) throw new Error('Brak zalogowanego użytkownika');
+      
+      const token = await firebaseUser.getIdToken();
       if (!token) throw new Error('Brak tokena autoryzacji');
 
       toast({
@@ -177,7 +183,11 @@ function BulkImportPage() {
 
     setImporting(true);
     try {
-      const token = await auth.currentUser?.getIdToken();
+      // Get Firebase token - user is guaranteed to be logged in by withAuth HOC
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) throw new Error('Brak zalogowanego użytkownika');
+      
+      const token = await firebaseUser.getIdToken();
       if (!token) throw new Error('Brak tokena');
 
       const response = await fetch('/api/admin/bulk-import/commit', {

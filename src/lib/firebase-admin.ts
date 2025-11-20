@@ -1,5 +1,6 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
@@ -51,4 +52,6 @@ adminDb.settings({
   ignoreUndefinedProperties: true,
 });
 
-export { adminDb, adminApp };
+const adminAuth = getAuth(adminApp);
+
+export { adminDb, adminApp, adminAuth };

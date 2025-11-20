@@ -6,8 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { adminApp } from '@/lib/firebase-admin';
+import { adminAuth, adminApp } from '@/lib/firebase-admin';
 import { runImport, IngestOptions } from '@/integrations/aliexpress/ingest';
 import { logger } from '@/lib/logging';
 
@@ -62,8 +61,7 @@ export async function POST(request: NextRequest) {
     
     let decodedToken;
     try {
-      const auth = getAuth(adminApp);
-      decodedToken = await auth.verifyIdToken(token);
+      decodedToken = await adminAuth.verifyIdToken(token);
     } catch (error) {
       logger.error('Token verification failed', { error });
       return NextResponse.json(

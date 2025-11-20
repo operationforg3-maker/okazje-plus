@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { AliExpressClient } from '@/integrations/aliexpress/client';
 import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.substring(7);
-    const decodedToken = await getAuth().verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     
     // TODO: Re-enable admin check after fixing Firestore Rules for Admin SDK
     // Check admin role
