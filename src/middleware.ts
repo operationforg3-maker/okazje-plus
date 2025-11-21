@@ -10,8 +10,6 @@ const intlMiddleware = createMiddleware({
   defaultLocale,
   // Require locale prefix always
   localePrefix: 'always',
-  // Force Polish for now regardless of Accept-Language
-  localeDetection: false,
 });
 
 export default function middleware(request: NextRequest) {
