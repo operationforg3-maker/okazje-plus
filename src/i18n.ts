@@ -1,24 +1,18 @@
 import {getRequestConfig} from 'next-intl/server';
-import {notFound} from 'next/navigation';
-
-// Supported locales
-export const locales = ['pl', 'en', 'de'] as const;
-export type Locale = (typeof locales)[number];
-
-// Default locale
-export const defaultLocale: Locale = 'pl';
+import {hasLocale} from 'next-intl';
+import {routing} from './i18n/routing';
 
 export default getRequestConfig(async ({requestLocale}) => {
   // Wait for the promise to resolve
-  let locale = await requestLocale;
+  const requested = await requestLocale;
   
-  // Provide a fallback locale if needed
-  if (!locale || !locales.includes(locale as Locale)) {
-    locale = defaultLocale;
-  }
+  // Validate and provide a fallback locale
+  const locale = hasLocale(routing.locales, requested)
+    ? requested
+    : routing.defaultLocale;
 
   return {
-    messages: (await import(`../messages/${locale}.json`)).default,
     locale,
+    messages: (await import(`../messages/${locale}.json`)).default,
   };
 });

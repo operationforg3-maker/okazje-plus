@@ -58,7 +58,7 @@ export default async function RootLayout({
   const { locale } = await params;
   // Wymuszamy polskie tłumaczenia niezależnie od parametru, dopóki EN/DE nie gotowe
   const effectiveLocale = 'pl';
-  const messages = await getMessages({locale: effectiveLocale});
+  const messages = await getMessages();
   
   return (
   <html lang={effectiveLocale} suppressHydrationWarning>
