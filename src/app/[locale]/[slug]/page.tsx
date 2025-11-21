@@ -4,13 +4,13 @@ import { WheelOfFortuneClient } from "@/components/wheel-of-fortune-client";
 import { headers } from "next/headers";
 
 interface SecretPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export default async function SecretPage({ params }: SecretPageProps) {
-  const { slug } = params;
+  const { slug } = await params;
 
   // Fetch secret page
   const page = await getSecretPageBySlug(slug);

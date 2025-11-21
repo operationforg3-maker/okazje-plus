@@ -53,9 +53,9 @@ export default async function RootLayout({
   params,
 }: Readonly<{
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }>) {
-  const locale = params.locale;
+  const { locale } = await params;
   // Wymuszamy polskie tłumaczenia niezależnie od parametru, dopóki EN/DE nie gotowe
   const effectiveLocale = 'pl';
   const messages = await getMessages({locale: effectiveLocale});
@@ -78,11 +78,11 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        {/* hreflang alternate links (only PL live) */}
+        <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="pl" />
+        <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="x-default" />
       </head>
       <body className={cn('min-h-screen bg-background font-body antialiased')}>
-        {/* hreflang alternate links (only PL live) */}
-  <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="pl" />
-  <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="x-default" />
   <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
             <ConditionalNav>{children}</ConditionalNav>
