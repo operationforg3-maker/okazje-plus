@@ -116,8 +116,8 @@ export default function Home() {
 
   const formatRelease = (d: Date) => {
     try {
-      const datePart = d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
-      const timePart = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      const datePart = d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Warsaw' });
+      const timePart = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw' });
       // Kapitalizacja pierwszej litery dnia tygodnia
       const cap = datePart.charAt(0).toUpperCase() + datePart.slice(1);
       return `${cap} · ${timePart}`;
