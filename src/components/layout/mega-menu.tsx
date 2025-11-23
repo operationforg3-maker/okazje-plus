@@ -26,6 +26,7 @@ import {
   getHotDealsByCategory,
 } from "@/lib/data";
 import { Category, Deal, Product } from "@/lib/types";
+import { FEATURES } from "@/lib/config";
 
 const priceFormatter = new Intl.NumberFormat("pl-PL", {
   style: "currency",
@@ -588,8 +589,8 @@ export function MegaMenu() {
                           <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                         </Link>
 
-                        {/* Szybkie skróty: Okazje i Gorące w tej podkategorii */}
-                        <div className="pl-6 pt-1 flex items-center gap-2 text-xs">
+                        {/* Szybkie skróty do okazji w podkategorii */}
+                        <div className="pl-6 pt-1 flex flex-wrap items-center gap-2 text-xs">
                           <Link
                             href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}`}
                             className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
@@ -602,6 +603,34 @@ export function MegaMenu() {
                           >
                             🔥 Gorące
                           </Link>
+                          {FEATURES.MEGA_MENU_FILTER_SHORTCUTS && (
+                            <>
+                              <Link
+                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&sort=newest`}
+                                className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
+                              >
+                                🕒 Nowe
+                              </Link>
+                              <Link
+                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&type=coupon`}
+                                className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
+                              >
+                                🎟️ Kupony
+                              </Link>
+                              <Link
+                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&type=freebie`}
+                                className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
+                              >
+                                🆓 Za darmo
+                              </Link>
+                              <Link
+                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&freeShipping=1`}
+                                className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
+                              >
+                                🚚 Darmowa dostawa
+                              </Link>
+                            </>
+                          )}
                         </div>
 
                         {/* Sub-subkategorie (jeśli istnieją) */}

@@ -22,10 +22,12 @@ import { useAuth } from '@/lib/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { FEATURES } from '@/lib/config';
 // Umożliwiamy nawigację przez query params z mega‑menu (mainCategory, subCategory, sort, q)
 
 type ViewMode = 'list' | 'grid';
 type SortOption = 'hottest' | 'newest' | 'price_asc' | 'price_desc' | 'discount';
+type DealTypeFilter = 'all' | 'sale' | 'coupon' | 'freebie' | 'pricing-error' | 'cashback' | 'bundle';
 
 interface SavedFilter {
   name: string;
@@ -53,6 +55,7 @@ export default function DealsPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [sortBy, setSortBy] = useState<SortOption>('hottest');
+  const [typeFilter, setTypeFilter] = useState<DealTypeFilter>('all');
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
@@ -134,10 +137,23 @@ export default function DealsPage() {
       const subParam = params.get('subCategory');
       const sortParam = params.get('sort');
       const qParam = params.get('q');
+      const typeParam = params.get('type');
+      const freeShippingParam = params.get('freeShipping');
 
       if (qParam) setSearchTerm(qParam);
       if (sortParam === 'newest' || sortParam === 'hottest' || sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'discount') {
         setSortBy(sortParam as any);
+      }
+      // Ustawienie filtra typu okazji z URL (np. type=coupon|freebie|cashback)
+      if (FEATURES.DEALS_TYPE_FILTER && typeParam) {
+        const allowed = new Set<DealTypeFilter>(['all','sale','coupon','freebie','pricing-error','cashback','bundle']);
+        if (allowed.has(typeParam as DealTypeFilter)) {
+          setTypeFilter(typeParam as DealTypeFilter);
+        }
+      }
+      // Ustawienie darmowej dostawy z URL (freeShipping=1)
+      if (FEATURES.DEALS_FREE_SHIPPING_FILTER && freeShippingParam === '1') {
+        setQuickFilters(prev => ({ ...prev, freeShipping: true }));
       }
 
       if (mainParam) {
@@ -269,6 +285,10 @@ export default function DealsPage() {
   // Sortowanie i filtrowanie lokalne (po pobraniu z API)
   const filteredAndSortedDeals = deals
     .filter(deal => {
+      // Typ okazji (z URL / UI)
+      if (FEATURES.DEALS_TYPE_FILTER && typeFilter !== 'all') {
+        if ((deal.dealType || 'sale') !== typeFilter) return false;
+      }
       // Quick filters
       if (quickFilters.freeShipping && deal.shippingCost !== 0) return false;
       if (quickFilters.bigDiscount && deal.originalPrice) {
@@ -661,6 +681,24 @@ export default function DealsPage() {
                     <Truck className="h-3 w-3 mr-1" />
                     Darmowa dostawa
                   </Badge>
+                  {FEATURES.DEALS_TYPE_FILTER && (
+                    <Badge
+                      variant={typeFilter === 'coupon' ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setTypeFilter(prev => prev === 'coupon' ? 'all' as DealTypeFilter : 'coupon')}
+                    >
+                      🎟️ Tylko kupony
+                    </Badge>
+                  )}
+                  {FEATURES.DEALS_TYPE_FILTER && (
+                    <Badge
+                      variant={typeFilter === 'freebie' ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setTypeFilter(prev => prev === 'freebie' ? 'all' as DealTypeFilter : 'freebie')}
+                    >
+                      🆓 Gratisy
+                    </Badge>
+                  )}
                   <Badge
                     variant={quickFilters.bigDiscount ? 'default' : 'outline'}
                     className="cursor-pointer hover:bg-primary/10 transition-colors"
