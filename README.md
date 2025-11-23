@@ -10,7 +10,26 @@ Najważniejsze:
 - Optymalizacje: `docs/OPTIMIZATION_SUMMARY.md`
 - Cache & unieważnianie: `docs/CACHE_INTEGRATION_GUIDE.md`
 - Multi-marketplace: `docs/MILESTONE_4_README.md`
+- **Notifications & Price Alerts (M5)**: `docs/M5_COMPLETION_SUMMARY.md`
 - Aktualizacje inkrementalne: `docs/updates/*`
+
+## ✨ Nowe funkcje (M5 - 23.11.2025)
+
+### 🔔 System Powiadomień
+- **In-app notifications**: dropdown w navbar z real-time updates
+- **Email notifications**: integracja SendGrid dla wszystkich typów powiadomień
+- **Auto-triggers**: Cloud Functions automatycznie powiadamiają o odpowiedziach na komentarze
+
+### 💰 Price Monitoring & Alerts
+- **Alerty cenowe**: użytkownicy mogą ustawić powiadomienia przy spadku ceny
+- **Scheduled monitoring**: Cloud Function sprawdza ceny co godzinę
+- **Historia cen**: wykresy zmian w czasie (30 dni)
+- **Email notifications**: automatyczne powiadomienia gdy cena spadnie
+
+### 💬 Comment Enhancements
+- **Edycja komentarzy**: inline editing z oznaczeniem "(edytowano)"
+- **Spam protection**: 5-sekundowy cooldown między komentarzami
+- **Threading**: odpowiedzi na komentarze z powiadomieniami
 
 ## 🚀 Szybki start (skrót)
 ```bash
@@ -21,7 +40,32 @@ npm run dev          # Next.js (port 9002)
 npm run genkit:dev   # Genkit UI
 ```
 
-Dodaj `.env.local` (Firebase `NEXT_PUBLIC_FIREBASE_*`, opcjonalnie Typesense, sekrety AliExpress lokalnie bez prefixu `NEXT_PUBLIC_`).
+### Environment Variables
+Dodaj `.env.local`:
+
+```bash
+# Firebase (wymagane)
+NEXT_PUBLIC_FIREBASE_API_KEY=xxx
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=xxx
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=xxx
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=xxx
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=xxx
+NEXT_PUBLIC_FIREBASE_APP_ID=xxx
+
+# SendGrid Email (opcjonalne - dla powiadomień email)
+SENDGRID_API_KEY=SG.xxx
+SENDGRID_FROM_EMAIL=noreply@okazje.plus
+
+# Typesense Search (opcjonalne)
+NEXT_PUBLIC_TYPESENSE_HOST=xxx
+NEXT_PUBLIC_TYPESENSE_PORT=443
+NEXT_PUBLIC_TYPESENSE_PROTOCOL=https
+NEXT_PUBLIC_TYPESENSE_API_KEY=xxx
+
+# AliExpress Integration (opcjonalne)
+ALIEXPRESS_APP_KEY=xxx
+ALIEXPRESS_APP_SECRET=xxx
+```
 
 ## � Kluczowe ścieżki
 `src/lib/types.ts` (SSOT typów)  

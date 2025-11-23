@@ -62,6 +62,11 @@ const pathNames: Record<string, string> = {
   '/admin/users': 'Użytkownicy',
   '/admin/secret-pages': 'Tajne strony',
   '/admin/settings': 'Ustawienia',
+  '/admin/duplicates': 'Duplikaty (M2)',
+  '/admin/settings/oauth': 'OAuth Tokens (M2)',
+  '/admin/marketplaces': 'Marketplace (M4)',
+  '/admin/comparison': 'Porównanie cen (M4)',
+  '/admin/category-mappings': 'Mapowanie kategorii (M4)',
 };
 
 export default function AdminLayout({
@@ -346,6 +351,61 @@ export default function AdminLayout({
                           >
                             <Link href="/admin/m3-tools">
                               <span>M3 Tools</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/duplicates')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/duplicates">
+                              <span>Duplikaty (M2)</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/settings/oauth')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/settings/oauth">
+                              <span>OAuth Tokens (M2)</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/marketplaces')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/marketplaces">
+                              <span>Marketplaces (M4)</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/comparison')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/comparison">
+                              <span>Porównanie cen (M4)</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isActive('/admin/category-mappings')}
+                            className="data-[active=true]:bg-primary data-[active=true]:text-primary-foreground text-sm"
+                          >
+                            <Link href="/admin/category-mappings">
+                              <span>Mapowanie kategorii (M4)</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

@@ -41,10 +41,44 @@ Polska platforma agregująca okazje i produkty, inspirowana serwisami Pepper.com
 - Statystyki aktywności
 
 ### 💬 System Komentarzy
-- Komentowanie okazji przez zalogowanych użytkowników
+- Komentowanie okazji i produktów przez zalogowanych użytkowników
+- **Threading**: odpowiedzi na komentarze (parentId)
+- **Edycja**: użytkownicy mogą edytować swoje komentarze z oznaczeniem "edited"
+- **Spam protection**: 5-sekundowy cooldown między komentarzami
 - Licznik komentarzy aktualizowany automatycznie przez Cloud Function
 - Sortowanie komentarzy chronologicznie
 - Walidacja autoryzacji przed dodaniem komentarza
+
+### 🔔 System Powiadomień
+- **In-app notifications**: dropdown w navbar z badge pokazującym liczbę nieprzeczytanych
+- **Email notifications**: integracja z SendGrid dla powiadomień email
+- **Typy powiadomień**: 
+  - `comment_reply` - odpowiedź na komentarz użytkownika
+  - `system` - alerty cenowe i powiadomienia systemowe
+  - `new_deal` - nowa okazja od obserwowanego użytkownika
+  - `deal_approved` / `deal_rejected` - moderacja okazji użytkownika
+- **Cloud Functions**: automatyczne triggery przy tworzeniu komentarzy
+- Polling co 30s dla aktualizacji w czasie rzeczywistym
+- Oznaczanie jako przeczytane po kliknięciu
+
+### 💰 Price Monitoring & Alerts
+- **Price Snapshots**: automatyczne zapisywanie historii cen
+- **Price History**: wykresy zmian cen w czasie (30 dni)
+- **User Alerts**: użytkownicy mogą ustawić alerty cenowe
+  - `target_price` - powiadomienie przy osiągnięciu ceny docelowej
+  - `price_drop` - powiadomienie przy spadku o X%
+  - `back_in_stock` - powiadomienie gdy produkt wraca na stan
+  - `coupon_expiry` - przypomnienie przed wygaśnięciem kuponu
+- **Scheduled Monitoring**: Cloud Function uruchamiana co godzinę
+- **Notifications**: automatyczne powiadomienia in-app + email przy triggered alerts
+- **UI Components**: PriceAlertButton, PriceHistoryChart
+
+### 📝 Pre-registration System
+- **Beta Access**: system zaproszeń na zamknięte beta
+- **JWT Tokens**: bezpieczne tokeny aktywacyjne ważne 7 dni
+- **Email Invitations**: automatyczne wysyłanie zaproszeń przez SendGrid
+- **Landing Page**: countdown do public release z dynamicznym formatowaniem dat
+- **Timezone**: Europe/Warsaw dla konsystencji SSR/CSR
 
 ### ⚙️ Panel Administracyjny
 - Bezpieczny interface dla adminów

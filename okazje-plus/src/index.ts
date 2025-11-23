@@ -811,7 +811,10 @@ export const priceMonitor = onSchedule(
         const alertType: string = alert.alertType;
 
         // Pobierz bieżącą cenę z zasobu (products/deals)
-        const itemRef = db.collection(itemType === "product" ? "products" : "deals").doc(itemId);
+        const collName = itemType === "product" ?
+          "products" :
+          "deals";
+        const itemRef = db.collection(collName).doc(itemId);
         const itemDoc = await itemRef.get();
         if (!itemDoc.exists) continue;
         const item = itemDoc.data() as any;
@@ -820,18 +823,29 @@ export const priceMonitor = onSchedule(
 
         let shouldTrigger = false;
 
-        if (alertType === "target_price" && typeof alert.targetPrice === "number") {
+        if (
+          alertType === "target_price" &&
+          typeof alert.targetPrice === "number"
+        ) {
           shouldTrigger = currentPrice <= alert.targetPrice;
-        } else if (alertType === "price_drop" && typeof alert.dropPercentage === "number") {
-          const base = alert.metadata?.currentPrice ?? item?.originalPrice ?? currentPrice;
+        } else if (
+          alertType === "price_drop" &&
+          typeof alert.dropPercentage === "number"
+        ) {
+          const base =
+            alert.metadata?.currentPrice ??
+            item?.originalPrice ??
+            currentPrice;
           if (typeof base === "number" && base > 0) {
             const drop = ((base - currentPrice) / base) * 100;
             shouldTrigger = drop >= alert.dropPercentage;
           }
         } else if (alertType === "back_in_stock") {
-          // Minimalna obsługa: jeśli availability nie jest 'out_of_stock'
-          const availability = item?.availability || alert?.metadata?.availability;
-          shouldTrigger = availability && availability !== "out_of_stock";
+          // Minimalna obsługa: jeśli availability != 'out_of_stock'
+          const availability =
+            item?.availability || alert?.metadata?.availability;
+          shouldTrigger =
+            availability && availability !== "out_of_stock";
         }
 
         if (!shouldTrigger) {
@@ -846,17 +860,19 @@ export const priceMonitor = onSchedule(
           notificationSent: true,
         });
 
-        // Utwórz notyfikację do kolekcji 'notifications' (używanej przez NotificationBell)
+        // Utwórz notyfikację do kolekcji 'notifications'
         const link = `/${itemType}s/${itemId}`;
-        const message = alertType === "target_price"
-          ? `Cena spadła do ${currentPrice} PLN (cel: ${alert.targetPrice} PLN)`
-          : `Cena spadła do ${currentPrice} PLN`;
+        const msgTpl =
+          alertType === "target_price" ?
+            `Cena spadła do ${currentPrice} PLN ` +
+            `(cel: ${alert.targetPrice} PLN)` :
+            `Cena spadła do ${currentPrice} PLN`;
 
         await db.collection("notifications").add({
           userId: alert.userId,
           type: "system",
           title: "Alert cenowy",
-          message,
+          message: msgTpl,
           link,
           itemId,
           itemType,
@@ -874,19 +890,27 @@ export const priceMonitor = onSchedule(
         if (apiKey) {
           try {
             sgMail.setApiKey(apiKey);
-            const userDoc = await db.collection("users").doc(alert.userId).get();
+            const userDoc =
+              await db.collection("users").doc(alert.userId).get();
             const email = (userDoc.data() as any)?.email;
             if (email) {
+              const fromEmail =
+                process.env.SENDGRID_FROM_EMAIL ||
+                "no-reply@okazjeplus.pl";
               await sgMail.send({
                 to: email,
-                from: process.env.SENDGRID_FROM_EMAIL || "no-reply@okazjeplus.pl",
+                from: fromEmail,
                 subject: "Alert cenowy – cena spadła",
-                text: `${message}. Zobacz: ${link}`,
-                html: `<p>${message}</p><p><a href="${link}">Przejdź do oferty</a></p>`,
+                text: `${msgTpl}. Zobacz: ${link}`,
+                html:
+                  `<p>${msgTpl}</p>` +
+                  `<p><a href="${link}">Przejdź do oferty</a></p>`,
               } as any);
             }
           } catch (e) {
-            logger.warn("SendGrid email failed", {error: (e as Error).message});
+            logger.warn("SendGrid email failed", {
+              error: (e as Error).message,
+            });
           }
         }
 
@@ -915,7 +939,11 @@ export const notifyOnDealCommentReply = onDocumentCreated(
     if (!data?.parentId) return; // tylko odpowiedzi
 
     const dealId = (event.params as any).dealId as string;
-    const parentRef = db.collection("deals").doc(dealId).collection("comments").doc(data.parentId);
+    const parentRef = db
+      .collection("deals")
+      .doc(dealId)
+      .collection("comments")
+      .doc(data.parentId);
     const parentDoc = await parentRef.get();
     if (!parentDoc.exists) return;
     const parent = parentDoc.data() as any;
@@ -923,11 +951,13 @@ export const notifyOnDealCommentReply = onDocumentCreated(
     if (!recipientUserId || recipientUserId === data.userId) return;
 
     const link = `/deals/${dealId}`;
+    const msg = data.content ||
+      "Ktoś odpowiedział na Twój komentarz";
     await db.collection("notifications").add({
       userId: recipientUserId,
       type: "comment_reply",
       title: "Nowa odpowiedź na Twój komentarz",
-      message: (data.content || "Ktoś odpowiedział na Twój komentarz").slice(0, 140),
+      message: msg.slice(0, 140),
       link,
       itemId: dealId,
       itemType: "deal",
@@ -951,7 +981,11 @@ export const notifyOnProductCommentReply = onDocumentCreated(
     if (!data?.parentId) return; // tylko odpowiedzi
 
     const productId = (event.params as any).productId as string;
-    const parentRef = db.collection("products").doc(productId).collection("comments").doc(data.parentId);
+    const parentRef = db
+      .collection("products")
+      .doc(productId)
+      .collection("comments")
+      .doc(data.parentId);
     const parentDoc = await parentRef.get();
     if (!parentDoc.exists) return;
     const parent = parentDoc.data() as any;
@@ -959,11 +993,13 @@ export const notifyOnProductCommentReply = onDocumentCreated(
     if (!recipientUserId || recipientUserId === data.userId) return;
 
     const link = `/products/${productId}`;
+    const msg = data.content ||
+      "Ktoś odpowiedział na Twój komentarz";
     await db.collection("notifications").add({
       userId: recipientUserId,
       type: "comment_reply",
       title: "Nowa odpowiedź na Twój komentarz",
-      message: (data.content || "Ktoś odpowiedział na Twój komentarz").slice(0, 140),
+      message: msg.slice(0, 140),
       link,
       itemId: productId,
       itemType: "product",
@@ -983,14 +1019,15 @@ export const notifyOnProductCommentReply = onDocumentCreated(
 
 /**
  * Gdy w kolekcji `notifications` pojawi się nowy dokument,
- * wyślij e-mail (o ile ustawione SENDGRID_API_KEY i SENDGRID_FROM_EMAIL).
- * Prosto mapujemy typy: comment_reply, system (alerty cenowe), deal_approved/rejected, new_deal.
+ * wyślij e-mail (jeśli SENDGRID_API_KEY i SENDGRID_FROM_EMAIL).
+ * Mapujemy typy: comment_reply, system, deal_approved/rejected.
  */
 export const sendEmailOnNotification = onDocumentCreated(
   "notifications/{notificationId}",
   async (event) => {
     const apiKey = process.env.SENDGRID_API_KEY;
-    const fromEmail = process.env.SENDGRID_FROM_EMAIL || "no-reply@okazjeplus.pl";
+    const fromEmail =
+      process.env.SENDGRID_FROM_EMAIL || "no-reply@okazjeplus.pl";
     if (!apiKey) return; // brak integracji
 
     const snap = event.data;
@@ -999,7 +1036,8 @@ export const sendEmailOnNotification = onDocumentCreated(
 
     try {
       // Pobierz e-mail użytkownika
-      const userDoc = await db.collection("users").doc(notif.userId).get();
+      const userDoc =
+        await db.collection("users").doc(notif.userId).get();
       const email = (userDoc.data() as any)?.email;
       if (!email) return;
 
@@ -1012,9 +1050,19 @@ export const sendEmailOnNotification = onDocumentCreated(
       };
 
       const subject = subjectMap[notif.type] || "Powiadomienie";
-      const link = notif.link || (notif.itemId && notif.itemType ? `/${notif.itemType}s/${notif.itemId}` : "https://okazjeplus.pl");
-      const text = `${notif.title || subject}\n\n${notif.message || "Masz nowe powiadomienie."}\n\nPrzejdź: ${link}`;
-      const html = `<h3>${notif.title || subject}</h3><p>${notif.message || "Masz nowe powiadomienie."}</p><p><a href="${link}">Przejdź do serwisu</a></p>`;
+      const linkDef =
+        notif.link ||
+        (notif.itemId && notif.itemType ?
+          `/${notif.itemType}s/${notif.itemId}` :
+          "https://okazjeplus.pl");
+      const msgText = notif.message || "Masz nowe powiadomienie.";
+      const titleText = notif.title || subject;
+      const text =
+        `${titleText}\n\n${msgText}\n\nPrzejdź: ${linkDef}`;
+      const html =
+        `<h2>${titleText}</h2>` +
+        `<p>${msgText}</p>` +
+        `<p><a href="${linkDef}">Zobacz więcej</a></p>`;
 
       sgMail.setApiKey(apiKey);
       await sgMail.send({
@@ -1025,7 +1073,9 @@ export const sendEmailOnNotification = onDocumentCreated(
         html,
       } as any);
     } catch (e) {
-      logger.warn("sendEmailOnNotification failed", { error: (e as Error).message });
+      logger.warn("sendEmailOnNotification failed", {
+        error: (e as Error).message,
+      });
     }
   }
 );
