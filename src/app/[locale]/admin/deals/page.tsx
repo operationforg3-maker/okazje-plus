@@ -30,7 +30,7 @@ import {
 import { getHotDeals, getDealsForAdmin } from '@/lib/data';
 import { Deal } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download, AlertTriangle, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { DealForm } from '@/components/admin/deal-form';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -142,6 +142,44 @@ export default function AdminDealsPage() {
     setIsEditDialogOpen(false);
     setEditingDeal(null);
     fetchDeals();
+  };
+
+  const handleAINormalize = async (deal: Deal) => {
+    try {
+      toast({ title: 'AI Normalization', description: 'Normalizacja tytułu w toku...' });
+      
+      const res = await fetch('/api/admin/ai/enhance-deal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          dealId: deal.id,
+          operations: ['normalize-title']
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.error || 'Błąd AI normalization');
+      }
+      
+      if (data.operations?.['normalize-title']?.success) {
+        toast({ 
+          title: 'AI Normalization zakończone', 
+          description: `Nowy tytuł: ${data.operations['normalize-title'].normalizedTitle}` 
+        });
+        fetchDeals(); // Odśwież listę
+      } else {
+        throw new Error(data.operations?.['normalize-title']?.error || 'AI normalization failed');
+      }
+    } catch (error) {
+      console.error('AI normalize failed:', error);
+      toast({ 
+        title: 'Błąd', 
+        description: error instanceof Error ? error.message : 'AI normalization nie powiodło się',
+        variant: 'destructive' 
+      });
+    }
   };
 
   const handleExport = () => {
@@ -349,6 +387,10 @@ export default function AdminDealsPage() {
                           <DropdownMenuItem onClick={() => handleEdit(deal)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edytuj
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleAINormalize(deal)}>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Popraw tytuł AI
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => setDeletingDeal(deal)}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -43,6 +44,7 @@ interface DealFormData {
 export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [useAI, setUseAI] = useState(false); // AI enhancement toggle
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<string>('');
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -118,6 +120,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
     try {
       const dealData = {
         ...data,
+        useAI, // Wyślij informację o użyciu AI
         temperature: deal?.temperature || 0,
         commentsCount: deal?.commentsCount || 0,
         voteCount: deal?.voteCount || 0,
@@ -167,6 +170,35 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* AI Enhancement Toggle */}
+      {!deal && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              🤖 AI Enhancement
+            </CardTitle>
+            <CardDescription>
+              Automatyczne ulepszanie treści przez sztuczną inteligencję
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="useAI"
+                checked={useAI}
+                onCheckedChange={(checked) => setUseAI(checked as boolean)}
+              />
+              <Label htmlFor="useAI" className="cursor-pointer">
+                Użyj AI do normalizacji tytułu
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              AI poprawi tytuł okazji, usuwając zbędne emoji i znaki specjalne
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle>Podstawowe informacje</CardTitle>

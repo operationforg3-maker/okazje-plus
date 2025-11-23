@@ -31,7 +31,7 @@ import { getRecommendedProducts, getProductsForAdmin } from '@/lib/data';
 import { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, Download, AlertTriangle, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { ProductForm } from '@/components/admin/product-form';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
@@ -154,6 +154,44 @@ export default function AdminProductsPage() {
     } catch (error) {
       console.error('Create deal from product failed:', error);
       toast({ title: 'Błąd', description: 'Nie udało się utworzyć okazji', variant: 'destructive' });
+    }
+  };
+
+  const handleAITranslate = async (product: Product) => {
+    try {
+      toast({ title: 'AI Translation', description: 'Tłumaczenie w toku...' });
+      
+      const res = await fetch('/api/admin/ai/enhance-product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          productId: product.id,
+          operations: ['translate']
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.error || 'Błąd AI translation');
+      }
+      
+      if (data.operations?.translate?.success) {
+        toast({ 
+          title: 'AI Translation zakończone', 
+          description: 'Produkt przetłumaczony na EN i DE' 
+        });
+        fetchProducts(); // Odśwież listę
+      } else {
+        throw new Error(data.operations?.translate?.error || 'AI translation failed');
+      }
+    } catch (error) {
+      console.error('AI translate failed:', error);
+      toast({ 
+        title: 'Błąd', 
+        description: error instanceof Error ? error.message : 'AI translation nie powiodło się',
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -360,6 +398,10 @@ export default function AdminProductsPage() {
                           <DropdownMenuItem onClick={() => handleEdit(product)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edytuj
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleAITranslate(product)}>
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            Przetłumacz AI
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleCreateDealFromProduct(product)}>
                             <PlusCircle className="mr-2 h-4 w-4" />

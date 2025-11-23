@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin';
 import { z } from 'zod';
+import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 
 // Schemat walidacji danych okazji (minimum dla draftu)
 const dealSchema = z.object({
@@ -58,11 +59,26 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data;
 
+    // AI Enhancement (opcjonalne - tylko jeśli useAI=true)
+    let normalizedTitle = data.title;
+    if (raw.useAI === true) {
+      try {
+        console.log('[POST /api/admin/deals] 🤖 Running AI title normalization...');
+        const titleResult = await aiNormalizeTitlePL({ title: data.title });
+        normalizedTitle = titleResult.normalizedTitle;
+        console.log('[POST /api/admin/deals] ✅ AI normalized title:', normalizedTitle);
+      } catch (aiError) {
+        console.error('[POST /api/admin/deals] ⚠️ AI normalization failed:', aiError);
+        // Kontynuuj z oryginalnym tytułem
+      }
+    }
+
     // Konstruujemy dokument zgodny z rules (draft)
     const dealDoc = {
       ...data,
+      title: normalizedTitle, // Użyj znormalizowanego tytułu jeśli AI było użyte
       ...baseDraftFields(),
-      imageHint: data.title,
+      imageHint: normalizedTitle,
       category: data.mainCategorySlug, // kompatybilność legacy
       postedBy: decoded.uid,
       postedAt: new Date().toISOString(),
