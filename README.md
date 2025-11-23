@@ -52,6 +52,10 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=xxx
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=xxx
 NEXT_PUBLIC_FIREBASE_APP_ID=xxx
 
+# Gemini AI (wymagane dla AI flows - bulk import, tłumaczenia)
+# Pobierz klucz z: https://aistudio.google.com/apikey
+GEMINI_API_KEY=AIza...
+
 # SendGrid Email (opcjonalne - dla powiadomień email)
 SENDGRID_API_KEY=SG.xxx
 SENDGRID_FROM_EMAIL=noreply@okazje.plus
