@@ -114,6 +114,18 @@ export default function Home() {
   const spotsLeft = Math.max(0, 5000 - currentCount);
   const pioneerSpotsLeft = Math.max(0, 100 - currentCount);
 
+  const formatRelease = (d: Date) => {
+    try {
+      const datePart = d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+      const timePart = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+      // Kapitalizacja pierwszej litery dnia tygodnia
+      const cap = datePart.charAt(0).toUpperCase() + datePart.slice(1);
+      return `${cap} · ${timePart}`;
+    } catch {
+      return '';
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary/5 via-accent/5 to-background">
       <div className="flex-1">
@@ -148,8 +160,8 @@ export default function Home() {
                       <Flame className="h-5 w-5" />
                       <span className="font-semibold uppercase tracking-wide">Beta Release</span>
                     </div>
-                    <p className="text-2xl md:text-3xl font-bold font-headline">
-                      Środa, 20 listopada · 10:00
+                    <p className="text-2xl md:text-3xl font-bold font-headline" suppressHydrationWarning>
+                      {formatRelease(BETA_RELEASE)}
                     </p>
                   </div>
                   <div className="flex gap-3">
@@ -180,8 +192,8 @@ export default function Home() {
                       <Zap className="h-5 w-5" />
                       <span className="font-semibold uppercase tracking-wide">Public Release</span>
                     </div>
-                    <p className="text-2xl md:text-3xl font-bold font-headline">
-                      Piątek, 21 listopada · 19:00
+                    <p className="text-2xl md:text-3xl font-bold font-headline" suppressHydrationWarning>
+                      {formatRelease(PUBLIC_RELEASE)}
                     </p>
                   </div>
                   <div className="flex gap-3">
