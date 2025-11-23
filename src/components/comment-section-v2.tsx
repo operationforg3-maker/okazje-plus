@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
-import { addComment, getComments } from '@/lib/data';
+import { addComment, getComments, updateComment } from '@/lib/data';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { Comment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,8 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState<Record<string, string>>({});
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState<Record<string, string>>({});
 
   // Sprawdź czy user jest adminem (prawdziwa rola z User doc)
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
@@ -192,6 +194,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
     const hasReplies = (comment.repliesCount || 0) > 0 || (comment.replies && comment.replies.length > 0);
     const isExpanded = expandedReplies.has(comment.id);
     const isReplying = replyingTo === comment.id;
+    const isEditing = editingId === comment.id;
 
     return (
       <div key={comment.id} className={level > 0 ? 'ml-8 mt-4' : ''}>
@@ -222,15 +225,44 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
                   <span className="text-xs text-muted-foreground italic">(edytowany)</span>
                 )}
               </div>
-              <div 
-                className="text-foreground mt-1 whitespace-pre-wrap break-words"
-                dangerouslySetInnerHTML={{ 
-                  __html: DOMPurify.sanitize(comment.content, {
-                    ALLOWED_TAGS: [], // Usuń wszystkie HTML tagi
-                    KEEP_CONTENT: true // Zachowaj text content
-                  })
-                }}
-              />
+              {!isEditing ? (
+                <div 
+                  className="text-foreground mt-1 whitespace-pre-wrap break-words"
+                  dangerouslySetInnerHTML={{ 
+                    __html: DOMPurify.sanitize(comment.content, {
+                      ALLOWED_TAGS: [],
+                      KEEP_CONTENT: true
+                    })
+                  }}
+                />
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <Textarea
+                    value={editContent[comment.id] ?? comment.content}
+                    onChange={(e) => setEditContent(prev => ({...prev, [comment.id]: e.target.value}))}
+                    className="min-h-[80px]"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        if (!user) return;
+                        const newVal = (editContent[comment.id] ?? '').trim();
+                        if (!newVal) return;
+                        try {
+                          await updateComment(collectionName, docId, comment.id, user.uid, newVal);
+                          setEditingId(null);
+                          setComments(await getComments(collectionName, docId, 100));
+                          toast.success('Komentarz zaktualizowany');
+                        } catch (e) {
+                          toast.error('Nie udało się zaktualizować komentarza');
+                        }
+                      }}
+                    >Zapisz</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>Anuluj</Button>
+                  </div>
+                </div>
+              )}
               
               {/* Actions */}
               <div className="flex items-center gap-3 mt-2">
@@ -243,6 +275,17 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
                   >
                     <Reply className="h-3 w-3 mr-1" />
                     Odpowiedz
+                  </Button>
+                )}
+
+                {user && user.uid === comment.userId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingId(isEditing ? null : comment.id)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    Edytuj
                   </Button>
                 )}
                 

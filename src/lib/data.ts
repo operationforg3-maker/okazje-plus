@@ -642,6 +642,29 @@ export async function getComments(collectionName: "products" | "deals", docId: s
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
 }
 
+/**
+ * Edycja własnego komentarza (ustawia edited + editedAt)
+ */
+export async function updateComment(
+  collectionName: "products" | "deals",
+  docId: string,
+  commentId: string,
+  userId: string,
+  content: string
+): Promise<void> {
+  const commentRef = doc(db, collectionName, docId, "comments", commentId);
+  const snap = await getDoc(commentRef);
+  if (!snap.exists()) throw new Error("Komentarz nie istnieje");
+  const data = snap.data() as Comment;
+  if (data.userId !== userId) throw new Error("Brak uprawnień do edycji");
+
+  await updateDoc(commentRef, {
+    content,
+    edited: true,
+    editedAt: new Date().toISOString(),
+  } as any);
+}
+
 // === SYSTEM OCEN PRODUKTÓW ===
 
 /**

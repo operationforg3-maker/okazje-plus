@@ -14,6 +14,7 @@ import {
 import * as logger from "firebase-functions/logger";
 import {
   onDocumentWritten,
+  onDocumentCreated,
   FirestoreEvent,
   Change,
 } from "firebase-functions/v2/firestore";
@@ -759,6 +760,220 @@ export const scheduleAliExpressSync = onSchedule(
       );
       throw error; // Re-throw to mark function as failed
     }
+  }
+);
+
+// ============================================
+// Price Alerts Monitor (Scheduled)
+// ============================================
+
+/**
+ * Scheduled function to monitor price alerts and send notifications
+ * Runs every hour in Europe/Warsaw timezone
+ */
+export const priceMonitor = onSchedule(
+  {
+    schedule: "0 * * * *", // co godzinę
+    timeZone: "Europe/Warsaw",
+    region: "europe-west1",
+    memory: "256MiB",
+    timeoutSeconds: 300,
+  },
+  async () => {
+    logger.info("Running priceMonitor schedule");
+    const nowIso = new Date().toISOString();
+
+    // Pobierz aktywne alerty (nieprzeterminowane)
+    const alertsSnap = await db
+      .collection("price_alerts")
+      .where("status", "==", "active")
+      .get();
+
+    if (alertsSnap.empty) {
+      logger.info("No active price alerts");
+      return;
+    }
+
+    let processed = 0;
+    let triggered = 0;
+
+    for (const docSnap of alertsSnap.docs) {
+      try {
+        const alert = docSnap.data() as any;
+
+        // Pomiń wygasłe
+        if (alert.expiresAt && alert.expiresAt < nowIso) {
+          continue;
+        }
+
+        const itemId: string = alert.itemId;
+        const itemType: "product" | "deal" = alert.itemType;
+        const alertType: string = alert.alertType;
+
+        // Pobierz bieżącą cenę z zasobu (products/deals)
+        const itemRef = db.collection(itemType === "product" ? "products" : "deals").doc(itemId);
+        const itemDoc = await itemRef.get();
+        if (!itemDoc.exists) continue;
+        const item = itemDoc.data() as any;
+        const currentPrice: number | undefined = item?.price;
+        if (typeof currentPrice !== "number") continue;
+
+        let shouldTrigger = false;
+
+        if (alertType === "target_price" && typeof alert.targetPrice === "number") {
+          shouldTrigger = currentPrice <= alert.targetPrice;
+        } else if (alertType === "price_drop" && typeof alert.dropPercentage === "number") {
+          const base = alert.metadata?.currentPrice ?? item?.originalPrice ?? currentPrice;
+          if (typeof base === "number" && base > 0) {
+            const drop = ((base - currentPrice) / base) * 100;
+            shouldTrigger = drop >= alert.dropPercentage;
+          }
+        } else if (alertType === "back_in_stock") {
+          // Minimalna obsługa: jeśli availability nie jest 'out_of_stock'
+          const availability = item?.availability || alert?.metadata?.availability;
+          shouldTrigger = availability && availability !== "out_of_stock";
+        }
+
+        if (!shouldTrigger) {
+          processed++;
+          continue;
+        }
+
+        // Oznacz alert jako wyzwolony
+        await docSnap.ref.update({
+          status: "triggered",
+          triggeredAt: nowIso,
+          notificationSent: true,
+        });
+
+        // Utwórz notyfikację do kolekcji 'notifications' (używanej przez NotificationBell)
+        const link = `/${itemType}s/${itemId}`;
+        const message = alertType === "target_price"
+          ? `Cena spadła do ${currentPrice} PLN (cel: ${alert.targetPrice} PLN)`
+          : `Cena spadła do ${currentPrice} PLN`;
+
+        await db.collection("notifications").add({
+          userId: alert.userId,
+          type: "system",
+          title: "Alert cenowy",
+          message,
+          link,
+          itemId,
+          itemType,
+          read: false,
+          createdAt: Timestamp.now(),
+          metadata: {
+            alertType,
+            currentPrice,
+            targetPrice: alert.targetPrice ?? null,
+          },
+        });
+
+        // Opcjonalnie e-mail (SendGrid) jeśli dostępny klucz
+        const apiKey = process.env.SENDGRID_API_KEY;
+        if (apiKey) {
+          try {
+            sgMail.setApiKey(apiKey);
+            const userDoc = await db.collection("users").doc(alert.userId).get();
+            const email = (userDoc.data() as any)?.email;
+            if (email) {
+              await sgMail.send({
+                to: email,
+                from: process.env.SENDGRID_FROM_EMAIL || "no-reply@okazjeplus.pl",
+                subject: "Alert cenowy – cena spadła",
+                text: `${message}. Zobacz: ${link}`,
+                html: `<p>${message}</p><p><a href="${link}">Przejdź do oferty</a></p>`,
+              } as any);
+            }
+          } catch (e) {
+            logger.warn("SendGrid email failed", {error: (e as Error).message});
+          }
+        }
+
+        triggered++;
+        processed++;
+      } catch (e) {
+        logger.error("priceMonitor item failed", {error: (e as Error).message});
+      }
+    }
+
+    logger.info("priceMonitor completed", {processed, triggered});
+  }
+);
+
+// ============================================
+// Notifications: comment replies
+// ============================================
+
+// Deals: reply notification
+export const notifyOnDealCommentReply = onDocumentCreated(
+  "deals/{dealId}/comments/{commentId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const data = snap.data() as any;
+    if (!data?.parentId) return; // tylko odpowiedzi
+
+    const dealId = (event.params as any).dealId as string;
+    const parentRef = db.collection("deals").doc(dealId).collection("comments").doc(data.parentId);
+    const parentDoc = await parentRef.get();
+    if (!parentDoc.exists) return;
+    const parent = parentDoc.data() as any;
+    const recipientUserId = parent.userId;
+    if (!recipientUserId || recipientUserId === data.userId) return;
+
+    const link = `/deals/${dealId}`;
+    await db.collection("notifications").add({
+      userId: recipientUserId,
+      type: "comment_reply",
+      title: "Nowa odpowiedź na Twój komentarz",
+      message: (data.content || "Ktoś odpowiedział na Twój komentarz").slice(0, 140),
+      link,
+      itemId: dealId,
+      itemType: "deal",
+      read: false,
+      createdAt: Timestamp.now(),
+      metadata: {
+        commentId: snap.id,
+        parentId: data.parentId,
+      },
+    });
+  }
+);
+
+// Products: reply notification
+export const notifyOnProductCommentReply = onDocumentCreated(
+  "products/{productId}/comments/{commentId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const data = snap.data() as any;
+    if (!data?.parentId) return; // tylko odpowiedzi
+
+    const productId = (event.params as any).productId as string;
+    const parentRef = db.collection("products").doc(productId).collection("comments").doc(data.parentId);
+    const parentDoc = await parentRef.get();
+    if (!parentDoc.exists) return;
+    const parent = parentDoc.data() as any;
+    const recipientUserId = parent.userId;
+    if (!recipientUserId || recipientUserId === data.userId) return;
+
+    const link = `/products/${productId}`;
+    await db.collection("notifications").add({
+      userId: recipientUserId,
+      type: "comment_reply",
+      title: "Nowa odpowiedź na Twój komentarz",
+      message: (data.content || "Ktoś odpowiedział na Twój komentarz").slice(0, 140),
+      link,
+      itemId: productId,
+      itemType: "product",
+      read: false,
+      createdAt: Timestamp.now(),
+      metadata: {
+        commentId: snap.id,
+        parentId: data.parentId,
+      },
+    });
   }
 );
 
