@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
+import { RatingBar } from './rating-bar';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
 
@@ -39,6 +40,9 @@ function getRelativeTime(isoDate: string): string {
 }
 
 export default function DealCard({ deal }: DealCardProps) {
+  // TODO: pobierz powiązany produkt jeśli istnieje (np. z cache lub props)
+  // Przykład: const product = useProductById(deal.linkedProductIds?.[0]);
+  const product = null; // placeholder
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
@@ -202,6 +206,12 @@ export default function DealCard({ deal }: DealCardProps) {
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
     >
       <div className="relative overflow-hidden">
+        {/* Pasek ocen produktu jeśli powiązany */}
+        {product && product.ratingSources && (
+          <div className="absolute left-1.5 top-1.5 z-10">
+            <RatingBar users={product.ratingSources.users} editorial={product.ratingSources.editorial} external={product.ratingSources.external} />
+          </div>
+        )}
         <Image
           src={deal.image}
           alt={deal.title}

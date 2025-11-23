@@ -1,9 +1,17 @@
+        {/* Parametry/specyfikacja produktu (TODO: rozwinąć na podstawie danych) */}
+        {/*
+        <div className="mt-2 text-xs text-muted-foreground">
+          <span>Parametry: ...</span>
+        </div>
+        */}
+import { ProductGallery } from './product-gallery';
 "use client";
 
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split } from 'lucide-react';
+import { RatingBar } from './rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -41,23 +49,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     ? Math.round(100 - (product.price / (product as any).originalPrice) * 100)
     : null;
   const categoryBadge = product.subCategorySlug || product.mainCategorySlug || product.category;
-  // Rozdzielone źródła ocen
-  const externalAvg = product.ratingSources?.external?.average;
-  const externalCount = product.ratingSources?.external?.count;
-  const usersAvg = product.ratingSources?.users?.average;
-  const usersCount = product.ratingSources?.users?.count;
-  const editorialAvg = product.ratingSources?.editorial?.average;
-  // Wylicz główną wyświetlaną wartość (preferujemy oceny użytkowników > redakcja > zewnętrzne)
-  const avgRating = typeof usersAvg === 'number' && usersCount && usersCount > 0
-    ? usersAvg
-    : typeof editorialAvg === 'number'
-      ? editorialAvg
-      : typeof externalAvg === 'number'
-        ? externalAvg
-        : product.ratingCard.average;
-  const ratingCount = usersCount && usersCount > 0
-    ? usersCount
-    : externalCount || product.ratingCard.count;
+  // Rozdzielone źródła ocen do RatingBar
+  const users = product.ratingSources?.users;
+  const editorial = product.ratingSources?.editorial;
+  const external = product.ratingSources?.external;
   const liveComments = useCommentsCount('products', product.id, (product as any).commentsCount);
 
   useEffect(() => {
@@ -79,6 +74,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       onClick={handleDetailClick}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
     >
+      {/* Galeria zdjęć produktu */}
+      <ProductGallery images={product.gallery ? product.gallery.map(img => ({ src: img.src, alt: img.alt })) : [{ src: product.image, alt: product.name }]} />
       <div className="relative overflow-hidden">
         <Image
           src={product.image}
@@ -88,12 +85,10 @@ export default function ProductCard({ product }: ProductCardProps) {
           height={400}
           className="aspect-[3/2] w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        {avgRating >= 4.5 && (
-          <Badge className="absolute right-2 top-2 bg-gradient-to-r from-yellow-500 to-amber-600 text-white shadow-lg">
-            <TrendingUp className="mr-1 h-3 w-3" />
-            Top Rated
-          </Badge>
-        )}
+        {/* Pasek ocen - zawsze widoczny */}
+        <div className="absolute left-1.5 top-1.5 z-10">
+          <RatingBar users={users} editorial={editorial} external={external} />
+        </div>
         <Button
           size="icon"
           variant="ghost"
@@ -137,54 +132,6 @@ export default function ProductCard({ product }: ProductCardProps) {
               {categoryBadge}
             </Badge>
           )}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1 text-sm font-semibold text-amber-500">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                  <span>{avgRating.toFixed(1)}</span>
-                  <span className="text-xs text-muted-foreground">({ratingCount})</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="space-y-2 p-3">
-                <p className="text-xs font-semibold flex items-center gap-1">
-                  <Split className="h-3 w-3" /> Źródła ocen
-                </p>
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span>Użytkownicy: {typeof usersAvg === 'number' ? usersAvg.toFixed(1) : '—'} {usersCount ? `(${usersCount})` : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-violet-400 text-violet-400" />
-                    <span>Redakcja: {typeof editorialAvg === 'number' ? editorialAvg.toFixed(1) : '—'}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-cyan-400 text-cyan-400" />
-                    <span>Zewnętrzne ({product.ratingSources?.external?.source || '—'}): {typeof externalAvg === 'number' ? externalAvg.toFixed(1) : '—'} {externalCount ? `(${externalCount})` : ''}</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span>Trwałość: {product.ratingCard.durability.toFixed(1)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span>Jakość/Cena: {product.ratingCard.valueForMoney.toFixed(1)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span>Łatwość: {product.ratingCard.easeOfUse.toFixed(1)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span>Funkcje: {product.ratingCard.versatility.toFixed(1)}</span>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
@@ -203,6 +150,16 @@ export default function ProductCard({ product }: ProductCardProps) {
           {typeof discount === 'number' && discount > 0 && (
             <Badge variant="destructive" className="ml-auto">-{discount}%</Badge>
           )}
+        </div>
+        {/* Parametry i wysyłka */}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {product.metadata?.shipping && (
+            <span>Dostawa: {product.metadata.shipping}</span>
+          )}
+          {typeof product.metadata?.orders === 'number' && (
+            <span>Zamówienia: {product.metadata.orders}</span>
+          )}
+          {/* Można dodać kolejne parametry: gwarancja, kraj wysyłki, itp. */}
         </div>
       </div>
       
