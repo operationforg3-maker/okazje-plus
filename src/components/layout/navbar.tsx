@@ -24,7 +24,6 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MegaMenu } from '@/components/layout/mega-menu';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { NotificationBell } from '@/components/notification-bell';
 import { LanguageSwitcher } from '@/components/language-switcher';
@@ -67,7 +66,7 @@ export function Navbar() {
             <div className="flex flex-col space-y-4 py-6">
               <Link href={`${prefix}/`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Strona główna</Link>
               <Link href={`${prefix}/deals`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Okazje</Link>
-              <Link href={`${prefix}/products`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Katalog</Link>
+              <Link href={`${prefix}/products`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Produkty</Link>
               <Link href={`${prefix}/forum`} className="text-lg font-medium" onClick={() => setIsOpen(false)}>Forum</Link>
             </div>
           </SheetContent>
@@ -98,13 +97,19 @@ export function Navbar() {
               </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
+              <Link href={`${prefix}/products`} legacyBehavior passHref>
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  Produkty
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
               <Link href={`${prefix}/forum`} legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Forum
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
-            <MegaMenu />
           </NavigationMenuList>
         </NavigationMenu>
 

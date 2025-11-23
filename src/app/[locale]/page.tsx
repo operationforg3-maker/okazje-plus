@@ -10,8 +10,8 @@ import { ShoppingBag, Flame, Users, Zap, Clock, Mail, CheckCircle2, Trophy, Rock
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 
-const BETA_RELEASE = new Date("2025-11-20T10:00:00+01:00");
-const PUBLIC_RELEASE = new Date("2025-11-21T19:00:00+01:00");
+const BETA_RELEASE = new Date("2025-12-10T10:00:00+01:00");
+const PUBLIC_RELEASE = new Date("2025-12-15T19:00:00+01:00");
 
 interface TimeLeft {
   days: number;
