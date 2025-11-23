@@ -864,6 +864,10 @@ export function MegaMenu() {
                         <span className="flex items-center gap-2"><Flame className="h-4 w-4" /> Powiadomienia</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </Link>
+                      <Link href="/leaderboard" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                        <span className="flex items-center gap-2">🏆 Ranking</span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </Link>
                       {user.role === "admin" ? (
                         <Link
                           href="/admin"
