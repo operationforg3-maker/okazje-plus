@@ -181,7 +181,7 @@ service cloud.firestore {
     // FAVORITES
     ////////////////////////////////
     match /favorites/{favoriteId} {
-  allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
@@ -192,7 +192,7 @@ service cloud.firestore {
     // NOTIFICATIONS
     ////////////////////////////////
     match /notifications/{notificationId} {
-  allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && (isAdmin() || request.resource.data.userId == request.auth.uid);
     }

@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { trackVote } from "@/lib/analytics";
@@ -28,30 +27,53 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
 
     setIsLoading(true);
     try {
-      // Use server API to handle voting (transactional, idempotent)
+      // Pobierz Firebase Auth token z aktualnego użytkownika Firebase
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        toast.error("Sesja wygasła - zaloguj się ponownie");
+        return;
+      }
+      
+      const token = await firebaseUser.getIdToken();
+      
       const action = direction === 'up' ? 'up' : 'down';
       const res = await fetch(`/api/deals/${dealId}/vote`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, userId: user.uid }), // temporary userId for dev
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // Wyślij zweryfikowany token
+        },
+        body: JSON.stringify({ action }),
       });
+      
       const json = await res.json();
+      
       if (!res.ok || !json.success) {
-        throw new Error(json.message || 'Vote failed');
+        if (res.status === 429) {
+          toast.error('Zbyt wiele głosów - poczekaj chwilę');
+        } else if (res.status === 401) {
+          toast.error('Musisz być zalogowany aby głosować');
+        } else {
+          toast.error(json.message || 'Błąd podczas głosowania');
+        }
+        return;
       }
 
       // Update UI based on server response
-      if (typeof json.temperature === 'number') setIsLoading(false);
+      setIsLoading(false);
+      
       // Notify other components to refresh deal data
       try {
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('deal-voted', { detail: { dealId } }));
+          window.dispatchEvent(new CustomEvent('deal-voted', { detail: { dealId, ...json } }));
         }
       } catch (e) {
         // noop
       }
-      // We don't have direct deal object here; consumer can re-fetch to update values.
+      
       trackVote('deal', dealId, direction);
+      toast.success(`Głos ${direction === 'up' ? '👍' : '👎'} został zapisany`);
+      
     } catch (error) {
       console.error("Błąd podczas głosowania:", error);
       toast.error("Wystąpił błąd podczas głosowania.");

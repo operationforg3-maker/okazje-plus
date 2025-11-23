@@ -594,13 +594,45 @@ export async function voteOnDeal(dealId: string, userId: string, vote: 1 | -1) {
     }
 }
 
-export async function addComment(collectionName: "products" | "deals", docId: string, userId: string, content: string) {
+export async function addComment(collectionName: "products" | "deals", docId: string, userId: string, content: string, parentId?: string | null) {
     const commentsColRef = collection(db, collectionName, docId, "comments");
+    
+    // Pobierz user data dla photoURL
+    let userPhotoURL: string | undefined;
+    let userDisplayName: string | undefined;
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        userPhotoURL = userData.photoURL || undefined;
+        userDisplayName = userData.displayName || undefined;
+      }
+    } catch (error) {
+      console.warn('Could not fetch user data for comment:', error);
+    }
+    
     await addDoc(commentsColRef, {
         userId: userId,
+        userDisplayName: userDisplayName,
+        userPhotoURL: userPhotoURL,
         content: content,
+        parentId: parentId || null,
+        repliesCount: 0,
+        edited: false,
         createdAt: serverTimestamp(),
     });
+    
+    // Jeśli to odpowiedź, zwiększ repliesCount rodzica
+    if (parentId) {
+      try {
+        const parentRef = doc(db, collectionName, docId, "comments", parentId);
+        await updateDoc(parentRef, {
+          repliesCount: increment(1)
+        });
+      } catch (error) {
+        console.warn('Could not update parent repliesCount:', error);
+      }
+    }
 }
 
 export async function getComments(collectionName: "products" | "deals", docId: string, limitCount: number = 20): Promise<Comment[]> {

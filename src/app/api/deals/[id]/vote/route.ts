@@ -1,30 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, runTransaction, increment } from 'firebase/firestore';
+import { adminAuth } from '@/lib/firebase-admin';
 
-// Weryfikacja tokenu Firebase (uproszczona - w produkcji użyj Firebase Admin SDK)
+/**
+ * Weryfikacja tokenu Firebase z wykorzystaniem Admin SDK
+ * PRODUCTION-READY implementation
+ */
 async function getUserFromRequest(request: NextRequest): Promise<{ uid: string } | null> {
-  // W Next.js App Router z Firebase Auth po stronie klienta,
-  // token zwykle przekazywany jest w headerze Authorization
-  const authHeader = request.headers.get('authorization');
-  
-  if (!authHeader?.startsWith('Bearer ')) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    
+    if (!authHeader?.startsWith('Bearer ')) {
+      return null;
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    // Weryfikuj token używając Firebase Admin SDK
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    
+    return { uid: decodedToken.uid };
+  } catch (error) {
+    console.error('Token verification failed:', error);
     return null;
   }
+}
 
-  // TODO: Zweryfikować token używając Firebase Admin SDK
-  // Na razie zakładamy, że token jest w formacie który możemy zdekodować
-  // W produkcji MUSI być właściwa weryfikacja!
+// Rate limiting - prosta implementacja w pamięci (dla produkcji użyj Redis)
+const voteRateLimit = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const limit = voteRateLimit.get(userId);
   
-  // Tymczasowe rozwiązanie - pobieramy uid z ciasteczka lub sesji
-  // Dla pełnej implementacji potrzebny jest Firebase Admin SDK
-  const uid = request.headers.get('x-user-id'); // Tymczasowe
-  
-  if (!uid) {
-    return null;
+  if (!limit || now > limit.resetAt) {
+    // Reset counter co minute
+    voteRateLimit.set(userId, { count: 1, resetAt: now + 60000 });
+    return true;
   }
-
-  return { uid };
+  
+  if (limit.count >= 10) { // Max 10 votes per minute
+    return false;
+  }
+  
+  limit.count++;
+  return true;
 }
 
 export async function POST(
@@ -44,22 +65,22 @@ export async function POST(
       );
     }
 
-    // Weryfikacja użytkownika - TYMCZASOWO WYŁĄCZONE dla development
-    // W produkcji KONIECZNIE włączyć!
-    // const user = await getUserFromRequest(request);
-    // if (!user) {
-    //   return NextResponse.json(
-    //     { success: false, message: 'Unauthorized' },
-    //     { status: 401 }
-    //   );
-    // }
-    
-    // TYMCZASOWE: Pobierz uid z body (tylko dla development!)
-    const userId = body.userId;
-    if (!userId) {
+    // AUTORYZACJA - wymagany zweryfikowany token
+    const user = await getUserFromRequest(request);
+    if (!user) {
       return NextResponse.json(
-        { success: false, message: 'userId jest wymagane' },
-        { status: 400 }
+        { success: false, message: 'Unauthorized - musisz być zalogowany' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = user.uid;
+    
+    // Rate limiting
+    if (!checkRateLimit(userId)) {
+      return NextResponse.json(
+        { success: false, message: 'Rate limit exceeded - max 10 votes per minute' },
+        { status: 429 }
       );
     }
 
@@ -127,7 +148,11 @@ export async function POST(
           voteCountChange = voteValue;
         }
 
-        transaction.set(voteRef, { vote: voteValue, createdAt: new Date().toISOString() });
+        transaction.set(voteRef, {
+          vote: voteValue,
+          createdAt: new Date().toISOString(),
+          userId, // Zabezpieczenie - zapisz userId
+        });
         newVote = voteValue;
       }
 
@@ -143,6 +168,9 @@ export async function POST(
         userVote: newVote,
       };
     });
+    
+    // Logging dla audytu (opcjonalnie zapisz do Firestore analytics)
+    console.log(`Vote logged: user=${userId}, deal=${dealId}, action=${action}, newVote=${result.userVote}`);
 
     return NextResponse.json({
       success: true,

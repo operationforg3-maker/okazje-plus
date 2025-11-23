@@ -447,8 +447,13 @@ export interface Comment {
   dealId: string;
   userId: string;
   userDisplayName: string;
+  userPhotoURL?: string; // Avatar użytkownika
   content: string;
   createdAt: string; // ISO string
+  parentId?: string | null; // ID komentarza rodzica dla odpowiedzi
+  repliesCount?: number; // Liczba bezpośrednich odpowiedzi
+  edited?: boolean;
+  editedAt?: string;
 }
 
 export interface Favorite {

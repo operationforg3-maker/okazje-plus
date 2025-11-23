@@ -33,8 +33,8 @@ export default function CommentSection({ collectionName, docId }: CommentSection
   const [deletingComment, setDeletingComment] = useState<Comment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Sprawdź czy user jest adminem
-  const isAdmin = user?.email?.includes('@admin') || false; // Uproszczone - w produkcji sprawdź role w user doc
+  // Sprawdź czy user jest adminem/moderatorem - prawdziwa rola z User object
+  const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
 
   // Optymistyczne podbijanie licznika komentarzy
   const commentsCount = useCommentsCount(collectionName === 'deals' ? 'deals' : 'products', docId, undefined);
