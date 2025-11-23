@@ -39,6 +39,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
   const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState<Record<string, string>>({});
+  const [cooldownUntil, setCooldownUntil] = useState<number>(0);
 
   // Sprawdź czy user jest adminem (prawdziwa rola z User doc)
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
@@ -79,6 +80,12 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
       toast.error("Musisz być zalogowany, aby dodać komentarz.");
       return;
     }
+    const now = Date.now();
+    if (now < cooldownUntil) {
+      const wait = Math.ceil((cooldownUntil - now) / 1000);
+      toast.error(`Zaczekaj ${wait}s przed dodaniem kolejnego komentarza.`);
+      return;
+    }
     if (!newComment.trim()) {
       return;
     }
@@ -101,6 +108,8 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
 
       await addComment(collectionName, docId, user.uid, newComment);
       void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, newComment.length);
+      // 5 sekundowy cooldown
+      setCooldownUntil(Date.now() + 5000);
 
       // Po zapisie pobierz odświeżone komentarze z serwera
       setComments(await getComments(collectionName, docId, 100));
@@ -118,6 +127,12 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
       toast.error("Musisz być zalogowany, aby odpowiedzieć.");
       return;
     }
+    const now = Date.now();
+    if (now < cooldownUntil) {
+      const wait = Math.ceil((cooldownUntil - now) / 1000);
+      toast.error(`Zaczekaj ${wait}s przed dodaniem odpowiedzi.`);
+      return;
+    }
     
     const content = replyContent[parentId];
     if (!content?.trim()) {
@@ -127,6 +142,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
     try {
       await addComment(collectionName, docId, user.uid, content, parentId);
       void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, content.length);
+      setCooldownUntil(Date.now() + 5000);
 
       // Pobierz odświeżone komentarze
       setComments(await getComments(collectionName, docId, 100));

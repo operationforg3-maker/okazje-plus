@@ -977,6 +977,59 @@ export const notifyOnProductCommentReply = onDocumentCreated(
   }
 );
 
+// ============================================
+// Notifications: email dispatcher (onCreate)
+// ============================================
+
+/**
+ * Gdy w kolekcji `notifications` pojawi się nowy dokument,
+ * wyślij e-mail (o ile ustawione SENDGRID_API_KEY i SENDGRID_FROM_EMAIL).
+ * Prosto mapujemy typy: comment_reply, system (alerty cenowe), deal_approved/rejected, new_deal.
+ */
+export const sendEmailOnNotification = onDocumentCreated(
+  "notifications/{notificationId}",
+  async (event) => {
+    const apiKey = process.env.SENDGRID_API_KEY;
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL || "no-reply@okazjeplus.pl";
+    if (!apiKey) return; // brak integracji
+
+    const snap = event.data;
+    if (!snap) return;
+    const notif = snap.data() as any;
+
+    try {
+      // Pobierz e-mail użytkownika
+      const userDoc = await db.collection("users").doc(notif.userId).get();
+      const email = (userDoc.data() as any)?.email;
+      if (!email) return;
+
+      const subjectMap: Record<string, string> = {
+        comment_reply: "Nowa odpowiedź na Twój komentarz",
+        system: "Powiadomienie systemowe",
+        new_deal: "Nowa okazja",
+        deal_approved: "Twoja okazja została zaakceptowana",
+        deal_rejected: "Twoja okazja została odrzucona",
+      };
+
+      const subject = subjectMap[notif.type] || "Powiadomienie";
+      const link = notif.link || (notif.itemId && notif.itemType ? `/${notif.itemType}s/${notif.itemId}` : "https://okazjeplus.pl");
+      const text = `${notif.title || subject}\n\n${notif.message || "Masz nowe powiadomienie."}\n\nPrzejdź: ${link}`;
+      const html = `<h3>${notif.title || subject}</h3><p>${notif.message || "Masz nowe powiadomienie."}</p><p><a href="${link}">Przejdź do serwisu</a></p>`;
+
+      sgMail.setApiKey(apiKey);
+      await sgMail.send({
+        to: email,
+        from: fromEmail,
+        subject,
+        text,
+        html,
+      } as any);
+    } catch (e) {
+      logger.warn("sendEmailOnNotification failed", { error: (e as Error).message });
+    }
+  }
+);
+
 // =============================================================================
 // PRE-REGISTRATION INVITATION SYSTEM
 // =============================================================================
