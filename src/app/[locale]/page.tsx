@@ -7,11 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { ShoppingBag, Flame, Users, Zap, Clock, Mail, CheckCircle2, Trophy, Rocket, Sparkles, Gift } from "lucide-react";
-import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 
-const BETA_RELEASE = new Date("2025-12-10T10:00:00+01:00");
-const PUBLIC_RELEASE = new Date("2025-12-15T19:00:00+01:00");
+const BETA_RELEASE = new Date("2025-11-24T19:00:00+01:00");
+const PUBLIC_RELEASE = new Date("2025-11-25T20:00:00+01:00");
 
 interface TimeLeft {
   days: number;
@@ -336,7 +335,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 }

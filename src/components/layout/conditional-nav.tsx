@@ -7,8 +7,8 @@ import { Footer } from "./footer";
 export function ConditionalNav({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Ukryj navbar i footer tylko na stronie głównej (/)
-  const hideNav = pathname === "/";
+  // Ukryj navbar tylko na stronie głównej (/ lub /pl/)
+  const hideNav = pathname === "/" || pathname === "/pl" || pathname === "/pl/";
 
   if (hideNav) {
     // Strona główna - tylko children (ma własny footer wbudowany)
