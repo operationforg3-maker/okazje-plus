@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
+// Umożliwiamy nawigację przez query params z mega‑menu (mainCategory, subCategory, sort, q)
 
 type ViewMode = 'list' | 'grid';
 type SortOption = 'hottest' | 'newest' | 'price_asc' | 'price_desc' | 'discount';
@@ -122,6 +123,38 @@ export default function DealsPage() {
   }, [user]);
 
   // Wczytaj zapisaną kategorię / podkategorię gdy tylko będą dostępne kategorie
+  // Najpierw sprawdź query params, potem dopiero localStorage (jeśli brak query)
+  useEffect(() => {
+    if (categories.length === 0) return;
+    // Jeśli już wybrano kategorię (np. użytkownik kliknął w UI) – nie nadpisuj
+    if (selectedCategory) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const mainParam = params.get('mainCategory');
+      const subParam = params.get('subCategory');
+      const sortParam = params.get('sort');
+      const qParam = params.get('q');
+
+      if (qParam) setSearchTerm(qParam);
+      if (sortParam === 'newest' || sortParam === 'hottest' || sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'discount') {
+        setSortBy(sortParam as any);
+      }
+
+      if (mainParam) {
+        const byId = categories.find(c => c.id === mainParam || c.slug === mainParam);
+        if (byId) {
+          setSelectedCategory(byId);
+          if (subParam) {
+            const hasSub = byId.subcategories?.some(s => s.slug === subParam || s.id === subParam);
+            if (hasSub) setSelectedSubcategory(subParam);
+          }
+          return; // Query params mają pierwszeństwo przed localStorage
+        }
+      }
+    } catch {}
+  }, [categories, selectedCategory]);
+
+  // Jeśli brak query params – fallback do localStorage
   useEffect(() => {
     if (categories.length === 0) return;
     // Jeśli użytkownik już coś wybrał w tej sesji – nie nadpisuj

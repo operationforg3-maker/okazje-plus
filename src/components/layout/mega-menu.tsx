@@ -588,6 +588,22 @@ export function MegaMenu() {
                           <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                         </Link>
 
+                        {/* Szybkie skróty: Okazje i Gorące w tej podkategorii */}
+                        <div className="pl-6 pt-1 flex items-center gap-2 text-xs">
+                          <Link
+                            href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}`}
+                            className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
+                          >
+                            <Flame className="h-3.5 w-3.5" /> Okazje
+                          </Link>
+                          <Link
+                            href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&sort=hottest`}
+                            className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
+                          >
+                            🔥 Gorące
+                          </Link>
+                        </div>
+
                         {/* Sub-subkategorie (jeśli istnieją) */}
                         {hasSubSubcategories && (
                           <div className="grid gap-2 pl-6 md:grid-cols-2 lg:grid-cols-3">
