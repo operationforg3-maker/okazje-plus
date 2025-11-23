@@ -51,6 +51,7 @@ const pathNames: Record<string, string> = {
   '/admin': 'Dashboard',
   '/admin/products': 'Produkty',
   '/admin/deals': 'Okazje',
+  '/admin/deals-import': 'Import Okazji',
   '/admin/categories': 'Kategorie',
   '/admin/navigation': 'Nawigacja',
   '/admin/moderation': 'Moderacja',
@@ -203,6 +204,21 @@ export default function AdminLayout({
                     <Link href="/admin/aliexpress-import">
                       <ShoppingBag />
                       <span className="group-data-[collapsible=icon]:hidden font-medium">Import AliExpress</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                
+                {/* Import Okazji */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/deals-import')}
+                    tooltip={{ children: 'Import Okazji' }}
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-orange-600 data-[active=true]:to-red-600 data-[active=true]:text-white hover:bg-muted/80 border-l-4 border-transparent data-[active=true]:border-orange-400 transition-all"
+                  >
+                    <Link href="/admin/deals-import">
+                      <Flame />
+                      <span className="group-data-[collapsible=icon]:hidden font-medium">Import Okazji</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

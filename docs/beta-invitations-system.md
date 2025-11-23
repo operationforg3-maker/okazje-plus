@@ -72,13 +72,20 @@ firebase deploy --only functions:sendBetaInvitations,functions:activatePreRegist
 
 ## Workflow użycia
 
-### Przed Beta Release (20.11.2025 10:00)
+### Przed Beta Release (24.11.2025 19:00)
 
 1. Admin wchodzi na `/admin/pre-registrations`
 2. Sprawdza listę oczekujących (status: pending)
 3. Klika "Wyślij zaproszenia (X)"
 4. System wysyła emaile do wszystkich pending
 5. Status zmienia się na `invited`
+
+### Public Release (26.11.2025 20:00)
+
+1. Weryfikacja podstawowych ścieżek: `/`, `/deals`, `/products`, `/search`
+2. Włączenie rejestracji publicznej (landing + formularz)
+3. Odświeżenie cache (strony główne + listy)
+4. Monitoring metryk: błędy, czas odpowiedzi, rejestracje, CTR
 
 ### Użytkownik otrzymuje email
 

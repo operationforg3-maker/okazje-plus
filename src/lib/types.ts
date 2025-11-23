@@ -147,17 +147,93 @@ export interface Deal {
   shippingCost?: number;
   status?: 'draft' | 'approved' | 'rejected';
   createdBy?: string;
+  
   /**
    * Powiązanie z produktami (future-proof: wiele produktów może być powiązanych z jednym dealem — np. różne warianty).
    * Zwykle będzie 0 lub 1 ID.
    */
   linkedProductIds?: string[];
+  
   /**
    * Oryginalny identyfikator zewnętrzny jeśli deal pochodzi z importu marketplace (np. AliExpress product_id / item_id).
    */
   externalOriginalId?: string;
-  /** Źródło pochodzenia dealu (manual, aliexpress, csv, other). */
-  source?: 'manual' | 'aliexpress' | 'csv' | 'other';
+  
+  /** Źródło pochodzenia dealu (manual, aliexpress, csv, other, pepper, mydealz, reddit). */
+  source?: 'manual' | 'aliexpress' | 'csv' | 'pepper' | 'mydealz' | 'reddit' | 'other';
+  
+  // ====== ROZSZERZONE PARAMETRY OKAZJI ======
+  
+  /** Typ okazji - standardowa promocja, kod rabatowy, gratisowy przedmiot, błąd cenowy */
+  dealType?: 'sale' | 'coupon' | 'freebie' | 'pricing-error' | 'cashback' | 'bundle';
+  
+  /** Kod rabatowy/promocyjny (jeśli dealType === 'coupon') */
+  couponCode?: string;
+  
+  /** Czy wysyłka jest darmowa */
+  freeShipping?: boolean;
+  
+  /** Cashback dostępny dla tej okazji (w PLN lub %) */
+  cashback?: {
+    amount?: number; // kwota w PLN
+    percentage?: number; // procent zwrotu
+    provider?: string; // np. "LetyShops", "iGraal"
+  };
+  
+  /** Minimalna wartość zamówienia wymagana do skorzystania z promocji */
+  minOrderValue?: number;
+  
+  /** Alert o limitowanej dostępności */
+  stockAlert?: 'limited' | 'low' | 'ending-soon' | null;
+  
+  /** Data wygaśnięcia okazji (ISO string) */
+  expiryDate?: string;
+  
+  /** Liczba dostępnych sztuk (jeśli znana) */
+  availableQuantity?: number;
+  
+  /** Limit na użytkownika/zamówienie */
+  limitPerUser?: number;
+  
+  /** Wymagane członkostwo/subskrypcja (np. Amazon Prime, Club) */
+  requiresMembership?: string;
+  
+  /** Warunki dodatkowe (np. "tylko dla nowych użytkowników", "w aplikacji mobilnej") */
+  conditions?: string[];
+  
+  /** Galeria dodatkowych zdjęć */
+  gallery?: string[];
+  
+  /** Weryfikacja okazji - czy została potwierdzona przez moderatorów/społeczność */
+  verified?: boolean;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  
+  /** Tagi dla łatwiejszego wyszukiwania */
+  tags?: string[];
+  
+  /** Ocena jakości okazji przez AI */
+  aiQuality?: {
+    score: number; // 0-100
+    recommendation: 'approve' | 'review' | 'reject';
+    reasoning: string;
+    factors?: {
+      priceQuality: number;
+      discountLegitimacy: number;
+      merchantTrust: number;
+      expiryValidity: number;
+      contentQuality: number;
+    };
+    scoredAt: string;
+  };
+  
+  /** Metadata importu dla śledzenia pochodzenia */
+  importMetadata?: {
+    source: string;
+    importedAt: string;
+    originalUrl?: string;
+    scrapedData?: Record<string, any>;
+  };
 }
 
 // Zaktualizowany interfejs Product

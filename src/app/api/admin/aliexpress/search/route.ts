@@ -204,7 +204,24 @@ export async function GET(request: Request) {
         images.push(...additionalImages.filter((url: string) => url && !images.includes(url)));
       }
       
-      // Some APIs return product_video_url - we skip video for now
+      // Additional image sources
+      if (p.product_images) {
+        const moreImages = Array.isArray(p.product_images) ? p.product_images : [p.product_images];
+        images.push(...moreImages.filter((url: string) => url && !images.includes(url)));
+      }
+      
+      // Extract warehouse/shipping information
+      const warehouse = p.ship_from_country || p.warehouse_location || p.ship_from || '';
+      const deliveryTime = p.delivery_time || p.estimated_delivery_time || p.logistics_info?.delivery_time || '';
+      
+      // Extract shipping details
+      const shippingInfo = {
+        warehouse: warehouse,
+        deliveryTime: deliveryTime,
+        freeShipping: p.free_shipping || p.is_free_shipping || false,
+        shippingCost: p.shipping_cost || p.shipping_price || null,
+        shippingMethod: p.shipping_method || null,
+      };
       
       return {
         id: String(p.product_id || p.productId || p.item_id || p.itemId || ''),
@@ -213,15 +230,21 @@ export async function GET(request: Request) {
         price: Number(p.target_sale_price || p.sale_price || p.sale_price_amount || p.target_app_sale_price || 0),
         originalPrice: Number(p.target_original_price || p.original_price || p.original_price_amount || null),
         imageUrl: mainImage,
-        images: images.slice(0, 10), // Limit to 10 images
+        images: images, // Wszystkie zdjęcia bez limitu
         productUrl: p.promotion_link || p.product_detail_url || p.target_url || '',
         rating: p.evaluate_rate ? parseFloat(p.evaluate_rate) / 20 : (p.product_rating ? Number(p.product_rating) : 0),
         orders: p.lastest_volume || p.volume || p.orders || p.trade_volume || 0,
         discount: p.discount ? parseInt(p.discount) : 0,
         shipping: p.first_level_category_name || p.category_name || '',
+        shippingInfo: shippingInfo,
         currency: 'USD',
         merchant: p.shop_title || p.shop_name || '',
+        merchantId: p.shop_id || null,
         categoryId: p.first_level_category_id || p.category_id || '',
+        categoryName: p.first_level_category_name || p.category_name || '',
+        // Dodatkowe metadane
+        productVideoUrl: p.product_video_url || null,
+        specifications: p.specifications || p.attributes || null,
       };
     });
 

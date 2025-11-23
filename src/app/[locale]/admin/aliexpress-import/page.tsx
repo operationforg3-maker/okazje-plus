@@ -112,6 +112,60 @@ function AliExpressImportPage() {
       } else {
         console.log('[AliExpress Import] Products fetched:', products.length);
         toast({ title: 'Sukces', description: `Znaleziono ${products.length} produktów` });
+        
+        // Auto-kategoryzacja AI dla wszystkich produktów
+        console.log('[AliExpress Import] Starting AI categorization for', products.length, 'products');
+        const newCategoryMapping: Record<string, { main: string; sub: string; subSub: string }> = {};
+        
+        // Przetwarzaj w partiach po 5, żeby nie przeciążyć API
+        for (let i = 0; i < products.length; i += 5) {
+          const batch = products.slice(i, i + 5);
+          console.log(`[AliExpress Import] Processing batch ${Math.floor(i / 5) + 1}/${Math.ceil(products.length / 5)}`);
+          
+          await Promise.all(
+            batch.map(async (product) => {
+              try {
+                const aiRes = await fetch('/api/admin/aliexpress/suggest-category', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title: product.title,
+                    description: '',
+                    aliexpressCategory: '',
+                    price: product.price,
+                  }),
+                });
+                
+                if (aiRes.ok) {
+                  const aiData = await aiRes.json();
+                  newCategoryMapping[product.id] = {
+                    main: aiData.mainCategorySlug,
+                    sub: aiData.subCategorySlug,
+                    subSub: aiData.subSubCategorySlug,
+                  };
+                  console.log(`[AliExpress Import] AI categorized ${product.id}:`, aiData);
+                } else {
+                  console.warn(`[AliExpress Import] AI failed for ${product.id}, using fallback`);
+                  newCategoryMapping[product.id] = {
+                    main: 'inne',
+                    sub: 'pozostale',
+                    subSub: 'niesklasyfikowane',
+                  };
+                }
+              } catch (err) {
+                console.error(`[AliExpress Import] AI error for ${product.id}:`, err);
+                newCategoryMapping[product.id] = {
+                  main: 'inne',
+                  sub: 'pozostale',
+                  subSub: 'niesklasyfikowane',
+                };
+              }
+            })
+          );
+        }
+        
+        setCategoryMapping(newCategoryMapping);
+        console.log('[AliExpress Import] AI categorization complete:', newCategoryMapping);
       }
 
       setResults(products);

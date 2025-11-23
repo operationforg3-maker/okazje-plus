@@ -96,8 +96,11 @@ export async function POST(request: NextRequest) {
     })();
 
     const images: string[] = Array.isArray(product.images)
-      ? product.images.filter((u: any) => typeof u === 'string').slice(0, 10)
-      : []; // limit 10 dla bezpieczeństwa
+      ? product.images.filter((u: any) => typeof u === 'string') // Bez limitu - wszystkie zdjęcia
+      : [];
+
+    // Shipping info z rozszerzonych danych
+    const shippingInfo = product.shippingInfo || {};
 
     const docData: any = {
       name: product.title,
@@ -139,6 +142,17 @@ export async function POST(request: NextRequest) {
         orders: product.orders || null,
         shipping: product.shipping || null,
         merchant: product.merchant || null,
+        merchantId: product.merchantId || null,
+        // Nowe pola: warehouse, delivery, shipping details
+        warehouse: shippingInfo.warehouse || null,
+        deliveryTime: shippingInfo.deliveryTime || null,
+        freeShipping: shippingInfo.freeShipping || false,
+        shippingCost: shippingInfo.shippingCost || null,
+        shippingMethod: shippingInfo.shippingMethod || null,
+        categoryId: product.categoryId || null,
+        categoryName: product.categoryName || null,
+        videoUrl: product.productVideoUrl || null,
+        specifications: product.specifications || null,
         rawDataStored: false,
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
