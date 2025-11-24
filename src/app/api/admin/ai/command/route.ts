@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runGeminiCommand } from '@/ai/gemini';
+import { fillCategoriesWithProducts } from '@/ai/flows/fillCategoriesWithProducts';
 
 export async function POST(req: NextRequest) {
   const { command } = await req.json();
