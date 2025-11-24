@@ -1,11 +1,6 @@
-        {/* Parametry/specyfikacja produktu (TODO: rozwinąć na podstawie danych) */}
-        {/*
-        <div className="mt-2 text-xs text-muted-foreground">
-          <span>Parametry: ...</span>
-        </div>
-        */}
-import { ProductGallery } from './product-gallery';
+
 "use client";
+import { ProductGallery } from './product-gallery';
 
 import Image from 'next/image';
 import Link from 'next/link';
