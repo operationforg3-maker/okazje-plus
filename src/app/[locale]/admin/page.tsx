@@ -644,6 +644,15 @@ function AdminPage() {
               <Users className="h-8 w-8 text-primary" />
               <span className="text-sm font-medium text-center">Użytkownicy</span>
             </Link>
+            <Link 
+              href="/admin/ai" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 text-white mb-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              </span>
+              <span className="text-sm font-medium text-center">Panel AI <span className="text-xs text-blue-500 font-bold">beta</span></span>
+            </Link>
           </div>
         </CardContent>
       </Card>
