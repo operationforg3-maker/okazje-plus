@@ -1,10 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runGeminiCommand } from '@/ai/gemini';
 import { fillCategoriesWithProducts } from '@/ai/flows/fillCategoriesWithProducts';
+import { logAiCommand } from '@/lib/data';
 
 export async function POST(req: NextRequest) {
-  const { command } = await req.json();
-  // Wywołanie Gemini + obsługa API/bazy
-  const result = await runGeminiCommand(command);
-  return NextResponse.json({ result });
+  try {
+    const { command } = await req.json();
+    
+    let result: string;
+    
+    // Rozpoznaj polecenie i wywołaj odpowiedni flow
+    if (command === 'fillCategoriesWithProducts' || command.includes('wypełnij katalog')) {
+      result = await fillCategoriesWithProducts();
+      
+      // Zaloguj do historii
+      await logAiCommand({
+        command: 'fillCategoriesWithProducts',
+        status: 'success',
+        result,
+      });
+    } else {
+      result = 'Nieznane polecenie. Dostępne: fillCategoriesWithProducts';
+    }
+    
+    return NextResponse.json({ result });
+  } catch (error: any) {
+    // Zaloguj błąd
+    await logAiCommand({
+      command: 'unknown',
+      status: 'error',
+      result: error.message || 'Nieznany błąd',
+    });
+    
+    return NextResponse.json({ 
+      result: `Błąd: ${error.message}` 
+    }, { status: 500 });
+  }
 }

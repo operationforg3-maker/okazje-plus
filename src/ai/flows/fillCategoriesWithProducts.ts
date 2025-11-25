@@ -1,8 +1,31 @@
 import { getTopProductsByCategory, getRecommendedProducts, createCategory, createSubcategory, createSubSubcategory, createProduct } from '@/lib/data';
 
 /**
+ * Wyszukuje produkty dla kategorii przez AliExpress API
+ */
+async function fetchProductsForCategory(categoryName: string, count: number = 5): Promise<any[]> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        query: categoryName, 
+        limit: count,
+        sort: 'bestMatch'
+      })
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.products || [];
+  } catch (e) {
+    console.warn(`Nie udało się pobrać produktów dla ${categoryName}:`, e);
+    return [];
+  }
+}
+
+/**
  * Automatycznie wypełnia katalog kategoriami, podkategoriami, pod-podkategoriami
- * i przypisuje do nich produkty (najpopularniejsze, najlepsze, średnie, przekrojowe)
+ * i przypisuje do nich produkty pobrane z AliExpress API
  * Struktura zbliżona do Pepper.pl, zoptymalizowana pod wygodę klienta.
  */
 export async function fillCategoriesWithProducts() {
@@ -115,25 +138,42 @@ export async function fillCategoriesWithProducts() {
     ] }
   ];
 
+  let totalProducts = 0;
+  
   for (const cat of categories) {
     const catId = await createCategory(cat);
     for (const sub of cat.subs) {
       const subId = await createSubcategory(catId, sub);
       for (const subsub of sub.subs) {
         const subsubId = await createSubSubcategory(catId, subId, subsub);
-        // Dodaj przykładowe produkty do pod-podkategorii (możesz rozbudować logikę generowania)
-        const products = await getRecommendedProducts(20);
-        for (const p of products) {
-          await createProduct({
-            ...p,
-            mainCategorySlug: cat.slug,
-            subCategorySlug: sub.slug,
-            subSubCategorySlug: subsub.slug,
-            status: 'approved',
-          });
+        
+        // Pobierz produkty z AliExpress dla tej kategorii
+        const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 5);
+        
+        for (const aliProduct of aliProducts) {
+          try {
+            await createProduct({
+              name: aliProduct.title || aliProduct.name,
+              description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
+              price: aliProduct.price?.value || 0,
+              currency: aliProduct.price?.currency || 'PLN',
+              image: aliProduct.image || aliProduct.imageUrl,
+              link: aliProduct.link || aliProduct.url,
+              mainCategorySlug: cat.slug,
+              subCategorySlug: sub.slug,
+              subSubCategorySlug: subsub.slug,
+              status: 'approved',
+              source: 'aliexpress',
+              externalId: aliProduct.id || aliProduct.itemId,
+            });
+            totalProducts++;
+          } catch (e) {
+            console.warn(`Nie udało się dodać produktu ${aliProduct.title}:`, e);
+          }
         }
       }
     }
   }
-  return 'Katalog został automatycznie wypełniony rozbudowanymi kategoriami i produktami.';
+  
+  return `Katalog został automatycznie wypełniony ${categories.length} kategoriami i ${totalProducts} produktami z AliExpress.`;
 }
