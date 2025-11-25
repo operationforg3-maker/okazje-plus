@@ -20,6 +20,11 @@ export async function createCategory(data: {
   heroImage?: string; 
 }): Promise<string> {
   const ref = adminDb.collection('categories');
+  // Idempotent: find existing by slug
+  const existing = await ref.where('slug', '==', data.slug).limit(1).get();
+  if (!existing.empty) {
+    return existing.docs[0].id;
+  }
   const docRef = await ref.add({
     ...data,
     createdAt: FieldValue.serverTimestamp(),
@@ -42,6 +47,11 @@ export async function createSubcategory(
   }
 ): Promise<string> {
   const ref = adminDb.collection('categories').doc(categoryId).collection('subcategories');
+  // Idempotent: find existing by slug
+  const existing = await ref.where('slug', '==', data.slug).limit(1).get();
+  if (!existing.empty) {
+    return existing.docs[0].id;
+  }
   const docRef = await ref.add({
     ...data,
     createdAt: FieldValue.serverTimestamp(),
@@ -70,13 +80,40 @@ export async function createSubSubcategory(
     .collection('subcategories')
     .doc(subcategoryId)
     .collection('subcategories');
-  
+  // Idempotent: find existing by slug
+  const existing = await ref.where('slug', '==', data.slug).limit(1).get();
+  if (!existing.empty) {
+    return existing.docs[0].id;
+  }
   const docRef = await ref.add({
     ...data,
     createdAt: FieldValue.serverTimestamp(),
     sortOrder: data.sortOrder ?? 0,
   });
   return docRef.id;
+}
+
+/**
+ * Znajdź istniejący produkt po metadata.originalId lub affiliateUrl
+ */
+export async function findExistingProduct(params: { originalId?: string; affiliateUrl?: string; }): Promise<string | null> {
+  const ref = adminDb.collection('products');
+  if (params.originalId) {
+    const snap = await ref.where('metadata.originalId', '==', params.originalId).limit(1).get();
+    if (!snap.empty) return snap.docs[0].id;
+  }
+  if (params.affiliateUrl) {
+    const snap = await ref.where('affiliateUrl', '==', params.affiliateUrl).limit(1).get();
+    if (!snap.empty) return snap.docs[0].id;
+  }
+  return null;
+}
+
+/**
+ * Zaktualizuj podstawowe pola produktu (bez ryzyka nadpisania polach użytkownika)
+ */
+export async function updateProduct(productId: string, data: Partial<Product>): Promise<void> {
+  await adminDb.collection('products').doc(productId).set(data, { merge: true });
 }
 
 /**
@@ -125,6 +162,26 @@ export async function createDeal(
     commentsCount: 0,
   });
   return docRef.id;
+}
+
+/**
+ * Znajdź istniejący deal po externalOriginalId lub link
+ */
+export async function findExistingDeal(params: { externalOriginalId?: string; link?: string; }): Promise<string | null> {
+  const ref = adminDb.collection('deals');
+  if (params.externalOriginalId) {
+    const snap = await ref.where('externalOriginalId', '==', params.externalOriginalId).limit(1).get();
+    if (!snap.empty) return snap.docs[0].id;
+  }
+  if (params.link) {
+    const snap = await ref.where('link', '==', params.link).limit(1).get();
+    if (!snap.empty) return snap.docs[0].id;
+  }
+  return null;
+}
+
+export async function updateDeal(dealId: string, data: Partial<Deal>): Promise<void> {
+  await adminDb.collection('deals').doc(dealId).set(data, { merge: true });
 }
 
 /**

@@ -1,4 +1,5 @@
-import { createCategory, createSubcategory, createSubSubcategory, createProduct } from '@/lib/data-admin';
+import { createCategory, createSubcategory, createSubSubcategory, createProduct, findExistingProduct, updateProduct } from '@/lib/data-admin';
+import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 
 /**
  * Wyszukuje produkty dla kategorii przez AliExpress API
@@ -202,14 +203,25 @@ export async function fillCategoriesWithProducts() {
                 
                 for (const aliProduct of aliProducts) {
                   try {
-                    await createProduct({
-                      name: aliProduct.title || aliProduct.name,
+                    const originalId = aliProduct.id || aliProduct.itemId || aliProduct.item_id || aliProduct.productId;
+                    const affiliateUrl = aliProduct.link || aliProduct.productUrl || aliProduct.url;
+                  
+                    // AI normalize title to Polish
+                    const titleRaw = aliProduct.title || aliProduct.name || '';
+                    const norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                    const normalizedTitle = norm.normalizedTitle || titleRaw;
+
+                    // Dedupe by originalId / affiliateUrl
+                    const existingId = await findExistingProduct({ originalId, affiliateUrl });
+
+                    const baseData = {
+                      name: normalizedTitle,
                       description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
                       longDescription: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
                       price: aliProduct.price?.value || aliProduct.price || 0,
                       image: aliProduct.image || aliProduct.imageUrl || '',
                       imageHint: '',
-                      affiliateUrl: aliProduct.link || aliProduct.productUrl || aliProduct.url || '#',
+                      affiliateUrl: affiliateUrl || '#',
                       mainCategorySlug: cat.slug,
                       subCategorySlug: sub.slug,
                       subSubCategorySlug: subsub.slug,
@@ -224,11 +236,30 @@ export async function fillCategoriesWithProducts() {
                       },
                       metadata: {
                         source: 'aliexpress',
-                        originalId: aliProduct.id || aliProduct.itemId || '',
+                        originalId: originalId || '',
                         importedAt: new Date().toISOString(),
+                        orders: aliProduct.orders || 0,
+                        merchant: aliProduct.merchant || aliProduct.storeName,
                       }
-                    });
-                    totalProducts++;
+                    } as const;
+
+                    if (existingId) {
+                      await updateProduct(existingId, {
+                        ...baseData,
+                        ai: {
+                          titleNormalization: {
+                            originalTitle: titleRaw,
+                            normalizedTitle,
+                            translated: norm.translated,
+                            changes: norm.changes,
+                          }
+                        }
+                      } as any);
+                      console.log(`[fillCategoriesWithProducts] Updated existing product ${existingId}`);
+                    } else {
+                      await createProduct(baseData as any);
+                      totalProducts++;
+                    }
                   } catch (e: any) {
                     console.warn(`[fillCategoriesWithProducts] Failed to create product ${aliProduct.title}:`, e.message);
                   }
@@ -245,14 +276,24 @@ export async function fillCategoriesWithProducts() {
             
             for (const aliProduct of aliProducts) {
               try {
-                await createProduct({
-                  name: aliProduct.title || aliProduct.name,
+                const originalId = aliProduct.id || aliProduct.itemId || aliProduct.item_id || aliProduct.productId;
+                const affiliateUrl = aliProduct.link || aliProduct.productUrl || aliProduct.url;
+
+                // AI normalize title to Polish
+                const titleRaw = aliProduct.title || aliProduct.name || '';
+                const norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                const normalizedTitle = norm.normalizedTitle || titleRaw;
+
+                const existingId = await findExistingProduct({ originalId, affiliateUrl });
+
+                const baseData = {
+                  name: normalizedTitle,
                   description: aliProduct.description || `Produkt z kategorii ${sub.name}`,
                   longDescription: aliProduct.description || `Produkt z kategorii ${sub.name}`,
                   price: aliProduct.price?.value || aliProduct.price || 0,
                   image: aliProduct.image || aliProduct.imageUrl || '',
                   imageHint: '',
-                  affiliateUrl: aliProduct.link || aliProduct.productUrl || aliProduct.url || '#',
+                  affiliateUrl: affiliateUrl || '#',
                   mainCategorySlug: cat.slug,
                   subCategorySlug: sub.slug,
                   subSubCategorySlug: undefined,
@@ -267,11 +308,30 @@ export async function fillCategoriesWithProducts() {
                   },
                   metadata: {
                     source: 'aliexpress',
-                    originalId: aliProduct.id || aliProduct.itemId || '',
+                    originalId: originalId || '',
                     importedAt: new Date().toISOString(),
+                    orders: aliProduct.orders || 0,
+                    merchant: aliProduct.merchant || aliProduct.storeName,
                   }
-                });
-                totalProducts++;
+                } as const;
+
+                if (existingId) {
+                  await updateProduct(existingId, {
+                    ...baseData,
+                    ai: {
+                      titleNormalization: {
+                        originalTitle: titleRaw,
+                        normalizedTitle,
+                        translated: norm.translated,
+                        changes: norm.changes,
+                      }
+                    }
+                  } as any);
+                  console.log(`[fillCategoriesWithProducts] Updated existing product ${existingId}`);
+                } else {
+                  await createProduct(baseData as any);
+                  totalProducts++;
+                }
               } catch (e: any) {
                 console.warn(`[fillCategoriesWithProducts] Failed to create product ${aliProduct.title}:`, e.message);
               }

@@ -1,4 +1,4 @@
-import { createDeal } from '@/lib/data-admin';
+import { createDeal, findExistingDeal, updateDeal } from '@/lib/data-admin';
 
 /**
  * Pobiera deale (promocje) z AliExpress API dla każdej kategorii
@@ -71,12 +71,15 @@ export async function fillCategoriesWithDeals() {
             continue;
           }
           
-          await createDeal({
+          const externalOriginalId = product.id || product.itemId || product.item_id || product.productId;
+          const link = product.productUrl || product.link || '#';
+          
+          const baseDeal = {
             title: `🔥 ${product.title}`,
             description: product.description || `Super okazja! ${product.title} z ${discount}% zniżką!`,
             price: product.price,
             originalPrice: product.originalPrice,
-            link: product.productUrl || product.link || '#',
+            link,
             image: product.imageUrl || product.image || '',
             imageHint: '',
             mainCategorySlug: category.slug,
@@ -85,15 +88,22 @@ export async function fillCategoriesWithDeals() {
             postedBy: 'system',
             postedAt: new Date().toISOString(),
             commentsCount: 0,
-            source: 'aliexpress', // KLUCZOWE: deal pochodzi z AliExpress
-            status: 'draft', // Wymaga akceptacji admina
-            temperature: 50 + Math.min(discount, 50), // Im większa zniżka, tym wyższa temperatura
-            voteCount: Math.floor((product.orders || 0) / 100), // Głosy bazowane na zamówieniach
+            source: 'aliexpress' as const,
+            status: 'draft' as const,
+            temperature: 50 + Math.min(discount, 50),
+            voteCount: Math.floor((product.orders || 0) / 100),
             merchant: product.merchant || 'AliExpress',
-            externalOriginalId: product.id,
-            dealType: 'sale',
+            externalOriginalId,
+            dealType: 'sale' as const,
             freeShipping: product.shippingInfo?.freeShipping || false,
-          });
+          };
+          
+          const existingId = await findExistingDeal({ externalOriginalId, link });
+          if (existingId) {
+            await updateDeal(existingId, baseDeal as any);
+          } else {
+            await createDeal(baseDeal as any);
+          }
           
           totalDeals++;
         } catch (e: any) {
