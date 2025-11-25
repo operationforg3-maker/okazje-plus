@@ -1,5 +1,6 @@
 import { createCategory, createSubcategory, createSubSubcategory, createProduct, findExistingProduct, updateProduct } from '@/lib/data-admin';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
 import { cacheDel } from '@/lib/cache';
 
 /**
@@ -199,7 +200,7 @@ export async function fillCategoriesWithProducts() {
                 
                 // Pobierz produkty z AliExpress dla tej kategorii
                 console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} ${subsub.name}`);
-                const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 5);
+                const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 12);
                 console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
                 
                 for (const aliProduct of aliProducts) {
@@ -212,13 +213,37 @@ export async function fillCategoriesWithProducts() {
                     const norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
                     const normalizedTitle = norm.normalizedTitle || titleRaw;
 
+                    // AI enrichment (opis, cechy, keywords)
+                    let enrichedName = normalizedTitle;
+                    let shortDesc = aliProduct.description || `Produkt z kategorii ${subsub.name}`;
+                    let longDesc = shortDesc;
+                    let features: string[] = [];
+                    let keywords: string[] = [];
+                    try {
+                      const enrichment = await aiProductEnrichmentPL({
+                        originalTitle: normalizedTitle,
+                        rawDescription: aliProduct.description || '',
+                        categoryPath: [cat.name, sub.name, subsub.name],
+                        price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
+                        originalPrice: aliProduct.originalPrice || undefined,
+                        rating: aliProduct.rating || undefined,
+                        orders: aliProduct.orders || undefined,
+                        merchant: aliProduct.merchant || aliProduct.storeName || undefined,
+                      });
+                      enrichedName = enrichment.normalizedName || enrichedName;
+                      shortDesc = enrichment.shortDescription || shortDesc;
+                      longDesc = enrichment.longDescription || longDesc;
+                      features = enrichment.features || [];
+                      keywords = enrichment.keywords || [];
+                    } catch (_) {}
+
                     // Dedupe by originalId / affiliateUrl
                     const existingId = await findExistingProduct({ originalId, affiliateUrl });
 
                     const baseData = {
-                      name: normalizedTitle,
-                      description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
-                      longDescription: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
+                      name: enrichedName,
+                      description: shortDesc,
+                      longDescription: longDesc,
                       price: aliProduct.price?.value || aliProduct.price || 0,
                       image: aliProduct.image || aliProduct.imageUrl || '',
                       imageHint: '',
@@ -235,6 +260,8 @@ export async function fillCategoriesWithProducts() {
                         valueForMoney: 4.5,
                         versatility: 4.5,
                       },
+                      seoKeywords: keywords,
+                      metaDescription: shortDesc.slice(0,160),
                       metadata: {
                         source: 'aliexpress',
                         originalId: originalId || '',
@@ -253,6 +280,10 @@ export async function fillCategoriesWithProducts() {
                             normalizedTitle,
                             translated: norm.translated,
                             changes: norm.changes,
+                          },
+                          enrichment: {
+                            features,
+                            keywords,
                           }
                         }
                       } as any);
@@ -272,7 +303,7 @@ export async function fillCategoriesWithProducts() {
           } else {
             // Jeśli nie ma pod-podkategorii, pobierz produkty bezpośrednio dla subcategory
             console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} (no sub-subcategories)`);
-            const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name}`, 5);
+            const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name}`, 10);
             console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
             
             for (const aliProduct of aliProducts) {
@@ -285,12 +316,36 @@ export async function fillCategoriesWithProducts() {
                 const norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
                 const normalizedTitle = norm.normalizedTitle || titleRaw;
 
+                // AI enrichment (opis, cechy, keywords)
+                let enrichedName = normalizedTitle;
+                let shortDesc = aliProduct.description || `Produkt z kategorii ${sub.name}`;
+                let longDesc = shortDesc;
+                let features: string[] = [];
+                let keywords: string[] = [];
+                try {
+                  const enrichment = await aiProductEnrichmentPL({
+                    originalTitle: normalizedTitle,
+                    rawDescription: aliProduct.description || '',
+                    categoryPath: [cat.name, sub.name],
+                    price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
+                    originalPrice: aliProduct.originalPrice || undefined,
+                    rating: aliProduct.rating || undefined,
+                    orders: aliProduct.orders || undefined,
+                    merchant: aliProduct.merchant || aliProduct.storeName || undefined,
+                  });
+                  enrichedName = enrichment.normalizedName || enrichedName;
+                  shortDesc = enrichment.shortDescription || shortDesc;
+                  longDesc = enrichment.longDescription || longDesc;
+                  features = enrichment.features || [];
+                  keywords = enrichment.keywords || [];
+                } catch (_) {}
+
                 const existingId = await findExistingProduct({ originalId, affiliateUrl });
 
                 const baseData = {
-                  name: normalizedTitle,
-                  description: aliProduct.description || `Produkt z kategorii ${sub.name}`,
-                  longDescription: aliProduct.description || `Produkt z kategorii ${sub.name}`,
+                  name: enrichedName,
+                  description: shortDesc,
+                  longDescription: longDesc,
                   price: aliProduct.price?.value || aliProduct.price || 0,
                   image: aliProduct.image || aliProduct.imageUrl || '',
                   imageHint: '',
@@ -307,6 +362,8 @@ export async function fillCategoriesWithProducts() {
                     valueForMoney: 4.5,
                     versatility: 4.5,
                   },
+                  seoKeywords: keywords,
+                  metaDescription: shortDesc.slice(0,160),
                   metadata: {
                     source: 'aliexpress',
                     originalId: originalId || '',
@@ -325,6 +382,10 @@ export async function fillCategoriesWithProducts() {
                         normalizedTitle,
                         translated: norm.translated,
                         changes: norm.changes,
+                      },
+                      enrichment: {
+                        features,
+                        keywords,
                       }
                     }
                   } as any);
