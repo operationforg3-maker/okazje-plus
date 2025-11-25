@@ -1,5 +1,6 @@
 import { createCategory, createSubcategory, createSubSubcategory, createProduct, findExistingProduct, updateProduct } from '@/lib/data-admin';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { cacheDel } from '@/lib/cache';
 
 /**
  * Wyszukuje produkty dla kategorii przez AliExpress API
@@ -346,6 +347,9 @@ export async function fillCategoriesWithProducts() {
     }
   }
   
+  // Invalidate cached categories to odświeżyć mega-menu na serwerze/SSR
+  try { await cacheDel('categories:all'); } catch (_) {}
+
   const summary = `✅ Katalog wypełniony!\n\n` +
     `📊 Statystyki:\n` +
     `- Kategorii głównych: ${totalCategories}/${categories.length}\n` +

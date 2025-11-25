@@ -1,4 +1,6 @@
 import { createDeal, findExistingDeal, updateDeal } from '@/lib/data-admin';
+import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { aiGenerateDealDescriptionPL } from '@/ai/flows/aliexpress/aiDealDescriptionPL';
 
 /**
  * Pobiera deale (promocje) z AliExpress API dla każdej kategorii
@@ -77,9 +79,36 @@ export async function fillCategoriesWithDeals() {
           const externalOriginalId = product.id || product.itemId || product.item_id || product.productId;
           const link = product.productUrl || product.link || '#';
           
+          // Przygotowanie i normalizacja tytułu (dodajemy kontekst zniżki, usuwamy spam, tłumaczymy na PL)
+          const rawTitle = product.title || '';
+          const enrichedTitle = rawTitle ? `${rawTitle} - ${discount}% taniej` : `Okazja - ${discount}% taniej`;
+          let normalizedTitle = enrichedTitle;
+          try {
+            const norm = await aiNormalizeTitlePL({ title: enrichedTitle, language: (product.language || product.locale || undefined) });
+            normalizedTitle = norm.normalizedTitle;
+          } catch (_) {
+            // Fallback zostawia enrichedTitle
+          }
+
+          // Generowanie opisu (krótki/średni) i tagów
+          let description = product.description || `Super okazja! ${normalizedTitle} z ${discount}% zniżką!`;
+          let tags: string[] | undefined = undefined;
+          try {
+            const desc = await aiGenerateDealDescriptionPL({
+              title: normalizedTitle,
+              discount,
+              price: typeof product.price === 'number' ? product.price : undefined,
+              originalPrice: typeof product.originalPrice === 'number' ? product.originalPrice : undefined,
+              merchant: product.merchant || 'AliExpress',
+            });
+            // Użyj opisu średniej długości, fallback na krótki jeśli zbyt długi
+            description = (desc.mediumDescription?.length ?? 0) <= 220 ? desc.mediumDescription : (desc.shortDescription || description);
+            tags = (desc.keywords || []).slice(0, 6);
+          } catch (_) {}
+
           const baseDeal = {
-            title: `🔥 ${product.title}`,
-            description: product.description || `Super okazja! ${product.title} z ${discount}% zniżką!`,
+            title: `🔥 ${normalizedTitle}`,
+            description,
             price: product.price,
             originalPrice: product.originalPrice,
             link,
@@ -99,6 +128,7 @@ export async function fillCategoriesWithDeals() {
             externalOriginalId,
             dealType: 'sale' as const,
             freeShipping: product.shippingInfo?.freeShipping || false,
+            ...(tags?.length ? { tags } : {}),
           };
           
           const existingId = await findExistingDeal({ externalOriginalId, link });

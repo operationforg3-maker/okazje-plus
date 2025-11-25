@@ -7,6 +7,7 @@
     "dev": "next dev --turbopack -p 9002",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
+    "dev:deals-flow": "tsx src/ai/dev-deals.ts",
     "prebuild": "node ./scripts/generate-build-info.js",
     "build": "NODE_ENV=production next build",
     "start": "next start",
