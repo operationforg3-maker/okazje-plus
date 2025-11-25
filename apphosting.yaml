@@ -47,6 +47,13 @@ env:
       - BUILD
       - RUNTIME
   
+  # Gemini API key (alias for Genkit compatibility)
+  - variable: GEMINI_API_KEY
+    secret: GOOGLE_GENAI_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  
   - variable: TEST_USER_EMAIL
     secret: TEST_USER_EMAIL
     availability:
