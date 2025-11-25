@@ -5,7 +5,11 @@ import { createCategory, createSubcategory, createSubSubcategory, createProduct 
  */
 async function fetchProductsForCategory(categoryName: string, count: number = 5): Promise<any[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/search`, {
+    const url = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/search`;
+    console.log(`[fetchProductsForCategory] Fetching from: ${url}`);
+    console.log(`[fetchProductsForCategory] Query: "${categoryName}", limit: ${count}`);
+    
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -14,11 +18,29 @@ async function fetchProductsForCategory(categoryName: string, count: number = 5)
         sort: 'bestMatch'
       })
     });
-    if (!response.ok) return [];
+    
+    console.log(`[fetchProductsForCategory] Response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[fetchProductsForCategory] API error (${response.status}):`, errorText);
+      return [];
+    }
+    
     const data = await response.json();
+    console.log(`[fetchProductsForCategory] Received ${data.products?.length || 0} products for "${categoryName}"`);
+    
+    if (data.products && data.products.length > 0) {
+      console.log(`[fetchProductsForCategory] First product sample:`, {
+        title: data.products[0].title,
+        price: data.products[0].price,
+        hasImage: !!data.products[0].image
+      });
+    }
+    
     return data.products || [];
-  } catch (e) {
-    console.warn(`Nie udało się pobrać produktów dla ${categoryName}:`, e);
+  } catch (e: any) {
+    console.error(`[fetchProductsForCategory] Exception for "${categoryName}":`, e.message);
     return [];
   }
 }

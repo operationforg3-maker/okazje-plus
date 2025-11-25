@@ -322,3 +322,42 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * POST handler for AI flows that send JSON body instead of query params
+ * Converts body to query string and reuses GET logic
+ */
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { query, limit, sort, category, minPrice, maxPrice, minRating, minOrders, page } = body;
+    
+    // Build query string from body params
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (limit) params.set('limit', String(limit));
+    if (category) params.set('category', category);
+    if (minPrice) params.set('minPrice', String(minPrice));
+    if (maxPrice) params.set('maxPrice', String(maxPrice));
+    if (minRating) params.set('minRating', String(minRating));
+    if (minOrders) params.set('minOrders', String(minOrders));
+    if (page) params.set('page', String(page));
+    
+    // Create a new request with query params
+    const url = new URL(request.url);
+    url.search = params.toString();
+    
+    const newRequest = new Request(url.toString(), {
+      method: 'GET',
+      headers: request.headers,
+    });
+    
+    // Reuse GET handler
+    return await GET(newRequest);
+  } catch (e) {
+    console.error('[AliExpress POST] Invalid request:', e);
+    return NextResponse.json({ 
+      error: 'invalid_request', 
+      message: 'Invalid JSON body' 
+    }, { status: 400 });
+  }
+}
