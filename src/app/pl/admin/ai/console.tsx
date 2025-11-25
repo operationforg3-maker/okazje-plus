@@ -9,7 +9,7 @@ export default function AiConsole() {
     if (!confirm('To wypełni bazę kategoriami i produktami z AliExpress. Kontynuować?')) return;
     
     setLoading(true);
-    setResult('Rozpoczynam wypełnianie katalogu...');
+    setResult('🚀 Rozpoczynam wypełnianie katalogu...\n\nTo może zająć kilka minut. Proszę czekać...');
     
     try {
       const res = await fetch('/api/admin/ai/command', {
@@ -18,20 +18,28 @@ export default function AiConsole() {
         body: JSON.stringify({ command: 'fillCategoriesWithProducts' })
       });
       
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
+        return;
+      }
+      
       const data = await res.json();
-      setResult(data.result || 'Zakończono!');
+      setResult(data.result || '✅ Zakończono!');
     } catch (e: any) {
-      setResult(`Błąd: ${e.message}`);
+      setResult(`❌ Błąd połączenia: ${e.message || 'Sprawdź połączenie z internetem'}`);
+      console.error('Fetch error:', e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleWipeDatabase = async () => {
-    if (!confirm('To usunie WSZYSTKIE produkty i deale. Czy na pewno?')) return;
+    if (!confirm('⚠️ UWAGA! To usunie WSZYSTKIE produkty i deale. Czy na pewno?')) return;
+    if (!confirm('To jest nieodwracalne. Ostatnia szansa - kontynuować?')) return;
     
     setLoading(true);
-    setResult('Czyszczenie bazy danych...');
+    setResult('🗑️ Czyszczenie bazy danych...\n\nUsuwam produkty i deale...');
     
     try {
       const res = await fetch('/api/admin/ai/wipe', {
@@ -39,20 +47,27 @@ export default function AiConsole() {
         headers: { 'Content-Type': 'application/json' }
       });
       
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.message || 'Nieznany błąd serwera'}`);
+        return;
+      }
+      
       const data = await res.json();
-      setResult(data.message || 'Baza danych wyczyszczona');
+      setResult(data.message || '✅ Baza danych wyczyszczona');
     } catch (e: any) {
-      setResult(`Błąd: ${e.message}`);
+      setResult(`❌ Błąd połączenia: ${e.message}`);
+      console.error('Fetch error:', e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleFetchDeals = async () => {
-    if (!confirm('To pobierze deale (promocje) z AliExpress API. Kontynuować?')) return;
+    if (!confirm('To pobierze deale (promocje >50% zniżki) z AliExpress API. Kontynuować?')) return;
     
     setLoading(true);
-    setResult('Pobieram deale z AliExpress...');
+    setResult('🔥 Pobieram deale z AliExpress...\n\nSzukam promocji >50% zniżki...');
     
     try {
       const res = await fetch('/api/admin/ai/command', {
@@ -61,10 +76,17 @@ export default function AiConsole() {
         body: JSON.stringify({ command: 'fillCategoriesWithDeals' })
       });
       
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
+        return;
+      }
+      
       const data = await res.json();
-      setResult(data.result || 'Deale pobrane z AliExpress!');
+      setResult(data.result || '✅ Deale pobrane z AliExpress!');
     } catch (e: any) {
-      setResult(`Błąd: ${e.message}`);
+      setResult(`❌ Błąd połączenia: ${e.message}`);
+      console.error('Fetch error:', e);
     } finally {
       setLoading(false);
     }
