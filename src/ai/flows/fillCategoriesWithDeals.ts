@@ -60,10 +60,13 @@ export async function fillCategoriesWithDeals() {
       // Mapuj produkty z AliExpress na Deal type
       for (const product of products) {
         try {
-          // Oblicz zniżkę
-          const discount = product.originalPrice && product.price 
+          // Oblicz zniżkę (preferuj pole discount z API; fallback wyliczenie)
+          const apiDiscountRaw = product.discount;
+          const apiDiscount = typeof apiDiscountRaw === 'string' ? parseInt(apiDiscountRaw) : (apiDiscountRaw || 0);
+          const computedDiscount = (product.originalPrice && product.price && product.originalPrice > 0)
             ? Math.round((1 - product.price / product.originalPrice) * 100)
             : 0;
+          const discount = apiDiscount || computedDiscount;
             
           // Tylko produkty z realną zniżką >= 50%
           if (discount < 50) {

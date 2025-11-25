@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const maxPrice = url.searchParams.get('maxPrice') || '';
   const minRating = url.searchParams.get('minRating') || '';
   const minOrders = url.searchParams.get('minOrders') || '';
+  const minDiscount = url.searchParams.get('minDiscount') || '';
   const limit = Number(url.searchParams.get('limit') || '50');
   const page = Number(url.searchParams.get('page') || '1');
 
@@ -71,6 +72,7 @@ export async function GET(request: Request) {
     // Optional filters from spec
     if (minRating) apiParams.ship_to_country = 'PL'; // For rating filter, need country context
     if (minOrders) apiParams.min_lastest_volume = minOrders;
+    // AliExpress API nie respektuje bezpośrednio minDiscount – filtr lokalny niżej
 
     // Build signed params (app_key, timestamp, sign, format, v)
   const signed = buildSignedParams({ ...apiParams, sign_method: 'md5' }, String(APP_KEY), String(APP_SECRET));
@@ -185,6 +187,48 @@ export async function GET(request: Request) {
       }
     }
 
+    // Advanced fallback: Hot Products (if enabled and still 0 results)
+    const enableAdvanced = process.env.ALIEXPRESS_ENABLE_ADVANCED === '1' || process.env.ALIEXPRESS_ENABLE_ADVANCED === 'true';
+    if (products.length === 0 && enableAdvanced) {
+      console.warn('[AliExpress] Both primary/secondary returned 0. Attempting Hot Products API...');
+      const hotMethod = 'aliexpress.affiliate.hotproduct.query';
+      const hotParams: Record<string, string | number> = {
+        method: hotMethod,
+        target_language: 'EN',
+        ship_to_country: 'PL',
+        page_size: Math.min(limit, 50),
+        page_no: page,
+      };
+      if (category) hotParams.category_ids = category;
+      if (AFFILIATE_ID) hotParams.tracking_id = AFFILIATE_ID;
+      
+      const hotSigned = buildSignedParams({ ...hotParams, sign_method: 'md5' }, String(APP_KEY), String(APP_SECRET));
+      const hotBody = toQueryString(hotSigned);
+      const hotRes = await fetch(API_BASE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+        body: hotBody,
+      });
+      
+      console.log('[AliExpress] Hot Products response status:', hotRes.status);
+      if (hotRes.ok) {
+        const hotText = await hotRes.text();
+        let hotJson: any = null;
+        try { hotJson = JSON.parse(hotText); } catch {}
+        if (hotJson) {
+          const hotWrapper = hotJson.aliexpress_affiliate_hotproduct_query_response || hotJson.aliexpress_affiliate_hotproductquery_response;
+          const hotExtraction = extractProducts(hotWrapper);
+          if (hotExtraction.rawProducts && hotExtraction.rawProducts.length) {
+            total = hotExtraction.total;
+            products = hotExtraction.rawProducts;
+            console.log(`[AliExpress] Hot Products fallback succeeded with ${products.length} products.`);
+          } else {
+            console.warn('[AliExpress] Hot Products returned 0. Snippet:', hotText.slice(0, 300));
+          }
+        }
+      }
+    }
+
     // Normalize & filter
     console.log(`[AliExpress] Raw products from API: ${products.length}`);
     
@@ -291,6 +335,22 @@ export async function GET(request: Request) {
       console.log(`[AliExpress] Orders filter applied (>=${minOrdersNum}): ${beforeOrdersFilter} → ${products.length} products`);
     }
 
+    // CLIENT-SIDE DISCOUNT FILTERING (używa p.discount lub wyliczenia fallback)
+    const minDiscountNum = minDiscount ? parseInt(minDiscount) : null;
+    if (minDiscountNum !== null) {
+      const beforeDiscountFilter = products.length;
+      products = products.filter((p: any) => {
+        const apiDiscount = typeof p.discount === 'string' ? parseInt(p.discount) : p.discount;
+        let computedDiscount = 0;
+        if (p.originalPrice && p.price && p.originalPrice > 0) {
+          computedDiscount = Math.round((1 - p.price / p.originalPrice) * 100);
+        }
+        const effectiveDiscount = apiDiscount || computedDiscount || 0;
+        return effectiveDiscount >= minDiscountNum;
+      });
+      console.log(`[AliExpress] Discount filter applied (>=${minDiscountNum}%): ${beforeDiscountFilter} → ${products.length} products`);
+    }
+
     console.log(`[AliExpress] Final products after all filters: ${products.length}/${total}`);
 
     // RANK BY RELEVANCE using fuzzy matching
@@ -329,7 +389,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { query, limit, sort, category, minPrice, maxPrice, minRating, minOrders, page } = body;
+    const { query, limit, sort, category, minPrice, maxPrice, minRating, minOrders, minDiscount, page } = body;
     
     // Build query string from body params
     const params = new URLSearchParams();
@@ -340,6 +400,7 @@ export async function POST(request: Request) {
     if (maxPrice) params.set('maxPrice', String(maxPrice));
     if (minRating) params.set('minRating', String(minRating));
     if (minOrders) params.set('minOrders', String(minOrders));
+    if (minDiscount) params.set('minDiscount', String(minDiscount));
     if (page) params.set('page', String(page));
     
     // Create a new request with query params
