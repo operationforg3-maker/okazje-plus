@@ -1,6 +1,5 @@
-import dynamic from 'next/dynamic';
-const AiCommandConsole = dynamic(() => import('./console'), { ssr: false });
+import AiCommandConsoleWrapper from './console-wrapper';
 
 export default function AiPanelPage() {
-  return <AiCommandConsole />;
+  return <AiCommandConsoleWrapper />;
 }
