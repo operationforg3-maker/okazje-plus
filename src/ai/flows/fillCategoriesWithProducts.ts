@@ -30,7 +30,9 @@ async function fetchProductsForCategory(categoryName: string, count: number = 5)
  */
 export async function fillCategoriesWithProducts() {
   try {
-    console.log('[fillCategoriesWithProducts] Starting...');
+    console.log('[fillCategoriesWithProducts] ===== STARTING FLOW =====');
+    console.log('[fillCategoriesWithProducts] Process:', process.pid);
+    console.log('[fillCategoriesWithProducts] Environment:', process.env.NODE_ENV);
     
     // Rozbudowana struktura kategorii
     const categories = [
@@ -152,60 +154,105 @@ export async function fillCategoriesWithProducts() {
     try {
       console.log(`[fillCategoriesWithProducts] Creating category: ${cat.name}`);
       const catId = await createCategory(cat);
+      console.log(`[fillCategoriesWithProducts] Created category ${cat.name} with ID: ${catId}`);
       totalCategories++;
       
       for (const sub of cat.subs) {
         try {
           console.log(`[fillCategoriesWithProducts] Creating subcategory: ${sub.name}`);
           const subId = await createSubcategory(catId, sub);
+          console.log(`[fillCategoriesWithProducts] Created subcategory ${sub.name} with ID: ${subId}`);
           totalSubcategories++;
           
-          for (const subsub of sub.subs) {
-            try {
-              console.log(`[fillCategoriesWithProducts] Creating sub-subcategory: ${subsub.name}`);
-              const subsubId = await createSubSubcategory(catId, subId, subsub);
-              totalSubSubcategories++;
-              
-              // Pobierz produkty z AliExpress dla tej kategorii
-              console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} ${subsub.name}`);
-              const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 5);
-              console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
-              
-              for (const aliProduct of aliProducts) {
-                try {
-                  await createProduct({
-                    name: aliProduct.title || aliProduct.name,
-                    description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
-                    longDescription: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
-                    price: aliProduct.price?.value || aliProduct.price || 0,
-                    image: aliProduct.image || aliProduct.imageUrl || '',
-                    imageHint: '',
-                    affiliateUrl: aliProduct.link || aliProduct.productUrl || aliProduct.url || '#',
-                    mainCategorySlug: cat.slug,
-                    subCategorySlug: sub.slug,
-                    subSubCategorySlug: subsub.slug,
-                    status: 'approved',
-                    ratingCard: {
-                      average: aliProduct.rating || 4.5,
-                      count: aliProduct.orders || 0,
-                      durability: 4.5,
-                      easeOfUse: 4.5,
-                      valueForMoney: 4.5,
-                      versatility: 4.5,
-                    },
-                    metadata: {
-                      source: 'aliexpress',
-                      originalId: aliProduct.id || aliProduct.itemId || '',
-                      importedAt: new Date().toISOString(),
-                    }
-                  });
-                  totalProducts++;
-                } catch (e: any) {
-                  console.warn(`[fillCategoriesWithProducts] Failed to create product ${aliProduct.title}:`, e.message);
+          // Jeśli subcategoria ma pod-podkategorie, utwórz je
+          if (sub.subs && sub.subs.length > 0) {
+            for (const subsub of sub.subs) {
+              try {
+                console.log(`[fillCategoriesWithProducts] Creating sub-subcategory: ${subsub.name}`);
+                const subsubId = await createSubSubcategory(catId, subId, subsub);
+                console.log(`[fillCategoriesWithProducts] Created sub-subcategory ${subsub.name} with ID: ${subsubId}`);
+                totalSubSubcategories++;
+                
+                // Pobierz produkty z AliExpress dla tej kategorii
+                console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} ${subsub.name}`);
+                const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 5);
+                console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
+                
+                for (const aliProduct of aliProducts) {
+                  try {
+                    await createProduct({
+                      name: aliProduct.title || aliProduct.name,
+                      description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
+                      longDescription: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
+                      price: aliProduct.price?.value || aliProduct.price || 0,
+                      image: aliProduct.image || aliProduct.imageUrl || '',
+                      imageHint: '',
+                      affiliateUrl: aliProduct.link || aliProduct.productUrl || aliProduct.url || '#',
+                      mainCategorySlug: cat.slug,
+                      subCategorySlug: sub.slug,
+                      subSubCategorySlug: subsub.slug,
+                      status: 'approved',
+                      ratingCard: {
+                        average: aliProduct.rating || 4.5,
+                        count: aliProduct.orders || 0,
+                        durability: 4.5,
+                        easeOfUse: 4.5,
+                        valueForMoney: 4.5,
+                        versatility: 4.5,
+                      },
+                      metadata: {
+                        source: 'aliexpress',
+                        originalId: aliProduct.id || aliProduct.itemId || '',
+                        importedAt: new Date().toISOString(),
+                      }
+                    });
+                    totalProducts++;
+                  } catch (e: any) {
+                    console.warn(`[fillCategoriesWithProducts] Failed to create product ${aliProduct.title}:`, e.message);
+                  }
                 }
+              } catch (e: any) {
+                console.error(`[fillCategoriesWithProducts] Failed to create sub-subcategory ${subsub.name}:`, e.message);
               }
-            } catch (e: any) {
-              console.error(`[fillCategoriesWithProducts] Failed to create sub-subcategory ${subsub.name}:`, e.message);
+            }
+          } else {
+            // Jeśli nie ma pod-podkategorii, pobierz produkty bezpośrednio dla subcategory
+            console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} (no sub-subcategories)`);
+            const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name}`, 5);
+            console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
+            
+            for (const aliProduct of aliProducts) {
+              try {
+                await createProduct({
+                  name: aliProduct.title || aliProduct.name,
+                  description: aliProduct.description || `Produkt z kategorii ${sub.name}`,
+                  longDescription: aliProduct.description || `Produkt z kategorii ${sub.name}`,
+                  price: aliProduct.price?.value || aliProduct.price || 0,
+                  image: aliProduct.image || aliProduct.imageUrl || '',
+                  imageHint: '',
+                  affiliateUrl: aliProduct.link || aliProduct.productUrl || aliProduct.url || '#',
+                  mainCategorySlug: cat.slug,
+                  subCategorySlug: sub.slug,
+                  subSubCategorySlug: undefined,
+                  status: 'approved',
+                  ratingCard: {
+                    average: aliProduct.rating || 4.5,
+                    count: aliProduct.orders || 0,
+                    durability: 4.5,
+                    easeOfUse: 4.5,
+                    valueForMoney: 4.5,
+                    versatility: 4.5,
+                  },
+                  metadata: {
+                    source: 'aliexpress',
+                    originalId: aliProduct.id || aliProduct.itemId || '',
+                    importedAt: new Date().toISOString(),
+                  }
+                });
+                totalProducts++;
+              } catch (e: any) {
+                console.warn(`[fillCategoriesWithProducts] Failed to create product ${aliProduct.title}:`, e.message);
+              }
             }
           }
         } catch (e: any) {
