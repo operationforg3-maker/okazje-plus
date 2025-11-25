@@ -48,21 +48,21 @@ export default function AiConsole() {
     }
   };
 
-  const handleGenerateDeals = async () => {
-    if (!confirm('To wygeneruje deale z istniejących produktów. Kontynuować?')) return;
+  const handleFetchDeals = async () => {
+    if (!confirm('To pobierze deale (promocje) z AliExpress API. Kontynuować?')) return;
     
     setLoading(true);
-    setResult('Generuję deale z produktów...');
+    setResult('Pobieram deale z AliExpress...');
     
     try {
       const res = await fetch('/api/admin/ai/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'generateDealsFromProducts' })
+        body: JSON.stringify({ command: 'fillCategoriesWithDeals' })
       });
       
       const data = await res.json();
-      setResult(data.result || 'Deale wygenerowane!');
+      setResult(data.result || 'Deale pobrane z AliExpress!');
     } catch (e: any) {
       setResult(`Błąd: ${e.message}`);
     } finally {
@@ -84,11 +84,11 @@ export default function AiConsole() {
         </button>
         
         <button
-          onClick={handleGenerateDeals}
+          onClick={handleFetchDeals}
           disabled={loading}
           className="p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
         >
-          {loading ? '⏳ Generuję...' : '🔥 Generuj Deale z Produktów'}
+          {loading ? '⏳ Pobieram...' : '🔥 Pobierz Deale (AliExpress)'}
         </button>
         
         <button
@@ -111,8 +111,9 @@ export default function AiConsole() {
         <h3 className="font-medium mb-2">ℹ️ Jak to działa:</h3>
         <ul className="text-sm space-y-1 list-disc list-inside">
           <li><strong>Wypełnij Katalog:</strong> Tworzy strukturę kategorii (jak Pepper.pl) i pobiera produkty z AliExpress API</li>
-          <li><strong>Generuj Deale:</strong> Tworzy hot deale z losowych produktów (z obniżoną ceną i opisem promocji)</li>
+          <li><strong>Pobierz Deale:</strong> Agreguje gorące okazje (promocje {'>'} 50% zniżki) z AliExpress dla każdej kategorii</li>
           <li><strong>Wyczyść Bazę:</strong> Usuwa wszystkie produkty i deale (przydatne przed re-seedowaniem)</li>
+          <li>⚠️ <strong>Ważne:</strong> To agregator - produkty i deale pochodzą z AliExpress, nie są generowane sztucznie</li>
           <li>Proces może zająć kilka minut w zależności od ilości kategorii</li>
         </ul>
       </div>

@@ -155,16 +155,28 @@ export async function fillCategoriesWithProducts() {
             await createProduct({
               name: aliProduct.title || aliProduct.name,
               description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
+              longDescription: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
               price: aliProduct.price?.value || 0,
-              currency: aliProduct.price?.currency || 'PLN',
               image: aliProduct.image || aliProduct.imageUrl,
-              link: aliProduct.link || aliProduct.url,
+              imageHint: '',
+              affiliateUrl: aliProduct.link || aliProduct.url || '#',
               mainCategorySlug: cat.slug,
               subCategorySlug: sub.slug,
               subSubCategorySlug: subsub.slug,
               status: 'approved',
-              source: 'aliexpress',
-              externalId: aliProduct.id || aliProduct.itemId,
+              ratingCard: {
+                average: 4.5,
+                count: 0,
+                durability: 4.5,
+                easeOfUse: 4.5,
+                valueForMoney: 4.5,
+                versatility: 4.5,
+              },
+              metadata: {
+                source: 'aliexpress',
+                originalId: aliProduct.id || aliProduct.itemId,
+                importedAt: new Date().toISOString(),
+              }
             });
             totalProducts++;
           } catch (e) {
