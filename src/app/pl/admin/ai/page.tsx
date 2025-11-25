@@ -1,5 +1,5 @@
-import AiCommandConsoleWrapper from './console-wrapper';
-import AiHistory from './history';
+import AiCommandConsoleWrapper from './_components/console-wrapper';
+import AiHistory from './_components/history';
 
 export default function AiPanelPage() {
   return (
