@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
-import type { Deal } from '@/lib/types';
+import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useAuth } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ function getRelativeTime(isoDate: string): string {
 export default function DealCard({ deal }: DealCardProps) {
   // TODO: pobierz powiązany produkt jeśli istnieje (np. z cache lub props)
   // Przykład: const product = useProductById(deal.linkedProductIds?.[0]);
-  const product = null; // placeholder
+  const product = null as Product | null; // placeholder, typ jawnie Product | null
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;

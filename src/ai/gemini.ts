@@ -16,8 +16,10 @@ Zwróć wynik w formacie JSON lub czytelnym dla użytkownika. Jeśli polecenie d
   const response = await ai.generate({
     prompt,
     model: 'googleai/gemini-1.5-flash',
-    maxTokens: 1024,
-    temperature: 0.2,
+    config: {
+      maxOutputTokens: 1024,
+      temperature: 0.2,
+    }
   });
   return response.text || JSON.stringify(response);
 }
