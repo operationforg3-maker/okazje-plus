@@ -30,6 +30,181 @@ import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
 import TestsTab from '@/components/admin/tests-tab';
 
+// AI Console Component
+function AiConsole() {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState('');
+
+  const handleFillCatalog = async () => {
+    if (!confirm('To wypełni bazę kategoriami i produktami z AliExpress. Kontynuować?')) return;
+    
+    setLoading(true);
+    setResult('🚀 Rozpoczynam wypełnianie katalogu...\n\nTo może zająć kilka minut. Proszę czekać...');
+    
+    try {
+      const res = await fetch('/api/admin/ai/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'fillCategoriesWithProducts' })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
+        return;
+      }
+      
+      const data = await res.json();
+      setResult(data.result || '✅ Zakończono!');
+    } catch (e: any) {
+      setResult(`❌ Błąd połączenia: ${e.message || 'Sprawdź połączenie z internetem'}`);
+      console.error('Fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWipeDatabase = async () => {
+    if (!confirm('⚠️ UWAGA! To usunie WSZYSTKIE produkty i deale. Czy na pewno?')) return;
+    if (!confirm('To jest nieodwracalne. Ostatnia szansa - kontynuować?')) return;
+    
+    setLoading(true);
+    setResult('🗑️ Czyszczenie bazy danych...\n\nUsuwam produkty i deale...');
+    
+    try {
+      const res = await fetch('/api/admin/ai/wipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.message || 'Nieznany błąd serwera'}`);
+        return;
+      }
+      
+      const data = await res.json();
+      setResult(data.message || '✅ Baza danych wyczyszczona');
+    } catch (e: any) {
+      setResult(`❌ Błąd połączenia: ${e.message}`);
+      console.error('Fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFetchDeals = async () => {
+    if (!confirm('To pobierze deale (promocje >50% zniżki) z AliExpress API. Kontynuować?')) return;
+    
+    setLoading(true);
+    setResult('🔥 Pobieram deale z AliExpress...\n\nSzukam promocji >50% zniżki...');
+    
+    try {
+      const res = await fetch('/api/admin/ai/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'fillCategoriesWithDeals' })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
+        return;
+      }
+      
+      const data = await res.json();
+      setResult(data.result || '✅ Deale pobrane z AliExpress!');
+    } catch (e: any) {
+      setResult(`❌ Błąd połączenia: ${e.message}`);
+      console.error('Fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Command Buttons */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button
+          onClick={handleFillCatalog}
+          disabled={loading}
+          className="group relative p-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-4xl">🚀</span>
+            <span className="text-lg font-bold">Wypełnij Katalog</span>
+            <span className="text-sm text-blue-100 text-center">
+              {loading ? '⏳ Przetwarzam...' : 'Produkty z AliExpress API'}
+            </span>
+          </div>
+          <div className="absolute top-2 right-2">
+            <span className="bg-white/20 text-xs px-2 py-1 rounded-full">~300 produktów</span>
+          </div>
+        </button>
+        
+        <button
+          onClick={handleFetchDeals}
+          disabled={loading}
+          className="group relative p-6 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-xl hover:from-orange-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-4xl">🔥</span>
+            <span className="text-lg font-bold">Pobierz Deale</span>
+            <span className="text-sm text-orange-100 text-center">
+              {loading ? '⏳ Pobieram...' : 'Promocje {\'>\'}50% zniżki'}
+            </span>
+          </div>
+          <div className="absolute top-2 right-2">
+            <span className="bg-white/20 text-xs px-2 py-1 rounded-full">~100 deali</span>
+          </div>
+        </button>
+        
+        <button
+          onClick={handleWipeDatabase}
+          disabled={loading}
+          className="group relative p-6 bg-gradient-to-br from-gray-600 to-gray-800 text-white rounded-xl hover:from-red-600 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
+        >
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-4xl">🗑️</span>
+            <span className="text-lg font-bold">Wyczyść Bazę</span>
+            <span className="text-sm text-gray-200 text-center">
+              {loading ? '⏳ Czyszczę...' : 'Reset całej bazy'}
+            </span>
+          </div>
+          <div className="absolute top-2 right-2">
+            <span className="bg-red-500/50 text-xs px-2 py-1 rounded-full">⚠️ Ostrożnie</span>
+          </div>
+        </button>
+      </div>
+
+      {/* Result Display */}
+      {result && (
+        <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-inner">
+          <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+            <span className="text-2xl">✨</span>
+            Wynik operacji:
+          </h3>
+          <pre className="whitespace-pre-wrap text-sm bg-white dark:bg-gray-900 p-4 rounded-lg border font-mono">
+            {result}
+          </pre>
+        </div>
+      )}
+      
+      <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+        <h3 className="font-medium mb-2">ℹ️ Jak to działa:</h3>
+        <ul className="text-sm space-y-1 list-disc list-inside">
+          <li><strong>Wypełnij Katalog:</strong> Tworzy strukturę kategorii (jak Pepper.pl) i pobiera produkty z AliExpress API</li>
+          <li><strong>Pobierz Deale:</strong> Agreguje gorące okazje (promocje {'>'} 50% zniżki) z AliExpress dla każdej kategorii</li>
+          <li><strong>Wyczyść Bazę:</strong> Usuwa wszystkie produkty i deale (przydatne przed re-seedowaniem)</li>
+          <li>⚠️ <strong>Ważne:</strong> To agregator - produkty i deale pochodzą z AliExpress, nie są generowane sztucznie</li>
+          <li>Proces może zająć kilka minut w zależności od ilości kategorii</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 interface Stats {
   products: number;
   deals: number;
@@ -611,173 +786,7 @@ function AdminPage() {
         </TabsContent>
 
         <TabsContent value="ai" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* AI Catalog Management */}
-            <Card className="border-l-4 border-l-blue-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🚀 Zarządzanie Katalogiem AI
-                </CardTitle>
-                <CardDescription>
-                  Automatyczne wypełnianie bazy danych produktami i dealami z AliExpress
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  asChild 
-                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-                  size="lg"
-                >
-                  <Link href="/pl/admin/ai">
-                    🤖 Otwórz Konsolę AI
-                  </Link>
-                </Button>
-                <div className="text-sm text-muted-foreground space-y-2">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-500" />
-                    <span>Wypełnij katalog produktami (struktura Pepper.pl)</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-500" />
-                    <span>Pobierz hot deale z promocjami {'>'}50% zniżki</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-500" />
-                    <span>Wyczyść bazę danych (reset)</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Enhancement Tools */}
-            <Card className="border-l-4 border-l-purple-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  ✨ Narzędzia AI Enhancement
-                </CardTitle>
-                <CardDescription>
-                  Ulepszanie i optymalizacja treści przy pomocy AI
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/products">
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Produkty
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/deals">
-                      <Flame className="h-4 w-4 mr-2" />
-                      Deale
-                    </Link>
-                  </Button>
-                </div>
-                <div className="text-sm text-muted-foreground space-y-2 mt-4">
-                  <div className="flex items-start gap-2">
-                    <Badge variant="secondary" className="text-xs">AI</Badge>
-                    <span>Automatyczne tłumaczenia i SEO</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Badge variant="secondary" className="text-xs">AI</Badge>
-                    <span>Sugestie kategorii i tagów</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Badge variant="secondary" className="text-xs">AI</Badge>
-                    <span>Ocena jakości treści</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AliExpress Integration */}
-            <Card className="border-l-4 border-l-orange-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  🛒 Integracja AliExpress
-                </CardTitle>
-                <CardDescription>
-                  Import produktów bezpośrednio z AliExpress API
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button asChild variant="outline" className="w-full" size="lg">
-                  <Link href="/admin/aliexpress-import">
-                    Import z AliExpress
-                  </Link>
-                </Button>
-                <div className="text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Activity className="h-4 w-4 text-green-500" />
-                    <span className="font-medium">Status: Aktywny</span>
-                  </div>
-                  <div className="text-xs space-y-1">
-                    <div>• Wyszukiwanie produktów</div>
-                    <div>• Podgląd przed importem</div>
-                    <div>• Automatyczne mapowanie kategorii</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Import Tools */}
-            <Card className="border-l-4 border-l-green-500">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  📦 Masowy Import
-                </CardTitle>
-                <CardDescription>
-                  Narzędzia do importu dużych ilości danych
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/bulk-import">
-                      CSV Import
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/admin/deals-import">
-                      Deale CSV
-                    </Link>
-                  </Button>
-                </div>
-                <div className="text-sm text-muted-foreground mt-4">
-                  <div className="text-xs space-y-1">
-                    <div>• Import CSV z walidacją</div>
-                    <div>• Podgląd przed zapisem</div>
-                    <div>• Obsługa duplikatów</div>
-                    <div>• Historie importów</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* AI Command History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Historia Poleceń AI
-              </CardTitle>
-              <CardDescription>
-                Ostatnie operacje wykonane przez system AI
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Button asChild variant="outline">
-                  <Link href="/pl/admin/ai/history">
-                    Zobacz pełną historię
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <AiConsole />
         </TabsContent>
       </Tabs>
 
@@ -825,18 +834,6 @@ function AdminPage() {
             >
               <Package className="h-8 w-8 text-primary" />
               <span className="text-sm font-medium text-center">Kategorie</span>
-            </Link>
-            <Link 
-              href="/pl/admin/ai" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 transition-all"
-            >
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              </span>
-              <span className="text-sm font-medium text-center">
-                AI Tools
-                <Badge variant="secondary" className="ml-1 text-xs">Beta</Badge>
-              </span>
             </Link>
             <Link 
               href="/admin/aliexpress-import" 
