@@ -67,6 +67,8 @@ const pathNames: Record<string, string> = {
   '/admin/marketplaces': 'Marketplace (M4)',
   '/admin/comparison': 'Porównanie cen (M4)',
   '/admin/category-mappings': 'Mapowanie kategorii (M4)',
+  '/pl/admin/ai': 'AI Tools (Beta)',
+  '/pl/admin/ai/history': 'Historia AI',
 };
 
 export default function AdminLayout({
@@ -239,6 +241,24 @@ export default function AdminLayout({
                     <Link href="/admin/bulk-import">
                       <Sparkles />
                       <span className="group-data-[collapsible=icon]:hidden font-medium">Bulk AI Import</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {/* AI Tools - NEW */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/pl/admin/ai')}
+                    tooltip={{ children: 'AI Tools' }}
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-purple-600 data-[active=true]:to-pink-600 data-[active=true]:text-white hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 dark:hover:from-purple-950 dark:hover:to-pink-950 border-l-4 border-transparent data-[active=true]:border-purple-400 transition-all"
+                  >
+                    <Link href="/pl/admin/ai">
+                      <BrainCircuit className="animate-pulse" />
+                      <span className="group-data-[collapsible=icon]:hidden font-medium">
+                        AI Tools
+                        <span className="ml-2 text-xs bg-purple-500 text-white px-1.5 py-0.5 rounded-full">Beta</span>
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -71,39 +71,71 @@ export default function AiConsole() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Konsola AI - Zarządzanie Katalogiem</h1>
-      
+    <div className="space-y-6">
+      {/* Command Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button
           onClick={handleFillCatalog}
           disabled={loading}
-          className="p-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium"
+          className="group relative p-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
         >
-          {loading ? '⏳ Przetwarzam...' : '🚀 Wypełnij Katalog (AliExpress)'}
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-4xl">🚀</span>
+            <span className="text-lg font-bold">Wypełnij Katalog</span>
+            <span className="text-sm text-blue-100 text-center">
+              {loading ? '⏳ Przetwarzam...' : 'Produkty z AliExpress API'}
+            </span>
+          </div>
+          <div className="absolute top-2 right-2">
+            <span className="bg-white/20 text-xs px-2 py-1 rounded-full">~300 produktów</span>
+          </div>
         </button>
         
         <button
           onClick={handleFetchDeals}
           disabled={loading}
-          className="p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+          className="group relative p-6 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-xl hover:from-orange-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
         >
-          {loading ? '⏳ Pobieram...' : '🔥 Pobierz Deale (AliExpress)'}
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-4xl">🔥</span>
+            <span className="text-lg font-bold">Pobierz Deale</span>
+            <span className="text-sm text-orange-100 text-center">
+              {loading ? '⏳ Pobieram...' : 'Promocje {\'>\'}50% zniżki'}
+            </span>
+          </div>
+          <div className="absolute top-2 right-2">
+            <span className="bg-white/20 text-xs px-2 py-1 rounded-full">~100 deali</span>
+          </div>
         </button>
         
         <button
           onClick={handleWipeDatabase}
           disabled={loading}
-          className="p-4 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 disabled:opacity-50 font-medium"
+          className="group relative p-6 bg-gradient-to-br from-gray-600 to-gray-800 text-white rounded-xl hover:from-red-600 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
         >
-          {loading ? '⏳ Czyszczę...' : '🗑️ Wyczyść Bazę Danych'}
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-4xl">🗑️</span>
+            <span className="text-lg font-bold">Wyczyść Bazę</span>
+            <span className="text-sm text-gray-200 text-center">
+              {loading ? '⏳ Czyszczę...' : 'Reset całej bazy'}
+            </span>
+          </div>
+          <div className="absolute top-2 right-2">
+            <span className="bg-red-500/50 text-xs px-2 py-1 rounded-full">⚠️ Ostrożnie</span>
+          </div>
         </button>
       </div>
-      
+
+      {/* Result Display */}
       {result && (
-        <div className="p-4 bg-muted rounded-lg border">
-          <h3 className="font-medium mb-2">Wynik:</h3>
-          <pre className="whitespace-pre-wrap text-sm">{result}</pre>
+        <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-inner">
+          <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+            <span className="text-2xl">✨</span>
+            Wynik operacji:
+          </h3>
+          <pre className="whitespace-pre-wrap text-sm bg-white dark:bg-gray-900 p-4 rounded-lg border font-mono">
+            {result}
+          </pre>
         </div>
       )}
       
