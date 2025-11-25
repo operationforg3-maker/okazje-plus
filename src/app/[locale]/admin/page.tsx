@@ -400,7 +400,7 @@ function AdminPage() {
 
       {/* Tabs for detailed views */}
       <Tabs defaultValue="hot-deals" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="hot-deals">
             <Flame className="h-4 w-4 mr-2" />
             Gorące okazje
@@ -416,6 +416,11 @@ function AdminPage() {
           <TabsTrigger value="activity">
             <Activity className="h-4 w-4 mr-2" />
             Aktywność
+          </TabsTrigger>
+          <TabsTrigger value="ai">
+            <span className="flex items-center gap-2">
+              🤖 AI Tools
+            </span>
           </TabsTrigger>
           <TabsTrigger value="tests">
             <CheckCircle className="h-4 w-4 mr-2" />
@@ -604,6 +609,176 @@ function AdminPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="ai" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* AI Catalog Management */}
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🚀 Zarządzanie Katalogiem AI
+                </CardTitle>
+                <CardDescription>
+                  Automatyczne wypełnianie bazy danych produktami i dealami z AliExpress
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  asChild 
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                  size="lg"
+                >
+                  <Link href="/pl/admin/ai">
+                    🤖 Otwórz Konsolę AI
+                  </Link>
+                </Button>
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-500" />
+                    <span>Wypełnij katalog produktami (struktura Pepper.pl)</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-500" />
+                    <span>Pobierz hot deale z promocjami {'>'}50% zniżki</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 mt-0.5 text-green-500" />
+                    <span>Wyczyść bazę danych (reset)</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Enhancement Tools */}
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  ✨ Narzędzia AI Enhancement
+                </CardTitle>
+                <CardDescription>
+                  Ulepszanie i optymalizacja treści przy pomocy AI
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/products">
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Produkty
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/deals">
+                      <Flame className="h-4 w-4 mr-2" />
+                      Deale
+                    </Link>
+                  </Button>
+                </div>
+                <div className="text-sm text-muted-foreground space-y-2 mt-4">
+                  <div className="flex items-start gap-2">
+                    <Badge variant="secondary" className="text-xs">AI</Badge>
+                    <span>Automatyczne tłumaczenia i SEO</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Badge variant="secondary" className="text-xs">AI</Badge>
+                    <span>Sugestie kategorii i tagów</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Badge variant="secondary" className="text-xs">AI</Badge>
+                    <span>Ocena jakości treści</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AliExpress Integration */}
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🛒 Integracja AliExpress
+                </CardTitle>
+                <CardDescription>
+                  Import produktów bezpośrednio z AliExpress API
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button asChild variant="outline" className="w-full" size="lg">
+                  <Link href="/admin/aliexpress-import">
+                    Import z AliExpress
+                  </Link>
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-4 w-4 text-green-500" />
+                    <span className="font-medium">Status: Aktywny</span>
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <div>• Wyszukiwanie produktów</div>
+                    <div>• Podgląd przed importem</div>
+                    <div>• Automatyczne mapowanie kategorii</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Import Tools */}
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  📦 Masowy Import
+                </CardTitle>
+                <CardDescription>
+                  Narzędzia do importu dużych ilości danych
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/bulk-import">
+                      CSV Import
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/admin/deals-import">
+                      Deale CSV
+                    </Link>
+                  </Button>
+                </div>
+                <div className="text-sm text-muted-foreground mt-4">
+                  <div className="text-xs space-y-1">
+                    <div>• Import CSV z walidacją</div>
+                    <div>• Podgląd przed zapisem</div>
+                    <div>• Obsługa duplikatów</div>
+                    <div>• Historie importów</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Command History */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Historia Poleceń AI
+              </CardTitle>
+              <CardDescription>
+                Ostatnie operacje wykonane przez system AI
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <Button asChild variant="outline">
+                  <Link href="/pl/admin/ai/history">
+                    Zobacz pełną historię
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Quick Actions */}
@@ -615,27 +790,27 @@ function AdminPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Link 
               href="/admin/deals" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <Flame className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Zarządzaj okazjami</span>
+              <span className="text-sm font-medium text-center">Okazje</span>
             </Link>
             <Link 
               href="/admin/products" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <ShoppingCart className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Zarządzaj produktami</span>
+              <span className="text-sm font-medium text-center">Produkty</span>
             </Link>
             <Link 
-              href="/admin/import" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
+              href="/admin/moderation" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
             >
-              <Package className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Import CSV</span>
+              <AlertCircle className="h-8 w-8 text-orange-500" />
+              <span className="text-sm font-medium text-center">Moderacja</span>
             </Link>
             <Link 
               href="/admin/users" 
@@ -645,13 +820,65 @@ function AdminPage() {
               <span className="text-sm font-medium text-center">Użytkownicy</span>
             </Link>
             <Link 
-              href="/admin/ai" 
+              href="/admin/categories" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
-              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 text-white mb-1">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              <Package className="h-8 w-8 text-primary" />
+              <span className="text-sm font-medium text-center">Kategorie</span>
+            </Link>
+            <Link 
+              href="/pl/admin/ai" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 transition-all"
+            >
+              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-tr from-blue-400 to-purple-500 text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               </span>
-              <span className="text-sm font-medium text-center">Panel AI <span className="text-xs text-blue-500 font-bold">beta</span></span>
+              <span className="text-sm font-medium text-center">
+                AI Tools
+                <Badge variant="secondary" className="ml-1 text-xs">Beta</Badge>
+              </span>
+            </Link>
+            <Link 
+              href="/admin/aliexpress-import" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
+            >
+              <span className="text-2xl">🛒</span>
+              <span className="text-sm font-medium text-center">AliExpress</span>
+            </Link>
+            <Link 
+              href="/admin/bulk-import" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <span className="text-2xl">📦</span>
+              <span className="text-sm font-medium text-center">Bulk Import</span>
+            </Link>
+            <Link 
+              href="/admin/analytics" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <span className="text-sm font-medium text-center">Analityka</span>
+            </Link>
+            <Link 
+              href="/admin/settings" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <span className="text-2xl">⚙️</span>
+              <span className="text-sm font-medium text-center">Ustawienia</span>
+            </Link>
+            <Link 
+              href="/admin/navigation" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
+            >
+              <span className="text-2xl">🗺️</span>
+              <span className="text-sm font-medium text-center">Nawigacja</span>
+            </Link>
+            <Link 
+              href="/admin/duplicates" 
+              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-950 transition-colors"
+            >
+              <span className="text-2xl">🔍</span>
+              <span className="text-sm font-medium text-center">Duplikaty</span>
             </Link>
           </div>
         </CardContent>
