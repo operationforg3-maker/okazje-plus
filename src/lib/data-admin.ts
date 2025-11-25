@@ -160,6 +160,64 @@ export async function deleteAllDeals(): Promise<number> {
 }
 
 /**
+ * Rekurencyjnie usuwa wszystkie subkolekcje kategorii
+ */
+async function deleteSubcollections(categoryRef: FirebaseFirestore.DocumentReference): Promise<number> {
+  let deletedCount = 0;
+  
+  // Usuń subcategories
+  const subcategoriesSnapshot = await categoryRef.collection('subcategories').get();
+  
+  for (const subcategoryDoc of subcategoriesSnapshot.docs) {
+    // Rekurencyjnie usuń pod-podkategorie
+    const subSubcategoriesSnapshot = await subcategoryDoc.ref.collection('subcategories').get();
+    const subSubBatch = adminDb.batch();
+    
+    subSubcategoriesSnapshot.docs.forEach(doc => {
+      subSubBatch.delete(doc.ref);
+    });
+    
+    await subSubBatch.commit();
+    deletedCount += subSubcategoriesSnapshot.size;
+    
+    // Usuń subcategory
+    await subcategoryDoc.ref.delete();
+    deletedCount++;
+  }
+  
+  return deletedCount;
+}
+
+/**
+ * Usuwa wszystkie kategorie wraz z ich subkolekcjami (Admin SDK)
+ */
+export async function deleteAllCategories(): Promise<{ categories: number; subcategories: number }> {
+  const ref = adminDb.collection('categories');
+  const snapshot = await ref.get();
+  
+  let totalSubcategories = 0;
+  
+  // Najpierw usuń wszystkie subkolekcje
+  for (const categoryDoc of snapshot.docs) {
+    const subcategoriesDeleted = await deleteSubcollections(categoryDoc.ref);
+    totalSubcategories += subcategoriesDeleted;
+  }
+  
+  // Następnie usuń główne kategorie
+  const batch = adminDb.batch();
+  snapshot.docs.forEach(doc => {
+    batch.delete(doc.ref);
+  });
+  
+  await batch.commit();
+  
+  return {
+    categories: snapshot.size,
+    subcategories: totalSubcategories,
+  };
+}
+
+/**
  * Loguje wykonanie polecenia AI do kolekcji "aiCommandHistory"
  */
 export async function logAiCommand(data: {
