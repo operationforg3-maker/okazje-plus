@@ -80,7 +80,7 @@ firebase deploy --only functions:sendBetaInvitations,functions:activatePreRegist
 4. System wysyła emaile do wszystkich pending
 5. Status zmienia się na `invited`
 
-### Public Release (26.11.2025 20:00)
+### Public Release (25.11.2025 22:00)
 
 1. Weryfikacja podstawowych ścieżek: `/`, `/deals`, `/products`, `/search`
 2. Włączenie rejestracji publicznej (landing + formularz)

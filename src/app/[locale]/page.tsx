@@ -10,7 +10,7 @@ import { ShoppingBag, Flame, Users, Zap, Clock, Mail, CheckCircle2, Trophy, Rock
 import Link from "next/link";
 
 const BETA_RELEASE = new Date("2025-11-24T19:00:00+01:00");
-const PUBLIC_RELEASE = new Date("2025-11-25T20:00:00+01:00");
+const PUBLIC_RELEASE = new Date("2025-11-25T22:00:00+01:00");
 
 interface TimeLeft {
   days: number;
