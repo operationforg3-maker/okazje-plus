@@ -1107,6 +1107,22 @@ export async function createProduct(data: Omit<Product, 'id' | 'createdAt'> & { 
   return docRef.id;
 }
 
+/**
+ * Tworzy deal w kolekcji "deals" na podstawie produktu lub danych.
+ */
+export async function createDeal(data: Omit<Deal, 'id' | 'postedAt' | 'createdAt'> & { mainCategorySlug: string; subCategorySlug?: string; subSubCategorySlug?: string; }): Promise<string> {
+  const ref = collection(db, 'deals');
+  const docRef = await addDoc(ref, {
+    ...data,
+    postedAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+    status: data.status ?? 'approved',
+    temperature: data.temperature ?? 0,
+    voteCount: data.voteCount ?? 0,
+  });
+  return docRef.id;
+}
+
 // Placeholder data for users to fix build error
 export const users = [
   {

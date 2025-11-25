@@ -48,17 +48,47 @@ export default function AiConsole() {
     }
   };
 
+  const handleGenerateDeals = async () => {
+    if (!confirm('To wygeneruje deale z istniejących produktów. Kontynuować?')) return;
+    
+    setLoading(true);
+    setResult('Generuję deale z produktów...');
+    
+    try {
+      const res = await fetch('/api/admin/ai/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'generateDealsFromProducts' })
+      });
+      
+      const data = await res.json();
+      setResult(data.result || 'Deale wygenerowane!');
+    } catch (e: any) {
+      setResult(`Błąd: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Konsola AI - Zarządzanie Katalogiem</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button
           onClick={handleFillCatalog}
           disabled={loading}
           className="p-4 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 font-medium"
         >
           {loading ? '⏳ Przetwarzam...' : '🚀 Wypełnij Katalog (AliExpress)'}
+        </button>
+        
+        <button
+          onClick={handleGenerateDeals}
+          disabled={loading}
+          className="p-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+        >
+          {loading ? '⏳ Generuję...' : '🔥 Generuj Deale z Produktów'}
         </button>
         
         <button
@@ -81,6 +111,7 @@ export default function AiConsole() {
         <h3 className="font-medium mb-2">ℹ️ Jak to działa:</h3>
         <ul className="text-sm space-y-1 list-disc list-inside">
           <li><strong>Wypełnij Katalog:</strong> Tworzy strukturę kategorii (jak Pepper.pl) i pobiera produkty z AliExpress API</li>
+          <li><strong>Generuj Deale:</strong> Tworzy hot deale z losowych produktów (z obniżoną ceną i opisem promocji)</li>
           <li><strong>Wyczyść Bazę:</strong> Usuwa wszystkie produkty i deale (przydatne przed re-seedowaniem)</li>
           <li>Proces może zająć kilka minut w zależności od ilości kategorii</li>
         </ul>

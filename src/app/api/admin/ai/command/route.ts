@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fillCategoriesWithProducts } from '@/ai/flows/fillCategoriesWithProducts';
+import { generateDealsFromProducts } from '@/ai/flows/generateDealsFromProducts';
 import { logAiCommand } from '@/lib/data';
 
 export async function POST(req: NextRequest) {
@@ -18,8 +19,17 @@ export async function POST(req: NextRequest) {
         status: 'success',
         result,
       });
+    } else if (command === 'generateDealsFromProducts' || command.includes('generuj deale')) {
+      result = await generateDealsFromProducts(50);
+      
+      // Zaloguj do historii
+      await logAiCommand({
+        command: 'generateDealsFromProducts',
+        status: 'success',
+        result,
+      });
     } else {
-      result = 'Nieznane polecenie. Dostępne: fillCategoriesWithProducts';
+      result = 'Nieznane polecenie. Dostępne: fillCategoriesWithProducts, generateDealsFromProducts';
     }
     
     return NextResponse.json({ result });
