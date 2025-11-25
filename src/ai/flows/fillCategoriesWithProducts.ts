@@ -29,8 +29,11 @@ async function fetchProductsForCategory(categoryName: string, count: number = 5)
  * Struktura zbliżona do Pepper.pl, zoptymalizowana pod wygodę klienta.
  */
 export async function fillCategoriesWithProducts() {
-  // Rozbudowana struktura kategorii
-  const categories = [
+  try {
+    console.log('[fillCategoriesWithProducts] Starting...');
+    
+    // Rozbudowana struktura kategorii
+    const categories = [
     { name: 'Elektronika', slug: 'elektronika', subs: [
       { name: 'Telefony i smartfony', slug: 'telefony-smartfony', subs: [
         { name: 'Smartfony', slug: 'smartfony' },
@@ -139,53 +142,93 @@ export async function fillCategoriesWithProducts() {
   ];
 
   let totalProducts = 0;
+  let totalCategories = 0;
+  let totalSubcategories = 0;
+  let totalSubSubcategories = 0;
+  
+  console.log(`[fillCategoriesWithProducts] Processing ${categories.length} main categories...`);
   
   for (const cat of categories) {
-    const catId = await createCategory(cat);
-    for (const sub of cat.subs) {
-      const subId = await createSubcategory(catId, sub);
-      for (const subsub of sub.subs) {
-        const subsubId = await createSubSubcategory(catId, subId, subsub);
-        
-        // Pobierz produkty z AliExpress dla tej kategorii
-        const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 5);
-        
-        for (const aliProduct of aliProducts) {
-          try {
-            await createProduct({
-              name: aliProduct.title || aliProduct.name,
-              description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
-              longDescription: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
-              price: aliProduct.price?.value || 0,
-              image: aliProduct.image || aliProduct.imageUrl,
-              imageHint: '',
-              affiliateUrl: aliProduct.link || aliProduct.url || '#',
-              mainCategorySlug: cat.slug,
-              subCategorySlug: sub.slug,
-              subSubCategorySlug: subsub.slug,
-              status: 'approved',
-              ratingCard: {
-                average: 4.5,
-                count: 0,
-                durability: 4.5,
-                easeOfUse: 4.5,
-                valueForMoney: 4.5,
-                versatility: 4.5,
-              },
-              metadata: {
-                source: 'aliexpress',
-                originalId: aliProduct.id || aliProduct.itemId,
-                importedAt: new Date().toISOString(),
+    try {
+      console.log(`[fillCategoriesWithProducts] Creating category: ${cat.name}`);
+      const catId = await createCategory(cat);
+      totalCategories++;
+      
+      for (const sub of cat.subs) {
+        try {
+          console.log(`[fillCategoriesWithProducts] Creating subcategory: ${sub.name}`);
+          const subId = await createSubcategory(catId, sub);
+          totalSubcategories++;
+          
+          for (const subsub of sub.subs) {
+            try {
+              console.log(`[fillCategoriesWithProducts] Creating sub-subcategory: ${subsub.name}`);
+              const subsubId = await createSubSubcategory(catId, subId, subsub);
+              totalSubSubcategories++;
+              
+              // Pobierz produkty z AliExpress dla tej kategorii
+              console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} ${subsub.name}`);
+              const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 5);
+              console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
+              
+              for (const aliProduct of aliProducts) {
+                try {
+                  await createProduct({
+                    name: aliProduct.title || aliProduct.name,
+                    description: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
+                    longDescription: aliProduct.description || `Produkt z kategorii ${subsub.name}`,
+                    price: aliProduct.price?.value || aliProduct.price || 0,
+                    image: aliProduct.image || aliProduct.imageUrl || '',
+                    imageHint: '',
+                    affiliateUrl: aliProduct.link || aliProduct.productUrl || aliProduct.url || '#',
+                    mainCategorySlug: cat.slug,
+                    subCategorySlug: sub.slug,
+                    subSubCategorySlug: subsub.slug,
+                    status: 'approved',
+                    ratingCard: {
+                      average: aliProduct.rating || 4.5,
+                      count: aliProduct.orders || 0,
+                      durability: 4.5,
+                      easeOfUse: 4.5,
+                      valueForMoney: 4.5,
+                      versatility: 4.5,
+                    },
+                    metadata: {
+                      source: 'aliexpress',
+                      originalId: aliProduct.id || aliProduct.itemId || '',
+                      importedAt: new Date().toISOString(),
+                    }
+                  });
+                  totalProducts++;
+                } catch (e: any) {
+                  console.warn(`[fillCategoriesWithProducts] Failed to create product ${aliProduct.title}:`, e.message);
+                }
               }
-            });
-            totalProducts++;
-          } catch (e) {
-            console.warn(`Nie udało się dodać produktu ${aliProduct.title}:`, e);
+            } catch (e: any) {
+              console.error(`[fillCategoriesWithProducts] Failed to create sub-subcategory ${subsub.name}:`, e.message);
+            }
           }
+        } catch (e: any) {
+          console.error(`[fillCategoriesWithProducts] Failed to create subcategory ${sub.name}:`, e.message);
         }
       }
+    } catch (e: any) {
+      console.error(`[fillCategoriesWithProducts] Failed to create category ${cat.name}:`, e.message);
     }
   }
   
-  return `Katalog został automatycznie wypełniony ${categories.length} kategoriami i ${totalProducts} produktami z AliExpress.`;
+  const summary = `✅ Katalog wypełniony!\n\n` +
+    `📊 Statystyki:\n` +
+    `- Kategorii głównych: ${totalCategories}/${categories.length}\n` +
+    `- Podkategorii: ${totalSubcategories}\n` +
+    `- Pod-podkategorii: ${totalSubSubcategories}\n` +
+    `- Produktów: ${totalProducts}\n\n` +
+    `Źródło: AliExpress API`;
+  
+  console.log('[fillCategoriesWithProducts] Done:', summary);
+  return summary;
+  } catch (error: any) {
+    console.error('[fillCategoriesWithProducts] Fatal error:', error);
+    return `❌ Błąd podczas wypełniania katalogu: ${error.message || 'Nieznany błąd'}`;
+  }
 }

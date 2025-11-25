@@ -8,8 +8,11 @@ import { createDeal } from '@/lib/data';
  * Szukamy produktów z dużymi zniżkami (>50%) lub promocjami.
  */
 export async function fillCategoriesWithDeals() {
-  // Kategorie do przeszukania promocji
-  const dealCategories = [
+  try {
+    console.log('[fillCategoriesWithDeals] Starting...');
+    
+    // Kategorie do przeszukania promocji
+    const dealCategories = [
     { name: 'Elektronika - Promocje Black Friday', slug: 'elektronika', query: 'electronics deals discount sale' },
     { name: 'Telefony - Wyprzedaż', slug: 'telefony-smartfony', query: 'smartphone sale discount coupon' },
     { name: 'Laptopy - Hot Deals', slug: 'laptopy-komputery', query: 'laptop deals promotion flash sale' },
@@ -23,9 +26,14 @@ export async function fillCategoriesWithDeals() {
   ];
   
   let totalDeals = 0;
+  let totalErrors = 0;
+  
+  console.log(`[fillCategoriesWithDeals] Processing ${dealCategories.length} categories...`);
   
   for (const category of dealCategories) {
     try {
+      console.log(`[fillCategoriesWithDeals] Fetching deals for: ${category.name}`);
+      
       // Szukaj produktów z dużą zniżką (>50%) przez AliExpress API
       const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/search`, {
         method: 'POST',
@@ -39,12 +47,15 @@ export async function fillCategoriesWithDeals() {
       });
       
       if (!response.ok) {
-        console.warn(`Nie udało się pobrać deali dla ${category.name}`);
+        console.warn(`[fillCategoriesWithDeals] Failed to fetch deals for ${category.name}: ${response.status}`);
+        totalErrors++;
         continue;
       }
       
       const data = await response.json();
       const products = data.products || [];
+      
+      console.log(`[fillCategoriesWithDeals] Found ${products.length} deals for ${category.name}`);
       
       // Mapuj produkty z AliExpress na Deal type
       for (const product of products) {
@@ -55,15 +66,18 @@ export async function fillCategoriesWithDeals() {
             : 0;
             
           // Tylko produkty z realną zniżką >= 50%
-          if (discount < 50) continue;
+          if (discount < 50) {
+            console.log(`[fillCategoriesWithDeals] Skipping product with discount ${discount}%`);
+            continue;
+          }
           
           await createDeal({
             title: `🔥 ${product.title}`,
             description: product.description || `Super okazja! ${product.title} z ${discount}% zniżką!`,
             price: product.price,
             originalPrice: product.originalPrice,
-            link: product.productUrl,
-            image: product.imageUrl,
+            link: product.productUrl || product.link || '#',
+            image: product.imageUrl || product.image || '',
             imageHint: '',
             mainCategorySlug: category.slug,
             subCategorySlug: category.slug,
@@ -73,7 +87,7 @@ export async function fillCategoriesWithDeals() {
             source: 'aliexpress', // KLUCZOWE: deal pochodzi z AliExpress
             status: 'draft', // Wymaga akceptacji admina
             temperature: 50 + Math.min(discount, 50), // Im większa zniżka, tym wyższa temperatura
-            voteCount: Math.floor(product.orders / 100), // Głosy bazowane na zamówieniach
+            voteCount: Math.floor((product.orders || 0) / 100), // Głosy bazowane na zamówieniach
             merchant: product.merchant || 'AliExpress',
             externalOriginalId: product.id,
             dealType: 'sale',
@@ -81,14 +95,29 @@ export async function fillCategoriesWithDeals() {
           });
           
           totalDeals++;
-        } catch (e) {
-          console.warn(`Nie udało się utworzyć deala:`, e);
+        } catch (e: any) {
+          console.warn(`[fillCategoriesWithDeals] Failed to create deal:`, e.message);
+          totalErrors++;
         }
       }
-    } catch (e) {
-      console.error(`Błąd przy pobieraniu deali dla ${category.name}:`, e);
+    } catch (e: any) {
+      console.error(`[fillCategoriesWithDeals] Error for category ${category.name}:`, e.message);
+      totalErrors++;
     }
   }
   
-  return `Pobrano ${totalDeals} deali z AliExpress (status: draft, wymagana akceptacja).`;
+  const summary = `✅ Deale pobrane!\n\n` +
+    `📊 Statystyki:\n` +
+    `- Przetworzono kategorii: ${dealCategories.length}\n` +
+    `- Pobranych deali: ${totalDeals}\n` +
+    `- Błędów: ${totalErrors}\n\n` +
+    `⚠️ Status: draft (wymagana akceptacja admina)\n` +
+    `Źródło: AliExpress API (promocje >50% zniżki)`;
+  
+  console.log('[fillCategoriesWithDeals] Done:', summary);
+  return summary;
+  } catch (error: any) {
+    console.error('[fillCategoriesWithDeals] Fatal error:', error);
+    return `❌ Błąd podczas pobierania deali: ${error.message || 'Nieznany błąd'}`;
+  }
 }
