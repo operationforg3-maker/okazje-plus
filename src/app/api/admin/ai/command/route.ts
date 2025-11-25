@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fillCategoriesWithProducts } from '@/ai/flows/fillCategoriesWithProducts';
 import { fillCategoriesWithDeals } from '@/ai/flows/fillCategoriesWithDeals';
-import { logAiCommand } from '@/lib/data';
+import { logAiCommand } from '@/lib/data-admin';
 
 export async function POST(req: NextRequest) {
   try {

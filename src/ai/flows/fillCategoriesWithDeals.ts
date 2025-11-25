@@ -1,4 +1,4 @@
-import { createDeal } from '@/lib/data';
+import { createDeal } from '@/lib/data-admin';
 
 /**
  * Pobiera deale (promocje) z AliExpress API dla każdej kategorii
@@ -83,6 +83,7 @@ export async function fillCategoriesWithDeals() {
             subCategorySlug: category.slug,
             category: category.slug,
             postedBy: 'system',
+            postedAt: new Date().toISOString(),
             commentsCount: 0,
             source: 'aliexpress', // KLUCZOWE: deal pochodzi z AliExpress
             status: 'draft', // Wymaga akceptacji admina

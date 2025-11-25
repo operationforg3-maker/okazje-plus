@@ -1,4 +1,4 @@
-import { getTopProductsByCategory, getRecommendedProducts, createCategory, createSubcategory, createSubSubcategory, createProduct } from '@/lib/data';
+import { createCategory, createSubcategory, createSubSubcategory, createProduct } from '@/lib/data-admin';
 
 /**
  * Wyszukuje produkty dla kategorii przez AliExpress API
