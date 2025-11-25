@@ -1052,6 +1052,61 @@ export async function getNavigationShowcase(): Promise<NavigationShowcaseConfig 
   return config;
 }
 
+// === AI: Tworzenie kategorii, podkategorii i produktów ===
+
+
+/**
+ * Tworzy kategorię główną w kolekcji "categories".
+ */
+export async function createCategory(data: { name: string; slug: string; icon?: string; description?: string; sortOrder?: number; accentColor?: string; heroImage?: string; }): Promise<string> {
+  const ref = collection(db, 'categories');
+  const docRef = await addDoc(ref, {
+    ...data,
+    createdAt: serverTimestamp(),
+    sortOrder: data.sortOrder ?? 0,
+  });
+  return docRef.id;
+}
+
+/**
+ * Tworzy podkategorię w subkolekcji "subcategories" danej kategorii.
+ */
+export async function createSubcategory(categoryId: string, data: { name: string; slug: string; icon?: string; description?: string; sortOrder?: number; }): Promise<string> {
+  const ref = collection(db, 'categories', categoryId, 'subcategories');
+  const docRef = await addDoc(ref, {
+    ...data,
+    createdAt: serverTimestamp(),
+    sortOrder: data.sortOrder ?? 0,
+  });
+  return docRef.id;
+}
+
+/**
+ * Tworzy pod-podkategorię w subkolekcji "subcategories" danej podkategorii.
+ */
+export async function createSubSubcategory(categoryId: string, subcategoryId: string, data: { name: string; slug: string; icon?: string; description?: string; sortOrder?: number; }): Promise<string> {
+  const ref = collection(db, 'categories', categoryId, 'subcategories', subcategoryId, 'subcategories');
+  const docRef = await addDoc(ref, {
+    ...data,
+    createdAt: serverTimestamp(),
+    sortOrder: data.sortOrder ?? 0,
+  });
+  return docRef.id;
+}
+
+/**
+ * Tworzy produkt w kolekcji "products" i przypisuje do kategorii/podkategorii.
+ */
+export async function createProduct(data: Omit<Product, 'id' | 'createdAt'> & { mainCategorySlug: string; subCategorySlug?: string; subSubCategorySlug?: string; }): Promise<string> {
+  const ref = collection(db, 'products');
+  const docRef = await addDoc(ref, {
+    ...data,
+    createdAt: serverTimestamp(),
+    status: data.status ?? 'approved',
+  });
+  return docRef.id;
+}
+
 // Placeholder data for users to fix build error
 export const users = [
   {
@@ -1748,8 +1803,10 @@ export async function getSecretPageBySlug(slug: string) {
  * Get all secret pages (admin)
  */
 export async function getAllSecretPages() {
-  const secretPagesRef = collection(db, "secret_pages");
-  const q = query(secretPagesRef, orderBy("createdAt", "desc"));
+  const q = query(
+    collection(db, "secret_pages"),
+    orderBy("createdAt", "desc")
+  );
   const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
@@ -1926,9 +1983,50 @@ export async function getAllPreRegistrations() {
   return snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
-    createdAt: doc.data().createdAt?.toDate().toISOString(),
-    confirmedAt: doc.data().confirmedAt?.toDate().toISOString(),
-    invitedAt: doc.data().invitedAt?.toDate().toISOString(),
+    createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null,
+    confirmedAt: doc.data().confirmedAt?.toDate?.().toISOString?.() || null,
+    invitedAt: doc.data().invitedAt?.toDate?.().toISOString?.() || null,
+  }));
+}
+
+/**
+ * Zaloguj polecenie AI do Firestore
+ */
+export async function logAiCommand({
+  command,
+  status,
+  result,
+  userId = null,
+  meta = null
+}: {
+  command: string;
+  status: string;
+  result: string;
+  userId?: string | null;
+  meta?: any;
+}) {
+  const ref = collection(db, "ai_commands");
+  await addDoc(ref, {
+    command,
+    status,
+    result,
+    userId: userId || null,
+    meta: meta || null,
+    createdAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Pobierz historię poleceń AI (najnowsze pierwsze)
+ */
+export async function getAiCommandHistory(limitCount: number = 20) {
+  const ref = collection(db, "ai_commands");
+  const q = query(ref, orderBy("createdAt", "desc"), limit(limitCount));
+  const snap = await getDocs(q);
+  return snap.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+    createdAt: doc.data().createdAt?.toDate?.().toISOString?.() || null,
   }));
 }
 
