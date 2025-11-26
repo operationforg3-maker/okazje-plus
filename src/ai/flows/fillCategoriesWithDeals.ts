@@ -128,6 +128,9 @@ export async function fillCategoriesWithDeals() {
             externalOriginalId,
             dealType: 'sale' as const,
             freeShipping: product.shippingInfo?.freeShipping || false,
+            shippingCost: product.shippingInfo?.shippingCost || null,
+            deliveryTime: product.shippingInfo?.deliveryTime || '',
+            warehouse: product.shippingInfo?.warehouse || '',
             ...(tags?.length ? { tags } : {}),
           };
           

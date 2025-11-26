@@ -8,11 +8,12 @@ import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useAuth } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package } from "lucide-react";
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useCoupons } from '@/hooks/use-coupons';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
@@ -49,6 +50,7 @@ export default function DealCard({ deal }: DealCardProps) {
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { user } = useAuth();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
+  const { coupons } = useCoupons(deal.externalOriginalId, undefined);
   const [temperature, setTemperature] = useState(deal.temperature);
   const [voteCount, setVoteCount] = useState(deal.voteCount);
   const [isVoting, setIsVoting] = useState(false);
@@ -249,6 +251,18 @@ export default function DealCard({ deal }: DealCardProps) {
               Nowość
             </Badge>
           )}
+          {deal.freeShipping && (
+            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg">
+              <Truck className="mr-1 h-3 w-3" />
+              Darmowa dostawa
+            </Badge>
+          )}
+          {Array.isArray(coupons) && coupons.length > 0 && (
+            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
+              <Tag className="mr-1 h-3 w-3" />
+              Kupon ({coupons.length})
+            </Badge>
+          )}
         </div>
         
         {/* Admin Edit Button - prawy dolny róg obrazka */}
@@ -288,9 +302,37 @@ export default function DealCard({ deal }: DealCardProps) {
           {deal.title}
         </h3>
         
-        <p className="text-sm text-muted-foreground line-clamp-2">
+        <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
           {deal.description}
         </p>
+
+        {/* Szczegóły dostawy i dodatkowe info */}
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {deal.deliveryTime && (
+            <span className="flex items-center gap-1">
+              <Truck className="h-3 w-3" />
+              {deal.deliveryTime}
+            </span>
+          )}
+          {deal.warehouse && (
+            <span className="flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              Magazyn: {deal.warehouse}
+            </span>
+          )}
+          {typeof deal.shippingCost === 'number' && deal.shippingCost > 0 && (
+            <span>Koszt wysyłki: {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.shippingCost)}</span>
+          )}
+          {deal.cashback && (
+            <span className="font-semibold text-green-600">
+              Cashback: {deal.cashback.amount ? `${deal.cashback.amount} PLN` : `${deal.cashback.percentage}%`}
+              {deal.cashback.provider && ` (${deal.cashback.provider})`}
+            </span>
+          )}
+          {deal.couponCode && (
+            <span className="font-mono text-primary">Kod: {deal.couponCode}</span>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xl font-bold text-primary">{price}</span>

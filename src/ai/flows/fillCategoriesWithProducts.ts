@@ -361,6 +361,13 @@ export async function fillCategoriesWithProducts() {
                         importedAt: new Date().toISOString(),
                         orders: aliProduct.orders || 0,
                         merchant: aliProduct.merchant || aliProduct.storeName,
+                        shipping: aliProduct.shippingInfo || aliProduct.shipping,
+                        warehouse: aliProduct.shippingInfo?.warehouse || '',
+                        deliveryTime: aliProduct.shippingInfo?.deliveryTime || '',
+                        freeShipping: aliProduct.shippingInfo?.freeShipping || false,
+                        shippingCost: aliProduct.shippingInfo?.shippingCost || null,
+                        specifications: aliProduct.specifications || null,
+                        productVideoUrl: aliProduct.productVideoUrl || null,
                       }
                     } as const;
 
@@ -523,6 +530,13 @@ export async function fillCategoriesWithProducts() {
                     importedAt: new Date().toISOString(),
                     orders: aliProduct.orders || 0,
                     merchant: aliProduct.merchant || aliProduct.storeName,
+                    shipping: aliProduct.shippingInfo || aliProduct.shipping,
+                    warehouse: aliProduct.shippingInfo?.warehouse || '',
+                    deliveryTime: aliProduct.shippingInfo?.deliveryTime || '',
+                    freeShipping: aliProduct.shippingInfo?.freeShipping || false,
+                    shippingCost: aliProduct.shippingInfo?.shippingCost || null,
+                    specifications: aliProduct.specifications || null,
+                    productVideoUrl: aliProduct.productVideoUrl || null,
                   }
                 } as const;
 

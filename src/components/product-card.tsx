@@ -144,6 +144,11 @@ export default function ProductCard({ product }: ProductCardProps) {
               Dostawa: {detail.shipping.deliveryTime}
             </Badge>
           )}
+          {product.metadata?.freeShipping && (
+            <Badge variant="default" className="flex w-fit items-center gap-1 bg-green-600">
+              Darmowa dostawa
+            </Badge>
+          )}
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
@@ -175,6 +180,12 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {product.metadata?.shipping && (
             <span>Dostawa: {product.metadata.shipping}</span>
+          )}
+          {product.metadata?.warehouse && (
+            <span>Magazyn: {product.metadata.warehouse}</span>
+          )}
+          {typeof product.metadata?.shippingCost === 'number' && product.metadata.shippingCost > 0 && (
+            <span>Koszt wysyłki: {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.metadata.shippingCost)}</span>
           )}
           {typeof product.metadata?.orders === 'number' && (
             <span>Zamówienia: {product.metadata.orders}</span>
@@ -232,8 +243,11 @@ export default function ProductCard({ product }: ProductCardProps) {
               <TooltipContent className="max-w-xs">
                 <div className="space-y-1">
                   {coupons.slice(0,3).map((c, i) => (
-                    <div key={i} className="text-xs">
-                      {c.coupon_code || 'Kupon'}: {c.coupon_amount || ''}
+                    <div key={i} className="text-xs space-y-0.5">
+                      <div className="font-semibold">{c.coupon_code || 'Kupon'}: {c.coupon_amount || ''}</div>
+                      {c.coupon_start_time && c.coupon_end_time && (
+                        <div className="text-[10px] opacity-70">Ważny: {new Date(c.coupon_start_time).toLocaleDateString('pl')} - {new Date(c.coupon_end_time).toLocaleDateString('pl')}</div>
+                      )}
                     </div>
                   ))}
                   {coupons.length > 3 && (
