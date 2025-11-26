@@ -41,6 +41,7 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react';
+import { SidebarCategoryTree } from '@/components/admin/sidebar-category-tree';
 import { UserNav } from '@/components/auth/user-nav';
 import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
 import { Separator } from '@/components/ui/separator';
@@ -197,6 +198,11 @@ export default function AdminLayout({
                     </CollapsibleContent>
                   </SidebarMenuItem>
                 </Collapsible>
+
+                {/* Dynamic Category Tree */}
+                <div className="mt-3 mb-2 px-2">
+                  <SidebarCategoryTree />
+                </div>
 
                 {/* Import - pojedynczy najważniejszy */}
                 <SidebarMenuItem>

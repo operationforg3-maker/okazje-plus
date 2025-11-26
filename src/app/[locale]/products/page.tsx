@@ -84,14 +84,14 @@ function ProductsPageContent() {
         const q = searchTerm.trim();
         if (q.length > 1) {
           const results = await searchProductsTypesense(q, {
-            mainCategorySlug: selectedCategory.id,
+            mainCategorySlug: selectedCategory.slug || selectedCategory.id,
             subCategorySlug: selectedSubcategory || undefined,
             limit: 100,
           });
           if (!cancelled) setProducts(results);
         } else {
           const categoryProducts = await getProductsByCategory(
-            selectedCategory.id,
+            selectedCategory.slug || selectedCategory.id,
             selectedSubcategory || undefined,
             undefined,
             100

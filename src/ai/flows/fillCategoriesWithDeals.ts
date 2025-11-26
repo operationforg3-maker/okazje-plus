@@ -63,16 +63,18 @@ export async function fillCategoriesWithDeals() {
       for (const product of products) {
         try {
           // Oblicz zniżkę (preferuj pole discount z API; fallback wyliczenie)
-          const apiDiscountRaw = product.discount;
+          const apiDiscountRaw = product.discount || product.discountRate || product.discount_rate;
           const apiDiscount = typeof apiDiscountRaw === 'string' ? parseInt(apiDiscountRaw) : (apiDiscountRaw || 0);
-          const computedDiscount = (product.originalPrice && product.price && product.originalPrice > 0)
-            ? Math.round((1 - product.price / product.originalPrice) * 100)
+          const originalCandidate = product.originalPrice || product.original_price || product.targetOriginalPrice || product.target_original_price;
+          const saleCandidate = product.price || product.salePrice || product.sale_price || product.target_sale_price;
+          const computedDiscount = (originalCandidate && saleCandidate && originalCandidate > 0)
+            ? Math.round((1 - saleCandidate / originalCandidate) * 100)
             : 0;
           const discount = apiDiscount || computedDiscount;
-            
-          // Tylko produkty z realną zniżką >= 50%
-          if (discount < 50) {
-            console.log(`[fillCategoriesWithDeals] Skipping product with discount ${discount}%`);
+          console.log(`[fillCategoriesWithDeals] Discount calc: api=${apiDiscount} computed=${computedDiscount} final=${discount} title="${product.title}"`);
+          
+          // Zmniejszony próg na 40% aby zwiększyć liczbę wyników + uniknąć pustych list
+          if (discount < 40) {
             continue;
           }
           

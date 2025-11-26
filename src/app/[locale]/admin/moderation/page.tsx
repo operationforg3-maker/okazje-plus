@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,64 @@ import {
   Eye
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+interface BulkItem { id: string; type: 'deal' | 'product'; }
+
+function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'; items: any[]; onAction: () => Promise<void> }) {
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [processing, setProcessing] = useState(false);
+
+  const toggle = (id: string) => setSelected(p => ({ ...p, [id]: !p[id] }));
+  const clear = () => setSelected({});
+  const allSelectedIds = Object.entries(selected).filter(([, v]) => v).map(([id]) => id);
+
+  async function bulk(action: 'approve' | 'reject') {
+    if (allSelectedIds.length === 0) return;
+    setProcessing(true);
+    try {
+      const res = await fetch('/api/admin/moderation/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: allSelectedIds.map(id => ({ id, type })), action })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        clear();
+        await onAction();
+      }
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border rounded-md p-2 bg-muted/50">
+      <span className="text-xs font-medium">Zbiorcza moderacja: {type === 'deal' ? 'Okazje' : 'Produkty'}</span>
+      <button
+        className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50"
+        onClick={() => bulk('approve')} disabled={processing || allSelectedIds.length === 0}
+      >Zatwierdź zaznaczone ({allSelectedIds.length})</button>
+      <button
+        className="text-xs px-2 py-1 rounded bg-red-600 text-white disabled:opacity-50"
+        onClick={() => bulk('reject')} disabled={processing || allSelectedIds.length === 0}
+      >Odrzuć zaznaczone</button>
+      <button
+        className="text-xs px-2 py-1 rounded bg-secondary disabled:opacity-50"
+        onClick={clear} disabled={processing || allSelectedIds.length === 0}
+      >Wyczyść</button>
+      <div className="ml-auto flex gap-1 flex-wrap">
+        {items.map(item => (
+          <button
+            key={item.id}
+            onClick={() => toggle(item.id)}
+            className={"text-[10px] px-1.5 py-1 rounded border " + (selected[item.id] ? 'bg-primary text-white' : 'bg-background')}
+          >{selected[item.id] ? '✓' : '+'}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 import { getPendingDeals, getPendingProducts, getRecentlyModerated } from '@/lib/data';
 import { Deal, Product } from '@/lib/types';
 
@@ -190,6 +249,8 @@ function ModerationPage() {
         </TabsList>
 
         <TabsContent value="deals" className="space-y-4">
+          {/* Bulk actions bar (deals) */}
+          <BulkModerationBar type="deal" items={pendingDeals} onAction={async () => fetchModerationData()} />
           <Card>
             <CardHeader>
               <CardTitle>Okazje oczekujące na moderację</CardTitle>
@@ -263,6 +324,7 @@ function ModerationPage() {
         </TabsContent>
 
         <TabsContent value="products" className="space-y-4">
+          <BulkModerationBar type="product" items={pendingProducts} onAction={async () => fetchModerationData()} />
           <Card>
             <CardHeader>
               <CardTitle>Produkty oczekujące na moderację</CardTitle>
