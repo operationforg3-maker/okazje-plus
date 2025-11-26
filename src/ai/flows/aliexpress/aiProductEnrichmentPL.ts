@@ -31,29 +31,65 @@ const productEnrichmentPrompt = ai.definePrompt({
   name: 'productEnrichmentPromptPL',
   input: { schema: ProductEnrichmentInputSchema },
   output: { schema: ProductEnrichmentOutputSchema },
-  prompt: `Jesteś ekspertem ds. contentu e-commerce w Polsce.
+  prompt: `Jesteś ekspertem ds. contentu e-commerce w Polsce, specjalizujesz się w tłumaczeniu i normalizacji produktów z AliExpress.
 
-Zadanie: Uporządkuj i wzbogac treść dla produktu.
+ZADANIE: Przetłumacz i wzbogać treść produktu na polski rynek.
 
-TYTUŁ ORYGINALNY: {{{originalTitle}}}
-KATEGORIA ŚCIEŻKA: {{#each categoryPath}}{{this}}/{{/each}}
-{{#if rawDescription}}OPIS SUROWY: {{{rawDescription}}}{{/if}}
-{{#if price}}CENA: {{{price}}} PLN{{/if}}
-{{#if originalPrice}}CENA PRZED: {{{originalPrice}}} PLN{{/if}}
-{{#if rating}}OCENA: {{{rating}}}{{/if}}
-{{#if orders}}ZAMÓWIENIA: {{{orders}}}{{/if}}
-{{#if merchant}}SKLEP: {{{merchant}}}{{/if}}
+DANE WEJŚCIOWE:
+• TYTUŁ ORYGINALNY: {{{originalTitle}}}
+• KATEGORIA: {{#each categoryPath}}{{this}}/{{/each}}
+{{#if rawDescription}}• OPIS SUROWY: {{{rawDescription}}}{{/if}}
+{{#if price}}• CENA: {{{price}}} PLN{{/if}}
+{{#if originalPrice}}• CENA ORYGINALNA: {{{originalPrice}}} PLN{{/if}}
+{{#if rating}}• OCENA: {{{rating}}}/5{{/if}}
+{{#if orders}}• ZAMÓWIEŃ: {{{orders}}}{{/if}}
+{{#if merchant}}• SPRZEDAWCA: {{{merchant}}}{{/if}}
 
-INSTRUKCJE:
-1. Normalizuj nazwę do polskiego: usuń spam, emoji, ang. marketing (NEW, HOT etc.).
-2. Jeśli tytuł zawiera specyfikacje (np. 128GB, 4K, RTX), zachowaj je.
-3. shortDescription: korzyść + co to za produkt.
-4. longDescription: 3-6 zdań: zastosowanie, główne funkcje, kluczowe parametry – tylko fakty widoczne z tytułu/ surowych danych.
-5. features: wypunktowane krótkie cechy / parametry (max 10); każda zaczyna się od rzeczownika lub parametru.
-6. keywords: krótkie frazy (bez powtórzeń; bez znaków specjalnych).
-7. Zero pustych marketingowych obietnic. Nie wymyślaj parametrów których nie ma.
-8. Język: naturalna polszczyzna, bez anglicyzmów jeśli istnieje polski odpowiednik.
-`,
+INSTRUKCJE SZCZEGÓŁOWE:
+
+1. **normalizedName** (Nazwa po polsku):
+   • Przetłumacz z angielskiego/chińskiego na naturalny polski
+   • Usuń spam: emoji (🔥), wielkie litery (NEW!!!), marketing (Hot Sale, Free Ship)
+   • Zachowaj: marki (Xiaomi, Apple), numery modeli (Mi Band 8), specyfikacje (128GB, 5G, 4K)
+   • Polskie odpowiedniki: smartphone→smartfon, laptop→laptop, earbuds→słuchawki douszne
+   • Przykład: "2024 NEW Xiaomi Redmi Note 13 5G 128GB!!! 🔥" → "Xiaomi Redmi Note 13 5G 128GB – smartfon"
+   • Długość: 50-90 znaków
+
+2. **shortDescription** (Krótki opis 1-2 zdania):
+   • Przedstaw główną korzyść i zastosowanie produktu
+   • Naturalna polszczyzna (nie tłumaczenie słowo-w-słowo)
+   • Wspomnij kluczowy parametr jeśli jest istotny (pojemność, moc, rozmiar)
+   • Przykład: "Kompaktowy powerbank o pojemności 20000 mAh z szybkim ładowaniem. Idealny do podróży i codziennego użytku."
+
+3. **longDescription** (Dłuższy opis 4-7 zdań):
+   • Rozwiń zastosowanie, główne funkcje, kluczowe parametry
+   • Tylko fakty wynikające z tytułu/surowych danych – NIE wymyślaj parametrów
+   • Struktura: co to jest → do czego służy → najważniejsze cechy → dla kogo
+   • Konkretne dane zamiast ogólników: "bateria 5000 mAh" zamiast "długi czas pracy"
+   • Naturalna narracja sprzedażowa bez przesady
+
+4. **features** (Lista cech/parametrów, max 10):
+   • Konkretne parametry i cechy produktu
+   • Format: "Pojemność: 128 GB", "Ekran: 6.5 cala AMOLED", "Procesor: Snapdragon 8 Gen 2"
+   • Krótko i na temat – każda cecha w osobnej linii
+   • Tylko to co wiesz z tytułu/opisu – NIE wymyślaj
+   • Jeśli brak parametrów, zwróć pustą listę []
+
+5. **keywords** (Frazy SEO, 5-10 fraz):
+   • Naturalne frazy wyszukiwania po polsku: "smartfon xiaomi", "powerbank 20000mah", "słuchawki bluetooth"
+   • Małe litery, bez znaków specjalnych, bez powtórzeń
+   • Mix ogólnych ("słuchawki bezprzewodowe") i konkretnych ("redmi note 13 5g")
+   • Przykłady: "xiaomi mi band 8", "opaska fitness", "smartwatch z pulsometrem"
+
+ZASADY OGÓLNE:
+✓ Tłumacz na naturalny polski (nie kalka językowa)
+✓ Techniczne nazwy/marki po angielsku (USB-C, Bluetooth, WiFi, LED)
+✓ Polskie odpowiedniki tam gdzie istnieją: słuchawki (nie earphones), mysz (nie mouse)
+✓ Zero marketingowych kłamstw i pustych frazesów
+✓ Konkretne dane liczbowe zamiast ogólników
+✓ Ton: rzeczowy, profesjonalny, pomocny – nie nachalny
+
+Wygeneruj treść:`,
 });
 
 const productEnrichmentFlow = ai.defineFlow({

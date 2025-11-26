@@ -19,9 +19,8 @@ import { queueProductForIndexing, queueDealForIndexing } from '@/search/typesens
 
 // AI flows
 import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
-import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
 import { aiSuggestCategory } from '@/ai/flows/aliexpress/aiSuggestCategory';
-import { aiGenerateSEODescription } from '@/ai/flows/aliexpress/aiGenerateSEODescription';
 
 /**
  * Result of an import run
@@ -216,10 +215,10 @@ export async function runImport(
           scoredAt: new Date().toISOString(),
         };
         
-        // Skip low-quality products (score < 70 or reject recommendation)
+        // Skip low-quality products (score < 50 or explicit reject recommendation)
         if (
           qualityResult.recommendation === 'reject' ||
-          qualityResult.score < 70
+          qualityResult.score < 50
         ) {
           importLogger.info('Product rejected by AI quality score', {
             productId: aliProduct.item_id,
@@ -231,27 +230,42 @@ export async function runImport(
           continue;
         }
         
-        // Step 2: AI Title Normalization
-        importLogger.debug('Running AI title normalization', {
+        // Step 2: AI Product Enrichment (Polish translation + normalization + SEO)
+        importLogger.debug('Running AI product enrichment (PL)', {
           originalTitle: product.name,
         });
         
-        const titleResult = await aiNormalizeTitlePL({
-          title: product.name,
-          language: 'en', // Assume AliExpress is English by default
+        const enrichmentResult = await aiProductEnrichmentPL({
+          originalTitle: product.name,
+          rawDescription: product.description,
+          categoryPath: [
+            product.mainCategorySlug,
+            product.subCategorySlug,
+            product.subSubCategorySlug,
+          ].filter(Boolean) as string[],
+          price: product.price,
+          originalPrice: product.originalPrice,
+          rating: product.ratingCard?.average,
+          orders: product.metadata?.orders as number | undefined,
+          merchant: product.metadata?.merchant as string | undefined,
         });
         
-        product.name = titleResult.normalizedTitle;
+        // Apply enriched content
+        product.name = enrichmentResult.normalizedName;
+        product.description = enrichmentResult.shortDescription;
+        product.longDescription = enrichmentResult.longDescription;
+        product.seoKeywords = enrichmentResult.keywords;
         
+        // Store AI metadata
         if (!product.ai) product.ai = {};
-        product.ai.titleNormalization = {
-          originalTitle: aliProduct.item_id, // Store item_id as fallback
-          normalizedTitle: titleResult.normalizedTitle,
-          translated: titleResult.translated,
-          changes: titleResult.changes,
+        product.ai.enrichment = {
+          originalTitle: aliProduct.item_id,
+          normalizedName: enrichmentResult.normalizedName,
+          features: enrichmentResult.features,
+          processedAt: new Date().toISOString(),
         };
         
-        // Step 3: AI Category Suggestion
+        // Step 3: AI Category Suggestion (keep existing logic)
         importLogger.debug('Running AI category suggestion', {
           title: product.name,
         });
@@ -259,8 +273,8 @@ export async function runImport(
         const categoryResult = await aiSuggestCategory({
           title: product.name,
           description: product.description,
-          aliexpressCategory: '', // AliExpressProduct doesn't have category_name
-          price: product.price, // Use price instead of currentPrice
+          aliexpressCategory: '',
+          price: product.price,
         });
         
         // Override category mapping with AI suggestion if confidence >= 0.6
@@ -289,41 +303,12 @@ export async function runImport(
           });
         }
         
-        // Step 4: AI SEO Description Generation
-        importLogger.debug('Generating AI SEO description', {
-          title: product.name,
-        });
-        
-        const seoResult = await aiGenerateSEODescription({
-          normalizedTitle: product.name,
-          mainCategorySlug: product.mainCategorySlug,
-          subCategorySlug: product.subCategorySlug,
-          subSubCategorySlug: product.subSubCategorySlug,
-          price: product.price,
-          rating: product.ratingCard?.average,
-          reviewCount: product.ratingCard?.count,
-          attributes: {}, // Product doesn't have attributes field - use empty object
-        });
-        
-        // Enrich product with AI-generated SEO content
-        product.description = seoResult.description;
-        product.seoKeywords = seoResult.keywords;
-        product.metaTitle = seoResult.metaTitle;
-        product.metaDescription = seoResult.metaDescription;
-        
-        if (!product.ai) product.ai = {};
-        product.ai.seo = {
-          generatedDescription: seoResult.description,
-          keywords: seoResult.keywords,
-          generatedAt: new Date().toISOString(),
-        };
-        
         importLogger.info('AI processing complete', {
           productId: aliProduct.item_id,
           qualityScore: qualityResult.score,
-          normalizedTitle: product.name,
+          normalizedName: product.name,
           category: `${product.mainCategorySlug}/${product.subCategorySlug}`,
-          seoKeywordCount: seoResult.keywords.length,
+          keywordCount: product.seoKeywords?.length || 0,
         });
         
         // === END AI PIPELINE ===
