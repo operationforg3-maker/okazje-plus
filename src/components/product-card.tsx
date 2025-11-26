@@ -5,7 +5,7 @@ import { ProductGallery } from './product-gallery';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split } from 'lucide-react';
+import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split, Truck, Package, Zap, AlertTriangle, ShieldCheck, Info } from 'lucide-react';
 import { RatingBar } from './rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useCoupons } from '@/hooks/use-coupons';
@@ -149,6 +149,36 @@ export default function ProductCard({ product }: ProductCardProps) {
               Darmowa dostawa
             </Badge>
           )}
+          {product.metadata?.hotProduct && (
+            <Badge variant="destructive" className="flex w-fit items-center gap-1 bg-red-600 animate-pulse">
+              <Zap className="h-3 w-3" aria-hidden />
+              HOT
+            </Badge>
+          )}
+          {product.metadata?.flashDeal && (
+            <Badge variant="destructive" className="flex w-fit items-center gap-1 bg-orange-600">
+              <Zap className="h-3 w-3" aria-hidden />
+              Flash Deal
+            </Badge>
+          )}
+          {product.metadata?.stockStatus === 'low_stock' && (
+            <Badge variant="outline" className="flex w-fit items-center gap-1 border-yellow-600 text-yellow-600">
+              <AlertTriangle className="h-3 w-3" aria-hidden />
+              Niski stan
+            </Badge>
+          )}
+          {product.metadata?.stockStatus === 'out_of_stock' && (
+            <Badge variant="outline" className="flex w-fit items-center gap-1 border-red-600 text-red-600">
+              <AlertTriangle className="h-3 w-3" aria-hidden />
+              Wyprzedane
+            </Badge>
+          )}
+          {product.metadata?.promotionId && (
+            <Badge variant="secondary" className="flex w-fit items-center gap-1 bg-purple-600 text-white">
+              <Tag className="h-3 w-3" aria-hidden />
+              Promocja
+            </Badge>
+          )}
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
@@ -182,15 +212,77 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span>Dostawa: {product.metadata.shipping}</span>
           )}
           {product.metadata?.warehouse && (
-            <span>Magazyn: {product.metadata.warehouse}</span>
+            <span className="flex items-center gap-1">
+              <Package className="h-3 w-3" />
+              Magazyn: {product.metadata.warehouse}
+            </span>
           )}
           {typeof product.metadata?.shippingCost === 'number' && product.metadata.shippingCost > 0 && (
-            <span>Koszt wysyłki: {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.metadata.shippingCost)}</span>
+            <span className="flex items-center gap-1">
+              <Truck className="h-3 w-3" />
+              Wysyłka: {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.metadata.shippingCost)}
+            </span>
           )}
           {typeof product.metadata?.orders === 'number' && (
             <span>Zamówienia: {product.metadata.orders}</span>
           )}
-          {/* Można dodać kolejne parametry: gwarancja, kraj wysyłki, itp. */}
+          {typeof product.metadata?.sellerRating === 'number' && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    Sprzedawca: {product.metadata.sellerRating.toFixed(1)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ocena sprzedawcy na platformie
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {product.metadata?.returnPolicy && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help text-green-600">
+                    <ShieldCheck className="h-3 w-3" />
+                    Zwroty
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  {product.metadata.returnPolicy}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {product.metadata?.specifications && Array.isArray(product.metadata.specifications) && product.metadata.specifications.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Info className="h-3 w-3" />
+                    Specyfikacja
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <div className="space-y-1">
+                    {product.metadata.specifications.slice(0, 5).map((spec, i) => (
+                      <div key={i} className="text-xs">
+                        <span className="font-semibold">{spec.key}:</span> {spec.value}
+                      </div>
+                    ))}
+                    {product.metadata.specifications.length > 5 && (
+                      <div className="text-[11px] opacity-70">+{product.metadata.specifications.length - 5} więcej</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {typeof product.metadata?.evaluateCount === 'number' && product.metadata.evaluateCount > 0 && (
+            <span>Oceny: {product.metadata.evaluateCount}</span>
+          )}
         </div>
       </div>
       

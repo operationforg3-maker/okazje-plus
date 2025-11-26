@@ -331,6 +331,10 @@ export async function fillCategoriesWithProducts() {
                     const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
                       ? Math.round(100 - (priceValue / originalPrice) * 100)
                       : undefined;
+                    // Determine stock status
+                    const stockStatus = aliProduct.stock_status || aliProduct.stockStatus || 
+                      (aliProduct.volume > 1000 ? 'in_stock' : aliProduct.volume > 100 ? 'low_stock' : 'unknown');
+
                     const baseData = {
                       name: enrichedName,
                       description: shortDesc,
@@ -360,14 +364,28 @@ export async function fillCategoriesWithProducts() {
                         originalId: originalId || '',
                         importedAt: new Date().toISOString(),
                         orders: aliProduct.orders || 0,
-                        merchant: aliProduct.merchant || aliProduct.storeName,
+                        merchant: aliProduct.merchant || aliProduct.storeName || aliProduct.shop_title,
+                        merchantId: aliProduct.merchantId || aliProduct.shop_id,
                         shipping: aliProduct.shippingInfo || aliProduct.shipping,
-                        warehouse: aliProduct.shippingInfo?.warehouse || '',
-                        deliveryTime: aliProduct.shippingInfo?.deliveryTime || '',
-                        freeShipping: aliProduct.shippingInfo?.freeShipping || false,
-                        shippingCost: aliProduct.shippingInfo?.shippingCost || null,
-                        specifications: aliProduct.specifications || null,
-                        productVideoUrl: aliProduct.productVideoUrl || null,
+                        warehouse: aliProduct.shippingInfo?.warehouse || aliProduct.ship_from_country || aliProduct.warehouse_location || '',
+                        deliveryTime: aliProduct.shippingInfo?.deliveryTime || aliProduct.delivery_time || aliProduct.estimated_delivery_time || '',
+                        freeShipping: aliProduct.shippingInfo?.freeShipping || aliProduct.free_shipping || aliProduct.is_free_shipping || false,
+                        shippingCost: aliProduct.shippingInfo?.shippingCost || aliProduct.shipping_cost || aliProduct.shipping_price || null,
+                        shippingMethod: aliProduct.shippingInfo?.shippingMethod || aliProduct.shipping_method || null,
+                        specifications: aliProduct.specifications || aliProduct.attributes || null,
+                        productVideoUrl: aliProduct.productVideoUrl || aliProduct.product_video_url || null,
+                        // Advanced API fields
+                        promotionId: aliProduct.promotion_id || aliProduct.promotionId || null,
+                        commissionRate: aliProduct.commission_rate || aliProduct.commissionRate || null,
+                        evaluateCount: aliProduct.evaluation_count || aliProduct.evaluate_count || aliProduct.evaluateCount || null,
+                        evaluateRate: aliProduct.evaluate_rate || aliProduct.evaluateRate || null,
+                        sellerRating: aliProduct.seller_rating || aliProduct.sellerRating || (aliProduct.shop_rating ? parseFloat(aliProduct.shop_rating) : null),
+                        returnPolicy: aliProduct.return_policy || aliProduct.returnPolicy || null,
+                        hotProduct: aliProduct.hot_product || aliProduct.hotProduct || aliProduct.is_hot_product || false,
+                        flashDeal: aliProduct.flash_deal || aliProduct.flashDeal || aliProduct.is_flash_deal || false,
+                        platformProductType: aliProduct.platform_product_type || aliProduct.platformProductType || aliProduct.product_type || null,
+                        stockStatus: stockStatus as any,
+                        stockLevel: aliProduct.stock_level || aliProduct.stockLevel || aliProduct.available_quantity || null,
                       }
                     } as const;
 

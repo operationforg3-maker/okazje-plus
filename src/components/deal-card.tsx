@@ -8,7 +8,7 @@ import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useAuth } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info } from "lucide-react";
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -19,6 +19,12 @@ import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface DealCardProps {
   deal: Deal;
@@ -263,6 +269,36 @@ export default function DealCard({ deal }: DealCardProps) {
               Kupon ({coupons.length})
             </Badge>
           )}
+          {deal.importMetadata?.hotProduct && (
+            <Badge className="bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg animate-pulse">
+              <Zap className="mr-1 h-3 w-3" />
+              HOT
+            </Badge>
+          )}
+          {deal.importMetadata?.flashDeal && (
+            <Badge className="bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg">
+              <Zap className="mr-1 h-3 w-3" />
+              Flash
+            </Badge>
+          )}
+          {deal.importMetadata?.stockStatus === 'low_stock' && (
+            <Badge variant="outline" className="border-yellow-600 text-yellow-600 bg-white/90 shadow-lg">
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              Niski stan
+            </Badge>
+          )}
+          {deal.importMetadata?.stockStatus === 'out_of_stock' && (
+            <Badge variant="outline" className="border-red-600 text-red-600 bg-white/90 shadow-lg">
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              Wyprzedane
+            </Badge>
+          )}
+          {deal.importMetadata?.promotionId && (
+            <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+              <Tag className="mr-1 h-3 w-3" />
+              Promocja
+            </Badge>
+          )}
         </div>
         
         {/* Admin Edit Button - prawy dolny róg obrazka */}
@@ -331,6 +367,63 @@ export default function DealCard({ deal }: DealCardProps) {
           )}
           {deal.couponCode && (
             <span className="font-mono text-primary">Kod: {deal.couponCode}</span>
+          )}
+          {typeof deal.importMetadata?.sellerRating === 'number' && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    Sprzedawca: {deal.importMetadata.sellerRating.toFixed(1)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ocena sprzedawcy na platformie
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {deal.importMetadata?.returnPolicy && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help text-green-600">
+                    <ShieldCheck className="h-3 w-3" />
+                    Zwroty
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  {deal.importMetadata.returnPolicy}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          {typeof deal.importMetadata?.evaluateCount === 'number' && deal.importMetadata.evaluateCount > 0 && (
+            <span>Oceny: {deal.importMetadata.evaluateCount}</span>
+          )}
+          {deal.importMetadata?.specifications && Array.isArray(deal.importMetadata.specifications) && deal.importMetadata.specifications.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Info className="h-3 w-3" />
+                    Specyfikacja
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <div className="space-y-1">
+                    {deal.importMetadata.specifications.slice(0, 5).map((spec, i) => (
+                      <div key={i} className="text-xs">
+                        <span className="font-semibold">{spec.key}:</span> {spec.value}
+                      </div>
+                    ))}
+                    {deal.importMetadata.specifications.length > 5 && (
+                      <div className="text-[11px] opacity-70">+{deal.importMetadata.specifications.length - 5} więcej</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
 

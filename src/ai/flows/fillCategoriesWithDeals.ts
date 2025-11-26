@@ -106,6 +106,10 @@ export async function fillCategoriesWithDeals() {
             tags = (desc.keywords || []).slice(0, 6);
           } catch (_) {}
 
+          // Determine stock status
+          const stockStatus = product.stock_status || product.stockStatus || 
+            (product.volume > 1000 ? 'in_stock' : product.volume > 100 ? 'low_stock' : 'unknown');
+
           const baseDeal = {
             title: `🔥 ${normalizedTitle}`,
             description,
@@ -127,11 +131,31 @@ export async function fillCategoriesWithDeals() {
             merchant: product.merchant || 'AliExpress',
             externalOriginalId,
             dealType: 'sale' as const,
-            freeShipping: product.shippingInfo?.freeShipping || false,
-            shippingCost: product.shippingInfo?.shippingCost || null,
-            deliveryTime: product.shippingInfo?.deliveryTime || '',
-            warehouse: product.shippingInfo?.warehouse || '',
+            freeShipping: product.shippingInfo?.freeShipping || product.free_shipping || false,
+            shippingCost: product.shippingInfo?.shippingCost || product.shipping_cost || null,
+            deliveryTime: product.shippingInfo?.deliveryTime || product.delivery_time || '',
+            warehouse: product.shippingInfo?.warehouse || product.ship_from_country || '',
             ...(tags?.length ? { tags } : {}),
+            // Advanced API metadata
+            importMetadata: {
+              source: 'aliexpress',
+              importedAt: new Date().toISOString(),
+              originalUrl: link,
+              promotionId: product.promotion_id || product.promotionId || undefined,
+              commissionRate: product.commission_rate || product.commissionRate || undefined,
+              evaluateCount: product.evaluation_count || product.evaluate_count || undefined,
+              evaluateRate: product.evaluate_rate || product.evaluateRate || undefined,
+              sellerRating: product.seller_rating || (product.shop_rating ? parseFloat(product.shop_rating) : undefined),
+              returnPolicy: product.return_policy || product.returnPolicy || undefined,
+              hotProduct: product.hot_product || product.is_hot_product || false,
+              flashDeal: product.flash_deal || product.is_flash_deal || false,
+              platformProductType: product.platform_product_type || product.product_type || undefined,
+              stockStatus: stockStatus as any,
+              stockLevel: product.stock_level || product.available_quantity || undefined,
+              specifications: product.specifications || product.attributes || undefined,
+              productVideoUrl: product.product_video_url || product.productVideoUrl || undefined,
+              shippingMethod: product.shipping_method || product.shippingInfo?.shippingMethod || undefined,
+            }
           };
           
           const existingId = await findExistingDeal({ externalOriginalId, link });

@@ -233,6 +233,24 @@ export interface Deal {
     importedAt: string;
     originalUrl?: string;
     scrapedData?: Record<string, any>;
+    
+    // Advanced API fields
+    promotionId?: string;
+    commissionRate?: number;
+    evaluateCount?: number;
+    evaluateRate?: string;
+    sellerRating?: number;
+    returnPolicy?: string;
+    hotProduct?: boolean;
+    flashDeal?: boolean;
+    platformProductType?: string;
+    stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
+    stockLevel?: number;
+    specifications?: Array<{key: string; value: string}>;
+    productVideoUrl?: string;
+    warehouse?: string;
+    deliveryTime?: string;
+    shippingMethod?: string;
   };
 }
 
@@ -386,7 +404,28 @@ export interface ProductImportMetadata {
   orders?: number;
   shipping?: string;
   merchant?: string;
+  merchantId?: string;
   rawDataStored?: boolean;
+  
+  // Advanced API fields
+  promotionId?: string;
+  commissionRate?: number; // Prowizja dla afiliacji (0-100)
+  evaluateCount?: number; // Liczba ocen (różne od orders)
+  evaluateRate?: string; // Surowa ocena z API (np. "4.5/5")
+  sellerRating?: number; // Ocena sprzedawcy (0-5)
+  returnPolicy?: string; // Polityka zwrotów
+  hotProduct?: boolean; // Czy produkt jest w hot products
+  flashDeal?: boolean; // Czy promocja flash
+  platformProductType?: string; // Typ produktu w platformie
+  stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
+  stockLevel?: number; // Liczba dostępnych sztuk
+  specifications?: Array<{key: string; value: string}>; // Specyfikacje techniczne
+  productVideoUrl?: string;
+  warehouse?: string;
+  deliveryTime?: string;
+  freeShipping?: boolean;
+  shippingCost?: number;
+  shippingMethod?: string;
 }
 
 // Reszta interfejsów pozostaje bez zmian
