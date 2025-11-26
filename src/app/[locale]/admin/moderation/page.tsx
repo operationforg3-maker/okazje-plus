@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,6 @@ import {
   XCircle,
   Eye
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 interface BulkItem { id: string; type: 'deal' | 'product'; }
 
