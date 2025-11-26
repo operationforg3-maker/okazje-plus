@@ -2,27 +2,16 @@ import { NextResponse } from 'next/server';
 import { ai } from '@/ai/genkit';
 
 /**
- * Simple Gemini API test endpoint
+ * Simple Vertex AI test endpoint
  * GET /api/test-gemini
  */
 export async function GET() {
   try {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-    
-    if (!apiKey) {
-      return NextResponse.json({
-        success: false,
-        error: 'API key not configured',
-        message: 'Set GEMINI_API_KEY or GOOGLE_API_KEY in environment variables',
-      }, { status: 503 });
-    }
-
-    console.log('[test-gemini] Testing Gemini API...');
-    console.log('[test-gemini] API key present:', apiKey.slice(0, 10) + '...');
+    console.log('[test-gemini] Testing Vertex AI (ADC credentials)...');
 
     // Simple generation test
     const result = await ai.generate({
-      model: 'googleai/gemini-2.0-flash',
+      model: 'vertexai/gemini-2.0-flash',
       prompt: 'Translate to Polish in 3 words: "wireless bluetooth headphones"',
     });
 
@@ -30,9 +19,9 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      message: 'Gemini API is working',
+      message: 'Vertex AI is working',
       response: result.text,
-      model: 'gemini-2.0-flash',
+      model: 'vertexai/gemini-2.0-flash',
     });
   } catch (error: any) {
     console.error('[test-gemini] Error:', error);
@@ -41,9 +30,7 @@ export async function GET() {
       success: false,
       error: error.message || 'Unknown error',
       details: error.toString(),
-      hint: error.message?.includes('API key') 
-        ? 'Check GEMINI_API_KEY or GOOGLE_API_KEY in .env.local'
-        : 'Check Gemini API quotas and billing',
+      hint: 'Check Vertex AI quotas, billing, and service account permissions',
     }, { status: 500 });
   }
 }
