@@ -1,6 +1,7 @@
 import { createCategory, createSubcategory, createSubSubcategory, createProduct, findExistingProduct, updateProduct } from '@/lib/data-admin';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
+import { aiProductEnrichmentBatchPL } from '@/ai/flows/aliexpress/aiProductEnrichmentBatchPL';
 import { cacheDel } from '@/lib/cache';
 
 /**
@@ -46,6 +47,31 @@ async function fetchProductsForCategory(categoryName: string, count: number = 5)
     console.error(`[fetchProductsForCategory] Exception for "${categoryName}":`, e.message);
     return [];
   }
+}
+
+// Multi-query wariant: kilka zapytań + deduplikacja
+async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promise<any[]> {
+  const base = categoryPath.join(' ');
+  const queries = [
+    base,
+    `${base} promocja`,
+    `${base} bestseller`,
+    `${base} top`,
+  ];
+  const seen = new Set<string>();
+  const merged: any[] = [];
+  for (const q of queries) {
+    const list = await fetchProductsForCategory(q, baseLimit);
+    for (const p of list) {
+      const originalId = p.id || p.itemId || p.item_id || p.productId || '';
+      const affiliateUrl = p.link || p.productUrl || p.url || '';
+      const key = originalId || affiliateUrl;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(p);
+    }
+  }
+  return merged;
 }
 
 /**
@@ -172,6 +198,9 @@ export async function fillCategoriesWithProducts() {
   let totalCategories = 0;
   let totalSubcategories = 0;
   let totalSubSubcategories = 0;
+  // Cache AI aby ograniczyć liczbę wywołań przy multi-query
+  const titleNormCache = new Map<string, any>();
+  const enrichmentCache = new Map<string, any>();
   
   console.log(`[fillCategoriesWithProducts] Processing ${categories.length} main categories...`);
   
@@ -199,18 +228,65 @@ export async function fillCategoriesWithProducts() {
                 totalSubSubcategories++;
                 
                 // Pobierz produkty z AliExpress dla tej kategorii
-                console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} ${subsub.name}`);
-                const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name} ${subsub.name}`, 12);
-                console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
+                console.log(`[fillCategoriesWithProducts] Fetching (multi-query) products for: ${cat.name} ${sub.name} ${subsub.name}`);
+                let aliProducts = await fetchMultiQuery([cat.name, sub.name, subsub.name], 8);
+                // Jeśli Advanced włączone – spróbuj użyć batch-search endpointu aby ograniczyć liczbę wywołań
+                const advanced = process.env.ALIEXPRESS_ENABLE_ADVANCED === '1' || process.env.ALIEXPRESS_ENABLE_ADVANCED === 'true';
+                if (advanced) {
+                  try {
+                    const base = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/advanced/batch-search`;
+                    const queries = [
+                      `${cat.name} ${sub.name} ${subsub.name}`,
+                      `${cat.name} ${sub.name} ${subsub.name} promocja`,
+                      `${cat.name} ${sub.name} ${subsub.name} bestseller`,
+                      `${cat.name} ${sub.name} ${subsub.name} top`,
+                    ];
+                    const r = await fetch(base, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ queries, limit: 8 })
+                    });
+                    if (r.ok) {
+                      const data = await r.json();
+                      if (Array.isArray(data.products) && data.products.length > 0) {
+                        aliProducts = data.products;
+                      }
+                    }
+                  } catch (_) {}
+                }
+                console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} multi-query products (deduped)`);
                 
-                for (const aliProduct of aliProducts) {
+                // Batch AI enrichment na paczki
+                const batchInputs = aliProducts.map((aliProduct: any) => {
+                  const titleRaw = aliProduct.title || aliProduct.name || '';
+                  return {
+                    originalTitle: titleRaw,
+                    rawDescription: aliProduct.description || '',
+                    categoryPath: [cat.name, sub.name, subsub.name],
+                    price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
+                    originalPrice: aliProduct.originalPrice || undefined,
+                    rating: aliProduct.rating || undefined,
+                    orders: aliProduct.orders || undefined,
+                    merchant: aliProduct.merchant || aliProduct.storeName || undefined,
+                  };
+                });
+                let batchOutputs: any[] = [];
+                try {
+                  batchOutputs = await aiProductEnrichmentBatchPL(batchInputs);
+                } catch (_) { batchOutputs = []; }
+
+                for (let idx = 0; idx < aliProducts.length; idx++) {
+                  const aliProduct = aliProducts[idx];
                   try {
                     const originalId = aliProduct.id || aliProduct.itemId || aliProduct.item_id || aliProduct.productId;
                     const affiliateUrl = aliProduct.link || aliProduct.productUrl || aliProduct.url;
                   
                     // AI normalize title to Polish
                     const titleRaw = aliProduct.title || aliProduct.name || '';
-                    const norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                    let norm = titleNormCache.get(titleRaw);
+                    if (!norm) {
+                      norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                      titleNormCache.set(titleRaw, norm);
+                    }
                     const normalizedTitle = norm.normalizedTitle || titleRaw;
 
                     // AI enrichment (opis, cechy, keywords)
@@ -219,32 +295,49 @@ export async function fillCategoriesWithProducts() {
                     let longDesc = shortDesc;
                     let features: string[] = [];
                     let keywords: string[] = [];
-                    try {
-                      const enrichment = await aiProductEnrichmentPL({
-                        originalTitle: normalizedTitle,
-                        rawDescription: aliProduct.description || '',
-                        categoryPath: [cat.name, sub.name, subsub.name],
-                        price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
-                        originalPrice: aliProduct.originalPrice || undefined,
-                        rating: aliProduct.rating || undefined,
-                        orders: aliProduct.orders || undefined,
-                        merchant: aliProduct.merchant || aliProduct.storeName || undefined,
-                      });
+                    const cacheKey = originalId || normalizedTitle;
+                    let enrichment = enrichmentCache.get(cacheKey);
+                    if (!enrichment) {
+                      enrichment = batchOutputs[idx];
+                      if (!enrichment) {
+                        try {
+                          enrichment = await aiProductEnrichmentPL({
+                            originalTitle: normalizedTitle,
+                            rawDescription: aliProduct.description || '',
+                            categoryPath: [cat.name, sub.name, subsub.name],
+                            price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
+                            originalPrice: aliProduct.originalPrice || undefined,
+                            rating: aliProduct.rating || undefined,
+                            orders: aliProduct.orders || undefined,
+                            merchant: aliProduct.merchant || aliProduct.storeName || undefined,
+                          });
+                        } catch (_) {}
+                      }
+                      if (enrichment) enrichmentCache.set(cacheKey, enrichment);
+                    }
+                    if (enrichment) {
                       enrichedName = enrichment.normalizedName || enrichedName;
                       shortDesc = enrichment.shortDescription || shortDesc;
                       longDesc = enrichment.longDescription || longDesc;
                       features = enrichment.features || [];
                       keywords = enrichment.keywords || [];
-                    } catch (_) {}
+                    }
 
                     // Dedupe by originalId / affiliateUrl
                     const existingId = await findExistingProduct({ originalId, affiliateUrl });
 
+                    const originalPrice = aliProduct.originalPrice || aliProduct.original_price || undefined;
+                    const priceValue = aliProduct.price?.value || aliProduct.price || 0;
+                    const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
+                      ? Math.round(100 - (priceValue / originalPrice) * 100)
+                      : undefined;
                     const baseData = {
                       name: enrichedName,
                       description: shortDesc,
                       longDescription: longDesc,
-                      price: aliProduct.price?.value || aliProduct.price || 0,
+                      price: priceValue,
+                      originalPrice,
+                      discountPercent,
                       image: aliProduct.image || aliProduct.imageUrl || '',
                       imageHint: '',
                       affiliateUrl: affiliateUrl || '#',
@@ -302,18 +395,61 @@ export async function fillCategoriesWithProducts() {
             }
           } else {
             // Jeśli nie ma pod-podkategorii, pobierz produkty bezpośrednio dla subcategory
-            console.log(`[fillCategoriesWithProducts] Fetching products for: ${cat.name} ${sub.name} (no sub-subcategories)`);
-            const aliProducts = await fetchProductsForCategory(`${cat.name} ${sub.name}`, 10);
-            console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} products`);
+            console.log(`[fillCategoriesWithProducts] Fetching (multi-query) products for: ${cat.name} ${sub.name} (no sub-subcategories)`);
+            let aliProducts = await fetchMultiQuery([cat.name, sub.name], 8);
+            const advanced = process.env.ALIEXPRESS_ENABLE_ADVANCED === '1' || process.env.ALIEXPRESS_ENABLE_ADVANCED === 'true';
+            if (advanced) {
+              try {
+                const base = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/advanced/batch-search`;
+                const queries = [
+                  `${cat.name} ${sub.name}`,
+                  `${cat.name} ${sub.name} promocja`,
+                  `${cat.name} ${sub.name} bestseller`,
+                  `${cat.name} ${sub.name} top`,
+                ];
+                const r = await fetch(base, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ queries, limit: 8 })
+                });
+                if (r.ok) {
+                  const data = await r.json();
+                  if (Array.isArray(data.products) && data.products.length > 0) {
+                    aliProducts = data.products;
+                  }
+                }
+              } catch (_) {}
+            }
+            console.log(`[fillCategoriesWithProducts] Found ${aliProducts.length} multi-query products (deduped)`);
             
-            for (const aliProduct of aliProducts) {
+            const batchInputs = aliProducts.map((aliProduct: any) => {
+              const titleRaw = aliProduct.title || aliProduct.name || '';
+              return {
+                originalTitle: titleRaw,
+                rawDescription: aliProduct.description || '',
+                categoryPath: [cat.name, sub.name],
+                price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
+                originalPrice: aliProduct.originalPrice || undefined,
+                rating: aliProduct.rating || undefined,
+                orders: aliProduct.orders || undefined,
+                merchant: aliProduct.merchant || aliProduct.storeName || undefined,
+              };
+            });
+            let batchOutputs: any[] = [];
+            try { batchOutputs = await aiProductEnrichmentBatchPL(batchInputs); } catch (_) { batchOutputs = []; }
+
+            for (let idx = 0; idx < aliProducts.length; idx++) {
+              const aliProduct = aliProducts[idx];
               try {
                 const originalId = aliProduct.id || aliProduct.itemId || aliProduct.item_id || aliProduct.productId;
                 const affiliateUrl = aliProduct.link || aliProduct.productUrl || aliProduct.url;
 
                 // AI normalize title to Polish
                 const titleRaw = aliProduct.title || aliProduct.name || '';
-                const norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                let norm = titleNormCache.get(titleRaw);
+                if (!norm) {
+                  norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                  titleNormCache.set(titleRaw, norm);
+                }
                 const normalizedTitle = norm.normalizedTitle || titleRaw;
 
                 // AI enrichment (opis, cechy, keywords)
@@ -322,31 +458,48 @@ export async function fillCategoriesWithProducts() {
                 let longDesc = shortDesc;
                 let features: string[] = [];
                 let keywords: string[] = [];
-                try {
-                  const enrichment = await aiProductEnrichmentPL({
-                    originalTitle: normalizedTitle,
-                    rawDescription: aliProduct.description || '',
-                    categoryPath: [cat.name, sub.name],
-                    price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
-                    originalPrice: aliProduct.originalPrice || undefined,
-                    rating: aliProduct.rating || undefined,
-                    orders: aliProduct.orders || undefined,
-                    merchant: aliProduct.merchant || aliProduct.storeName || undefined,
-                  });
+                const cacheKey = originalId || normalizedTitle;
+                let enrichment = enrichmentCache.get(cacheKey);
+                if (!enrichment) {
+                  enrichment = batchOutputs[idx];
+                  if (!enrichment) {
+                    try {
+                      enrichment = await aiProductEnrichmentPL({
+                        originalTitle: normalizedTitle,
+                        rawDescription: aliProduct.description || '',
+                        categoryPath: [cat.name, sub.name],
+                        price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
+                        originalPrice: aliProduct.originalPrice || undefined,
+                        rating: aliProduct.rating || undefined,
+                        orders: aliProduct.orders || undefined,
+                        merchant: aliProduct.merchant || aliProduct.storeName || undefined,
+                      });
+                    } catch (_) {}
+                  }
+                  if (enrichment) enrichmentCache.set(cacheKey, enrichment);
+                }
+                if (enrichment) {
                   enrichedName = enrichment.normalizedName || enrichedName;
                   shortDesc = enrichment.shortDescription || shortDesc;
                   longDesc = enrichment.longDescription || longDesc;
                   features = enrichment.features || [];
                   keywords = enrichment.keywords || [];
-                } catch (_) {}
+                }
 
                 const existingId = await findExistingProduct({ originalId, affiliateUrl });
 
+                const originalPrice = aliProduct.originalPrice || aliProduct.original_price || undefined;
+                const priceValue = aliProduct.price?.value || aliProduct.price || 0;
+                const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
+                  ? Math.round(100 - (priceValue / originalPrice) * 100)
+                  : undefined;
                 const baseData = {
                   name: enrichedName,
                   description: shortDesc,
                   longDescription: longDesc,
-                  price: aliProduct.price?.value || aliProduct.price || 0,
+                  price: priceValue,
+                  originalPrice,
+                  discountPercent,
                   image: aliProduct.image || aliProduct.imageUrl || '',
                   imageHint: '',
                   affiliateUrl: affiliateUrl || '#',

@@ -362,6 +362,12 @@ export interface ProductAiMeta {
     keywords: string[];
     generatedAt: string;
   };
+
+  // M3: Enrichment szczegółowy (cechy i słowa kluczowe)
+  enrichment?: {
+    features?: string[];
+    keywords?: string[];
+  };
 }
 
 export interface ProductModerationState {
