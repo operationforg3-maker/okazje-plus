@@ -208,10 +208,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
         {/* Parametry i wysyłka */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {product.metadata?.shipping && (
+          {typeof product.metadata?.shipping === 'string' && (
             <span>Dostawa: {product.metadata.shipping}</span>
           )}
-          {product.metadata?.warehouse && (
+          {typeof product.metadata?.warehouse === 'string' && (
             <span className="flex items-center gap-1">
               <Package className="h-3 w-3" />
               Magazyn: {product.metadata.warehouse}

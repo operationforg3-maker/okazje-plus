@@ -279,11 +279,11 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "mainCategorySlug",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "status",
+          "fieldPath": "mainCategorySlug",
           "order": "ASCENDING"
         },
         {
@@ -300,6 +300,10 @@
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
         {
           "fieldPath": "mainCategorySlug",
           "order": "ASCENDING"
@@ -309,10 +313,6 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
         },
@@ -326,6 +326,10 @@
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
         {
           "fieldPath": "mainCategorySlug",
           "order": "ASCENDING"
@@ -336,10 +340,6 @@
         },
         {
           "fieldPath": "subSubCategorySlug",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
