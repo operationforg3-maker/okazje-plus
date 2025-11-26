@@ -40,16 +40,15 @@ env:
       - BUILD
       - RUNTIME
   
-  # Google AI for Genkit (required for build-time flow initialization)
-  - variable: GOOGLE_GENAI_API_KEY
-    secret: GOOGLE_GENAI_API_KEY
+  # Vertex AI configuration (uses Firebase project ADC automatically)
+  - variable: VERTEX_AI_LOCATION
+    value: europe-west1
     availability:
       - BUILD
       - RUNTIME
   
-  # Gemini API key (alias for Genkit compatibility)
-  - variable: GEMINI_API_KEY
-    secret: GOOGLE_GENAI_API_KEY
+  - variable: FIREBASE_PROJECT_ID
+    value: okazje-plus
     availability:
       - BUILD
       - RUNTIME

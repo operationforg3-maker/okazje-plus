@@ -124,7 +124,7 @@ Zwróć tylko JSON z dopasowaniami.
 `;
 
     const { output } = await ai.generate({
-      model: 'googleai/gemini-2.0-flash-exp',
+      model: 'vertexai/gemini-2.0-flash-exp',
       prompt,
       output: { schema: DealToLinkOutputSchema },
     });
