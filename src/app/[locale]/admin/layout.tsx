@@ -56,6 +56,7 @@ const pathNames: Record<string, string> = {
   '/admin/moderation': 'Moderacja',
   '/admin/aliexpress-import': 'Import AliExpress',
   '/admin/bulk-import': 'Bulk AI Import',
+  '/admin/ai-tools': 'AI Tools',
   '/admin/analytics': 'Analityka',
   '/admin/stats': 'Statystyki',
   '/admin/users': 'Użytkownicy',
@@ -238,6 +239,21 @@ export default function AdminLayout({
                     <Link href="/admin/bulk-import">
                       <Sparkles />
                       <span className="group-data-[collapsible=icon]:hidden font-medium">Bulk AI Import</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+
+                {/* AI Tools (dedykowana sekcja) */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/admin/ai-tools')}
+                    tooltip={{ children: 'AI Tools' }}
+                    className="data-[active=true]:bg-gradient-to-r data-[active=true]:from-purple-600 data-[active=true]:to-pink-600 data-[active=true]:text-white hover:bg-muted/80 border-l-4 border-transparent data-[active=true]:border-pink-400 transition-all"
+                  >
+                    <Link href="/admin/ai-tools">
+                      <Sparkles />
+                      <span className="group-data-[collapsible=icon]:hidden font-medium">AI Tools</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
