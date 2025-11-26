@@ -10,7 +10,9 @@ import { ShoppingBag, Flame, Users, Zap, Clock, Mail, CheckCircle2, Trophy, Rock
 import Link from "next/link";
 
 const BETA_RELEASE = new Date("2025-11-24T19:00:00+01:00");
-const PUBLIC_RELEASE = new Date("2025-11-25T22:00:00+01:00");
+// Publiczny start: czwartek 27 listopada 17:00 (Europe/Warsaw)
+const PUBLIC_RELEASE = new Date("2025-11-27T17:00:00+01:00");
+const PIONEER_LIMIT = 58;
 
 interface TimeLeft {
   days: number;
@@ -97,7 +99,7 @@ export default function Home() {
         setRegistrationNumber(data.registrationNumber);
         toast({
           title: 'Sukces!',
-          description: `Zarejestrowano jako ${data.registrationNumber <= 100 ? 'PIONIER' : 'BETA TESTER'} #${data.registrationNumber}`,
+          description: `Zarejestrowano jako ${data.registrationNumber <= PIONEER_LIMIT ? 'PIONIER' : 'BETA TESTER'} #${data.registrationNumber}`,
         });
       } else {
         const msg = data.error || (data.issues ? 'Niepoprawne dane formularza' : 'Nie udało się zarejestrować');
@@ -110,9 +112,9 @@ export default function Home() {
     }
   };
 
-  const isPioneer = currentCount < 100;
+  const isPioneer = currentCount < PIONEER_LIMIT;
   const spotsLeft = Math.max(0, 5000 - currentCount);
-  const pioneerSpotsLeft = Math.max(0, 100 - currentCount);
+  const pioneerSpotsLeft = Math.max(0, PIONEER_LIMIT - currentCount);
 
   const formatRelease = (d: Date) => {
     try {
@@ -292,7 +294,7 @@ export default function Home() {
                   <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center space-y-3">
                     <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto" />
                     <p className="font-bold text-lg">
-                      {registrationNumber && registrationNumber <= 100 ? "🏆 Jesteś Pionierem" : "🚀 Jesteś Beta Testerem"} #{registrationNumber}
+                      {registrationNumber && registrationNumber <= PIONEER_LIMIT ? "🏆 Jesteś Pionierem" : "🚀 Jesteś Beta Testerem"} #{registrationNumber}
                     </p>
                     <p className="text-sm text-muted-foreground">Zaproszenie wysłano na {email}</p>
                   </div>

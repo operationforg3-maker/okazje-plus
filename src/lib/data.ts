@@ -1970,7 +1970,8 @@ export async function createPreRegistration(data: {
   }
 
   const registrationNumber = currentCount + 1;
-  const role = registrationNumber <= 100 ? "pioneer" : "beta";
+  const PIONEER_LIMIT = 58;
+  const role = registrationNumber <= PIONEER_LIMIT ? "pioneer" : "beta";
 
   const docRef = await addDoc(collection(db, "pre_registrations"), {
     email,
