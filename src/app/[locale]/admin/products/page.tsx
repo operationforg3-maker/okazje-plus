@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -45,9 +45,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function AdminProductsPage() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -58,7 +61,9 @@ export default function AdminProductsPage() {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('filter') || 'all');
+  const mainCategory = searchParams.get('mainCategory') || undefined;
+  const subCategory = searchParams.get('subCategory') || undefined;
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Product>(
@@ -85,7 +90,12 @@ export default function AdminProductsPage() {
     setLoading(true);
     try {
       const allProducts = await getProductsForAdmin(statusFilter === 'all' ? undefined : statusFilter, 200);
-      setProducts(allProducts);
+      const filtered = allProducts.filter(p => {
+        const catOk = mainCategory ? p.mainCategorySlug === mainCategory : true;
+        const subOk = subCategory ? p.subCategorySlug === subCategory : true;
+        return catOk && subOk;
+      });
+      setProducts(filtered);
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -96,7 +106,7 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, statusFilter]);
+  }, [toast, statusFilter, mainCategory, subCategory]);
 
   useEffect(() => {
     fetchProducts();
@@ -292,7 +302,12 @@ export default function AdminProductsPage() {
         <CardContent>
           <div className="mb-4 flex items-center gap-4">
             <Label htmlFor="status-filter" className="whitespace-nowrap">Filtruj status:</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(v) => {
+              setStatusFilter(v);
+              const sp = new URLSearchParams(Array.from(searchParams.entries()));
+              if (v === 'all') sp.delete('filter'); else sp.set('filter', v);
+              router.replace(`/admin/products?${sp.toString()}`);
+            }}>
               <SelectTrigger id="status-filter" className="w-[200px]">
                 <SelectValue placeholder="Wszystkie" />
               </SelectTrigger>
@@ -452,6 +467,7 @@ export default function AdminProductsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Dodaj nowy produkt</DialogTitle>
+            <DialogDescription>Wypełnij formularz, aby dodać nowy produkt do katalogu.</DialogDescription>
           </DialogHeader>
           <ProductForm 
             onSuccess={handleSuccess}
@@ -465,6 +481,7 @@ export default function AdminProductsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edytuj produkt</DialogTitle>
+            <DialogDescription>Zaktualizuj dane istniejącego produktu.</DialogDescription>
           </DialogHeader>
           <ProductForm 
             product={editingProduct || undefined}

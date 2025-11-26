@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -44,9 +44,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function AdminDealsPage() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -57,7 +60,9 @@ export default function AdminDealsPage() {
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState('');
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('filter') || 'all');
+  const mainCategory = searchParams.get('mainCategory') || undefined;
+  const subCategory = searchParams.get('subCategory') || undefined;
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Deal>(
@@ -84,7 +89,12 @@ export default function AdminDealsPage() {
     setLoading(true);
     try {
       const allDeals = await getDealsForAdmin(statusFilter === 'all' ? undefined : statusFilter, 200);
-      setDeals(allDeals);
+      const filtered = allDeals.filter(d => {
+        const catOk = mainCategory ? d.mainCategorySlug === mainCategory : true;
+        const subOk = subCategory ? d.subCategorySlug === subCategory : true;
+        return catOk && subOk;
+      });
+      setDeals(filtered);
     } catch (error) {
       console.error('Error fetching deals:', error);
       toast({
@@ -100,7 +110,19 @@ export default function AdminDealsPage() {
   useEffect(() => {
     fetchDeals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, mainCategory, subCategory]);
+
+  // High discount filter post-processing
+  const displayDeals = useMemo(() => {
+    if (statusFilter !== 'high-discount') return deals;
+    return deals.filter(d => {
+      const orig = d.originalPrice || 0;
+      const price = d.price || 0;
+      if (!orig || !price || price >= orig) return false;
+      const rate = (orig - price) / orig;
+      return rate >= 0.4; // 40%+
+    });
+  }, [deals, statusFilter]);
 
   const handleEdit = (deal: Deal) => {
     setEditingDeal(deal);
@@ -273,7 +295,12 @@ export default function AdminDealsPage() {
         <CardContent>
           <div className="mb-4 flex items-center gap-4">
             <Label htmlFor="status-filter-deals" className="whitespace-nowrap">Filtruj status:</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <Select value={statusFilter} onValueChange={(v) => {
+              setStatusFilter(v);
+              const sp = new URLSearchParams(Array.from(searchParams.entries()));
+              if (v === 'all') sp.delete('filter'); else sp.set('filter', v);
+              router.replace(`/admin/deals?${sp.toString()}`);
+            }}>
               <SelectTrigger id="status-filter-deals" className="w-[200px]">
                 <SelectValue placeholder="Wszystkie" />
               </SelectTrigger>
@@ -283,6 +310,7 @@ export default function AdminDealsPage() {
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="high-discount">Duży rabat (40%+)</SelectItem>
               </SelectContent>
             </Select>
             <span className="text-sm text-muted-foreground">
@@ -356,7 +384,7 @@ export default function AdminDealsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedData.map((deal) => (
+                  displayDeals.slice((currentPage-1)*itemsPerPage, (currentPage-1)*itemsPerPage + itemsPerPage).map((deal) => (
                   <TableRow key={deal.id}>
                     <TableCell className="font-medium">{deal.title}</TableCell>
                     <TableCell>
@@ -435,6 +463,7 @@ export default function AdminDealsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Dodaj nową okazję</DialogTitle>
+            <DialogDescription>Wypełnij formularz, aby utworzyć nową okazję.</DialogDescription>
           </DialogHeader>
           <DealForm 
             onSuccess={handleSuccess}
@@ -448,6 +477,7 @@ export default function AdminDealsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edytuj okazję</DialogTitle>
+            <DialogDescription>Zaktualizuj dane istniejącej okazji.</DialogDescription>
           </DialogHeader>
           <DealForm 
             deal={editingDeal || undefined}
