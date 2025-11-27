@@ -1259,7 +1259,12 @@ function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
   if (filters.maxPrice && deal.price > filters.maxPrice) return false;
 
   // Temperature
-  if (filters.minTemperature && deal.temperature < filters.minTemperature) return false;
+  if (
+    filters.minTemperature &&
+    deal.temperature < filters.minTemperature
+  ) {
+    return false;
+  }
 
   // Free shipping
   if (filters.freeShipping && !deal.freeShipping) return false;
@@ -1466,12 +1471,22 @@ function generateWeeklyDigestHTML(
   topDeals: Deal[],
   personalizedDeals: Deal[]
 ): string {
+  /**
+   * Format price to PLN currency
+   * @param {number} price - Price to format
+   * @return {string} Formatted price string
+   */
   const formatPrice = (price: number) =>
     new Intl.NumberFormat("pl-PL", {
       style: "currency",
       currency: "PLN",
     }).format(price);
 
+  /**
+   * Generate HTML for single deal
+   * @param {Deal} deal - Deal object
+   * @return {string} HTML string for deal
+   */
   const dealHTML = (deal: Deal) => `
     <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: white;">
       <div style="display: flex; gap: 16px;">
