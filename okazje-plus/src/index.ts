@@ -1465,12 +1465,12 @@ export const sendWeeklyDigest = onSchedule(
  * @param {Deal[]} personalizedDeals - Personalized deals for user
  * @return {string} HTML email content
  */
-/* eslint-disable max-len */
 function generateWeeklyDigestHTML(
   userName: string,
   topDeals: Deal[],
   personalizedDeals: Deal[]
 ): string {
+  /* eslint-disable max-len */
   /**
    * Format price to PLN currency
    * @param {number} price - Price to format
