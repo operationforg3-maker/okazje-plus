@@ -8,13 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Tags, Pin, Lock, Award } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MessageSquare, Tags, Pin, Lock, Award, Search } from 'lucide-react';
+
+type SortOption = 'newest' | 'popular' | 'unanswered';
+type FilterOption = 'all' | 'answered' | 'unanswered' | 'pinned';
 
 export default function ForumHomePage() {
   const [threads, setThreads] = useState<ForumThread[]>([]);
+  const [filteredThreads, setFilteredThreads] = useState<ForumThread[]>([]);
   const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [filterBy, setFilterBy] = useState<FilterOption>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -22,7 +31,7 @@ export default function ForumHomePage() {
       try {
         const [cats, th] = await Promise.all([
           listForumCategories().catch(() => []),
-          listForumThreads(20).catch(() => []),
+          listForumThreads(100).catch(() => []), // Zwiększ limit aby mieć więcej do sortowania/filtrowania
         ]);
         if (!mounted) return;
         setCategories(cats);
@@ -34,15 +43,64 @@ export default function ForumHomePage() {
     return () => { mounted = false };
   }, []);
 
-  const handleCategoryChange = async (categoryId?: string) => {
-    setActiveCategory(categoryId || '');
-    setLoading(true);
-    try {
-      const th = await listForumThreads(20, categoryId);
-      setThreads(th);
-    } finally {
-      setLoading(false);
+  // Sortowanie i filtrowanie w czasie rzeczywistym
+  useEffect(() => {
+    let result = [...threads];
+
+    // Filtruj po kategorii
+    if (activeCategory) {
+      result = result.filter(t => t.categoryId === activeCategory);
     }
+
+    // Filtruj po statusie odpowiedzi
+    if (filterBy === 'answered') {
+      result = result.filter(t => t.bestAnswerId);
+    } else if (filterBy === 'unanswered') {
+      result = result.filter(t => !t.bestAnswerId);
+    } else if (filterBy === 'pinned') {
+      result = result.filter(t => t.isPinned);
+    }
+
+    // Filtruj po wyszukiwaniu
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(t => 
+        t.title.toLowerCase().includes(query) ||
+        t.summary?.toLowerCase().includes(query) ||
+        t.tags?.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+
+    // Sortuj
+    if (sortBy === 'newest') {
+      result.sort((a, b) => {
+        // Przypięte zawsze na górze
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    } else if (sortBy === 'popular') {
+      result.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return (b.postsCount || 0) - (a.postsCount || 0);
+      });
+    } else if (sortBy === 'unanswered') {
+      result.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        // Nierozwiązane najpierw
+        if (!a.bestAnswerId && b.bestAnswerId) return -1;
+        if (a.bestAnswerId && !b.bestAnswerId) return 1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    }
+
+    setFilteredThreads(result);
+  }, [threads, activeCategory, sortBy, filterBy, searchQuery]);
+
+  const handleCategoryChange = (categoryId?: string) => {
+    setActiveCategory(categoryId || '');
   };
 
   return (
@@ -57,6 +115,52 @@ export default function ForumHomePage() {
         </Button>
       </div>
 
+      {/* Wyszukiwanie */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Szukaj wątków..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {/* Filtry i sortowanie */}
+      <div className="flex gap-4 flex-wrap items-center">
+        {/* Sortowanie */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Sortuj:</span>
+          <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Najnowsze</SelectItem>
+              <SelectItem value="popular">Popularne</SelectItem>
+              <SelectItem value="unanswered">Nierozwiązane</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Filtr statusu */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Status:</span>
+          <Select value={filterBy} onValueChange={(val) => setFilterBy(val as FilterOption)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie</SelectItem>
+              <SelectItem value="answered">Rozwiązane</SelectItem>
+              <SelectItem value="unanswered">Nierozwiązane</SelectItem>
+              <SelectItem value="pinned">Przypięte</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Kategorie */}
       <div className="flex gap-2 flex-wrap">
         <Button variant={activeCategory === '' ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(undefined)}>
           Wszystko
@@ -74,13 +178,15 @@ export default function ForumHomePage() {
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
         </div>
-      ) : threads.length === 0 ? (
+      ) : filteredThreads.length === 0 ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">Brak wątków w tej kategorii.</CardContent>
+          <CardContent className="p-6 text-sm text-muted-foreground">
+            {searchQuery ? `Brak wyników dla "${searchQuery}"` : 'Brak wątków w tej kategorii.'}
+          </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {threads.map((t) => (
+          {filteredThreads.map((t) => (
             <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
