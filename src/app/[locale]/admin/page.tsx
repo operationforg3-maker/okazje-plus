@@ -20,7 +20,8 @@ import {
   Clock,
   ArrowRight,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Settings
 } from 'lucide-react';
 import { getCounts, getHotDeals, getRecommendedProducts, getAdminDashboardStats } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -314,18 +315,87 @@ function AdminPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/deals">
-              <Flame className="h-4 w-4 mr-2" />
-              Zarządzaj okazjami
+            <Link href="/admin/setup">
+              <Settings className="h-4 w-4 mr-2" />
+              Setup & Seeding
             </Link>
           </Button>
-          <Button asChild size="sm">
-            <Link href="/admin/products">
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Zarządzaj produktami
+          <Button asChild variant="outline" size="sm">
+            <Link href="/admin/analytics">
+              <Activity className="h-4 w-4 mr-2" />
+              Analityka
             </Link>
           </Button>
         </div>
+      </div>
+
+      {/* Quick Action Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Link href="/admin/deals">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-orange-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Okazje</CardTitle>
+              <Flame className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.deals || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                {dashboardStats?.pending.deals || 0} oczekujących
+                {(dashboardStats?.pending?.deals ?? 0) > 0 && (
+                  <Badge variant="secondary" className="ml-1">!</Badge>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/products">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Produkty</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.products || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                {dashboardStats?.pending.products || 0} oczekujących
+                {(dashboardStats?.pending?.products ?? 0) > 0 && (
+                  <Badge variant="secondary" className="ml-1">!</Badge>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/users">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-purple-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Użytkownicy</CardTitle>
+              <Users className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.users || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Aktywni użytkownicy
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/forum/moderation">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Forum</CardTitle>
+              <MessageSquare className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">Aktywne</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Moderacja wątków
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Main Stats Cards */}
