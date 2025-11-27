@@ -1087,7 +1087,9 @@ export const sendEmailOnNotification = onDocumentCreated(
 /**
  * Callable function do trackowania udostępnień społecznościowych.
  * Inkrementuje shareCount w dokumencie deal/product.
- * Wywołanie: trackShare(itemType: 'deal' | 'product', itemId: string, platform: string)
+ * Wywołanie: trackShare(itemType, itemId, platform)
+ * @param {CallableRequest} request - Request with itemType, itemId, platform
+ * @return {Promise} Success status and new shareCount
  */
 export const trackShareStats = onCall(
   {
@@ -1114,7 +1116,10 @@ export const trackShareStats = onCall(
       const doc = await docRef.get();
 
       if (!doc.exists) {
-        throw new HttpsError("not-found", `${itemType} o id ${itemId} nie istnieje`);
+        throw new HttpsError(
+          "not-found",
+          `${itemType} o id ${itemId} nie istnieje`
+        );
       }
 
       // Inkrementuj shareCount
@@ -1183,7 +1188,7 @@ export const checkSavedSearches = onDocumentCreated(
 
       for (const searchDoc of searchesSnapshot.docs) {
         const search = searchDoc.data();
-        
+
         // Check if deal matches the saved search filters
         const matches = matchesSavedSearchFilters(deal, search.filters);
 
@@ -1232,7 +1237,9 @@ export const checkSavedSearches = onDocumentCreated(
           batch.set(ref, notif);
         });
         await batch.commit();
-        logger.info(`Created ${notifications.length} saved search notifications`);
+        logger.info(
+          `Created ${notifications.length} saved search notifications`
+        );
       }
     } catch (error) {
       logger.error("Error checking saved searches", error);
@@ -1242,6 +1249,9 @@ export const checkSavedSearches = onDocumentCreated(
 
 /**
  * Helper function to check if deal matches saved search filters
+ * @param {Deal} deal - The deal to check
+ * @param {any} filters - Saved search filters
+ * @return {boolean} True if deal matches filters
  */
 function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
   // Price range
@@ -1276,17 +1286,29 @@ function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
   // Tags
   if (filters.tags?.length > 0) {
     const dealTags = deal.tags || [];
-    const hasMatchingTag = filters.tags.some((tag: string) => dealTags.includes(tag));
+    const hasMatchingTag = filters.tags.some(
+      (tag: string) => dealTags.includes(tag)
+    );
     if (!hasMatchingTag) return false;
   }
 
   // Merchants
   if (filters.merchants?.length > 0) {
-    if (!deal.merchant || !filters.merchants.includes(deal.merchant)) return false;
+    if (
+      !deal.merchant ||
+      !filters.merchants.includes(deal.merchant)
+    ) {
+      return false;
+    }
   }
 
   if (filters.excludeMerchants?.length > 0) {
-    if (deal.merchant && filters.excludeMerchants.includes(deal.merchant)) return false;
+    if (
+      deal.merchant &&
+      filters.excludeMerchants.includes(deal.merchant)
+    ) {
+      return false;
+    }
   }
 
   return true;
@@ -1381,7 +1403,9 @@ export const sendWeeklyDigest = onSchedule(
           const favoriteCategories = new Set<string>();
           favoritesSnapshot.forEach((fav) => {
             const deal = fav.data() as any;
-            if (deal.mainCategorySlug) favoriteCategories.add(deal.mainCategorySlug);
+            if (deal.mainCategorySlug) {
+              favoriteCategories.add(deal.mainCategorySlug);
+            }
           });
 
           // Filter deals - top 10 overall + 5 personalized
@@ -1389,12 +1413,14 @@ export const sendWeeklyDigest = onSchedule(
             .sort((a, b) => b.temperature - a.temperature)
             .slice(0, 10);
 
-          const personalizedDeals = favoriteCategories.size > 0
-            ? allDeals
-                .filter((deal) => favoriteCategories.has(deal.mainCategorySlug))
-                .sort((a, b) => b.temperature - a.temperature)
-                .slice(0, 5)
-            : [];
+          const personalizedDeals = favoriteCategories.size > 0 ?
+            allDeals
+              .filter(
+                (deal) => favoriteCategories.has(deal.mainCategorySlug)
+              )
+              .sort((a, b) => b.temperature - a.temperature)
+              .slice(0, 5) :
+            [];
 
           // Generate HTML email
           const html = generateWeeklyDigestHTML(
@@ -1429,7 +1455,12 @@ export const sendWeeklyDigest = onSchedule(
 
 /**
  * Generate HTML template for weekly digest email
+ * @param {string} userName - User's name
+ * @param {Deal[]} topDeals - Top deals of the week
+ * @param {Deal[]} personalizedDeals - Personalized deals for user
+ * @return {string} HTML email content
  */
+/* eslint-disable max-len */
 function generateWeeklyDigestHTML(
   userName: string,
   topDeals: Deal[],
@@ -1445,9 +1476,9 @@ function generateWeeklyDigestHTML(
     <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: white;">
       <div style="display: flex; gap: 16px;">
         ${
-  deal.image
-    ? `<img src="${deal.image}" alt="${deal.title}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" />`
-    : ""
+  deal.image ?
+    `<img src="${deal.image}" alt="${deal.title}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" />` :
+    ""
 }
         <div style="flex: 1;">
           <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #111827;">
@@ -1458,18 +1489,18 @@ function generateWeeklyDigestHTML(
               ${formatPrice(deal.price)}
             </span>
             ${
-  deal.originalPrice
-    ? `<span style="font-size: 14px; color: #6b7280; text-decoration: line-through;">
+  deal.originalPrice ?
+    `<span style="font-size: 14px; color: #6b7280; text-decoration: line-through;">
                   ${formatPrice(deal.originalPrice)}
-                </span>`
-    : ""
+                </span>` :
+    ""
 }
             ${
-  deal.temperature >= 100
-    ? `<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+  deal.temperature >= 100 ?
+    `<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
                   🔥 ${deal.temperature}°
-                </span>`
-    : ""
+                </span>` :
+    ""
 }
           </div>
           <a href="https://okazje.plus/deals/${deal.id}" style="display: inline-block; background: #ef4444; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">
@@ -1516,15 +1547,15 @@ function generateWeeklyDigestHTML(
           ${topDeals.map(dealHTML).join("")}
 
           ${
-  personalizedDeals.length > 0
-    ? `
+  personalizedDeals.length > 0 ?
+    `
           <!-- Personalized Deals -->
           <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 32px 0 16px 0; border-bottom: 2px solid #ef4444; padding-bottom: 8px;">
             ⭐ Wybrane dla Ciebie
           </h2>
           ${personalizedDeals.map(dealHTML).join("")}
-          `
-    : ""
+          ` :
+    ""
 }
 
           <!-- CTA -->
@@ -1547,6 +1578,7 @@ function generateWeeklyDigestHTML(
     </html>
   `;
 }
+/* eslint-enable max-len */
 
 // =============================================================================
 // PRE-REGISTRATION INVITATION SYSTEM
