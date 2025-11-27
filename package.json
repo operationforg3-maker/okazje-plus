@@ -19,6 +19,8 @@
     "test:e2e": "playwright test",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:interactions": "ts-node src/scripts/seed-interactions.ts",
+    "seed:categories": "tsx src/scripts/seed-categories-full.ts",
+    "auto-import": "tsx src/scripts/auto-import-products.ts",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts",
     "postinstall": "node ./scripts/apply-react-hooks-shim.js || true && patch-package"
   },
