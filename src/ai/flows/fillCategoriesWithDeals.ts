@@ -36,15 +36,16 @@ export async function fillCategoriesWithDeals() {
     try {
       console.log(`[fillCategoriesWithDeals] Fetching deals for: ${category.name}`);
       
-      // Szukaj produktów z dużą zniżką (>50%) przez AliExpress API
+      // Szukaj produktów z dużą zniżką przez AliExpress API
+      // UWAGA: AliExpress często nie zwraca pola discount, więc obniżamy próg i filtrujemy po pobraniu
       const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           query: category.query,
-          limit: 10, // Po 10 deali na kategorię
+          limit: 50, // Zwiększamy limit bo będziemy filtrować po pobraniu
           sort: 'orders', // Sortuj po popularności
-          minDiscount: 50 // Minimum 50% zniżki - to są prawdziwe okazje!
+          minDiscount: 30 // Obniżamy próg - filtrowanie będzie w kodzie poniżej
         })
       });
       
@@ -73,8 +74,10 @@ export async function fillCategoriesWithDeals() {
           const discount = apiDiscount || computedDiscount;
           console.log(`[fillCategoriesWithDeals] Discount calc: api=${apiDiscount} computed=${computedDiscount} final=${discount} title="${product.title}"`);
           
-          // Zmniejszony próg na 40% aby zwiększyć liczbę wyników + uniknąć pustych list
-          if (discount < 40) {
+          // Obniżony próg do 30% aby zwiększyć liczbę wyników
+          // Produkty bez originalPrice są pomijane (nie można obliczyć zniżki)
+          if (discount < 30 || !originalCandidate || !saleCandidate) {
+            console.log(`[fillCategoriesWithDeals] Skipping: discount=${discount}, hasOriginal=${!!originalCandidate}, hasSale=${!!saleCandidate}`);
             continue;
           }
           
