@@ -46,6 +46,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ActivityFeed } from '@/components/activity-feed';
+import { NotificationSettingsCard } from '@/components/notification-settings-card';
+import { UserStatsCard } from '@/components/user-stats-card';
 
 type UserActivity = {
   votes: number;
@@ -338,48 +341,20 @@ function ProfilePage() {
             <Bell className="h-4 w-4" />
             <span className="hidden sm:inline">Powiadomienia</span>
           </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            <span className="hidden sm:inline">Ustawienia</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Przegląd */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  Ostatnia aktywność
-                </CardTitle>
-                <CardDescription>Twoje ostatnie działania</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-3">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />
-                    ))}
-                  </div>
-                ) : recentComments.length > 0 ? (
-                  <div className="space-y-4">
-                    {recentComments.map((comment) => (
-                      <div key={comment.id} className="flex gap-3 p-3 border rounded-lg">
-                        <MessageSquare className="h-5 w-5 text-muted-foreground mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm line-clamp-2">{comment.content}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(comment.createdAt).toLocaleDateString('pl-PL')}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Brak aktywności</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Activity Feed Component */}
+            <ActivityFeed userId={user?.uid} maxItems={20} showTitle={true} />
+
+            {/* User Stats Card */}
+            {user && <UserStatsCard userId={user.uid} />}
 
             <Card>
               <CardHeader>
@@ -811,6 +786,47 @@ function ProfilePage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Notification Settings */}
+            <NotificationSettingsCard />
+
+            {/* Account Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  Ustawienia konta
+                </CardTitle>
+                <CardDescription>Zarządzaj swoim kontem i preferencjami</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nazwa użytkownika</label>
+                  <p className="text-sm text-muted-foreground">{user?.displayName || 'Nie ustawiono'}</p>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data dołączenia</label>
+                  <p className="text-sm text-muted-foreground">{activity.memberSince}</p>
+                </div>
+                <Separator />
+                <div className="pt-4">
+                  <Button variant="destructive" className="w-full" onClick={logout}>
+                    Wyloguj się
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

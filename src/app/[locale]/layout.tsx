@@ -6,6 +6,7 @@ import { ConditionalNav } from '@/components/layout/conditional-nav';
 import { AuthProvider } from '@/lib/auth';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
+import { ComparisonListener } from '@/components/deal-comparison-tool';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazje-plus.web.app'),
@@ -86,6 +87,7 @@ export default async function RootLayout({
   <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
             <ConditionalNav>{children}</ConditionalNav>
+            <ComparisonListener />
             <Toaster />
           </AuthProvider>
         </NextIntlClientProvider>

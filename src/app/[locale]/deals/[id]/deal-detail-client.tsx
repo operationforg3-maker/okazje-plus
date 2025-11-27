@@ -43,6 +43,7 @@ import { useCommentsCount } from '@/hooks/use-comments-count';
 import ShareButton from '@/components/share-button';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
+import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
 import {
   Tooltip,
   TooltipContent,
@@ -550,6 +551,18 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
           </section>
         </>
       )}
+
+      {/* AI-Powered Similar Items Carousel */}
+      <SimilarItemsCarousel
+        itemId={deal.id}
+        itemType="deal"
+        category={deal.mainCategorySlug}
+        subcategory={deal.subCategorySlug}
+        tags={deal.tags}
+        priceRange={deal.price ? [deal.price * 0.7, deal.price * 1.3] : undefined}
+        excludeItemId={deal.id}
+        maxItems={8}
+      />
     </div>
   );
 }
