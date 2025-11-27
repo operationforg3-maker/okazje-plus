@@ -1093,7 +1093,7 @@ export const sendEmailOnNotification = onDocumentCreated(
  */
 export const trackShareStats = onCall(
   {
-    region: "europe-west1",
+    region: "us-central1",
     cors: true,
   },
   async (request: CallableRequest<{
@@ -1162,7 +1162,10 @@ export const trackShareStats = onCall(
  * Checks all active saved searches and sends notifications to matching users.
  */
 export const checkSavedSearches = onDocumentCreated(
-  "deals/{dealId}",
+  {
+    document: "deals/{dealId}",
+    region: "us-central1",
+  },
   async (event) => {
     const snap = event.data;
     if (!snap) return;
@@ -1331,7 +1334,7 @@ export const sendWeeklyDigest = onSchedule(
   {
     schedule: "0 9 * * 0", // Every Sunday at 9 AM
     timeZone: "Europe/Warsaw",
-    region: "europe-west1",
+    region: "us-central1",
     memory: "512MiB",
     timeoutSeconds: 540,
   },
@@ -1993,3 +1996,8 @@ export const activatePreRegistration = onCall(
     }
   }
 );
+
+// Eksporty wymagane przez Firebase Functions deploy
+exports.trackShareStats = trackShareStats;
+exports.checkSavedSearches = checkSavedSearches;
+exports.sendWeeklyDigest = sendWeeklyDigest;
