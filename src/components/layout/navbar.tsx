@@ -73,7 +73,7 @@ export function Navbar() {
         </Sheet>
         
         {/* Desktop Nav */}
-  <Link href={`${prefix}/`} className="mr-6 hidden items-center space-x-2 md:flex">
+        <Link href={`${prefix}/`} className="mr-6 flex items-center space-x-2">
           <ShoppingBag className="h-6 w-6 text-primary" />
           <span className="hidden font-bold font-headline sm:inline-block text-lg">
             Okazje+
@@ -82,13 +82,6 @@ export function Navbar() {
         
         <NavigationMenu className="hidden md:flex">
           <NavigationMenuList>
-            <NavigationMenuItem>
-              <Link href={`${prefix}/`} legacyBehavior passHref>
-                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                  Strona główna
-                </NavigationMenuLink>
-              </Link>
-            </NavigationMenuItem>
             <NavigationMenuItem>
               <Link href={`${prefix}/deals`} legacyBehavior passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>

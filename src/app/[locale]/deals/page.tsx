@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { FEATURES } from '@/lib/config';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 // Umożliwiamy nawigację przez query params z mega‑menu (mainCategory, subCategory, sort, q)
 
 type ViewMode = 'list' | 'grid';
@@ -65,7 +66,6 @@ export default function DealsPage() {
     today: false,
     verified: false,
   });
-  const [displayLimit, setDisplayLimit] = useState(20);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
 
   // Helper: unify postedAt to timestamp (ms)
@@ -327,6 +327,18 @@ export default function DealsPage() {
           return 0;
       }
     });
+
+  // Infinite scroll hook - ładuje kolejne deale przy scrollowaniu
+  const {
+    displayedItems: displayedDeals,
+    hasMore,
+    isLoading: isLoadingMore,
+    observerTarget,
+  } = useInfiniteScroll({
+    items: filteredAndSortedDeals,
+    initialItemsPerPage: 20,
+    loadMoreThreshold: 500,
+  });
 
   // Statystyki
   const stats = {
@@ -808,40 +820,43 @@ export default function DealsPage() {
                     ))}
                   </div>
                 ) : filteredAndSortedDeals.length > 0 ? (
-                  viewMode === 'list' ? (
-                    <div className="space-y-4">
-                      {filteredAndSortedDeals.slice(0, displayLimit).map((deal) => (
-                        <DealListCard key={deal.id} deal={deal} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {filteredAndSortedDeals.slice(0, displayLimit).map((deal) => (
-                        <DealCard key={deal.id} deal={deal} />
-                      ))}
-                    </div>
-                  )
+                  <>
+                    {viewMode === 'list' ? (
+                      <div className="space-y-4">
+                        {displayedDeals.map((deal) => (
+                          <DealListCard key={deal.id} deal={deal} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {displayedDeals.map((deal) => (
+                          <DealCard key={deal.id} deal={deal} />
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Infinite scroll loader */}
+                    {hasMore && (
+                      <div ref={observerTarget} className="mt-6 flex justify-center items-center py-4">
+                        {isLoadingMore && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span>Ładowanie kolejnych okazji...</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Status info */}
+                    {!hasMore && displayedDeals.length > 0 && (
+                      <div className="mt-6 text-center text-sm text-muted-foreground">
+                        <p>Pokazano wszystkie {filteredAndSortedDeals.length} okazji</p>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">Brak okazji w tej kategorii</p>
-                  </div>
-                )}
-
-                {/* Load More Button */}
-                {filteredAndSortedDeals.length > displayLimit && (
-                  <div className="mt-6 text-center">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={() => setDisplayLimit(prev => prev + 20)}
-                      className="w-full sm:w-auto"
-                    >
-                      Załaduj więcej okazji
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Pokazujesz {Math.min(displayLimit, filteredAndSortedDeals.length)} z {filteredAndSortedDeals.length} okazji
-                    </p>
                   </div>
                 )}
               </div>

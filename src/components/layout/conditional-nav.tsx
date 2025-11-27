@@ -5,17 +5,6 @@ import { Navbar } from "./navbar";
 import { Footer } from "./footer";
 
 export function ConditionalNav({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  
-  // Ukryj navbar tylko na stronie głównej (/ lub /pl/)
-  const hideNav = pathname === "/" || pathname === "/pl" || pathname === "/pl/";
-
-  if (hideNav) {
-    // Strona główna - tylko children (ma własny footer wbudowany)
-    return <>{children}</>;
-  }
-
-  // Wszystkie inne strony - normalny layout z navbarem i footerem
   return (
     <div className="relative flex min-h-screen flex-col">
       <Navbar />

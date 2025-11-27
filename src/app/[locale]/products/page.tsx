@@ -12,11 +12,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2 } from 'lucide-react';
 import { Category, Product, Deal } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
@@ -114,6 +115,18 @@ function ProductsPageContent() {
       product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
     return matchesSearch;
+  });
+
+  // Infinite scroll hook - ładuje kolejne produkty przy scrollowaniu
+  const {
+    displayedItems: displayedProducts,
+    hasMore,
+    isLoading: isLoadingMore,
+    observerTarget,
+  } = useInfiniteScroll({
+    items: filteredProducts,
+    initialItemsPerPage: 20,
+    loadMoreThreshold: 500,
   });
 
   const priceFormatter = new Intl.NumberFormat('pl-PL', {
@@ -264,11 +277,32 @@ function ProductsPageContent() {
                     ))}
                   </div>
                 ) : filteredProducts.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {filteredProducts.slice(0, 12).map((product) => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {displayedProducts.map((product) => (
+                        <ProductCard key={product.id} product={product} />
+                      ))}
+                    </div>
+                    
+                    {/* Infinite scroll loader */}
+                    {hasMore && (
+                      <div ref={observerTarget} className="mt-6 flex justify-center items-center py-4">
+                        {isLoadingMore && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span>Ładowanie kolejnych produktów...</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Status info */}
+                    {!hasMore && displayedProducts.length > 0 && (
+                      <div className="mt-6 text-center text-sm text-muted-foreground">
+                        <p>Pokazano wszystkie {filteredProducts.length} produktów</p>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">Brak produktów w tej kategorii</p>

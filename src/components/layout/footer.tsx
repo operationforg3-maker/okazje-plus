@@ -41,7 +41,10 @@ export function Footer() {
           <div>
             <h3 className="font-headline font-semibold">Nawigacja</h3>
             <div className="mt-4 flex flex-col space-y-2">
-              <Link href="/admin" className="text-sm text-muted-foreground hover:text-primary transition-colors">Panel Admina</Link>
+              <Link href="/deals" className="text-sm text-muted-foreground hover:text-primary transition-colors">Okazje</Link>
+              <Link href="/products" className="text-sm text-muted-foreground hover:text-primary transition-colors">Produkty</Link>
+              <Link href="/forum" className="text-sm text-muted-foreground hover:text-primary transition-colors">Forum</Link>
+              <Link href="/add-deal" className="text-sm text-muted-foreground hover:text-primary transition-colors">Dodaj okazję</Link>
             </div>
           </div>
 

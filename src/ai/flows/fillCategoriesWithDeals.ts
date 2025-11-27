@@ -37,15 +37,15 @@ export async function fillCategoriesWithDeals() {
       console.log(`[fillCategoriesWithDeals] Fetching deals for: ${category.name}`);
       
       // Szukaj produktów z dużą zniżką przez AliExpress API
-      // UWAGA: AliExpress często nie zwraca pola discount, więc obniżamy próg i filtrujemy po pobraniu
+      // UWAGA: Maksymalnie luźne filtry - chcemy mieć dużo produktów!
       const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           query: category.query,
-          limit: 50, // Zwiększamy limit bo będziemy filtrować po pobraniu
+          limit: 50,
           sort: 'orders', // Sortuj po popularności
-          minDiscount: 30 // Obniżamy próg - filtrowanie będzie w kodzie poniżej
+          // BEZ minDiscount - chcemy wszystkie produkty
         })
       });
       
@@ -72,14 +72,8 @@ export async function fillCategoriesWithDeals() {
             ? Math.round((1 - saleCandidate / originalCandidate) * 100)
             : 0;
           const discount = apiDiscount || computedDiscount;
-          console.log(`[fillCategoriesWithDeals] Discount calc: api=${apiDiscount} computed=${computedDiscount} final=${discount} title="${product.title}"`);
-          
-          // Obniżony próg do 30% aby zwiększyć liczbę wyników
-          // Produkty bez originalPrice są pomijane (nie można obliczyć zniżki)
-          if (discount < 30 || !originalCandidate || !saleCandidate) {
-            console.log(`[fillCategoriesWithDeals] Skipping: discount=${discount}, hasOriginal=${!!originalCandidate}, hasSale=${!!saleCandidate}`);
-            continue;
-          }
+          // USUNIĘTO FILTR minDiscount - zapisujemy wszystkie produkty aby mieć pełny katalog
+          console.log(`[fillCategoriesWithDeals] Product discount: ${discount}% - "${product.title?.slice(0, 60)}"`);
           
           const externalOriginalId = product.id || product.itemId || product.item_id || product.productId;
           const link = product.productUrl || product.link || '#';
