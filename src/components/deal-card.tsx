@@ -344,16 +344,16 @@ export default function DealCard({ deal }: DealCardProps) {
 
         {/* Szczegóły dostawy i dodatkowe info */}
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {deal.deliveryTime && (
+          {deal.importMetadata?.deliveryTime && (
             <span className="flex items-center gap-1">
               <Truck className="h-3 w-3" />
-              {deal.deliveryTime}
+              {deal.importMetadata.deliveryTime}
             </span>
           )}
-          {deal.warehouse && (
+          {deal.importMetadata?.warehouse && (
             <span className="flex items-center gap-1">
               <Package className="h-3 w-3" />
-              Magazyn: {deal.warehouse}
+              Magazyn: {deal.importMetadata.warehouse}
             </span>
           )}
           {typeof deal.shippingCost === 'number' && deal.shippingCost > 0 && (
