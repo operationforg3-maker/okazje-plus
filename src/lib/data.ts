@@ -1692,9 +1692,24 @@ export async function listForumThreads(limitCount: number = 20, categoryId?: str
   const ref = collection(db, 'forum_threads');
   let qBase;
   try {
-    qBase = categoryId
-      ? query(ref, where('categoryId', '==', categoryId), orderBy('lastPostAt', 'desc'), limit(limitCount))
-      : query(ref, orderBy('lastPostAt', 'desc'), limit(limitCount));
+    if (categoryId) {
+      qBase = query(
+        ref,
+        where('categoryId', '==', categoryId),
+        where('status', 'in', ['approved', undefined, null]),
+        orderBy('isPinned', 'desc'),
+        orderBy('lastPostAt', 'desc'),
+        limit(limitCount)
+      );
+    } else {
+      qBase = query(
+        ref,
+        where('status', 'in', ['approved', undefined, null]),
+        orderBy('isPinned', 'desc'),
+        orderBy('lastPostAt', 'desc'),
+        limit(limitCount)
+      );
+    }
   } catch {
     // fallback jeśli brak indeksu
     qBase = categoryId
@@ -1702,7 +1717,16 @@ export async function listForumThreads(limitCount: number = 20, categoryId?: str
       : query(ref, orderBy('createdAt', 'desc'), limit(limitCount));
   }
   const snap = await getDocs(qBase);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumThread));
+  const threads = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumThread));
+  
+  // Filtruj tylko approved/undefined oraz sortuj przypięte na górze
+  return threads
+    .filter(t => !t.status || t.status === 'approved')
+    .sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return 0;
+    });
 }
 
 export async function getForumThread(threadId: string): Promise<ForumThread | null> {
@@ -1713,9 +1737,19 @@ export async function getForumThread(threadId: string): Promise<ForumThread | nu
 }
 
 export async function listForumPosts(threadId: string, limitCount: number = 100): Promise<ForumPost[]> {
-  const ref = collection(db, 'forum_threads', threadId, 'posts');
-  const snap = await getDocs(query(ref, orderBy('createdAt', 'asc'), limit(limitCount)));
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumPost));
+  const ref = collection(db, 'forum_posts');
+  const q = query(
+    ref,
+    where('threadId', '==', threadId),
+    where('status', 'in', ['approved', undefined, null]),
+    orderBy('createdAt', 'asc'),
+    limit(limitCount)
+  );
+  const snap = await getDocs(q);
+  const posts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumPost));
+  
+  // Filtruj tylko approved/undefined (nie usunięte)
+  return posts.filter(p => !p.status || p.status === 'approved');
 }
 
 export async function createForumThread(params: {

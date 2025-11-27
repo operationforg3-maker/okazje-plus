@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquare, Tags } from 'lucide-react';
+import { MessageSquare, Tags, Pin, Lock, Award } from 'lucide-react';
 
 export default function ForumHomePage() {
   const [threads, setThreads] = useState<ForumThread[]>([]);
@@ -81,12 +81,30 @@ export default function ForumHomePage() {
       ) : (
         <div className="space-y-3">
           {threads.map((t) => (
-            <Card key={t.id}>
+            <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">
+                <CardTitle className="text-base flex items-center gap-2">
                   <Link href={`/forum/${t.id}`} className="hover:underline">
                     {t.title}
                   </Link>
+                  {t.isPinned && (
+                    <Badge variant="outline" className="gap-1">
+                      <Pin className="h-3 w-3" />
+                      Przypięty
+                    </Badge>
+                  )}
+                  {t.isLocked && (
+                    <Badge variant="destructive" className="gap-1">
+                      <Lock className="h-3 w-3" />
+                      Zablokowany
+                    </Badge>
+                  )}
+                  {t.bestAnswerId && (
+                    <Badge variant="default" className="gap-1 bg-green-600">
+                      <Award className="h-3 w-3" />
+                      Rozwiązany
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
                   {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}

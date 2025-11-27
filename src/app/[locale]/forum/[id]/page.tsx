@@ -7,12 +7,18 @@ import { useParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/lib/auth';
 import Link from 'next/link';
 import { SearchableAttachmentPicker } from '@/components/forum/searchable-attachment-picker';
 import { AttachmentCard } from '@/components/forum/attachment-card';
+import { VoteControls } from '@/components/forum/vote-controls';
+import { PostReactions } from '@/components/forum/post-reactions';
+import { PostActions } from '@/components/forum/post-actions';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { Pin, Lock, Award } from 'lucide-react';
+import { toast } from 'sonner';
 
 // Komponent do parsowania @mentions i renderowania załączników
 async function parseMentions(content: string): Promise<{
@@ -191,8 +197,22 @@ export default function ThreadPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{thread.title}</h1>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">{thread.title}</h1>
+            {thread.isPinned && (
+              <Badge variant="outline" className="gap-1">
+                <Pin className="h-3 w-3" />
+                Przypięty
+              </Badge>
+            )}
+            {thread.isLocked && (
+              <Badge variant="destructive" className="gap-1">
+                <Lock className="h-3 w-3" />
+                Zablokowany
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             {thread.authorDisplayName || 'Użytkownik'} • {new Date(thread.createdAt).toLocaleString('pl-PL')}
           </p>
@@ -204,24 +224,127 @@ export default function ThreadPage() {
 
       {/* Posty */}
       <div className="space-y-4">
-        {posts.map((p) => (
-          <Card key={p.id}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <span>{p.authorDisplayName || 'Użytkownik'}</span>
-                <span className="text-xs text-muted-foreground">{new Date(p.createdAt).toLocaleString('pl-PL')}</span>
-              </CardTitle>
-              <CardDescription></CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-2">
-              <PostContent content={p.content} attachments={p.attachments} />
-            </CardContent>
-          </Card>
-        ))}
+        {posts.map((p) => {
+          const isBestAnswer = thread.bestAnswerId === p.id;
+          const isThreadAuthor = user?.uid === thread.authorUid;
+          const isAdmin = user?.role === "admin" || user?.role === "moderator";
+          const canMarkBestAnswer = (isThreadAuthor || isAdmin) && !isBestAnswer;
+          
+          return (
+            <Card key={p.id} className={isBestAnswer ? "border-green-500 border-2" : ""}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span>{p.authorDisplayName || 'Użytkownik'}</span>
+                      {isBestAnswer && (
+                        <Badge variant="default" className="gap-1 bg-green-600">
+                          <Award className="h-3 w-3" />
+                          Najlepsza odpowiedź
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      {new Date(p.createdAt).toLocaleString('pl-PL')}
+                      {p.isEdited && <span className="ml-2">(edytowany)</span>}
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {canMarkBestAnswer && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        onClick={async () => {
+                          try {
+                            const firebaseUser = auth.currentUser;
+                            if (!firebaseUser) {
+                              toast.error("Brak autoryzacji");
+                              return;
+                            }
+
+                            const idToken = await firebaseUser.getIdToken();
+                            
+                            const response = await fetch("/api/forum/best-answer", {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${idToken}`,
+                              },
+                              body: JSON.stringify({
+                                threadId: thread.id,
+                                postId: p.id,
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error("Błąd oznaczania odpowiedzi");
+                            }
+
+                            toast.success("Oznaczono jako najlepszą odpowiedź");
+                            
+                            // Odśwież wątek
+                            const updatedThread = await getForumThread(thread.id);
+                            setThread(updatedThread);
+                          } catch (error: any) {
+                            console.error("Error marking best answer:", error);
+                            toast.error(error.message || "Błąd oznaczania odpowiedzi");
+                          }
+                        }}
+                      >
+                        <Award className="h-4 w-4" />
+                        Najlepsza odpowiedź
+                      </Button>
+                    )}
+                    <PostActions
+                      postId={p.id}
+                      authorUid={p.authorUid}
+                      content={p.content}
+                      onUpdate={async () => {
+                        const updated = await listForumPosts(thread.id);
+                        setPosts(updated);
+                      }}
+                      onDelete={async () => {
+                        const updated = await listForumPosts(thread.id);
+                        setPosts(updated);
+                      }}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-4">
+                <PostContent content={p.content} attachments={p.attachments} />
+                
+                {/* Voting i Reactions */}
+                <div className="flex items-center gap-4 flex-wrap pt-2 border-t">
+                  <VoteControls
+                    postId={p.id}
+                    threadId={thread.id}
+                    initialUpvotes={p.upvotes || 0}
+                    initialDownvotes={p.downvotes || 0}
+                  />
+                  <PostReactions
+                    postId={p.id}
+                    initialReactions={p.reactions}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Odpowiedź */}
-      <Card>
+      {thread.isLocked ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground">
+              Ten wątek jest zablokowany. Nie możesz dodawać nowych odpowiedzi.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
         <CardHeader>
           <CardTitle>Twoja odpowiedź</CardTitle>
           <CardDescription>
@@ -283,7 +406,8 @@ export default function ThreadPage() {
             </Button>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

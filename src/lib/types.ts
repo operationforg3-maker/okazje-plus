@@ -624,6 +624,21 @@ export interface ForumThread {
   createdAt: string; // ISO
   updatedAt?: string; // ISO
   lastPostAt?: string; // ISO
+  
+  // Moderacja i status
+  status?: 'draft' | 'approved' | 'rejected' | 'spam'; // Status moderacji
+  isPinned?: boolean; // Przypięty wątek (sticky)
+  isLocked?: boolean; // Zablokowany (no new posts)
+  lockedBy?: string; // UID moderatora
+  lockedAt?: string; // ISO
+  lockedReason?: string;
+  
+  // Engagement
+  views?: number; // Liczba wyświetleń
+  bestAnswerId?: string; // ID posta oznaczonego jako najlepsza odpowiedź
+  
+  // SEO & Search
+  slug?: string; // URL-friendly slug
 }
 
 export interface ForumPost {
@@ -638,6 +653,32 @@ export interface ForumPost {
   downvotes?: number;
   createdAt: string; // ISO
   updatedAt?: string; // ISO
+  
+  // Moderacja
+  status?: 'approved' | 'pending' | 'deleted' | 'spam';
+  deletedBy?: string; // UID moderatora lub autora
+  deletedAt?: string; // ISO
+  deletedReason?: string;
+  
+  // Edycja
+  isEdited?: boolean;
+  editedAt?: string; // ISO
+  editHistory?: Array<{
+    content: string;
+    editedAt: string;
+    editedBy: string;
+  }>;
+  
+  // Reactions
+  reactions?: Record<string, string[]>; // emoji -> array of userIds
+  
+  // Flagging & Reports
+  reportCount?: number;
+  reports?: Array<{
+    reportedBy: string;
+    reason: string;
+    reportedAt: string;
+  }>;
 }
 
 // ============================================
