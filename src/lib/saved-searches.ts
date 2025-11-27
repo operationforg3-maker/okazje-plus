@@ -54,11 +54,12 @@ export const SavedSearchSchema = z.object({
 });
 
 export type SavedSearch = z.infer<typeof SavedSearchSchema>;
+export type SavedSearchFilters = SavedSearch['filters'];
 
 /**
  * Quick filter presets for common searches
  */
-export const QUICK_FILTER_PRESETS: Omit<SavedSearch, 'id' | 'userId' | 'createdAt'>[] = [
+export const QUICK_FILTERS: Omit<SavedSearch, 'id' | 'userId' | 'createdAt'>[] = [
   {
     name: '🔥 Gorące okazje',
     description: 'Okazje z temperaturą powyżej 100°',

@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Scale, X, ExternalLink, Check, Flame } from 'lucide-react';
+import { Scale, X, ExternalLink, Check, Flame, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -231,6 +231,54 @@ export function DealComparisonTool() {
                       <TableCell key={item.id}>{getStore(item)}</TableCell>
                     ))}
                   </TableRow>
+
+                  {/* Rating Row (for products) */}
+                  {items.some(i => i.type === 'product') && (
+                    <TableRow>
+                      <TableCell className="font-medium sticky left-0 bg-background">Ocena</TableCell>
+                      {items.map((item) => {
+                        if (item.type === 'product') {
+                          const product = item as Product;
+                          const rating = product.ratingCard?.average || 0;
+                          const count = product.ratingCard?.count || 0;
+                          return (
+                            <TableCell key={item.id}>
+                              {rating > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                    <span className="font-semibold">{rating.toFixed(1)}</span>
+                                  </div>
+                                  <span className="text-sm text-muted-foreground">({count})</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">Brak ocen</span>
+                              )}
+                            </TableCell>
+                          );
+                        }
+                        return <TableCell key={item.id}>N/A</TableCell>;
+                      })}
+                    </TableRow>
+                  )}
+
+                  {/* Brand Row (for products) */}
+                  {items.some(i => i.type === 'product') && (
+                    <TableRow>
+                      <TableCell className="font-medium sticky left-0 bg-background">Marka</TableCell>
+                      {items.map((item) => {
+                        if (item.type === 'product') {
+                          const product = item as Product;
+                          return (
+                            <TableCell key={item.id}>
+                              {product.metadata?.brand || 'Nieznana'}
+                            </TableCell>
+                          );
+                        }
+                        return <TableCell key={item.id}>N/A</TableCell>;
+                      })}
+                    </TableRow>
+                  )}
 
                   {/* Link Row */}
                   <TableRow>

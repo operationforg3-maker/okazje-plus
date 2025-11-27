@@ -5,7 +5,8 @@ import { ProductGallery } from './product-gallery';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split, Truck, Package, Zap, AlertTriangle, ShieldCheck, Info } from 'lucide-react';
+import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split, Truck, Package, Zap, AlertTriangle, ShieldCheck, Info, Scale, Share2 } from 'lucide-react';
+import { useComparison } from './deal-comparison-tool';
 import { RatingBar } from './rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useCoupons } from '@/hooks/use-coupons';
@@ -54,6 +55,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const editorial = product.ratingSources?.editorial;
   const external = product.ratingSources?.external;
   const liveComments = useCommentsCount('products', product.id, (product as any).commentsCount);
+  const { addToComparison } = useComparison();
 
   useEffect(() => {
     // track wyświetlenie karty produktu (raz na sesję per element)
@@ -301,6 +303,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             <MessageSquare className="h-4 w-4" />
             <span>{liveComments.count}</span>
           </div>
+          {typeof product.shareCount === 'number' && product.shareCount > 0 && (
+            <div className="flex items-center gap-1" title="Udostępnienia">
+              <Share2 className="h-4 w-4" />
+              <span>{product.shareCount}</span>
+            </div>
+          )}
         </div>
         <Button 
           size="sm" 

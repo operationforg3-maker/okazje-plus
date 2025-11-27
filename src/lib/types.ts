@@ -139,6 +139,7 @@ export interface Deal {
   voteCount: number;
   temperature: number;
   commentsCount: number;
+  shareCount?: number; // Licznik udostępnień społecznościowych
   category: string;
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
@@ -297,6 +298,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   discountPercent?: number; // denormalizacja wyliczona (originalPrice - price)/originalPrice
+  shareCount?: number; // Licznik udostępnień społecznościowych
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
   subSubCategorySlug?: string; // NOWE pole dla poziomu 3
@@ -405,6 +407,7 @@ export interface ProductImportMetadata {
   shipping?: string;
   merchant?: string;
   merchantId?: string;
+  brand?: string; // Marka produktu
   rawDataStored?: boolean;
   
   // Advanced API fields

@@ -13,9 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Filter, X, SlidersHorizontal } from 'lucide-react';
+import { Filter, X, SlidersHorizontal, Bookmark, Zap, Truck, Star, Flame, ShieldCheck } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { QUICK_FILTERS } from '@/lib/saved-searches';
+import SavedSearchDialog from '@/components/saved-search-dialog';
+import type { SavedSearchFilters } from '@/lib/saved-searches';
 
 interface SearchFilters {
   minPrice?: number;
@@ -30,6 +34,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     sortBy: 'relevance',
   });
@@ -71,6 +76,25 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
     setFilters({ sortBy: 'relevance' });
   };
 
+  const applyQuickFilter = (preset: typeof QUICK_FILTERS[0]) => {
+    const newFilters: SearchFilters = {
+      sortBy: 'relevance',
+      minPrice: preset.filters.minPrice,
+      maxPrice: preset.filters.maxPrice,
+      minTemperature: preset.filters.minTemperature,
+    };
+    setFilters(newFilters);
+  };
+
+  const getQuickFilterIcon = (name: string) => {
+    if (name.includes('🔥')) return Flame;
+    if (name.includes('🚚')) return Truck;
+    if (name.includes('💎')) return Star;
+    if (name.includes('⚡')) return Zap;
+    if (name.includes('✅')) return ShieldCheck;
+    return Filter;
+  };
+
   const hasActiveFilters = filters.minPrice || filters.maxPrice || filters.minTemperature || filters.minRating;
 
   const totalResults = products.length + deals.length;
@@ -92,26 +116,53 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
       </div>
 
       {/* Filters Toggle Button */}
-      <div className="mb-6 flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setShowFilters(!showFilters)}
-          className="gap-2"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Filtry
-          {hasActiveFilters && (
-            <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-              {[filters.minPrice, filters.maxPrice, filters.minTemperature, filters.minRating].filter(Boolean).length}
-            </span>
-          )}
-        </Button>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            <X className="h-4 w-4 mr-2" />
-            Wyczyść filtry
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtry
+            {hasActiveFilters && (
+              <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
+                {[filters.minPrice, filters.maxPrice, filters.minTemperature, filters.minRating].filter(Boolean).length}
+              </span>
+            )}
           </Button>
-        )}
+          {hasActiveFilters && (
+            <>
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <X className="h-4 w-4 mr-2" />
+                Wyczyść filtry
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(true)}>
+                <Bookmark className="h-4 w-4 mr-2" />
+                Zapisz wyszukiwanie
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Filters */}
+      <div className="mb-6 flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium text-muted-foreground">Szybkie filtry:</span>
+        {QUICK_FILTERS.map((preset, index) => {
+          const Icon = getQuickFilterIcon(preset.name);
+          return (
+            <Badge
+              key={index}
+              variant="outline"
+              className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+              onClick={() => applyQuickFilter(preset)}
+            >
+              <Icon className="h-3 w-3 mr-1" />
+              {preset.name}
+            </Badge>
+          );
+        })}
       </div>
 
       {/* Filters Panel */}
@@ -280,6 +331,18 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Save Search Dialog */}
+      <SavedSearchDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        initialFilters={{
+          minPrice: filters.minPrice,
+          maxPrice: filters.maxPrice,
+          minTemperature: filters.minTemperature,
+          keywords: searchParams.q,
+        } as SavedSearchFilters}
+      />
     </div>
   );
 }

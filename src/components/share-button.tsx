@@ -11,6 +11,8 @@ import { Share2, Facebook, Twitter, Link as LinkIcon, Check } from "lucide-react
 import { useState } from "react";
 import { toast } from "sonner";
 import { trackShare } from "@/lib/analytics";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import { getApp } from "firebase/app";
 
 interface ShareButtonProps {
   type: 'deal' | 'product';
@@ -33,9 +35,24 @@ export default function ShareButton({
 }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
-  const handleShare = (method: 'facebook' | 'twitter' | 'copy_link') => {
+  const handleShare = async (method: 'facebook' | 'twitter' | 'copy_link') => {
+    // Analytics tracking (client-side)
     trackShare(type, itemId, method);
     if (onShared) onShared(method);
+
+    // Backend tracking (Cloud Function)
+    try {
+      const functions = getFunctions(getApp(), 'europe-west1');
+      const trackShareStats = httpsCallable(functions, 'trackShareStats');
+      await trackShareStats({
+        itemType: type,
+        itemId,
+        platform: method,
+      });
+    } catch (error) {
+      console.error('Failed to track share stats:', error);
+      // Nie pokazujemy błędu użytkownikowi - tracking jest opcjonalny
+    }
 
     const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url}`;
     const encodedUrl = encodeURIComponent(fullUrl);

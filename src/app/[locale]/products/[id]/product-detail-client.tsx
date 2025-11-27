@@ -38,6 +38,7 @@ import ProductCard from '@/components/product-card';
 import CommentSection from '@/components/comment-section';
 import RatingInput from '@/components/rating-input';
 import ShareButton from '@/components/share-button';
+import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
 import { 
   Tooltip,
   TooltipContent,
@@ -587,6 +588,17 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
           </section>
         </>
       )}
+
+      {/* AI-Powered Similar Items Carousel */}
+      <SimilarItemsCarousel
+        itemId={product.id}
+        itemType="product"
+        category={product.mainCategorySlug}
+        subcategory={product.subCategorySlug}
+        priceRange={product.price ? [product.price * 0.7, product.price * 1.3] : undefined}
+        excludeItemId={product.id}
+        maxItems={8}
+      />
     </div>
   );
 }

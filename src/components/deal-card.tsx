@@ -5,10 +5,11 @@ import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
+import { useComparison } from '@/components/deal-comparison-tool';
 import { useAuth } from '@/lib/auth';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2 } from "lucide-react";
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -54,6 +55,7 @@ export default function DealCard({ deal }: DealCardProps) {
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
+  const { addToComparison } = useComparison();
   const { user } = useAuth();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const { coupons } = useCoupons(deal.externalOriginalId, undefined);
@@ -466,6 +468,12 @@ export default function DealCard({ deal }: DealCardProps) {
               <MessageSquare className="h-3 w-3" />
               {liveComments.count}
             </span>
+            {typeof deal.shareCount === 'number' && deal.shareCount > 0 && (
+              <span className="flex items-center gap-1" title="Udostępnienia">
+                <Share2 className="h-3 w-3" />
+                {deal.shareCount}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -510,6 +518,18 @@ export default function DealCard({ deal }: DealCardProps) {
             size="sm" 
             onShared={(platform) => handleShareTrack(platform)} 
           />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addToComparison({ ...deal, type: 'deal' });
+            }}
+            aria-label="Dodaj do porównania"
+          >
+            <Scale className="h-4 w-4" />
+          </Button>
           <Button size="sm" className="gap-1">
             Przejdź
             <ArrowUp className="h-3 w-3 rotate-90" />

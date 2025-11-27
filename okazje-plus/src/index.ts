@@ -1081,6 +1081,474 @@ export const sendEmailOnNotification = onDocumentCreated(
 );
 
 // =============================================================================
+// SOCIAL SHARING STATS TRACKING
+// =============================================================================
+
+/**
+ * Callable function do trackowania udostępnień społecznościowych.
+ * Inkrementuje shareCount w dokumencie deal/product.
+ * Wywołanie: trackShare(itemType: 'deal' | 'product', itemId: string, platform: string)
+ */
+export const trackShareStats = onCall(
+  {
+    region: "europe-west1",
+    cors: true,
+  },
+  async (request: CallableRequest<{
+    itemType: "deal" | "product";
+    itemId: string;
+    platform: "facebook" | "twitter" | "copy_link" | "whatsapp" | "telegram";
+  }>) => {
+    const {itemType, itemId, platform} = request.data;
+
+    if (!itemType || !itemId || !platform) {
+      throw new HttpsError(
+        "invalid-argument",
+        "itemType, itemId i platform są wymagane"
+      );
+    }
+
+    try {
+      const collection = itemType === "deal" ? "deals" : "products";
+      const docRef = db.collection(collection).doc(itemId);
+      const doc = await docRef.get();
+
+      if (!doc.exists) {
+        throw new HttpsError("not-found", `${itemType} o id ${itemId} nie istnieje`);
+      }
+
+      // Inkrementuj shareCount
+      await docRef.update({
+        shareCount: (doc.data()?.shareCount || 0) + 1,
+      });
+
+      // Opcjonalnie: zapisz szczegółową analitykę (dla przyszłych statystyk)
+      await db.collection("share_events").add({
+        itemType,
+        itemId,
+        platform,
+        userId: request.auth?.uid || null,
+        timestamp: Timestamp.now(),
+        userAgent: request.rawRequest?.headers?.["user-agent"] || null,
+      });
+
+      logger.info(`Share tracked: ${itemType}/${itemId} on ${platform}`);
+
+      return {
+        success: true,
+        newShareCount: (doc.data()?.shareCount || 0) + 1,
+      };
+    } catch (error) {
+      logger.error("Error tracking share", error);
+      throw new HttpsError(
+        "internal",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
+);
+
+// =============================================================================
+// SAVED SEARCHES & NOTIFICATIONS
+// =============================================================================
+
+/**
+ * Trigger function when new deal is created.
+ * Checks all active saved searches and sends notifications to matching users.
+ */
+export const checkSavedSearches = onDocumentCreated(
+  "deals/{dealId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
+    const deal = snap.data() as Deal;
+
+    // Only check approved deals
+    if (deal.status !== "approved") return;
+
+    try {
+      // Get all active saved searches with notifications enabled
+      const searchesSnapshot = await db
+        .collection("saved_searches")
+        .where("notificationsEnabled", "==", true)
+        .get();
+
+      if (searchesSnapshot.empty) {
+        logger.info("No active saved searches found");
+        return;
+      }
+
+      const notifications: any[] = [];
+
+      for (const searchDoc of searchesSnapshot.docs) {
+        const search = searchDoc.data();
+        
+        // Check if deal matches the saved search filters
+        const matches = matchesSavedSearchFilters(deal, search.filters);
+
+        if (matches) {
+          // Create notification based on frequency
+          if (search.notificationFrequency === "instant") {
+            notifications.push({
+              userId: search.userId,
+              type: "saved_search_match",
+              title: "Nowa okazja pasuje do Twojego wyszukiwania",
+              message: `"${deal.title}" pasuje do wyszukiwania: ${search.name}`,
+              itemType: "deal",
+              itemId: deal.id,
+              link: `/deals/${deal.id}`,
+              createdAt: new Date().toISOString(),
+              read: false,
+              metadata: {
+                searchId: searchDoc.id,
+                searchName: search.name,
+              },
+            });
+
+            // Update match count
+            await searchDoc.ref.update({
+              matchCount: (search.matchCount || 0) + 1,
+              lastMatchedAt: new Date().toISOString(),
+            });
+          } else {
+            // For daily/weekly, store in pending notifications
+            await db.collection("pending_notifications").add({
+              userId: search.userId,
+              searchId: searchDoc.id,
+              dealId: deal.id,
+              createdAt: new Date().toISOString(),
+              frequency: search.notificationFrequency,
+            });
+          }
+        }
+      }
+
+      // Batch create instant notifications
+      if (notifications.length > 0) {
+        const batch = db.batch();
+        notifications.forEach((notif) => {
+          const ref = db.collection("notifications").doc();
+          batch.set(ref, notif);
+        });
+        await batch.commit();
+        logger.info(`Created ${notifications.length} saved search notifications`);
+      }
+    } catch (error) {
+      logger.error("Error checking saved searches", error);
+    }
+  }
+);
+
+/**
+ * Helper function to check if deal matches saved search filters
+ */
+function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
+  // Price range
+  if (filters.minPrice && deal.price < filters.minPrice) return false;
+  if (filters.maxPrice && deal.price > filters.maxPrice) return false;
+
+  // Temperature
+  if (filters.minTemperature && deal.temperature < filters.minTemperature) return false;
+
+  // Free shipping
+  if (filters.freeShipping && !deal.freeShipping) return false;
+
+  // Verified
+  if (filters.verified && !deal.verified) return false;
+
+  // Categories
+  if (filters.mainCategories?.length > 0) {
+    if (!filters.mainCategories.includes(deal.mainCategorySlug)) return false;
+  }
+
+  if (filters.subCategories?.length > 0) {
+    if (!filters.subCategories.includes(deal.subCategorySlug)) return false;
+  }
+
+  // Keywords
+  if (filters.keywords) {
+    const keywords = filters.keywords.toLowerCase();
+    const searchText = `${deal.title} ${deal.description}`.toLowerCase();
+    if (!searchText.includes(keywords)) return false;
+  }
+
+  // Tags
+  if (filters.tags?.length > 0) {
+    const dealTags = deal.tags || [];
+    const hasMatchingTag = filters.tags.some((tag: string) => dealTags.includes(tag));
+    if (!hasMatchingTag) return false;
+  }
+
+  // Merchants
+  if (filters.merchants?.length > 0) {
+    if (!deal.merchant || !filters.merchants.includes(deal.merchant)) return false;
+  }
+
+  if (filters.excludeMerchants?.length > 0) {
+    if (deal.merchant && filters.excludeMerchants.includes(deal.merchant)) return false;
+  }
+
+  return true;
+}
+
+// =============================================================================
+// WEEKLY DIGEST EMAIL
+// =============================================================================
+
+/**
+ * Scheduled function to send weekly digest emails every Sunday at 9 AM.
+ * Sends personalized top deals to users who have opted in.
+ */
+export const sendWeeklyDigest = onSchedule(
+  {
+    schedule: "0 9 * * 0", // Every Sunday at 9 AM
+    timeZone: "Europe/Warsaw",
+    region: "europe-west1",
+    memory: "512MiB",
+    timeoutSeconds: 540,
+  },
+  async () => {
+    logger.info("Starting weekly digest email send");
+
+    const apiKey = process.env.SENDGRID_API_KEY;
+    const fromEmail = process.env.SENDGRID_FROM_EMAIL || "noreply@okazje.plus";
+
+    if (!apiKey) {
+      logger.warn("SENDGRID_API_KEY not set, skipping weekly digest");
+      return;
+    }
+
+    try {
+      sgMail.setApiKey(apiKey);
+
+      // Get users who have weekly digest enabled
+      const usersSnapshot = await db
+        .collection("users")
+        .where("settings.weeklyDigest", "==", true)
+        .where("settings.emailNotifications", "==", true)
+        .get();
+
+      if (usersSnapshot.empty) {
+        logger.info("No users with weekly digest enabled");
+        return;
+      }
+
+      logger.info(`Found ${usersSnapshot.size} users for weekly digest`);
+
+      // Get top deals from last 7 days
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const dealsSnapshot = await db
+        .collection("deals")
+        .where("status", "==", "approved")
+        .where("postedAt", ">=", oneWeekAgo.toISOString())
+        .orderBy("postedAt", "desc")
+        .orderBy("temperature", "desc")
+        .limit(50)
+        .get();
+
+      const allDeals = dealsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Deal[];
+
+      if (allDeals.length === 0) {
+        logger.info("No deals found for weekly digest");
+        return;
+      }
+
+      // Send emails
+      let sent = 0;
+      let errors = 0;
+
+      for (const userDoc of usersSnapshot.docs) {
+        try {
+          const userData = userDoc.data();
+          const email = userData.email;
+
+          if (!email) continue;
+
+          // Get user's favorite categories for personalization
+          const favoritesSnapshot = await db
+            .collection("favorites")
+            .where("userId", "==", userDoc.id)
+            .where("type", "==", "deal")
+            .limit(10)
+            .get();
+
+          const favoriteCategories = new Set<string>();
+          favoritesSnapshot.forEach((fav) => {
+            const deal = fav.data() as any;
+            if (deal.mainCategorySlug) favoriteCategories.add(deal.mainCategorySlug);
+          });
+
+          // Filter deals - top 10 overall + 5 personalized
+          const topDeals = allDeals
+            .sort((a, b) => b.temperature - a.temperature)
+            .slice(0, 10);
+
+          const personalizedDeals = favoriteCategories.size > 0
+            ? allDeals
+                .filter((deal) => favoriteCategories.has(deal.mainCategorySlug))
+                .sort((a, b) => b.temperature - a.temperature)
+                .slice(0, 5)
+            : [];
+
+          // Generate HTML email
+          const html = generateWeeklyDigestHTML(
+            userData.displayName || userData.email,
+            topDeals,
+            personalizedDeals
+          );
+
+          await sgMail.send({
+            to: email,
+            from: fromEmail,
+            subject: "📧 Twoje cotygodniowe podsumowanie najlepszych okazji",
+            html,
+          } as any);
+
+          sent++;
+          logger.info(`Weekly digest sent to ${email}`);
+        } catch (error) {
+          errors++;
+          logger.error(`Failed to send weekly digest to ${userDoc.id}`, error);
+        }
+      }
+
+      logger.info(
+        `Weekly digest complete: ${sent} sent, ${errors} errors`
+      );
+    } catch (error) {
+      logger.error("Error in weekly digest", error);
+    }
+  }
+);
+
+/**
+ * Generate HTML template for weekly digest email
+ */
+function generateWeeklyDigestHTML(
+  userName: string,
+  topDeals: Deal[],
+  personalizedDeals: Deal[]
+): string {
+  const formatPrice = (price: number) =>
+    new Intl.NumberFormat("pl-PL", {
+      style: "currency",
+      currency: "PLN",
+    }).format(price);
+
+  const dealHTML = (deal: Deal) => `
+    <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: white;">
+      <div style="display: flex; gap: 16px;">
+        ${
+  deal.image
+    ? `<img src="${deal.image}" alt="${deal.title}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px;" />`
+    : ""
+}
+        <div style="flex: 1;">
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #111827;">
+            ${deal.title}
+          </h3>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+            <span style="font-size: 20px; font-weight: bold; color: #ef4444;">
+              ${formatPrice(deal.price)}
+            </span>
+            ${
+  deal.originalPrice
+    ? `<span style="font-size: 14px; color: #6b7280; text-decoration: line-through;">
+                  ${formatPrice(deal.originalPrice)}
+                </span>`
+    : ""
+}
+            ${
+  deal.temperature >= 100
+    ? `<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                  🔥 ${deal.temperature}°
+                </span>`
+    : ""
+}
+          </div>
+          <a href="https://okazje.plus/deals/${deal.id}" style="display: inline-block; background: #ef4444; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; margin-top: 8px;">
+            Zobacz okazję →
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="pl">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Cotygodniowe podsumowanie - Okazje Plus</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 32px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="margin: 0; color: white; font-size: 28px; font-weight: bold;">
+            🛍️ Okazje Plus
+          </h1>
+          <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 16px;">
+            Twoje cotygodniowe podsumowanie najlepszych okazji
+          </p>
+        </div>
+
+        <!-- Content -->
+        <div style="background: #ffffff; padding: 32px; border-radius: 0 0 12px 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <p style="margin: 0 0 24px 0; font-size: 16px; color: #374151;">
+            Cześć <strong>${userName}</strong>! 👋
+          </p>
+          <p style="margin: 0 0 24px 0; font-size: 14px; color: #6b7280;">
+            Oto najgorętsze okazje z ostatniego tygodnia, które wybraliśmy specjalnie dla Ciebie.
+          </p>
+
+          <!-- Top Deals -->
+          <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 0 0 16px 0; border-bottom: 2px solid #ef4444; padding-bottom: 8px;">
+            🔥 Najgorętsze okazje tygodnia
+          </h2>
+          ${topDeals.map(dealHTML).join("")}
+
+          ${
+  personalizedDeals.length > 0
+    ? `
+          <!-- Personalized Deals -->
+          <h2 style="font-size: 20px; font-weight: 600; color: #111827; margin: 32px 0 16px 0; border-bottom: 2px solid #ef4444; padding-bottom: 8px;">
+            ⭐ Wybrane dla Ciebie
+          </h2>
+          ${personalizedDeals.map(dealHTML).join("")}
+          `
+    : ""
+}
+
+          <!-- CTA -->
+          <div style="text-align: center; margin-top: 32px; padding-top: 32px; border-top: 1px solid #e5e7eb;">
+            <a href="https://okazje.plus" style="display: inline-block; background: #ef4444; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600;">
+              Zobacz wszystkie okazje
+            </a>
+          </div>
+
+          <!-- Unsubscribe -->
+          <p style="margin: 24px 0 0 0; font-size: 12px; color: #9ca3af; text-align: center;">
+            Nie chcesz otrzymywać tych wiadomości? 
+            <a href="https://okazje.plus/profile/settings" style="color: #ef4444; text-decoration: underline;">
+              Zmień ustawienia
+            </a>
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// =============================================================================
 // PRE-REGISTRATION INVITATION SYSTEM
 // =============================================================================
 
