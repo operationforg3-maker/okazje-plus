@@ -10,7 +10,7 @@ export function ProductGallery({ images }: ProductGalleryProps) {
   return (
     <div className="flex gap-2 overflow-x-auto py-2">
       {images.map((img, i) => (
-        <div key={i} className="min-w-[120px] max-w-[200px]">
+        <div key={`gallery-${img.src}-${i}`} className="min-w-[120px] max-w-[200px]">
           <Image
             src={img.src}
             alt={img.alt || ''}

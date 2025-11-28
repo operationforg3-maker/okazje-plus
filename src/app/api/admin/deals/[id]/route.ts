@@ -63,6 +63,12 @@ export async function DELETE(
 ) {
   try {
     const { id } = params;
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid deal ID' },
+        { status: 400 }
+      );
+    }
     const dealRef = doc(db, 'deals', id);
     
     // Sprawdź czy deal istnieje

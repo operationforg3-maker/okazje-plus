@@ -98,6 +98,12 @@ export async function DELETE(
 ) {
   try {
     const { id } = params;
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { error: 'Invalid product ID' },
+        { status: 400 }
+      );
+    }
     const productRef = doc(db, 'products', id);
     
     // Sprawdź czy produkt istnieje
