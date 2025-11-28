@@ -349,7 +349,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
             {deal.tags && deal.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-4">
                 {deal.tags.map((tag, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
+                  <Badge key={`tag-${tag}-${idx}`} variant="secondary" className="text-xs">
                     {tag}
                   </Badge>
                 ))}
@@ -432,7 +432,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                 </h3>
                 <ul className="space-y-1 text-sm">
                   {deal.conditions.map((condition, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
+                    <li key={`condition-${idx}-${condition.substring(0,15)}`} className="flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
                       <span>{condition}</span>
                     </li>

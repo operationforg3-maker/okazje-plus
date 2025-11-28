@@ -138,7 +138,7 @@ export function SimilarItemsCarousel({
         <CardContent>
           <div className="flex gap-4 overflow-hidden">
             {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-64 w-72 flex-shrink-0" />
+              <Skeleton key={`skeleton-${i}`} className="h-64 w-72 flex-shrink-0" />
             ))}
           </div>
         </CardContent>

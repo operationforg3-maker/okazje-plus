@@ -269,7 +269,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                 <div className="flex items-center gap-1">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star
-                      key={i}
+                      key={`rating-star-${i}`}
                       className={`h-4 w-4 md:h-5 md:w-5 ${
                         i < Math.floor(avgRating)
                           ? 'fill-amber-400 text-amber-400'
@@ -315,7 +315,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
             {product.ai?.enrichment?.features && product.ai.enrichment.features.length > 0 && (
               <ul className="mt-4 space-y-2">
                 {product.ai.enrichment.features.slice(0, 5).map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm">
+                  <li key={`feature-${idx}-${feature.substring(0,15)}`} className="flex items-start gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                     <span>{feature}</span>
                   </li>
@@ -484,7 +484,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               <CardContent>
                 <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {specifications.map((spec, idx) => (
-                    <div key={idx} className="border-b pb-2">
+                    <div key={`spec-${idx}-${spec.key}`} className="border-b pb-2">
                       <dt className="text-sm font-medium text-muted-foreground">{spec.key}</dt>
                       <dd className="mt-1 text-sm font-semibold">{spec.value}</dd>
                     </div>
@@ -538,7 +538,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               <CardContent>
                 <div className="flex flex-wrap gap-2">
                   {product.ai.enrichment.keywords.map((keyword, idx) => (
-                    <Badge key={idx} variant="secondary" className="text-xs">
+                    <Badge key={`keyword-${keyword}-${idx}`} variant="secondary" className="text-xs">
                       {keyword}
                     </Badge>
                   ))}
@@ -565,7 +565,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                       <div className="flex items-center gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
                           <Star
-                            key={i}
+                            key={`review-star-${rating.id}-${i}`}
                             className={`h-4 w-4 ${
                               i < rating.rating
                                 ? 'fill-amber-400 text-amber-400'
