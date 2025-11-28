@@ -96,7 +96,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
 
   // External rating (z AliExpress lub innych źródeł)
   const externalRating = product.ratingSources?.external;
-  const hasExternalRating = externalRating && externalRating.average > 0;
+  const hasExternalRating = Boolean(externalRating && externalRating.average > 0);
 
   // Specyfikacje techniczne
   const specifications = product.metadata?.specifications || [];
@@ -450,12 +450,9 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
 
       {/* Tabs Section */}
       <Tabs defaultValue="description" className="mb-12">
-        <TabsList className={`grid w-full ${hasExternalRating ? 'grid-cols-4' : 'grid-cols-3'} lg:w-auto lg:inline-grid`}>
+        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
           <TabsTrigger value="description">Opis i specyfikacja</TabsTrigger>
-          <TabsTrigger value="reviews">Opinie Okazje Plus ({ratingCount})</TabsTrigger>
-          {hasExternalRating && (
-            <TabsTrigger value="external-reviews">Opinie AliExpress ({externalRating.count || '?'})</TabsTrigger>
-          )}
+          <TabsTrigger value="reviews">Opinie ({ratingCount})</TabsTrigger>
           <TabsTrigger value="rate">Oceń produkt</TabsTrigger>
         </TabsList>
         
@@ -598,7 +595,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
         </TabsContent>
 
         {/* External Reviews from AliExpress */}
-        {hasExternalRating && (
+        {hasExternalRating && externalRating && (
           <TabsContent value="external-reviews" className="mt-6">
             <Card>
               <CardHeader>
@@ -610,19 +607,19 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                   <div className="flex items-center gap-1">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
-                        key={i}
+                        key={`ext-star-${i}`}
                         className={`h-5 w-5 ${
-                          i < Math.floor(externalRating.average)
+                          i < Math.floor(externalRating?.average || 0)
                             ? 'fill-amber-400 text-amber-400'
                             : 'text-muted-foreground'
                         }`}
                       />
                     ))}
-                    <span className="ml-2 text-xl font-bold">{externalRating.average.toFixed(1)}</span>
+                    <span className="ml-2 text-xl font-bold">{externalRating?.average?.toFixed(1) || 'N/A'}</span>
                   </div>
                 </div>
                 <CardDescription>
-                  {externalRating.count ? `Liczba ocen: ${externalRating.count.toLocaleString('pl-PL')}` : 'Oceny z platformy AliExpress'}
+                  {externalRating?.count ? `Liczba ocen: ${externalRating.count.toLocaleString('pl-PL')}` : 'Oceny z platformy AliExpress'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
