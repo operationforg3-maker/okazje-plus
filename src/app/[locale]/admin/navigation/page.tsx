@@ -38,19 +38,22 @@ function AdminNavigationPage() {
     try {
       const cats = await getCategories();
       setCategories(cats);
-      if (!activeCatId && cats.length) setActiveCatId(cats[0].id);
+      // Set initial category only if none selected
+      setActiveCatId((current) => {
+        if (!current && cats.length) return cats[0].id;
+        return current;
+      });
     } catch (e) {
       console.error(e);
       toast({ title: 'Błąd', description: 'Nie udało się wczytać kategorii', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, [activeCatId, toast]);
+  }, [toast]);
 
   useEffect(() => {
     loadCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadCategories]);
 
   useEffect(() => {
     if (activeCategory) {

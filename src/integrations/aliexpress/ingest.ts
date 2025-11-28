@@ -235,16 +235,21 @@ export async function runImport(
           originalTitle: product.name,
         });
         
-        const categoryPathFiltered = [
+        const rawCategoryPath = [
           product.mainCategorySlug,
           product.subCategorySlug,
           product.subSubCategorySlug,
-        ].filter(Boolean) as [string, ...string[]];
+        ].filter((s): s is string => Boolean(s));
+        
+        // Ensure we have at least one category for the tuple type requirement
+        const categoryPath: [string, ...string[]] = rawCategoryPath.length > 0 
+          ? [rawCategoryPath[0], ...rawCategoryPath.slice(1)]
+          : ['Inne'];
         
         const enrichmentResult = await aiProductEnrichmentPL({
           originalTitle: product.name,
           rawDescription: product.description,
-          categoryPath: categoryPathFiltered.length > 0 ? categoryPathFiltered : ['Inne'],
+          categoryPath,
           price: product.price,
           originalPrice: product.originalPrice,
           rating: product.ratingCard?.average,

@@ -5,7 +5,12 @@ import { getFunctions, Functions } from "firebase/functions";
 
 const isServer = typeof window === 'undefined';
 const isTestEnv = process.env.NODE_ENV === 'test';
-const isBuildTime = isServer && !process.env.FIREBASE_WEBAPP_CONFIG && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+// During static build without Firebase config, use placeholder values
+const hasValidConfig = Boolean(
+  process.env.FIREBASE_WEBAPP_CONFIG ||
+  (process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'placeholder-key')
+);
+const isBuildTime = isServer && !hasValidConfig && !isTestEnv;
 
 // Client-side Firebase config from NEXT_PUBLIC_ env vars (inline during build)
 const defaultClientConfig = {
@@ -35,19 +40,15 @@ let auth: Auth;
 let db: Firestore;
 let functions: Functions;
 
-// W czasie budowania bez konfiguracji Firebase, nie inicjalizuj prawdziwego połączenia
-if (isBuildTime) {
-  // Tworzymy mockowy obiekt Firebase dla czasu budowania
+// W czasie budowania bez konfiguracji Firebase, używamy placeholder config
+if (isBuildTime && process.env.NODE_ENV !== 'production') {
+  // Log only in development/test builds for debugging
   console.log('[firebase] Build-time mode: using placeholder config');
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
-  functions = getFunctions(app, 'europe-west1');
-} else {
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
-  functions = getFunctions(app, 'europe-west1'); // Region zgodny z App Hosting
 }
+
+app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+auth = getAuth(app);
+db = getFirestore(app);
+functions = getFunctions(app, 'europe-west1'); // Region zgodny z App Hosting
 
 export { app, auth, db, functions };
