@@ -388,6 +388,20 @@ service cloud.firestore {
       allow read, update: if isAdmin();
       allow delete: if false; // Nie można usuwać rejestracji
     }
+
+    ////////////////////////////////
+    // OAUTH TOKENS
+    ////////////////////////////////
+    match /oauthTokens/{tokenId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // DUPLICATE GROUPS
+    ////////////////////////////////
+    match /duplicate_groups/{groupId} {
+      allow read, write: if isAdmin();
+    }
   }
 }
 
