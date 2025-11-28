@@ -461,7 +461,7 @@ export function MegaMenu() {
     }
     void loadSmart();
     return () => { cancelled = true; };
-  }, [activeCategory?.id, activeCategory?.slug]);
+  }, [activeCategory]);
 
   return (
     <NavigationMenuItem>

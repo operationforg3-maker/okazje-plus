@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
 import { isAdmin, useAuth } from '@/lib/auth';
 import { Category, CategoryTile } from '@/lib/types';
@@ -34,20 +34,22 @@ function AdminNavigationPage() {
   const [editingTile, setEditingTile] = useState<CategoryTile>(emptyTile);
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const cats = await getCategories();
-        setCategories(cats);
-        if (!activeCatId && cats.length) setActiveCatId(cats[0].id);
-      } catch (e) {
-        console.error(e);
-        toast({ title: 'Błąd', description: 'Nie udało się wczytać kategorii', variant: 'destructive' });
-      } finally {
-        setLoading(false);
-      }
+  const loadCategories = useCallback(async () => {
+    try {
+      const cats = await getCategories();
+      setCategories(cats);
+      if (!activeCatId && cats.length) setActiveCatId(cats[0].id);
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Błąd', description: 'Nie udało się wczytać kategorii', variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-    load();
+  }, [activeCatId, toast]);
+
+  useEffect(() => {
+    loadCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ function AdminNavigationPage() {
       setTopRatedIds((activeCategory.topRatedIds || []).join('\n'));
       setBestSellingIds((activeCategory.bestSellingIds || []).join('\n'));
     }
-  }, [activeCategory?.id]);
+  }, [activeCategory]);
 
   if (!isAdmin(user)) {
     return <div className="p-6">Brak uprawnień.</div>;

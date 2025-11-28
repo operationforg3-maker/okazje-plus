@@ -28,7 +28,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getPendingDuplicateGroups, rejectDuplicateGroup, mergeProducts } from '@/lib/deduplication';
 import { DuplicateGroup } from '@/lib/types';
 
@@ -39,11 +39,7 @@ function DuplicatesPage() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchDuplicateGroups();
-  }, []);
-
-  const fetchDuplicateGroups = async () => {
+  const fetchDuplicateGroups = useCallback(async () => {
     setLoading(true);
     try {
       const groups = await getPendingDuplicateGroups();
@@ -58,7 +54,11 @@ function DuplicatesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchDuplicateGroups();
+  }, [fetchDuplicateGroups]);
 
   const toggleExpanded = (groupId: string) => {
     const newExpanded = new Set(expandedGroups);
