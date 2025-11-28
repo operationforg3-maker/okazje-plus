@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, doc, updateDoc, deleteDoc, getDoc, Timestamp } from 'firebase/firestore';
-import { app } from '@/lib/firebase';
-
-const db = getFirestore(app);
+import { db } from '@/lib/firebase';
+import { doc, updateDoc, deleteDoc, getDoc, Timestamp } from 'firebase/firestore';
 
 export async function PUT(
   request: NextRequest,

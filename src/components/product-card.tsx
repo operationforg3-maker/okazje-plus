@@ -74,16 +74,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
     >
       {/* Galeria zdjęć produktu */}
-      <ProductGallery images={product.gallery ? product.gallery.map(img => ({ src: img.src, alt: img.alt })) : [{ src: product.image, alt: product.name }]} />
       <div className="relative overflow-hidden">
-        <Image
-          src={product.image}
-          alt={product.name}
-          data-ai-hint={product.imageHint}
-          width={600}
-          height={400}
-          className="aspect-[3/2] w-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
+        <ProductGallery images={product.gallery ? product.gallery.map(img => ({ src: img.src, alt: img.alt })) : [{ src: product.image, alt: product.name }]} />
         {/* Pasek ocen - zawsze widoczny */}
         <div className="absolute left-1.5 top-1.5 z-10">
           <RatingBar users={users} editorial={editorial} external={external} />
