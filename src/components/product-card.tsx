@@ -9,8 +9,6 @@ import { Star, Tag, TrendingUp, ExternalLink, Heart, MessageSquare, Split, Truck
 import { useComparison } from './deal-comparison-tool';
 import { RatingBar } from './rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
-import { useCoupons } from '@/hooks/use-coupons';
-import { useSkuDetail } from '@/hooks/use-sku-detail';
 import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,9 +37,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { isFavorited, isLoading, toggleFavorite } = useFavorites(product.id, 'product');
   const { user } = useAuth();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const { coupons } = useCoupons(product.metadata?.originalId || product.id, undefined);
-  const { detail } = useSkuDetail(product.metadata?.originalId || product.id);
-  const [skuOpen, setSkuOpen] = useState(false);
+  // Usunięto wywołania useCoupons i useSkuDetail - dane powinny być już w Firestore
+  // Usunięto skuOpen state - modal wariantów został usunięty
   
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
   const hasOriginal = typeof (product as any).originalPrice === 'number';
@@ -134,18 +131,8 @@ export default function ProductCard({ product }: ProductCardProps) {
               {categoryBadge}
             </Badge>
           )}
-          {Array.isArray(coupons) && coupons.length > 0 && (
-            <Badge variant="default" className="flex w-fit items-center gap-1">
-              <Tag className="h-3 w-3" aria-hidden />
-              Kupon
-              <span className="ml-1 text-[11px] opacity-80">{coupons.length}</span>
-            </Badge>
-          )}
-          {detail?.shipping?.deliveryTime && (
-            <Badge variant="outline" className="flex w-fit items-center gap-1">
-              Dostawa: {detail.shipping.deliveryTime}
-            </Badge>
-          )}
+          {/* Usunięto badge kuponów - dane powinny być w product.metadata */}
+          {/* Usunięto badge czasu dostawy z live API - dane powinny być w Firestore */}
           {product.metadata?.freeShipping && (
             <Badge variant="default" className="flex w-fit items-center gap-1 bg-green-600">
               Darmowa dostawa
@@ -323,62 +310,9 @@ export default function ProductCard({ product }: ProductCardProps) {
           <ExternalLink className="h-3.5 w-3.5" />
           Kup teraz
         </Button>
-        {detail?.variants && detail.variants.length > 0 && (
-          <Button variant="outline" size="sm" className="gap-1" onClick={(e) => {
-            e.preventDefault(); e.stopPropagation(); setSkuOpen(true);
-          }}>
-            <Split className="h-3.5 w-3.5" />
-            Warianty
-          </Button>
-        )}
-        {Array.isArray(coupons) && coupons.length > 0 && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="secondary" size="sm" className="gap-1">
-                  <Tag className="h-3.5 w-3.5" />
-                  Kupony
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <div className="space-y-1">
-                  {coupons.slice(0,3).map((c, i) => (
-                    <div key={i} className="text-xs space-y-0.5">
-                      <div className="font-semibold">{c.coupon_code || 'Kupon'}: {c.coupon_amount || ''}</div>
-                      {c.coupon_start_time && c.coupon_end_time && (
-                        <div className="text-[10px] opacity-70">Ważny: {new Date(c.coupon_start_time).toLocaleDateString('pl')} - {new Date(c.coupon_end_time).toLocaleDateString('pl')}</div>
-                      )}
-                    </div>
-                  ))}
-                  {coupons.length > 3 && (
-                    <div className="text-[11px] opacity-70">+{coupons.length - 3} więcej</div>
-                  )}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+        {/* Usunięto przycisk wariantów - dane powinny być w Firestore, nie z live API */}
+        {/* Usunięto wyświetlanie kuponów i wariantów z live API - dane powinny być w Firestore */}
       </div>
-
-      {/* Modal wariantów */}
-      {skuOpen && detail?.variants && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setSkuOpen(false)}>
-          <div className="mx-4 w-full max-w-lg rounded-lg bg-card p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-2 flex items-center justify-between">
-              <h4 className="font-semibold">Warianty produktu</h4>
-              <Button variant="ghost" size="sm" onClick={() => setSkuOpen(false)}>Zamknij</Button>
-            </div>
-            <div className="space-y-2 max-h-[50vh] overflow-auto">
-              {detail.variants.map((v, i) => (
-                <div key={i} className="flex items-center justify-between rounded border p-2 text-sm">
-                  <div className="truncate pr-2">{v.sku_property || 'Wariant'} {v.sku_id ? `(#${v.sku_id})` : ''}</div>
-                  <div className="opacity-80">{v.sku_price || ''}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </Link>
   );
 }

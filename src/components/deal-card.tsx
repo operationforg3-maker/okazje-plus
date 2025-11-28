@@ -14,7 +14,7 @@ import { useState } from 'react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
-import { useCoupons } from '@/hooks/use-coupons';
+import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
@@ -58,7 +58,7 @@ export default function DealCard({ deal }: DealCardProps) {
   const { addToComparison } = useComparison();
   const { user } = useAuth();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
-  const { coupons } = useCoupons(deal.externalOriginalId, undefined);
+  // Usunięto wywołanie useCoupons - dane kuponów powinny być już w Firestore
   const [temperature, setTemperature] = useState(deal.temperature);
   const [voteCount, setVoteCount] = useState(deal.voteCount);
   const [isVoting, setIsVoting] = useState(false);
@@ -265,12 +265,7 @@ export default function DealCard({ deal }: DealCardProps) {
               Darmowa dostawa
             </Badge>
           )}
-          {Array.isArray(coupons) && coupons.length > 0 && (
-            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg">
-              <Tag className="mr-1 h-3 w-3" />
-              Kupon ({coupons.length})
-            </Badge>
-          )}
+          {/* Usunięto badge kuponów z live API - dane powinny być w Firestore */}
           {deal.importMetadata?.hotProduct && (
             <Badge className="bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg animate-pulse">
               <Zap className="mr-1 h-3 w-3" />
