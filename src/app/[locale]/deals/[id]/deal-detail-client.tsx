@@ -525,11 +525,8 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
 
       {/* Tabs Section */}
       <Tabs defaultValue="discussion" className="mb-12">
-        <TabsList className={`grid w-full ${deal.metadata?.specifications ? 'grid-cols-2' : 'grid-cols-1'} lg:w-auto lg:inline-grid`}>
+        <TabsList className="grid w-full grid-cols-1 lg:w-auto lg:inline-grid">
           <TabsTrigger value="discussion">Dyskusja ({liveComments.count})</TabsTrigger>
-          {deal.metadata?.specifications && deal.metadata.specifications.length > 0 && (
-            <TabsTrigger value="specifications">Specyfikacja</TabsTrigger>
-          )}
         </TabsList>
         
         <TabsContent value="discussion" className="mt-6">
@@ -549,7 +546,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
               <CardContent>
                 <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {deal.metadata.specifications.map((spec, idx) => (
-                    <div key={idx} className="border-b pb-2">
+                    <div key={`spec-${idx}-${spec.key}`} className="border-b pb-2">
                       <dt className="text-sm font-medium text-muted-foreground">{spec.key}</dt>
                       <dd className="mt-1 text-sm font-semibold">{spec.value}</dd>
                     </div>
