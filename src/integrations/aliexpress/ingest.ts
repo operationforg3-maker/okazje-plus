@@ -235,14 +235,16 @@ export async function runImport(
           originalTitle: product.name,
         });
         
+        const categoryPathFiltered = [
+          product.mainCategorySlug,
+          product.subCategorySlug,
+          product.subSubCategorySlug,
+        ].filter(Boolean) as [string, ...string[]];
+        
         const enrichmentResult = await aiProductEnrichmentPL({
           originalTitle: product.name,
           rawDescription: product.description,
-          categoryPath: [
-            product.mainCategorySlug,
-            product.subCategorySlug,
-            product.subSubCategorySlug,
-          ].filter(Boolean) as string[],
+          categoryPath: categoryPathFiltered.length > 0 ? categoryPathFiltered : ['Inne'],
           price: product.price,
           originalPrice: product.originalPrice,
           rating: product.ratingCard?.average,
@@ -258,11 +260,14 @@ export async function runImport(
         
         // Store AI metadata
         if (!product.ai) product.ai = {};
+        product.ai.seo = {
+          generatedDescription: enrichmentResult.shortDescription,
+          keywords: enrichmentResult.keywords,
+          generatedAt: new Date().toISOString(),
+        };
         product.ai.enrichment = {
-          originalTitle: aliProduct.item_id,
-          normalizedName: enrichmentResult.normalizedName,
           features: enrichmentResult.features,
-          processedAt: new Date().toISOString(),
+          keywords: enrichmentResult.keywords,
         };
         
         // Step 3: AI Category Suggestion (keep existing logic)
