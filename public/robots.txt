@@ -1,0 +1,12 @@
+# www.robotstxt.org
+
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+
+# Sitemap
+Sitemap: https://okazjeplus.pl/sitemap.xml

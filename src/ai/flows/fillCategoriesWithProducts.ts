@@ -261,7 +261,7 @@ export async function fillCategoriesWithProducts() {
                   return {
                     originalTitle: titleRaw,
                     rawDescription: aliProduct.description || '',
-                    categoryPath: [cat.name, sub.name, subsub.name],
+                    categoryPath: [cat.name, sub.name, subsub.name] as [string, ...string[]],
                     price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
                     originalPrice: aliProduct.originalPrice || undefined,
                     rating: aliProduct.rating || undefined,
@@ -451,7 +451,7 @@ export async function fillCategoriesWithProducts() {
               return {
                 originalTitle: titleRaw,
                 rawDescription: aliProduct.description || '',
-                categoryPath: [cat.name, sub.name],
+                categoryPath: [cat.name, sub.name] as [string, ...string[]],
                 price: typeof aliProduct.price === 'number' ? aliProduct.price : (aliProduct.price?.value || undefined),
                 originalPrice: aliProduct.originalPrice || undefined,
                 rating: aliProduct.rating || undefined,

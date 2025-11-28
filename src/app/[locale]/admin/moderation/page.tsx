@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -87,11 +87,7 @@ function ModerationPage() {
   const [rejectedItems, setRejectedItems] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchModerationData();
-  }, []);
-
-  const fetchModerationData = async () => {
+  const fetchModerationData = useCallback(async () => {
     setLoading(true);
     try {
       const [deals, products, approved, rejected] = await Promise.all([
@@ -115,7 +111,11 @@ function ModerationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchModerationData();
+  }, [fetchModerationData]);
 
   const handleModeration = async (itemId: string, itemType: 'deal' | 'product', action: 'approve' | 'reject') => {
     setProcessingId(itemId);

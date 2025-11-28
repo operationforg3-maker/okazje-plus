@@ -235,14 +235,21 @@ export async function runImport(
           originalTitle: product.name,
         });
         
+        const rawCategoryPath = [
+          product.mainCategorySlug,
+          product.subCategorySlug,
+          product.subSubCategorySlug,
+        ].filter((s): s is string => Boolean(s));
+        
+        // Ensure we have at least one category for the tuple type requirement
+        const categoryPath: [string, ...string[]] = rawCategoryPath.length > 0 
+          ? [rawCategoryPath[0], ...rawCategoryPath.slice(1)]
+          : ['Inne'];
+        
         const enrichmentResult = await aiProductEnrichmentPL({
           originalTitle: product.name,
           rawDescription: product.description,
-          categoryPath: [
-            product.mainCategorySlug,
-            product.subCategorySlug,
-            product.subSubCategorySlug,
-          ].filter(Boolean) as string[],
+          categoryPath,
           price: product.price,
           originalPrice: product.originalPrice,
           rating: product.ratingCard?.average,
@@ -258,11 +265,14 @@ export async function runImport(
         
         // Store AI metadata
         if (!product.ai) product.ai = {};
+        product.ai.seo = {
+          generatedDescription: enrichmentResult.shortDescription,
+          keywords: enrichmentResult.keywords,
+          generatedAt: new Date().toISOString(),
+        };
         product.ai.enrichment = {
-          originalTitle: aliProduct.item_id,
-          normalizedName: enrichmentResult.normalizedName,
           features: enrichmentResult.features,
-          processedAt: new Date().toISOString(),
+          keywords: enrichmentResult.keywords,
         };
         
         // Step 3: AI Category Suggestion (keep existing logic)

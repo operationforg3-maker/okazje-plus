@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,13 +49,7 @@ export function PriceAlertButton({
   const [existingAlert, setExistingAlert] = useState<PriceAlert | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      checkExistingAlert();
-    }
-  }, [user, itemId]);
-
-  const checkExistingAlert = async () => {
+  const checkExistingAlert = useCallback(async () => {
     if (!user) return;
     try {
       const alerts = await getUserPriceAlerts(user.uid);
@@ -64,7 +58,13 @@ export function PriceAlertButton({
     } catch (error) {
       console.error('Error checking existing alert:', error);
     }
-  };
+  }, [user, itemId]);
+
+  useEffect(() => {
+    if (user) {
+      checkExistingAlert();
+    }
+  }, [user, itemId, checkExistingAlert]);
 
   const handleCreateAlert = async () => {
     if (!user) {

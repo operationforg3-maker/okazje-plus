@@ -28,7 +28,7 @@ import {
   Trash2,
   Plus,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { OAuthToken } from '@/lib/types';
 
@@ -54,6 +54,29 @@ function OAuthSettingsPage() {
   const [tokens, setTokens] = useState<TokenDisplay[]>([]);
   const [processingTokenId, setProcessingTokenId] = useState<string | null>(null);
   const [selectedVendor, setSelectedVendor] = useState<string>('aliexpress');
+
+  const fetchTokens = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/admin/oauth/tokens?vendorId=${selectedVendor}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch tokens');
+      }
+      
+      const data = await response.json();
+      setTokens(data.tokens || []);
+    } catch (error) {
+      console.error('Error fetching tokens:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load OAuth tokens',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedVendor, toast]);
 
   useEffect(() => {
     // Check for OAuth callback status
@@ -86,30 +109,7 @@ function OAuthSettingsPage() {
     }
 
     fetchTokens();
-  }, [searchParams, toast]);
-
-  const fetchTokens = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/admin/oauth/tokens?vendorId=${selectedVendor}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch tokens');
-      }
-      
-      const data = await response.json();
-      setTokens(data.tokens || []);
-    } catch (error) {
-      console.error('Error fetching tokens:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load OAuth tokens',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchParams, toast, fetchTokens]);
 
   const handleAuthorize = (accountName?: string) => {
     const params = new URLSearchParams({

@@ -4,7 +4,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { readFileSync, existsSync } from 'fs';
 import { join, resolve } from 'path';
 
-let adminApp: App;
+let adminApp: App | undefined;
 
 // Na App Hosting używamy domyślnych credentials (Application Default Credentials)
 // Lokalnie można opcjonalnie załadować serviceAccountKey.json jeśli istnieje
