@@ -8,11 +8,15 @@ export async function PUT(
 ) {
   try {
     const { id } = params;
-    const data = await request.json();
+    const body = await request.json();
+    // Obsłuż oba formaty: bezpośrednie pola lub { id, data }
+    const data: any = body?.data && typeof body.data === 'object' ? body.data : body;
 
     // Jeśli to tylko aktualizacja statusu lub częściowa edycja, nie wymagaj wszystkich pól
     // Walidacja tylko jeśli próbujemy edytować główne pola
-    if (data.name !== undefined || data.description !== undefined || data.price !== undefined) {
+    // Główne pola są wymagane tylko przy pełnej edycji formularza.
+    // Dla częściowych aktualizacji (np. status) nie blokuj.
+    if (data && (data.name !== undefined || data.description !== undefined || data.price !== undefined)) {
       if (!data.name || !data.description || data.price === undefined) {
         return NextResponse.json(
           { error: 'Brakuje wymaganych pól' },
@@ -33,26 +37,29 @@ export async function PUT(
     }
 
     // Usuń pola które nie powinny być w Firestore
-    const { id: _, ...updateData } = data;
+    const { id: _ignored, ...updateData } = data || {};
     
     // Przygotuj dane do aktualizacji
     const firestoreData: any = {};
     
     // Skopiuj wszystkie pola oprócz ratingCard
-    for (const [key, value] of Object.entries(updateData)) {
-      if (key !== 'ratingCard') {
-        firestoreData[key] = value;
+    if (updateData && typeof updateData === 'object') {
+      for (const [key, value] of Object.entries(updateData)) {
+        if (key !== 'ratingCard') {
+          firestoreData[key] = value;
+        }
       }
     }
     
     // Konwertuj ratingCard na dot notation dla Firestore
-    if (updateData.ratingCard) {
-      firestoreData['ratingCard.average'] = updateData.ratingCard.average ?? 0;
-      firestoreData['ratingCard.count'] = updateData.ratingCard.count ?? 0;
-      firestoreData['ratingCard.durability'] = updateData.ratingCard.durability ?? 0;
-      firestoreData['ratingCard.easeOfUse'] = updateData.ratingCard.easeOfUse ?? 0;
-      firestoreData['ratingCard.valueForMoney'] = updateData.ratingCard.valueForMoney ?? 0;
-      firestoreData['ratingCard.versatility'] = updateData.ratingCard.versatility ?? 0;
+    if (updateData && (updateData as any).ratingCard) {
+      const rc = (updateData as any).ratingCard;
+      firestoreData['ratingCard.average'] = rc.average ?? 0;
+      firestoreData['ratingCard.count'] = rc.count ?? 0;
+      firestoreData['ratingCard.durability'] = rc.durability ?? 0;
+      firestoreData['ratingCard.easeOfUse'] = rc.easeOfUse ?? 0;
+      firestoreData['ratingCard.valueForMoney'] = rc.valueForMoney ?? 0;
+      firestoreData['ratingCard.versatility'] = rc.versatility ?? 0;
     }
     
     // Dodaj timestamp

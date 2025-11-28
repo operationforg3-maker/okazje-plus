@@ -8,14 +8,17 @@ export async function PUT(
 ) {
   try {
     const { id } = params;
-    const data = await request.json();
+    const body = await request.json();
+    const data: any = body?.data && typeof body.data === 'object' ? body.data : body;
 
-    // Walidacja wymaganych pól
-    if (!data.title || !data.description || !data.price || !data.link || !data.image) {
-      return NextResponse.json(
-        { error: 'Brakuje wymaganych pól' },
-        { status: 400 }
-      );
+    // Wymagane pola tylko przy pełnej edycji – częściowe aktualizacje (np. status) dozwolone
+    if (data && (data.title !== undefined || data.description !== undefined || data.price !== undefined || data.link !== undefined || data.image !== undefined)) {
+      if (!data.title || !data.description || data.price === undefined || !data.link || !data.image) {
+        return NextResponse.json(
+          { error: 'Brakuje wymaganych pól' },
+          { status: 400 }
+        );
+      }
     }
 
     const dealRef = doc(db, 'deals', id);
@@ -30,11 +33,11 @@ export async function PUT(
     }
 
     // Usuń pola które nie powinny być w Firestore
-    const { id: _, ...updateData } = data;
+    const { id: _ignored, ...updateData } = data || {};
     
     // Zaktualizuj
     await updateDoc(dealRef, {
-      ...updateData,
+      ...(updateData || {}),
       updatedAt: Timestamp.now(),
     });
 
