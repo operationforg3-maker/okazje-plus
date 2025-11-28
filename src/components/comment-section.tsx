@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { addComment, getComments } from '@/lib/data';
 import { useCommentsCount } from '@/hooks/use-comments-count';
@@ -115,17 +116,33 @@ export default function CommentSection({ collectionName, docId }: CommentSection
   return (
     <div className="mt-8">
       <h3 className="font-headline text-2xl font-bold mb-4">Komentarze</h3>
-      {user && (
-        <div className="mb-6">
-          <Textarea 
-            placeholder="Dodaj swój komentarz..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className="mb-2"
-          />
-          <Button onClick={handleSubmitComment}>Dodaj komentarz</Button>
-        </div>
-      )}
+      <div className="mb-6">
+        {user ? (
+          <>
+            <Textarea 
+              placeholder="Dodaj swój komentarz..."
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="mb-2"
+            />
+            <Button onClick={handleSubmitComment}>Dodaj komentarz</Button>
+          </>
+        ) : (
+          <>
+            <Textarea 
+              placeholder="Zaloguj się, aby dodać komentarz"
+              disabled
+              className="mb-2 cursor-not-allowed bg-muted"
+            />
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <span>Musisz być zalogowany, aby dodać komentarz.</span>
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                Zaloguj się
+              </Link>
+            </p>
+          </>
+        )}
+      </div>
       <div className="space-y-4">
         {comments.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">

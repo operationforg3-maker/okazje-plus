@@ -253,6 +253,30 @@ export interface Deal {
     deliveryTime?: string;
     shippingMethod?: string;
   };
+  
+  /** Alias dla importMetadata dla zachowania spójności z Product */
+  metadata?: {
+    source?: string;
+    importedAt?: string;
+    originalUrl?: string;
+    scrapedData?: Record<string, any>;
+    promotionId?: string;
+    commissionRate?: number;
+    evaluateCount?: number;
+    evaluateRate?: string;
+    sellerRating?: number;
+    returnPolicy?: string;
+    hotProduct?: boolean;
+    flashDeal?: boolean;
+    platformProductType?: string;
+    stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
+    stockLevel?: number;
+    specifications?: Array<{key: string; value: string}>;
+    productVideoUrl?: string;
+    warehouse?: string;
+    deliveryTime?: string;
+    shippingMethod?: string;
+  };
 }
 
 // Zaktualizowany interfejs Product

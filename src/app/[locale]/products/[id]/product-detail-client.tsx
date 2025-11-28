@@ -450,9 +450,12 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
 
       {/* Tabs Section */}
       <Tabs defaultValue="description" className="mb-12">
-        <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+        <TabsList className={`grid w-full ${hasExternalRating ? 'grid-cols-4' : 'grid-cols-3'} lg:w-auto lg:inline-grid`}>
           <TabsTrigger value="description">Opis i specyfikacja</TabsTrigger>
-          <TabsTrigger value="reviews">Opinie ({ratingCount})</TabsTrigger>
+          <TabsTrigger value="reviews">Opinie Okazje Plus ({ratingCount})</TabsTrigger>
+          {hasExternalRating && (
+            <TabsTrigger value="external-reviews">Opinie AliExpress ({externalRating.count || '?'})</TabsTrigger>
+          )}
           <TabsTrigger value="rate">Oceń produkt</TabsTrigger>
         </TabsList>
         
@@ -490,6 +493,38 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                     </div>
                   ))}
                 </dl>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Delivery & Warehouse info from AliExpress */}
+          {(product.metadata?.warehouse || product.metadata?.deliveryTime || product.metadata?.shippingMethod) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="h-5 w-5" />
+                  Informacje o dostawie
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {product.metadata.warehouse && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm"><strong>Magazyn:</strong> {product.metadata.warehouse}</span>
+                  </div>
+                )}
+                {product.metadata.deliveryTime && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm"><strong>Czas dostawy:</strong> {product.metadata.deliveryTime}</span>
+                  </div>
+                )}
+                {product.metadata.shippingMethod && (
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm"><strong>Metoda wysyłki:</strong> {product.metadata.shippingMethod}</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -561,6 +596,52 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
 
           <CommentSection collectionName="products" docId={product.id} />
         </TabsContent>
+
+        {/* External Reviews from AliExpress */}
+        {hasExternalRating && (
+          <TabsContent value="external-reviews" className="mt-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <ExternalLink className="h-5 w-5" />
+                    Opinie z AliExpress
+                  </CardTitle>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-5 w-5 ${
+                          i < Math.floor(externalRating.average)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-muted-foreground'
+                        }`}
+                      />
+                    ))}
+                    <span className="ml-2 text-xl font-bold">{externalRating.average.toFixed(1)}</span>
+                  </div>
+                </div>
+                <CardDescription>
+                  {externalRating.count ? `Liczba ocen: ${externalRating.count.toLocaleString('pl-PL')}` : 'Oceny z platformy AliExpress'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-lg bg-muted/50 p-6 text-center space-y-3">
+                  <Info className="h-12 w-12 mx-auto text-muted-foreground" />
+                  <p className="text-muted-foreground">
+                    Opinie pochodzą z platformy AliExpress. Pełne recenzje dostępne są na stronie sprzedawcy.
+                  </p>
+                  <Button asChild variant="outline" className="mt-4">
+                    <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Zobacz opinie na AliExpress
+                    </a>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         <TabsContent value="rate" className="mt-6">
           <RatingInput

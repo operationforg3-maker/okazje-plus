@@ -525,13 +525,72 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
 
       {/* Tabs Section */}
       <Tabs defaultValue="discussion" className="mb-12">
-        <TabsList className="grid w-full grid-cols-1 lg:w-auto">
+        <TabsList className={`grid w-full ${deal.metadata?.specifications ? 'grid-cols-2' : 'grid-cols-1'} lg:w-auto lg:inline-grid`}>
           <TabsTrigger value="discussion">Dyskusja ({liveComments.count})</TabsTrigger>
+          {deal.metadata?.specifications && deal.metadata.specifications.length > 0 && (
+            <TabsTrigger value="specifications">Specyfikacja</TabsTrigger>
+          )}
         </TabsList>
         
         <TabsContent value="discussion" className="mt-6">
           <CommentSection collectionName="deals" docId={deal.id} />
         </TabsContent>
+
+        {/* Product specifications from AliExpress */}
+        {deal.metadata?.specifications && deal.metadata.specifications.length > 0 && (
+          <TabsContent value="specifications" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Specyfikacja produktu
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {deal.metadata.specifications.map((spec, idx) => (
+                    <div key={idx} className="border-b pb-2">
+                      <dt className="text-sm font-medium text-muted-foreground">{spec.key}</dt>
+                      <dd className="mt-1 text-sm font-semibold">{spec.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </CardContent>
+            </Card>
+
+            {/* Delivery info from AliExpress */}
+            {(deal.metadata.warehouse || deal.metadata.deliveryTime || deal.metadata.shippingMethod) && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    Informacje o dostawie
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {deal.metadata.warehouse && (
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm"><strong>Magazyn:</strong> {deal.metadata.warehouse}</span>
+                    </div>
+                  )}
+                  {deal.metadata.deliveryTime && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm"><strong>Czas dostawy:</strong> {deal.metadata.deliveryTime}</span>
+                    </div>
+                  )}
+                  {deal.metadata.shippingMethod && (
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm"><strong>Metoda wysyłki:</strong> {deal.metadata.shippingMethod}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Related Deals */}
