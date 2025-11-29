@@ -12,11 +12,33 @@ export default function TranslationsPage() {
   const [dryRunResult, setDryRunResult] = useState<any>(null);
 
   const dryRun = async () => {
-    setDryRunResult({ translated: 0, preview: [] });
+    try {
+      const payload = { scope, mode, prompt, dryRun: true };
+      const res = await fetch("/api/admin-import/translations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "dry-run", payload }),
+      });
+      const data = await res.json();
+      setDryRunResult(data);
+    } catch (e: any) {
+      setDryRunResult({ ok: false, error: e?.message || "Error" });
+    }
   };
 
   const runTranslate = async () => {
-    // TODO: server action do tłumaczeń przez Genkit
+    try {
+      const payload = { scope, mode, prompt, dryRun: false };
+      const res = await fetch("/api/admin-import/translations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "run", payload }),
+      });
+      const data = await res.json();
+      setDryRunResult(data);
+    } catch (e: any) {
+      setDryRunResult({ ok: false, error: e?.message || "Error" });
+    }
   };
 
   return (

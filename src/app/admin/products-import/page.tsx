@@ -14,11 +14,35 @@ export default function ProductsImportPage() {
   const [dryRunResult, setDryRunResult] = useState<any>(null);
 
   const dryRun = async () => {
-    setDryRunResult({ added: 0, updated: 0, skipped: 0, preview: [] });
+    try {
+      const parsed = JSON.parse(jsonInput || "[]");
+      const payload = { products: parsed, upsert, dedupe, batchSize, dryRun: true };
+      const res = await fetch("/api/admin-import/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "dry-run", payload }),
+      });
+      const data = await res.json();
+      setDryRunResult(data);
+    } catch (e: any) {
+      setDryRunResult({ ok: false, error: e?.message || "Parse error" });
+    }
   };
 
   const runImport = async () => {
-    // TODO: server action do importu produktów z parametrami
+    try {
+      const parsed = JSON.parse(jsonInput || "[]");
+      const payload = { products: parsed, upsert, dedupe, batchSize, dryRun: false };
+      const res = await fetch("/api/admin-import/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "run", payload }),
+      });
+      const data = await res.json();
+      setDryRunResult(data);
+    } catch (e: any) {
+      setDryRunResult({ ok: false, error: e?.message || "Parse error" });
+    }
   };
 
   return (
