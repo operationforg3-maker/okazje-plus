@@ -6,6 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Settings, 
   Play, 
@@ -17,18 +32,49 @@ import {
   Database,
   Search,
   ExternalLink,
-  Loader2
+  Loader2,
+  Eye,
+  Package
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { getCategories } from '@/lib/data';
+import { Category } from '@/lib/types';
+import { useAuth } from '@/lib/auth';
 
 function AliExpressImportWizard() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [productDetails, setProductDetails] = useState<any>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState('');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('');
+  const [importing, setImporting] = useState(false);
+
+  // Load categories on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const cats = await getCategories();
+        setCategories(cats);
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Get subcategories for selected main category
+  const getSubcategories = () => {
+    const mainCat = categories.find(c => c.id === selectedMainCategory);
+    return mainCat?.subcategories || [];
+  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -43,7 +89,7 @@ function AliExpressImportWizard() {
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/admin/aliexpress/search?query=${encodeURIComponent(searchQuery)}&pageSize=10`
+        `/api/admin/aliexpress/search?q=${encodeURIComponent(searchQuery)}&limit=20`
       );
       
       if (!response.ok) {
@@ -51,11 +97,18 @@ function AliExpressImportWizard() {
       }
 
       const data = await response.json();
-      setSearchResults(data.products || []);
+      
+      // Normalize product IDs (API może zwracać różne formaty)
+      const products = (data.products || []).map((p: any) => ({
+        ...p,
+        id: p.id || p.productId,
+      }));
+      
+      setSearchResults(products);
       
       toast({
         title: 'Sukces',
-        description: `Znaleziono ${data.products?.length || 0} produktów`,
+        description: `Znaleziono ${products.length} produktów`,
       });
     } catch (error: any) {
       toast({
@@ -69,31 +122,75 @@ function AliExpressImportWizard() {
     }
   };
 
-  const handleImportProduct = async (productId: string) => {
-    setLoading(true);
+  const handleViewDetails = async (product: any) => {
+    setSelectedProduct(product);
+    setShowDetailsDialog(true);
+    setProductDetails(null);
+    
     try {
+      const response = await fetch(
+        `/api/admin/aliexpress/item?productId=${encodeURIComponent(product.id)}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Nie udało się pobrać szczegółów');
+      }
+
+      const data = await response.json();
+      setProductDetails(data.product || data);
+    } catch (error: any) {
+      toast({
+        title: 'Błąd',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleImportProduct = async (product: any) => {
+    if (!selectedMainCategory || !selectedSubCategory) {
+      toast({
+        title: 'Błąd',
+        description: 'Wybierz kategorię główną i podkategorię',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      // Get Firebase Auth token
+      const fbUser = user as any;
+      const idToken = fbUser?.getIdToken ? await fbUser.getIdToken() : null;
+      
       const response = await fetch('/api/admin/aliexpress/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(idToken && { 'Authorization': `Bearer ${idToken}` }),
+        },
         body: JSON.stringify({
-          productId,
-          skipDuplicates: true,
-          autoApprove: false,
+          product: product,
+          mainCategory: selectedMainCategory,
+          subCategory: selectedSubCategory,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Nie udało się zaimportować produktu');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Nie udało się zaimportować produktu');
       }
 
       const data = await response.json();
       
       toast({
-        title: 'Sukces',
-        description: `Produkt został zaimportowany (ID: ${data.productId})`,
+        title: 'Sukces! 🎉',
+        description: `Produkt został zaimportowany (ID: ${data.id})`,
       });
       
+      setShowDetailsDialog(false);
       setSelectedProduct(null);
+      setProductDetails(null);
     } catch (error: any) {
       toast({
         title: 'Błąd',
@@ -101,7 +198,7 @@ function AliExpressImportWizard() {
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setImporting(false);
     }
   };
 
@@ -183,33 +280,57 @@ function AliExpressImportWizard() {
               <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
                 {searchResults.map((product: any) => (
                   <div
-                    key={product.productId}
+                    key={product.id}
                     className="p-3 flex items-center justify-between hover:bg-muted/50"
                   >
-                    <div className="flex-1">
-                      <h5 className="text-sm font-medium line-clamp-1">
-                        {product.productTitle}
-                      </h5>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {product.targetSalePrice} {product.targetSalePriceCurrency}
-                        </Badge>
-                        {product.productId && (
-                          <span className="text-xs text-muted-foreground">
-                            ID: {product.productId}
-                          </span>
-                        )}
+                    <div className="flex gap-3 flex-1">
+                      {product.imageUrl && (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.title}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <h5 className="text-sm font-medium line-clamp-2">
+                          {product.title}
+                        </h5>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs font-bold text-green-600">
+                            ${product.price}
+                          </Badge>
+                          {product.originalPrice && product.originalPrice > product.price && (
+                            <span className="text-xs text-muted-foreground line-through">
+                              ${product.originalPrice}
+                            </span>
+                          )}
+                          {product.discount > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              -{product.discount}%
+                            </Badge>
+                          )}
+                          {product.orders > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {product.orders} zamówień
+                            </span>
+                          )}
+                          {product.rating > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              ⭐ {product.rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      {product.productDetailUrl && (
+                      {product.productUrl && (
                         <Button
                           size="sm"
                           variant="ghost"
                           asChild
                         >
                           <a
-                            href={product.productDetailUrl}
+                            href={product.productUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -219,12 +340,11 @@ function AliExpressImportWizard() {
                       )}
                       <Button
                         size="sm"
-                        onClick={() =>
-                          handleImportProduct(product.productId)
-                        }
-                        disabled={loading}
+                        variant="outline"
+                        onClick={() => handleViewDetails(product)}
                       >
-                        Importuj
+                        <Eye className="mr-1 h-4 w-4" />
+                        Szczegóły
                       </Button>
                     </div>
                   </div>
@@ -234,6 +354,177 @@ function AliExpressImportWizard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Product Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Szczegóły produktu i import</DialogTitle>
+            <DialogDescription>
+              Sprawdź szczegóły i wybierz kategorię przed importem
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProduct && (
+            <div className="space-y-4">
+              {/* Product Info */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex gap-4">
+                  {selectedProduct.imageUrl && (
+                    <img
+                      src={selectedProduct.imageUrl}
+                      alt={selectedProduct.title}
+                      className="w-32 h-32 object-cover rounded"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-2">{selectedProduct.title}</h3>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge className="font-bold text-green-600">${selectedProduct.price}</Badge>
+                        {selectedProduct.originalPrice && (
+                          <span className="text-muted-foreground line-through">
+                            ${selectedProduct.originalPrice}
+                          </span>
+                        )}
+                        {selectedProduct.discount > 0 && (
+                          <Badge variant="destructive">-{selectedProduct.discount}%</Badge>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground">
+                        {selectedProduct.orders > 0 && `${selectedProduct.orders} zamówień • `}
+                        {selectedProduct.rating > 0 && `⭐ ${selectedProduct.rating.toFixed(1)}`}
+                      </div>
+                      {selectedProduct.shippingInfo && (
+                        <div className="text-xs text-muted-foreground">
+                          {selectedProduct.shippingInfo.warehouse && `📦 ${selectedProduct.shippingInfo.warehouse} • `}
+                          {selectedProduct.shippingInfo.freeShipping && '🚚 Darmowa wysyłka'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedProduct.description && (
+                  <div className="text-sm text-muted-foreground">
+                    <p className="line-clamp-3">{selectedProduct.description}</p>
+                  </div>
+                )}
+
+                {/* Image Gallery */}
+                {selectedProduct.images && selectedProduct.images.length > 1 && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Galeria ({selectedProduct.images.length} zdjęć)
+                    </Label>
+                    <div className="flex gap-2 mt-2 overflow-x-auto">
+                      {selectedProduct.images.slice(0, 6).map((img: string, idx: number) => (
+                        <img
+                          key={idx}
+                          src={img}
+                          alt={`${selectedProduct.title} ${idx + 1}`}
+                          className="w-16 h-16 object-cover rounded border"
+                        />
+                      ))}
+                      {selectedProduct.images.length > 6 && (
+                        <div className="w-16 h-16 flex items-center justify-center border rounded bg-muted text-xs">
+                          +{selectedProduct.images.length - 6}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Category Selection */}
+              <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                <div>
+                  <Label htmlFor="mainCategory" className="font-semibold">
+                    Kategoria główna <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={selectedMainCategory}
+                    onValueChange={(value) => {
+                      setSelectedMainCategory(value);
+                      setSelectedSubCategory('');
+                    }}
+                  >
+                    <SelectTrigger id="mainCategory">
+                      <SelectValue placeholder="Wybierz kategorię główną" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.icon} {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="subCategory" className="font-semibold">
+                    Podkategoria <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={selectedSubCategory}
+                    onValueChange={setSelectedSubCategory}
+                    disabled={!selectedMainCategory}
+                  >
+                    <SelectTrigger id="subCategory">
+                      <SelectValue placeholder="Wybierz podkategorię" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getSubcategories().map((sub) => (
+                        <SelectItem key={sub.slug} value={sub.slug}>
+                          {sub.icon} {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Additional Details (if loaded) */}
+              {productDetails && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h4 className="font-semibold text-sm">Dodatkowe informacje</h4>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    {productDetails.merchant && <div>🏪 Sprzedawca: {productDetails.merchant}</div>}
+                    {productDetails.categoryName && <div>📁 Kategoria AliExpress: {productDetails.categoryName}</div>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDetailsDialog(false)}
+              disabled={importing}
+            >
+              Anuluj
+            </Button>
+            <Button
+              onClick={() => selectedProduct && handleImportProduct(selectedProduct)}
+              disabled={importing || !selectedMainCategory || !selectedSubCategory}
+            >
+              {importing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importowanie...
+                </>
+              ) : (
+                <>
+                  <Package className="mr-2 h-4 w-4" />
+                  Importuj produkt
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Documentation */}
       <Card>
