@@ -1,0 +1,49 @@
+"use client";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+
+export default function ProductsImportPage() {
+  const [jsonInput, setJsonInput] = useState("");
+  const [batchSize, setBatchSize] = useState(500);
+  const [upsert, setUpsert] = useState(true);
+  const [dedupe, setDedupe] = useState(true);
+  const [dryRunResult, setDryRunResult] = useState<any>(null);
+
+  const dryRun = async () => {
+    setDryRunResult({ added: 0, updated: 0, skipped: 0, preview: [] });
+  };
+
+  const runImport = async () => {
+    // TODO: server action do importu produktów z parametrami
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <h1 className="font-headline text-2xl font-bold">Import produktów</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Parametry</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Textarea placeholder="Wklej JSON produktów" value={jsonInput} onChange={e=>setJsonInput(e.target.value)} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Input type="number" value={batchSize} onChange={e=>setBatchSize(parseInt(e.target.value||"500"))} placeholder="Batch size" />
+            <label className="flex items-center gap-2"><Checkbox checked={upsert} onCheckedChange={(v)=>setUpsert(!!v)} /> Upsert</label>
+            <label className="flex items-center gap-2"><Checkbox checked={dedupe} onCheckedChange={(v)=>setDedupe(!!v)} /> Deduplikacja</label>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={dryRun}>Dry-run</Button>
+            <Button onClick={runImport}>Importuj</Button>
+          </div>
+          {dryRunResult && (
+            <pre className="mt-4 text-xs bg-muted p-3 rounded">{JSON.stringify(dryRunResult,null,2)}</pre>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

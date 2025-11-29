@@ -505,6 +505,32 @@ export interface User {
   displayName: string | null;
   photoURL: string | null;
   role: 'admin' | 'moderator' | 'specjalista' | 'user';
+
+// Import/Seeding profiles and AI prompt configuration
+export type AiFlowTarget = "categories" | "products" | "deals" | "translations";
+
+export interface PromptConfig {
+  id: string;
+  target: AiFlowTarget;
+  name: string;
+  prompt: string;
+  params?: { temperature?: number; maxTokens?: number };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ImportProfile {
+  id: string;
+  target: Exclude<AiFlowTarget, "translations">;
+  name: string;
+  upsert?: boolean;
+  dedupe?: boolean;
+  batchSize?: number;
+  autoApproveDeals?: boolean;
+  categoryMapping?: Record<string, string>;
+  createdAt?: string;
+  updatedAt?: string;
+}
   betaRole?: 'pioneer' | 'beta'; // Rola z pre-rejestracji (opcjonalna)
   betaNumber?: number; // Numer rejestracji (opcjonalny)
   createdAt?: string; // Data utworzenia konta
