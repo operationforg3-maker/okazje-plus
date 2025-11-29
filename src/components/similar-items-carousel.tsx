@@ -108,6 +108,8 @@ export function SimilarItemsCarousel({
       setItems(similarItems.slice(0, maxItems));
     } catch (error) {
       console.error('Error fetching similar items:', error);
+      // Fallback: do not crash the page, just hide the carousel
+      setItems([]);
     } finally {
       setLoading(false);
     }

@@ -13,6 +13,46 @@
           "order": "ASCENDING"
         }
       ]
+            {
+              "collectionGroup": "products",
+              "queryScope": "COLLECTION",
+              "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "subCategorySlug", "order": "ASCENDING" },
+                { "fieldPath": "temperature", "order": "DESCENDING" },
+                { "fieldPath": "__name__", "order": "ASCENDING" }
+              ]
+            },
+            {
+              "collectionGroup": "products",
+              "queryScope": "COLLECTION",
+              "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
+                { "fieldPath": "temperature", "order": "DESCENDING" },
+                { "fieldPath": "__name__", "order": "ASCENDING" }
+              ]
+            },
+            {
+              "collectionGroup": "deals",
+              "queryScope": "COLLECTION",
+              "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "subCategorySlug", "order": "ASCENDING" },
+                { "fieldPath": "temperature", "order": "DESCENDING" },
+                { "fieldPath": "__name__", "order": "ASCENDING" }
+              ]
+            },
+            {
+              "collectionGroup": "deals",
+              "queryScope": "COLLECTION",
+              "fields": [
+                { "fieldPath": "status", "order": "ASCENDING" },
+                { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
+                { "fieldPath": "temperature", "order": "DESCENDING" },
+                { "fieldPath": "__name__", "order": "ASCENDING" }
+              ]
+            }
     },
     {
       "collectionGroup": "analytics",
