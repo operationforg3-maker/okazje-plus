@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { auth } from "@/lib/firebase";
 
 export default function ProductsImportPage() {
   const [jsonInput, setJsonInput] = useState("");
@@ -13,13 +14,20 @@ export default function ProductsImportPage() {
   const [dedupe, setDedupe] = useState(true);
   const [dryRunResult, setDryRunResult] = useState<any>(null);
 
+  const getAuthToken = async () => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Not authenticated");
+    return await user.getIdToken();
+  };
+
   const dryRun = async () => {
     try {
+      const token = await getAuthToken();
       const parsed = JSON.parse(jsonInput || "[]");
       const payload = { products: parsed, upsert, dedupe, batchSize, dryRun: true };
       const res = await fetch("/api/admin-import/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ mode: "dry-run", payload }),
       });
       const data = await res.json();
@@ -31,11 +39,12 @@ export default function ProductsImportPage() {
 
   const runImport = async () => {
     try {
+      const token = await getAuthToken();
       const parsed = JSON.parse(jsonInput || "[]");
       const payload = { products: parsed, upsert, dedupe, batchSize, dryRun: false };
       const res = await fetch("/api/admin-import/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ mode: "run", payload }),
       });
       const data = await res.json();

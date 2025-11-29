@@ -505,6 +505,10 @@ export interface User {
   displayName: string | null;
   photoURL: string | null;
   role: 'admin' | 'moderator' | 'specjalista' | 'user';
+  betaRole?: 'pioneer' | 'beta'; // Rola z pre-rejestracji (opcjonalna)
+  betaNumber?: number; // Numer rejestracji (opcjonalny)
+  createdAt?: string; // Data utworzenia konta
+}
 
 // Import/Seeding profiles and AI prompt configuration
 export type AiFlowTarget = "categories" | "products" | "deals" | "translations";
@@ -519,7 +523,7 @@ export interface PromptConfig {
   updatedAt?: string;
 }
 
-export interface ImportProfile {
+export interface AdminImportProfile {
   id: string;
   target: Exclude<AiFlowTarget, "translations">;
   name: string;
@@ -530,10 +534,6 @@ export interface ImportProfile {
   categoryMapping?: Record<string, string>;
   createdAt?: string;
   updatedAt?: string;
-}
-  betaRole?: 'pioneer' | 'beta'; // Rola z pre-rejestracji (opcjonalna)
-  betaNumber?: number; // Numer rejestracji (opcjonalny)
-  createdAt?: string; // Data utworzenia konta
 }
 
 export interface Vote {

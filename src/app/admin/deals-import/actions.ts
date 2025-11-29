@@ -32,11 +32,18 @@ export async function dryRunImportDeals(input: unknown) {
   if (!parsed.success) return { ok: false, error: parsed.error.flatten() };
   const { deals } = parsed.data;
   let toCreate = 0, toUpdate = 0;
-  for (const d of deals.slice(0, 200)) {
+  const preview: Array<{ deal: any; action: string; reason?: string; existingId?: string }> = [];
+  for (const d of deals.slice(0, 50)) {
     const existingId = await findExistingDeal({ externalOriginalId: d.externalOriginalId, link: d.link });
-    if (existingId) toUpdate++; else toCreate++;
+    if (existingId) {
+      toUpdate++;
+      preview.push({ deal: { id: existingId, title: d.title }, action: "update", reason: "Existing deal found", existingId });
+    } else {
+      toCreate++;
+      preview.push({ deal: { title: d.title }, action: "create" });
+    }
   }
-  return { ok: true, summary: { total: deals.length, toCreate, toUpdate }, preview: deals.slice(0, 5) };
+  return { ok: true, summary: { total: deals.length, toCreate, toUpdate }, preview: preview.slice(0, 10) };
 }
 
 export async function runImportDeals(input: unknown) {

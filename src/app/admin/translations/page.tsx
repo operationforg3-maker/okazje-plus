@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { auth } from "@/lib/firebase";
 
 export default function TranslationsPage() {
   const [scope, setScope] = useState<"product"|"deal">("product");
@@ -11,12 +12,19 @@ export default function TranslationsPage() {
   const [prompt, setPrompt] = useState("");
   const [dryRunResult, setDryRunResult] = useState<any>(null);
 
+  const getAuthToken = async () => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Not authenticated");
+    return await user.getIdToken();
+  };
+
   const dryRun = async () => {
     try {
+      const token = await getAuthToken();
       const payload = { scope, mode, prompt, dryRun: true };
       const res = await fetch("/api/admin-import/translations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ mode: "dry-run", payload }),
       });
       const data = await res.json();
@@ -28,10 +36,11 @@ export default function TranslationsPage() {
 
   const runTranslate = async () => {
     try {
+      const token = await getAuthToken();
       const payload = { scope, mode, prompt, dryRun: false };
       const res = await fetch("/api/admin-import/translations", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ mode: "run", payload }),
       });
       const data = await res.json();

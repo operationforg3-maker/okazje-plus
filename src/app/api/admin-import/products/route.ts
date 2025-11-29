@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProductsPayloadSchema, dryRunImportProducts, runImportProducts } from "@/app/admin/products-import/actions";
+import { requireRole } from "@/lib/auth-admin";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireRole(req, ["admin", "moderator"]);
+  if (!auth.authorized) {
+    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+  }
   try {
     const body = await req.json();
     const { mode, payload } = body || {};

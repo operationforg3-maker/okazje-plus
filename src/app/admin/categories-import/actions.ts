@@ -22,12 +22,16 @@ export async function dryRunImportCategories(input: unknown) {
     return { ok: false, error: parsed.error.flatten() };
   }
   const { categories } = parsed.data;
-  const roots = categories.filter(c => !c.parentSlug).length;
-  const children = categories.filter(c => !!c.parentSlug).length;
+  const roots = categories.filter(c => !c.parentSlug);
+  const children = categories.filter(c => !!c.parentSlug);
+  const preview = [
+    ...roots.slice(0, 5).map(c => ({ slug: c.slug, name: c.name, action: "create", level: "root" })),
+    ...children.slice(0, 5).map(c => ({ slug: c.slug, name: c.name, action: "create", level: "subcategory", parentSlug: c.parentSlug })),
+  ];
   return {
     ok: true,
-    summary: { total: categories.length, roots, children },
-    preview: categories.slice(0, 10),
+    summary: { total: categories.length, roots: roots.length, children: children.length },
+    preview,
   };
 }
 

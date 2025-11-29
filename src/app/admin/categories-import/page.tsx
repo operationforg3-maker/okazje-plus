@@ -4,19 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { auth } from "@/lib/firebase";
 
 export default function CategoriesImportPage() {
   const [jsonInput, setJsonInput] = useState("");
   const [sourcePrompt, setSourcePrompt] = useState("");
   const [dryRunResult, setDryRunResult] = useState<any>(null);
 
+  const getAuthToken = async () => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Not authenticated");
+    return await user.getIdToken();
+  };
+
   const dryRun = async () => {
     try {
+      const token = await getAuthToken();
       const parsed = JSON.parse(jsonInput || "[]");
       const payload = { categories: parsed, dryRun: true };
       const res = await fetch("/api/admin-import/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ mode: "dry-run", payload }),
       });
       const data = await res.json();
@@ -28,11 +36,12 @@ export default function CategoriesImportPage() {
 
   const runImport = async () => {
     try {
+      const token = await getAuthToken();
       const parsed = JSON.parse(jsonInput || "[]");
       const payload = { categories: parsed, dryRun: false };
       const res = await fetch("/api/admin-import/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ mode: "run", payload, prompt: sourcePrompt }),
       });
       const data = await res.json();
