@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
@@ -114,13 +114,15 @@ function ProductsPageContent() {
     return () => { cancelled = true; clearTimeout(t); };
   }, [selectedCategory, selectedSubcategory, searchTerm]);
 
-  const filteredProducts = products.filter(product => {
-    if (!searchTerm) return true;
-    const name = toSearchableText(product.name).toLowerCase();
-    const description = toSearchableText(product.description).toLowerCase();
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return products;
     const needle = searchTerm.toLowerCase();
-    return name.includes(needle) || description.includes(needle);
-  });
+    return products.filter((product) => {
+      const name = toSearchableText(product.name).toLowerCase();
+      const description = toSearchableText(product.description).toLowerCase();
+      return name.includes(needle) || description.includes(needle);
+    });
+  }, [products, searchTerm]);
 
   // Infinite scroll hook - ładuje kolejne produkty przy scrollowaniu
   const {
