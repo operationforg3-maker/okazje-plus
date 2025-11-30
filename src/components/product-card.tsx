@@ -40,7 +40,8 @@ export default function ProductCard({ product }: ProductCardProps) {
   // Usunięto wywołania useCoupons i useSkuDetail - dane powinny być już w Firestore
   // Usunięto skuOpen state - modal wariantów został usunięty
   
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
+  const safePrice = typeof product.price === 'number' ? product.price : Number(product.price) || 0;
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
   const hasOriginal = typeof (product as any).originalPrice === 'number';
   const original = hasOriginal ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format((product as any).originalPrice) : null;
   const discount = hasOriginal && (product as any).originalPrice > 0
@@ -75,7 +76,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     >
       {/* Galeria zdjęć produktu */}
       <div className="relative overflow-hidden">
-        <ProductGallery images={product.gallery ? product.gallery.map(img => ({ src: img.src, alt: img.alt })) : [{ src: product.image, alt: product.name }]} />
+        <ProductGallery images={product.gallery && Array.isArray(product.gallery) && product.gallery.length > 0
+          ? product.gallery.map(img => ({ src: img.src, alt: img.alt }))
+          : [{ src: (typeof product.image === 'string' ? product.image : '/placeholder.png'), alt: String(product.name || '') }]}
+        />
         {/* Pasek ocen - zawsze widoczny */}
         <div className="absolute left-1.5 top-1.5 z-10">
           <RatingBar users={users} editorial={editorial} external={external} />
@@ -120,7 +124,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {categoryBadge && (
             <Badge variant="secondary" className="flex w-fit items-center gap-1">
               <Tag className="h-3 w-3" aria-hidden />
-              {categoryBadge}
+              {String(categoryBadge)}
             </Badge>
           )}
           {/* Usunięto badge kuponów - dane powinny być w product.metadata */}
@@ -163,17 +167,17 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
-          {product.name}
+          {String(product.name || '')}
         </h3>
         
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {product.description}
+          {typeof product.description === 'string' ? product.description : ''}
         </p>
 
         {product.ai?.enrichment?.features && product.ai.enrichment.features.length > 0 && (
           <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground space-y-0.5">
             {product.ai.enrichment.features.slice(0,3).map((f, idx) => (
-              <li key={idx} className="leading-snug">{f}</li>
+              <li key={idx} className="leading-snug">{typeof f === 'string' ? f : ''}</li>
             ))}
           </ul>
         )}
@@ -295,7 +299,8 @@ export default function ProductCard({ product }: ProductCardProps) {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            window.open(product.affiliateUrl, '_blank', 'noopener,noreferrer');
+            const url = typeof product.affiliateUrl === 'string' ? product.affiliateUrl : '#';
+            window.open(url, '_blank', 'noopener,noreferrer');
             handleAffiliateClick();
           }}
         >

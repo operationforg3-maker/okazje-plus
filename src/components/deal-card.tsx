@@ -30,9 +30,29 @@ interface DealCardProps {
   deal: Deal;
 }
 
-function getRelativeTime(isoDate: string): string {
+function toTimestampSafe(value: any): number {
+  if (!value) return 0;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const n = Date.parse(value);
+    return isNaN(n) ? 0 : n;
+  }
+  if (typeof value === 'object') {
+    try {
+      if (typeof (value as any).toDate === 'function') {
+        return (value as any).toDate().getTime();
+      }
+      if (typeof (value as any).seconds === 'number') {
+        return ((value as any).seconds * 1000) + Math.floor(((value as any).nanoseconds || 0) / 1e6);
+      }
+    } catch {}
+  }
+  return 0;
+}
+
+function getRelativeTime(when: any): string {
   const now = new Date();
-  const posted = new Date(isoDate);
+  const ts = toTimestampSafe(when);
+  const posted = ts ? new Date(ts) : new Date(0);
   const diffMs = now.getTime() - posted.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -64,7 +84,8 @@ export default function DealCard({ deal }: DealCardProps) {
   const [userVote, setUserVote] = useState<1 | -1 | null>(null); // Śledzimy głos użytkownika
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
+  const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
   const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
   const savings = typeof deal.originalPrice === 'number' && deal.originalPrice > deal.price 
@@ -222,7 +243,7 @@ export default function DealCard({ deal }: DealCardProps) {
           </div>
         )}
         <Image
-          src={deal.image}
+          src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
           alt={deal.title}
           width={600}
           height={400}
@@ -320,7 +341,7 @@ export default function DealCard({ deal }: DealCardProps) {
             {(deal.subCategorySlug || deal.mainCategorySlug) && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <Tag className="h-3 w-3" aria-hidden />
-                {deal.subCategorySlug || deal.mainCategorySlug}
+                {String(deal.subCategorySlug || deal.mainCategorySlug)}
               </Badge>
             )}
           </div>
@@ -331,11 +352,11 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
-          {deal.title}
+          {String(deal.title || '')}
         </h3>
         
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-          {deal.description}
+          {typeof deal.description === 'string' ? deal.description : ''}
         </p>
 
         {/* Szczegóły dostawy i dodatkowe info */}

@@ -15,9 +15,29 @@ interface DealListCardProps {
   deal: Deal;
 }
 
-function getRelativeTime(isoDate: string): string {
+function toTimestampSafe(value: any): number {
+  if (!value) return 0;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const n = Date.parse(value);
+    return isNaN(n) ? 0 : n;
+  }
+  if (typeof value === 'object') {
+    try {
+      if (typeof (value as any).toDate === 'function') {
+        return (value as any).toDate().getTime();
+      }
+      if (typeof (value as any).seconds === 'number') {
+        return ((value as any).seconds * 1000) + Math.floor(((value as any).nanoseconds || 0) / 1e6);
+      }
+    } catch {}
+  }
+  return 0;
+}
+
+function getRelativeTime(when: any): string {
   const now = new Date();
-  const posted = new Date(isoDate);
+  const ts = toTimestampSafe(when);
+  const posted = ts ? new Date(ts) : new Date(0);
   const diffMs = now.getTime() - posted.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -37,7 +57,8 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
+  const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
   const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
   const savings = typeof deal.originalPrice === 'number' && deal.originalPrice > deal.price 
@@ -64,7 +85,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
   <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
         <div className="relative w-40 h-32">
           <Image
-            src={deal.image}
+            src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
             alt={deal.title}
             data-ai-hint={deal.imageHint}
             fill
@@ -122,13 +143,13 @@ export default function DealListCard({ deal }: DealListCardProps) {
             {(deal.subCategorySlug || deal.mainCategorySlug) && (
               <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                 <Tag className="h-3 w-3" aria-hidden />
-                {deal.subCategorySlug || deal.mainCategorySlug}
+                {String(deal.subCategorySlug || deal.mainCategorySlug)}
               </Badge>
             )}
           </div>
 
           <p className="text-sm text-muted-foreground line-clamp-2">
-            {deal.description}
+            {typeof deal.description === 'string' ? deal.description : ''}
           </p>
 
           {/* Temperature bar */}
@@ -179,7 +200,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
       <div className="flex flex-col items-center justify-between gap-3 pl-4 border-l">
         <VoteControls dealId={deal.id} initialVoteCount={deal.temperature} />
         <Button asChild size="lg" className="whitespace-nowrap">
-          <Link href={deal.link} target="_blank" rel="noopener noreferrer">
+          <Link href={typeof deal.link === 'string' ? deal.link : '#'} target="_blank" rel="noopener noreferrer">
             Idź do okazji
           </Link>
         </Button>
