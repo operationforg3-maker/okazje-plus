@@ -29,9 +29,12 @@ const safeText = (value: unknown, fallback = ''): string => {
 
 function toTimestampSafe(value: any): number {
   if (!value) return 0;
-  if (typeof value === 'string' || typeof value === 'number') {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === 'string') {
     const n = Date.parse(value);
-    return isNaN(n) ? 0 : n;
+    return Number.isNaN(n) ? 0 : n;
   }
   if (typeof value === 'object') {
     try {

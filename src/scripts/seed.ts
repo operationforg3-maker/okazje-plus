@@ -1,6 +1,7 @@
 
 import * as admin from 'firebase-admin';
 import * as dotenv from 'dotenv';
+import { readFileSync } from 'node:fs';
 
 // Load environment variables from .env.local
 dotenv.config({ path: '.env.local' });
@@ -24,8 +25,8 @@ try {
       // Fallback: attempt to load local service account JSON
       // IMPORTANT: Ensure this file is NOT committed with real secrets in production.
       // Current file appears to be sanitized; if the private key contains comment markers they will be stripped.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const svc = require('./serviceAccountKey.json');
+      const svcRaw = readFileSync(new URL('./serviceAccountKey.json', import.meta.url), 'utf-8');
+      const svc = JSON.parse(svcRaw);
       if (!svc.project_id || !svc.client_email || !svc.private_key) {
         throw new Error('serviceAccountKey.json missing required fields');
       }

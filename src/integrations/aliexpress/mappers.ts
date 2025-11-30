@@ -7,6 +7,7 @@
 import { Product, Deal, ProductRatingCard, ProductImageEntry } from '@/lib/types';
 import { AliExpressProduct } from './types';
 import { logger } from '@/lib/logging';
+import { sanitizeDealPayload, sanitizeProductPayload } from '@/lib/sanitizers';
 
 /**
  * Configuration for mapping
@@ -70,7 +71,7 @@ export function mapToProduct(
     ? aliProduct.description.substring(0, 300)
     : aliProduct.title.substring(0, 300);
   
-  const product: Omit<Product, 'id'> = {
+  const productDraft: Partial<Product> = {
     name,
     description,
     longDescription: aliProduct.description || aliProduct.title,
@@ -102,7 +103,7 @@ export function mapToProduct(
     title: name
   });
   
-  return product;
+  return sanitizeProductPayload(productDraft);
 }
 
 /**
@@ -151,7 +152,7 @@ export function mapToDeal(
     ? aliProduct.description.substring(0, 500)
     : `${aliProduct.title}\n\n${aliProduct.shipping?.free ? '✓ Darmowa wysyłka' : ''}`;
   
-  const deal: Omit<Deal, 'id'> = {
+  const dealDraft: Partial<Deal> = {
     title,
     description,
     price: Math.round(price * 100) / 100,
@@ -179,7 +180,7 @@ export function mapToDeal(
     discount: aliProduct.discount_percent
   });
   
-  return deal;
+  return sanitizeDealPayload(dealDraft);
 }
 
 /**

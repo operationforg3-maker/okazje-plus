@@ -5,6 +5,7 @@ import type { Product } from '@/lib/types';
 import ProductCard from '@/components/product-card';
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
+import { sanitizeProductRecord } from '@/lib/sanitizers';
 
 interface ProductCardBoundaryProps {
   product: Product;
@@ -14,6 +15,50 @@ interface ProductCardBoundaryState {
   hasError: boolean;
   errorMessage?: string;
 }
+
+type FieldDiff = {
+  field: string;
+  raw: unknown;
+  sanitized: unknown;
+};
+
+const summarizeProductForLog = (product: Product) => {
+  const sanitized = sanitizeProductRecord(product, product.id);
+  const diffs: FieldDiff[] = [];
+  const rawEntries = product as unknown as Record<string, unknown>;
+  const sanitizedEntries = sanitized as unknown as Record<string, unknown>;
+  const keys = new Set([...Object.keys(rawEntries), ...Object.keys(sanitizedEntries)]);
+
+  const isSimpleValue = (value: unknown): boolean => {
+    return (
+      value === null ||
+      ['string', 'number', 'boolean', 'undefined'].includes(typeof value)
+    );
+  };
+
+  keys.forEach((key) => {
+    const rawValue = rawEntries[key];
+    const sanitizedValue = sanitizedEntries[key];
+
+    if (isSimpleValue(rawValue) && isSimpleValue(sanitizedValue)) {
+      if (!Object.is(rawValue, sanitizedValue)) {
+        diffs.push({ field: key, raw: rawValue, sanitized: sanitizedValue });
+      }
+      return;
+    }
+
+    const rawSerialized = JSON.stringify(rawValue ?? null);
+    const sanitizedSerialized = JSON.stringify(sanitizedValue ?? null);
+    if (rawSerialized !== sanitizedSerialized) {
+      diffs.push({ field: key, raw: rawValue, sanitized: sanitizedValue });
+    }
+  });
+
+  return {
+    sanitized,
+    fieldDiffs: diffs.slice(0, 12),
+  };
+};
 
 export class ProductCardBoundary extends Component<
   ProductCardBoundaryProps,
@@ -26,6 +71,7 @@ export class ProductCardBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    const summary = summarizeProductForLog(this.props.product);
     console.error('ProductCard render error', {
       productId: this.props.product.id,
       error: error?.message,
@@ -36,6 +82,8 @@ export class ProductCardBoundary extends Component<
         ratingSources: this.props.product.ratingSources,
         metadata: this.props.product.metadata,
       },
+      sanitizedSnapshot: summary.sanitized,
+      sanitizedDiffs: summary.fieldDiffs,
     });
   }
 

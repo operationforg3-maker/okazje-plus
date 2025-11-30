@@ -1,6 +1,7 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
+import { sanitizeDealRecord, sanitizeProductRecord } from '@/lib/sanitizers';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
 const _warnedOnce = new Set<string>();
 function warnOnce(key: string, ...args: any[]) {
@@ -43,6 +44,9 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return chunks;
 }
 
+const docToProduct = (snap: any): Product => sanitizeProductRecord(snap.data(), snap.id);
+const docToDeal = (snap: any): Deal => sanitizeDealRecord(snap.data(), snap.id);
+
 export async function getHotDeals(count: number): Promise<Deal[]> {
   // Lazy import cache tylko na serwerze; dla klienta funkcja i tak zwykle nie będzie używana.
   let cacheGetFn: any = null, cacheSetFn: any = null;
@@ -68,7 +72,7 @@ export async function getHotDeals(count: number): Promise<Deal[]> {
     limit(count)
   );
   const querySnapshot = await getDocs(q);
-  const deals = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  const deals = querySnapshot.docs.map(docToDeal);
   
   if (cacheSetFn) {
     await cacheSetFn(cacheKey, deals, 300);
@@ -82,7 +86,7 @@ export async function getRandomDeals(count: number): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
   const q = query(dealsRef, where("status", "==", "approved"), limit(count * 5));
   const snapshot = await getDocs(q);
-  const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+  const all = snapshot.docs.map(docToDeal);
   // prosty shuffle
   for (let i = all.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -106,7 +110,7 @@ export async function getProductsForAdmin(status?: string, maxCount: number = 20
       primaryQ = query(productsRef, orderBy("createdAt", "desc"), limit(maxCount));
     }
     const snap = await getDocs(primaryQ);
-    for (const d of snap.docs) resultsMap.set(d.id, { id: d.id, ...d.data() } as Product);
+    for (const d of snap.docs) resultsMap.set(d.id, docToProduct(d));
   } catch (err: any) {
     warnOnce('getProductsForAdmin-primary', 'getProductsForAdmin primary query failed – fallback', err?.message || err);
   }
@@ -121,7 +125,7 @@ export async function getProductsForAdmin(status?: string, maxCount: number = 20
     }
     const snap = await getDocs(fallbackQ);
     for (const d of snap.docs) {
-      if (!resultsMap.has(d.id)) resultsMap.set(d.id, { id: d.id, ...d.data() } as Product);
+      if (!resultsMap.has(d.id)) resultsMap.set(d.id, docToProduct(d));
       if (resultsMap.size >= maxCount) break;
     }
   } catch (inner: any) {
@@ -154,7 +158,7 @@ export async function getDealsForAdmin(status?: string, maxCount: number = 200):
       primaryQ = query(dealsRef, orderBy("postedAt", "desc"), limit(maxCount));
     }
     const snap = await getDocs(primaryQ);
-    for (const d of snap.docs) resultsMap.set(d.id, { id: d.id, ...d.data() } as Deal);
+    for (const d of snap.docs) resultsMap.set(d.id, docToDeal(d));
   } catch (err: any) {
     warnOnce('getDealsForAdmin-primary', 'getDealsForAdmin primary query failed – fallback', err?.message || err);
   }
@@ -169,7 +173,7 @@ export async function getDealsForAdmin(status?: string, maxCount: number = 200):
     }
     const snap = await getDocs(fallbackQ);
     for (const d of snap.docs) {
-      if (!resultsMap.has(d.id)) resultsMap.set(d.id, { id: d.id, ...d.data() } as Deal);
+      if (!resultsMap.has(d.id)) resultsMap.set(d.id, docToDeal(d));
       if (resultsMap.size >= maxCount) break;
     }
   } catch (inner: any) {
@@ -208,7 +212,7 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       limit(count)
     );
     const querySnapshot = await getDocs(q);
-    const products = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    const products = querySnapshot.docs.map(docToProduct);
     
     if (cacheSetFn) {
       await cacheSetFn(cacheKey, products, 600);
@@ -231,7 +235,7 @@ export async function getTopProductsByCategory(mainCategorySlug: string, count: 
       limit(count)
     );
     const snap = await getDocs(q1);
-    if (!snap.empty) return snap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+    if (!snap.empty) return snap.docs.map(docToProduct);
   } catch (_) {
     // możliwy brak indeksu – przejdź do fallbacku
   }
@@ -245,12 +249,12 @@ export async function getTopProductsByCategory(mainCategorySlug: string, count: 
       limit(count)
     );
     const snap2 = await getDocs(q2);
-    if (!snap2.empty) return snap2.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+    if (!snap2.empty) return snap2.docs.map(docToProduct);
   } catch (_) {}
   // Ostatecznie: pierwsze N
   const q3 = query(productsRef, where("status", "==", "approved"), where("mainCategorySlug", "==", mainCategorySlug), limit(count));
   const snap3 = await getDocs(q3);
-  return snap3.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+  return snap3.docs.map(docToProduct);
 }
 
 // Najgorętsze okazje w kategorii
@@ -265,11 +269,11 @@ export async function getHotDealsByCategory(mainCategorySlug: string, count: num
       limit(count)
     );
     const snap = await getDocs(q1);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+    return snap.docs.map(docToDeal);
   } catch (_) {
     const q2 = query(dealsRef, where("status", "==", "approved"), where("mainCategorySlug", "==", mainCategorySlug), limit(count));
     const snap2 = await getDocs(q2);
-    return snap2.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+    return snap2.docs.map(docToDeal);
   }
 }
 
@@ -283,7 +287,7 @@ export async function getPendingDeals(): Promise<Deal[]> {
     limit(100)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  return querySnapshot.docs.map(docToDeal);
 }
 
 export async function getPendingProducts(): Promise<Product[]> {
@@ -295,7 +299,7 @@ export async function getPendingProducts(): Promise<Product[]> {
     limit(100)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+  return querySnapshot.docs.map(docToProduct);
 }
 
 export async function getRecentlyModerated(status: "approved" | "rejected", days: number = 7): Promise<(Deal | Product)[]> {
@@ -408,13 +412,13 @@ export async function getDealsByCategory(
 
   try {
     const primarySnap = await getDocs(buildPrimaryQuery());
-    return primarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+    return primarySnap.docs.map(docToDeal);
   } catch (err: any) {
     // Missing index lub permission – spróbuj fallback bez sortowania
   warnOnce("getDealsByCategory-primary", "getDealsByCategory primary query failed – fallback", err?.message || err);
     try {
       const fbSnap = await getDocs(buildFallbackQuery());
-      return fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as Deal));
+      return fbSnap.docs.map(docToDeal);
     } catch (inner: any) {
       console.error("getDealsByCategory fallback failed", inner?.message || inner);
       return [];
@@ -492,12 +496,12 @@ export async function getProductsByCategory(
 
   try {
     const primarySnap = await getDocs(buildPrimaryQuery());
-    return primarySnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+    return primarySnap.docs.map(docToProduct);
   } catch (err: any) {
   warnOnce('getProductsByCategory-primary', 'getProductsByCategory primary query failed – fallback', err?.message || err);
     try {
       const fbSnap = await getDocs(buildFallbackQuery());
-      return fbSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+      return fbSnap.docs.map(docToProduct);
     } catch (inner: any) {
       console.error('getProductsByCategory fallback failed', inner?.message || inner);
       return [];
@@ -520,13 +524,13 @@ export async function searchProducts(searchTerm: string): Promise<Product[]> {
 
   const results: { [id: string]: Product } = {};
   nameSnapshot.forEach(doc => {
-    results[doc.id] = { id: doc.id, ...doc.data() } as Product;
+    results[doc.id] = docToProduct(doc);
   });
   categorySnapshot.forEach(doc => {
-    results[doc.id] = { id: doc.id, ...doc.data() } as Product;
+    results[doc.id] = docToProduct(doc);
   });
   subcategorySnapshot.forEach(doc => {
-    results[doc.id] = { id: doc.id, ...doc.data() } as Product;
+    results[doc.id] = docToProduct(doc);
   });
 
   return Object.values(results).filter(p => p.status === 'approved');
@@ -541,7 +545,7 @@ export async function searchDeals(searchTerm: string): Promise<Deal[]> {
 
   const results: { [id: string]: Deal } = {};
   titleSnapshot.forEach(doc => {
-    results[doc.id] = { id: doc.id, ...doc.data() } as Deal;
+    results[doc.id] = docToDeal(doc);
   });
 
   return Object.values(results).filter(d => d.status === 'approved');
@@ -822,7 +826,7 @@ export async function searchProductsForLinking(searchText: string): Promise<Prod
     );
 
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    return querySnapshot.docs.map(docToProduct);
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -1257,7 +1261,7 @@ export async function getFavoriteDeals(userId: string, limitCount: number = 50):
   const deals: Deal[] = [];
   for (const snapshot of dealSnapshots) {
     snapshot.docs.forEach(doc => {
-      deals.push({ id: doc.id, ...doc.data() } as Deal);
+      deals.push(docToDeal(doc));
     });
   }
   
@@ -1302,7 +1306,7 @@ export async function getFavoriteProducts(userId: string, limitCount: number = 5
   const products: Product[] = [];
   for (const snapshot of productSnapshots) {
     snapshot.docs.forEach(doc => {
-      products.push({ id: doc.id, ...doc.data() } as Product);
+      products.push(docToProduct(doc));
     });
   }
   
@@ -1514,7 +1518,7 @@ export async function getAdminDashboardStats() {
     limit(100)
   );
   const recentDealsSnapshot = await getDocs(recentDealsQuery);
-  const recentDeals = recentDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  const recentDeals = recentDealsSnapshot.docs.map(docToDeal);
 
   // Średnia temperatura z aktywnych deals
   const avgTemperature = recentDeals.length > 0
@@ -1528,7 +1532,7 @@ export async function getAdminDashboardStats() {
     limit(500)
   );
   const allDealsSnapshot = await getDocs(allDealsQuery);
-  const allDeals = allDealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
+  const allDeals = allDealsSnapshot.docs.map(docToDeal);
 
   const categoryCount: Record<string, number> = {};
   allDeals.forEach(deal => {

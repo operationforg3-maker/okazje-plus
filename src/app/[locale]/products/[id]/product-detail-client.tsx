@@ -286,7 +286,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               </span>
               
               {/* External rating (AliExpress) */}
-              {hasExternalRating && (
+              {hasExternalRating && externalRating && (
                 <>
                   <Separator orientation="vertical" className="h-6 md:h-8" />
                   <TooltipProvider>

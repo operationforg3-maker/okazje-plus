@@ -61,10 +61,10 @@ type NormalizedRatingSource = {
   source?: string;
 };
 
-const normalizeRatingSource = (source: any): NormalizedRatingSource | null => {
-  if (!source || typeof source !== 'object') return null;
+const normalizeRatingSource = (source: any): NormalizedRatingSource | undefined => {
+  if (!source || typeof source !== 'object') return undefined;
   const average = toNumber(source.average);
-  if (average === null) return null;
+  if (average === null) return undefined;
   const count = toNumber(source.count);
   const normalized: NormalizedRatingSource = { average };
   if (typeof count === 'number') normalized.count = Math.max(0, Math.round(count));
