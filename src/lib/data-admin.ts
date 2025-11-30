@@ -184,6 +184,14 @@ export async function updateDeal(dealId: string, data: Partial<Deal>): Promise<v
   await adminDb.collection('deals').doc(dealId).set(data, { merge: true });
 }
 
+export async function deleteDealDocument(dealId: string): Promise<void> {
+  await adminDb.collection('deals').doc(dealId).delete();
+}
+
+export async function deleteProductDocument(productId: string): Promise<void> {
+  await adminDb.collection('products').doc(productId).delete();
+}
+
 /**
  * Usuwa wszystkie produkty z kolekcji "products" (Admin SDK)
  */
@@ -214,6 +222,54 @@ export async function deleteAllDeals(): Promise<number> {
   
   await batch.commit();
   return snapshot.size;
+}
+
+function isDealDocumentValid(data: FirebaseFirestore.DocumentData | undefined): boolean {
+  if (!data) return false;
+  if (Object.keys(data).length === 0) return false;
+  if (typeof data.title !== 'string' || data.title.trim() === '') return false;
+  if (typeof data.price !== 'number') return false;
+  if (typeof data.image !== 'string' || data.image.trim() === '') return false;
+  return true;
+}
+
+function isProductDocumentValid(data: FirebaseFirestore.DocumentData | undefined): boolean {
+  if (!data) return false;
+  if (Object.keys(data).length === 0) return false;
+  if (typeof data.name !== 'string' || data.name.trim() === '') return false;
+  if (typeof data.price !== 'number') return false;
+  if (typeof data.image !== 'string' || data.image.trim() === '') return false;
+  return true;
+}
+
+async function purgeCollection(
+  collectionName: 'deals' | 'products',
+  isValid: (data: FirebaseFirestore.DocumentData | undefined) => boolean
+): Promise<{ deleted: number; checked: number; skipped: number; }> {
+  const snapshot = await adminDb.collection(collectionName).get();
+  const invalidDocs = snapshot.docs.filter(doc => !isValid(doc.data()));
+
+  const batchSize = 500;
+  for (let i = 0; i < invalidDocs.length; i += batchSize) {
+    const batch = adminDb.batch();
+    const slice = invalidDocs.slice(i, i + batchSize);
+    slice.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+  }
+
+  return {
+    deleted: invalidDocs.length,
+    checked: snapshot.size,
+    skipped: snapshot.size - invalidDocs.length,
+  };
+}
+
+export async function purgeEmptyDeals(): Promise<{ deleted: number; checked: number; skipped: number; }> {
+  return purgeCollection('deals', isDealDocumentValid);
+}
+
+export async function purgeEmptyProducts(): Promise<{ deleted: number; checked: number; skipped: number; }> {
+  return purgeCollection('products', isProductDocumentValid);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, updateDoc, deleteDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function PUT(
   request: NextRequest,
@@ -25,11 +25,9 @@ export async function PUT(
       }
     }
 
-    const productRef = doc(db, 'products', id);
-    
-    // Sprawdź czy produkt istnieje
-    const productSnap = await getDoc(productRef);
-    if (!productSnap.exists()) {
+    const productRef = adminDb.collection('products').doc(id);
+    const productSnap = await productRef.get();
+    if (!productSnap.exists) {
       return NextResponse.json(
         { error: 'Produkt nie został znaleziony' },
         { status: 404 }
@@ -40,7 +38,7 @@ export async function PUT(
     const { id: _ignored, ...updateData } = data || {};
     
     // Przygotuj dane do aktualizacji
-    const firestoreData: any = {};
+    const firestoreData: Record<string, any> = {};
     
     // Skopiuj wszystkie pola oprócz ratingCard
     if (updateData && typeof updateData === 'object') {
@@ -63,10 +61,8 @@ export async function PUT(
     }
     
     // Dodaj timestamp
-    firestoreData.updatedAt = Timestamp.now();
-    
-    // Zaktualizuj
-    await updateDoc(productRef, firestoreData);
+    firestoreData.updatedAt = FieldValue.serverTimestamp();
+    await productRef.set(firestoreData, { merge: true });
 
     return NextResponse.json(
       { 
@@ -104,19 +100,16 @@ export async function DELETE(
         { status: 400 }
       );
     }
-    const productRef = doc(db, 'products', id);
-    
-    // Sprawdź czy produkt istnieje
-    const productSnap = await getDoc(productRef);
-    if (!productSnap.exists()) {
+    const productRef = adminDb.collection('products').doc(id);
+    const productSnap = await productRef.get();
+    if (!productSnap.exists) {
       return NextResponse.json(
         { error: 'Produkt nie został znaleziony' },
         { status: 404 }
       );
     }
 
-    // Usuń
-    await deleteDoc(productRef);
+    await productRef.delete();
 
     return NextResponse.json(
       { 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, updateDoc, deleteDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function PUT(
   request: NextRequest,
@@ -21,11 +21,10 @@ export async function PUT(
       }
     }
 
-    const dealRef = doc(db, 'deals', id);
-    
-    // Sprawdź czy deal istnieje
-    const dealSnap = await getDoc(dealRef);
-    if (!dealSnap.exists()) {
+    const dealRef = adminDb.collection('deals').doc(id);
+
+    const dealSnap = await dealRef.get();
+    if (!dealSnap.exists) {
       return NextResponse.json(
         { error: 'Okazja nie została znaleziona' },
         { status: 404 }
@@ -36,10 +35,10 @@ export async function PUT(
     const { id: _ignored, ...updateData } = data || {};
     
     // Zaktualizuj
-    await updateDoc(dealRef, {
+    await dealRef.set({
       ...(updateData || {}),
-      updatedAt: Timestamp.now(),
-    });
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
 
     return NextResponse.json(
       { 
@@ -69,19 +68,16 @@ export async function DELETE(
         { status: 400 }
       );
     }
-    const dealRef = doc(db, 'deals', id);
-    
-    // Sprawdź czy deal istnieje
-    const dealSnap = await getDoc(dealRef);
-    if (!dealSnap.exists()) {
+    const dealRef = adminDb.collection('deals').doc(id);
+    const dealSnap = await dealRef.get();
+    if (!dealSnap.exists) {
       return NextResponse.json(
         { error: 'Okazja nie została znaleziona' },
         { status: 404 }
       );
     }
 
-    // Usuń
-    await deleteDoc(dealRef);
+    await dealRef.delete();
 
     return NextResponse.json(
       { 
