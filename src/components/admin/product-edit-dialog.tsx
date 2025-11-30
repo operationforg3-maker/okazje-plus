@@ -37,12 +37,25 @@ export default function ProductEditDialog({
   onSuccess,
 }: ProductEditDialogProps) {
   const [loading, setLoading] = useState(false);
+  const toInputText = (value: unknown): string => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    return '';
+  };
+  const toPriceString = (value: unknown): string => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value.toString();
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace?.(/[^0-9.,-]/g, '').replace(',', '.'));
+      return Number.isFinite(parsed) ? parsed.toString() : '';
+    }
+    return '';
+  };
   const [formData, setFormData] = useState({
-    name: product.name,
-    description: product.description,
-    price: product.price.toString(),
-    affiliateUrl: product.affiliateUrl,
-    status: product.status,
+    name: toInputText(product.name),
+    description: toInputText(product.description),
+    price: toPriceString(product.price),
+    affiliateUrl: toInputText(product.affiliateUrl),
+    status: typeof product.status === 'string' ? product.status : 'draft',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +69,7 @@ export default function ProductEditDialog({
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,
-          price: parseFloat(formData.price),
+          price: parseFloat(formData.price.replace(',', '.')),
           affiliateUrl: formData.affiliateUrl,
           status: formData.status,
         }),

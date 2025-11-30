@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
-import ProductCard from '@/components/product-card';
+import { ProductCardBoundary } from '@/components/product-card-boundary';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
+
+const toSearchableText = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
+};
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
@@ -110,11 +116,11 @@ function ProductsPageContent() {
   }, [selectedCategory, selectedSubcategory, searchTerm]);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = !searchTerm || 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
+    if (!searchTerm) return true;
+    const name = toSearchableText(product.name).toLowerCase();
+    const description = toSearchableText(product.description).toLowerCase();
+    const needle = searchTerm.toLowerCase();
+    return name.includes(needle) || description.includes(needle);
   });
 
   // Infinite scroll hook - ładuje kolejne produkty przy scrollowaniu
@@ -280,7 +286,7 @@ function ProductsPageContent() {
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {displayedProducts.map((product) => (
-                        <ProductCard key={product.id} product={product} />
+                        <ProductCardBoundary key={product.id} product={product} />
                       ))}
                     </div>
                     

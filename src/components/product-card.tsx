@@ -46,6 +46,33 @@ const toPlainText = (value: unknown): string => {
   return '';
 };
 
+const toNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace?.(/[^0-9.,-]/g, '').replace(',', '.'));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+type NormalizedRatingSource = {
+  average: number;
+  count?: number;
+  source?: string;
+};
+
+const normalizeRatingSource = (source: any): NormalizedRatingSource | null => {
+  if (!source || typeof source !== 'object') return null;
+  const average = toNumber(source.average);
+  if (average === null) return null;
+  const count = toNumber(source.count);
+  const normalized: NormalizedRatingSource = { average };
+  if (typeof count === 'number') normalized.count = Math.max(0, Math.round(count));
+  const textSource = toPlainText(source.source);
+  if (textSource) normalized.source = textSource;
+  return normalized;
+};
+
 export default function ProductCard({ product }: ProductCardProps) {
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
@@ -68,9 +95,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   const rawCategoryBadge = product.subCategorySlug || product.mainCategorySlug || product.category;
   const categoryBadge = toPlainText(rawCategoryBadge);
   // Rozdzielone źródła ocen do RatingBar
-  const users = product.ratingSources?.users;
-  const editorial = product.ratingSources?.editorial;
-  const external = product.ratingSources?.external;
+  const users = normalizeRatingSource(product.ratingSources?.users);
+  const editorial = normalizeRatingSource(product.ratingSources?.editorial);
+  const external = normalizeRatingSource(product.ratingSources?.external);
   const liveComments = useCommentsCount('products', product.id, (product as any).commentsCount);
   const { addToComparison } = useComparison();
   const normalizedSpecifications = Array.isArray(product.metadata?.specifications)
