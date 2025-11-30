@@ -195,17 +195,33 @@ export async function deleteProductDocument(productId: string): Promise<void> {
 /**
  * Usuwa wszystkie produkty z kolekcji "products" (Admin SDK)
  */
+async function deleteCollectionDocuments(
+  collectionRef: FirebaseFirestore.CollectionReference,
+  batchSize = 250
+): Promise<number> {
+  let deleted = 0;
+
+  while (true) {
+    const snapshot = await collectionRef.limit(batchSize).get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    const batch = adminDb.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += snapshot.size;
+  }
+
+  return deleted;
+}
+
+/**
+ * Usuwa wszystkie produkty z kolekcji "products" (Admin SDK)
+ */
 export async function deleteAllProducts(): Promise<number> {
   const ref = adminDb.collection('products');
-  const snapshot = await ref.get();
-  
-  const batch = adminDb.batch();
-  snapshot.docs.forEach(doc => {
-    batch.delete(doc.ref);
-  });
-  
-  await batch.commit();
-  return snapshot.size;
+  return deleteCollectionDocuments(ref);
 }
 
 /**
@@ -213,15 +229,7 @@ export async function deleteAllProducts(): Promise<number> {
  */
 export async function deleteAllDeals(): Promise<number> {
   const ref = adminDb.collection('deals');
-  const snapshot = await ref.get();
-  
-  const batch = adminDb.batch();
-  snapshot.docs.forEach(doc => {
-    batch.delete(doc.ref);
-  });
-  
-  await batch.commit();
-  return snapshot.size;
+  return deleteCollectionDocuments(ref);
 }
 
 function isDealDocumentValid(data: FirebaseFirestore.DocumentData | undefined): boolean {
@@ -316,16 +324,10 @@ export async function deleteAllCategories(): Promise<{ categories: number; subca
     totalSubcategories += subcategoriesDeleted;
   }
   
-  // Następnie usuń główne kategorie
-  const batch = adminDb.batch();
-  snapshot.docs.forEach(doc => {
-    batch.delete(doc.ref);
-  });
-  
-  await batch.commit();
+  const deletedCategories = await deleteCollectionDocuments(ref);
   
   return {
-    categories: snapshot.size,
+    categories: deletedCategories,
     subcategories: totalSubcategories,
   };
 }
