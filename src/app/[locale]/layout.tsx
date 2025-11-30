@@ -7,6 +7,7 @@ import { AuthProvider } from '@/lib/auth';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import { ComparisonListener } from '@/components/deal-comparison-tool';
+import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazje-plus.web.app'),
@@ -88,6 +89,7 @@ export default async function RootLayout({
           <AuthProvider>
             <ConditionalNav>{children}</ConditionalNav>
             <ComparisonListener />
+            <ExtensionWarningBanner />
             <Toaster />
           </AuthProvider>
         </NextIntlClientProvider>

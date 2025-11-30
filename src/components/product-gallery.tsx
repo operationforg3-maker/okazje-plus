@@ -5,15 +5,18 @@ interface ProductGalleryProps {
 }
 
 export function ProductGallery({ images }: ProductGalleryProps) {
-  if (!images || images.length === 0) return null;
+  const validImages = Array.isArray(images)
+    ? images.filter((img): img is { src: string; alt?: string } => typeof img?.src === 'string' && img.src.length > 0)
+    : [];
+  if (validImages.length === 0) return null;
   // TODO: Zastąpić prostą listę karuzelą (np. Swiper, Embla)
   return (
     <div className="flex gap-2 overflow-x-auto py-2">
-      {images.map((img, i) => (
+      {validImages.map((img, i) => (
         <div key={`gallery-${img.src}-${i}`} className="min-w-[120px] max-w-[200px]">
           <Image
             src={img.src}
-            alt={img.alt || ''}
+            alt={typeof img.alt === 'string' ? img.alt : ''}
             width={200}
             height={200}
             className="rounded border object-cover"

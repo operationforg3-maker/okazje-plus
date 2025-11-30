@@ -259,6 +259,20 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "updatedAt",
           "order": "DESCENDING"
         },
@@ -304,6 +318,24 @@
         },
         {
           "fieldPath": "ratingCard.count",
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mainCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
           "order": "DESCENDING"
         }
       ]
@@ -361,6 +393,24 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mainCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "subCategorySlug",
           "order": "ASCENDING"
         },
@@ -370,6 +420,28 @@
         },
         {
           "fieldPath": "__name__",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mainCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
           "order": "DESCENDING"
         }
       ]
@@ -419,6 +491,14 @@
         {
           "fieldPath": "subCategorySlug",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subSubCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -426,6 +506,46 @@
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mainCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subCategorySlug",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mainCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
         {
           "fieldPath": "status",
           "order": "ASCENDING"
@@ -502,6 +622,32 @@
           "fieldPath": "slug",
           "order": "ASCENDING"
         },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "mainCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "subSubCategorySlug",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
         {
           "fieldPath": "isActive",
           "order": "ASCENDING"

@@ -30,6 +30,22 @@ interface ProductCardProps {
   product: Product;
 }
 
+const toPlainText = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    const firstText = value.find((entry) => typeof entry === 'string');
+    return typeof firstText === 'string' ? firstText : '';
+  }
+  if (value && typeof value === 'object') {
+    for (const entry of Object.values(value as Record<string, unknown>)) {
+      if (typeof entry === 'string') return entry;
+      if (typeof entry === 'number' || typeof entry === 'boolean') return String(entry);
+    }
+  }
+  return '';
+};
+
 export default function ProductCard({ product }: ProductCardProps) {
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
@@ -41,19 +57,56 @@ export default function ProductCard({ product }: ProductCardProps) {
   // Usunięto skuOpen state - modal wariantów został usunięty
   
   const safePrice = typeof product.price === 'number' ? product.price : Number(product.price) || 0;
+  const productName = toPlainText(product.name) || 'Produkt';
+  const productDescription = toPlainText(product.description);
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
   const hasOriginal = typeof (product as any).originalPrice === 'number';
   const original = hasOriginal ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format((product as any).originalPrice) : null;
   const discount = hasOriginal && (product as any).originalPrice > 0
     ? Math.round(100 - (product.price / (product as any).originalPrice) * 100)
     : null;
-  const categoryBadge = product.subCategorySlug || product.mainCategorySlug || product.category;
+  const rawCategoryBadge = product.subCategorySlug || product.mainCategorySlug || product.category;
+  const categoryBadge = toPlainText(rawCategoryBadge);
   // Rozdzielone źródła ocen do RatingBar
   const users = product.ratingSources?.users;
   const editorial = product.ratingSources?.editorial;
   const external = product.ratingSources?.external;
   const liveComments = useCommentsCount('products', product.id, (product as any).commentsCount);
   const { addToComparison } = useComparison();
+  const normalizedSpecifications = Array.isArray(product.metadata?.specifications)
+    ? product.metadata.specifications
+        .map((spec: any) => {
+          if (!spec || typeof spec !== 'object') return null;
+          const key = toPlainText(spec.key);
+          const value = toPlainText(spec.value);
+          if (!key || !value) return null;
+          return { key, value };
+        })
+        .filter(Boolean) as { key: string; value: string }[]
+    : [];
+  const shippingLabel = toPlainText(product.metadata?.shipping);
+  const warehouseLabel = toPlainText(product.metadata?.warehouse);
+  const returnPolicyText = toPlainText(product.metadata?.returnPolicy);
+  const galleryFromDoc = Array.isArray(product.gallery)
+    ? product.gallery
+        .map((img: any) => {
+          if (!img) return null;
+          if (typeof img === 'string') {
+            return { src: img, alt: productName };
+          }
+          if (typeof img === 'object') {
+            const src = typeof img.src === 'string' ? img.src : undefined;
+            const alt = toPlainText(img.alt) || productName;
+            return src ? { src, alt } : null;
+          }
+          return null;
+        })
+        .filter(Boolean) as { src: string; alt?: string }[]
+    : [];
+  const fallbackImage = typeof product.image === 'string' && product.image.length > 4
+    ? product.image
+    : '/placeholder.png';
+  const galleryImages = galleryFromDoc.length > 0 ? galleryFromDoc : [{ src: fallbackImage, alt: productName }];
 
   useEffect(() => {
     // track wyświetlenie karty produktu (raz na sesję per element)
@@ -76,10 +129,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     >
       {/* Galeria zdjęć produktu */}
       <div className="relative overflow-hidden">
-        <ProductGallery images={product.gallery && Array.isArray(product.gallery) && product.gallery.length > 0
-          ? product.gallery.map(img => ({ src: img.src, alt: img.alt }))
-          : [{ src: (typeof product.image === 'string' ? product.image : '/placeholder.png'), alt: String(product.name || '') }]}
-        />
+        <ProductGallery images={galleryImages} />
         {/* Pasek ocen - zawsze widoczny */}
         <div className="absolute left-1.5 top-1.5 z-10">
           <RatingBar users={users} editorial={editorial} external={external} />
@@ -124,7 +174,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {categoryBadge && (
             <Badge variant="secondary" className="flex w-fit items-center gap-1">
               <Tag className="h-3 w-3" aria-hidden />
-              {String(categoryBadge)}
+              {categoryBadge}
             </Badge>
           )}
           {/* Usunięto badge kuponów - dane powinny być w product.metadata */}
@@ -167,11 +217,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
-          {String(product.name || '')}
+          {productName}
         </h3>
         
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {typeof product.description === 'string' ? product.description : ''}
+          {productDescription}
         </p>
 
         {product.ai?.enrichment?.features && product.ai.enrichment.features.length > 0 && (
@@ -193,13 +243,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
         {/* Parametry i wysyłka */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {typeof product.metadata?.shipping === 'string' && (
-            <span>Dostawa: {product.metadata.shipping}</span>
+          {shippingLabel && (
+            <span>Dostawa: {shippingLabel}</span>
           )}
-          {typeof product.metadata?.warehouse === 'string' && (
+          {warehouseLabel && (
             <span className="flex items-center gap-1">
               <Package className="h-3 w-3" />
-              Magazyn: {product.metadata.warehouse}
+              Magazyn: {warehouseLabel}
             </span>
           )}
           {typeof product.metadata?.shippingCost === 'number' && product.metadata.shippingCost > 0 && (
@@ -226,7 +276,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               </Tooltip>
             </TooltipProvider>
           )}
-          {product.metadata?.returnPolicy && (
+          {returnPolicyText && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -236,12 +286,12 @@ export default function ProductCard({ product }: ProductCardProps) {
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  {product.metadata.returnPolicy}
+                  {returnPolicyText}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
-          {product.metadata?.specifications && Array.isArray(product.metadata.specifications) && product.metadata.specifications.length > 0 && (
+          {normalizedSpecifications.length > 0 && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -252,13 +302,13 @@ export default function ProductCard({ product }: ProductCardProps) {
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <div className="space-y-1">
-                    {product.metadata.specifications.slice(0, 5).map((spec, i) => (
+                    {normalizedSpecifications.slice(0, 5).map((spec, i) => (
                       <div key={i} className="text-xs">
                         <span className="font-semibold">{spec.key}:</span> {spec.value}
                       </div>
                     ))}
-                    {product.metadata.specifications.length > 5 && (
-                      <div className="text-[11px] opacity-70">+{product.metadata.specifications.length - 5} więcej</div>
+                    {normalizedSpecifications.length > 5 && (
+                      <div className="text-[11px] opacity-70">+{normalizedSpecifications.length - 5} więcej</div>
                     )}
                   </div>
                 </TooltipContent>
@@ -275,7 +325,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <ShareButton 
           type="product"
           itemId={product.id}
-          title={product.name}
+          title={productName}
           url={`/products/${product.id}`}
           variant="ghost"
           size="sm"
