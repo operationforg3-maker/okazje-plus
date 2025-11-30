@@ -30,6 +30,18 @@ interface DealCardProps {
   deal: Deal;
 }
 
+const safeText = (value: unknown, fallback = ''): string => {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value instanceof Date) return value.toISOString();
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return fallback;
+  }
+};
+
 function toTimestampSafe(value: any): number {
   if (!value) return 0;
   if (typeof value === 'string' || typeof value === 'number') {
@@ -91,6 +103,13 @@ export default function DealCard({ deal }: DealCardProps) {
   const savings = typeof deal.originalPrice === 'number' && deal.originalPrice > deal.price 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price)
     : null;
+  const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
+  const postedBy = safeText(deal.postedBy, 'Użytkownik');
+  const description = safeText(deal.description);
+  const couponCode = safeText(deal.couponCode);
+  const deliveryTime = safeText(deal.importMetadata?.deliveryTime);
+  const warehouseInfo = safeText(deal.importMetadata?.warehouse);
+  const returnPolicy = safeText(deal.importMetadata?.returnPolicy);
 
   const isHot = temperature >= 300;
   const isNew = (() => {
@@ -244,7 +263,7 @@ export default function DealCard({ deal }: DealCardProps) {
         )}
         <Image
           src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
-          alt={deal.title}
+          alt={safeText(deal.title) || 'Okazja'}
           width={600}
           height={400}
           className="aspect-[3/2] w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -338,10 +357,10 @@ export default function DealCard({ deal }: DealCardProps) {
       <div className="flex-grow space-y-3 p-4">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            {(deal.subCategorySlug || deal.mainCategorySlug) && (
+            {categoryLabel && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 <Tag className="h-3 w-3" aria-hidden />
-                {String(deal.subCategorySlug || deal.mainCategorySlug)}
+                {categoryLabel}
               </Badge>
             )}
           </div>
@@ -352,25 +371,25 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
-          {String(deal.title || '')}
+          {safeText(deal.title)}
         </h3>
         
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-          {typeof deal.description === 'string' ? deal.description : ''}
+          {description}
         </p>
 
         {/* Szczegóły dostawy i dodatkowe info */}
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {deal.importMetadata?.deliveryTime && (
+          {deliveryTime && (
             <span className="flex items-center gap-1">
               <Truck className="h-3 w-3" />
-              {deal.importMetadata.deliveryTime}
+              {deliveryTime}
             </span>
           )}
-          {deal.importMetadata?.warehouse && (
+          {warehouseInfo && (
             <span className="flex items-center gap-1">
               <Package className="h-3 w-3" />
-              Magazyn: {deal.importMetadata.warehouse}
+              Magazyn: {warehouseInfo}
             </span>
           )}
           {typeof deal.shippingCost === 'number' && deal.shippingCost > 0 && (
@@ -379,11 +398,11 @@ export default function DealCard({ deal }: DealCardProps) {
           {deal.cashback && (
             <span className="font-semibold text-green-600">
               Cashback: {deal.cashback.amount ? `${deal.cashback.amount} PLN` : `${deal.cashback.percentage}%`}
-              {deal.cashback.provider && ` (${deal.cashback.provider})`}
+              {deal.cashback.provider && ` (${safeText(deal.cashback.provider)})`}
             </span>
           )}
-          {deal.couponCode && (
-            <span className="font-mono text-primary">Kod: {deal.couponCode}</span>
+          {couponCode && (
+            <span className="font-mono text-primary">Kod: {couponCode}</span>
           )}
           {typeof deal.importMetadata?.sellerRating === 'number' && (
             <TooltipProvider>
@@ -400,7 +419,7 @@ export default function DealCard({ deal }: DealCardProps) {
               </Tooltip>
             </TooltipProvider>
           )}
-          {deal.importMetadata?.returnPolicy && (
+          {returnPolicy && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -410,7 +429,7 @@ export default function DealCard({ deal }: DealCardProps) {
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
-                  {deal.importMetadata.returnPolicy}
+                  {returnPolicy}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -431,7 +450,7 @@ export default function DealCard({ deal }: DealCardProps) {
                   <div className="space-y-1">
                     {deal.importMetadata.specifications.slice(0, 5).map((spec, i) => (
                       <div key={i} className="text-xs">
-                        <span className="font-semibold">{spec.key}:</span> {spec.value}
+                        <span className="font-semibold">{safeText(spec?.key)}:</span> {safeText(spec?.value)}
                       </div>
                     ))}
                     {deal.importMetadata.specifications.length > 5 && (
@@ -473,7 +492,7 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Dodane przez <span className="font-medium text-foreground">{deal.postedBy}</span></span>
+          <span>Dodane przez <span className="font-medium text-foreground">{postedBy}</span></span>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1" title="Głosy">
               <ArrowUp className="h-3 w-3" />
@@ -527,7 +546,7 @@ export default function DealCard({ deal }: DealCardProps) {
           <ShareButton 
             type="deal" 
             itemId={deal.id} 
-            title={deal.title} 
+            title={safeText(deal.title) || 'Okazja'} 
             url={`/deals/${deal.id}`} 
             variant="ghost" 
             size="sm" 

@@ -15,6 +15,18 @@ interface DealListCardProps {
   deal: Deal;
 }
 
+const safeText = (value: unknown, fallback = ''): string => {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (value instanceof Date) return value.toISOString();
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return fallback;
+  }
+};
+
 function toTimestampSafe(value: any): number {
   if (!value) return 0;
   if (typeof value === 'string' || typeof value === 'number') {
@@ -64,6 +76,9 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const savings = typeof deal.originalPrice === 'number' && deal.originalPrice > deal.price 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price)
     : null;
+  const description = safeText(deal.description);
+  const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
+  const postedBy = safeText(deal.postedBy, 'Użytkownik');
 
   const isHot = deal.temperature >= 300;
   const isNew = (() => {
@@ -86,8 +101,8 @@ export default function DealListCard({ deal }: DealListCardProps) {
         <div className="relative w-40 h-32">
           <Image
             src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
-            alt={deal.title}
-            data-ai-hint={deal.imageHint}
+            alt={safeText(deal.title) || 'Okazja'}
+            data-ai-hint={safeText(deal.imageHint)}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
@@ -129,7 +144,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
           <div className="flex items-center justify-between gap-3">
             <Link href={`${prefix}/deals/${deal.id}`} className="group/title">
               <h3 className="font-headline text-xl font-semibold group-hover/title:text-primary transition-colors line-clamp-2">
-                {deal.title}
+                {safeText(deal.title)}
               </h3>
             </Link>
           </div>
@@ -139,17 +154,17 @@ export default function DealListCard({ deal }: DealListCardProps) {
               <Clock className="h-3 w-3" />
               {getRelativeTime(deal.postedAt)}
             </span>
-            <span>przez <span className="font-medium text-foreground">{deal.postedBy}</span></span>
-            {(deal.subCategorySlug || deal.mainCategorySlug) && (
+            <span>przez <span className="font-medium text-foreground">{postedBy}</span></span>
+            {categoryLabel && (
               <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                 <Tag className="h-3 w-3" aria-hidden />
-                {String(deal.subCategorySlug || deal.mainCategorySlug)}
+                {categoryLabel}
               </Badge>
             )}
           </div>
 
           <p className="text-sm text-muted-foreground line-clamp-2">
-            {typeof deal.description === 'string' ? deal.description : ''}
+            {description}
           </p>
 
           {/* Temperature bar */}
