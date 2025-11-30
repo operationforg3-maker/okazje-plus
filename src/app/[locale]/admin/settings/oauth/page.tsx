@@ -54,6 +54,11 @@ function OAuthSettingsPage() {
   const [tokens, setTokens] = useState<TokenDisplay[]>([]);
   const [processingTokenId, setProcessingTokenId] = useState<string | null>(null);
   const [selectedVendor, setSelectedVendor] = useState<string>('aliexpress');
+  const successParam = searchParams.get('success');
+  const errorParam = searchParams.get('error');
+  const errorDescriptionParam = searchParams.get('error_description');
+  const vendorParam = searchParams.get('vendorId');
+  const accountNameParam = searchParams.get('accountName');
 
   const fetchTokens = useCallback(async () => {
     setLoading(true);
@@ -79,37 +84,27 @@ function OAuthSettingsPage() {
   }, [selectedVendor, toast]);
 
   useEffect(() => {
-    // Check for OAuth callback status
-    const success = searchParams.get('success');
-    const error = searchParams.get('error');
-    const errorDescription = searchParams.get('error_description');
-
-    if (success === 'true') {
-      const vendorId = searchParams.get('vendorId');
-      const accountName = searchParams.get('accountName');
-      
+    if (successParam === 'true') {
       toast({
         title: 'OAuth Authorized Successfully',
-        description: `Token for ${accountName || 'default'} account on ${vendorId} obtained.`,
+        description: `Token for ${accountNameParam || 'default'} account on ${vendorParam} obtained.`,
       });
-      
-      // Clear URL parameters
+
       window.history.replaceState({}, '', '/admin/settings/oauth');
     }
 
-    if (error) {
+    if (errorParam) {
       toast({
         title: 'OAuth Authorization Failed',
-        description: errorDescription || error,
+        description: errorDescriptionParam || errorParam,
         variant: 'destructive',
       });
-      
-      // Clear URL parameters
+
       window.history.replaceState({}, '', '/admin/settings/oauth');
     }
 
     fetchTokens();
-  }, [searchParams, toast, fetchTokens]);
+  }, [successParam, errorParam, errorDescriptionParam, vendorParam, accountNameParam, toast, fetchTokens]);
 
   const handleAuthorize = (accountName?: string) => {
     const params = new URLSearchParams({
