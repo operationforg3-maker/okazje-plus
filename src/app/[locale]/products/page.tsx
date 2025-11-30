@@ -27,6 +27,8 @@ const toSearchableText = (value: unknown): string => {
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
+  const mainCategoryParam = searchParams.get('mainCategory');
+  const subCategoryParam = searchParams.get('subCategory');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -49,9 +51,6 @@ function ProductsPageContent() {
         setCategories(fetchedCategories);
         
         // Sprawdź parametry URL
-        const mainCategoryParam = searchParams.get('mainCategory');
-        const subCategoryParam = searchParams.get('subCategory');
-        
         if (mainCategoryParam && fetchedCategories.length > 0) {
           const foundCategory = fetchedCategories.find(c => c.id === mainCategoryParam || c.slug === mainCategoryParam);
           if (foundCategory) {
@@ -79,7 +78,7 @@ function ProductsPageContent() {
       }
     }
     fetchData();
-  }, [searchParams]);
+  }, [mainCategoryParam, subCategoryParam]);
 
   // Pobierz produkty przy zmianie kategorii / subkategorii / wyszukiwaniu
   useEffect(() => {
