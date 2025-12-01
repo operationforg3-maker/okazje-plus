@@ -101,13 +101,14 @@ export default function DealListCard({ deal }: DealListCardProps) {
   return (
     <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
   <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
-        <div className="relative w-40 h-32">
+        <div className="relative w-40 h-32 bg-muted">
           <Image
             src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
             alt={safeText(deal.title) || 'Okazja'}
             data-ai-hint={safeText(deal.imageHint)}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="160px"
+            className="object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </div>
         <div className="absolute left-2 top-2 flex flex-col gap-1">

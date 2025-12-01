@@ -257,7 +257,7 @@ export default function DealCard({ deal }: DealCardProps) {
       onClick={handleDetailClick}
       className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
     >
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden aspect-square bg-muted">
         {/* Pasek ocen produktu jeśli powiązany */}
         {product && product.ratingSources && (
           <div className="absolute left-1.5 top-1.5 z-10">
@@ -267,14 +267,14 @@ export default function DealCard({ deal }: DealCardProps) {
         <Image
           src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
           alt={safeText(deal.title) || 'Okazja'}
-          width={600}
-          height={400}
-          className="aspect-[3/2] w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          className="object-contain transition-transform duration-300 group-hover:scale-105"
         />
         <Button
           size="icon"
           variant="ghost"
-          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white hover:scale-110 transition-all"
+          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white hover:scale-110 transition-all z-10"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -288,7 +288,7 @@ export default function DealCard({ deal }: DealCardProps) {
             }`}
           />
         </Button>
-        <div className="absolute right-2 top-2 flex gap-1">
+        <div className="absolute right-2 top-2 flex gap-1 z-10">
           {isHot && (
             <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg">
               <Flame className="mr-1 h-3 w-3" />
