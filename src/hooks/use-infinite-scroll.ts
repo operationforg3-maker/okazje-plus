@@ -20,12 +20,13 @@ export function useInfiniteScroll<T>({
   const [isLoading, setIsLoading] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Inicjalizacja - pokaż pierwsze elementy
+  // Inicjalizacja / reset przy zmianie listy (nowe filtry, kategorie itp.)
   useEffect(() => {
     const initial = items.slice(0, initialItemsPerPage);
     setDisplayedItems(initial);
     setCurrentIndex(initialItemsPerPage);
     setHasMore(initialItemsPerPage < items.length);
+    setIsLoading(false);
   }, [items, initialItemsPerPage]);
 
   // Funkcja ładująca kolejne elementy
@@ -69,14 +70,7 @@ export function useInfiniteScroll<T>({
     };
   }, [hasMore, isLoading, loadMore, loadMoreThreshold]);
 
-  // Reset gdy zmienią się items (nowe filtry, kategorie itp.)
-  useEffect(() => {
-    const initial = items.slice(0, initialItemsPerPage);
-    setDisplayedItems(initial);
-    setCurrentIndex(initialItemsPerPage);
-    setHasMore(initialItemsPerPage < items.length);
-    setIsLoading(false);
-  }, [items, initialItemsPerPage]);
+  // (Usunięto duplikat resetu aby uniknąć podwójnych setState i pętli renderów)
 
   return {
     displayedItems,
