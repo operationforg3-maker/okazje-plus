@@ -72,18 +72,26 @@ function SetupPage() {
     loadIndexesSchedule();
   }, []);
 
+  const [categoryMode, setCategoryMode] = useState<'seeds-only' | 'ai-only' | 'hybrid'>('seeds-only');
+  const [categoryPrompt, setCategoryPrompt] = useState('');
+
   const handleCreateCategories = async () => {
-    if (!confirm('To utworzy strukturę kategorii (9 głównych → 60+ podkategorii → 200+ sub-podkategorii). Kontynuować?')) return;
+    if (!confirm('To utworzy strukturę kategorii. Kontynuować?')) return;
     
     setLoading(true);
     setSeedingStatus('running');
     setResult('📁 Tworzę strukturę kategorii...\n\nTo może zająć chwilę...');
     
     try {
+      const useAi = categoryMode !== 'seeds-only';
       const res = await fetch('/api/admin/ai/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'createCategoryStructure' })
+        body: JSON.stringify(
+          useAi
+            ? { command: 'generateCategoriesAI', params: { mode: categoryMode, prompt: categoryPrompt || undefined } }
+            : { command: 'createCategoryStructure' }
+        )
       });
       
       if (!res.ok) {
@@ -423,22 +431,48 @@ function SetupPage() {
                 </div>
                 <CardTitle className="text-xl">Utwórz Kategorie</CardTitle>
                 <CardDescription>
-                  Tworzy 3-poziomową strukturę kategorii (9 → 60+ → 200+)
+                  Tworzy 3-poziomową strukturę kategorii (Seed/AI/Hybryda)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tryb tworzenia kategorii</label>
+                  <select
+                    value={categoryMode}
+                    onChange={(e) => setCategoryMode(e.target.value as any)}
+                    className="w-full p-2 text-sm border rounded-md bg-background"
+                    disabled={loading}
+                  >
+                    <option value="seeds-only">Z seedów (statyczne)</option>
+                    <option value="ai-only">AI (na podstawie promptu)</option>
+                    <option value="hybrid">Hybryda (seedy + AI)</option>
+                  </select>
+                </div>
+                {categoryMode !== 'seeds-only' && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Prompt dla AI</label>
+                    <textarea
+                      value={categoryPrompt}
+                      onChange={(e) => setCategoryPrompt(e.target.value)}
+                      placeholder="Np. Rozszerz elektronikę o smart home, wearables, narzędzia pomiarowe; dodaj zwierzęta i biuro"
+                      className="w-full p-2 text-sm border rounded-md bg-background h-24"
+                      disabled={loading}
+                    />
+                    <p className="text-xs text-muted-foreground">AI wygeneruje drzewo (3 poziomy) po polsku z poprawnymi slugami.</p>
+                  </div>
+                )}
                 <ul className="text-sm space-y-2 text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <span>9 kategorii głównych</span>
+                    <span>15+ kategorii głównych (rozszerzone)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <span>60+ podkategorii</span>
+                    <span>70+ podkategorii</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <span>200+ sub-podkategorii</span>
+                    <span>350+ sub-podkategorii</span>
                   </li>
                 </ul>
                 <Button

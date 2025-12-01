@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fillCategoriesWithProducts } from '@/ai/flows/fillCategoriesWithProducts';
 import { fillCategoriesWithDeals } from '@/ai/flows/fillCategoriesWithDeals';
 import { createCategoryStructure } from '@/ai/flows/createCategoryStructure';
+import generateCategoriesAI from '@/ai/flows/generateCategoriesAI';
 import { logAiCommand } from '@/lib/data-admin';
 
 export async function POST(req: NextRequest) {
@@ -36,6 +37,17 @@ export async function POST(req: NextRequest) {
       } catch (logError) {
         console.error('[AI Command] Failed to log command:', logError);
       }
+    } else if (command === 'generateCategoriesAI' || command.includes('generuj kategorie')) {
+      console.log('[AI Command] Executing generateCategoriesAI...');
+      const params = body?.params ?? { mode: 'seeds-only' };
+      const aiRes = await generateCategoriesAI(params);
+      result = `OK: Utworzono ${aiRes.createdCount} kategorii (mode: ${aiRes.mode})`;
+      console.log('[AI Command] Result:', result);
+      try {
+        await logAiCommand({ command: 'generateCategoriesAI', status: 'success', result });
+      } catch (logError) {
+        console.error('[AI Command] Failed to log command:', logError);
+      }
     } else if (command === 'fillCategoriesWithProducts' || command.includes('wypełnij katalog')) {
       console.log('[AI Command] Executing fillCategoriesWithProducts...');
       result = await fillCategoriesWithProducts();
@@ -67,7 +79,7 @@ export async function POST(req: NextRequest) {
         console.error('[AI Command] Failed to log command:', logError);
       }
     } else {
-      result = `Nieznane polecenie: "${command}". Dostępne: createCategoryStructure, fillCategoriesWithProducts, fillCategoriesWithDeals`;
+      result = `Nieznane polecenie: "${command}". Dostępne: createCategoryStructure, generateCategoriesAI, fillCategoriesWithProducts, fillCategoriesWithDeals`;
       return NextResponse.json({ result }, { status: 400 });
     }
     

@@ -102,6 +102,15 @@ Teraz **wszystkie 18 stron admina** mają wpisy w sidebarze:
 17. ✅ `/admin/settings` (Ustawienia)
 18. ✅ `/admin/settings/oauth` (OAuth - dostępne przez Settings)
 
+## Seeding Kategorii
+
+- Przycisk "Utwórz Kategorie" ma teraz trzy tryby:
+   - Seeds-only: używa `src/lib/category-seeds.ts` (statyczne, deterministyczne)
+   - AI-only: generuje pełne drzewo przez AI na bazie promptu (3 poziomy, polskie nazwy, slug kebab-case)
+   - Hybryda: scala seedy z wynikiem AI (unikając duplikatów po `slug`)
+- UI pozwala wpisać prompt dla AI (opcjonalnie). Endpoint: `/api/admin/ai/command` z `command=generateCategoriesAI`.
+- Wypełnienie katalogu produktami jest osobnym krokiem (AliExpress API).
+
 ### Następne kroki
 
 Aby wdrożyć zmiany:
