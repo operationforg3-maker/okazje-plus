@@ -72,12 +72,45 @@ function SetupPage() {
     loadIndexesSchedule();
   }, []);
 
-  const handleFillCatalog = async () => {
-    if (!confirm('To wypełni bazę kategoriami i produktami z AliExpress. Kontynuować?')) return;
+  const handleCreateCategories = async () => {
+    if (!confirm('To utworzy strukturę kategorii (9 głównych → 60+ podkategorii → 200+ sub-podkategorii). Kontynuować?')) return;
     
     setLoading(true);
     setSeedingStatus('running');
-    setResult('🚀 Rozpoczynam wypełnianie katalogu...\n\nTo może zająć kilka minut. Proszę czekać...');
+    setResult('📁 Tworzę strukturę kategorii...\n\nTo może zająć chwilę...');
+    
+    try {
+      const res = await fetch('/api/admin/ai/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'createCategoryStructure' })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
+        setSeedingStatus('error');
+        return;
+      }
+      
+      const data = await res.json();
+      setResult(data.result || '✅ Struktura kategorii utworzona!');
+      setSeedingStatus('success');
+    } catch (e: any) {
+      setResult(`❌ Błąd połączenia: ${e.message || 'Sprawdź połączenie z internetem'}`);
+      setSeedingStatus('error');
+      console.error('Fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFillWithProducts = async () => {
+    if (!confirm('To wypełni istniejące kategorie produktami z AliExpress API. Kontynuować?')) return;
+    
+    setLoading(true);
+    setSeedingStatus('running');
+    setResult('📦 Pobieram produkty z AliExpress...\n\nTo może zająć kilka minut. Proszę czekać...');
     
     try {
       const res = await fetch('/api/admin/ai/command', {
@@ -94,7 +127,7 @@ function SetupPage() {
       }
       
       const data = await res.json();
-      setResult(data.result || '✅ Zakończono!');
+      setResult(data.result || '✅ Produkty dodane!');
       setSeedingStatus('success');
     } catch (e: any) {
       setResult(`❌ Błąd połączenia: ${e.message || 'Sprawdź połączenie z internetem'}`);
@@ -378,40 +411,90 @@ function SetupPage() {
 
           {/* Quick Actions Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Fill Catalog */}
+            {/* Create Categories Structure */}
             <Card className="relative overflow-hidden group hover:shadow-xl transition-all border-2">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-bl-full" />
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-bl-full" />
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-                    <Package className="h-6 w-6 text-white" />
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <Database className="h-6 w-6 text-white" />
                   </div>
-                  <Badge variant="secondary">~300 produktów</Badge>
+                  <Badge variant="secondary">Krok 1</Badge>
                 </div>
-                <CardTitle className="text-xl">Wypełnij Katalog</CardTitle>
+                <CardTitle className="text-xl">Utwórz Kategorie</CardTitle>
                 <CardDescription>
-                  Tworzy strukturę kategorii i pobiera produkty z AliExpress API
+                  Tworzy 3-poziomową strukturę kategorii (9 → 60+ → 200+)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ul className="text-sm space-y-2 text-muted-foreground">
                   <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Kategorie jak Pepper.pl</span>
+                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <span>9 kategorii głównych</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>Produkty z AliExpress</span>
+                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <span>60+ podkategorii</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>AI-enhanced metadata</span>
+                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <span>200+ sub-podkategorii</span>
                   </li>
                 </ul>
                 <Button
-                  onClick={handleFillCatalog}
+                  onClick={handleCreateCategories}
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Tworzę...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Utwórz
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Fill with Products */}
+            <Card className="relative overflow-hidden group hover:shadow-xl transition-all border-2">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-bl-full" />
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
+                    <Package className="h-6 w-6 text-white" />
+                  </div>
+                  <Badge variant="secondary">Krok 2</Badge>
+                </div>
+                <CardTitle className="text-xl">Wypełnij Produktami</CardTitle>
+                <CardDescription>
+                  Pobiera produkty z AliExpress API do istniejących kategorii
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <ul className="text-sm space-y-2 text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <span>Produkty z AliExpress</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <span>AI-enhanced metadata</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                    <span>~300 produktów</span>
+                  </li>
+                </ul>
+                <Button
+                  onClick={handleFillWithProducts}
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                 >
                   {loading ? (
                     <>
@@ -421,7 +504,7 @@ function SetupPage() {
                   ) : (
                     <>
                       <Play className="mr-2 h-4 w-4" />
-                      Uruchom
+                      Wypełnij
                     </>
                   )}
                 </Button>

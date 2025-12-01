@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fillCategoriesWithProducts } from '@/ai/flows/fillCategoriesWithProducts';
 import { fillCategoriesWithDeals } from '@/ai/flows/fillCategoriesWithDeals';
+import { createCategoryStructure } from '@/ai/flows/createCategoryStructure';
 import { logAiCommand } from '@/lib/data-admin';
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,22 @@ export async function POST(req: NextRequest) {
     let result: string;
     
     // Rozpoznaj polecenie i wywołaj odpowiedni flow
-    if (command === 'fillCategoriesWithProducts' || command.includes('wypełnij katalog')) {
+    if (command === 'createCategoryStructure' || command.includes('utwórz kategorie')) {
+      console.log('[AI Command] Executing createCategoryStructure...');
+      result = await createCategoryStructure();
+      console.log('[AI Command] Result:', result);
+      
+      // Zaloguj do historii
+      try {
+        await logAiCommand({
+          command: 'createCategoryStructure',
+          status: 'success',
+          result,
+        });
+      } catch (logError) {
+        console.error('[AI Command] Failed to log command:', logError);
+      }
+    } else if (command === 'fillCategoriesWithProducts' || command.includes('wypełnij katalog')) {
       console.log('[AI Command] Executing fillCategoriesWithProducts...');
       result = await fillCategoriesWithProducts();
       console.log('[AI Command] Result:', result);
@@ -51,7 +67,7 @@ export async function POST(req: NextRequest) {
         console.error('[AI Command] Failed to log command:', logError);
       }
     } else {
-      result = `Nieznane polecenie: "${command}". Dostępne: fillCategoriesWithProducts, fillCategoriesWithDeals`;
+      result = `Nieznane polecenie: "${command}". Dostępne: createCategoryStructure, fillCategoriesWithProducts, fillCategoriesWithDeals`;
       return NextResponse.json({ result }, { status: 400 });
     }
     
