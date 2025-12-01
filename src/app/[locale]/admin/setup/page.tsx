@@ -20,7 +20,9 @@ import {
   Flame,
   RefreshCw,
   Clock,
-  Calendar
+  Calendar,
+  Link2,
+  ListTree
 } from 'lucide-react';
 
 function SetupPage() {
@@ -34,6 +36,14 @@ function SetupPage() {
   const [scheduleTime, setScheduleTime] = useState('02:00');
   const [lastRun, setLastRun] = useState<string | null>(null);
   const [nextRun, setNextRun] = useState<string | null>(null);
+  
+  // Indexes verification state
+  const [indexesResult, setIndexesResult] = useState('');
+  const [indexesLoading, setIndexesLoading] = useState(false);
+  
+  // Links verification state
+  const [linksResult, setLinksResult] = useState('');
+  const [linksLoading, setLinksLoading] = useState(false);
 
   const handleFillCatalog = async () => {
     if (!confirm('To wypełni bazę kategoriami i produktami z AliExpress. Kontynuować?')) return;
@@ -169,6 +179,94 @@ function SetupPage() {
   const handleTestRun = async () => {
     if (!confirm('Uruchomić testowy import deals? To może zająć kilka minut.')) return;
     await handleFetchDeals();
+  };
+
+  const handleVerifyIndexes = async () => {
+    setIndexesLoading(true);
+    setIndexesResult('🔍 Weryfikacja indeksów Firestore...\n');
+    
+    try {
+      const res = await fetch('/api/admin/indexes/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify' })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setIndexesResult(`❌ Błąd ${res.status}: ${errorData.error || 'Nieznany błąd'}`);
+        return;
+      }
+      
+      const data = await res.json();
+      
+      let resultText = `${data.message}\n\n`;
+      resultText += `📊 Podsumowanie:\n`;
+      resultText += `  • Wszystkich indeksów: ${data.summary.total}\n`;
+      resultText += `  • Istnieje: ${data.summary.existing}\n`;
+      resultText += `  • Brakuje: ${data.summary.missing}\n\n`;
+      
+      if (data.summary.missing > 0) {
+        resultText += `❌ Brakujące indeksy:\n`;
+        data.indexes.filter((idx: any) => !idx.exists).forEach((idx: any) => {
+          resultText += `  • ${idx.collection}: ${idx.fields}\n`;
+          if (idx.consoleUrl) {
+            resultText += `    👉 ${idx.consoleUrl}\n`;
+          }
+        });
+        resultText += `\n💡 Kliknij linki powyżej aby utworzyć indeksy w konsoli Firebase.\n`;
+      }
+      
+      setIndexesResult(resultText);
+    } catch (e: any) {
+      setIndexesResult(`❌ Błąd połączenia: ${e.message}`);
+    } finally {
+      setIndexesLoading(false);
+    }
+  };
+
+  const handleVerifyLinks = async (updateLinks = false) => {
+    setLinksLoading(true);
+    setLinksResult(`🔍 ${updateLinks ? 'Aktualizacja' : 'Weryfikacja'} linków afiliacyjnych...\n`);
+    
+    try {
+      const res = await fetch('/api/admin/links/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: updateLinks ? 'update' : 'verify',
+          limit: 1000 // Check up to 1000 items
+        })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
+        setLinksResult(`❌ Błąd ${res.status}: ${errorData.error || 'Nieznany błąd'}`);
+        return;
+      }
+      
+      const data = await res.json();
+      
+      let resultText = `${data.message}\n\n`;
+      resultText += `📊 Podsumowanie:\n`;
+      resultText += `  • Sprawdzono: ${data.stats.total} linków\n`;
+      resultText += `  • Linki afiliacyjne: ${data.stats.affiliate}\n`;
+      resultText += `  • Bez afiliacji: ${data.stats.nonAffiliate}\n`;
+      
+      if (updateLinks && data.stats.updated > 0) {
+        resultText += `  • ✅ Zaktualizowano: ${data.stats.updated}\n`;
+      }
+      
+      if (data.stats.errors > 0) {
+        resultText += `  • ⚠️ Błędy: ${data.stats.errors}\n`;
+      }
+      
+      setLinksResult(resultText);
+    } catch (e: any) {
+      setLinksResult(`❌ Błąd połączenia: ${e.message}`);
+    } finally {
+      setLinksLoading(false);
+    }
   };
 
   return (
@@ -585,6 +683,156 @@ function SetupPage() {
 
         {/* MAINTENANCE TAB */}
         <TabsContent value="maintenance" className="space-y-6">
+          {/* Indexes Verification */}
+          <Card className="border-2 border-blue-200 dark:border-blue-900/50">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ListTree className="h-5 w-5 text-blue-600" />
+                    Weryfikacja Indeksów Firestore
+                  </CardTitle>
+                  <CardDescription>
+                    Sprawdza czy wszystkie wymagane indeksy są utworzone w Firestore
+                  </CardDescription>
+                </div>
+                <Badge variant="secondary">
+                  10+ indeksów
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Indeksy Firestore są wymagane dla złożonych zapytań. Brak indeksów powoduje błędy w aplikacji.
+                </p>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Deals (status, temperature, category)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Products (status, category, createdAt)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Comments, Votes, User Activity
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleVerifyIndexes}
+                  disabled={indexesLoading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {indexesLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sprawdzam...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Weryfikuj Indeksy
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {indexesResult && (
+                <div className="mt-4">
+                  <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg font-mono overflow-x-auto max-h-96 overflow-y-auto">
+                    {indexesResult}
+                  </pre>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Links Verification */}
+          <Card className="border-2 border-green-200 dark:border-green-900/50">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Link2 className="h-5 w-5 text-green-600" />
+                    Weryfikacja Linków Afiliacyjnych
+                  </CardTitle>
+                  <CardDescription>
+                    Sprawdza i aktualizuje linki do produktów/deals na afiliacyjne
+                  </CardDescription>
+                </div>
+                <Badge variant="secondary">
+                  Auto-update
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Wszystkie linki powinny być linkami afiliacyjnymi aby generować przychód z prowizji.
+                </p>
+                <Alert className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-sm">
+                    <strong>Ważne:</strong> Linki afiliacyjne zawierają parametry trackingowe (aff_, tag=, ref=). 
+                    Narzędzie automatycznie konwertuje standardowe linki na afiliacyjne.
+                  </AlertDescription>
+                </Alert>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handleVerifyLinks(false)}
+                  disabled={linksLoading}
+                  variant="outline"
+                  className="border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                >
+                  {linksLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sprawdzam...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Tylko Weryfikuj
+                    </>
+                  )}
+                </Button>
+                
+                <Button
+                  onClick={() => handleVerifyLinks(true)}
+                  disabled={linksLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {linksLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Aktualizuję...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Weryfikuj i Aktualizuj
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {linksResult && (
+                <div className="mt-4">
+                  <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg font-mono overflow-x-auto">
+                    {linksResult}
+                  </pre>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Zadania konserwacyjne</CardTitle>
@@ -592,11 +840,7 @@ function SetupPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Button variant="outline" className="justify-start">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Odśwież indeksy Firestore
-                </Button>
-                <Button variant="outline" className="justify-start">
+                <Button variant="outline" className="justify-start" disabled>
                   <Database className="mr-2 h-4 w-4" />
                   Backup bazy danych
                 </Button>
