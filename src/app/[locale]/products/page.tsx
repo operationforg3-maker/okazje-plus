@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package } from 'lucide-react';
 import { Category, Product, Deal } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -58,13 +58,10 @@ function ProductsPageContent() {
             if (subCategoryParam) {
               setSelectedSubcategory(subCategoryParam);
             }
-          } else {
-            // Fallback do pierwszej kategorii
-            setSelectedCategory(fetchedCategories[0]);
           }
-        } else if (fetchedCategories.length > 0) {
-          setSelectedCategory(fetchedCategories[0]);
+          // Jeśli nie znaleziono kategorii z URL, pozostaw null (wszystkie produkty)
         }
+        // Jeśli brak parametrów URL, pozostaw null (wszystkie produkty)
 
         // Pobierz deal of the day
         if (showcaseConfig?.dealOfTheDayId) {
@@ -84,18 +81,23 @@ function ProductsPageContent() {
   useEffect(() => {
     let cancelled = false;
     async function fetchProducts() {
-      if (!selectedCategory) return;
       setIsLoading(true);
       try {
         const q = searchTerm.trim();
         if (q.length > 1) {
+          // Wyszukiwanie z filtrowaniem po kategorii (jeśli wybrana)
           const results = await searchProductsTypesense(q, {
-            mainCategorySlug: selectedCategory.slug || selectedCategory.id,
+            mainCategorySlug: selectedCategory?.slug || selectedCategory?.id,
             subCategorySlug: selectedSubcategory || undefined,
             limit: 100,
           });
           if (!cancelled) setProducts(results);
+        } else if (!selectedCategory) {
+          // Wszystkie produkty (polecane)
+          const allProducts = await getRecommendedProducts(100);
+          if (!cancelled) setProducts(allProducts);
         } else {
+          // Produkty z wybranej kategorii
           const categoryProducts = await getProductsByCategory(
             selectedCategory.slug || selectedCategory.id,
             selectedSubcategory || undefined,
@@ -146,6 +148,30 @@ function ProductsPageContent() {
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
       <ScrollArea className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
+        {/* Przycisk "Wszystkie" */}
+        <div className="mb-1">
+          <button
+            onClick={() => {
+              setSelectedCategory(null);
+              setSelectedSubcategory(null);
+              setIsMobileSidebarOpen(false);
+            }}
+            className={cn(
+              "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
+              !selectedCategory
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted"
+            )}
+          >
+            <Package className="h-5 w-5" />
+            <span className="font-medium flex-1">Wszystkie produkty</span>
+            <ChevronRight className={cn(
+              "h-4 w-4 transition-transform",
+              !selectedCategory ? "rotate-90" : "group-hover:translate-x-1"
+            )} />
+          </button>
+        </div>
+
         {categories.map((category) => {
           const isActive = selectedCategory?.id === category.id;
           return (
