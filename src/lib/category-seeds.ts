@@ -5,6 +5,8 @@
 
 import { Category } from './types';
 
+// UWAGA: Rozszerzona struktura kategorii zgodna z wzorcami AliExpress / Pepper.pl
+// Główne cele: szeroka pokrywalność, SEO-friendly slugi, możliwość łatwej ekspansji AI enrichment
 export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
   {
     name: 'Elektronika',
@@ -20,12 +22,24 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
         sortOrder: 1,
         subcategories: [
           { name: 'Smartfony', slug: 'smartfony', sortOrder: 1 },
+         { name: 'iPhone', slug: 'iphone', sortOrder: 2 },
+         { name: 'Samsung Galaxy', slug: 'samsung-galaxy', sortOrder: 3 },
+         { name: 'Xiaomi', slug: 'xiaomi-smartfony', sortOrder: 4 },
+         { name: 'Huawei', slug: 'huawei-smartfony', sortOrder: 5 },
+         { name: 'Oppo', slug: 'oppo', sortOrder: 6 },
+         { name: 'Realme', slug: 'realme', sortOrder: 7 },
           { name: 'Telefony klasyczne', slug: 'telefony-klasyczne', sortOrder: 2 },
           { name: 'Akcesoria GSM', slug: 'akcesoria-gsm', sortOrder: 3 },
           { name: 'Etui i pokrowce', slug: 'etui-pokrowce', sortOrder: 4 },
           { name: 'Ładowarki i kable', slug: 'ladowarki-kable', sortOrder: 5 },
+         { name: 'Ładowarki bezprzewodowe', slug: 'ladowarki-bezprzewodowe', sortOrder: 6 },
+         { name: 'Kable USB-C', slug: 'kable-usb-c', sortOrder: 7 },
+         { name: 'Kable Lightning', slug: 'kable-lightning', sortOrder: 8 },
           { name: 'Power banki', slug: 'power-banki', sortOrder: 6 },
           { name: 'Folie i szkła ochronne', slug: 'folie-szkla', sortOrder: 7 },
+         { name: 'Uchwyty samochodowe', slug: 'uchwyty-samochodowe-telefon', sortOrder: 8 },
+         { name: 'Karty SIM', slug: 'karty-sim', sortOrder: 9 },
+         { name: 'Aparaty słuchowe', slug: 'aparaty-sluchowe', sortOrder: 10 },
         ]
       },
       {
@@ -655,6 +669,8 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           { name: 'Amazon Prime', slug: 'amazon-prime', sortOrder: 4 },
           { name: 'Spotify', slug: 'spotify', sortOrder: 5 },
           { name: 'YouTube Premium', slug: 'youtube-premium', sortOrder: 6 },
+          { name: 'Apple TV+', slug: 'apple-tv-plus', sortOrder: 7 },
+          { name: 'SkyShowtime', slug: 'skyshowtime', sortOrder: 8 },
         ]
       },
       {
@@ -666,6 +682,8 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           { name: 'PlayStation Plus', slug: 'playstation-plus', sortOrder: 1 },
           { name: 'Xbox Game Pass', slug: 'xbox-game-pass', sortOrder: 2 },
           { name: 'Nintendo Switch Online', slug: 'nintendo-switch-online', sortOrder: 3 },
+          { name: 'EA Play', slug: 'ea-play', sortOrder: 4 },
+          { name: 'Ubisoft+', slug: 'ubisoft-plus', sortOrder: 5 },
         ]
       },
       {
@@ -678,6 +696,393 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           { name: 'Windows', slug: 'windows', sortOrder: 2 },
           { name: 'Antivirus', slug: 'antivirus', sortOrder: 3 },
           { name: 'VPN', slug: 'vpn', sortOrder: 4 },
+          { name: 'Adobe Creative Cloud', slug: 'adobe-creative-cloud', sortOrder: 5 },
+          { name: 'Canva Pro', slug: 'canva-pro', sortOrder: 6 },
+        ]
+      },
+      {
+        name: 'Podróże i bilety',
+        slug: 'podroze-bilety',
+        icon: '✈️',
+        sortOrder: 4,
+        subcategories: [
+          { name: 'Loty', slug: 'loty', sortOrder: 1 },
+          { name: 'Hotele', slug: 'hotele', sortOrder: 2 },
+          { name: 'Bilety kolejowe', slug: 'bilety-kolejowe', sortOrder: 3 },
+          { name: 'Wynajem samochodów', slug: 'wynajem-samochodow', sortOrder: 4 },
+          { name: 'Ubezpieczenia turystyczne', slug: 'ubezpieczenia-turystyczne', sortOrder: 5 },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Zwierzęta',
+    slug: 'zwierzeta',
+    icon: '🐾',
+    description: 'Akcesoria, karmy i pielęgnacja dla zwierząt',
+    sortOrder: 10,
+    subcategories: [
+      {
+        name: 'Psy',
+        slug: 'psy',
+        icon: '🐕',
+        sortOrder: 1,
+        subcategories: [
+          { name: 'Karma dla psów', slug: 'karma-psy', sortOrder: 1 },
+          { name: 'Smycze i obroże', slug: 'smycze-obroze', sortOrder: 2 },
+          { name: 'Legowiska', slug: 'legowiska-psy', sortOrder: 3 },
+          { name: 'Zabawki dla psów', slug: 'zabawki-psy', sortOrder: 4 },
+          { name: 'Transporter dla psów', slug: 'transportery-psy', sortOrder: 5 },
+          { name: 'Pielęgnacja psów', slug: 'pielegnacja-psy', sortOrder: 6 },
+        ]
+      },
+      {
+        name: 'Koty',
+        slug: 'koty',
+        icon: '🐈',
+        sortOrder: 2,
+        subcategories: [
+          { name: 'Karma dla kotów', slug: 'karma-koty', sortOrder: 1 },
+          { name: 'Kuwety i żwirek', slug: 'kuwety-zwirek', sortOrder: 2 },
+          { name: 'Drapaki', slug: 'drapaki', sortOrder: 3 },
+          { name: 'Zabawki dla kotów', slug: 'zabawki-koty', sortOrder: 4 },
+          { name: 'Transporter dla kotów', slug: 'transportery-koty', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Akwaria i rybki',
+        slug: 'akwaria-rybki',
+        icon: '🐠',
+        sortOrder: 3,
+        subcategories: [
+          { name: 'Akwaria', slug: 'akwaria', sortOrder: 1 },
+          { name: 'Filtry do akwarium', slug: 'filtry-akwarium', sortOrder: 2 },
+          { name: 'Oświetlenie akwariowe', slug: 'oswietlenie-akwarium', sortOrder: 3 },
+          { name: 'Pokarm dla ryb', slug: 'pokarm-ryb', sortOrder: 4 },
+        ]
+      },
+      {
+        name: 'Ptaki i gryzonie',
+        slug: 'ptaki-gryzonie',
+        icon: '🐹',
+        sortOrder: 4,
+        subcategories: [
+          { name: 'Klatki', slug: 'klatki', sortOrder: 1 },
+          { name: 'Karma dla ptaków', slug: 'karma-ptaki', sortOrder: 2 },
+          { name: 'Karma dla gryzoni', slug: 'karma-gryzonie', sortOrder: 3 },
+          { name: 'Akcesoria dla gryzoni', slug: 'akcesoria-gryzonie', sortOrder: 4 },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Biuro i szkoła',
+    slug: 'biuro-szkola',
+    icon: '📝',
+    description: 'Materiały biurowe, papiernicze i szkolne',
+    sortOrder: 11,
+    subcategories: [
+      {
+        name: 'Materiały piśmienne',
+        slug: 'materialy-pismienne',
+        icon: '✏️',
+        sortOrder: 1,
+        subcategories: [
+          { name: 'Długopisy', slug: 'dlugopisy', sortOrder: 1 },
+          { name: 'Ołówki', slug: 'olowki', sortOrder: 2 },
+          { name: 'Markery i flamastry', slug: 'markery-flamastry', sortOrder: 3 },
+          { name: 'Korektory', slug: 'korektory', sortOrder: 4 },
+          { name: 'Zakreślacze', slug: 'zakreslacze', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Papier i zeszyty',
+        slug: 'papier-zeszyty',
+        icon: '📄',
+        sortOrder: 2,
+        subcategories: [
+          { name: 'Papier ksero', slug: 'papier-ksero', sortOrder: 1 },
+          { name: 'Zeszyty', slug: 'zeszyty', sortOrder: 2 },
+          { name: 'Notesy', slug: 'notesy', sortOrder: 3 },
+          { name: 'Bloki rysunkowe', slug: 'bloki-rysunkowe', sortOrder: 4 },
+        ]
+      },
+      {
+        name: 'Organizacja',
+        slug: 'organizacja-biuro',
+        icon: '📋',
+        sortOrder: 3,
+        subcategories: [
+          { name: 'Segregatory', slug: 'segregatory', sortOrder: 1 },
+          { name: 'Teczki', slug: 'teczki', sortOrder: 2 },
+          { name: 'Organizery biurkowe', slug: 'organizery-biurkowe', sortOrder: 3 },
+          { name: 'Kalendarze i plannery', slug: 'kalendarze-plannery', sortOrder: 4 },
+          { name: 'Tablice i pinezki', slug: 'tablice-pinezki', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Plecaki i tornistry',
+        slug: 'plecaki-tornistry',
+        icon: '🎒',
+        sortOrder: 4,
+        subcategories: [
+          { name: 'Tornistry szkolne', slug: 'tornistry-szkolne', sortOrder: 1 },
+          { name: 'Plecaki szkolne', slug: 'plecaki-szkolne', sortOrder: 2 },
+          { name: 'Piórniki', slug: 'piorniki', sortOrder: 3 },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Smart Home',
+    slug: 'smart-home',
+    icon: '🏡',
+    description: 'Inteligentne urządzenia do domu',
+    sortOrder: 12,
+    subcategories: [
+      {
+        name: 'Oświetlenie inteligentne',
+        slug: 'oswietlenie-smart',
+        icon: '💡',
+        sortOrder: 1,
+        subcategories: [
+          { name: 'Żarówki smart', slug: 'zarowki-smart', sortOrder: 1 },
+          { name: 'Taśmy LED smart', slug: 'tasmy-led-smart', sortOrder: 2 },
+          { name: 'Przełączniki smart', slug: 'przelaczniki-smart', sortOrder: 3 },
+        ]
+      },
+      {
+        name: 'Bezpieczeństwo',
+        slug: 'bezpieczenstwo-smart',
+        icon: '🔒',
+        sortOrder: 2,
+        subcategories: [
+          { name: 'Kamery IP', slug: 'kamery-ip', sortOrder: 1 },
+          { name: 'Dzwonki wideo', slug: 'dzwonki-wideo', sortOrder: 2 },
+          { name: 'Alarmy smart', slug: 'alarmy-smart', sortOrder: 3 },
+          { name: 'Zamki smart', slug: 'zamki-smart', sortOrder: 4 },
+          { name: 'Czujniki ruchu', slug: 'czujniki-ruchu', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Klimatyzacja i ogrzewanie',
+        slug: 'klimatyzacja-smart',
+        icon: '🌡️',
+        sortOrder: 3,
+        subcategories: [
+          { name: 'Termostaty smart', slug: 'termostaty-smart', sortOrder: 1 },
+          { name: 'Czujniki temperatury', slug: 'czujniki-temperatury', sortOrder: 2 },
+          { name: 'Nawilżacze smart', slug: 'nawilzacze-smart', sortOrder: 3 },
+        ]
+      },
+      {
+        name: 'Asystenci głosowi',
+        slug: 'asystenci-glosowi',
+        icon: '🔊',
+        sortOrder: 4,
+        subcategories: [
+          { name: 'Amazon Echo', slug: 'amazon-echo', sortOrder: 1 },
+          { name: 'Google Home', slug: 'google-home', sortOrder: 2 },
+          { name: 'Apple HomePod', slug: 'apple-homepod', sortOrder: 3 },
+        ]
+      },
+      {
+        name: 'Gniazdka i sterowanie',
+        slug: 'gniazdka-sterowanie',
+        icon: '🔌',
+        sortOrder: 5,
+        subcategories: [
+          { name: 'Gniazdka smart', slug: 'gniazdka-smart', sortOrder: 1 },
+          { name: 'Listwy zasilające smart', slug: 'listwy-smart', sortOrder: 2 },
+          { name: 'Piloty uniwersalne', slug: 'piloty-uniwersalne', sortOrder: 3 },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Elektronika noszona',
+    slug: 'elektronika-noszona',
+    icon: '⌚',
+    description: 'Smartwatche, opaski, akcesoria wearables',
+    sortOrder: 13,
+    subcategories: [
+      {
+        name: 'Smartwatche',
+        slug: 'smartwatche-wearables',
+        icon: '⌚',
+        sortOrder: 1,
+        subcategories: [
+          { name: 'Apple Watch', slug: 'apple-watch', sortOrder: 1 },
+          { name: 'Samsung Galaxy Watch', slug: 'samsung-galaxy-watch', sortOrder: 2 },
+          { name: 'Garmin', slug: 'garmin-smartwatch', sortOrder: 3 },
+          { name: 'Xiaomi Watch', slug: 'xiaomi-watch', sortOrder: 4 },
+          { name: 'Zegarki dla dzieci', slug: 'zegarki-dzieci', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Opaski sportowe',
+        slug: 'opaski-sportowe',
+        icon: '🏃',
+        sortOrder: 2,
+        subcategories: [
+          { name: 'Opaski fitness', slug: 'opaski-fitness', sortOrder: 1 },
+          { name: 'Pulsometry', slug: 'pulsometry', sortOrder: 2 },
+          { name: 'Opaski do biegania', slug: 'opaski-bieganie', sortOrder: 3 },
+        ]
+      },
+      {
+        name: 'Akcesoria do wearables',
+        slug: 'akcesoria-wearables',
+        icon: '🔗',
+        sortOrder: 3,
+        subcategories: [
+          { name: 'Paski do zegarków', slug: 'paski-smartwatch', sortOrder: 1 },
+          { name: 'Ładowarki do smartwatchy', slug: 'ladowarki-smartwatch', sortOrder: 2 },
+          { name: 'Folie ochronne', slug: 'folie-smartwatch', sortOrder: 3 },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Hobby i rękodzieło',
+    slug: 'hobby-rekodzilo',
+    icon: '🎨',
+    description: 'Modelarstwo, druk 3D, malarstwo, szycie',
+    sortOrder: 14,
+    subcategories: [
+      {
+        name: 'Modelarstwo',
+        slug: 'modelarstwo',
+        icon: '✈️',
+        sortOrder: 1,
+        subcategories: [
+          { name: 'Modele samolotów', slug: 'modele-samolotow', sortOrder: 1 },
+          { name: 'Modele samochodów', slug: 'modele-samochodow', sortOrder: 2 },
+          { name: 'Modele statków', slug: 'modele-statkow', sortOrder: 3 },
+          { name: 'Kleje i farby modelarskie', slug: 'kleje-farby-modelarskie', sortOrder: 4 },
+        ]
+      },
+      {
+        name: 'Druk 3D',
+        slug: 'druk-3d',
+        icon: '🖨️',
+        sortOrder: 2,
+        subcategories: [
+          { name: 'Drukarki 3D', slug: 'drukarki-3d', sortOrder: 1 },
+          { name: 'Filamenty PLA', slug: 'filamenty-pla', sortOrder: 2 },
+          { name: 'Filamenty ABS', slug: 'filamenty-abs', sortOrder: 3 },
+          { name: 'Żywice do druku', slug: 'zywice-druk', sortOrder: 4 },
+        ]
+      },
+      {
+        name: 'Malarstwo i rysowanie',
+        slug: 'malarstwo-rysowanie',
+        icon: '🎨',
+        sortOrder: 3,
+        subcategories: [
+          { name: 'Farby akrylowe', slug: 'farby-akrylowe', sortOrder: 1 },
+          { name: 'Farby olejne', slug: 'farby-olejne', sortOrder: 2 },
+          { name: 'Pędzle', slug: 'pedzle', sortOrder: 3 },
+          { name: 'Płótna malarskie', slug: 'plotna-malarskie', sortOrder: 4 },
+          { name: 'Kredki i pastele', slug: 'kredki-pastele', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Szycie i dziewiarstwo',
+        slug: 'szycie-dziewiarstwo',
+        icon: '🧵',
+        sortOrder: 4,
+        subcategories: [
+          { name: 'Maszyny do szycia', slug: 'maszyny-szycia', sortOrder: 1 },
+          { name: 'Nici i igły', slug: 'nici-igly', sortOrder: 2 },
+          { name: 'Tkaniny', slug: 'tkaniny', sortOrder: 3 },
+          { name: 'Druty i szydełka', slug: 'druty-szydelka', sortOrder: 4 },
+          { name: 'Włóczki', slug: 'wloczki', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Elektronika DIY',
+        slug: 'elektronika-diy',
+        icon: '🔧',
+        sortOrder: 5,
+        subcategories: [
+          { name: 'Arduino', slug: 'arduino', sortOrder: 1 },
+          { name: 'Raspberry Pi', slug: 'raspberry-pi', sortOrder: 2 },
+          { name: 'Zestawy elektroniczne', slug: 'zestawy-elektroniczne', sortOrder: 3 },
+          { name: 'Lutownice', slug: 'lutownice', sortOrder: 4 },
+          { name: 'Multimetry', slug: 'multimetry', sortOrder: 5 },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Narzędzia i przemysł',
+    slug: 'narzedzia-przemysl',
+    icon: '🔧',
+    description: 'Elektronarzędzia, BHP, osprzęt przemysłowy',
+    sortOrder: 15,
+    subcategories: [
+      {
+        name: 'Elektronarzędzia',
+        slug: 'elektronarzedzia',
+        icon: '⚙️',
+        sortOrder: 1,
+        subcategories: [
+          { name: 'Wiertarko-wkrętarki', slug: 'wiertarko-wkretarki', sortOrder: 1 },
+          { name: 'Młoty udarowe', slug: 'mloty-udarowe', sortOrder: 2 },
+          { name: 'Szlifierki kątowe', slug: 'szlifierki-katowe', sortOrder: 3 },
+          { name: 'Piły tarczowe', slug: 'pily-tarczowe', sortOrder: 4 },
+          { name: 'Frezarki', slug: 'frezarki', sortOrder: 5 },
+          { name: 'Strugarki', slug: 'strugarki', sortOrder: 6 },
+        ]
+      },
+      {
+        name: 'Osprzęt narzędziowy',
+        slug: 'osprzet-narzedzia',
+        icon: '🔩',
+        sortOrder: 2,
+        subcategories: [
+          { name: 'Wiertła', slug: 'wiertla', sortOrder: 1 },
+          { name: 'Bity i nasadki', slug: 'bity-nasadki', sortOrder: 2 },
+          { name: 'Tarcze ścierne', slug: 'tarcze-scierne', sortOrder: 3 },
+          { name: 'Tarcze do piły', slug: 'tarcze-pily', sortOrder: 4 },
+        ]
+      },
+      {
+        name: 'BHP i ochrona',
+        slug: 'bhp-ochrona',
+        icon: '🦺',
+        sortOrder: 3,
+        subcategories: [
+          { name: 'Kaski ochronne', slug: 'kaski-ochronne', sortOrder: 1 },
+          { name: 'Okulary ochronne', slug: 'okulary-ochronne', sortOrder: 2 },
+          { name: 'Rękawice robocze', slug: 'rekawice-robocze', sortOrder: 3 },
+          { name: 'Maseczki i respiratory', slug: 'maseczki-respiratory', sortOrder: 4 },
+          { name: 'Buty robocze', slug: 'buty-robocze', sortOrder: 5 },
+        ]
+      },
+      {
+        name: 'Spawanie i lutowanie',
+        slug: 'spawanie-lutowanie',
+        icon: '🔥',
+        sortOrder: 4,
+        subcategories: [
+          { name: 'Spawarki', slug: 'spawarki', sortOrder: 1 },
+          { name: 'Elektrody', slug: 'elektrody', sortOrder: 2 },
+          { name: 'Maski spawalnicze', slug: 'maski-spawalnicze', sortOrder: 3 },
+          { name: 'Palniki', slug: 'palniki', sortOrder: 4 },
+        ]
+      },
+      {
+        name: 'Pomiary i poziomy',
+        slug: 'pomiary-poziomy',
+        icon: '📏',
+        sortOrder: 5,
+        subcategories: [
+          { name: 'Poziomica laserowe', slug: 'poziomica-laserowe', sortOrder: 1 },
+          { name: 'Dalmierze', slug: 'dalmierze', sortOrder: 2 },
+          { name: 'Mierniki laserowe', slug: 'mierniki-laserowe', sortOrder: 3 },
+          { name: 'Taśmy miernicze', slug: 'tasmy-miernicze', sortOrder: 4 },
         ]
       },
     ]
