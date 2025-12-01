@@ -383,7 +383,84 @@ export default function DealCard({ deal }: DealCardProps) {
 
         {/* Szczegóły dostawy i dodatkowe info */}
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {deliveryTime && (
+          {/* Enhanced deal tags */}
+          {deal.metadata?.dealTags && deal.metadata.dealTags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {deal.metadata.dealTags.slice(0, 3).map((tag: string, idx: number) => (
+                <Badge key={idx} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+          
+          {/* Flash sale indicator */}
+          {deal.metadata?.flashSale?.active && (
+            <Badge variant="destructive" className="bg-orange-600 animate-pulse">
+              <Zap className="h-3 w-3 mr-1" />
+              Flash Sale
+            </Badge>
+          )}
+          
+          {/* Stock alert */}
+          {deal.metadata?.stockAlert?.lowStock && (
+            <Badge variant="outline" className="border-yellow-600 text-yellow-600">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Tylko {deal.metadata.stockAlert.available} szt.
+            </Badge>
+          )}
+          
+          {/* Shipping details */}
+          {deal.metadata?.shippingDetails?.free && (
+            <Badge variant="default" className="bg-green-600 text-white">
+              <Truck className="h-3 w-3 mr-1" />
+              Darmowa wysyłka
+            </Badge>
+          )}
+          {deal.metadata?.shippingDetails?.deliveryTime && (
+            <span className="flex items-center gap-1">
+              <Truck className="h-3 w-3" />
+              Dostawa: {deal.metadata.shippingDetails.deliveryTime}
+            </span>
+          )}
+          {deal.metadata?.shippingDetails?.fromCountry && (
+            <span>Z: {deal.metadata.shippingDetails.fromCountry}</span>
+          )}
+          
+          {/* Merchant rating */}
+          {deal.metadata?.merchantRating && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    Sprzedawca: {deal.metadata.merchantRating.toFixed(1)}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Ocena sprzedawcy na platformie
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {/* Certifications */}
+          {deal.metadata?.certifications && deal.metadata.certifications.length > 0 && (
+            <Badge variant="outline" className="text-xs">
+              <ShieldCheck className="h-3 w-3 mr-1" />
+              {deal.metadata.certifications.join(', ')}
+            </Badge>
+          )}
+          
+          {/* Video indicator */}
+          {deal.metadata?.videoUrl && (
+            <Badge variant="outline" className="text-xs">
+              📹 Wideo
+            </Badge>
+          )}
+          
+          {/* Legacy fields for backward compatibility */}
+          {deliveryTime && !deal.metadata?.shippingDetails && (
             <span className="flex items-center gap-1">
               <Truck className="h-3 w-3" />
               {deliveryTime}
@@ -407,7 +484,7 @@ export default function DealCard({ deal }: DealCardProps) {
           {couponCode && (
             <span className="font-mono text-primary">Kod: {couponCode}</span>
           )}
-          {typeof deal.importMetadata?.sellerRating === 'number' && (
+          {typeof deal.importMetadata?.sellerRating === 'number' && !deal.metadata?.merchantRating && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

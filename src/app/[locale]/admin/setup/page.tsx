@@ -18,13 +18,22 @@ import {
   Sparkles,
   Package,
   Flame,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Calendar
 } from 'lucide-react';
 
 function SetupPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
   const [seedingStatus, setSeedingStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  
+  // Scheduled import state
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleFrequency, setScheduleFrequency] = useState<'hourly' | 'daily' | 'weekly'>('daily');
+  const [scheduleTime, setScheduleTime] = useState('02:00');
+  const [lastRun, setLastRun] = useState<string | null>(null);
+  const [nextRun, setNextRun] = useState<string | null>(null);
 
   const handleFillCatalog = async () => {
     if (!confirm('To wypełni bazę kategoriami i produktami z AliExpress. Kontynuować?')) return;
@@ -125,6 +134,43 @@ function SetupPage() {
     }
   };
 
+  const handleToggleSchedule = async () => {
+    const newEnabled = !scheduleEnabled;
+    setScheduleEnabled(newEnabled);
+    
+    // TODO: Call backend API to save schedule config
+    try {
+      const res = await fetch('/api/admin/schedule/deals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: newEnabled,
+          frequency: scheduleFrequency,
+          time: scheduleTime
+        })
+      });
+      
+      if (!res.ok) {
+        setScheduleEnabled(!newEnabled); // revert on error
+        alert('Błąd zapisu harmonogramu');
+        return;
+      }
+      
+      const data = await res.json();
+      if (data.nextRun) {
+        setNextRun(data.nextRun);
+      }
+    } catch (e) {
+      console.error('Schedule error:', e);
+      setScheduleEnabled(!newEnabled); // revert on error
+    }
+  };
+
+  const handleTestRun = async () => {
+    if (!confirm('Uruchomić testowy import deals? To może zająć kilka minut.')) return;
+    await handleFetchDeals();
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -171,7 +217,7 @@ function SetupPage() {
           )}
 
           {/* Quick Actions Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Fill Catalog */}
             <Card className="relative overflow-hidden group hover:shadow-xl transition-all border-2">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-purple-600/20 rounded-bl-full" />
@@ -269,6 +315,102 @@ function SetupPage() {
                     </>
                   )}
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Scheduled Import */}
+            <Card className="relative overflow-hidden group hover:shadow-xl transition-all border-2 border-purple-200 dark:border-purple-900/50">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-bl-full" />
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
+                    <Calendar className="h-6 w-6 text-white" />
+                  </div>
+                  <Badge variant={scheduleEnabled ? "default" : "secondary"} className={scheduleEnabled ? "bg-green-600" : ""}>
+                    {scheduleEnabled ? '✓ Aktywny' : 'Nieaktywny'}
+                  </Badge>
+                </div>
+                <CardTitle className="text-xl">Harmonogram Import</CardTitle>
+                <CardDescription>
+                  Automatyczny import deals według harmonogramu
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  {/* Frequency selector */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Częstotliwość</label>
+                    <select 
+                      value={scheduleFrequency}
+                      onChange={(e) => setScheduleFrequency(e.target.value as any)}
+                      className="w-full p-2 text-sm border rounded-md bg-background"
+                      disabled={scheduleEnabled}
+                    >
+                      <option value="hourly">Co godzinę</option>
+                      <option value="daily">Codziennie</option>
+                      <option value="weekly">Co tydzień</option>
+                    </select>
+                  </div>
+                  
+                  {/* Time picker */}
+                  {scheduleFrequency !== 'hourly' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Godzina uruchomienia</label>
+                      <input 
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        className="w-full p-2 text-sm border rounded-md bg-background"
+                        disabled={scheduleEnabled}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Status info */}
+                  {lastRun && (
+                    <div className="text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 inline mr-1" />
+                      Ostatni: {new Date(lastRun).toLocaleString('pl-PL')}
+                    </div>
+                  )}
+                  {nextRun && scheduleEnabled && (
+                    <div className="text-xs text-green-600">
+                      <Clock className="h-3 w-3 inline mr-1" />
+                      Następny: {new Date(nextRun).toLocaleString('pl-PL')}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Button
+                    onClick={handleToggleSchedule}
+                    disabled={loading}
+                    className="w-full"
+                    variant={scheduleEnabled ? "destructive" : "default"}
+                  >
+                    {scheduleEnabled ? (
+                      <>
+                        <Clock className="mr-2 h-4 w-4" />
+                        Wyłącz
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Włącz
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    onClick={handleTestRun}
+                    disabled={loading}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Test
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

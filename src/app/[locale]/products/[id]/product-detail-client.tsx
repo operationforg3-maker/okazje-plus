@@ -359,7 +359,13 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                 {product.metadata.returnPolicy && (
                   <div className="flex items-center gap-2 text-sm">
                     <RefreshCcw className="h-4 w-4 text-muted-foreground" />
-                    <span>{product.metadata.returnPolicy}</span>
+                    <span>
+                      {typeof product.metadata.returnPolicy === 'string' 
+                        ? product.metadata.returnPolicy 
+                        : product.metadata.returnPolicy.allowed 
+                          ? `Zwroty do ${product.metadata.returnPolicy.days} dni`
+                          : 'Bez zwrotów'}
+                    </span>
                   </div>
                 )}
               </CardContent>

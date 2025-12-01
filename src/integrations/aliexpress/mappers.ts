@@ -94,7 +94,55 @@ export function mapToProduct(
       importedBy: config.importedBy,
       orders: aliProduct.sales,
       shipping: aliProduct.shipping?.info || (aliProduct.shipping?.free ? 'Darmowa wysyłka' : undefined),
-      merchant: aliProduct.merchant?.name
+      merchant: aliProduct.merchant?.name,
+      // Enhanced fields
+      specifications: aliProduct.specifications?.map(spec => ({
+        name: spec.name,
+        value: spec.value,
+        unit: spec.unit
+      })),
+      shippingDetails: aliProduct.shipping ? {
+        method: aliProduct.shipping.method,
+        deliveryTime: aliProduct.shipping.delivery_time 
+          ? `${aliProduct.shipping.delivery_time.min}-${aliProduct.shipping.delivery_time.max} ${aliProduct.shipping.delivery_time.unit}`
+          : undefined,
+        fromCountry: aliProduct.shipping.from_country,
+        toCountry: aliProduct.shipping.to_country,
+        cost: aliProduct.shipping.cost,
+        free: aliProduct.shipping.free
+      } : undefined,
+      stock: aliProduct.stock ? {
+        available: aliProduct.stock.available,
+        total: aliProduct.stock.total,
+        availability: aliProduct.availability
+      } : undefined,
+      warranty: aliProduct.warranty ? {
+        type: aliProduct.warranty.type,
+        duration: aliProduct.warranty.duration ? `${aliProduct.warranty.duration.value} ${aliProduct.warranty.duration.unit}` : undefined
+      } : undefined,
+      returnPolicy: aliProduct.return_policy ? {
+        allowed: aliProduct.return_policy.allowed,
+        days: aliProduct.return_policy.days,
+        conditions: Array.isArray(aliProduct.return_policy.conditions) 
+          ? aliProduct.return_policy.conditions.join(', ')
+          : aliProduct.return_policy.conditions
+      } : undefined,
+      certifications: aliProduct.certifications,
+      packageInfo: aliProduct.package_info ? {
+        weight: aliProduct.package_info.weight ? `${aliProduct.package_info.weight.value}${aliProduct.package_info.weight.unit}` : undefined,
+        dimensions: aliProduct.package_info.dimensions 
+          ? `${aliProduct.package_info.dimensions.length}x${aliProduct.package_info.dimensions.width}x${aliProduct.package_info.dimensions.height}${aliProduct.package_info.dimensions.unit}`
+          : undefined
+      } : undefined,
+      tags: aliProduct.tags,
+      merchantDetails: aliProduct.merchant ? {
+        name: aliProduct.merchant.name,
+        rating: aliProduct.merchant.rating,
+        followers: aliProduct.merchant.followers,
+        positiveFeedback: aliProduct.merchant.positive_feedback
+      } : undefined,
+      videoUrl: aliProduct.video_url,
+      appSalePrice: aliProduct.price.app_sale
     }
   };
   
@@ -172,7 +220,42 @@ export function mapToDeal(
     merchant: aliProduct.merchant?.name,
     shippingCost: aliProduct.shipping?.free ? 0 : aliProduct.shipping?.cost,
     status: config.defaultStatus || 'draft',
-    createdBy: config.importedBy
+    createdBy: config.importedBy,
+    metadata: {
+      source: 'aliexpress',
+      originalId: aliProduct.item_id,
+      importedAt: now,
+      orders: aliProduct.sales,
+      // Enhanced deal fields
+      flashSale: aliProduct.price.app_sale ? {
+        active: true,
+        appSalePrice: aliProduct.price.app_sale,
+        originalPrice: aliProduct.price.current
+      } : undefined,
+      stockAlert: aliProduct.stock?.available && aliProduct.stock.available < 50 ? {
+        lowStock: true,
+        available: aliProduct.stock.available,
+        total: aliProduct.stock.total
+      } : undefined,
+      dealTags: [
+        ...(aliProduct.tags || []),
+        ...(aliProduct.shipping?.free ? ['Darmowa wysyłka'] : []),
+        ...(aliProduct.discount_percent && aliProduct.discount_percent >= 50 ? ['Super promocja'] : []),
+        ...(aliProduct.availability === 'low_stock' || aliProduct.availability === 'out_of_stock' ? ['Limitowana dostępność'] : [])
+      ].filter(Boolean),
+      shippingDetails: aliProduct.shipping ? {
+        method: aliProduct.shipping.method,
+        deliveryTime: aliProduct.shipping.delivery_time 
+          ? `${aliProduct.shipping.delivery_time.min}-${aliProduct.shipping.delivery_time.max} ${aliProduct.shipping.delivery_time.unit}`
+          : undefined,
+        fromCountry: aliProduct.shipping.from_country,
+        free: aliProduct.shipping.free,
+        cost: aliProduct.shipping.cost
+      } : undefined,
+      merchantRating: aliProduct.merchant?.rating,
+      certifications: aliProduct.certifications,
+      videoUrl: aliProduct.video_url
+    }
   };
   
   logger.debug('Mapped AliExpress product to Deal', {
@@ -194,6 +277,8 @@ export function validateProduct(
     minRating?: number;
     minOrders?: number;
     minDiscount?: number;
+    requireStock?: boolean;
+    minMerchantRating?: number;
   }
 ): { valid: boolean; reason?: string } {
   if (!product.title || product.title.trim().length === 0) {
@@ -228,7 +313,74 @@ export function validateProduct(
     if (filters.minDiscount && product.discount_percent && product.discount_percent < filters.minDiscount) {
       return { valid: false, reason: `Discount below minimum (${filters.minDiscount}%)` };
     }
+    
+    if (filters.requireStock && (!product.stock?.available || product.availability === 'out_of_stock')) {
+      return { valid: false, reason: 'Out of stock' };
+    }
+    
+    if (filters.minMerchantRating && product.merchant?.rating && product.merchant.rating < filters.minMerchantRating) {
+      return { valid: false, reason: `Merchant rating below minimum (${filters.minMerchantRating})` };
+    }
   }
   
   return { valid: true };
+}
+
+/**
+ * Calculate deal quality score for prioritization
+ * Higher score = better deal to import
+ */
+export function calculateDealScore(product: AliExpressProduct): number {
+  let score = 0;
+  
+  // Discount weight (40 points max)
+  if (product.discount_percent) {
+    score += Math.min(product.discount_percent * 0.8, 40);
+  }
+  
+  // Flash sale bonus (15 points)
+  if (product.price.app_sale && product.price.app_sale < product.price.current) {
+    score += 15;
+  }
+  
+  // Rating weight (20 points max)
+  if (product.rating?.score) {
+    score += (product.rating.score / 5) * 20;
+  }
+  
+  // Sales volume weight (15 points max)
+  if (product.sales) {
+    score += Math.min(Math.log10(product.sales) * 3, 15);
+  }
+  
+  // Free shipping bonus (10 points)
+  if (product.shipping?.free) {
+    score += 10;
+  }
+  
+  // Limited stock urgency (5 points)
+  if (product.stock?.available && product.stock.available < 50) {
+    score += 5;
+  }
+  
+  // Merchant reputation (10 points max)
+  if (product.merchant?.rating) {
+    score += (product.merchant.rating / 5) * 10;
+  }
+  
+  return Math.round(score);
+}
+
+/**
+ * Sort products by deal quality score (descending)
+ * Use this to prioritize best deals for import
+ */
+export function sortByDealQuality(products: AliExpressProduct[]): AliExpressProduct[] {
+  return products
+    .map(product => ({
+      product,
+      score: calculateDealScore(product)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.product);
 }

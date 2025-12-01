@@ -270,7 +270,165 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
         {/* Parametry i wysyłka */}
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {shippingLabel && (
+          {/* Shipping details */}
+          {product.metadata?.shippingDetails?.free && (
+            <Badge variant="default" className="bg-green-600 text-white">
+              <Truck className="h-3 w-3 mr-1" />
+              Darmowa wysyłka
+            </Badge>
+          )}
+          {product.metadata?.shippingDetails?.deliveryTime && (
+            <span className="flex items-center gap-1">
+              <Truck className="h-3 w-3" />
+              {product.metadata.shippingDetails.deliveryTime}
+            </span>
+          )}
+          {product.metadata?.shippingDetails?.method && (
+            <span>Sposób: {product.metadata.shippingDetails.method}</span>
+          )}
+          
+          {/* Stock status */}
+          {product.metadata?.stock?.availability === 'low_stock' && (
+            <Badge variant="outline" className="border-yellow-600 text-yellow-600">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {product.metadata.stock.available} szt.
+            </Badge>
+          )}
+          {product.metadata?.stock?.availability === 'in_stock' && typeof product.metadata?.stock?.available === 'number' && (
+            <span className="text-green-600">W magazynie: {product.metadata.stock.available}</span>
+          )}
+          {product.metadata?.stock?.availability === 'out_of_stock' && (
+            <Badge variant="outline" className="border-red-600 text-red-600">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              Wyprzedane
+            </Badge>
+          )}
+          
+          {/* Orders count */}
+          {typeof product.metadata?.orders === 'number' && (
+            <span>Zamówienia: {product.metadata.orders.toLocaleString('pl-PL')}</span>
+          )}
+          
+          {/* Merchant rating */}
+          {product.metadata?.merchantDetails && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    {product.metadata.merchantDetails.name} ({product.metadata.merchantDetails.rating?.toFixed(1)})
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="space-y-1 text-xs">
+                    {product.metadata.merchantDetails.followers && (
+                      <div>Obserwujących: {product.metadata.merchantDetails.followers.toLocaleString('pl-PL')}</div>
+                    )}
+                    {product.metadata.merchantDetails.positiveFeedback && (
+                      <div>Pozytywne opinie: {product.metadata.merchantDetails.positiveFeedback}%</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {/* Warranty */}
+          {product.metadata?.warranty && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help text-blue-600">
+                    <ShieldCheck className="h-3 w-3" />
+                    Gwarancja
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {product.metadata.warranty.type}: {product.metadata.warranty.duration}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {/* Return policy */}
+          {product.metadata?.returnPolicy && typeof product.metadata.returnPolicy === 'object' && product.metadata.returnPolicy.allowed && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help text-green-600">
+                    <ShieldCheck className="h-3 w-3" />
+                    Zwroty {product.metadata.returnPolicy.days}dni
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  {typeof product.metadata.returnPolicy.conditions === 'string' 
+                    ? product.metadata.returnPolicy.conditions
+                    : ''}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {/* Certifications */}
+          {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
+            <Badge variant="outline" className="text-xs">
+              <ShieldCheck className="h-3 w-3 mr-1" />
+              {product.metadata.certifications.join(', ')}
+            </Badge>
+          )}
+          
+          {/* Specifications preview */}
+          {product.metadata?.specifications && product.metadata.specifications.length > 0 && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Info className="h-3 w-3" />
+                    Specyfikacja ({product.metadata.specifications.length})
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <div className="space-y-1">
+                    {product.metadata.specifications.slice(0, 5).map((spec: any, i: number) => (
+                      <div key={i} className="text-xs">
+                        <span className="font-semibold">{spec.name}:</span> {spec.value}{spec.unit ? ` ${spec.unit}` : ''}
+                      </div>
+                    ))}
+                    {product.metadata.specifications.length > 5 && (
+                      <div className="text-[11px] opacity-70">+{product.metadata.specifications.length - 5} więcej</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {/* Package info */}
+          {product.metadata?.packageInfo && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-1 cursor-help">
+                    <Package className="h-3 w-3" />
+                    Paczka
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-xs space-y-1">
+                    {product.metadata.packageInfo.weight && (
+                      <div>Waga: {product.metadata.packageInfo.weight}</div>
+                    )}
+                    {product.metadata.packageInfo.dimensions && (
+                      <div>Wymiary: {product.metadata.packageInfo.dimensions}</div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {/* Legacy fields for backward compatibility */}
+          {shippingLabel && !product.metadata?.shippingDetails && (
             <span>Dostawa: {shippingLabel}</span>
           )}
           {warehouseLabel && (
@@ -279,16 +437,13 @@ export default function ProductCard({ product }: ProductCardProps) {
               Magazyn: {warehouseLabel}
             </span>
           )}
-          {typeof product.metadata?.shippingCost === 'number' && product.metadata.shippingCost > 0 && (
+          {typeof product.metadata?.shippingCost === 'number' && product.metadata.shippingCost > 0 && !product.metadata?.shippingDetails && (
             <span className="flex items-center gap-1">
               <Truck className="h-3 w-3" />
               Wysyłka: {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.metadata.shippingCost)}
             </span>
           )}
-          {typeof product.metadata?.orders === 'number' && (
-            <span>Zamówienia: {product.metadata.orders}</span>
-          )}
-          {typeof product.metadata?.sellerRating === 'number' && (
+          {typeof product.metadata?.sellerRating === 'number' && !product.metadata?.merchantDetails && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -303,7 +458,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               </Tooltip>
             </TooltipProvider>
           )}
-          {returnPolicyText && (
+          {returnPolicyText && !product.metadata?.returnPolicy && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -318,7 +473,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               </Tooltip>
             </TooltipProvider>
           )}
-          {normalizedSpecifications.length > 0 && (
+          {normalizedSpecifications.length > 0 && !product.metadata?.specifications && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

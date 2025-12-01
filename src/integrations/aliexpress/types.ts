@@ -13,10 +13,12 @@ export interface AliExpressProduct {
   title: string;
   description?: string;
   image_urls: string[];
+  video_url?: string;
   price: {
     current: number;
     original?: number;
     currency: string;
+    app_sale?: number; // Special app-only price
   };
   rating?: {
     score: number;
@@ -27,15 +29,62 @@ export interface AliExpressProduct {
     cost: number;
     free: boolean;
     info?: string;
+    method?: string; // Standard, Express, etc.
+    delivery_time?: {
+      min: number;
+      max: number;
+      unit: 'days' | 'weeks';
+    };
+    from_country?: string;
+    to_country?: string;
   };
   category_path?: string[];
   product_url: string;
   merchant?: {
     id: string;
     name: string;
+    rating?: number;
+    followers?: number;
+    positive_feedback?: number; // percentage
   };
   variants?: ProductVariant[];
   discount_percent?: number;
+  
+  // Extended attributes
+  specifications?: ProductSpecification[];
+  attributes?: Record<string, string>;
+  stock?: {
+    available: number;
+    total?: number;
+  };
+  warranty?: {
+    type: string;
+    duration?: {
+      value: number;
+      unit: 'months' | 'years';
+    };
+  };
+  return_policy?: {
+    allowed: boolean;
+    days: number;
+    conditions?: string | string[];
+  };
+  certifications?: string[]; // CE, FCC, etc.
+  package_info?: {
+    weight?: {
+      value: number;
+      unit: 'kg' | 'g' | 'lb';
+    };
+    dimensions?: {
+      length: number;
+      width: number;
+      height: number;
+      unit: 'cm' | 'inch';
+    };
+    contents?: string;
+  };
+  tags?: string[]; // hot deal, best seller, new arrival
+  availability?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order';
 }
 
 /**
@@ -46,6 +95,17 @@ export interface ProductVariant {
   name: string;
   values: string[];
   price_diff?: number;
+  stock?: Record<string, number>; // variant value -> stock count
+  sku?: string;
+}
+
+/**
+ * Product specification entry
+ */
+export interface ProductSpecification {
+  name: string;
+  value: string;
+  unit?: string;
 }
 
 /**

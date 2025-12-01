@@ -276,6 +276,31 @@ export interface Deal {
     warehouse?: string;
     deliveryTime?: string;
     shippingMethod?: string;
+    originalId?: string;
+    orders?: number;
+    
+    // Enhanced fields for deals
+    flashSale?: {
+      active: boolean;
+      appSalePrice?: number;
+      originalPrice?: number;
+    };
+    stockAlert?: {
+      lowStock: boolean;
+      available?: number;
+      total?: number;
+    };
+    dealTags?: string[];
+    shippingDetails?: {
+      method?: string;
+      deliveryTime?: string;
+      fromCountry?: string;
+      free?: boolean;
+      cost?: number;
+    };
+    merchantRating?: number;
+    certifications?: string[];
+    videoUrl?: string;
   };
 }
 
@@ -440,19 +465,56 @@ export interface ProductImportMetadata {
   evaluateCount?: number; // Liczba ocen (różne od orders)
   evaluateRate?: string; // Surowa ocena z API (np. "4.5/5")
   sellerRating?: number; // Ocena sprzedawcy (0-5)
-  returnPolicy?: string; // Polityka zwrotów
+  returnPolicy?: string | {
+    allowed: boolean;
+    days: number;
+    conditions?: string;
+  };
   hotProduct?: boolean; // Czy produkt jest w hot products
   flashDeal?: boolean; // Czy promocja flash
   platformProductType?: string; // Typ produktu w platformie
   stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
   stockLevel?: number; // Liczba dostępnych sztuk
-  specifications?: Array<{key: string; value: string}>; // Specyfikacje techniczne
+  specifications?: Array<{key?: string; name?: string; value: string; unit?: string}>; // Specyfikacje techniczne
   productVideoUrl?: string;
   warehouse?: string;
   deliveryTime?: string;
   freeShipping?: boolean;
   shippingCost?: number;
   shippingMethod?: string;
+  
+  // Enhanced fields from enriched AliExpress data
+  shippingDetails?: {
+    method?: string;
+    deliveryTime?: string;
+    fromCountry?: string;
+    toCountry?: string;
+    cost?: number;
+    free?: boolean;
+  };
+  stock?: {
+    available?: number;
+    total?: number;
+    availability?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order';
+  };
+  warranty?: {
+    type?: string;
+    duration?: string;
+  };
+  certifications?: string[];
+  packageInfo?: {
+    weight?: string;
+    dimensions?: string;
+  };
+  tags?: string[];
+  merchantDetails?: {
+    name?: string;
+    rating?: number;
+    followers?: number;
+    positiveFeedback?: number;
+  };
+  videoUrl?: string;
+  appSalePrice?: number;
 }
 
 // Reszta interfejsów pozostaje bez zmian
