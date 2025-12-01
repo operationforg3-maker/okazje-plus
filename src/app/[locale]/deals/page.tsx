@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getHotDeals, getCategories, getNavigationShowcase, getProductById, getDealsByCategory } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { Deal, Category, Product } from '@/lib/types';
@@ -283,50 +283,55 @@ export default function DealsPage() {
   }, [selectedCategory, selectedSubcategory, searchTerm]);
 
   // Sortowanie i filtrowanie lokalne (po pobraniu z API)
-  const filteredAndSortedDeals = deals
-    .filter(deal => {
-      // Typ okazji (z URL / UI)
-      if (FEATURES.DEALS_TYPE_FILTER && typeFilter !== 'all') {
-        if ((deal.dealType || 'sale') !== typeFilter) return false;
-      }
-      // Quick filters
-      if (quickFilters.freeShipping && deal.shippingCost !== 0) return false;
-      if (quickFilters.bigDiscount && deal.originalPrice) {
-        const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
-        if (discount < 50) return false;
-      }
-      if (quickFilters.today) {
-        const ts = toTimestamp((deal as any).postedAt);
-        if (!ts) return false;
-        const today = new Date();
-        const d = new Date(ts);
-        if (today.getFullYear() !== d.getFullYear() || today.getMonth() !== d.getMonth() || today.getDate() !== d.getDate()) return false;
-      }
-      if (quickFilters.verified && !deal.merchant) return false;
-      
-      // Price range
-      if (deal.price < priceRange[0] || deal.price > priceRange[1]) return false;
-      
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'hottest':
-          return b.temperature - a.temperature;
-        case 'newest':
-          return toTimestamp((b as any).postedAt) - toTimestamp((a as any).postedAt);
-        case 'price_asc':
-          return a.price - b.price;
-        case 'price_desc':
-          return b.price - a.price;
-        case 'discount':
-          const discountA = a.originalPrice ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0;
-          const discountB = b.originalPrice ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0;
-          return discountB - discountA;
-        default:
-          return 0;
-      }
-    });
+  const filteredAndSortedDeals = useMemo(() => {
+    return deals
+      .filter((deal) => {
+        if (FEATURES.DEALS_TYPE_FILTER && typeFilter !== 'all') {
+          if ((deal.dealType || 'sale') !== typeFilter) return false;
+        }
+        if (quickFilters.freeShipping && deal.shippingCost !== 0) return false;
+        if (quickFilters.bigDiscount && deal.originalPrice) {
+          const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
+          if (discount < 50) return false;
+        }
+        if (quickFilters.today) {
+          const ts = toTimestamp((deal as any).postedAt);
+          if (!ts) return false;
+          const today = new Date();
+          const d = new Date(ts);
+          if (
+            today.getFullYear() !== d.getFullYear() ||
+            today.getMonth() !== d.getMonth() ||
+            today.getDate() !== d.getDate()
+          ) {
+            return false;
+          }
+        }
+        if (quickFilters.verified && !deal.merchant) return false;
+
+        if (deal.price < priceRange[0] || deal.price > priceRange[1]) return false;
+
+        return true;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'hottest':
+            return b.temperature - a.temperature;
+          case 'newest':
+            return toTimestamp((b as any).postedAt) - toTimestamp((a as any).postedAt);
+          case 'price_asc':
+            return a.price - b.price;
+          case 'price_desc':
+            return b.price - a.price;
+          case 'discount':
+            const discountA = a.originalPrice ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0;
+            const discountB = b.originalPrice ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0;
+            return discountB - discountA;
+          default:
+            return 0;
+        }
+      });
+  }, [deals, typeFilter, quickFilters, priceRange, sortBy]);
 
   // Infinite scroll hook - ładuje kolejne deale przy scrollowaniu
   const {
