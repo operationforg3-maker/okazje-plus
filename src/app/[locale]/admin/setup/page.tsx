@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,10 +40,37 @@ function SetupPage() {
   // Indexes verification state
   const [indexesResult, setIndexesResult] = useState('');
   const [indexesLoading, setIndexesLoading] = useState(false);
+  const [indexesScheduleEnabled, setIndexesScheduleEnabled] = useState(false);
+  const [indexesScheduleFrequency, setIndexesScheduleFrequency] = useState<'hourly' | 'daily' | 'weekly'>('daily');
+  const [indexesScheduleTime, setIndexesScheduleTime] = useState('03:00');
+  const [indexesAutoFix, setIndexesAutoFix] = useState(false);
+  const [indexesLastRun, setIndexesLastRun] = useState<string | null>(null);
+  const [indexesNextRun, setIndexesNextRun] = useState<string | null>(null);
   
   // Links verification state
   const [linksResult, setLinksResult] = useState('');
   const [linksLoading, setLinksLoading] = useState(false);
+
+  // Load indexes schedule on mount
+  useEffect(() => {
+    const loadIndexesSchedule = async () => {
+      try {
+        const res = await fetch('/api/admin/schedule/indexes');
+        if (res.ok) {
+          const data = await res.json();
+          setIndexesScheduleEnabled(data.enabled || false);
+          setIndexesScheduleFrequency(data.frequency || 'daily');
+          setIndexesScheduleTime(data.time || '03:00');
+          setIndexesAutoFix(data.autoFix || false);
+          setIndexesLastRun(data.lastRun || null);
+          setIndexesNextRun(data.nextRun || null);
+        }
+      } catch (e) {
+        console.error('Failed to load indexes schedule:', e);
+      }
+    };
+    loadIndexesSchedule();
+  }, []);
 
   const handleFillCatalog = async () => {
     if (!confirm('To wypełni bazę kategoriami i produktami z AliExpress. Kontynuować?')) return;
@@ -218,10 +245,45 @@ function SetupPage() {
       }
       
       setIndexesResult(resultText);
+      
+      // Update last run timestamp
+      setIndexesLastRun(new Date().toISOString());
     } catch (e: any) {
       setIndexesResult(`❌ Błąd połączenia: ${e.message}`);
     } finally {
       setIndexesLoading(false);
+    }
+  };
+
+  const handleToggleIndexesSchedule = async () => {
+    const newEnabled = !indexesScheduleEnabled;
+    setIndexesScheduleEnabled(newEnabled);
+    
+    try {
+      const res = await fetch('/api/admin/schedule/indexes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: newEnabled,
+          frequency: indexesScheduleFrequency,
+          time: indexesScheduleTime,
+          autoFix: indexesAutoFix
+        })
+      });
+      
+      if (!res.ok) {
+        setIndexesScheduleEnabled(!newEnabled); // revert on error
+        alert('Błąd zapisu harmonogramu');
+        return;
+      }
+      
+      const data = await res.json();
+      if (data.nextRun) {
+        setIndexesNextRun(data.nextRun);
+      }
+    } catch (e) {
+      console.error('Schedule error:', e);
+      setIndexesScheduleEnabled(!newEnabled); // revert on error
     }
   };
 
@@ -722,11 +784,103 @@ function SetupPage() {
                 </ul>
               </div>
               
-              <div className="flex gap-2">
+              {/* Scheduling Controls */}
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Harmonogram weryfikacji</label>
+                  <Badge variant={indexesScheduleEnabled ? "default" : "secondary"}>
+                    {indexesScheduleEnabled ? "Aktywny" : "Nieaktywny"}
+                  </Badge>
+                </div>
+                
+                <div className="grid gap-3">
+                  {/* Frequency selector */}
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Częstotliwość</label>
+                    <select
+                      value={indexesScheduleFrequency}
+                      onChange={(e) => setIndexesScheduleFrequency(e.target.value as 'hourly' | 'daily' | 'weekly')}
+                      className="w-full p-2 text-sm border rounded-md bg-background"
+                      disabled={indexesScheduleEnabled}
+                    >
+                      <option value="hourly">Co godzinę</option>
+                      <option value="daily">Codziennie</option>
+                      <option value="weekly">Co tydzień</option>
+                    </select>
+                  </div>
+                  
+                  {/* Time picker for daily/weekly */}
+                  {(indexesScheduleFrequency === 'daily' || indexesScheduleFrequency === 'weekly') && (
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">
+                        Godzina {indexesScheduleFrequency === 'weekly' ? '(poniedziałek)' : ''}
+                      </label>
+                      <input
+                        type="time"
+                        value={indexesScheduleTime}
+                        onChange={(e) => setIndexesScheduleTime(e.target.value)}
+                        className="w-full p-2 text-sm border rounded-md bg-background"
+                        disabled={indexesScheduleEnabled}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Auto-fix checkbox */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="indexesAutoFix"
+                      checked={indexesAutoFix}
+                      onChange={(e) => setIndexesAutoFix(e.target.checked)}
+                      disabled={indexesScheduleEnabled}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor="indexesAutoFix" className="text-sm">
+                      Automatycznie generuj brakujące indeksy
+                    </label>
+                  </div>
+                  
+                  {/* Status info */}
+                  {indexesLastRun && (
+                    <div className="text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3 inline mr-1" />
+                      Ostatni: {new Date(indexesLastRun).toLocaleString('pl-PL')}
+                    </div>
+                  )}
+                  {indexesNextRun && indexesScheduleEnabled && (
+                    <div className="text-xs text-green-600">
+                      <Clock className="h-3 w-3 inline mr-1" />
+                      Następny: {new Date(indexesNextRun).toLocaleString('pl-PL')}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Button
+                  onClick={handleToggleIndexesSchedule}
+                  disabled={indexesLoading}
+                  className="w-full"
+                  variant={indexesScheduleEnabled ? "destructive" : "default"}
+                >
+                  {indexesScheduleEnabled ? (
+                    <>
+                      <Clock className="mr-2 h-4 w-4" />
+                      Wyłącz harmonogram
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Włącz harmonogram
+                    </>
+                  )}
+                </Button>
+                
                 <Button
                   onClick={handleVerifyIndexes}
                   disabled={indexesLoading}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  variant="outline"
+                  className="w-full"
                 >
                   {indexesLoading ? (
                     <>
@@ -735,8 +889,8 @@ function SetupPage() {
                     </>
                   ) : (
                     <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Weryfikuj Indeksy
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Test weryfikacji
                     </>
                   )}
                 </Button>
