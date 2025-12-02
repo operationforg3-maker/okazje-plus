@@ -305,30 +305,41 @@ export async function getPendingProducts(): Promise<Product[]> {
 export async function getRecentlyModerated(status: "approved" | "rejected", days: number = 7): Promise<(Deal | Product)[]> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
+  const cutoffTime = cutoffDate.getTime();
   
-  // Pobierz okazje
+  // Pobierz okazje - bez range filter na updatedAt, filtrujemy w pamięci
   const dealsRef = collection(db, "deals");
   const dealsQuery = query(
     dealsRef,
     where("status", "==", status),
-    where("updatedAt", ">=", cutoffDate),
     orderBy("updatedAt", "desc"),
-    limit(50)
+    limit(100) // pobierz więcej i przefiltruj
   );
   const dealsSnapshot = await getDocs(dealsQuery);
-  const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'deal' } as any));
+  const deals = dealsSnapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data(), type: 'deal' } as any))
+    .filter(deal => {
+      const updatedAt = deal.updatedAt?.toDate?.() || new Date(0);
+      return updatedAt.getTime() >= cutoffTime;
+    })
+    .slice(0, 50); // ogranicz do 50 po filtrowaniu
   
-  // Pobierz produkty
+  // Pobierz produkty - podobnie
   const productsRef = collection(db, "products");
   const productsQuery = query(
     productsRef,
     where("status", "==", status),
-    where("updatedAt", ">=", cutoffDate),
     orderBy("updatedAt", "desc"),
-    limit(50)
+    limit(100)
   );
   const productsSnapshot = await getDocs(productsQuery);
-  const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), type: 'product' } as any));
+  const products = productsSnapshot.docs
+    .map(doc => ({ id: doc.id, ...doc.data(), type: 'product' } as any))
+    .filter(product => {
+      const updatedAt = product.updatedAt?.toDate?.() || new Date(0);
+      return updatedAt.getTime() >= cutoffTime;
+    })
+    .slice(0, 50);
   
   // Połącz i posortuj po dacie
   const all = [...deals, ...products];
@@ -338,7 +349,7 @@ export async function getRecentlyModerated(status: "approved" | "rejected", days
     return dateB.getTime() - dateA.getTime();
   });
   
-  return all;
+  return all.slice(0, 50); // ostateczny limit
 }
 
 export async function getDealsByCategory(

@@ -1,6 +1,6 @@
 /**
- * Admin API: Scheduled indexes verification configuration
- * POST /api/admin/schedule/indexes
+ * Admin API: Scheduled links verification configuration
+ * POST /api/admin/schedule/links
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +16,8 @@ interface ScheduleConfig {
   time?: string; // HH:MM format for daily/weekly
   lastRun?: string;
   nextRun?: string;
-  autoFix?: boolean; // Auto-generate missing indexes
+  autoDisable?: boolean; // Auto-disable broken links
+  notifyAdmin?: boolean; // Send notification on broken links
 }
 
 /**
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { enabled, frequency, time, autoFix } = body as Partial<ScheduleConfig>;
+    const { enabled, frequency, time, autoDisable, notifyAdmin } = body as Partial<ScheduleConfig>;
 
     if (typeof enabled !== 'boolean') {
       return NextResponse.json(
@@ -83,12 +84,13 @@ export async function POST(req: NextRequest) {
       enabled,
       frequency: frequency!,
       time,
-      autoFix: autoFix || false,
+      autoDisable: autoDisable || false,
+      notifyAdmin: notifyAdmin || false,
       nextRun: nextRun?.toISOString()
     };
 
     // Save to Firestore config collection
-    await adminDb.collection('config').doc('indexesSchedule').set(config, { merge: true });
+    await adminDb.collection('config').doc('linksSchedule').set(config, { merge: true });
 
     // TODO: In production, this should also:
     // 1. Create/update Cloud Scheduler job
@@ -120,14 +122,15 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // Dla GET: zwróć config bez blokowania (UI needs to render)
-    const configDoc = await adminDb.collection('config').doc('indexesSchedule').get();
+    const configDoc = await adminDb.collection('config').doc('linksSchedule').get();
     const config = configDoc.exists ? configDoc.data() as ScheduleConfig : null;
 
     return NextResponse.json({
       enabled: config?.enabled || false,
       frequency: config?.frequency || 'daily',
-      time: config?.time || '03:00',
-      autoFix: config?.autoFix || false,
+      time: config?.time || '04:00',
+      autoDisable: config?.autoDisable || false,
+      notifyAdmin: config?.notifyAdmin || true,
       lastRun: config?.lastRun || null,
       nextRun: config?.nextRun || null
     });

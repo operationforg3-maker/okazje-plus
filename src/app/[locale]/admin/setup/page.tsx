@@ -22,7 +22,8 @@ import {
   Clock,
   Calendar,
   Link2,
-  ListTree
+  ListTree,
+  XCircle
 } from 'lucide-react';
 
 function SetupPage() {
@@ -50,6 +51,13 @@ function SetupPage() {
   // Links verification state
   const [linksResult, setLinksResult] = useState('');
   const [linksLoading, setLinksLoading] = useState(false);
+  const [linksScheduleEnabled, setLinksScheduleEnabled] = useState(false);
+  const [linksScheduleFrequency, setLinksScheduleFrequency] = useState<'hourly' | 'daily' | 'weekly'>('daily');
+  const [linksScheduleTime, setLinksScheduleTime] = useState('04:00');
+  const [linksAutoDisable, setLinksAutoDisable] = useState(false);
+  const [linksNotifyAdmin, setLinksNotifyAdmin] = useState(true);
+  const [linksLastRun, setLinksLastRun] = useState<string | null>(null);
+  const [linksNextRun, setLinksNextRun] = useState<string | null>(null);
 
   // Load indexes schedule on mount
   useEffect(() => {
@@ -70,6 +78,28 @@ function SetupPage() {
       }
     };
     loadIndexesSchedule();
+  }, []);
+
+  // Load links schedule on mount
+  useEffect(() => {
+    const loadLinksSchedule = async () => {
+      try {
+        const res = await fetch('/api/admin/schedule/links');
+        if (res.ok) {
+          const data = await res.json();
+          setLinksScheduleEnabled(data.enabled || false);
+          setLinksScheduleFrequency(data.frequency || 'daily');
+          setLinksScheduleTime(data.time || '04:00');
+          setLinksAutoDisable(data.autoDisable || false);
+          setLinksNotifyAdmin(data.notifyAdmin || true);
+          setLinksLastRun(data.lastRun || null);
+          setLinksNextRun(data.nextRun || null);
+        }
+      } catch (e) {
+        console.error('Failed to load links schedule:', e);
+      }
+    };
+    loadLinksSchedule();
   }, []);
 
   const [categoryMode, setCategoryMode] = useState<'seeds-only' | 'ai-only' | 'hybrid'>('seeds-only');
@@ -365,10 +395,46 @@ function SetupPage() {
       }
       
       setLinksResult(resultText);
+      
+      // Update last run timestamp
+      setLinksLastRun(new Date().toISOString());
     } catch (e: any) {
       setLinksResult(`❌ Błąd połączenia: ${e.message}`);
     } finally {
       setLinksLoading(false);
+    }
+  };
+
+  const handleToggleLinksSchedule = async () => {
+    const newEnabled = !linksScheduleEnabled;
+    setLinksScheduleEnabled(newEnabled);
+    
+    try {
+      const res = await fetch('/api/admin/schedule/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: newEnabled,
+          frequency: linksScheduleFrequency,
+          time: linksScheduleTime,
+          autoDisable: linksAutoDisable,
+          notifyAdmin: linksNotifyAdmin
+        })
+      });
+      
+      if (!res.ok) {
+        setLinksScheduleEnabled(!newEnabled); // revert on error
+        alert('Błąd zapisu harmonogramu');
+        return;
+      }
+      
+      const data = await res.json();
+      if (data.nextRun) {
+        setLinksNextRun(data.nextRun);
+      }
+    } catch (e) {
+      console.error('Schedule error:', e);
+      setLinksScheduleEnabled(!newEnabled); // revert on error
     }
   };
 
@@ -1069,6 +1135,98 @@ function SetupPage() {
                     Narzędzie automatycznie konwertuje standardowe linki na afiliacyjne.
                   </AlertDescription>
                 </Alert>
+              </div>
+
+              {/* Scheduling Section */}
+              <div className="border rounded-lg p-4 bg-muted/30 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="font-medium">Harmonogram automatycznej weryfikacji</h4>
+                  </div>
+                  <Button
+                    onClick={handleToggleLinksSchedule}
+                    variant={linksScheduleEnabled ? "destructive" : "default"}
+                    size="sm"
+                  >
+                    {linksScheduleEnabled ? (
+                      <>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Wyłącz
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Włącz
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Częstotliwość</label>
+                    <select
+                      value={linksScheduleFrequency}
+                      onChange={(e) => setLinksScheduleFrequency(e.target.value as 'hourly' | 'daily' | 'weekly')}
+                      disabled={linksScheduleEnabled}
+                      className="w-full p-2 border rounded-md bg-background"
+                    >
+                      <option value="hourly">Co godzinę</option>
+                      <option value="daily">Codziennie</option>
+                      <option value="weekly">Co tydzień</option>
+                    </select>
+                  </div>
+
+                  {(linksScheduleFrequency === 'daily' || linksScheduleFrequency === 'weekly') && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Godzina wykonania</label>
+                      <input
+                        type="time"
+                        value={linksScheduleTime}
+                        onChange={(e) => setLinksScheduleTime(e.target.value)}
+                        disabled={linksScheduleEnabled}
+                        className="w-full p-2 border rounded-md bg-background"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="linksAutoDisable"
+                      checked={linksAutoDisable}
+                      onChange={(e) => setLinksAutoDisable(e.target.checked)}
+                      disabled={linksScheduleEnabled}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="linksAutoDisable" className="text-sm">
+                      Automatycznie wyłączaj zepsute linki
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="linksNotifyAdmin"
+                      checked={linksNotifyAdmin}
+                      onChange={(e) => setLinksNotifyAdmin(e.target.checked)}
+                      disabled={linksScheduleEnabled}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="linksNotifyAdmin" className="text-sm">
+                      Powiadom admina o zepsutych linkach
+                    </label>
+                  </div>
+                </div>
+
+                {linksScheduleEnabled && linksNextRun && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
+                    <Clock className="h-4 w-4" />
+                    <span>Następne uruchomienie: {new Date(linksNextRun).toLocaleString('pl-PL')}</span>
+                  </div>
+                )}
               </div>
               
               <div className="flex gap-2">

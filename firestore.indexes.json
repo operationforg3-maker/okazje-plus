@@ -65,14 +65,6 @@
       "collectionGroup": "deals",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "deals",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" },
@@ -172,15 +164,7 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" },
         { "fieldPath": "__name__", "order": "DESCENDING" }
       ]
-    },
     {
-      "collectionGroup": "products",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [
