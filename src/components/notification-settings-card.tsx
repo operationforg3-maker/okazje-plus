@@ -95,7 +95,7 @@ export function NotificationSettingsCard() {
         await showNotification({
           title: '🎉 Powiadomienia aktywne!',
           body: 'Będziesz otrzymywać powiadomienia o najlepszych okazjach',
-          icon: '/icon-192x192.png',
+          icon: '/icon_okazjeplus.png',
         });
       } else {
         toast.error('Powiadomienia zostały zablokowane. Zmień ustawienia w przeglądarce.');

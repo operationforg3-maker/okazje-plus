@@ -82,7 +82,7 @@ export async function showNotification(payload: NotificationPayload): Promise<No
   try {
     const notification = new Notification(payload.title, {
       body: payload.body,
-      icon: payload.icon || '/icon-192x192.png',
+      icon: payload.icon || '/icon_okazjeplus.png',
       badge: payload.badge || '/badge-72x72.png',
       tag: payload.tag,
       data: payload.data,
@@ -125,7 +125,7 @@ export async function notifyPriceDrop(
   await showNotification({
     title: '🔥 Spadek ceny!',
     body: `${itemName} - taniej o ${discount}%! (${newPrice.toFixed(2)} zł)`,
-    icon: '/icon-192x192.png',
+    icon: '/icon_okazjeplus.png',
     tag: `price-drop-${itemId}`,
     data: {
       url: `/${itemType === 'deal' ? 'deals' : 'products'}/${itemId}`,
@@ -147,7 +147,7 @@ export async function notifyNewDealInCategory(
   await showNotification({
     title: `✨ Nowa okazja w ${categoryName}`,
     body: dealTitle,
-    icon: '/icon-192x192.png',
+    icon: '/icon_okazjeplus.png',
     tag: `new-deal-${dealId}`,
     data: {
       url: `/deals/${dealId}`,
@@ -169,7 +169,7 @@ export async function notifyCommentReply(
   await showNotification({
     title: '💬 Nowa odpowiedź',
     body: `${authorName} odpowiedział na Twój komentarz w "${itemTitle}"`,
-    icon: '/icon-192x192.png',
+    icon: '/icon_okazjeplus.png',
     tag: `reply-${itemId}`,
     data: {
       url: `/${itemType === 'deal' ? 'deals' : 'products'}/${itemId}#comments`,
@@ -190,7 +190,7 @@ export async function notifyDealExpiring(
   await showNotification({
     title: '⏰ Okazja wygasa niedługo!',
     body: `${dealTitle} - zostało ${expiresIn}`,
-    icon: '/icon-192x192.png',
+    icon: '/icon_okazjeplus.png',
     tag: `expiring-${dealId}`,
     data: {
       url: `/deals/${dealId}`,
@@ -211,7 +211,7 @@ export async function notifyAchievement(
   await showNotification({
     title: '🏆 Nowe osiągnięcie!',
     body: `${badgeName} - ${badgeDescription}`,
-    icon: '/icon-192x192.png',
+    icon: '/icon_okazjeplus.png',
     tag: `achievement-${badgeName}`,
     data: {
       url: '/profile',
@@ -231,7 +231,7 @@ export async function notifyLevelUp(
   await showNotification({
     title: '🎉 Awans na nowy poziom!',
     body: `Gratulacje! Osiągnąłeś poziom ${newLevel}: ${levelName}`,
-    icon: '/icon-192x192.png',
+    icon: '/icon_okazjeplus.png',
     tag: `level-up-${newLevel}`,
     data: {
       url: '/profile',

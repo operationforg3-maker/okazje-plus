@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/Logotyp_okazjePlus.png',
         width: 1200,
         height: 630,
         alt: 'Okazje+ - Najlepsze okazje zakupowe',
@@ -39,10 +39,11 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
     description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże',
-    images: ['/og-image.png'],
+    images: ['/Logotyp_okazjePlus.png'],
   },
   icons: {
-    icon: '/favicon.svg',
+    icon: '/icon_okazjeplus.svg',
+    apple: '/icon_okazjeplus.png',
   },
   robots: {
     index: true,

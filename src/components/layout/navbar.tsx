@@ -58,7 +58,7 @@ export function Navbar() {
             <SheetHeader>
               <SheetTitle>
                 <Link href={`${prefix}/`} className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                  <ShoppingBag className="h-6 w-6 text-primary" />
+                  <img src="/icon_okazjeplus.svg" alt="Okazje+ logo" className="h-8 w-8" />
                   <span className="font-bold font-headline text-xl">Okazje+</span>
                 </Link>
               </SheetTitle>
@@ -74,10 +74,7 @@ export function Navbar() {
         
         {/* Desktop Nav */}
         <Link href={`${prefix}/`} className="mr-6 flex items-center space-x-2">
-          <ShoppingBag className="h-6 w-6 text-primary" />
-          <span className="hidden font-bold font-headline sm:inline-block text-lg">
-            Okazje+
-          </span>
+          <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-8" />
         </Link>
         
         <NavigationMenu className="hidden md:flex">

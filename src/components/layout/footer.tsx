@@ -30,8 +30,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:grid-cols-4">
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <ShoppingBag className="h-7 w-7 text-primary" />
-              <span className="font-bold font-headline text-xl">Okazje+</span>
+              <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-10" />
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
               Twoje zaufane źródło najlepszych okazji zakupowych w internecie.
