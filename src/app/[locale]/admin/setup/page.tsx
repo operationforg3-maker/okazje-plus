@@ -769,6 +769,18 @@ function SetupPage() {
               <p><strong>Wypełnij Katalog:</strong> Tworzy strukturę kategorii (jak Pepper.pl) i pobiera produkty z AliExpress API</p>
               <p><strong>Pobierz Deale:</strong> Agreguje gorące okazje (promocje &gt; 50% zniżki) z AliExpress dla każdej kategorii</p>
               <p><strong>Wyczyść Bazę:</strong> Usuwa wszystkie produkty i deale (przydatne przed re-seedowaniem)</p>
+              <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-3 mt-4">
+                <p className="flex items-start gap-2 text-green-800 dark:text-green-300">
+                  <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span><strong>Treści po polsku:</strong> AI automatycznie tłumaczy wszystkie tytuły, opisy i cechy produktów z AliExpress na <strong>przyjazny język polski</strong> z zachowaniem dokładności specyfikacji technicznych.</span>
+                </p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3 mt-2">
+                <p className="flex items-start gap-2 text-blue-800 dark:text-blue-300">
+                  <Sparkles className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span><strong>Wyszukiwarka:</strong> Typesense Search jest <strong>aktywna</strong> i indeksuje polskie treści dla szybkiego wyszukiwania pełnotekstowego. Fallback do Firestore jeśli Typesense niedostępny.</span>
+                </p>
+              </div>
               <p className="text-amber-700 dark:text-amber-400 flex items-start gap-2 mt-4">
                 <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                 <span><strong>Ważne:</strong> To agregator - produkty i deale pochodzą z AliExpress, nie są generowane sztucznie. Proces może zająć kilka minut w zależności od ilości kategorii.</span>
@@ -844,9 +856,13 @@ function SetupPage() {
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div>
                     <div className="font-medium">Typesense Search</div>
-                    <div className="text-sm text-muted-foreground">AI-powered search</div>
+                    <div className="text-sm text-muted-foreground">
+                      AI-powered search • Konfiguracja w Secret Manager
+                    </div>
                   </div>
-                  <Badge variant="secondary">Opcjonalne</Badge>
+                  <Badge variant="default" className="bg-green-600">
+                    Aktywne
+                  </Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div>
