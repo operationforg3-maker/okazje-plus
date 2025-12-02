@@ -37,19 +37,19 @@ export function StatsStrip() {
     <div className="w-full bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-y py-6">
       <div className="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-6">
         <StatCard
-          icon={<Boxes className="h-5 w-5" />}
+          icon={<Boxes className="h-5 w-5 md:h-6 md:w-6" />}
           label="Produkty w katalogu"
           value={counts?.products}
           loading={loading}
         />
         <StatCard
-          icon={<TrendingUp className="h-5 w-5" />}
+          icon={<TrendingUp className="h-5 w-5 md:h-6 md:w-6" />}
           label="Aktywne okazje"
           value={counts?.deals}
           loading={loading}
         />
         <StatCard
-          icon={<Users className="h-5 w-5" />}
+          icon={<Users className="h-5 w-5 md:h-6 md:w-6" />}
           label="Użytkownicy społeczności"
           value={counts?.users}
           loading={loading}

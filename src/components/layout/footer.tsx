@@ -30,7 +30,7 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:grid-cols-4">
           <div className="lg:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-10" />
+              <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-8 md:h-10 lg:h-12" />
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
               Twoje zaufane źródło najlepszych okazji zakupowych w internecie.
@@ -61,11 +61,11 @@ export function Footer() {
       <h3 className="font-headline font-semibold">Social Media</h3>
       <div className="mt-4 flex space-x-4">
         <Link href="https://www.facebook.com/people/Okazje-Plus/61583646609859" className="text-muted-foreground hover:text-primary transition-colors" target="_blank" rel="noopener noreferrer">
-          <Facebook className="h-6 w-6" />
+          <Facebook className="h-5 w-5 md:h-6 md:w-6" />
           <span className="sr-only">Facebook</span>
         </Link>
         <Link href="https://www.instagram.com/okazje_plus/" className="text-muted-foreground hover:text-primary transition-colors" target="_blank" rel="noopener noreferrer">
-          <Instagram className="h-6 w-6" />
+          <Instagram className="h-5 w-5 md:h-6 md:w-6" />
           <span className="sr-only">Instagram</span>
         </Link>
       </div>

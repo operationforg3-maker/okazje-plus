@@ -283,7 +283,7 @@ export default function DealCard({ deal }: DealCardProps) {
           disabled={isFavoriteLoading}
         >
           <Heart
-            className={`h-4 w-4 transition-all ${
+            className={`h-4 w-4 md:h-5 md:w-5 transition-all ${
               isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'
             }`}
           />
@@ -291,19 +291,19 @@ export default function DealCard({ deal }: DealCardProps) {
         <div className="absolute right-2 top-2 flex gap-1 z-10">
           {isHot && (
             <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg">
-              <Flame className="mr-1 h-3 w-3" />
+              <Flame className="mr-1 h-3 w-3 md:h-4 md:w-4" />
               Hot
             </Badge>
           )}
           {isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
-              <Sparkles className="mr-1 h-3 w-3" />
+              <Sparkles className="mr-1 h-3 w-3 md:h-4 md:w-4" />
               Nowość
             </Badge>
           )}
           {deal.freeShipping && (
             <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg">
-              <Truck className="mr-1 h-3 w-3" />
+              <Truck className="mr-1 h-3 w-3 md:h-4 md:w-4" />
               Darmowa dostawa
             </Badge>
           )}
@@ -362,13 +362,13 @@ export default function DealCard({ deal }: DealCardProps) {
           <div className="flex items-center gap-2">
             {categoryLabel && (
               <Badge variant="secondary" className="flex items-center gap-1">
-                <Tag className="h-3 w-3" aria-hidden />
+                <Tag className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
                 {categoryLabel}
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
+            <Clock className="h-3 w-3 md:h-4 md:w-4" />
             <span>{getRelativeTime(deal.postedAt)}</span>
           </div>
         </div>
@@ -397,7 +397,7 @@ export default function DealCard({ deal }: DealCardProps) {
           {/* Flash sale indicator */}
           {deal.metadata?.flashSale?.active && (
             <Badge variant="destructive" className="bg-orange-600 animate-pulse">
-              <Zap className="h-3 w-3 mr-1" />
+              <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               Flash Sale
             </Badge>
           )}
@@ -405,7 +405,7 @@ export default function DealCard({ deal }: DealCardProps) {
           {/* Stock alert */}
           {deal.metadata?.stockAlert?.lowStock && (
             <Badge variant="outline" className="border-yellow-600 text-yellow-600">
-              <AlertTriangle className="h-3 w-3 mr-1" />
+              <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               Tylko {deal.metadata.stockAlert.available} szt.
             </Badge>
           )}
@@ -413,7 +413,7 @@ export default function DealCard({ deal }: DealCardProps) {
           {/* Shipping details */}
           {deal.metadata?.shippingDetails?.free && (
             <Badge variant="default" className="bg-green-600 text-white">
-              <Truck className="h-3 w-3 mr-1" />
+              <Truck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               Darmowa wysyłka
             </Badge>
           )}
@@ -433,7 +433,7 @@ export default function DealCard({ deal }: DealCardProps) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="flex items-center gap-1 cursor-help">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    <Star className="h-3 w-3 md:h-4 md:w-4 fill-yellow-400 text-yellow-400" />
                     Sprzedawca: {deal.metadata.merchantRating.toFixed(1)}
                   </span>
                 </TooltipTrigger>
@@ -447,7 +447,7 @@ export default function DealCard({ deal }: DealCardProps) {
           {/* Certifications */}
           {deal.metadata?.certifications && deal.metadata.certifications.length > 0 && (
             <Badge variant="outline" className="text-xs">
-              <ShieldCheck className="h-3 w-3 mr-1" />
+              <ShieldCheck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               {deal.metadata.certifications.join(', ')}
             </Badge>
           )}

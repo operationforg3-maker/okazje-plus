@@ -26,7 +26,7 @@ export default function HeroSection() {
           {/* Główny nagłówek */}
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
-              <Flame className="h-4 w-4" />
+              <Flame className="h-4 w-4 md:h-5 md:w-5" />
               Najlepsze okazje w jednym miejscu
             </div>
             <h1 className="font-headline text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
@@ -51,21 +51,21 @@ export default function HeroSection() {
           <div className="grid grid-cols-3 gap-4 md:gap-8 max-w-2xl mx-auto pt-8">
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-2xl md:text-3xl font-bold text-primary">
-                <TrendingUp className="h-6 w-6" />
+                <TrendingUp className="h-5 w-5 md:h-6 md:w-6" />
                 <span>1000+</span>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground mt-1">Aktywnych okazji</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-2xl md:text-3xl font-bold text-primary">
-                <Zap className="h-6 w-6" />
+                <Zap className="h-5 w-5 md:h-6 md:w-6" />
                 <span>50k+</span>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground mt-1">Produktów</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-2xl md:text-3xl font-bold text-primary">
-                <Flame className="h-6 w-6" />
+                <Flame className="h-5 w-5 md:h-6 md:w-6" />
                 <span>AI</span>
               </div>
               <p className="text-xs md:text-sm text-muted-foreground mt-1">Trending prognoza</p>

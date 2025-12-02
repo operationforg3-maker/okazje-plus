@@ -200,7 +200,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="flex items-center justify-between">
           {categoryBadge && (
             <Badge variant="secondary" className="flex w-fit items-center gap-1">
-              <Tag className="h-3 w-3" aria-hidden />
+              <Tag className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
               {categoryBadge}
             </Badge>
           )}
@@ -213,31 +213,31 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
           {product.metadata?.hotProduct && (
             <Badge variant="destructive" className="flex w-fit items-center gap-1 bg-red-600 animate-pulse">
-              <Zap className="h-3 w-3" aria-hidden />
+              <Zap className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
               HOT
             </Badge>
           )}
           {product.metadata?.flashDeal && (
             <Badge variant="destructive" className="flex w-fit items-center gap-1 bg-orange-600">
-              <Zap className="h-3 w-3" aria-hidden />
+              <Zap className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
               Flash Deal
             </Badge>
           )}
           {product.metadata?.stockStatus === 'low_stock' && (
             <Badge variant="outline" className="flex w-fit items-center gap-1 border-yellow-600 text-yellow-600">
-              <AlertTriangle className="h-3 w-3" aria-hidden />
+              <AlertTriangle className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
               Niski stan
             </Badge>
           )}
           {product.metadata?.stockStatus === 'out_of_stock' && (
             <Badge variant="outline" className="flex w-fit items-center gap-1 border-red-600 text-red-600">
-              <AlertTriangle className="h-3 w-3" aria-hidden />
+              <AlertTriangle className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
               Wyprzedane
             </Badge>
           )}
           {product.metadata?.promotionId && (
             <Badge variant="secondary" className="flex w-fit items-center gap-1 bg-purple-600 text-white">
-              <Tag className="h-3 w-3" aria-hidden />
+              <Tag className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
               Promocja
             </Badge>
           )}
@@ -273,7 +273,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {/* Shipping details */}
           {product.metadata?.shippingDetails?.free && (
             <Badge variant="default" className="bg-green-600 text-white">
-              <Truck className="h-3 w-3 mr-1" />
+              <Truck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               Darmowa wysyłka
             </Badge>
           )}
@@ -290,7 +290,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {/* Stock status */}
           {product.metadata?.stock?.availability === 'low_stock' && (
             <Badge variant="outline" className="border-yellow-600 text-yellow-600">
-              <AlertTriangle className="h-3 w-3 mr-1" />
+              <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               {product.metadata.stock.available} szt.
             </Badge>
           )}
@@ -299,7 +299,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
           {product.metadata?.stock?.availability === 'out_of_stock' && (
             <Badge variant="outline" className="border-red-600 text-red-600">
-              <AlertTriangle className="h-3 w-3 mr-1" />
+              <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               Wyprzedane
             </Badge>
           )}
@@ -372,7 +372,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           {/* Certifications */}
           {product.metadata?.certifications && product.metadata.certifications.length > 0 && (
             <Badge variant="outline" className="text-xs">
-              <ShieldCheck className="h-3 w-3 mr-1" />
+              <ShieldCheck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               {product.metadata.certifications.join(', ')}
             </Badge>
           )}
