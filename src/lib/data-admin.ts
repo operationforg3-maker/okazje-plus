@@ -345,3 +345,57 @@ export async function logAiCommand(data: {
     createdAt: FieldValue.serverTimestamp(),
   });
 }
+
+/**
+ * Pobiera wszystkie kategorie główne z Firestore
+ */
+export async function getAllCategories(): Promise<Array<{ id: string; name: string; slug: string; icon?: string; sortOrder?: number }>> {
+  const snapshot = await adminDb.collection('categories').orderBy('sortOrder', 'asc').get();
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    name: doc.data().name,
+    slug: doc.data().slug,
+    icon: doc.data().icon,
+    sortOrder: doc.data().sortOrder,
+  }));
+}
+
+/**
+ * Pobiera wszystkie subcategories dla danej kategorii
+ */
+export async function getSubcategories(categoryId: string): Promise<Array<{ id: string; name: string; slug: string; icon?: string; sortOrder?: number }>> {
+  const snapshot = await adminDb
+    .collection('categories')
+    .doc(categoryId)
+    .collection('subcategories')
+    .orderBy('sortOrder', 'asc')
+    .get();
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    name: doc.data().name,
+    slug: doc.data().slug,
+    icon: doc.data().icon,
+    sortOrder: doc.data().sortOrder,
+  }));
+}
+
+/**
+ * Pobiera wszystkie sub-subcategories dla danej subcategory
+ */
+export async function getSubSubcategories(categoryId: string, subcategoryId: string): Promise<Array<{ id: string; name: string; slug: string; icon?: string; sortOrder?: number }>> {
+  const snapshot = await adminDb
+    .collection('categories')
+    .doc(categoryId)
+    .collection('subcategories')
+    .doc(subcategoryId)
+    .collection('subcategories')
+    .orderBy('sortOrder', 'asc')
+    .get();
+  return snapshot.docs.map(doc => ({
+    id: doc.id,
+    name: doc.data().name,
+    slug: doc.data().slug,
+    icon: doc.data().icon,
+    sortOrder: doc.data().sortOrder,
+  }));
+}

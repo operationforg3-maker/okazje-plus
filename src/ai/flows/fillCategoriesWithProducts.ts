@@ -1,9 +1,8 @@
-import { createCategory, createSubcategory, createSubSubcategory, createProduct, findExistingProduct, updateProduct } from '@/lib/data-admin';
+import { createCategory, createSubcategory, createSubSubcategory, createProduct, findExistingProduct, updateProduct, getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/data-admin';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
 import { aiProductEnrichmentBatchPL } from '@/ai/flows/aliexpress/aiProductEnrichmentBatchPL';
 import { cacheDel } from '@/lib/cache';
-import { CATEGORY_SEEDS } from '@/lib/category-seeds';
 
 /**
  * Wyszukuje produkty dla kategorii przez AliExpress API
@@ -92,19 +91,13 @@ export async function fillCategoriesWithProducts() {
     console.log('[fillCategoriesWithProducts] Process:', process.pid);
     console.log('[fillCategoriesWithProducts] Environment:', process.env.NODE_ENV);
     
-    // Użyj istniejącej struktury z category-seeds.ts (15 głównych kategorii, 350+ sub)
-    const categories = CATEGORY_SEEDS.map(cat => ({
-      name: cat.name!,
-      slug: cat.slug!,
-      subs: (cat.subcategories || []).map(sub => ({
-        name: sub.name!,
-        slug: sub.slug!,
-        subs: (sub.subcategories || []).map(subsub => ({
-          name: subsub.name!,
-          slug: subsub.slug!,
-        }))
-      }))
-    }));
+    // Przeczytaj istniejące kategorie z Firestore (utworzone wcześniej przez createCategoryStructure)
+    const categories = await getAllCategories();
+    console.log(`[fillCategoriesWithProducts] Found ${categories.length} categories in Firestore`);
+    
+    if (categories.length === 0) {
+      throw new Error('No categories found in Firestore. Please run "Utwórz kategorie" first!');
+    }
 
   let totalProducts = 0;
   let totalCategories = 0;
@@ -118,25 +111,27 @@ export async function fillCategoriesWithProducts() {
   
   for (const cat of categories) {
     try {
-      console.log(`[fillCategoriesWithProducts] Creating category: ${cat.name}`);
-      const catId = await createCategory(cat);
-      console.log(`[fillCategoriesWithProducts] Created category ${cat.name} with ID: ${catId}`);
+      console.log(`[fillCategoriesWithProducts] Processing category: ${cat.name} (ID: ${cat.id})`);
       totalCategories++;
       
-      for (const sub of cat.subs) {
+      // Pobierz subcategories z Firestore
+      const subcategories = await getSubcategories(cat.id);
+      console.log(`[fillCategoriesWithProducts] Found ${subcategories.length} subcategories for ${cat.name}`);
+      
+      for (const sub of subcategories) {
         try {
-          console.log(`[fillCategoriesWithProducts] Creating subcategory: ${sub.name}`);
-          const subId = await createSubcategory(catId, sub);
-          console.log(`[fillCategoriesWithProducts] Created subcategory ${sub.name} with ID: ${subId}`);
+          console.log(`[fillCategoriesWithProducts] Processing subcategory: ${sub.name} (ID: ${sub.id})`);
           totalSubcategories++;
           
-          // Jeśli subcategoria ma pod-podkategorie, utwórz je
-          if (sub.subs && sub.subs.length > 0) {
-            for (const subsub of sub.subs) {
+          // Pobierz sub-subcategories z Firestore
+          const subsubcategories = await getSubSubcategories(cat.id, sub.id);
+          console.log(`[fillCategoriesWithProducts] Found ${subsubcategories.length} sub-subcategories for ${sub.name}`);
+          
+          // Jeśli subcategoria ma pod-podkategorie, przetwórz je
+          if (subsubcategories.length > 0) {
+            for (const subsub of subsubcategories) {
               try {
-                console.log(`[fillCategoriesWithProducts] Creating sub-subcategory: ${subsub.name}`);
-                const subsubId = await createSubSubcategory(catId, subId, subsub);
-                console.log(`[fillCategoriesWithProducts] Created sub-subcategory ${subsub.name} with ID: ${subsubId}`);
+                console.log(`[fillCategoriesWithProducts] Processing sub-subcategory: ${subsub.name} (ID: ${subsub.id})`);
                 totalSubSubcategories++;
                 
                 // Pobierz produkty z AliExpress dla tej kategorii (zwiększony limit: 40 → ~160 produktów po 4 queries)
@@ -334,12 +329,12 @@ export async function fillCategoriesWithProducts() {
                   }
                 }
               } catch (e: any) {
-                console.error(`[fillCategoriesWithProducts] Failed to create sub-subcategory ${subsub.name}:`, e.message);
+                console.error(`[fillCategoriesWithProducts] Failed to process sub-subcategory ${subsub.name}:`, e.message);
               }
             }
           } else {
             // Jeśli nie ma pod-podkategorii, pobierz produkty bezpośrednio dla subcategory
-            console.log(`[fillCategoriesWithProducts] Fetching (multi-query) products for: ${cat.name} ${sub.name} (no sub-subcategories)`);
+            console.log(`[fillCategoriesWithProducts] No sub-subcategories, fetching products for: ${cat.name} ${sub.name}`);
             let aliProducts = await fetchMultiQuery([cat.name, sub.name], 40);
             const advanced = process.env.ALIEXPRESS_ENABLE_ADVANCED === '1' || process.env.ALIEXPRESS_ENABLE_ADVANCED === 'true';
             if (advanced) {
