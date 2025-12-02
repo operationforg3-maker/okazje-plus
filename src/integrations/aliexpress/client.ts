@@ -299,26 +299,54 @@ export class AliExpressClient {
       });
       
       // Transform products to our format
-      const transformedProducts = products.map((p: any) => ({
-        item_id: p.product_id || p.item_id,
-        title: p.product_title || p.title,
-        image_urls: [p.product_main_image_url || p.image_url].filter(Boolean),
-        price: {
-          current: parseFloat(p.target_sale_price || p.sale_price || '0'),
-          original: parseFloat(p.target_original_price || p.original_price || '0'),
-          currency: 'USD',
-        },
-        product_url: p.promotion_link || p.product_detail_url,
-        discount_percent: p.discount ? parseFloat(p.discount) : undefined,
-        rating: p.evaluate_rate ? {
-          score: parseFloat(p.evaluate_rate),
-          count: 0,
-        } : undefined,
-        shipping: {
-          free: p.ship_to_days === '0',
-          cost: 0,
-        },
-      }));
+      const transformedProducts = products.map((p: any) => {
+        // Zbierz wszystkie dostępne zdjęcia
+        const imageUrls: string[] = [];
+        
+        // Główne zdjęcie
+        if (p.product_main_image_url || p.image_url) {
+          imageUrls.push(p.product_main_image_url || p.image_url);
+        }
+        
+        // Galeria zdjęć (AliExpress zwraca jako string z separatorem ";" lub array)
+        if (p.product_small_image_urls) {
+          if (typeof p.product_small_image_urls === 'string') {
+            const urls = p.product_small_image_urls.split(';').filter(Boolean);
+            imageUrls.push(...urls);
+          } else if (Array.isArray(p.product_small_image_urls)) {
+            imageUrls.push(...p.product_small_image_urls.filter(Boolean));
+          }
+        }
+        
+        // Dodatkowe pola ze zdjęciami
+        if (p.second_level_image_url) imageUrls.push(p.second_level_image_url);
+        if (p.first_level_image_url) imageUrls.push(p.first_level_image_url);
+        
+        // Deduplikacja
+        const uniqueImages = [...new Set(imageUrls.filter(Boolean))];
+        
+        return {
+          item_id: p.product_id || p.item_id,
+          title: p.product_title || p.title,
+          image_urls: uniqueImages.length > 0 ? uniqueImages : [p.product_main_image_url || p.image_url].filter(Boolean),
+          product_video_url: p.product_video_url || null,
+          price: {
+            current: parseFloat(p.target_sale_price || p.sale_price || '0'),
+            original: parseFloat(p.target_original_price || p.original_price || '0'),
+            currency: 'USD',
+          },
+          product_url: p.promotion_link || p.product_detail_url,
+          discount_percent: p.discount ? parseFloat(p.discount) : undefined,
+          rating: p.evaluate_rate ? {
+            score: parseFloat(p.evaluate_rate),
+            count: 0,
+          } : undefined,
+          shipping: {
+            free: p.ship_to_days === '0',
+            cost: 0,
+          },
+        };
+      });
       
       return {
         success: true,

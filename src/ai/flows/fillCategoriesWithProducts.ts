@@ -248,6 +248,43 @@ export async function fillCategoriesWithProducts() {
                     const stockStatus = aliProduct.stock_status || aliProduct.stockStatus || 
                       (aliProduct.volume > 1000 ? 'in_stock' : aliProduct.volume > 100 ? 'low_stock' : 'unknown');
 
+                    // Przygotuj galerię zdjęć (wszystkie dostępne obrazy z AliExpress)
+                    const gallery: Array<{ id: string; type: 'url'; src: string; alt?: string; isPrimary?: boolean; source: 'aliexpress' }> = [];
+                    
+                    // Główne zdjęcie
+                    const mainImage = aliProduct.image || aliProduct.imageUrl || aliProduct.product_main_image_url;
+                    if (mainImage) {
+                      gallery.push({
+                        id: `img-0`,
+                        type: 'url',
+                        src: mainImage,
+                        alt: enrichedName,
+                        isPrimary: true,
+                        source: 'aliexpress',
+                      });
+                    }
+                    
+                    // Dodatkowe zdjęcia z galerii (image_urls z API)
+                    if (Array.isArray(aliProduct.image_urls)) {
+                      aliProduct.image_urls.forEach((url: string, idx: number) => {
+                        if (url && url !== mainImage) {
+                          gallery.push({
+                            id: `img-${idx + 1}`,
+                            type: 'url',
+                            src: url,
+                            alt: enrichedName,
+                            isPrimary: false,
+                            source: 'aliexpress',
+                          });
+                        }
+                      });
+                    }
+                    
+                    // Deduplikacja obrazów po URL
+                    const uniqueGallery = gallery.filter((img, index, self) => 
+                      index === self.findIndex((t) => t.src === img.src)
+                    );
+                    
                     const baseData = {
                       name: enrichedName,
                       description: shortDesc,
@@ -256,8 +293,9 @@ export async function fillCategoriesWithProducts() {
                       originalPrice,
                       discountPercent,
                       currency: priceCurrency, // USD/PLN/EUR dla multi-currency support
-                      image: aliProduct.image || aliProduct.imageUrl || '',
+                      image: mainImage || '',
                       imageHint: '',
+                      gallery: uniqueGallery.length > 0 ? uniqueGallery : undefined,
                       affiliateUrl: affiliateUrl || '#',
                       mainCategorySlug: cat.slug,
                       subCategorySlug: sub.slug,
@@ -438,6 +476,43 @@ export async function fillCategoriesWithProducts() {
                   || aliProduct.currency 
                   || 'USD'; // Default to USD for AliExpress
                 
+                // Przygotuj galerię zdjęć (wszystkie dostępne obrazy z AliExpress)
+                const gallery: Array<{ id: string; type: 'url'; src: string; alt?: string; isPrimary?: boolean; source: 'aliexpress' }> = [];
+                
+                // Główne zdjęcie
+                const mainImage = aliProduct.image || aliProduct.imageUrl || aliProduct.product_main_image_url;
+                if (mainImage) {
+                  gallery.push({
+                    id: `img-0`,
+                    type: 'url',
+                    src: mainImage,
+                    alt: enrichedName,
+                    isPrimary: true,
+                    source: 'aliexpress',
+                  });
+                }
+                
+                // Dodatkowe zdjęcia z galerii (image_urls z API)
+                if (Array.isArray(aliProduct.image_urls)) {
+                  aliProduct.image_urls.forEach((url: string, idx: number) => {
+                    if (url && url !== mainImage) {
+                      gallery.push({
+                        id: `img-${idx + 1}`,
+                        type: 'url',
+                        src: url,
+                        alt: enrichedName,
+                        isPrimary: false,
+                        source: 'aliexpress',
+                      });
+                    }
+                  });
+                }
+                
+                // Deduplikacja obrazów po URL
+                const uniqueGallery = gallery.filter((img, index, self) => 
+                  index === self.findIndex((t) => t.src === img.src)
+                );
+                
                 const baseData = {
                   name: enrichedName,
                   description: shortDesc,
@@ -446,8 +521,9 @@ export async function fillCategoriesWithProducts() {
                   originalPrice,
                   discountPercent,
                   currency: priceCurrency, // USD/PLN/EUR dla multi-currency support
-                  image: aliProduct.image || aliProduct.imageUrl || '',
+                  image: mainImage || '',
                   imageHint: '',
+                  gallery: uniqueGallery.length > 0 ? uniqueGallery : undefined,
                   affiliateUrl: affiliateUrl || '#',
                   mainCategorySlug: cat.slug,
                   subCategorySlug: sub.slug,
