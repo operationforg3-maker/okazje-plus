@@ -219,24 +219,32 @@ export async function fillCategoriesWithProducts() {
                   batchOutputs = await aiProductEnrichmentBatchPL(batchInputs);
                 } catch (_) { batchOutputs = []; }
 
-                // Pobierz szczegółowe dane (opis, specyfikacje) dla TOP 15 produktów
-                console.log(`[fillCategoriesWithProducts] Fetching detailed info for top 15 products...`);
-                const topProducts = aliProducts.slice(0, 15);
+                // Pobierz szczegółowe dane (opis, specyfikacje) dla WSZYSTKICH produktów
+                console.log(`[fillCategoriesWithProducts] Fetching detailed info for ALL ${aliProducts.length} products...`);
                 const productDetailsMap = new Map<string, any>();
+                let fetchedCount = 0;
                 
-                for (const product of topProducts) {
+                for (let i = 0; i < aliProducts.length; i++) {
+                  const product = aliProducts[i];
                   const productId = product.id || product.itemId || product.item_id || product.productId;
                   if (productId) {
-                    const details = await fetchProductDetails(String(productId));
-                    if (details) {
-                      productDetailsMap.set(String(productId), details);
-                      console.log(`[fillCategoriesWithProducts] Fetched details for ${productId}: ${details.title?.slice(0, 50)}...`);
+                    try {
+                      const details = await fetchProductDetails(String(productId));
+                      if (details) {
+                        productDetailsMap.set(String(productId), details);
+                        fetchedCount++;
+                        console.log(`[fillCategoriesWithProducts] [${i + 1}/${aliProducts.length}] ✓ ${productId}: ${details.title?.slice(0, 50)}...`);
+                      } else {
+                        console.log(`[fillCategoriesWithProducts] [${i + 1}/${aliProducts.length}] ✗ ${productId}: no details returned`);
+                      }
+                    } catch (e: any) {
+                      console.error(`[fillCategoriesWithProducts] [${i + 1}/${aliProducts.length}] ✗ ${productId}: ${e.message}`);
                     }
-                    // Rate limit: czekaj 100ms między requestami
-                    await new Promise(resolve => setTimeout(resolve, 100));
+                    // Rate limit: czekaj 200ms między requestami (bezpieczniejszy limit)
+                    await new Promise(resolve => setTimeout(resolve, 200));
                   }
                 }
-                console.log(`[fillCategoriesWithProducts] Fetched details for ${productDetailsMap.size}/${topProducts.length} top products`);
+                console.log(`[fillCategoriesWithProducts] Fetched details for ${fetchedCount}/${aliProducts.length} products (${Math.round(fetchedCount/aliProducts.length*100)}%)`);
 
                 for (let idx = 0; idx < aliProducts.length; idx++) {
                   const aliProduct = aliProducts[idx];
@@ -490,24 +498,32 @@ export async function fillCategoriesWithProducts() {
             let batchOutputs: any[] = [];
             try { batchOutputs = await aiProductEnrichmentBatchPL(batchInputs); } catch (_) { batchOutputs = []; }
 
-            // Pobierz szczegółowe dane (opis, specyfikacje) dla TOP 15 produktów
-            console.log(`[fillCategoriesWithProducts] Fetching detailed info for top 15 products...`);
-            const topProducts = aliProducts.slice(0, 15);
+            // Pobierz szczegółowe dane (opis, specyfikacje) dla WSZYSTKICH produktów
+            console.log(`[fillCategoriesWithProducts] Fetching detailed info for ALL ${aliProducts.length} products...`);
             const productDetailsMap = new Map<string, any>();
+            let fetchedCount = 0;
             
-            for (const product of topProducts) {
+            for (let i = 0; i < aliProducts.length; i++) {
+              const product = aliProducts[i];
               const productId = product.id || product.itemId || product.item_id || product.productId;
               if (productId) {
-                const details = await fetchProductDetails(String(productId));
-                if (details) {
-                  productDetailsMap.set(String(productId), details);
-                  console.log(`[fillCategoriesWithProducts] Fetched details for ${productId}: ${details.title?.slice(0, 50)}...`);
+                try {
+                  const details = await fetchProductDetails(String(productId));
+                  if (details) {
+                    productDetailsMap.set(String(productId), details);
+                    fetchedCount++;
+                    console.log(`[fillCategoriesWithProducts] [${i + 1}/${aliProducts.length}] ✓ ${productId}: ${details.title?.slice(0, 50)}...`);
+                  } else {
+                    console.log(`[fillCategoriesWithProducts] [${i + 1}/${aliProducts.length}] ✗ ${productId}: no details returned`);
+                  }
+                } catch (e: any) {
+                  console.error(`[fillCategoriesWithProducts] [${i + 1}/${aliProducts.length}] ✗ ${productId}: ${e.message}`);
                 }
-                // Rate limit: czekaj 100ms między requestami
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Rate limit: czekaj 200ms między requestami (bezpieczniejszy limit)
+                await new Promise(resolve => setTimeout(resolve, 200));
               }
             }
-            console.log(`[fillCategoriesWithProducts] Fetched details for ${productDetailsMap.size}/${topProducts.length} top products`);
+            console.log(`[fillCategoriesWithProducts] Fetched details for ${fetchedCount}/${aliProducts.length} products (${Math.round(fetchedCount/aliProducts.length*100)}%)`);
 
             for (let idx = 0; idx < aliProducts.length; idx++) {
               const aliProduct = aliProducts[idx];
