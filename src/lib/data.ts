@@ -280,26 +280,70 @@ export async function getHotDealsByCategory(mainCategorySlug: string, count: num
 // Funkcje do moderacji - pobieranie treści oczekujących
 export async function getPendingDeals(): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
-  const q = query(
+  
+  // Pobierz draft i pending osobno, potem połącz
+  const draftQuery = query(
     dealsRef,
-    where("status", "in", ["draft", "pending"]),
+    where("status", "==", "draft"),
     orderBy("createdAt", "desc"),
-    limit(100)
+    limit(50)
   );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(docToDeal);
+  const pendingQuery = query(
+    dealsRef,
+    where("status", "==", "pending"),
+    orderBy("createdAt", "desc"),
+    limit(50)
+  );
+  
+  const [draftSnapshot, pendingSnapshot] = await Promise.all([
+    getDocs(draftQuery),
+    getDocs(pendingQuery)
+  ]);
+  
+  const drafts = draftSnapshot.docs.map(docToDeal);
+  const pendings = pendingSnapshot.docs.map(docToDeal);
+  
+  // Połącz i posortuj
+  const all = [...drafts, ...pendings];
+  all.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
+  
+  return all.slice(0, 100);
 }
 
 export async function getPendingProducts(): Promise<Product[]> {
   const productsRef = collection(db, "products");
-  const q = query(
+  
+  // Pobierz draft i pending osobno, potem połącz
+  const draftQuery = query(
     productsRef,
-    where("status", "in", ["draft", "pending"]),
+    where("status", "==", "draft"),
     orderBy("createdAt", "desc"),
-    limit(100)
+    limit(50)
   );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(docToProduct);
+  const pendingQuery = query(
+    productsRef,
+    where("status", "==", "pending"),
+    orderBy("createdAt", "desc"),
+    limit(50)
+  );
+  
+  const [draftSnapshot, pendingSnapshot] = await Promise.all([
+    getDocs(draftQuery),
+    getDocs(pendingQuery)
+  ]);
+  
+  const drafts = draftSnapshot.docs.map(docToProduct);
+  const pendings = pendingSnapshot.docs.map(docToProduct);
+  
+  // Połącz i posortuj - użyj metadata.importedAt lub fallback na id
+  const all = [...drafts, ...pendings];
+  all.sort((a, b) => {
+    const dateA = new Date(a.metadata?.importedAt || 0).getTime();
+    const dateB = new Date(b.metadata?.importedAt || 0).getTime();
+    return dateB - dateA;
+  });
+  
+  return all.slice(0, 100);
 }
 
 export async function getRecentlyModerated(status: "approved" | "rejected", days: number = 7): Promise<(Deal | Product)[]> {
