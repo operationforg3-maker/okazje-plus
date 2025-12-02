@@ -121,13 +121,7 @@ export async function GET(req: NextRequest) {
   try {
     // Check admin authentication
     const authResult = await checkAdminAuth(req);
-    if (!authResult.authorized) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
+    // Dla GET: zwróć wartości domyślne bez 401, aby UI mogło się renderować
     const configDoc = await adminDb.collection('config').doc('indexesSchedule').get();
     const config = configDoc.exists ? configDoc.data() as ScheduleConfig : null;
 
@@ -137,7 +131,8 @@ export async function GET(req: NextRequest) {
         frequency: 'daily',
         time: '03:00',
         autoFix: false
-      }
+      },
+      authorized: !!authResult?.authorized
     });
 
   } catch (error: any) {
