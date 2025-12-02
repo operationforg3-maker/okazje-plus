@@ -1,26 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { doc, writeBatch, Timestamp } from 'firebase/firestore';
+import { doc, writeBatch, Timestamp, deleteDoc } from 'firebase/firestore';
 
 /**
  * Bulk moderation endpoint
- * Body: { items: Array<{ id: string; type: 'deal' | 'product' }>, action: 'approve' | 'reject' }
+ * Body: { 
+ *   items: Array<{ id: string; type: 'deal' | 'product' }>, 
+ *   action: 'approve' | 'reject' | 'delete' | 'change-status',
+ *   status?: string (dla action='change-status')
+ * }
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { items, action } = body || {};
+    const { items, action, status: targetStatus } = body || {};
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ success: false, message: 'Brak elementów do przetworzenia' }, { status: 400 });
     }
-    if (!['approve', 'reject'].includes(action)) {
+    if (!['approve', 'reject', 'delete', 'change-status'].includes(action)) {
       return NextResponse.json({ success: false, message: 'Nieprawidłowa akcja' }, { status: 400 });
     }
+    if (action === 'change-status' && !targetStatus) {
+      return NextResponse.json({ success: false, message: 'Brak docelowego statusu' }, { status: 400 });
+    }
 
-    const batch = writeBatch(db);
-    const newStatus = action === 'approve' ? 'approved' : 'rejected';
     const ts = Timestamp.now();
+
+    // Dla delete używamy osobnych operacji (batch.delete)
+    if (action === 'delete') {
+      const batch = writeBatch(db);
+      for (const item of items) {
+        if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
+        const col = item.type === 'deal' ? 'deals' : 'products';
+        batch.delete(doc(db, col, item.id));
+      }
+      await batch.commit();
+      return NextResponse.json({ success: true, message: `Usunięto ${items.length} elementów` });
+    }
+
+    // Dla approve/reject/change-status używamy update
+    const batch = writeBatch(db);
+    let newStatus: string;
+
+    if (action === 'change-status') {
+      newStatus = targetStatus;
+    } else {
+      newStatus = action === 'approve' ? 'approved' : 'rejected';
+    }
 
     for (const item of items) {
       if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
@@ -30,7 +57,10 @@ export async function POST(req: NextRequest) {
 
     await batch.commit();
 
-    return NextResponse.json({ success: true, message: `Zmieniono status ${items.length} elementów na ${newStatus}` });
+    return NextResponse.json({ 
+      success: true, 
+      message: `Zmieniono status ${items.length} elementów na ${newStatus}` 
+    });
   } catch (e: any) {
     console.error('[bulk moderation] error', e);
     return NextResponse.json({ success: false, message: 'Błąd przetwarzania' }, { status: 500 });

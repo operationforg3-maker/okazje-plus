@@ -45,34 +45,36 @@ const normalizationPrompt = ai.definePrompt({
   name: 'titleNormalizationPrompt',
   input: { schema: TitleNormalizationInputSchema },
   output: { schema: TitleNormalizationOutputSchema },
-  prompt: `You are an expert e-commerce content editor for a Polish marketplace.
+  prompt: `Jesteś ekspertem od treści e-commerce dla polskiego marketplace.
 
-Your task: Normalize the product title to clean, professional Polish.
+Twoje zadanie: Znormalizuj tytuł produktu do czystego, przyjaznego języka polskiego.
 
-**Original Title:** {{{title}}}
-{{#if language}}**Detected Language:** {{{language}}}{{/if}}
+**Oryginalny tytuł:** {{{title}}}
+{{#if language}}**Wykryty język:** {{{language}}}{{/if}}
 
-**Normalization Rules:**
+**Zasady normalizacji:**
 
-1. **Translation**: If not in Polish, translate to natural Polish
-2. **Remove Spam**: Remove excessive caps, emojis, symbols (!!!, 🔥, ★★★)
-3. **Clean Format**: 
-   - Title case (first letter uppercase, rest lowercase unless proper noun)
-   - No excessive spaces
-   - Remove vendor-specific jargon ("Hot Sale", "Free Shipping", "2024 NEW")
-4. **Preserve Key Info**:
-   - Product name and model
-   - Key specifications (size, color, capacity if part of name)
-   - Brand name (if present)
-5. **Length**: Keep title concise (50-80 characters ideal)
-6. **Polish Grammar**: Use proper Polish grammar and spelling
+1. **Tłumaczenie**: Jeśli nie po polsku, przetłumacz na naturalny, przyjazny polski
+   - Używaj konwersacyjnego stylu (np. "smartwatch" zamiast "inteligentny zegarek")
+   - DOKŁADNOŚĆ I PRECYZJA - zachowaj dokładne znaczenie i wszystkie specyfikacje
+2. **Usuń spam**: Usuń wielkie litery, emoji, symbole (!!!, 🔥, ★★★)
+3. **Czysty format**: 
+   - Pierwsza litera wielka, reszta małe (chyba że nazwa własna lub model)
+   - Brak nadmiarowych spacji
+   - Usuń vendor-specific jargon ("Hot Sale", "Free Shipping", "2024 NEW")
+4. **Zachowaj kluczowe info**:
+   - Nazwa produktu i model
+   - Kluczowe specyfikacje (rozmiar, kolor, pojemność jeśli część nazwy)
+   - Nazwa marki (jeśli obecna)
+5. **Długość**: Tytuł zwięzły (50-80 znaków idealnie)
+6. **Przyjazny język polski**: Naturalna, przyjazna polszczyzna bez literalnych tłumaczeń
 
-**Examples:**
-- "XIAOMI MI BAND 8 Smart Watch FREE SHIPPING!!!" → "Xiaomi Mi Band 8 – Smartwatch"
-- "2024 NEW iPhone Case Silicon TPU 🔥" → "Etui silikonowe TPU do iPhone"
-- "Gaming Mouse RGB LED 6400DPI Optical" → "Mysz gamingowa optyczna RGB LED 6400 DPI"
+**Przykłady:**
+- "XIAOMI MI BAND 8 Smart Watch FREE SHIPPING!!!" → "Smartwatch Xiaomi Mi Band 8"
+- "2024 NEW iPhone Case Silicon TPU 🔥" → "Silikonowe etui do iPhone z TPU"
+- "Gaming Mouse RGB LED 6400DPI Optical" → "Mysz gamingowa z podświetleniem RGB, 6400 DPI"
 
-Provide the normalized title and list all changes made.`,
+Podaj znormalizowany tytuł i wypisz wszystkie zmiany.`,
 });
 
 /**

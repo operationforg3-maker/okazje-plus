@@ -160,8 +160,8 @@ export interface Deal {
    */
   externalOriginalId?: string;
   
-  /** Źródło pochodzenia dealu (manual, aliexpress, csv, other, pepper, mydealz, reddit). */
-  source?: 'manual' | 'aliexpress' | 'csv' | 'pepper' | 'mydealz' | 'reddit' | 'other';
+  /** Źródło pochodzenia dealu (manual, api, ai, aliexpress, csv, other, pepper, mydealz, reddit). */
+  source?: 'manual' | 'api' | 'ai' | 'aliexpress' | 'csv' | 'pepper' | 'mydealz' | 'reddit' | 'other';
   
   // ====== ROZSZERZONE PARAMETRY OKAZJI ======
   
@@ -347,6 +347,7 @@ export interface Product {
   price: number;
   originalPrice?: number;
   discountPercent?: number; // denormalizacja wyliczona (originalPrice - price)/originalPrice
+  currency?: string; // Waluta ceny (USD, PLN, EUR, etc.) - dla multi-currency support
   shareCount?: number; // Licznik udostępnień społecznościowych
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole

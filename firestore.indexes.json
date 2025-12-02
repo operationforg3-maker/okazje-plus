@@ -65,6 +65,14 @@
       "collectionGroup": "deals",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "status", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" },
@@ -156,15 +164,23 @@
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
-        { "fieldPath": "subCategorySlug", "order": "ASCENDING" },
-        { "fieldPath": "subSubCategorySlug", "order": "ASCENDING" },
-        { "fieldPath": "temperature", "order": "DESCENDING" },
-        { "fieldPath": "__name__", "order": "ASCENDING" }
+        { "fieldPath": "createdAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "DESCENDING" }
       ]
     },
     {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [

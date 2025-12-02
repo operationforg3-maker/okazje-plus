@@ -28,18 +28,29 @@ const productEnrichmentBatchPrompt = ai.definePrompt({
   name: 'productEnrichmentBatchPromptPL',
   input: { schema: BatchInputSchema },
   output: { schema: BatchOutputSchema },
-  prompt: `Jesteś ekspertem e-commerce. Otrzymasz listę produktów.
-Dla każdego zwróć JSON z polami: normalizedName, shortDescription, longDescription, features[<=10], keywords[4-8].
-Nie wymyślaj parametrów – korzystaj z tytułu/opisu. Język: polski.
+  prompt: `Jesteś ekspertem e-commerce dla polskiego marketplace. Otrzymasz listę produktów.
+
+PRIORYTET: DOKŁADNOŚĆ I PRECYZJA tłumaczenia. Używaj przyjaznego, konwersacyjnego języka polskiego (nie literalnych tłumaczeń).
+
+Dla każdego produktu zwróć JSON z polami:
+- normalizedName: Przyjazna polska nazwa (naturalna, bez spam)
+- shortDescription: Krótki opis 1-2 zdania (przyjazny język, najważniejsze cechy)
+- longDescription: Szczegółowy opis 3-5 zdań (przyjazny język, dokładne specyfikacje, korzyści)
+- features: Lista 5-10 cech (konkretne parametry, bez wymyślania)
+- keywords: 4-8 słów kluczowych (polskie, SEO-friendly)
+
+NIE WYMYŚLAJ parametrów – korzystaj tylko z tytułu/opisu. Język: przyjazny polski (konwersacyjny styl).
 
 {{#each input}}
-ITEM {{@index}}:
+PRODUKT {{@index}}:
 TYTUŁ: {{{originalTitle}}}
 KATEGORIA: {{#each categoryPath}}{{this}}/{{/each}}
 {{#if rawDescription}}OPIS: {{{rawDescription}}}{{/if}}
 {{#if price}}CENA: {{{price}}}{{/if}} {{#if originalPrice}}PRZED: {{{originalPrice}}}{{/if}}
+{{#if rating}}OCENA: {{{rating}}}{{/if}} {{#if orders}}ZAMÓWIENIA: {{{orders}}}{{/if}}
 {{/each}}
-`,
+
+PAMIĘTAJ: Przyjazny, naturalny polski. Dokładność i precyzja tłumaczenia. Brak literalnych tłumaczeń.`,
 });
 
 const productEnrichmentBatchFlow = ai.defineFlow({

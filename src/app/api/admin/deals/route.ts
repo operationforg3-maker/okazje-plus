@@ -61,17 +61,22 @@ export async function POST(request: NextRequest) {
 
     // AI Enhancement (opcjonalne - tylko jeśli useAI=true)
     let normalizedTitle = data.title;
+    let usedAI = false;
     if (raw.useAI === true) {
       try {
         console.log('[POST /api/admin/deals] 🤖 Running AI title normalization...');
         const titleResult = await aiNormalizeTitlePL({ title: data.title });
         normalizedTitle = titleResult.normalizedTitle;
+        usedAI = true;
         console.log('[POST /api/admin/deals] ✅ AI normalized title:', normalizedTitle);
       } catch (aiError) {
         console.error('[POST /api/admin/deals] ⚠️ AI normalization failed:', aiError);
         // Kontynuuj z oryginalnym tytułem
       }
     }
+
+    // Określ źródło deala: jeśli użyto AI to 'ai', jeśli podano w payload to użyj tego, w przeciwnym razie 'api'
+    const dealSource = usedAI ? 'ai' : (raw.source || 'api');
 
     // Konstruujemy dokument zgodny z rules (draft)
     const dealDoc = {
@@ -87,7 +92,7 @@ export async function POST(request: NextRequest) {
       updatedAt: Timestamp.now(),
       // Denormalizacja rabatu jeżeli dostępna cena oryginalna
       discountPercent: data.originalPrice ? Math.round(((data.originalPrice - data.price) / data.originalPrice) * 100) : undefined,
-      source: 'manual',
+      source: dealSource,
     };
 
     console.log('[POST /api/admin/deals] Final doc to save:', JSON.stringify(dealDoc, null, 2));

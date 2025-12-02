@@ -3,6 +3,7 @@ import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
 import { aiProductEnrichmentBatchPL } from '@/ai/flows/aliexpress/aiProductEnrichmentBatchPL';
 import { cacheDel } from '@/lib/cache';
+import { CATEGORY_SEEDS } from '@/lib/category-seeds';
 
 /**
  * Wyszukuje produkty dla kategorii przez AliExpress API
@@ -49,14 +50,14 @@ async function fetchProductsForCategory(categoryName: string, count: number = 5)
   }
 }
 
-// Multi-query wariant: kilka zapytań + deduplikacja
+// Multi-query wariant: kilka zapytań + deduplikacja + sortowanie po popularności i ocenie
 async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promise<any[]> {
   const base = categoryPath.join(' ');
   const queries = [
-    base,
-    `${base} promocja`,
-    `${base} bestseller`,
-    `${base} top`,
+    `${base} bestseller`, // priorytet: bestsellery
+    `${base} wysokie oceny`, // wysokie oceny
+    base, // neutralne
+    `${base} promocja`, // dodatkowo promocje
   ];
   const seen = new Set<string>();
   const merged: any[] = [];
@@ -71,6 +72,12 @@ async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promi
       merged.push(p);
     }
   }
+  // Sortuj po popularności (orders) i ocenie (rating)
+  merged.sort((a, b) => {
+    const popularityA = (a.orders || 0) * (a.rating || 0);
+    const popularityB = (b.orders || 0) * (b.rating || 0);
+    return popularityB - popularityA;
+  });
   return merged;
 }
 
@@ -85,114 +92,19 @@ export async function fillCategoriesWithProducts() {
     console.log('[fillCategoriesWithProducts] Process:', process.pid);
     console.log('[fillCategoriesWithProducts] Environment:', process.env.NODE_ENV);
     
-    // Rozbudowana struktura kategorii
-    const categories = [
-    { name: 'Elektronika', slug: 'elektronika', subs: [
-      { name: 'Telefony i smartfony', slug: 'telefony-smartfony', subs: [
-        { name: 'Smartfony', slug: 'smartfony' },
-        { name: 'Telefony klasyczne', slug: 'telefony-klasyczne' },
-        { name: 'Akcesoria do telefonów', slug: 'akcesoria-telefonow' },
-        { name: 'Smartwatche', slug: 'smartwatche' },
-        { name: 'Powerbanki', slug: 'powerbanki' }
-      ] },
-      { name: 'Laptopy i komputery', slug: 'laptopy-komputery', subs: [
-        { name: 'Laptopy', slug: 'laptopy' },
-        { name: 'Komputery stacjonarne', slug: 'komputery-stacjonarne' },
-        { name: 'Monitory', slug: 'monitory' },
-        { name: 'Akcesoria komputerowe', slug: 'akcesoria-komputerowe' },
-        { name: 'Drukarki i skanery', slug: 'drukarki-skanery' }
-      ] },
-      { name: 'Audio i wideo', slug: 'audio-wideo', subs: [
-        { name: 'Słuchawki', slug: 'sluchawki' },
-        { name: 'Głośniki', slug: 'glosniki' },
-        { name: 'Telewizory', slug: 'telewizory' },
-        { name: 'Soundbary', slug: 'soundbary' },
-        { name: 'Projektory', slug: 'projektory' }
-      ] },
-      { name: 'Foto i kamery', slug: 'foto-kamery', subs: [
-        { name: 'Aparaty cyfrowe', slug: 'aparaty-cyfrowe' },
-        { name: 'Kamery sportowe', slug: 'kamery-sportowe' },
-        { name: 'Akcesoria foto', slug: 'akcesoria-foto' }
-      ] }
-    ] },
-    { name: 'Dom i ogród', slug: 'dom-ogrod', subs: [
-      { name: 'AGD', slug: 'agd', subs: [
-        { name: 'Odkurzacze', slug: 'odkurzacze' },
-        { name: 'Ekspresy do kawy', slug: 'ekspresy' },
-        { name: 'Miksery i blendery', slug: 'miksery-blendery' },
-        { name: 'Lodówki', slug: 'lodowki' },
-        { name: 'Pralki', slug: 'pralki' }
-      ] },
-      { name: 'Wyposażenie wnętrz', slug: 'wyposazenie-wnetrz', subs: [
-        { name: 'Meble', slug: 'meble' },
-        { name: 'Oświetlenie', slug: 'oswietlenie' },
-        { name: 'Dekoracje', slug: 'dekoracje' }
-      ] },
-      { name: 'Ogród', slug: 'ogrod', subs: [
-        { name: 'Narzędzia ogrodowe', slug: 'narzedzia-ogrodowe' },
-        { name: 'Grille', slug: 'grille' },
-        { name: 'Rośliny', slug: 'rosliny' }
-      ] }
-    ] },
-    { name: 'Moda', slug: 'moda', subs: [
-      { name: 'Odzież damska', slug: 'odziez-damska', subs: [
-        { name: 'Sukienki', slug: 'sukienki' },
-        { name: 'Bluzki', slug: 'bluzki' },
-        { name: 'Spodnie', slug: 'spodnie-damskie' }
-      ] },
-      { name: 'Odzież męska', slug: 'odziez-meska', subs: [
-        { name: 'Koszule', slug: 'koszule' },
-        { name: 'Spodnie', slug: 'spodnie-meskie' },
-        { name: 'Marynarki', slug: 'marynarki' }
-      ] },
-      { name: 'Obuwie', slug: 'obuwie', subs: [
-        { name: 'Buty sportowe', slug: 'buty-sportowe' },
-        { name: 'Buty eleganckie', slug: 'buty-eleganckie' },
-        { name: 'Sandały', slug: 'sandaly' }
-      ] },
-      { name: 'Akcesoria', slug: 'akcesoria-moda', subs: [
-        { name: 'Torebki', slug: 'torebki' },
-        { name: 'Paski', slug: 'paski' },
-        { name: 'Czapki', slug: 'czapki' }
-      ] }
-    ] },
-    { name: 'Dziecko', slug: 'dziecko', subs: [
-      { name: 'Zabawki', slug: 'zabawki', subs: [
-        { name: 'Klocki', slug: 'klocki' },
-        { name: 'Lalki', slug: 'lalki' },
-        { name: 'Puzzle', slug: 'puzzle' }
-      ] },
-      { name: 'Wózki i foteliki', slug: 'wozki-foteliki', subs: [
-        { name: 'Wózki dziecięce', slug: 'wozki-dzieciece' },
-        { name: 'Foteliki samochodowe', slug: 'foteliki-samochodowe' }
-      ] }
-    ] },
-    { name: 'Sport i turystyka', slug: 'sport-turystyka', subs: [
-      { name: 'Rowery', slug: 'rowery', subs: [
-        { name: 'Górskie', slug: 'rowery-gorskie' },
-        { name: 'Miejskie', slug: 'rowery-miejskie' }
-      ] },
-      { name: 'Fitness', slug: 'fitness', subs: [
-        { name: 'Bieżnie', slug: 'bieznie' },
-        { name: 'Hantle', slug: 'hantle' }
-      ] },
-      { name: 'Turystyka', slug: 'turystyka', subs: [
-        { name: 'Namioty', slug: 'namioty' },
-        { name: 'Śpiwory', slug: 'spiwory' }
-      ] }
-    ] },
-    { name: 'Supermarket', slug: 'supermarket', subs: [
-      { name: 'Artykuły spożywcze', slug: 'artykuly-spozywcze', subs: [
-        { name: 'Słodycze', slug: 'slodycze' },
-        { name: 'Napoje', slug: 'napoje' },
-        { name: 'Przekąski', slug: 'przekaski' }
-      ] },
-      { name: 'Chemia domowa', slug: 'chemia-domowa', subs: [
-        { name: 'Środki czystości', slug: 'srodki-czystosci' },
-        { name: 'Kosmetyki', slug: 'kosmetyki' }
-      ] }
-    ] }
-  ];
+    // Użyj istniejącej struktury z category-seeds.ts (15 głównych kategorii, 350+ sub)
+    const categories = CATEGORY_SEEDS.map(cat => ({
+      name: cat.name!,
+      slug: cat.slug!,
+      subs: (cat.subcategories || []).map(sub => ({
+        name: sub.name!,
+        slug: sub.slug!,
+        subs: (sub.subcategories || []).map(subsub => ({
+          name: subsub.name!,
+          slug: subsub.slug!,
+        }))
+      }))
+    }));
 
   let totalProducts = 0;
   let totalCategories = 0;
@@ -227,9 +139,9 @@ export async function fillCategoriesWithProducts() {
                 console.log(`[fillCategoriesWithProducts] Created sub-subcategory ${subsub.name} with ID: ${subsubId}`);
                 totalSubSubcategories++;
                 
-                // Pobierz produkty z AliExpress dla tej kategorii
+                // Pobierz produkty z AliExpress dla tej kategorii (zwiększony limit: 40 → ~160 produktów po 4 queries)
                 console.log(`[fillCategoriesWithProducts] Fetching (multi-query) products for: ${cat.name} ${sub.name} ${subsub.name}`);
-                let aliProducts = await fetchMultiQuery([cat.name, sub.name, subsub.name], 8);
+                let aliProducts = await fetchMultiQuery([cat.name, sub.name, subsub.name], 40);
                 // Jeśli Advanced włączone – spróbuj użyć batch-search endpointu aby ograniczyć liczbę wywołań
                 const advanced = process.env.ALIEXPRESS_ENABLE_ADVANCED === '1' || process.env.ALIEXPRESS_ENABLE_ADVANCED === 'true';
                 if (advanced) {
@@ -243,7 +155,7 @@ export async function fillCategoriesWithProducts() {
                     ];
                     const r = await fetch(base, {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ queries, limit: 8 })
+                      body: JSON.stringify({ queries, limit: 40 })
                     });
                     if (r.ok) {
                       const data = await r.json();
@@ -331,6 +243,12 @@ export async function fillCategoriesWithProducts() {
                     const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
                       ? Math.round(100 - (priceValue / originalPrice) * 100)
                       : undefined;
+                    
+                    // Currency detection (AliExpress zwykle zwraca USD)
+                    const priceCurrency = (typeof aliProduct.price === 'object' && aliProduct.price?.currency) 
+                      || aliProduct.currency 
+                      || 'USD'; // Default to USD for AliExpress
+                    
                     // Determine stock status
                     const stockStatus = aliProduct.stock_status || aliProduct.stockStatus || 
                       (aliProduct.volume > 1000 ? 'in_stock' : aliProduct.volume > 100 ? 'low_stock' : 'unknown');
@@ -342,6 +260,7 @@ export async function fillCategoriesWithProducts() {
                       price: priceValue,
                       originalPrice,
                       discountPercent,
+                      currency: priceCurrency, // USD/PLN/EUR dla multi-currency support
                       image: aliProduct.image || aliProduct.imageUrl || '',
                       imageHint: '',
                       affiliateUrl: affiliateUrl || '#',
@@ -421,7 +340,7 @@ export async function fillCategoriesWithProducts() {
           } else {
             // Jeśli nie ma pod-podkategorii, pobierz produkty bezpośrednio dla subcategory
             console.log(`[fillCategoriesWithProducts] Fetching (multi-query) products for: ${cat.name} ${sub.name} (no sub-subcategories)`);
-            let aliProducts = await fetchMultiQuery([cat.name, sub.name], 8);
+            let aliProducts = await fetchMultiQuery([cat.name, sub.name], 40);
             const advanced = process.env.ALIEXPRESS_ENABLE_ADVANCED === '1' || process.env.ALIEXPRESS_ENABLE_ADVANCED === 'true';
             if (advanced) {
               try {
@@ -434,7 +353,7 @@ export async function fillCategoriesWithProducts() {
                 ];
                 const r = await fetch(base, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ queries, limit: 8 })
+                  body: JSON.stringify({ queries, limit: 40 })
                 });
                 if (r.ok) {
                   const data = await r.json();
@@ -518,6 +437,12 @@ export async function fillCategoriesWithProducts() {
                 const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
                   ? Math.round(100 - (priceValue / originalPrice) * 100)
                   : undefined;
+                
+                // Currency detection (AliExpress zwykle zwraca USD)
+                const priceCurrency = (typeof aliProduct.price === 'object' && aliProduct.price?.currency) 
+                  || aliProduct.currency 
+                  || 'USD'; // Default to USD for AliExpress
+                
                 const baseData = {
                   name: enrichedName,
                   description: shortDesc,
@@ -525,6 +450,7 @@ export async function fillCategoriesWithProducts() {
                   price: priceValue,
                   originalPrice,
                   discountPercent,
+                  currency: priceCurrency, // USD/PLN/EUR dla multi-currency support
                   image: aliProduct.image || aliProduct.imageUrl || '',
                   imageHint: '',
                   affiliateUrl: affiliateUrl || '#',

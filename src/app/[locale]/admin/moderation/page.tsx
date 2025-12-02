@@ -23,52 +23,133 @@ interface BulkItem { id: string; type: 'deal' | 'product'; }
 function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'; items: any[]; onAction: () => Promise<void> }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [processing, setProcessing] = useState(false);
+  const { toast } = useToast();
 
   const toggle = (id: string) => setSelected(p => ({ ...p, [id]: !p[id] }));
   const clear = () => setSelected({});
+  const selectAll = () => {
+    const all: Record<string, boolean> = {};
+    items.forEach(item => all[item.id] = true);
+    setSelected(all);
+  };
   const allSelectedIds = Object.entries(selected).filter(([, v]) => v).map(([id]) => id);
 
-  async function bulk(action: 'approve' | 'reject') {
-    if (allSelectedIds.length === 0) return;
+  async function bulk(action: 'approve' | 'reject' | 'delete' | 'change-status', status?: string) {
+    if (allSelectedIds.length === 0) {
+      toast({ title: 'Błąd', description: 'Nie zaznaczono żadnych elementów', variant: 'destructive' });
+      return;
+    }
+
+    const confirmed = action === 'delete' 
+      ? window.confirm(`Czy na pewno chcesz usunąć ${allSelectedIds.length} elementów?`)
+      : true;
+
+    if (!confirmed) return;
+
     setProcessing(true);
     try {
       const res = await fetch('/api/admin/moderation/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: allSelectedIds.map(id => ({ id, type })), action })
+        body: JSON.stringify({ 
+          items: allSelectedIds.map(id => ({ id, type })), 
+          action,
+          ...(status && { status })
+        })
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        toast({ title: 'Sukces', description: data.message });
         clear();
         await onAction();
+      } else {
+        toast({ title: 'Błąd', description: data.message || 'Wystąpił błąd', variant: 'destructive' });
       }
+    } catch (error) {
+      toast({ title: 'Błąd', description: 'Nie udało się przetworzyć akcji', variant: 'destructive' });
     } finally {
       setProcessing(false);
     }
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border rounded-md p-2 bg-muted/50">
-      <span className="text-xs font-medium">Zbiorcza moderacja: {type === 'deal' ? 'Okazje' : 'Produkty'}</span>
-      <button
-        className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50"
-        onClick={() => bulk('approve')} disabled={processing || allSelectedIds.length === 0}
-      >Zatwierdź zaznaczone ({allSelectedIds.length})</button>
-      <button
-        className="text-xs px-2 py-1 rounded bg-red-600 text-white disabled:opacity-50"
-        onClick={() => bulk('reject')} disabled={processing || allSelectedIds.length === 0}
-      >Odrzuć zaznaczone</button>
-      <button
-        className="text-xs px-2 py-1 rounded bg-secondary disabled:opacity-50"
-        onClick={clear} disabled={processing || allSelectedIds.length === 0}
-      >Wyczyść</button>
-      <div className="ml-auto flex gap-1 flex-wrap">
+    <div className="space-y-2 border rounded-md p-3 bg-muted/30">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold">
+          Zbiorcza moderacja: {type === 'deal' ? 'Okazje' : 'Produkty'} 
+          <Badge variant="secondary" className="ml-2">{allSelectedIds.length} zaznaczonych</Badge>
+        </span>
+        <div className="ml-auto flex gap-2">
+          <Button size="sm" variant="outline" onClick={selectAll} disabled={processing || items.length === 0}>
+            Zaznacz wszystkie
+          </Button>
+          <Button size="sm" variant="outline" onClick={clear} disabled={processing || allSelectedIds.length === 0}>
+            Wyczyść
+          </Button>
+        </div>
+      </div>
+      
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="default"
+          onClick={() => bulk('approve')} 
+          disabled={processing || allSelectedIds.length === 0}
+        >
+          <CheckCircle className="h-4 w-4 mr-1" />
+          Zatwierdź ({allSelectedIds.length})
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          onClick={() => bulk('reject')} 
+          disabled={processing || allSelectedIds.length === 0}
+        >
+          <XCircle className="h-4 w-4 mr-1" />
+          Odrzuć ({allSelectedIds.length})
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => bulk('change-status', 'draft')} 
+          disabled={processing || allSelectedIds.length === 0}
+        >
+          Zmień na Draft
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => bulk('change-status', 'pending')} 
+          disabled={processing || allSelectedIds.length === 0}
+        >
+          Zmień na Pending
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="bg-red-950 text-red-50 hover:bg-red-900"
+          onClick={() => bulk('delete')} 
+          disabled={processing || allSelectedIds.length === 0}
+        >
+          🗑️ Usuń ({allSelectedIds.length})
+        </Button>
+      </div>
+
+      <div className="flex gap-1 flex-wrap max-h-32 overflow-y-auto">
         {items.map(item => (
           <button
             key={item.id}
             onClick={() => toggle(item.id)}
-            className={"text-[10px] px-1.5 py-1 rounded border " + (selected[item.id] ? 'bg-primary text-white' : 'bg-background')}
-          >{selected[item.id] ? '✓' : '+'}</button>
+            className={
+              "text-xs px-2 py-1 rounded border transition-colors " + 
+              (selected[item.id] 
+                ? 'bg-primary text-primary-foreground border-primary' 
+                : 'bg-background hover:bg-accent')
+            }
+            title={item.title || item.name}
+          >
+            {selected[item.id] ? '✓' : ''} {(item.title || item.name).substring(0, 30)}...
+          </button>
         ))}
       </div>
     </div>
@@ -277,6 +358,15 @@ function ModerationPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold truncate">{deal.title}</h3>
                           <Badge variant="secondary">{deal.status}</Badge>
+                          {deal.source && (
+                            <Badge variant="outline" className={
+                              deal.source === 'api' || deal.source === 'ai' 
+                                ? 'bg-blue-50 text-blue-700 border-blue-300' 
+                                : 'bg-gray-50'
+                            }>
+                              {deal.source === 'api' ? '🤖 API' : deal.source === 'ai' ? '✨ AI' : '👤 Manual'}
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>{deal.category}</span>
