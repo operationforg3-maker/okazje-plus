@@ -49,6 +49,31 @@ async function fetchProductsForCategory(categoryName: string, count: number = 5)
   }
 }
 
+/**
+ * Pobiera szczegółowe informacje o produkcie (opis, specyfikacje, warianty)
+ */
+async function fetchProductDetails(productId: string): Promise<any | null> {
+  try {
+    const url = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/aliexpress/item?id=${productId}`;
+    console.log(`[fetchProductDetails] Fetching details for product: ${productId}`);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+    });
+    
+    if (!response.ok) {
+      console.error(`[fetchProductDetails] API error (${response.status}) for product ${productId}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.product || null;
+  } catch (e: any) {
+    console.error(`[fetchProductDetails] Exception for product ${productId}:`, e.message);
+    return null;
+  }
+}
+
 // Multi-query wariant: kilka zapytań + deduplikacja + sortowanie po popularności i ocenie
 async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promise<any[]> {
   const base = categoryPath.join(' ');
@@ -194,24 +219,56 @@ export async function fillCategoriesWithProducts() {
                   batchOutputs = await aiProductEnrichmentBatchPL(batchInputs);
                 } catch (_) { batchOutputs = []; }
 
+                // Pobierz szczegółowe dane (opis, specyfikacje) dla TOP 15 produktów
+                console.log(`[fillCategoriesWithProducts] Fetching detailed info for top 15 products...`);
+                const topProducts = aliProducts.slice(0, 15);
+                const productDetailsMap = new Map<string, any>();
+                
+                for (const product of topProducts) {
+                  const productId = product.id || product.itemId || product.item_id || product.productId;
+                  if (productId) {
+                    const details = await fetchProductDetails(String(productId));
+                    if (details) {
+                      productDetailsMap.set(String(productId), details);
+                      console.log(`[fillCategoriesWithProducts] Fetched details for ${productId}: ${details.title?.slice(0, 50)}...`);
+                    }
+                    // Rate limit: czekaj 100ms między requestami
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  }
+                }
+                console.log(`[fillCategoriesWithProducts] Fetched details for ${productDetailsMap.size}/${topProducts.length} top products`);
+
                 for (let idx = 0; idx < aliProducts.length; idx++) {
                   const aliProduct = aliProducts[idx];
                   try {
                     const originalId = aliProduct.id || aliProduct.itemId || aliProduct.item_id || aliProduct.productId;
                     const affiliateUrl = aliProduct.link || aliProduct.productUrl || aliProduct.url;
+                    
+                    // Pobierz szczegółowe dane jeśli dostępne
+                    const productDetails = productDetailsMap.get(String(originalId));
+                    
+                    // Merguj dane - szczegóły mają priorytet
+                    const mergedProduct = productDetails ? {
+                      ...aliProduct,
+                      description: productDetails.descriptionHtml || aliProduct.description,
+                      images: productDetails.images?.length > 0 ? productDetails.images : (aliProduct.images || aliProduct.image_urls || []),
+                      specifications: productDetails.attributes || aliProduct.specifications,
+                      variants: productDetails.variants || [],
+                      videoUrl: productDetails.videoUrl || aliProduct.productVideoUrl,
+                    } : aliProduct;
                   
                     // AI normalize title to Polish
-                    const titleRaw = aliProduct.title || aliProduct.name || '';
+                    const titleRaw = mergedProduct.title || mergedProduct.name || '';
                     let norm = titleNormCache.get(titleRaw);
                     if (!norm) {
-                      norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                      norm = await aiNormalizeTitlePL({ title: titleRaw, language: mergedProduct.language || undefined });
                       titleNormCache.set(titleRaw, norm);
                     }
                     const normalizedTitle = norm.normalizedTitle || titleRaw;
 
-                    // AI enrichment (opis, cechy, keywords)
+                    // AI enrichment (opis, cechy, keywords) - używamy description z szczegółów
                     let enrichedName = normalizedTitle;
-                    let shortDesc = aliProduct.description || `Produkt z kategorii ${subsub.name}`;
+                    let shortDesc = mergedProduct.description || `Produkt z kategorii ${subsub.name}`;
                     let longDesc = shortDesc;
                     let features: string[] = [];
                     let keywords: string[] = [];
@@ -250,26 +307,26 @@ export async function fillCategoriesWithProducts() {
                     // Dedupe by originalId / affiliateUrl
                     const existingId = await findExistingProduct({ originalId, affiliateUrl });
 
-                    const originalPrice = aliProduct.originalPrice || aliProduct.original_price || undefined;
-                    const priceValue = aliProduct.price?.value || aliProduct.price || 0;
+                    const originalPrice = mergedProduct.originalPrice || mergedProduct.original_price || undefined;
+                    const priceValue = mergedProduct.price?.value || mergedProduct.price || 0;
                     const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
                       ? Math.round(100 - (priceValue / originalPrice) * 100)
                       : undefined;
                     
                     // Currency detection (używa preferencji użytkownika jako fallback)
-                    const priceCurrency = (typeof aliProduct.price === 'object' && aliProduct.price?.currency) 
-                      || aliProduct.currency 
+                    const priceCurrency = (typeof mergedProduct.price === 'object' && mergedProduct.price?.currency) 
+                      || mergedProduct.currency 
                       || preferredCurrency; // Użyj zapisanej preferencji
                     
                     // Determine stock status
-                    const stockStatus = aliProduct.stock_status || aliProduct.stockStatus || 
-                      (aliProduct.volume > 1000 ? 'in_stock' : aliProduct.volume > 100 ? 'low_stock' : 'unknown');
+                    const stockStatus = mergedProduct.stock_status || mergedProduct.stockStatus || 
+                      (mergedProduct.volume > 1000 ? 'in_stock' : mergedProduct.volume > 100 ? 'low_stock' : 'unknown');
 
                     // Przygotuj galerię zdjęć (wszystkie dostępne obrazy z AliExpress)
                     const gallery: Array<{ id: string; type: 'url'; src: string; alt?: string; isPrimary?: boolean; source: 'aliexpress' }> = [];
                     
                     // Główne zdjęcie
-                    const mainImage = aliProduct.image || aliProduct.imageUrl || aliProduct.product_main_image_url;
+                    const mainImage = mergedProduct.image || mergedProduct.imageUrl || mergedProduct.product_main_image_url || mergedProduct.mainImage;
                     if (mainImage) {
                       gallery.push({
                         id: `img-0`,
@@ -282,7 +339,7 @@ export async function fillCategoriesWithProducts() {
                     }
                     
                     // Dodatkowe zdjęcia z galerii (API zwraca jako 'images' array)
-                    const imagesList = aliProduct.images || aliProduct.image_urls || [];
+                    const imagesList = mergedProduct.images || mergedProduct.image_urls || [];
                     if (Array.isArray(imagesList)) {
                       imagesList.forEach((url: string, idx: number) => {
                         if (url && url !== mainImage) {
@@ -320,8 +377,8 @@ export async function fillCategoriesWithProducts() {
                       subSubCategorySlug: subsub.slug,
                       status: 'approved',
                       ratingCard: {
-                        average: aliProduct.rating || 4.5,
-                        count: aliProduct.orders || 0,
+                        average: mergedProduct.rating || 4.5,
+                        count: mergedProduct.orders || 0,
                         durability: 4.5,
                         easeOfUse: 4.5,
                         valueForMoney: 4.5,
@@ -333,29 +390,30 @@ export async function fillCategoriesWithProducts() {
                         source: 'aliexpress',
                         originalId: originalId || '',
                         importedAt: new Date().toISOString(),
-                        orders: aliProduct.orders || 0,
-                        merchant: aliProduct.merchant || aliProduct.storeName || aliProduct.shop_title,
-                        merchantId: aliProduct.merchantId || aliProduct.shop_id,
-                        shipping: aliProduct.shippingInfo || aliProduct.shipping,
-                        warehouse: aliProduct.shippingInfo?.warehouse || aliProduct.ship_from_country || aliProduct.warehouse_location || '',
-                        deliveryTime: aliProduct.shippingInfo?.deliveryTime || aliProduct.delivery_time || aliProduct.estimated_delivery_time || '',
-                        freeShipping: aliProduct.shippingInfo?.freeShipping || aliProduct.free_shipping || aliProduct.is_free_shipping || false,
-                        shippingCost: aliProduct.shippingInfo?.shippingCost || aliProduct.shipping_cost || aliProduct.shipping_price || null,
-                        shippingMethod: aliProduct.shippingInfo?.shippingMethod || aliProduct.shipping_method || null,
-                        specifications: aliProduct.specifications || aliProduct.attributes || null,
-                        productVideoUrl: aliProduct.productVideoUrl || aliProduct.product_video_url || null,
+                        orders: mergedProduct.orders || 0,
+                        merchant: mergedProduct.merchant || mergedProduct.storeName || mergedProduct.shop_title,
+                        merchantId: mergedProduct.merchantId || mergedProduct.shop_id,
+                        shipping: mergedProduct.shippingInfo || mergedProduct.shipping,
+                        warehouse: mergedProduct.shippingInfo?.warehouse || mergedProduct.ship_from_country || mergedProduct.warehouse_location || '',
+                        deliveryTime: mergedProduct.shippingInfo?.deliveryTime || mergedProduct.delivery_time || mergedProduct.estimated_delivery_time || '',
+                        freeShipping: mergedProduct.shippingInfo?.freeShipping || mergedProduct.free_shipping || mergedProduct.is_free_shipping || false,
+                        shippingCost: mergedProduct.shippingInfo?.shippingCost || mergedProduct.shipping_cost || mergedProduct.shipping_price || null,
+                        shippingMethod: mergedProduct.shippingInfo?.shippingMethod || mergedProduct.shipping_method || null,
+                        specifications: mergedProduct.specifications || mergedProduct.attributes || null, // Teraz z /item endpoint
+                        productVideoUrl: mergedProduct.videoUrl || mergedProduct.productVideoUrl || mergedProduct.product_video_url || null,
                         // Advanced API fields
-                        promotionId: aliProduct.promotion_id || aliProduct.promotionId || null,
-                        commissionRate: aliProduct.commission_rate || aliProduct.commissionRate || null,
-                        evaluateCount: aliProduct.evaluation_count || aliProduct.evaluate_count || aliProduct.evaluateCount || null,
-                        evaluateRate: aliProduct.evaluate_rate || aliProduct.evaluateRate || null,
-                        sellerRating: aliProduct.seller_rating || aliProduct.sellerRating || (aliProduct.shop_rating ? parseFloat(aliProduct.shop_rating) : null),
-                        returnPolicy: aliProduct.return_policy || aliProduct.returnPolicy || null,
-                        hotProduct: aliProduct.hot_product || aliProduct.hotProduct || aliProduct.is_hot_product || false,
-                        flashDeal: aliProduct.flash_deal || aliProduct.flashDeal || aliProduct.is_flash_deal || false,
-                        platformProductType: aliProduct.platform_product_type || aliProduct.platformProductType || aliProduct.product_type || null,
+                        promotionId: mergedProduct.promotion_id || mergedProduct.promotionId || null,
+                        commissionRate: mergedProduct.commission_rate || mergedProduct.commissionRate || null,
+                        evaluateCount: mergedProduct.evaluation_count || mergedProduct.evaluate_count || mergedProduct.evaluateCount || null,
+                        evaluateRate: mergedProduct.evaluate_rate || mergedProduct.evaluateRate || null,
+                        sellerRating: mergedProduct.seller_rating || mergedProduct.sellerRating || (mergedProduct.shop_rating ? parseFloat(mergedProduct.shop_rating) : null),
+                        returnPolicy: mergedProduct.return_policy || mergedProduct.returnPolicy || null,
+                        hotProduct: mergedProduct.hot_product || mergedProduct.hotProduct || mergedProduct.is_hot_product || false,
+                        flashDeal: mergedProduct.flash_deal || mergedProduct.flashDeal || mergedProduct.is_flash_deal || false,
+                        platformProductType: mergedProduct.platform_product_type || mergedProduct.platformProductType || mergedProduct.product_type || null,
                         stockStatus: stockStatus as any,
-                        stockLevel: aliProduct.stock_level || aliProduct.stockLevel || aliProduct.available_quantity || null,
+                        stockLevel: mergedProduct.stock_level || mergedProduct.stockLevel || mergedProduct.available_quantity || null,
+                        variants: mergedProduct.variants || [], // Warianty/SKU z /item endpoint
                       }
                     } as const;
 
@@ -432,24 +490,56 @@ export async function fillCategoriesWithProducts() {
             let batchOutputs: any[] = [];
             try { batchOutputs = await aiProductEnrichmentBatchPL(batchInputs); } catch (_) { batchOutputs = []; }
 
+            // Pobierz szczegółowe dane (opis, specyfikacje) dla TOP 15 produktów
+            console.log(`[fillCategoriesWithProducts] Fetching detailed info for top 15 products...`);
+            const topProducts = aliProducts.slice(0, 15);
+            const productDetailsMap = new Map<string, any>();
+            
+            for (const product of topProducts) {
+              const productId = product.id || product.itemId || product.item_id || product.productId;
+              if (productId) {
+                const details = await fetchProductDetails(String(productId));
+                if (details) {
+                  productDetailsMap.set(String(productId), details);
+                  console.log(`[fillCategoriesWithProducts] Fetched details for ${productId}: ${details.title?.slice(0, 50)}...`);
+                }
+                // Rate limit: czekaj 100ms między requestami
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+            }
+            console.log(`[fillCategoriesWithProducts] Fetched details for ${productDetailsMap.size}/${topProducts.length} top products`);
+
             for (let idx = 0; idx < aliProducts.length; idx++) {
               const aliProduct = aliProducts[idx];
               try {
                 const originalId = aliProduct.id || aliProduct.itemId || aliProduct.item_id || aliProduct.productId;
                 const affiliateUrl = aliProduct.link || aliProduct.productUrl || aliProduct.url;
+                
+                // Pobierz szczegółowe dane jeśli dostępne
+                const productDetails = productDetailsMap.get(String(originalId));
+                
+                // Merguj dane - szczegóły mają priorytet
+                const mergedProduct = productDetails ? {
+                  ...aliProduct,
+                  description: productDetails.descriptionHtml || aliProduct.description,
+                  images: productDetails.images?.length > 0 ? productDetails.images : (aliProduct.images || aliProduct.image_urls || []),
+                  specifications: productDetails.attributes || aliProduct.specifications,
+                  variants: productDetails.variants || [],
+                  videoUrl: productDetails.videoUrl || aliProduct.productVideoUrl,
+                } : aliProduct;
 
                 // AI normalize title to Polish
-                const titleRaw = aliProduct.title || aliProduct.name || '';
+                const titleRaw = mergedProduct.title || mergedProduct.name || '';
                 let norm = titleNormCache.get(titleRaw);
                 if (!norm) {
-                  norm = await aiNormalizeTitlePL({ title: titleRaw, language: aliProduct.language || undefined });
+                  norm = await aiNormalizeTitlePL({ title: titleRaw, language: mergedProduct.language || undefined });
                   titleNormCache.set(titleRaw, norm);
                 }
                 const normalizedTitle = norm.normalizedTitle || titleRaw;
 
-                // AI enrichment (opis, cechy, keywords)
+                // AI enrichment (opis, cechy, keywords) - używa description z szczegółów
                 let enrichedName = normalizedTitle;
-                let shortDesc = aliProduct.description || `Produkt z kategorii ${sub.name}`;
+                let shortDesc = mergedProduct.description || `Produkt z kategorii ${sub.name}`;
                 let longDesc = shortDesc;
                 let features: string[] = [];
                 let keywords: string[] = [];
@@ -487,22 +577,22 @@ export async function fillCategoriesWithProducts() {
 
                 const existingId = await findExistingProduct({ originalId, affiliateUrl });
 
-                const originalPrice = aliProduct.originalPrice || aliProduct.original_price || undefined;
-                const priceValue = aliProduct.price?.value || aliProduct.price || 0;
+                const originalPrice = mergedProduct.originalPrice || mergedProduct.original_price || undefined;
+                const priceValue = mergedProduct.price?.value || mergedProduct.price || 0;
                 const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
                   ? Math.round(100 - (priceValue / originalPrice) * 100)
                   : undefined;
                 
                 // Currency detection (używa preferencji użytkownika jako fallback)
-                const priceCurrency = (typeof aliProduct.price === 'object' && aliProduct.price?.currency) 
-                  || aliProduct.currency 
+                const priceCurrency = (typeof mergedProduct.price === 'object' && mergedProduct.price?.currency) 
+                  || mergedProduct.currency 
                   || preferredCurrency; // Użyj zapisanej preferencji
                 
                 // Przygotuj galerię zdjęć (wszystkie dostępne obrazy z AliExpress)
                 const gallery: Array<{ id: string; type: 'url'; src: string; alt?: string; isPrimary?: boolean; source: 'aliexpress' }> = [];
                 
                 // Główne zdjęcie
-                const mainImage = aliProduct.image || aliProduct.imageUrl || aliProduct.product_main_image_url;
+                const mainImage = mergedProduct.image || mergedProduct.imageUrl || mergedProduct.product_main_image_url || mergedProduct.mainImage;
                 if (mainImage) {
                   gallery.push({
                     id: `img-0`,
@@ -515,7 +605,7 @@ export async function fillCategoriesWithProducts() {
                 }
                 
                 // Dodatkowe zdjęcia z galerii (API zwraca jako 'images' array)
-                const imagesList = aliProduct.images || aliProduct.image_urls || [];
+                const imagesList = mergedProduct.images || mergedProduct.image_urls || [];
                 if (Array.isArray(imagesList)) {
                   imagesList.forEach((url: string, idx: number) => {
                     if (url && url !== mainImage) {
@@ -553,8 +643,8 @@ export async function fillCategoriesWithProducts() {
                   subSubCategorySlug: undefined,
                   status: 'approved',
                   ratingCard: {
-                    average: aliProduct.rating || 4.5,
-                    count: aliProduct.orders || 0,
+                    average: mergedProduct.rating || 4.5,
+                    count: mergedProduct.orders || 0,
                     durability: 4.5,
                     easeOfUse: 4.5,
                     valueForMoney: 4.5,
@@ -566,15 +656,16 @@ export async function fillCategoriesWithProducts() {
                     source: 'aliexpress',
                     originalId: originalId || '',
                     importedAt: new Date().toISOString(),
-                    orders: aliProduct.orders || 0,
-                    merchant: aliProduct.merchant || aliProduct.storeName,
-                    shipping: aliProduct.shippingInfo || aliProduct.shipping,
-                    warehouse: aliProduct.shippingInfo?.warehouse || '',
-                    deliveryTime: aliProduct.shippingInfo?.deliveryTime || '',
-                    freeShipping: aliProduct.shippingInfo?.freeShipping || false,
-                    shippingCost: aliProduct.shippingInfo?.shippingCost || null,
-                    specifications: aliProduct.specifications || null,
-                    productVideoUrl: aliProduct.productVideoUrl || null,
+                    orders: mergedProduct.orders || 0,
+                    merchant: mergedProduct.merchant || mergedProduct.storeName,
+                    shipping: mergedProduct.shippingInfo || mergedProduct.shipping,
+                    warehouse: mergedProduct.shippingInfo?.warehouse || '',
+                    deliveryTime: mergedProduct.shippingInfo?.deliveryTime || '',
+                    freeShipping: mergedProduct.shippingInfo?.freeShipping || false,
+                    shippingCost: mergedProduct.shippingInfo?.shippingCost || null,
+                    specifications: mergedProduct.specifications || mergedProduct.attributes || null, // Teraz z /item endpoint
+                    productVideoUrl: mergedProduct.videoUrl || mergedProduct.productVideoUrl || null,
+                    variants: mergedProduct.variants || [], // Warianty/SKU z /item endpoint
                   }
                 } as const;
 
