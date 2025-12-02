@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
+import { auth } from '@/lib/firebase';
 import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,9 +49,22 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
 
     setProcessing(true);
     try {
+      // Pobierz token użytkownika z Firebase auth
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
+        setProcessing(false);
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+
       const res = await fetch('/api/admin/moderation/bulk', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ 
           items: allSelectedIds.map(id => ({ id, type })), 
           action,

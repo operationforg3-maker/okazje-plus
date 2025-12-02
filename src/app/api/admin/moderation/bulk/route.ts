@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, writeBatch, Timestamp, deleteDoc } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 
 /**
  * Bulk moderation endpoint
@@ -12,6 +13,26 @@ import { doc, writeBatch, Timestamp, deleteDoc } from 'firebase/firestore';
  */
 export async function POST(req: NextRequest) {
   try {
+    // Sprawdź autoryzację admina
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, message: 'Brak nagłówka Authorization' }, { status: 401 });
+    }
+
+    const idToken = authHeader.substring('Bearer '.length).trim();
+    let decoded;
+    try {
+      decoded = await getAuth().verifyIdToken(idToken);
+    } catch (e) {
+      console.error('[bulk moderation] Token verify error', e);
+      return NextResponse.json({ success: false, message: 'Nieprawidłowy token użytkownika' }, { status: 401 });
+    }
+
+    // Sprawdź czy użytkownik jest adminem
+    if (!decoded.admin) {
+      return NextResponse.json({ success: false, message: 'Brak uprawnień administratora' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { items, action, status: targetStatus } = body || {};
 
@@ -25,22 +46,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Brak docelowego statusu' }, { status: 400 });
     }
 
-    const ts = Timestamp.now();
+    const ts = FieldValue.serverTimestamp();
 
     // Dla delete używamy osobnych operacji (batch.delete)
     if (action === 'delete') {
-      const batch = writeBatch(db);
+      const batch = adminDb.batch();
       for (const item of items) {
         if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
         const col = item.type === 'deal' ? 'deals' : 'products';
-        batch.delete(doc(db, col, item.id));
+        const docRef = adminDb.collection(col).doc(item.id);
+        batch.delete(docRef);
       }
       await batch.commit();
       return NextResponse.json({ success: true, message: `Usunięto ${items.length} elementów` });
     }
 
     // Dla approve/reject/change-status używamy update
-    const batch = writeBatch(db);
+    const batch = adminDb.batch();
     let newStatus: string;
 
     if (action === 'change-status') {
@@ -52,7 +74,8 @@ export async function POST(req: NextRequest) {
     for (const item of items) {
       if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
       const col = item.type === 'deal' ? 'deals' : 'products';
-      batch.update(doc(db, col, item.id), { status: newStatus, updatedAt: ts });
+      const docRef = adminDb.collection(col).doc(item.id);
+      batch.update(docRef, { status: newStatus, updatedAt: ts });
     }
 
     await batch.commit();
