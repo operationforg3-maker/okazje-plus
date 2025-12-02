@@ -9,7 +9,6 @@ import {
   navigationMenuTriggerStyle,
   NavigationMenuContent,
 } from "@/components/ui/navigation-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,8 +69,7 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
   setActiveIndex: (i: number) => void;
 }) {
   return (
-  <ScrollArea className="max-h-[70vh] pr-2">
-      <nav className="space-y-2" aria-label="Kategorie">
+      <nav className="space-y-1.5" aria-label="Kategorie">
         {categories.map((category, index) => {
           const isActive = index === activeIndex;
           return (
@@ -84,28 +82,27 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
               aria-selected={isActive}
               aria-current={isActive ? 'true' : undefined}
               aria-label={`Wybierz kategorię ${category.name}`}
-              className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+              className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm font-medium transition-all ${
                 isActive
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-transparent bg-card/70 hover:border-primary/40 hover:text-primary"
+                  ? "bg-secondary text-secondary-foreground shadow-sm"
+                  : "hover:bg-accent hover:text-accent-foreground"
               }`}
             >
-              <span className="flex items-center gap-3">
+              <span className="flex items-center gap-2.5">
                 {category.icon ? (
-                  <span className="text-lg" aria-hidden>
+                  <span className="text-base shrink-0" aria-hidden>
                     {category.icon}
                   </span>
                 ) : (
-                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <Sparkles className="h-4 w-4 shrink-0" />
                 )}
-                <span className="font-medium">{category.name}</span>
+                <span className="truncate">{category.name}</span>
               </span>
-              <ChevronRight className="h-4 w-4 opacity-70" />
+              <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
             </button>
           );
         })}
       </nav>
-    </ScrollArea>
   );
 }
 
@@ -199,7 +196,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                 </Link>
 
                 {hasSubSubcategories && (
-                  <div className="grid gap-2 pl-6 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-2 pl-4 md:grid-cols-2 lg:grid-cols-3">
                     {subcategory.subcategories!.map((subSubcategory) => {
                       const subSubSlug = subSubcategory.slug ?? subSubcategory.id;
                       const subSubHref = subSubSlug && targetSub
@@ -210,13 +207,13 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                         <Link
                           key={`${subKey}-${subSubcategory.slug}`}
                           href={subSubHref}
-                          className="group flex items-center gap-2 rounded-md border border-border/30 bg-background/50 px-3 py-2 text-sm transition-colors hover:border-primary/50 hover:bg-primary/5"
+                          className="group flex items-center gap-2 rounded-md bg-secondary/50 px-3 py-2 text-sm transition-all hover:bg-secondary hover:shadow-sm"
                         >
                           {subSubcategory.icon && (
-                            <span className="text-base">{subSubcategory.icon}</span>
+                            <span className="text-base shrink-0">{subSubcategory.icon}</span>
                           )}
-                          <span className="flex-1 truncate text-foreground group-hover:text-primary">{subSubcategory.name}</span>
-                          <ArrowRight className="h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100" />
+                          <span className="flex-1 truncate font-medium group-hover:text-primary">{subSubcategory.name}</span>
+                          <ArrowRight className="h-3 w-3 shrink-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                         </Link>
                       );
                     })}

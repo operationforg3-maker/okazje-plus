@@ -62,8 +62,8 @@ export default function CategoryNav({
       <div className="space-y-2 p-4">
         {/* All Items Link */}
         <Button
-          variant={!selectedCategoryId ? 'default' : 'ghost'}
-          className="w-full justify-start"
+          variant={!selectedCategoryId ? 'secondary' : 'ghost'}
+          className="w-full justify-start font-medium"
           asChild
         >
           <Link href={basePath}>
@@ -99,7 +99,7 @@ export default function CategoryNav({
                 <Button
                   variant={isSelected && !selectedSubcategorySlug ? 'secondary' : 'ghost'}
                   className={cn(
-                    'flex-1 justify-start',
+                    'flex-1 justify-start font-medium',
                     !hasSubcategories && 'ml-9'
                   )}
                   onClick={() => onCategorySelect?.(category)}
@@ -149,7 +149,7 @@ export default function CategoryNav({
                             variant={isSubSelected && !selectedSubSubcategorySlug ? 'secondary' : 'ghost'}
                             size="sm"
                             className={cn(
-                              'flex-1 justify-start text-sm',
+                              'flex-1 justify-start text-sm font-medium',
                               !hasSubSubcategories && 'ml-9'
                             )}
                             onClick={() => onSubcategorySelect?.(subcategory)}
