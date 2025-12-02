@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
+import { auth } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   Save,
@@ -21,6 +24,73 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function SettingsPage() {
+  const { toast } = useToast();
+  const [preferredCurrency, setPreferredCurrency] = useState<'USD' | 'PLN' | 'EUR'>('USD');
+  const [loading, setLoading] = useState(false);
+
+  // Load currency preference on mount
+  useEffect(() => {
+    async function loadCurrency() {
+      try {
+        const res = await fetch('/api/admin/settings/currency');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.currency) {
+            setPreferredCurrency(data.currency);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load currency preference:', e);
+      }
+    }
+    loadCurrency();
+  }, []);
+
+  async function saveCurrency() {
+    setLoading(true);
+    try {
+      // Pobierz token
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast({
+          title: 'Błąd',
+          description: 'Brak zalogowanego użytkownika',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+
+      const res = await fetch('/api/admin/settings/currency', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ currency: preferredCurrency })
+      });
+
+      if (res.ok) {
+        toast({
+          title: 'Sukces',
+          description: 'Preferencja waluty została zapisana',
+        });
+      } else {
+        throw new Error('Failed to save');
+      }
+    } catch (e) {
+      toast({
+        title: 'Błąd',
+        description: 'Nie udało się zapisać preferencji waluty',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -221,15 +291,31 @@ function SettingsPage() {
                     <Label htmlFor="aliTrackingId">Tracking ID (affiliate)</Label>
                     <Input id="aliTrackingId" placeholder="Wprowadź Tracking ID" />
                   </div>
+                  <div>
+                    <Label htmlFor="preferredCurrency">Preferowana waluta produktów</Label>
+                    <select 
+                      id="preferredCurrency"
+                      value={preferredCurrency}
+                      onChange={(e) => setPreferredCurrency(e.target.value as 'USD' | 'PLN' | 'EUR')}
+                      className="w-full p-2 border rounded-md bg-background"
+                    >
+                      <option value="USD">USD (Dolar amerykański)</option>
+                      <option value="PLN">PLN (Polski złoty)</option>
+                      <option value="EUR">EUR (Euro)</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Waluta używana przy imporcie produktów z AliExpress
+                    </p>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Do automatycznego importu produktów z AliExpress
                   </p>
                 </div>
               </div>
 
-              <Button>
+              <Button onClick={saveCurrency} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                Zapisz integracje
+                {loading ? 'Zapisywanie...' : 'Zapisz integracje'}
               </Button>
             </CardContent>
           </Card>

@@ -91,6 +91,19 @@ export async function fillCategoriesWithProducts() {
     console.log('[fillCategoriesWithProducts] Process:', process.pid);
     console.log('[fillCategoriesWithProducts] Environment:', process.env.NODE_ENV);
     
+    // Pobierz preferencję waluty z Firestore config
+    let preferredCurrency = 'USD';
+    try {
+      const { adminDb } = await import('@/lib/firebase-admin');
+      const currencyDoc = await adminDb.collection('config').doc('currencyPreference').get();
+      if (currencyDoc.exists) {
+        preferredCurrency = currencyDoc.data()?.currency || 'USD';
+      }
+      console.log(`[fillCategoriesWithProducts] Using preferred currency: ${preferredCurrency}`);
+    } catch (e) {
+      console.warn('[fillCategoriesWithProducts] Failed to load currency preference, using USD', e);
+    }
+    
     // Przeczytaj istniejące kategorie z Firestore (utworzone wcześniej przez createCategoryStructure)
     const categories = await getAllCategories();
     console.log(`[fillCategoriesWithProducts] Found ${categories.length} categories in Firestore`);
@@ -208,6 +221,7 @@ export async function fillCategoriesWithProducts() {
                       enrichment = batchOutputs[idx];
                       if (!enrichment) {
                         try {
+                          console.log(`[fillCategoriesWithProducts] Batch enrichment missing for ${normalizedTitle}, calling individual AI`);
                           enrichment = await aiProductEnrichmentPL({
                             originalTitle: normalizedTitle,
                             rawDescription: aliProduct.description || '',
@@ -218,7 +232,10 @@ export async function fillCategoriesWithProducts() {
                             orders: aliProduct.orders || undefined,
                             merchant: aliProduct.merchant || aliProduct.storeName || undefined,
                           });
-                        } catch (_) {}
+                          console.log(`[fillCategoriesWithProducts] Individual AI enrichment succeeded for ${normalizedTitle}`);
+                        } catch (e: any) {
+                          console.error(`[fillCategoriesWithProducts] AI enrichment failed for ${normalizedTitle}:`, e.message);
+                        }
                       }
                       if (enrichment) enrichmentCache.set(cacheKey, enrichment);
                     }
@@ -239,10 +256,10 @@ export async function fillCategoriesWithProducts() {
                       ? Math.round(100 - (priceValue / originalPrice) * 100)
                       : undefined;
                     
-                    // Currency detection (AliExpress zwykle zwraca USD)
+                    // Currency detection (używa preferencji użytkownika jako fallback)
                     const priceCurrency = (typeof aliProduct.price === 'object' && aliProduct.price?.currency) 
                       || aliProduct.currency 
-                      || 'USD'; // Default to USD for AliExpress
+                      || preferredCurrency; // Użyj zapisanej preferencji
                     
                     // Determine stock status
                     const stockStatus = aliProduct.stock_status || aliProduct.stockStatus || 
@@ -264,9 +281,10 @@ export async function fillCategoriesWithProducts() {
                       });
                     }
                     
-                    // Dodatkowe zdjęcia z galerii (image_urls z API)
-                    if (Array.isArray(aliProduct.image_urls)) {
-                      aliProduct.image_urls.forEach((url: string, idx: number) => {
+                    // Dodatkowe zdjęcia z galerii (API zwraca jako 'images' array)
+                    const imagesList = aliProduct.images || aliProduct.image_urls || [];
+                    if (Array.isArray(imagesList)) {
+                      imagesList.forEach((url: string, idx: number) => {
                         if (url && url !== mainImage) {
                           gallery.push({
                             id: `img-${idx + 1}`,
@@ -441,6 +459,7 @@ export async function fillCategoriesWithProducts() {
                   enrichment = batchOutputs[idx];
                   if (!enrichment) {
                     try {
+                      console.log(`[fillCategoriesWithProducts] Batch enrichment missing for ${normalizedTitle}, calling individual AI`);
                       enrichment = await aiProductEnrichmentPL({
                         originalTitle: normalizedTitle,
                         rawDescription: aliProduct.description || '',
@@ -451,7 +470,10 @@ export async function fillCategoriesWithProducts() {
                         orders: aliProduct.orders || undefined,
                         merchant: aliProduct.merchant || aliProduct.storeName || undefined,
                       });
-                    } catch (_) {}
+                      console.log(`[fillCategoriesWithProducts] Individual AI enrichment succeeded for ${normalizedTitle}`);
+                    } catch (e: any) {
+                      console.error(`[fillCategoriesWithProducts] AI enrichment failed for ${normalizedTitle}:`, e.message);
+                    }
                   }
                   if (enrichment) enrichmentCache.set(cacheKey, enrichment);
                 }
@@ -471,10 +493,10 @@ export async function fillCategoriesWithProducts() {
                   ? Math.round(100 - (priceValue / originalPrice) * 100)
                   : undefined;
                 
-                // Currency detection (AliExpress zwykle zwraca USD)
+                // Currency detection (używa preferencji użytkownika jako fallback)
                 const priceCurrency = (typeof aliProduct.price === 'object' && aliProduct.price?.currency) 
                   || aliProduct.currency 
-                  || 'USD'; // Default to USD for AliExpress
+                  || preferredCurrency; // Użyj zapisanej preferencji
                 
                 // Przygotuj galerię zdjęć (wszystkie dostępne obrazy z AliExpress)
                 const gallery: Array<{ id: string; type: 'url'; src: string; alt?: string; isPrimary?: boolean; source: 'aliexpress' }> = [];
@@ -492,9 +514,10 @@ export async function fillCategoriesWithProducts() {
                   });
                 }
                 
-                // Dodatkowe zdjęcia z galerii (image_urls z API)
-                if (Array.isArray(aliProduct.image_urls)) {
-                  aliProduct.image_urls.forEach((url: string, idx: number) => {
+                // Dodatkowe zdjęcia z galerii (API zwraca jako 'images' array)
+                const imagesList = aliProduct.images || aliProduct.image_urls || [];
+                if (Array.isArray(imagesList)) {
+                  imagesList.forEach((url: string, idx: number) => {
                     if (url && url !== mainImage) {
                       gallery.push({
                         id: `img-${idx + 1}`,
