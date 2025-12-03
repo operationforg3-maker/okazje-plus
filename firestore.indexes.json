@@ -156,14 +156,24 @@
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
+        { "fieldPath": "subCategorySlug", "order": "ASCENDING" },
+        { "fieldPath": "subSubCategorySlug", "order": "ASCENDING" },
+        { "fieldPath": "temperature", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
     {
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" },
         { "fieldPath": "__name__", "order": "DESCENDING" }
       ]
+    },
     {
       "collectionGroup": "products",
       "queryScope": "COLLECTION",
