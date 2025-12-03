@@ -102,9 +102,9 @@ export default function AdminLayout({
   return (
     <AdminAuthGuard>
       <SidebarProvider>
-        <div className="flex h-screen overflow-hidden">
-          <Sidebar className="border-r border-border/60">
-            <SidebarContent className="p-2">
+        <div className="flex min-h-screen w-full">
+          <Sidebar className="border-r border-border/60 h-screen sticky top-0 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            <SidebarContent className="p-2 pb-8">
               <SidebarMenu>
                 {/* Dashboard */}
                 <SidebarMenuItem>
@@ -483,33 +483,34 @@ export default function AdminLayout({
               </SidebarMenu>
             </SidebarContent>
           </Sidebar>
-          <SidebarInset className="flex flex-1 flex-col overflow-hidden">
-            <header className="flex h-16 items-center gap-4 border-b border-border/60 bg-background px-4 md:px-6 shrink-0 shadow-sm">
+          <SidebarInset className="flex flex-1 flex-col w-full">
+            <header className="sticky top-0 z-10 flex h-14 md:h-16 items-center gap-2 md:gap-4 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 md:px-6 shrink-0 shadow-sm">
               <div className="flex items-center gap-4 flex-1">
                 <SidebarTrigger className="md:hidden">
                   <PanelLeft />
                 </SidebarTrigger>
                 {/* Breadcrumbs */}
-                <div className="flex items-center gap-2 text-sm">
-                  <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 group">
-                    <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm overflow-x-auto">
+                  <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 md:gap-1.5 group shrink-0">
+                    <Home className="h-3.5 w-3.5 md:h-4 md:w-4 group-hover:scale-110 transition-transform" />
                     <span className="hidden md:inline">Strona główna</span>
                   </Link>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-                  <Link href="/admin" className="text-muted-foreground hover:text-primary transition-colors font-medium">
-                    Panel Admina
+                  <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground/50 shrink-0" />
+                  <Link href="/admin" className="text-muted-foreground hover:text-primary transition-colors font-medium shrink-0">
+                    <span className="hidden sm:inline">Panel Admina</span>
+                    <span className="sm:hidden">Admin</span>
                   </Link>
                   {pathname !== '/admin' && (
                     <>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-                      <span className="font-semibold text-foreground">{currentPageName}</span>
+                      <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground/50 shrink-0" />
+                      <span className="font-semibold text-foreground truncate">{currentPageName}</span>
                     </>
                   )}
                 </div>
               </div>
             </header>
-            <main className="flex-1 overflow-y-auto">
-              <div className="container mx-auto p-4 md:p-6 lg:p-8">
+            <main className="flex-1 w-full">
+              <div className="w-full max-w-[1600px] mx-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-16 md:pb-20">
                 {children}
               </div>
             </main>
