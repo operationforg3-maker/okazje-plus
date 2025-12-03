@@ -115,6 +115,8 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
       void trackFirestoreView('product', product.id, user?.uid);
       setHasTrackedView(true);
     }
+  }, [hasTrackedView, product.id, user?.uid]);
+
   const { formatPrice } = useCurrency();
   const totalUSD = (product.price?.baseAmount || 0) + (product.price?.shippingCostUSD || 0);
 
@@ -146,12 +148,9 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   const galleryImages = Array.isArray(product.gallery) && product.gallery.length > 0
     ? product.gallery.map(img => ({
         src: typeof img === 'string' ? img : img.src,
-          <h3 className="line-clamp-2 text-sm font-medium">{product.title.pl || product.title.en || product.title.de}</h3>
       }))
-            <span className="text-lg font-bold">{formatPrice(totalUSD)}</span>
-            {product.price.shippingCostUSD === 0 && (
-              <span className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Darmowa dostawa</span>
-            )}
+    : [];
+  // Elementy JSX (tytuł, cena, dostawa) renderowane poniżej, nie w galleryImages
   // ========================================
   
   return (
@@ -221,8 +220,8 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
           
           {/* Title (AI-Curated Clean Title) */}
           <Link href={productUrl} onClick={handleDetailClick}>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 hover:text-primary transition-colors leading-snug">
-              {displayTitle}
+            <h3 className="line-clamp-2 text-sm font-medium">
+              {product.title.pl || product.title.en || product.title.de}
             </h3>
           </Link>
 

@@ -1,4 +1,5 @@
-"use server";
+'use server';
+'use server';
 
 import { defineFlow } from '@genkit-ai/flow';
 import { gemini15Flash } from '@genkit-ai/vertexai';
@@ -40,7 +41,6 @@ export const aiNormalizeTitlePL = defineFlow(
     return llmResponse.text().trim();
   }
 );
-'use server';
 
 /**
  * AI Title Normalization Flow

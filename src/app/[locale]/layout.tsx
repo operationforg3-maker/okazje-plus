@@ -65,7 +65,7 @@ export default async function RootLayout({
   const messages = await getMessages();
   
   return (
-  <html lang={effectiveLocale} suppressHydrationWarning>
+    <html lang={effectiveLocale} suppressHydrationWarning>
       <head>
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-4M4NQB0PQD"></script>
@@ -86,14 +86,21 @@ export default async function RootLayout({
         <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="pl" />
         <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="x-default" />
       </head>
-      <body className={cn('min-h-screen bg-background font-body antialiased')}>
-  <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
+      <body className={cn('min-h-screen bg-background font-body antialiased')}
+        style={{ WebkitOverflowScrolling: 'touch' }}>
+        <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
             <SmartCartProvider>
-              <ConditionalNav>{children}</ConditionalNav>
-              <ComparisonListener />
-              <ExtensionWarningBanner />
-              <Toaster />
+              <div className="flex flex-col min-h-screen w-full max-w-screen-2xl mx-auto px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
+                <ConditionalNav>
+                  <main className="flex-1 w-full max-w-full px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
+                    {children}
+                  </main>
+                </ConditionalNav>
+                <ComparisonListener />
+                <ExtensionWarningBanner />
+                <Toaster />
+              </div>
             </SmartCartProvider>
           </AuthProvider>
         </NextIntlClientProvider>

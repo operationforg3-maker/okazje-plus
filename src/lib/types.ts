@@ -1,3 +1,61 @@
+// ====== KATEGORIE ======
+export interface Category {
+  id?: string;
+  slug: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  accentColor?: string;
+  heroImage?: string;
+  sortOrder?: number;
+  promo?: CategoryPromo;
+  translations?: Record<string, { name: string; description?: string }>;
+  subcategories?: Subcategory[];
+  tiles?: CategoryTile[];
+}
+
+export interface Subcategory {
+  slug: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  subcategories?: SubSubcategory[];
+}
+
+export interface SubSubcategory {
+  slug: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+}
+
+export interface CategoryPromo {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  image?: string;
+  link?: string;
+  badge?: string;
+  color?: string;
+  cta?: string;
+  type?: 'custom' | 'top-rated' | 'best-selling' | 'hot-deals' | 'category';
+}
+
+export interface CategoryTile {
+  id?: string;
+  slug: string;
+  name: string;
+  image?: string;
+  color?: string;
+  description?: string;
+  badge?: string;
+  link?: string;
+  subtitle?: string;
+}
 // Nowe interfejsy dla zagnieżdżonych kategorii
 
 // Sub-subkategoria (poziom 3)
@@ -35,173 +93,7 @@ export interface Subcategory {
   sortOrder?: number;
   image?: string;
   highlight?: boolean;
-  subcategories?: SubSubcategory[]; // Sub-subkategorie (opcjonalne)
-  // Rozszerzenia konfiguracyjne (opcjonalne)
-  bestSellingIds?: string[]; // ręcznie przypięte bestsellery
-  topRatedIds?: string[]; // ręcznie przypięte najwyżej oceniane
-  // Kafelki promocyjne dla danej (pod)kategorii
-  tiles?: CategoryTile[];
-  /**
-   * Metryki dynamiczne generowane automatycznie (np. CRON/Functions)
-   * Mogą być używane jako szybki cache do renderowania showcase.
-   */
-  dynamicMetrics?: {
-    updatedAt?: string | number; // ISO lub epoch ms
-    topProductIds?: string[];
-    hotDealIds?: string[];
-    trendingDealIds?: string[];
-  };
-}
-
-export interface CategoryPromo {
-  title: string;
-  subtitle?: string;
-  description?: string;
-  image?: string;
-  link?: string;
-  cta?: string;
-  badge?: string;
-  color?: string;
-}
-
-// Kafelek promocyjny kategorii (konfigurowalny w panelu admina)
-export interface CategoryTile {
-  id?: string;
-  title: string;
-  subtitle?: string;
-  image?: string;
-  link?: string;
-  badge?: string;
-  color?: string;
-  // Typ kafelka, pozwala na automatyczne wypełnianie
-  type?: 'custom' | 'top-rated' | 'best-selling' | 'hot-deals' | 'category';
-}
-
-export interface Category {
-  id: string; // ID dokumentu (slug kategorii głównej)
-  name: string;
-  slug?: string;
-  parentId?: string; // dla drzewa kategorii (null dla poziomu 1)
-  level?: number; // 1 | 2 | 3
-  path?: string[]; // pełna ścieżka slugów [main, sub, subSub]
-  icon?: string;
-  description?: string;
-  
-  // Multi-language support (i18n)
-  translations?: {
-    en?: {
-      name: string;
-      description?: string;
-    };
-    de?: {
-      name: string;
-      description?: string;
-    };
-  };
-  
-  sortOrder?: number;
-  accentColor?: string;
-  heroImage?: string;
-  promo?: CategoryPromo;
-  tiles?: CategoryTile[]; // dodatkowe kafelki prezentacyjne
-  subcategories: Subcategory[]; // Tablica obiektów podkategorii
-  // Rozszerzenia konfiguracyjne na poziomie kategorii
-  bestSellingIds?: string[];
-  topRatedIds?: string[];
-  /**
-   * Metryki dynamiczne generowane automatycznie (np. przez funkcję agregującą)
-   */
-  dynamicMetrics?: {
-    updatedAt?: string | number;
-    topProductIds?: string[];
-    hotDealIds?: string[];
-    trendingDealIds?: string[];
-  };
-  ai?: {
-    missingCoverage?: boolean; // kategoria wymaga uzupełnienia
-    recommendedExpansionQueries?: string[]; // zapytania wygenerowane przez AI
-    lastAuditAt?: string;
-  };
-}
-
-// Zaktualizowany interfejs Deal
-export type LocalizedString = {
-  pl: string;
-  en: string;
-  de: string;
-  [key: string]: string;
-};
-
-export interface Product {
-  id: string;
-  originalId?: string;
-  title: LocalizedString;
-  description?: LocalizedString; // HTML lub czysty tekst
-  seoDescription?: LocalizedString;
-  price: {
-    baseAmount: number; // zawsze w USD
-    currency: 'USD';
-    shippingCostUSD: number; // koszt wysyłki w USD (np. do PL)
-  };
-  images?: string[];
-  categories?: string[];
-  ai?: {
-    qualityScore?: number;
-    pros?: string[];
-    cons?: string[];
-  };
-  isSmartImport?: boolean;
-  updatedAt?: Date | string;
-  createdAt?: Date | string;
-}
-  
-  /**
-   * Powiązanie z produktami (future-proof: wiele produktów może być powiązanych z jednym dealem — np. różne warianty).
-   * Zwykle będzie 0 lub 1 ID.
-   */
-  linkedProductIds?: string[];
-  
-  /**
-   * Oryginalny identyfikator zewnętrzny jeśli deal pochodzi z importu marketplace (np. AliExpress product_id / item_id).
-   */
-  externalOriginalId?: string;
-  
-  /** Źródło pochodzenia dealu (manual, api, ai, aliexpress, csv, other, pepper, mydealz, reddit). */
-  source?: 'manual' | 'api' | 'ai' | 'aliexpress' | 'csv' | 'pepper' | 'mydealz' | 'reddit' | 'other';
-  
-  // ====== ROZSZERZONE PARAMETRY OKAZJI ======
-  
-  /** Typ okazji - standardowa promocja, kod rabatowy, gratisowy przedmiot, błąd cenowy */
-  dealType?: 'sale' | 'coupon' | 'freebie' | 'pricing-error' | 'cashback' | 'bundle';
-  
-  /** Kod rabatowy/promocyjny (jeśli dealType === 'coupon') */
-  couponCode?: string;
-  
-  /** Czy wysyłka jest darmowa */
-  freeShipping?: boolean;
-  
-  /** Cashback dostępny dla tej okazji (w PLN lub %) */
-  cashback?: {
-    amount?: number; // kwota w PLN
-    percentage?: number; // procent zwrotu
-    provider?: string; // np. "LetyShops", "iGraal"
-  };
-  
-  /** Minimalna wartość zamówienia wymagana do skorzystania z promocji */
-  minOrderValue?: number;
-  
-  /** Alert o limitowanej dostępności */
-  stockAlert?: 'limited' | 'low' | 'ending-soon' | null;
-  
-  /** Data wygaśnięcia okazji (ISO string) */
-  expiryDate?: string;
-  
-  /** Liczba dostępnych sztuk (jeśli znana) */
-  availableQuantity?: number;
-  
-  /** Limit na użytkownika/zamówienie */
-  limitPerUser?: number;
-  
+  // ...pozostałe typy i nowy model Product/Deal...
   /** Wymagane członkostwo/subskrypcja (np. Amazon Prime, Club) */
   requiresMembership?: string;
   

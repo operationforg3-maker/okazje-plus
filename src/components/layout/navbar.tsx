@@ -111,17 +111,19 @@ export function Navbar() {
           </div>
           <LanguageSwitcherMenu />
           <CurrencySwitcher />
+          {/* Ikona koszyka (MiniCartBadge) */}
           <MiniCartBadge />
+          {/* Ikona powiadomień tylko raz */}
           {user && <NotificationBell />}
           {loading ? (
-              <Skeleton className="h-9 w-9 rounded-full" />
-            ) : user ? (
-              <UserNav />
-            ) : (
-              <Link href={`${prefix}/login`}>
-                <Button variant="outline">Zaloguj się</Button>
-              </Link>
-            )}
+            <Skeleton className="h-9 w-9 rounded-full" />
+          ) : user ? (
+            <UserNav />
+          ) : (
+            <Link href={`${prefix}/login`}>
+              <Button variant="outline">Zaloguj się</Button>
+            </Link>
+          )}
         </div>
       </div>
     </header>

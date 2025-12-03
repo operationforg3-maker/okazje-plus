@@ -1,5 +1,8 @@
-"use server";
+'use server';
 
+import { runFlow } from '@genkit-ai/flow';
+import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
+'use server';
 import { runFlow } from '@genkit-ai/flow';
 import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
 import { db } from '../../lib/firebase';
@@ -58,7 +61,7 @@ export async function ingestProduct(productId: string) {
  * and SEO description generation.
  */
 
-'use server';
+// ...istniejący kod...
 
 import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
