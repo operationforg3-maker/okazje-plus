@@ -115,11 +115,8 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
       void trackFirestoreView('product', product.id, user?.uid);
       setHasTrackedView(true);
     }
-  }, [product.id, user?.uid, hasTrackedView]);
-
-  const handleDetailClick = () => {
-    void trackFirestoreClick('product', product.id, user?.uid);
-  };
+  const { formatPrice } = useCurrency();
+  const totalUSD = (product.price?.baseAmount || 0) + (product.price?.shippingCostUSD || 0);
 
   const handleAffiliateClick = () => {
     void trackFirestoreClick('product', product.id, user?.uid);
@@ -149,12 +146,12 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   const galleryImages = Array.isArray(product.gallery) && product.gallery.length > 0
     ? product.gallery.map(img => ({
         src: typeof img === 'string' ? img : img.src,
-        alt: typeof img === 'object' && img.alt ? img.alt : displayTitle
+          <h3 className="line-clamp-2 text-sm font-medium">{product.title.pl || product.title.en || product.title.de}</h3>
       }))
-    : [{ src: product.image || '/placeholder.png', alt: displayTitle }];
-
-  // ========================================
-  // 💡 TRUST-FIRST RENDER
+            <span className="text-lg font-bold">{formatPrice(totalUSD)}</span>
+            {product.price.shippingCostUSD === 0 && (
+              <span className="rounded bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">Darmowa dostawa</span>
+            )}
   // ========================================
   
   return (

@@ -125,29 +125,35 @@ export interface Category {
 }
 
 // Zaktualizowany interfejs Deal
-export interface Deal {
+export type LocalizedString = {
+  pl: string;
+  en: string;
+  de: string;
+  [key: string]: string;
+};
+
+export interface Product {
   id: string;
-  title: string;
-  description: string;
-  price: number;
-  originalPrice?: number;
-  link: string;
-  image: string;
-  imageHint: string;
-  postedBy: string;
-  postedAt: string; // Użyjemy ISO string dla spójności
-  voteCount: number;
-  temperature: number;
-  commentsCount: number;
-  shareCount?: number; // Licznik udostępnień społecznościowych
-  category: string;
-  mainCategorySlug: string; // NOWE pole
-  subCategorySlug: string;  // NOWE pole
-  subSubCategorySlug?: string; // NOWE pole dla poziomu 3
-  merchant?: string;
-  shippingCost?: number;
-  status?: 'draft' | 'approved' | 'rejected';
-  createdBy?: string;
+  originalId?: string;
+  title: LocalizedString;
+  description?: LocalizedString; // HTML lub czysty tekst
+  seoDescription?: LocalizedString;
+  price: {
+    baseAmount: number; // zawsze w USD
+    currency: 'USD';
+    shippingCostUSD: number; // koszt wysyłki w USD (np. do PL)
+  };
+  images?: string[];
+  categories?: string[];
+  ai?: {
+    qualityScore?: number;
+    pros?: string[];
+    cons?: string[];
+  };
+  isSmartImport?: boolean;
+  updatedAt?: Date | string;
+  createdAt?: Date | string;
+}
   
   /**
    * Powiązanie z produktami (future-proof: wiele produktów może być powiązanych z jednym dealem — np. różne warianty).
