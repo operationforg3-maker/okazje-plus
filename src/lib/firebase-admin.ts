@@ -6,6 +6,8 @@ import { join, resolve } from 'path';
 
 let adminApp: App | undefined;
 
+// Updated: 2025-12-03 - Fixed App Hosting Firestore permissions (datastore.user role added)
+
 // Na App Hosting używamy domyślnych credentials (Application Default Credentials)
 // Lokalnie można opcjonalnie załadować serviceAccountKey.json jeśli istnieje
 if (!getApps().length) {
