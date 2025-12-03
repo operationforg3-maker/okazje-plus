@@ -1,3 +1,53 @@
+import { runFlow } from '@genkit-ai/flow';
+import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
+import { db } from '../../lib/firebase';
+
+/**
+ * Ingests a single AliExpress product into Firestore with smart pricing.
+ * Calculates Total Landed Cost for PL and normalizes title via AI.
+ */
+export async function ingestProduct(productId: string) {
+  // 1. Simulate API Fetch (Replace with actual Client call later)
+  // const productData = await apiClient.getProductDetails(productId);
+  // const freightData = await apiClient.calculateFreight(productId, 'PL');
+
+  // MOCKED DATA FOR IMPLEMENTATION:
+  const rawProduct = {
+    title:
+      '2024 New Vintage Women Dress Summer Floral Print Boho Style Beach Party...',
+    price: 45.0,
+    currency: 'PLN',
+  };
+  const shippingCost = 15.0; // Simulated freight cost to Poland (PL)
+
+  // 2. Logic
+  const totalCost = rawProduct.price + shippingCost;
+
+  // 3. AI Magic
+  const cleanTitle = await runFlow(aiNormalizeTitlePL, {
+    rawTitle: rawProduct.title,
+  });
+
+  // 4. Save to Firestore (i18n-friendly structure)
+  const productPayload = {
+    originalId: productId,
+    title: {
+      pl: cleanTitle,
+      origin: rawProduct.title,
+    },
+    price: {
+      amount: rawProduct.price,
+      shipping: shippingCost,
+      total: totalCost,
+      currency: 'PLN',
+    },
+    isSmartImport: true,
+    updatedAt: new Date(),
+  } as const;
+
+  await db.collection('products').doc(productId).set(productPayload, { merge: true });
+  return productPayload;
+}
 /**
  * AliExpress ingestion pipeline (M2 Enhanced with AI)
  * 
