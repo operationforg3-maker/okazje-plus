@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
+import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
 
 // Initialize Firebase Admin lazily (copied pattern from seed route)
 function initializeFirebaseAdmin() {
@@ -96,19 +98,26 @@ export async function POST(request: NextRequest) {
     })();
 
     const images: string[] = Array.isArray(product.images)
-      ? product.images.filter((u: any) => typeof u === 'string') // Bez limitu - wszystkie zdjęcia
-      : [];
+      ? product.images.filter((u: any) => typeof u === 'string') // Wszystkie zdjęcia
+      : (product.imageUrl ? [product.imageUrl] : []); // Fallback do mainImage
 
+    // Waluta z produktu lub domyślna PLN/USD
+    const currency = product.currency || 'USD';
+    
     // Shipping info z rozszerzonych danych
     const shippingInfo = product.shippingInfo || {};
+    
+    // Specyfikacje/atrybuty z pełnych szczegółów
+    const specifications = product.specifications || product.attributes || null;
 
     const docData: any = {
-      name: product.title,
-      description: product.description || product.subTitle || product.title || '',
-      longDescription: product.description || product.title || '',
-      image: product.imageUrl || product.image || null,
+      name: product.title, // Oryginalny tytuł (AI przetłumaczy później)
+      description: product.descriptionHtml || product.description || product.subTitle || product.title || '',
+      longDescription: product.descriptionHtml || product.description || product.title || '',
+      image: images[0] || product.imageUrl || product.mainImage || null,
       imageHint: '',
       affiliateUrl: product.productUrl || product.url || null,
+      currency: currency,
       ratingCard: {
         average: Number(product.rating || 0),
         count: Number(product.orders || 0),
@@ -151,8 +160,9 @@ export async function POST(request: NextRequest) {
         shippingMethod: shippingInfo.shippingMethod || null,
         categoryId: product.categoryId || null,
         categoryName: product.categoryName || null,
-        videoUrl: product.productVideoUrl || null,
-        specifications: product.specifications || null,
+        videoUrl: product.productVideoUrl || product.videoUrl || null,
+        specifications: specifications,
+        variants: product.variants || null,
         rawDataStored: false,
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -178,6 +188,48 @@ export async function POST(request: NextRequest) {
     }
 
     await docRef.set(docData);
+
+    // AI Enrichment asynchronicznie (nie blokuj response)
+    (async () => {
+      try {
+        console.log(`[import] Starting AI enrichment for product ${docRef.id}`);
+        
+        // 1. Normalizuj tytuł (usuń emoji, śmieci)
+        const titleResult = await aiNormalizeTitlePL({
+          title: product.title || '',
+          language: 'en'
+        });
+        const normalizedTitle = titleResult.normalizedTitle;
+        
+        // 2. Wzbogać opis (tłumaczenie + SEO)
+        const enrichResult = await aiProductEnrichmentPL({
+          originalTitle: normalizedTitle,
+          rawDescription: product.descriptionHtml || product.description || undefined,
+          categoryPath: [mainCategory || 'inne', subCategory || 'inne'],
+          price: price,
+          originalPrice: originalPrice || undefined,
+          rating: Number(product.rating || 0),
+          orders: Number(product.orders || 0),
+          merchant: product.merchant || undefined
+        });
+        
+        // Update produktu z AI danymi
+        await docRef.update({
+          name: enrichResult.normalizedName,
+          description: enrichResult.shortDescription,
+          longDescription: enrichResult.longDescription,
+          features: enrichResult.features || [],
+          tags: enrichResult.keywords || [],
+          'metadata.aiEnriched': true,
+          'metadata.aiEnrichedAt': admin.firestore.FieldValue.serverTimestamp(),
+        });
+        
+        console.log(`[import] AI enrichment completed for product ${docRef.id}`);
+      } catch (aiError) {
+        console.error(`[import] AI enrichment failed for product ${docRef.id}:`, aiError);
+        // Nie rzucaj błędu - produkt już jest zapisany
+      }
+    })();
 
     return NextResponse.json({ ok: true, id: docRef.id });
   } catch (e) {

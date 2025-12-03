@@ -260,21 +260,58 @@ export default function AliExpressImporter() {
     setImportState('importing');
 
     try {
-      // Use callable Cloud Function importAliProduct if available
-      const callable = httpsCallable(functions as any, 'importAliProduct');
+      // Pobierz token z Firebase Auth
+      const { auth: firebaseAuth } = await import('@/lib/firebase');
+      const currentUser = firebaseAuth.currentUser;
+      if (!currentUser) {
+        toast.error('Brak zalogowanego użytkownika');
+        setImportState('previewing');
+        return;
+      }
+      
+      const token = await currentUser.getIdToken();
+      
       let success = 0;
+      let failed = 0;
+      
       for (const p of productsToImport) {
         const mapping = categoryMapping[p.id];
-        const payload = { product: p, mainCategorySlug: mapping.main, subCategorySlug: mapping.sub };
+        
+        // Użyj pełnych szczegółów jeśli są dostępne
+        const fullProduct = productDetails[p.id] || p;
+        
         try {
-          const res = await callable(payload);
-          if ((res as any).data?.ok) success++;
+          const res = await fetch('/api/admin/aliexpress/import', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+              product: fullProduct, 
+              mainCategory: mapping.main, 
+              subCategory: mapping.sub 
+            })
+          });
+          
+          const data = await res.json();
+          if (res.ok && data.ok) {
+            success++;
+          } else if (res.status === 409) {
+            console.log('Product already exists:', p.id);
+            failed++;
+          } else {
+            console.error('Import failed for', p.id, data.error);
+            failed++;
+          }
         } catch (err: any) {
           console.error('Import failed for', p.id, err);
+          failed++;
         }
       }
+      
       setImportState('completed');
-      toast.success(`Zaimportowano ${success} z ${productsToImport.length} produktów!`);
+      toast.success(`Zaimportowano ${success} z ${productsToImport.length} produktów! ${failed > 0 ? `Pominięto: ${failed}` : ''}`);
     } catch (err) {
       console.error('Bulk import failed:', err);
       toast.error('Import nieudany');
@@ -329,18 +366,60 @@ export default function AliExpressImporter() {
     }
     setImportState('importing');
     try {
-      const callable = httpsCallable(functions as any, 'importAliProduct');
-      const payload = { product: (productDetails[productId] || searchResults.find(p => p.id === productId)), mainCategorySlug: mapping.main, subCategorySlug: mapping.sub };
-      const res = await callable(payload);
-      if ((res as any).data?.ok) {
-        toast.success('Produkt zaimportowany');
-        closePreview();
-      } else {
-        toast.error('Import nie powiódł się');
+      // Pobierz pełne szczegóły jeśli nie ma
+      let fullProduct = productDetails[productId];
+      if (!fullProduct) {
+        await loadDetails(productId);
+        fullProduct = productDetails[productId];
       }
-    } catch (e) {
+      
+      // Użyj pełnych szczegółów jeśli są dostępne, inaczej podstawowe dane z search
+      const productToImport = fullProduct || searchResults.find(p => p.id === productId);
+      
+      if (!productToImport) {
+        toast.error('Nie znaleziono danych produktu');
+        setImportState('previewing');
+        return;
+      }
+
+      // Pobierz token z Firebase Auth
+      const { auth: firebaseAuth } = await import('@/lib/firebase');
+      const currentUser = firebaseAuth.currentUser;
+      if (!currentUser) {
+        toast.error('Brak zalogowanego użytkownika');
+        setImportState('previewing');
+        return;
+      }
+      
+      const token = await currentUser.getIdToken();
+      
+      // Wywołaj HTTP endpoint zamiast Cloud Function
+      const res = await fetch('/api/admin/aliexpress/import', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          product: productToImport, 
+          mainCategory: mapping.main, 
+          subCategory: mapping.sub 
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok && data.ok) {
+        toast.success('Produkt zaimportowany! AI przetłumaczy opis w tle.');
+        closePreview();
+      } else if (res.status === 409) {
+        toast.error('Produkt już istnieje w bazie');
+      } else {
+        toast.error(data.error || 'Import nie powiódł się');
+      }
+    } catch (e: any) {
       console.error('Import single failed', e);
-      toast.error('Import nieudany');
+      toast.error(e.message || 'Import nieudany');
     } finally {
       setImportState('previewing');
     }

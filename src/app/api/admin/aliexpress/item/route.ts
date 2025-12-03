@@ -3,9 +3,12 @@ import { buildSignedParams, toQueryString } from '@/lib/aliexpress';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const id = url.searchParams.get('id') || url.searchParams.get('itemId') || '';
+  const id = url.searchParams.get('id') 
+    || url.searchParams.get('itemId') 
+    || url.searchParams.get('productId') 
+    || '';
 
-  if (!id) return NextResponse.json({ error: 'missing_id' }, { status: 400 });
+  if (!id) return NextResponse.json({ error: 'missing_id', message: 'Provide id, itemId, or productId parameter' }, { status: 400 });
 
   const API_BASE = process.env.ALIEXPRESS_API_BASE;
   const APP_KEY = process.env.ALIEXPRESS_APP_KEY || process.env.ALIEXPRESS_API_KEY;

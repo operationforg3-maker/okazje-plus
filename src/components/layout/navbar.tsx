@@ -26,7 +26,8 @@ import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { NotificationBell } from '@/components/notification-bell';
-import { LanguageSwitcher } from '@/components/language-switcher';
+import { LanguageSwitcherMenu } from '@/components/locale-currency-switcher';
+import { CurrencySwitcher } from '@/components/currency-switcher';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -103,11 +104,12 @@ export function Navbar() {
           </NavigationMenuList>
         </NavigationMenu>
 
-        <div className="flex flex-1 items-center justify-end space-x-4">
+        <div className="flex flex-1 items-center justify-end space-x-2 md:space-x-4">
           <div className="flex-1 max-w-md ml-auto">
             <AutocompleteSearch />
           </div>
-          <LanguageSwitcher />
+          <LanguageSwitcherMenu />
+          <CurrencySwitcher />
           {loading ? (
               <Skeleton className="h-9 w-9 rounded-full" />
             ) : user ? (
