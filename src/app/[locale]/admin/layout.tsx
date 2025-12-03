@@ -46,7 +46,6 @@ import {
   Wrench,
 } from 'lucide-react';
 import { SidebarCategoryTree } from '@/components/admin/sidebar-category-tree';
-import { UserNav } from '@/components/auth/user-nav';
 import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -199,11 +198,26 @@ export default function AdminLayout({
                     </CollapsibleContent>
                   </SidebarMenuItem>
                 </Collapsible>
-                {/* Category Tree */}
-                <div className="mt-3 mb-2 px-2">
-                  <SidebarCategoryTree />
-                </div>
-                <Separator className="my-3" />
+                {/* Category Tree - minimalized */}
+                <Collapsible defaultOpen={false} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton className="w-full hover:bg-muted/80 opacity-70">
+                        <FolderTree className="h-4 w-4" />
+                        <span className="flex-1 text-left text-sm group-data-[collapsible=icon]:hidden">
+                          Katalog kategorii
+                        </span>
+                        <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180 group-data-[collapsible=icon]:hidden" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="px-2 py-2">
+                        <SidebarCategoryTree />
+                      </div>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+                <Separator className="my-2" />
                 {/* Import Danych - COLLAPSIBLE */}
                 <Collapsible open={importOpen} onOpenChange={setImportOpen} className="group/collapsible">
                   <SidebarMenuItem>
@@ -488,24 +502,23 @@ export default function AdminLayout({
                   <PanelLeft />
                 </SidebarTrigger>
                 {/* Breadcrumbs */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Link href="/" className="hover:text-primary transition-colors flex items-center gap-1.5 group">
+                <div className="flex items-center gap-2 text-sm">
+                  <Link href="/" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 group">
                     <Home className="h-4 w-4 group-hover:scale-110 transition-transform" />
-                    <span className="hidden sm:inline">Strona główna</span>
+                    <span className="hidden md:inline">Strona główna</span>
                   </Link>
-                  <ChevronRight className="h-4 w-4" />
-                  <Link href="/admin" className="hover:text-primary transition-colors">
-                    Panel
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                  <Link href="/admin" className="text-muted-foreground hover:text-primary transition-colors font-medium">
+                    Panel Admina
                   </Link>
                   {pathname !== '/admin' && (
                     <>
-                      <ChevronRight className="h-4 w-4" />
-                      <span className="font-medium text-foreground">{currentPageName}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                      <span className="font-semibold text-foreground">{currentPageName}</span>
                     </>
                   )}
                 </div>
               </div>
-              <UserNav />
             </header>
             <main className="flex-1 overflow-y-auto">
               <div className="container mx-auto p-4 md:p-6 lg:p-8">
