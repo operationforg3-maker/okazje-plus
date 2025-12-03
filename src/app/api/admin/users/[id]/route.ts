@@ -55,6 +55,18 @@ export async function PUT(
         );
       }
       updateData.role = role;
+      
+      // WAŻNE: Ustaw też custom claim w Firebase Auth
+      try {
+        await getAuth().setCustomUserClaims(userId, { admin: role === 'admin' });
+        console.log(`[PUT /api/admin/users/:id] Set custom claim admin=${role === 'admin'} for user ${userId}`);
+      } catch (e) {
+        console.error(`[PUT /api/admin/users/:id] Failed to set custom claim for ${userId}:`, e);
+        return NextResponse.json(
+          { success: false, message: "Nie udało się ustawić uprawnień w Firebase Auth" },
+          { status: 500 }
+        );
+      }
     }
 
     if (disabled !== undefined) {
@@ -66,7 +78,7 @@ export async function PUT(
     return NextResponse.json(
       {
         success: true,
-        message: "Użytkownik został zaktualizowany",
+        message: "Użytkownik został zaktualizowany. Użytkownik musi się ponownie zalogować, aby zmiany zadziałały.",
       },
       { status: 200 }
     );

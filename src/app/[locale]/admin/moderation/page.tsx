@@ -16,7 +16,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Eye
+  Eye,
+  RefreshCw
 } from 'lucide-react';
 
 interface BulkItem { id: string; type: 'deal' | 'product'; }
@@ -181,6 +182,60 @@ function ModerationPage() {
   const [approvedItems, setApprovedItems] = useState<any[]>([]);
   const [rejectedItems, setRejectedItems] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [checkingClaims, setCheckingClaims] = useState(false);
+
+  const handleFixAdminClaims = async () => {
+    setCheckingClaims(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast({ title: 'Błąd', description: 'Nie jesteś zalogowany', variant: 'destructive' });
+        return;
+      }
+
+      // Sprawdź i napraw claims
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/refresh-claims', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      const data = await res.json();
+      
+      if (data.wasSynced) {
+        toast({ 
+          title: 'Zsynchronizowano uprawnienia', 
+          description: 'Odświeżam token...'
+        });
+        
+        // Force refresh tokena po naprawieniu claims
+        await currentUser.getIdToken(true);
+        
+        toast({ 
+          title: 'Gotowe!', 
+          description: 'Uprawnienia admina zostały zaktualizowane. Odśwież stronę.'
+        });
+        
+        // Auto-refresh po 2 sekundach
+        setTimeout(() => window.location.reload(), 2000);
+      } else {
+        toast({ 
+          title: 'Wszystko OK', 
+          description: data.isAdmin 
+            ? 'Masz prawidłowe uprawnienia admina' 
+            : 'Brak uprawnień admina w systemie'
+        });
+      }
+    } catch (error: any) {
+      toast({ 
+        title: 'Błąd', 
+        description: error.message || 'Nie udało się sprawdzić uprawnień', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setCheckingClaims(false);
+    }
+  };
 
   const fetchModerationData = useCallback(async () => {
     setLoading(true);
@@ -257,11 +312,22 @@ function ModerationPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Panel moderacji</h2>
-        <p className="text-muted-foreground">
-          Zatwierdzaj i odrzucaj nowe treści
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Panel moderacji</h2>
+          <p className="text-muted-foreground">
+            Zatwierdzaj i odrzucaj nowe treści
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleFixAdminClaims}
+          disabled={checkingClaims}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${checkingClaims ? 'animate-spin' : ''}`} />
+          {checkingClaims ? 'Sprawdzam...' : 'Napraw uprawnienia'}
+        </Button>
       </div>
 
       {/* Stats */}

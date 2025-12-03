@@ -23,14 +23,35 @@ export async function POST(req: NextRequest) {
     let decoded;
     try {
       decoded = await getAuth().verifyIdToken(idToken);
+      console.log('[bulk moderation] User verified:', {
+        uid: decoded.uid,
+        email: decoded.email,
+        admin: decoded.admin,
+        role: decoded.role || 'not set'
+      });
     } catch (e) {
       console.error('[bulk moderation] Token verify error', e);
       return NextResponse.json({ success: false, message: 'Nieprawidłowy token użytkownika' }, { status: 401 });
     }
 
-    // Sprawdź czy użytkownik jest adminem
-    if (!decoded.admin) {
-      return NextResponse.json({ success: false, message: 'Brak uprawnień administratora' }, { status: 403 });
+    // Sprawdź czy użytkownik jest adminem (admin custom claim LUB role z Firestore)
+    const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
+    const userData = userDoc.data();
+    const isAdmin = decoded.admin === true || userData?.role === 'admin';
+    
+    console.log('[bulk moderation] Admin check:', {
+      uid: decoded.uid,
+      customClaimAdmin: decoded.admin,
+      firestoreRole: userData?.role,
+      isAdmin
+    });
+
+    if (!isAdmin) {
+      console.error('[bulk moderation] User is not admin:', decoded.uid);
+      return NextResponse.json({ 
+        success: false, 
+        message: `Brak uprawnień administratora. Sprawdź ustawienia konta.` 
+      }, { status: 403 });
     }
 
     const body = await req.json();

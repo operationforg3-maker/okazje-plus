@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
-  SidebarHeader,
   SidebarContent,
   SidebarMenu,
   SidebarMenuItem,
@@ -28,7 +27,6 @@ import {
   Flame,
   Users,
   Sparkles,
-  ShoppingBag,
   PanelLeft,
   FolderTree,
   Settings,
@@ -44,6 +42,7 @@ import {
   MessageSquare,
   Bell,
   Wrench,
+  ShoppingBag,
 } from 'lucide-react';
 import { SidebarCategoryTree } from '@/components/admin/sidebar-category-tree';
 import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
@@ -103,19 +102,8 @@ export default function AdminLayout({
   return (
     <AdminAuthGuard>
       <SidebarProvider>
-        <div className="flex min-h-screen">
+        <div className="flex h-screen overflow-hidden">
           <Sidebar className="border-r border-border/60">
-            <SidebarHeader className="border-b border-border/60 bg-gradient-to-r from-primary/10 to-purple-500/10">
-              <Link href="/" className="flex items-center gap-3 p-3 hover:bg-muted/50 rounded-lg transition-all group">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-                  <ShoppingBag className="h-5 w-5 text-white" />
-                </div>
-                <div className="group-data-[collapsible=icon]:hidden">
-                  <span className="font-bold font-headline text-lg block">Okazje+</span>
-                  <span className="text-xs text-muted-foreground">Panel Admina</span>
-                </div>
-              </Link>
-            </SidebarHeader>
             <SidebarContent className="p-2">
               <SidebarMenu>
                 {/* Dashboard */}
@@ -495,8 +483,8 @@ export default function AdminLayout({
               </SidebarMenu>
             </SidebarContent>
           </Sidebar>
-          <SidebarInset className="flex flex-1 flex-col">
-            <header className="flex h-16 items-center gap-4 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6 sticky top-0 z-30 shadow-sm">
+          <SidebarInset className="flex flex-1 flex-col overflow-hidden">
+            <header className="flex h-16 items-center gap-4 border-b border-border/60 bg-background px-4 md:px-6 shrink-0 shadow-sm">
               <div className="flex items-center gap-4 flex-1">
                 <SidebarTrigger className="md:hidden">
                   <PanelLeft />
