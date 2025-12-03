@@ -1,6 +1,5 @@
 'use server';
 
-import { runFlow } from '@genkit-ai/flow';
 import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
 
 /**
@@ -25,9 +24,7 @@ export async function ingestProduct(productId: string) {
   const totalCost = rawProduct.price + shippingCost;
 
   // 3. AI Magic
-  const cleanTitle = await runFlow(aiNormalizeTitlePL, {
-    rawTitle: rawProduct.title,
-  });
+  const cleanTitle = await aiNormalizeTitlePL({ rawTitle: rawProduct.title });
 
   // 4. Save to Firestore (i18n-friendly structure)
   const productPayload = {
@@ -46,7 +43,9 @@ export async function ingestProduct(productId: string) {
     updatedAt: new Date(),
   } as const;
 
-  await db.collection('products').doc(productId).set(productPayload, { merge: true });
+  // Modular Firestore API
+  const productRef = doc(db, 'products', productId);
+  await setDoc(productRef, productPayload, { merge: true });
   return productPayload;
 }
 /**
@@ -59,7 +58,7 @@ export async function ingestProduct(productId: string) {
 
 // ...istniejący kod...
 
-import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ImportRun, ImportProfile, ImportError, Product, Deal } from '@/lib/types';
 import { AliExpressClient } from './client';

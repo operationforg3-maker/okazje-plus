@@ -1,43 +1,41 @@
 'use server';
-
-import { defineFlow } from '@genkit-ai/flow';
-import { gemini15Flash } from '@genkit-ai/vertexai';
-import { generate } from '@genkit-ai/ai';
-import { z } from 'zod';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const ProductInputSchema = z.object({
-  rawTitle: z.string(),
-  attributes: z.array(z.any()).optional(),
+  rawTitle: z.string().describe('Oryginalny tytuł z AliExpress'),
 });
 
-export const aiNormalizeTitlePL = defineFlow(
-  {
-    name: 'aliexpress-normalizeTitlePL',
-    inputSchema: ProductInputSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    const prompt = `
-      Act as an e-commerce expert for a Polish store "OkazjePlus".
-      Transform the spammy AliExpress title into a professional, short Polish product title.
+const ProductOutputSchema = z.string().describe('Znormalizowany, krótki tytuł PL bez spamu');
 
-      RULES:
-      1. Remove spam keywords (e.g. "free shipping", "2024", "hot sale", "summer").
-      2. Format: [Brand] [Model/Name] [Key Feature].
-      3. Max length: 60 chars.
-      4. Keep model numbers specific (e.g. Xiaomi Mi Band 8).
-      5. Output ONLY the cleaned title string.
+const normalizeTitlePrompt = ai.definePrompt({
+  name: 'normalizeTitlePLPrompt',
+  input: { schema: ProductInputSchema },
+  output: { schema: z.object({ title: ProductOutputSchema }) },
+  prompt: `Jesteś ekspertem e-commerce w Polsce.
+Oczyść tytuł z AliExpress do profesjonalnej, zwięzłej formy po polsku.
 
-      INPUT: "${input.rawTitle}"
-    `;
+Zasady:
+1) Usuń spam (FREE, 2024, HOT SALE, emoji)
+2) Format: [Marka] [Model] [Cecha kluczowa]
+3) Maks 60 znaków
+4) Tylko czysty tytuł – bez dodatkowych komentarzy
 
-    const llmResponse = await generate({
-      model: gemini15Flash,
-      prompt: prompt,
-      config: { temperature: 0.3 },
-    });
+Wejście: {{{rawTitle}}}
 
-    return llmResponse.text().trim();
-  }
-);
+Zwróć JSON: { "title": "..." }`,
+});
+
+const normalizeTitleFlow = ai.defineFlow({
+  name: 'aliexpress-normalizeTitlePL',
+  inputSchema: ProductInputSchema,
+  outputSchema: ProductOutputSchema,
+}, async (input) => {
+  const { output } = await normalizeTitlePrompt(input);
+  return output!.title.trim();
+});
+
+export async function aiNormalizeTitlePL(input: z.infer<typeof ProductInputSchema>): Promise<string> {
+  return await normalizeTitleFlow(input);
+}
  
