@@ -304,17 +304,67 @@ export interface Deal {
   };
 }
 
-// Zaktualizowany interfejs Product
+// ============================================
+// M4: LocalizedText & Smart Pricing Types
+// ============================================
+
+/**
+ * LocalizedText - Multi-language text support with fallback chain
+ * Priority: current language -> English -> Polish
+ */
+export interface LocalizedText {
+  pl: string;  // Polish (required - base language)
+  en: string;  // English (required)
+  de?: string; // German (optional)
+  fr?: string; // French (optional)
+  es?: string; // Spanish (optional)
+  [key: string]: string | undefined; // Extensible for future languages
+}
+
+/**
+ * SmartPrice - Enhanced price model with shipping & omnibus compliance
+ */
+export interface SmartPrice {
+  amount: number;                 // Base product price
+  currency: string;                // e.g., "PLN", "USD", "EUR"
+  shippingCost: number;           // Calculated shipping cost to Poland
+  totalPrice: number;              // amount + shippingCost (displayed as "Total Landed Cost")
+  lowestPrice30Days?: number;     // Omnibus directive compliance (lowest price in last 30 days)
+  originalPrice?: number;          // Original price before discount
+  discountPercent?: number;        // Calculated discount percentage
+  freeShipping?: boolean;          // True if shippingCost is 0
+  lastUpdated?: string;            // ISO timestamp of last price update
+}
+
+// Zaktualizowany interfejs Product (M4 Enhanced)
 export interface Product {
   id: string;
+  
+  // DEPRECATED: Legacy single-language fields (keep for backward compatibility)
+  // These will be auto-populated from title.pl / description.pl for existing code
   name: string;
   description: string;
   longDescription: string;
+  
+  // M4: NEW Multi-language fields (replace name/description/longDescription)
+  title: LocalizedText;            // Product title in multiple languages
+  shortDescription: LocalizedText; // Short description (1-2 sentences)
+  fullDescription: LocalizedText;  // Full product description
+  seoDescription?: LocalizedText;  // AI-generated SEO meta description
+  
   image: string;
   imageHint: string;
   affiliateUrl: string;
   
-  // Multi-language support (i18n)
+  // M4: Smart Pricing Model
+  price: SmartPrice;               // Replaces old 'price: number'
+  
+  // DEPRECATED: Legacy price fields (keep for compatibility)
+  originalPrice?: number;
+  discountPercent?: number;
+  currency?: string;
+  
+  // Multi-language support (DEPRECATED - replaced by title/description LocalizedText)
   translations?: {
     en?: {
       name: string;
@@ -344,10 +394,6 @@ export interface Product {
    * Zachowujemy ratingCard dla kompatybilności (aktualnie odzwierciedla users lub external fallback).
    */
   ratingSources?: ProductRatingSources;
-  price: number;
-  originalPrice?: number;
-  discountPercent?: number; // denormalizacja wyliczona (originalPrice - price)/originalPrice
-  currency?: string; // Waluta ceny (USD, PLN, EUR, etc.) - dla multi-currency support
   shareCount?: number; // Licznik udostępnień społecznościowych
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole

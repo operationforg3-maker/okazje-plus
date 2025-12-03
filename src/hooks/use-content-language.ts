@@ -1,13 +1,15 @@
 'use client';
 
 /**
- * React Hook for Content Language Detection and Management
+ * React Hook for Content Language Detection and Management (M4 Enhanced)
  * 
  * Detects user's preferred language and provides utilities for i18n content
+ * with intelligent fallback chain for LocalizedText objects
  */
 
 import { useState, useEffect } from 'react';
 import { SupportedLanguage } from '@/lib/i18n-content';
+import { LocalizedText, getLocalizedText } from '@/lib/i18n-utils';
 
 const DEFAULT_LANGUAGE: SupportedLanguage = 'pl';
 const LANGUAGE_STORAGE_KEY = 'preferred_language';
@@ -51,7 +53,7 @@ function setStoredLanguage(lang: SupportedLanguage): void {
 }
 
 /**
- * Hook for managing content language
+ * Hook for managing content language (M4 Enhanced)
  */
 export function useContentLanguage() {
   const [language, setLanguageState] = useState<SupportedLanguage>(DEFAULT_LANGUAGE);
@@ -72,9 +74,17 @@ export function useContentLanguage() {
     setStoredLanguage(lang);
   };
 
+  /**
+   * M4: Get localized text with automatic fallback
+   */
+  const getText = (text: LocalizedText | string | undefined): string => {
+    return getLocalizedText(text, language);
+  };
+
   return {
     language,
     setLanguage,
+    getText, // M4: New helper for LocalizedText
     isLoading,
     isPolish: language === 'pl',
     isEnglish: language === 'en',

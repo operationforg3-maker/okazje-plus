@@ -449,6 +449,125 @@ export class AliExpressClient {
   }
 
   /**
+   * Calculate shipping cost to Poland (M4 Smart Pricing)
+   * 
+   * Uses AliExpress Logistics API to get real shipping costs
+   * Method: aliexpress.logistics.buyer.freight.get
+   * 
+   * @param productId AliExpress product ID
+   * @param country Target country code (default: PL)
+   * @param quantity Product quantity (default: 1)
+   * @returns Shipping cost in USD or 0 if free shipping
+   */
+  async calculateShipping(
+    productId: string,
+    country: string = 'PL',
+    quantity: number = 1
+  ): Promise<number> {
+    logger.info('Calculating shipping cost', { productId, country, quantity });
+    
+    try {
+      const params = {
+        product_id: productId,
+        product_num: quantity.toString(),
+        country_code: country,
+        send_goods_country_code: 'CN', // Most AliExpress products ship from China
+      };
+      
+      const result = await this.request<any>('aliexpress.logistics.buyer.freight.get', params);
+      
+      // Parse response
+      // Response structure: { aliexpress_logistics_buyer_freight_get_response: { result: { freight: [...] } } }
+      const responseKey = Object.keys(result)[0];
+      const responseData = result[responseKey];
+      
+      if (!responseData || responseData.resp_code !== 200) {
+        logger.warn('Shipping calculation failed, assuming free shipping', { responseData });
+        return 0;
+      }
+      
+      const freight = responseData.result?.freight;
+      if (!Array.isArray(freight) || freight.length === 0) {
+        logger.info('No shipping cost found, assuming free shipping');
+        return 0;
+      }
+      
+      // Find cheapest shipping option
+      const cheapestShipping = freight.reduce((min: any, current: any) => {
+        const currentPrice = parseFloat(current.freight_amount?.amount || '0');
+        const minPrice = parseFloat(min.freight_amount?.amount || '999999');
+        return currentPrice < minPrice ? current : min;
+      }, freight[0]);
+      
+      const shippingCost = parseFloat(cheapestShipping.freight_amount?.amount || '0');
+      
+      logger.info('Shipping cost calculated', {
+        productId,
+        shippingCost,
+        shippingMethod: cheapestShipping.service_name,
+        estimatedDays: cheapestShipping.estimated_delivery_time,
+      });
+      
+      return shippingCost;
+    } catch (error) {
+      logger.error('Shipping calculation error, assuming free shipping', { error });
+      // Graceful degradation - assume free shipping on error
+      return 0;
+    }
+  }
+
+  /**
+   * Get hot products / bestsellers (M4 Smart Importing)
+   * 
+   * Method: aliexpress.affiliate.hotproduct.query
+   * Returns best-selling products filtered by category and quality
+   * 
+   * @param categoryIds Category IDs to filter (optional)
+   * @param targetCurrency Target currency (default: PLN)
+   * @param limit Max products to return (default: 20, max: 50)
+   * @returns Hot products with high conversion rates
+   */
+  async getHotProducts(
+    categoryIds?: string[],
+    targetCurrency: string = 'PLN',
+    limit: number = 20
+  ): Promise<any[]> {
+    logger.info('Fetching hot products', { categoryIds, limit });
+    
+    try {
+      const params: Record<string, any> = {
+        target_currency: targetCurrency,
+        target_language: 'PL',
+        page_size: Math.min(limit, 50),
+      };
+      
+      if (categoryIds && categoryIds.length > 0) {
+        params.category_ids = categoryIds.join(',');
+      }
+      
+      const result = await this.request<any>('aliexpress.affiliate.hotproduct.query', params);
+      
+      // Parse response
+      const responseKey = Object.keys(result)[0];
+      const responseData = result[responseKey];
+      
+      if (!responseData || responseData.resp_code !== 200) {
+        logger.warn('Hot products fetch failed', { responseData });
+        return [];
+      }
+      
+      const products = responseData.result?.products || [];
+      
+      logger.info(`Fetched ${products.length} hot products`);
+      
+      return products;
+    } catch (error) {
+      logger.error('Hot products fetch failed', { error });
+      return [];
+    }
+  }
+
+  /**
    * Get client configuration (for debugging)
    */
   getConfig(): AliExpressClientConfig {

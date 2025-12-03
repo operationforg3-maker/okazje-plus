@@ -1027,6 +1027,13 @@ export async function getProductById(productId: string): Promise<Product | null>
   return { id: snapshot.id, ...(snapshot.data() as Omit<Product, "id">) };
 }
 
+/**
+ * Alias for getProductById (for backward compatibility)
+ */
+export async function getProduct(productId: string): Promise<Product | null> {
+  return getProductById(productId);
+}
+
 // === POWIĄZANIA DEAL ↔ PRODUCT ===
 /**
  * Tworzy powiązanie między dealem a produktem (bidirectional, future-proof).
