@@ -402,6 +402,14 @@ service cloud.firestore {
     match /duplicate_groups/{groupId} {
       allow read, write: if isAdmin();
     }
+
+    ////////////////////////////////
+    // CONFIG (System settings)
+    ////////////////////////////////
+    match /config/{configId} {
+      allow read: if true; // Public read dla currency preference, indexes schedule, etc
+      allow write: if isAdmin();
+    }
   }
 }
 
