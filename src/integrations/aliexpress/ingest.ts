@@ -1,3 +1,5 @@
+"use server";
+
 import { runFlow } from '@genkit-ai/flow';
 import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
 import { db } from '../../lib/firebase';
