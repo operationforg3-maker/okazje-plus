@@ -39,6 +39,9 @@ import CommentSection from '@/components/comment-section';
 import RatingInput from '@/components/rating-input';
 import ShareButton from '@/components/share-button';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
+import AIExpertSummary from '@/components/ai-expert-summary';
+import { PriceHistoryChart } from '@/components/price-history-chart';
+import { getTotalPrice, getPriceAmount, formatPrice } from '@/lib/i18n-utils';
 import { 
   Tooltip,
   TooltipContent,
@@ -67,15 +70,17 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
     setRecentRatings(ratings);
   };
 
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
-  const originalPrice = product.originalPrice 
-    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice)
+  const currentPrice = getTotalPrice(product.price);
+  const itemPrice = getPriceAmount(product.price);
+  const price = formatPrice(currentPrice, 'PLN');
+  const originalPrice = (product as any).originalPrice 
+    ? formatPrice((product as any).originalPrice, 'PLN')
     : null;
-  const discount = product.originalPrice && product.originalPrice > product.price
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  const discount = (product as any).originalPrice && (product as any).originalPrice > currentPrice
+    ? Math.round((((product as any).originalPrice - currentPrice) / (product as any).originalPrice) * 100)
     : null;
-  const savings = product.originalPrice && product.originalPrice > product.price
-    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice - product.price)
+  const savings = (product as any).originalPrice && (product as any).originalPrice > currentPrice
+    ? formatPrice((product as any).originalPrice - currentPrice, 'PLN')
     : null;
 
   const avgRating = product.ratingCard.average;
@@ -463,6 +468,17 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
         </TabsList>
         
         <TabsContent value="description" className="mt-6 space-y-6">
+          
+          {/* ========================================
+              💎 AI EXPERT SUMMARY (M4 Trust-First)
+              ======================================== */}
+          <AIExpertSummary product={product} />
+
+          {/* ========================================
+              📊 PRICE HISTORY (30-Day Tracking)
+              ======================================== */}
+          <PriceHistoryChart itemId={product.id} itemType="product" />
+
           {/* Long description */}
           <Card>
             <CardHeader>
@@ -679,7 +695,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
         itemType="product"
         category={product.mainCategorySlug}
         subcategory={product.subCategorySlug}
-        priceRange={product.price ? [product.price * 0.7, product.price * 1.3] : undefined}
+        priceRange={currentPrice ? [currentPrice * 0.7, currentPrice * 1.3] : undefined}
         excludeItemId={product.id}
         maxItems={8}
       />

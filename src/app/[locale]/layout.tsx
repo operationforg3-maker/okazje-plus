@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from 'sonner';
 import { ConditionalNav } from '@/components/layout/conditional-nav';
 import { AuthProvider } from '@/lib/auth';
+import { SmartCartProvider } from '@/lib/cart-context';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import { ComparisonListener } from '@/components/deal-comparison-tool';
@@ -88,10 +89,12 @@ export default async function RootLayout({
       <body className={cn('min-h-screen bg-background font-body antialiased')}>
   <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
-            <ConditionalNav>{children}</ConditionalNav>
-            <ComparisonListener />
-            <ExtensionWarningBanner />
-            <Toaster />
+            <SmartCartProvider>
+              <ConditionalNav>{children}</ConditionalNav>
+              <ComparisonListener />
+              <ExtensionWarningBanner />
+              <Toaster />
+            </SmartCartProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>

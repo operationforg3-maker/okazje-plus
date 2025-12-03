@@ -26,6 +26,7 @@ import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { NotificationBell } from '@/components/notification-bell';
+import { MiniCartBadge } from '@/components/smart-cart-widget';
 import { LanguageSwitcherMenu } from '@/components/locale-currency-switcher';
 import { CurrencySwitcher } from '@/components/currency-switcher';
 
@@ -110,6 +111,8 @@ export function Navbar() {
           </div>
           <LanguageSwitcherMenu />
           <CurrencySwitcher />
+          <MiniCartBadge />
+          {user && <NotificationBell />}
           {loading ? (
               <Skeleton className="h-9 w-9 rounded-full" />
             ) : user ? (
