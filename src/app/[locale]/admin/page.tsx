@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
 import TestsTab from '@/components/admin/tests-tab';
+import { ImportManager } from '@/components/admin/import-manager';
 
 // AI Console Component
 function AiConsole() {
@@ -859,6 +860,19 @@ function AdminPage() {
           <AiConsole />
         </TabsContent>
       </Tabs>
+
+      {/* Batch Import Manager */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Batch Import System</CardTitle>
+          <CardDescription>
+            Zarządzanie importami produktów i okazji z możliwością wstrzymania, wznowienia i rollback
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ImportManager />
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card>

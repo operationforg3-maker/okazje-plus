@@ -1,5 +1,5 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue as FirestoreFieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { readFileSync, existsSync } from 'fs';
 import { join, resolve } from 'path';
@@ -74,5 +74,8 @@ adminDb.settings({
 });
 
 const adminAuth = getAuth(adminApp);
+
+// Export FieldValue for array operations
+export const FieldValue = FirestoreFieldValue;
 
 export { adminDb, adminApp, adminAuth };
