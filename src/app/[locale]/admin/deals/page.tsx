@@ -45,6 +45,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { CategoryFilterSidebar } from '@/components/admin/category-filter-sidebar';
 
 export default function AdminDealsPage() {
   const { toast } = useToast();
@@ -63,6 +64,7 @@ export default function AdminDealsPage() {
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('filter') || 'all');
   const mainCategory = searchParams.get('mainCategory') || undefined;
   const subCategory = searchParams.get('subCategory') || undefined;
+  const subSubCategory = searchParams.get('subSubCategory') || undefined;
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Deal>(
@@ -92,7 +94,8 @@ export default function AdminDealsPage() {
       const filtered = allDeals.filter(d => {
         const catOk = mainCategory ? d.mainCategorySlug === mainCategory : true;
         const subOk = subCategory ? d.subCategorySlug === subCategory : true;
-        return catOk && subOk;
+        const subSubOk = subSubCategory ? d.subSubCategorySlug === subSubCategory : true;
+        return catOk && subOk && subSubOk;
       });
       setDeals(filtered);
     } catch (error) {
@@ -110,7 +113,7 @@ export default function AdminDealsPage() {
   useEffect(() => {
     fetchDeals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, mainCategory, subCategory]);
+  }, [statusFilter, mainCategory, subCategory, subSubCategory]);
 
   // High discount filter post-processing
   const displayDeals = useMemo(() => {
@@ -266,16 +269,18 @@ export default function AdminDealsPage() {
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Okazje</CardTitle>
-              <CardDescription>
-                Zarządzaj listą okazji w swoim serwisie.
-              </CardDescription>
-            </div>
+    <div className="flex h-full">
+      <CategoryFilterSidebar />
+      <div className="flex-1 overflow-y-auto">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Okazje</CardTitle>
+                <CardDescription>
+                  Zarządzaj listą okazji w swoim serwisie.
+                </CardDescription>
+              </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
@@ -552,6 +557,7 @@ export default function AdminDealsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+      </div>
+    </div>
   );
 }

@@ -46,6 +46,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { CategoryFilterSidebar } from '@/components/admin/category-filter-sidebar';
 
 export default function AdminProductsPage() {
   const { toast } = useToast();
@@ -64,6 +65,7 @@ export default function AdminProductsPage() {
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('filter') || 'all');
   const mainCategory = searchParams.get('mainCategory') || undefined;
   const subCategory = searchParams.get('subCategory') || undefined;
+  const subSubCategory = searchParams.get('subSubCategory') || undefined;
 
   // Sortowanie
   const { sortedData, requestSort, sortConfig } = useTableSort<Product>(
@@ -93,7 +95,8 @@ export default function AdminProductsPage() {
       const filtered = allProducts.filter(p => {
         const catOk = mainCategory ? p.mainCategorySlug === mainCategory : true;
         const subOk = subCategory ? p.subCategorySlug === subCategory : true;
-        return catOk && subOk;
+        const subSubOk = subSubCategory ? p.subSubCategorySlug === subSubCategory : true;
+        return catOk && subOk && subSubOk;
       });
       setProducts(filtered);
     } catch (error) {
@@ -106,7 +109,7 @@ export default function AdminProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, statusFilter, mainCategory, subCategory]);
+  }, [toast, statusFilter, mainCategory, subCategory, subSubCategory]);
 
   useEffect(() => {
     fetchProducts();
@@ -273,16 +276,18 @@ export default function AdminProductsPage() {
   };
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Produkty</CardTitle>
-              <CardDescription>
-                Zarządzaj listą produktów w swoim serwisie.
-              </CardDescription>
-            </div>
+    <div className="flex h-full">
+      <CategoryFilterSidebar />
+      <div className="flex-1 overflow-y-auto">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Produkty</CardTitle>
+                <CardDescription>
+                  Zarządzaj listą produktów w swoim serwisie.
+                </CardDescription>
+              </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
@@ -556,6 +561,7 @@ export default function AdminProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+      </div>
+    </div>
   );
 }
