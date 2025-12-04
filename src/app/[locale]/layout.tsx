@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { ConditionalNav } from '@/components/layout/conditional-nav';
 import { AuthProvider } from '@/lib/auth';
 import { SmartCartProvider } from '@/lib/cart-context';
+import { CurrencyProvider } from '@/context/currency-context';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import { ComparisonListener } from '@/components/deal-comparison-tool';
@@ -90,18 +91,20 @@ export default async function RootLayout({
         style={{ WebkitOverflowScrolling: 'touch' }}>
         <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
-            <SmartCartProvider>
-              <div className="flex flex-col min-h-screen w-full max-w-screen-2xl mx-auto px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
-                <ConditionalNav>
-                  <main className="flex-1 w-full max-w-full px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
-                    {children}
-                  </main>
-                </ConditionalNav>
-                <ComparisonListener />
-                <ExtensionWarningBanner />
-                <Toaster />
-              </div>
-            </SmartCartProvider>
+            <CurrencyProvider>
+              <SmartCartProvider>
+                <div className="flex flex-col min-h-screen w-full max-w-screen-2xl mx-auto px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
+                  <ConditionalNav>
+                    <main className="flex-1 w-full max-w-full px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
+                      {children}
+                    </main>
+                  </ConditionalNav>
+                  <ComparisonListener />
+                  <ExtensionWarningBanner />
+                  <Toaster />
+                </div>
+              </SmartCartProvider>
+            </CurrencyProvider>
           </AuthProvider>
         </NextIntlClientProvider>
       </body>
