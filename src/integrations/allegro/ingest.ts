@@ -11,6 +11,7 @@ import { AllegroClient } from './client';
 import { mapAllegroListingItemToProduct, mapAllegroProductToProduct } from './mappers';
 import { AllegroSearchParams, AllegroOfferListingItem } from './types';
 import { Product, ImportRun, ImportProfile } from '@/lib/types';
+import { smartImportProduct } from '@/integrations/smart-importer';
 
 /**
  * Import products from Allegro based on profile
@@ -144,12 +145,97 @@ async function processAllegroOffer(
     }
   }
 
-  // Map Allegro offer to platform Product
+  // Fetch full product details for AI processing
+  const fullProductResponse = await client.getOfferDetails({ productId: item.id });
+  if (!fullProductResponse || !fullProductResponse.offer) {
+    logger.warn('Could not fetch full product details', { offerId: item.id });
+    stats.skipped++;
+    return;
+  }
+  const fullProduct = fullProductResponse.offer;
+
+  // === AI PROCESSING PIPELINE - Using Smart Import Orchestration ===
+  logger.debug('Running Smart Import pipeline', { offerId: item.id });
+
+  const smartResult = await smartImportProduct({
+    title: item.name,
+    description: fullProduct.description,
+    price: item.sellingMode.price.amount,
+    originalPrice: undefined, // Allegro doesn't provide original price
+    shippingCost: item.delivery?.lowestPrice?.amount || 0,
+    rating: undefined, // Allegro seller ratings are separate; would need additional API call
+    soldCount: item.stats?.visitsCount, // Use visits as proxy for popularity
+    merchantRating: undefined, // Would need seller info API call
+    merchant: item.seller?.login,
+    source: 'allegro',
+    externalId: item.id,
+    importedBy: profile.createdBy,
+  });
+
+  // Skip low-quality products
+  if (
+    smartResult.qualityRecommendation === 'reject' ||
+    smartResult.qualityScore < 50
+  ) {
+    logger.info('Product rejected by AI quality score', {
+      offerId: item.id,
+      score: smartResult.qualityScore,
+      recommendation: smartResult.qualityRecommendation,
+    });
+    stats.skipped++;
+    return;
+  }
+
+  // Map Allegro offer to platform Product with AI enhancements
   const productData = mapAllegroListingItemToProduct(item, {
     mainSlug: profile.mapping.targetMainCategory,
     subSlug: profile.mapping.targetSubCategory,
     subSubSlug: profile.mapping.targetSubSubCategory,
   });
+
+  // Apply AI-suggested category if high confidence
+  if (smartResult.category && smartResult.categoryConfidence >= 0.6) {
+    productData.mainCategorySlug = smartResult.category.mainCategorySlug;
+    productData.subCategorySlug = smartResult.category.subCategorySlug;
+    productData.subSubCategorySlug = smartResult.category.subSubCategorySlug;
+  }
+
+  // Apply AI-generated content
+  if (smartResult.generatedContent) {
+    productData.name = smartResult.generatedContent.marketingTitle || productData.name;
+    productData.description = smartResult.generatedContent.shortDescription || productData.description;
+    productData.longDescription = smartResult.generatedContent.htmlContent || productData.longDescription;
+  }
+
+  // Attach AI metadata
+  if (!productData.ai) productData.ai = {};
+  productData.ai.quality = {
+    score: smartResult.qualityScore,
+    recommendation: smartResult.qualityRecommendation,
+    reasoning: smartResult.qualityReasoning,
+    scoredAt: new Date().toISOString(),
+  };
+  
+  if (smartResult.generatedContent) {
+    productData.ai.generatedContent = {
+      marketingTitle: smartResult.generatedContent.marketingTitle,
+      shortDescription: smartResult.generatedContent.shortDescription,
+      htmlContent: smartResult.generatedContent.htmlContent,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  if (smartResult.category) {
+    productData.ai.categoryMapping = {
+      suggestedPath: [
+        smartResult.category.mainCategorySlug,
+        smartResult.category.subCategorySlug,
+        smartResult.category.subSubCategorySlug,
+      ].filter(Boolean) as string[],
+      confidence: smartResult.categoryConfidence,
+      reasoning: smartResult.categoryReasoning,
+    };
+  }
 
   // Apply price markup if configured
   if (profile.mapping.priceMarkup) {
@@ -162,14 +248,17 @@ async function processAllegroOffer(
   if (!dryRun) {
     // Save to Firestore
     await addDoc(collection(db, 'products'), productData);
-    logger.info('Allegro product imported', {
+    logger.info('Allegro product imported with Smart Import', {
       offerId: item.id,
       name: productData.name,
+      qualityScore: smartResult.qualityScore,
+      processingTimeMs: smartResult.processingTimeMs,
     });
   } else {
     logger.info('Dry run: would import product', {
       offerId: item.id,
       name: productData.name,
+      qualityScore: smartResult.qualityScore,
     });
   }
 
