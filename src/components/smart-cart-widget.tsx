@@ -78,7 +78,8 @@ export function SmartCartWidget() {
           const price = getPriceAmount(item.product.price);
           const totalPrice = getTotalPrice(item.product.price);
           const freeShipping = isFreeShipping(item.product.price);
-          const title = getText(item.product.title);
+          // Backward compatibility: old products have 'name' (string), new have 'title' (LocalizedText)
+          const title = item.product.title ? getText(item.product.title) : (item.product.name || 'Produkt');
 
           return (
             <Card key={item.product.id} className="p-4">
@@ -213,7 +214,7 @@ export function SmartCartWidget() {
                 asChild
               >
                 <a href={affiliateLink} target="_blank" rel="noopener noreferrer">
-                  <span className="truncate">{getText(product.title)}</span>
+                  <span className="truncate">{product.title ? getText(product.title) : (product.name || 'Produkt')}</span>
                   <ExternalLink className="ml-2 h-4 w-4 flex-shrink-0" />
                 </a>
               </Button>

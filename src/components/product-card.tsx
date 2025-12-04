@@ -226,7 +226,7 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
           {/* Title (AI-Curated Clean Title) */}
           <Link href={productUrl} onClick={handleDetailClick}>
             <h3 className="line-clamp-2 text-sm font-medium">
-              {product.title.pl || product.title.en || product.title.de}
+              {product.title?.pl || product.title?.en || product.title?.de || product.name || 'Produkt'}
             </h3>
           </Link>
 
