@@ -196,10 +196,9 @@ export async function POST(request: NextRequest) {
         
         // 1. Normalizuj tytuł (usuń emoji, śmieci)
         const titleResult = await aiNormalizeTitlePL({
-          title: product.title || '',
-          language: 'en'
+          rawTitle: product.title || '',
         });
-        const normalizedTitle = titleResult.normalizedTitle;
+        const normalizedTitle = titleResult;
         
         // 2. Wzbogać opis (tłumaczenie + SEO)
         const enrichResult = await aiProductEnrichmentPL({

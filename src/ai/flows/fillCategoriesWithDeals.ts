@@ -83,8 +83,8 @@ export async function fillCategoriesWithDeals() {
           const enrichedTitle = rawTitle ? `${rawTitle} - ${discount}% taniej` : `Okazja - ${discount}% taniej`;
           let normalizedTitle = enrichedTitle;
           try {
-            const norm = await aiNormalizeTitlePL({ title: enrichedTitle, language: (product.language || product.locale || undefined) });
-            normalizedTitle = norm.normalizedTitle;
+            const norm = await aiNormalizeTitlePL({ rawTitle: enrichedTitle });
+            normalizedTitle = norm;
           } catch (_) {
             // Fallback zostawia enrichedTitle
           }

@@ -43,20 +43,20 @@ export async function POST(request: NextRequest) {
         console.log(`[AI Enhance Deal] 🤖 Normalizing title for deal ${dealId}...`);
         
         const titleResult = await aiNormalizeTitlePL({
-          title: deal?.title || '',
+          rawTitle: deal?.title || '',
         });
 
         // Aktualizuj deal z znormalizowanym tytułem
         await dealRef.update({
-          title: titleResult.normalizedTitle,
-          imageHint: titleResult.normalizedTitle,
+          title: titleResult,
+          imageHint: titleResult,
           updatedAt: new Date(),
         });
 
         results.operations['normalize-title'] = {
           success: true,
           originalTitle: deal?.title,
-          normalizedTitle: titleResult.normalizedTitle,
+          normalizedTitle: titleResult,
         };
 
         console.log(`[AI Enhance Deal] ✅ Title normalized for ${dealId}`);

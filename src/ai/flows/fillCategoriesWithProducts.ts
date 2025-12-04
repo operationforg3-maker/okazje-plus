@@ -267,12 +267,12 @@ export async function fillCategoriesWithProducts() {
                   
                     // AI normalize title to Polish
                     const titleRaw = mergedProduct.title || mergedProduct.name || '';
-                    let norm = titleNormCache.get(titleRaw);
-                    if (!norm) {
-                      norm = await aiNormalizeTitlePL({ title: titleRaw, language: mergedProduct.language || undefined });
-                      titleNormCache.set(titleRaw, norm);
+                    let normTitle = titleNormCache.get(titleRaw);
+                    if (!normTitle) {
+                      normTitle = await aiNormalizeTitlePL({ rawTitle: titleRaw });
+                      titleNormCache.set(titleRaw, normTitle);
                     }
-                    const normalizedTitle = norm.normalizedTitle || titleRaw;
+                    const normalizedTitle = normTitle || titleRaw;
 
                     // AI enrichment (opis, cechy, keywords) - używamy description z szczegółów
                     let enrichedName = normalizedTitle;
@@ -546,12 +546,12 @@ export async function fillCategoriesWithProducts() {
 
                 // AI normalize title to Polish
                 const titleRaw = mergedProduct.title || mergedProduct.name || '';
-                let norm = titleNormCache.get(titleRaw);
-                if (!norm) {
-                  norm = await aiNormalizeTitlePL({ title: titleRaw, language: mergedProduct.language || undefined });
-                  titleNormCache.set(titleRaw, norm);
+                let normTitle = titleNormCache.get(titleRaw);
+                if (!normTitle) {
+                  normTitle = await aiNormalizeTitlePL({ rawTitle: titleRaw });
+                  titleNormCache.set(titleRaw, normTitle);
                 }
-                const normalizedTitle = norm.normalizedTitle || titleRaw;
+                const normalizedTitle = normTitle || titleRaw;
 
                 // AI enrichment (opis, cechy, keywords) - używa description z szczegółów
                 let enrichedName = normalizedTitle;

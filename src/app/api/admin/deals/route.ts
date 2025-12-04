@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
     if (raw.useAI === true) {
       try {
         console.log('[POST /api/admin/deals] 🤖 Running AI title normalization...');
-        const titleResult = await aiNormalizeTitlePL({ title: data.title });
-        normalizedTitle = titleResult.normalizedTitle;
+        const titleResult = await aiNormalizeTitlePL({ rawTitle: data.title });
+        normalizedTitle = titleResult;
         usedAI = true;
         console.log('[POST /api/admin/deals] ✅ AI normalized title:', normalizedTitle);
       } catch (aiError) {

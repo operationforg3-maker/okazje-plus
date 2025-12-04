@@ -117,13 +117,12 @@ export async function POST(request: NextRequest) {
 
             // Stage 2: Title Normalization
             const titleResult = await aiNormalizeTitlePL({
-              title: rawProduct.title || '',
-              language: 'en',
+              rawTitle: rawProduct.title || '',
             });
 
             // Stage 3: Category Mapping (use AI suggestion if high confidence)
             const categoryResult = await aiSuggestCategory({
-              title: titleResult.normalizedTitle,
+              title: titleResult,
               description: rawProduct.description || '',
               aliexpressCategory: rawProduct.category_path?.join(' > '),
               price: rawProduct.price?.current,
@@ -144,7 +143,7 @@ export async function POST(request: NextRequest) {
 
             // Stage 4: SEO Description
             const seoResult = await aiGenerateSEODescription({
-              normalizedTitle: titleResult.normalizedTitle,
+              normalizedTitle: titleResult,
               mainCategorySlug: finalCategoryPath[0] || config.mainSlug,
               subCategorySlug: finalCategoryPath[1] || config.subSlug,
               subSubCategorySlug: finalCategoryPath[2],
@@ -156,7 +155,7 @@ export async function POST(request: NextRequest) {
             // Stage 5: Multi-language Translation (EN, DE)
             console.log(`[Bulk Preview] 🌍 Translating product to EN, DE...`);
             const translationResult = await aiTranslateProduct({
-              name: titleResult.normalizedTitle,
+              name: titleResult,
               description: seoResult.description,
               longDescription: seoResult.description, // Use same for now
               seoKeywords: seoResult.keywords,
@@ -165,14 +164,14 @@ export async function POST(request: NextRequest) {
               targetLanguages: ['en', 'de'],
             });
 
-            console.log(`[Bulk Preview] 📦 Adding product to results: ${titleResult.normalizedTitle.slice(0, 60)}`);
+            console.log(`[Bulk Preview] 📦 Adding product to results: ${titleResult.slice(0, 60)}`);
 
             // Build preview product object
             allProducts.push({
               id: `preview-${rawProduct.item_id}-${Date.now()}`,
               sourceId: rawProduct.item_id,
               title: rawProduct.title,
-              normalizedTitle: titleResult.normalizedTitle,
+              normalizedTitle: titleResult,
               price: rawProduct.price?.current || 0,
               image: rawProduct.image_urls?.[0] || '/placeholder.png',
               categoryPath: finalCategoryPath.map((slug, idx) => {
