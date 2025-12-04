@@ -462,6 +462,134 @@ export interface ProductImportMetadata {
   appSalePrice?: number;
 }
 
+// ============================================
+// Deal Type (Okazje)
+// ============================================
+
+export interface Deal {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  originalPrice?: number;
+  link: string;
+  image: string;
+  imageHint: string;
+  postedBy: string;
+  postedAt: string;
+  voteCount: number;
+  temperature: number;
+  commentsCount: number;
+  shareCount?: number;
+  
+  // Categories
+  category: string; // legacy backward compatibility
+  mainCategorySlug: string;
+  subCategorySlug: string;
+  subSubCategorySlug?: string;
+  
+  // Deal specifics
+  merchant?: string;
+  shippingCost?: number;
+  status: 'draft' | 'approved' | 'rejected';
+  createdBy?: string;
+  createdAt?: any; // Firestore Timestamp
+  updatedAt?: any; // Firestore Timestamp
+  
+  // Links & Source
+  linkedProductIds?: string[];
+  externalOriginalId?: string;
+  source?: 'manual' | 'aliexpress' | 'csv' | 'pepper' | 'mydealz' | 'reddit' | 'other';
+  
+  // Extended deal parameters
+  dealType?: 'sale' | 'coupon' | 'freebie' | 'pricing-error' | 'cashback' | 'bundle';
+  couponCode?: string;
+  freeShipping?: boolean;
+  cashback?: {
+    amount?: number;
+    percentage?: number;
+    provider?: string;
+  };
+  minOrderValue?: number;
+  stockAlert?: 'limited' | 'low' | 'ending-soon';
+  expiryDate?: string;
+  availableQuantity?: number;
+  limitPerUser?: number;
+  requiresMembership?: string;
+  conditions?: string[];
+  gallery?: string[];
+  
+  // Verification
+  verified?: boolean;
+  verifiedAt?: string;
+  verifiedBy?: string;
+  
+  // SEO & Tags
+  tags?: string[];
+  
+  // AI Quality
+  aiQuality?: {
+    score?: number;
+    factors?: {
+      titleQuality?: number;
+      descriptionCompleteness?: number;
+      discountLegitimacy?: number;
+      merchantTrust?: number;
+      productPopularity?: number;
+      contentQuality?: number;
+    };
+    warnings?: string[];
+    reasoning?: string;
+    scoredAt?: string;
+  };
+  
+  // Import Metadata
+  importMetadata?: {
+    source?: string;
+    importedAt?: string;
+    originalUrl?: string;
+    promotionId?: string;
+    commissionRate?: number;
+    evaluateCount?: number;
+    evaluateRate?: string;
+    sellerRating?: number;
+    returnPolicy?: string;
+    hotProduct?: boolean;
+    flashDeal?: boolean;
+    platformProductType?: string;
+    stockStatus?: string;
+    stockLevel?: number;
+    specifications?: any;
+    productVideoUrl?: string;
+    warehouse?: string;
+    deliveryTime?: string;
+    shippingMethod?: string;
+  };
+  
+  // General Metadata
+  metadata?: {
+    source?: string;
+    importedAt?: string;
+    originalUrl?: string;
+    promotionId?: string;
+    commissionRate?: number;
+    evaluateCount?: number;
+    evaluateRate?: string;
+    sellerRating?: number;
+    returnPolicy?: string;
+    hotProduct?: boolean;
+    flashDeal?: boolean;
+    platformProductType?: string;
+    stockStatus?: 'in_stock' | 'out_of_stock' | 'low_stock' | 'unknown';
+    stockLevel?: number;
+    specifications?: any;
+    productVideoUrl?: string;
+    warehouse?: string;
+    deliveryTime?: string;
+    shippingMethod?: string;
+  };
+}
+
 // Reszta interfejsów pozostaje bez zmian
 export interface ProductRatingCard {
   average: number;
