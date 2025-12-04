@@ -119,6 +119,7 @@ export async function fillSubSubcategoryProducts(params: {
   subsubcategorySlug: string;
   preferredCurrency?: string;
   maxProducts?: number; // limit produktów dla tej pod-kategorii (default: 20)
+  jobId?: string; // Optional: track created items in import job
 }) {
   const {
     categoryId, categoryName, categorySlug,
@@ -126,10 +127,13 @@ export async function fillSubSubcategoryProducts(params: {
     subsubcategoryId, subsubcategoryName, subsubcategorySlug,
     preferredCurrency = 'USD',
     maxProducts = 20,
+    jobId,
   } = params;
 
   let productsAdded = 0;
   let productsUpdated = 0;
+  const createdIds: string[] = [];
+  const updatedIds: string[] = [];
 
   try {
     console.log(`[fillSubSubcategoryProducts] Starting for: ${categoryName}/${subcategoryName}/${subsubcategoryName}`);
@@ -400,9 +404,13 @@ export async function fillSubSubcategoryProducts(params: {
             }
           } as any);
           productsUpdated++;
+          updatedIds.push(existingId);
         } else {
-          await createProduct(baseData as any);
+          const newProductId = await createProduct(baseData as any);
           productsAdded++;
+          if (newProductId) {
+            createdIds.push(newProductId);
+          }
         }
       } catch (e: any) {
         console.warn(`[fillSubSubcategoryProducts] Failed to create/update product ${aliProduct.title}:`, e.message);
@@ -410,11 +418,28 @@ export async function fillSubSubcategoryProducts(params: {
     }
 
     console.log(`[fillSubSubcategoryProducts] Completed: ${productsAdded} added, ${productsUpdated} updated`);
+    
+    // Track created/updated IDs in job if provided
+    if (jobId && (createdIds.length > 0 || updatedIds.length > 0)) {
+      try {
+        const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+        const jobRef = adminDb.collection('import_jobs').doc(jobId);
+        await jobRef.update({
+          itemsCreated: FieldValue.arrayUnion(...createdIds),
+          itemsUpdated: FieldValue.arrayUnion(...updatedIds),
+        });
+      } catch (e) {
+        console.error('[fillSubSubcategoryProducts] Failed to track IDs in job:', e);
+      }
+    }
+    
     return {
       success: true,
       productsAdded,
       productsUpdated,
       totalProcessed: aliProducts.length,
+      createdIds,
+      updatedIds,
     };
   } catch (e: any) {
     console.error(`[fillSubSubcategoryProducts] Error:`, e.message, e.stack);
