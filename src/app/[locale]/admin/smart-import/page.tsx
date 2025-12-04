@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, CheckCircle, Loader, Play } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader, Play, BarChart3, Zap, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SmartImportResult {
   success: boolean;
@@ -30,9 +31,13 @@ interface SmartImportResult {
 }
 
 export default function SmartImportPage() {
+  const [activeTab, setActiveTab] = useState('test');
   const [loading, setLoading] = useState(false);
+  const [testRunning, setTestRunning] = useState(false);
   const [result, setResult] = useState<SmartImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [cache, setCache] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     title: 'Samsung Galaxy S24 Ultra 256GB Smartphone',
@@ -80,6 +85,56 @@ export default function SmartImportPage() {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const runFullTestSuite = async () => {
+    setTestRunning(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/admin/smart-import/test', { method: 'POST' });
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      setStats(data.stats);
+      alert('✅ Test suite completed! Check the logs for detailed results.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Test failed');
+    } finally {
+      setTestRunning(false);
+    }
+  };
+
+  const getStats = async () => {
+    try {
+      const response = await fetch('/api/admin/smart-import/stats');
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const data = await response.json();
+      setStats(data.processingStats);
+      setCache(data.cacheStats);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch stats');
+    }
+  };
+
+  const resetStats = async () => {
+    try {
+      await fetch('/api/admin/smart-import/stats/reset', { method: 'POST' });
+      setStats(null);
+      setCache(null);
+      alert('✅ Statistics reset');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset stats');
+    }
+  };
+
+  const clearCache = async () => {
+    if (!confirm('Clear cache? This will remove all cached results.')) return;
+    try {
+      await fetch('/api/admin/smart-import/cache/clear', { method: 'POST' });
+      setCache(null);
+      alert('✅ Cache cleared');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to clear cache');
     }
   };
 
@@ -134,110 +189,118 @@ export default function SmartImportPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold">🤖 Smart Import Tester</h1>
-        <p className="text-gray-500 mt-2">Test the 3 AI Agents: Auditor, Copywriter, Librarian</p>
+        <h1 className="text-3xl font-bold">🤖 Smart Import Dashboard</h1>
+        <p className="text-gray-500 mt-2">Test & optimize the 3 AI Agents pipeline</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        {testSamples.map((sample) => (
-          <Button
-            key={sample.name}
-            variant="outline"
-            onClick={() => {
-              setFormData({ ...sample.data } as any);
-              setResult(null);
-              setError(null);
-            }}
-            className="justify-start h-auto"
-          >
-            <span className="text-left">
-              <div className="font-semibold">{sample.name}</div>
-              <div className="text-xs text-gray-500">{sample.data.title.substring(0, 40)}...</div>
-            </span>
-          </Button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="test">Test Pipeline</TabsTrigger>
+          <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
+          <TabsTrigger value="stats">Statistics</TabsTrigger>
+        </TabsList>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Product Input</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="source">Source</Label>
-                <select
-                  name="source"
-                  value={formData.source}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-md"
-                >
-                  <option value="aliexpress">AliExpress</option>
-                  <option value="allegro">Allegro</option>
-                  <option value="amazon">Amazon</option>
-                  <option value="ebay">eBay</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-            </div>
+        <TabsContent value="test" className="space-y-6 mt-6">
+          <div className="grid grid-cols-3 gap-4">
+            {testSamples.map((sample) => (
+              <Button
+                key={sample.name}
+                variant="outline"
+                onClick={() => {
+                  setFormData({ ...sample.data } as any);
+                  setResult(null);
+                  setError(null);
+                }}
+                className="justify-start h-auto"
+              >
+                <span className="text-left">
+                  <div className="font-semibold">{sample.name}</div>
+                  <div className="text-xs text-gray-500">{sample.data.title.substring(0, 40)}...</div>
+                </span>
+              </Button>
+            ))}
+          </div>
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                rows={3}
-              />
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Product Input</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="title">Title *</Label>
+                    <Input
+                      id="title"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="source">Source</Label>
+                    <select
+                      name="source"
+                      value={formData.source}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border rounded-md"
+                    >
+                      <option value="aliexpress">AliExpress</option>
+                      <option value="allegro">Allegro</option>
+                      <option value="amazon">Amazon</option>
+                      <option value="ebay">eBay</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="price">Price (PLN)</Label>
-                <Input
-                  id="price"
-                  name="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  step="0.01"
-                />
-              </div>
-              <div>
-                <Label htmlFor="originalPrice">Original Price</Label>
-                <Input
-                  id="originalPrice"
-                  name="originalPrice"
-                  type="number"
-                  value={formData.originalPrice}
-                  onChange={handleInputChange}
-                  step="0.01"
-                />
-              </div>
-              <div>
-                <Label htmlFor="shippingCost">Shipping Cost</Label>
-                <Input
-                  id="shippingCost"
-                  name="shippingCost"
-                  type="number"
-                  value={formData.shippingCost}
-                  onChange={handleInputChange}
-                  step="0.01"
-                />
-              </div>
-            </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="price">Price (PLN)</Label>
+                    <Input
+                      id="price"
+                      name="price"
+                      type="number"
+                      value={formData.price}
+                      onChange={handleInputChange}
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="originalPrice">Original Price</Label>
+                    <Input
+                      id="originalPrice"
+                      name="originalPrice"
+                      type="number"
+                      value={formData.originalPrice}
+                      onChange={handleInputChange}
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="shippingCost">Shipping Cost</Label>
+                    <Input
+                      id="shippingCost"
+                      name="shippingCost"
+                      type="number"
+                      value={formData.shippingCost}
+                      onChange={handleInputChange}
+                      step="0.01"
+                    />
+                  </div>
+                </div>
 
             <div className="grid grid-cols-4 gap-4">
               <div>
