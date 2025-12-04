@@ -1,10 +1,13 @@
 /**
  * Stage 4: TRANSLATE - Tłumacz tytuły i opisy na polski
  * 
- * AI translation EN → PL (batch processing)
+ * AI-powered translation EN → PL using Genkit flows
+ * Category-aware for better technical terminology
  */
 
 import { EnrichedProduct, ImportStageConfig } from './types';
+import { aiTranslateTitleToPL } from '@/ai/flows/translation/aiTranslateTitleToPL';
+import { aiTranslateDescriptionToPL } from '@/ai/flows/translation/aiTranslateDescriptionToPL';
 
 export interface TranslateConfig extends ImportStageConfig {
   targetLanguage: 'pl' | 'de' | 'fr';
@@ -25,33 +28,69 @@ export async function translateProducts(
 ): Promise<EnrichedProduct[]> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   
-  console.log(`[Importer:Translate] Starting translation for ${products.length} products to ${finalConfig.targetLanguage}`);
-  
-  // For now, we'll use a simple translation mapping
-  // In production, you'd integrate with Translation API or AI
+  console.log(`[Importer:Translate] Starting AI translation for ${products.length} products to ${finalConfig.targetLanguage}`);
   
   const translated: EnrichedProduct[] = [];
   let processed = 0;
+  let aiErrors = 0;
   
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
     
     try {
-      console.log(`[Importer:Translate] [${i + 1}/${products.length}] Translating: ${product.titleNormalizedEN.slice(0, 60)}...`);
+      console.log(`[Importer:Translate] [${i + 1}/${products.length}] AI translating: ${product.titleNormalizedEN.slice(0, 60)}...`);
       
       if (finalConfig.targetLanguage === 'pl') {
-        // Simple translation for Polish
-        product.titlePL = translateTitleToPolish(product.titleNormalizedEN);
-        product.descriptionPL = translateDescriptionToPolish(product.descriptionEN);
+        // AI Translation with category context
+        try {
+          const titleResult = await aiTranslateTitleToPL({
+            titleEN: product.titleNormalizedEN,
+            categoryEN: product.categorySlugEN,
+            subcategoryEN: product.subcategorySlugEN,
+            context: 'product_title',
+          });
+          
+          product.titlePL = titleResult.titlePL;
+          console.log(`  ✓ Title PL (${titleResult.confidence}% confidence): "${titleResult.titlePL.slice(0, 60)}..."`);
+          
+          if (titleResult.hasManualReview) {
+            console.warn(`  ⚠️ Low confidence - flagged for manual review`);
+          }
+        } catch (e: any) {
+          console.error(`  ✗ Title translation failed:`, e.message);
+          product.titlePL = product.titleNormalizedEN; // Fallback to English
+          aiErrors++;
+        }
         
-        console.log(`  ✓ Title PL: "${product.titlePL.slice(0, 60)}..."`);
+        // Translate description if available
+        if (product.descriptionEN && product.descriptionEN.length > 0) {
+          try {
+            const descResult = await aiTranslateDescriptionToPL({
+              descriptionEN: product.descriptionEN,
+              categoryEN: product.categorySlugEN,
+              subcategoryEN: product.subcategorySlugEN,
+              context: 'product_description',
+            });
+            
+            product.descriptionPL = descResult.descriptionPL;
+            console.log(`  ✓ Description PL (${descResult.confidence}% confidence)`);
+            
+            if (descResult.hasManualReview) {
+              console.warn(`  ⚠️ Low confidence description - flagged for review`);
+            }
+          } catch (e: any) {
+            console.error(`  ✗ Description translation failed:`, e.message);
+            product.descriptionPL = product.descriptionEN; // Fallback to English
+            aiErrors++;
+          }
+        }
       }
-      // Add more languages as needed
+      // Add more languages as needed (de, fr, etc.)
       
       translated.push(product);
       processed++;
       
-      // Delay between items
+      // Delay between items (AI rate limiting - longer than other stages)
       if ((i + 1) % finalConfig.batchSize !== 0) {
         await sleep(finalConfig.delayBetweenItems);
       } else {
@@ -64,99 +103,14 @@ export async function translateProducts(
       product.titlePL = product.titleNormalizedEN;
       product.descriptionPL = product.descriptionEN;
       translated.push(product);
+      aiErrors++;
     }
   }
   
-  console.log(`[Importer:Translate] Completed: ${translated.length} products translated`);
+  console.log(`[Importer:Translate] Completed: ${translated.length} products translated (${aiErrors} errors)`);
   return translated;
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Simple English → Polish title translation
- * For production, integrate with proper translation service
- */
-function translateTitleToPolish(titleEN: string): string {
-  // Build a translation dictionary for common tech terms
-  const dict: Record<string, string> = {
-    // Electronics
-    'smartphone': 'smartfon',
-    'mobile phone': 'telefon komórkowy',
-    'laptop': 'laptop',
-    'tablet': 'tablet',
-    'smartwatch': 'smartwatch',
-    'headphones': 'słuchawki',
-    'earphones': 'słuchawki douszne',
-    'charger': 'ładowarka',
-    'cable': 'kabel',
-    'screen protector': 'folia na ekran',
-    'case': 'etui',
-    'wireless': 'bezprzewodowy',
-    'fast charging': 'szybkie ładowanie',
-    'waterproof': 'wodoodporny',
-    
-    // Quantities/Specs
-    'inch': 'cala',
-    'gb': 'gb',
-    'mp': 'mp',
-    'ghz': 'ghz',
-    'mah': 'mah',
-    
-    // Common adjectives
-    'new': 'nowy',
-    'original': 'oryginalny',
-    'genuine': 'autentyczny',
-    'professional': 'profesjonalny',
-    'portable': 'przenośny',
-    'compact': 'kompaktowy',
-    'universal': 'uniwersalny',
-    'dual': 'podwójny',
-  };
-  
-  // Simple word-by-word replacement (would be improved with actual NLP)
-  let translated = titleEN;
-  
-  // Sort by length (longest first) to avoid partial replacements
-  const sortedEntries = Object.entries(dict).sort((a, b) => b[0].length - a[0].length);
-  
-  for (const [en, pl] of sortedEntries) {
-    const regex = new RegExp(`\\b${en}\\b`, 'gi');
-    translated = translated.replace(regex, pl);
-  }
-  
-  // Capitalize first letter
-  translated = translated.charAt(0).toUpperCase() + translated.slice(1);
-  
-  return translated;
-}
-
-/**
- * Simple English → Polish description translation
- */
-function translateDescriptionToPolish(descEN: string): string {
-  if (!descEN) return '';
-  
-  // For descriptions, just do basic replacements
-  let translated = descEN;
-  
-  const phrases: Record<string, string> = {
-    'high quality': 'wysoka jakość',
-    'fast delivery': 'szybka dostawa',
-    'free shipping': 'darmowa dostawa',
-    'best price': 'najlepsza cena',
-    'limited stock': 'ograniczony zapas',
-    'in stock': 'w magazynie',
-    'out of stock': 'brak w magazynie',
-    'warranty': 'gwarancja',
-  };
-  
-  for (const [en, pl] of Object.entries(phrases)) {
-    const regex = new RegExp(en, 'gi');
-    translated = translated.replace(regex, pl);
-  }
-  
-  return translated;
 }
