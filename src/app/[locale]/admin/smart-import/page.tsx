@@ -376,8 +376,7 @@ export default function SmartImportPage() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      {result && (
+  {result && (
         <Card className={result.success ? 'border-green-200' : 'border-red-200'}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -462,6 +461,8 @@ export default function SmartImportPage() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -23,8 +23,6 @@
  * });
  */
 
-'use server';
-
 import { logger } from '@/lib/logging';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 import { aiGenerateDealDescriptionPL } from '@/ai/flows/aliexpress/aiDealDescriptionPL';

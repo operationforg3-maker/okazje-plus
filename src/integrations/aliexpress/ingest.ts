@@ -295,6 +295,7 @@ export async function runImport(
           });
           
           result.stats.skipped++;
+        }
         
         // Step 2: AI Category Suggestion (override with smart import result if high confidence)
         importLogger.debug('Processing AI category suggestion', {
@@ -369,11 +370,7 @@ export async function runImport(
             createdAt: serverTimestamp()
           });
           
-          if (dryRun) {
-            result.stats.wouldCreate!++;
-          } else {
-            result.stats.created!++;
-          }
+          result.stats.created!++;
           
           importLogger.info('Created product', { productId: productRef.id });
           
