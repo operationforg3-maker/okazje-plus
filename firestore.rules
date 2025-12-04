@@ -178,6 +178,15 @@ service cloud.firestore {
 
     // Ulubione: Użytkownik może zarządzać tylko swoimi ulubionymi
     ////////////////////////////////
+    // SHOPPING CART (M4)
+    ////////////////////////////////
+    match /user_carts/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    ////////////////////////////////
     // FAVORITES
     ////////////////////////////////
     match /favorites/{favoriteId} {
