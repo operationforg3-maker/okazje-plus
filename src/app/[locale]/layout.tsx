@@ -10,6 +10,7 @@ import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import { ComparisonListener } from '@/components/deal-comparison-tool';
 import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
+import { CashbackWarningModal } from '@/components/cashback-warning-modal';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazje-plus.web.app'),
@@ -101,6 +102,7 @@ export default async function RootLayout({
                   </ConditionalNav>
                   <ComparisonListener />
                   <ExtensionWarningBanner />
+                  <CashbackWarningModal />
                   <Toaster />
                 </div>
               </SmartCartProvider>

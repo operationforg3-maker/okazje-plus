@@ -1,17 +1,16 @@
 /**
  * Cart Finalize API Endpoint (M4)
  * 
- * Generates fresh deep affiliate links for all products in cart
- * Uses AliExpress link generation API to ensure tracking and commission
+ * Generates secure affiliate redirects for all products in cart
+ * Uses server-side redirect endpoint to prevent cashback extension hijacking
  * 
  * POST /api/cart/finalize
- * Body: { items: [{ productId: string, quantity: number }] }
+ * Body: { items: [{ productId: string, quantity: number }], userId?: string }
  * 
- * Returns: { links: [{ product: Product, affiliateLink: string }] }
+ * Returns: { links: [{ product: Product, redirectUrl: string }] }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createAliExpressClient } from '@/integrations/aliexpress/client';
 import { getProduct } from '@/lib/data';
 import { logger } from '@/lib/logging';
 import { z } from 'zod';
@@ -24,48 +23,34 @@ const FinalizeCartSchema = z.object({
     productId: z.string(),
     quantity: z.number().int().positive(),
   })),
+  userId: z.string().optional(),
 });
 
 /**
- * Generate deep affiliate link for a product
+ * Generate secure redirect URL for affiliate link
  * 
- * Method: aliexpress.affiliate.link.generate
- * Generates trackable affiliate link with commission tracking
+ * This uses our server-side redirect endpoint to prevent
+ * cashback extensions from hijacking the link
  */
-async function generateAffiliateLink(
-  client: any,
+async function generateSecureRedirectUrl(
+  productId: string,
   productUrl: string,
-  trackingId?: string
+  userId: string | undefined,
+  trackingId: string
 ): Promise<string> {
   try {
-    const params: Record<string, any> = {
-      promotion_link_type: 0, // Normal link
-      source_values: productUrl,
-    };
+    // Call our secure redirect endpoint which returns the final URL
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
+    const params = new URLSearchParams({
+      productId,
+      productUrl,
+      source: 'cart',
+      userId: userId || 'anonymous',
+    });
     
-    if (trackingId) {
-      params.tracking_id = trackingId;
-    }
-    
-    const result = await client.request('aliexpress.affiliate.link.generate', params);
-    
-    // Parse response
-    const responseKey = Object.keys(result)[0];
-    const responseData = result[responseKey];
-    
-    if (!responseData || responseData.resp_code !== 200) {
-      logger.warn('Link generation failed, using original URL', { responseData });
-      return productUrl;
-    }
-    
-    const promotionLinks = responseData.result?.promotion_links;
-    if (promotionLinks && promotionLinks.length > 0) {
-      return promotionLinks[0].promotion_link;
-    }
-    
-    return productUrl;
+    return `${baseUrl}/api/affiliate/redirect?${params.toString()}`;
   } catch (error) {
-    logger.error('Failed to generate affiliate link', { error });
+    logger.error('Failed to generate secure redirect', { error });
     return productUrl; // Fallback to original URL
   }
 }
@@ -83,14 +68,11 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const { items } = parsed.data;
+    const { items, userId } = parsed.data;
     
-    logger.info('Finalizing cart', { itemCount: items.length });
+    logger.info('Finalizing cart', { itemCount: items.length, userId });
     
-    // Initialize AliExpress client
-    const client = createAliExpressClient();
-    
-    // Generate links for each product
+    // Generate secure redirects for each product
     const links = await Promise.all(
       items.map(async item => {
         try {
@@ -102,22 +84,23 @@ export async function POST(req: NextRequest) {
             return null;
           }
           
-          // Generate fresh affiliate link
-          const affiliateLink = await generateAffiliateLink(
-            client,
-            product.affiliateUrl,
-            `okazjeplus_cart_${Date.now()}`
+          // Generate secure redirect URL (prevents cashback hijacking)
+          const redirectUrl = await generateSecureRedirectUrl(
+            item.productId,
+            product.affiliateUrl || `https://www.aliexpress.com/item/${item.productId}.html`,
+            userId,
+            `okazjeplus_cart_${Date.now()}_${Math.random()}`
           );
           
-          logger.info('Generated affiliate link', {
+          logger.info('Generated secure redirect', {
             productId: item.productId,
             originalUrl: product.affiliateUrl,
-            generatedLink: affiliateLink,
+            redirectUrl,
           });
           
           return {
             product,
-            affiliateLink,
+            affiliateLink: redirectUrl, // Client uses this to redirect
           };
         } catch (error) {
           logger.error('Failed to process cart item', {
