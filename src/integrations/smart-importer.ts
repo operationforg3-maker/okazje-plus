@@ -25,7 +25,6 @@ import { logger } from '@/lib/logging';
 import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
 import { aiGenerateDealDescriptionPL } from '@/ai/flows/aliexpress/aiDealDescriptionPL';
 import { aiSuggestCategory } from '@/ai/flows/aliexpress/aiSuggestCategory';
-import type { Product, Deal } from '@/lib/types';
 
 /**
  * Input for smart import
@@ -233,89 +232,18 @@ export async function smartImportBatch(inputs: SmartImportInput[]): Promise<Smar
 }
 
 /**
- * Integration helper: Map SmartImportResult to Product/Deal objects
- * for Firestore storage
+ * DEPRECATED: buildProductFromSmartImport and buildDealFromSmartImport
+ * 
+ * These helper functions are not used because they conflict with the complex
+ * Product and Deal type schemas (SmartPrice, LocalizedText, detailed AI metadata, etc.).
+ * 
+ * Instead, importers (AliExpress, Allegro) directly build Product/Deal objects
+ * from their own mappers and apply SmartImportResult data to enrich them.
+ * This approach keeps integration simpler and avoids type mismatches.
+ * 
+ * Examples:
+ * - src/integrations/aliexpress/ingest.ts: Uses mapToProduct() then applies smartResult
+ * - src/integrations/allegro/ingest.ts: Uses mapAllegroListingItemToProduct() then applies smartResult
+ * 
+ * Future enhancement: Implement proper Product/Deal builders after Product schema stabilization.
  */
-export function buildProductFromSmartImport(
-  input: SmartImportInput,
-  smartResult: SmartImportResult
-): Partial<Product> {
-  if (!smartResult.success || !smartResult.category || !smartResult.generatedContent) {
-    throw new Error('Cannot build product from failed smart import');
-  }
-
-  return {
-    name: smartResult.generatedContent.marketingTitle,
-    description: smartResult.generatedContent.shortDescription,
-    price: input.price,
-    originalPrice: input.originalPrice,
-    mainCategorySlug: smartResult.category.main,
-    subCategorySlug: smartResult.category.sub,
-    subSubCategorySlug: smartResult.category.subsub,
-    image: input.imageUrl || '',
-    ratingCard: {
-      average: input.rating || 0,
-      count: input.soldCount || 0,
-    },
-    ai: {
-      quality: {
-        score: smartResult.qualityScore,
-        recommendation: smartResult.qualityRecommendation,
-        reasoning: '',
-      },
-      description: {
-        shortDescription: smartResult.generatedContent.shortDescription,
-        htmlContent: smartResult.generatedContent.htmlContent,
-      },
-      category: {
-        suggestion: smartResult.category.main,
-        confidence: smartResult.category.confidence,
-      },
-    },
-    metadata: {
-      source: input.source,
-      externalId: input.externalId,
-      externalUrl: input.externalUrl,
-      importedAt: new Date().toISOString(),
-      importedBy: input.importedBy,
-    },
-  };
-}
-
-/**
- * Integration helper: Map SmartImportResult to Deal object
- */
-export function buildDealFromSmartImport(
-  input: SmartImportInput,
-  smartResult: SmartImportResult,
-  productId: string
-): Partial<Deal> {
-  if (!smartResult.success || !smartResult.generatedContent) {
-    throw new Error('Cannot build deal from failed smart import');
-  }
-
-  return {
-    title: smartResult.generatedContent.marketingTitle,
-    description: smartResult.generatedContent.shortDescription,
-    price: input.price,
-    originalPrice: input.originalPrice,
-    link: input.externalUrl || '',
-    image: input.imageUrl || '',
-    mainCategorySlug: smartResult.category?.main || 'inne',
-    subCategorySlug: smartResult.category?.sub || 'pozostale',
-    status: smartResult.qualityRecommendation === 'publish' ? 'approved' : 'draft',
-    productIds: [productId],
-    ratingCard: {
-      average: input.rating || 0,
-      count: input.soldCount || 0,
-    },
-    ai: {
-      quality: {
-        score: smartResult.qualityScore,
-        recommendation: smartResult.qualityRecommendation,
-      },
-      description: smartResult.generatedContent,
-    },
-    source: input.source,
-  };
-}
