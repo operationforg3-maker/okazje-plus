@@ -432,8 +432,8 @@ export async function fillCategoriesWithProducts() {
                           titleNormalization: {
                             originalTitle: titleRaw,
                             normalizedTitle,
-                            translated: norm.translated,
-                            changes: norm.changes,
+                            translated: normTitle?.translated || false,
+                            changes: normTitle?.changes || [],
                           },
                           enrichment: {
                             features,
@@ -692,8 +692,8 @@ export async function fillCategoriesWithProducts() {
                       titleNormalization: {
                         originalTitle: titleRaw,
                         normalizedTitle,
-                        translated: norm.translated,
-                        changes: norm.changes,
+                        translated: normTitle?.translated || false,
+                        changes: normTitle?.changes || [],
                       },
                       enrichment: {
                         features,
