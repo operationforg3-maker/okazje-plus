@@ -1,6 +1,7 @@
 'use server';
 
 import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
+import { smartImportProduct } from '@/integrations/smart-importer';
 
 /**
  * Ingests a single AliExpress product into Firestore with smart pricing.
@@ -67,10 +68,10 @@ import { AliExpressSearchParams } from './types';
 import { logger, createImportLogger } from '@/lib/logging';
 import { queueProductForIndexing, queueDealForIndexing } from '@/search/typesenseQueue';
 
-// AI flows
-import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
-import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
-import { aiSuggestCategory } from '@/ai/flows/aliexpress/aiSuggestCategory';
+// AI orchestration (now handled by smartImportProduct)
+// import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
+// import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
+// import { aiSuggestCategory } from '@/ai/flows/aliexpress/aiSuggestCategory';
 
 /**
  * Result of an import run
@@ -235,143 +236,108 @@ export async function runImport(
         const product = mapToProduct(aliProduct, mapperConfig);
         const deal = mapToDeal(aliProduct, mapperConfig, profile.createdBy);
         
-        // === AI PROCESSING PIPELINE (M2) ===
+        // === AI PROCESSING PIPELINE (M2) - Using Smart Import Orchestration ===
         
-        // Step 1: AI Quality Score
-        importLogger.debug('Running AI quality score', {
+        // Smart Import: Unified AI processing (quality score + description + category)
+        importLogger.debug('Running Smart Import pipeline', {
           productId: aliProduct.item_id,
         });
         
-        const qualityResult = await aiDealQualityScore({
+        const smartResult = await smartImportProduct({
           title: product.name,
           description: product.description,
           price: product.price,
           originalPrice: product.originalPrice,
-          discountPercent: product.discountPercent,
-          rating: product.ratingCard?.average,
-          reviewCount: product.ratingCard?.count,
-          merchantName: product.metadata?.merchant,
+          shippingCost: aliProduct.shipping?.cost || 0,
+          rating: aliProduct.rating?.score,
+          soldCount: aliProduct.sales,
+          merchantRating: aliProduct.merchant?.rating,
+          merchant: aliProduct.merchant?.name,
+          source: 'aliexpress',
+          externalId: aliProduct.item_id,
+          importedBy: profile.createdBy,
         });
         
-        // Attach quality score to product metadata
+        // Attach quality score and generated content to product metadata
         if (!product.ai) product.ai = {};
         
         product.ai.quality = {
-          score: qualityResult.score,
-          recommendation: qualityResult.recommendation,
-          factors: qualityResult.factors,
-          warnings: qualityResult.warnings,
-          reasoning: qualityResult.reasoning,
+          score: smartResult.qualityScore,
+          recommendation: smartResult.qualityRecommendation,
+          reasoning: smartResult.qualityReasoning,
           scoredAt: new Date().toISOString(),
         };
         
+        // Attach generated content (polish description, marketing title)
+        if (smartResult.generatedContent) {
+          product.ai.generatedContent = {
+            marketingTitle: smartResult.generatedContent.marketingTitle,
+            shortDescription: smartResult.generatedContent.shortDescription,
+            htmlContent: smartResult.generatedContent.htmlContent,
+            generatedAt: new Date().toISOString(),
+          };
+          
+          // Apply generated content to product
+          product.name = smartResult.generatedContent.marketingTitle || product.name;
+          product.description = smartResult.generatedContent.shortDescription || product.description;
+          product.longDescription = smartResult.generatedContent.htmlContent || product.longDescription;
+        }
+        
         // Skip low-quality products (score < 50 or explicit reject recommendation)
         if (
-          qualityResult.recommendation === 'reject' ||
-          qualityResult.score < 50
+          smartResult.qualityRecommendation === 'reject' ||
+          smartResult.qualityScore < 50
         ) {
           importLogger.info('Product rejected by AI quality score', {
             productId: aliProduct.item_id,
-            score: qualityResult.score,
-            recommendation: qualityResult.recommendation,
+            score: smartResult.qualityScore,
+            recommendation: smartResult.qualityRecommendation,
           });
           
           result.stats.skipped++;
-          continue;
-        }
         
-        // Step 2: AI Product Enrichment (Polish translation + normalization + SEO)
-        importLogger.debug('Running AI product enrichment (PL)', {
-          originalTitle: product.name,
-        });
-        
-        const rawCategoryPath = [
-          product.mainCategorySlug,
-          product.subCategorySlug,
-          product.subSubCategorySlug,
-        ].filter((s): s is string => Boolean(s));
-        
-        // Ensure we have at least one category for the tuple type requirement
-        const categoryPath: [string, ...string[]] = rawCategoryPath.length > 0 
-          ? [rawCategoryPath[0], ...rawCategoryPath.slice(1)]
-          : ['Inne'];
-        
-        const enrichmentResult = await aiProductEnrichmentPL({
-          originalTitle: product.name,
-          rawDescription: product.description,
-          categoryPath,
-          price: product.price,
-          originalPrice: product.originalPrice,
-          rating: product.ratingCard?.average,
-          orders: product.metadata?.orders as number | undefined,
-          merchant: product.metadata?.merchant as string | undefined,
-        });
-        
-        // Apply enriched content
-        product.name = enrichmentResult.normalizedName;
-        product.description = enrichmentResult.shortDescription;
-        product.longDescription = enrichmentResult.longDescription;
-        product.seoKeywords = enrichmentResult.keywords;
-        
-        // Store AI metadata
-        if (!product.ai) product.ai = {};
-        product.ai.seo = {
-          generatedDescription: enrichmentResult.shortDescription,
-          keywords: enrichmentResult.keywords,
-          generatedAt: new Date().toISOString(),
-        };
-        product.ai.enrichment = {
-          features: enrichmentResult.features,
-          keywords: enrichmentResult.keywords,
-        };
-        
-        // Step 3: AI Category Suggestion (keep existing logic)
-        importLogger.debug('Running AI category suggestion', {
+        // Step 2: AI Category Suggestion (override with smart import result if high confidence)
+        importLogger.debug('Processing AI category suggestion', {
           title: product.name,
         });
         
-        const categoryResult = await aiSuggestCategory({
-          title: product.name,
-          description: product.description,
-          aliexpressCategory: '',
-          price: product.price,
-        });
-        
-        // Override category mapping with AI suggestion if confidence >= 0.6
-        if (categoryResult.confidence >= 0.6) {
-          product.mainCategorySlug = categoryResult.mainCategorySlug;
-          product.subCategorySlug = categoryResult.subCategorySlug;
-          if (categoryResult.subSubCategorySlug) {
-            product.subSubCategorySlug = categoryResult.subSubCategorySlug;
-          }
+        // Use smart import category result if high confidence
+        if (smartResult.category && smartResult.categoryConfidence >= 0.6) {
+          product.mainCategorySlug = smartResult.category.mainCategorySlug;
+          product.subCategorySlug = smartResult.category.subCategorySlug;
+          product.subSubCategorySlug = smartResult.category.subSubCategorySlug;
           
-          if (!product.ai) product.ai = {};
           product.ai.categoryMapping = {
             suggestedPath: [
-              categoryResult.mainCategorySlug,
-              categoryResult.subCategorySlug,
-              categoryResult.subSubCategorySlug,
+              smartResult.category.mainCategorySlug,
+              smartResult.category.subCategorySlug,
+              smartResult.category.subSubCategorySlug,
             ].filter(Boolean) as string[],
-            confidence: categoryResult.confidence,
-            reasoning: categoryResult.reasoning,
+            confidence: smartResult.categoryConfidence,
+            reasoning: smartResult.categoryReasoning,
           };
+          
+          importLogger.info('Used Smart Import category suggestion', {
+            productId: aliProduct.item_id,
+            confidence: smartResult.categoryConfidence,
+            category: `${product.mainCategorySlug}/${product.subCategorySlug}/${product.subSubCategorySlug}`,
+          });
         } else {
           // Low confidence - keep manual mapping from profile but log suggestion
           importLogger.warn('Low confidence AI category suggestion - using manual mapping', {
-            aiSuggestion: categoryResult,
+            aiConfidence: smartResult.categoryConfidence,
             manualMapping: mapperConfig.targetMainCategory,
           });
         }
         
-        importLogger.info('AI processing complete', {
+        importLogger.info('Smart Import pipeline complete', {
           productId: aliProduct.item_id,
-          qualityScore: qualityResult.score,
+          qualityScore: smartResult.qualityScore,
           normalizedName: product.name,
-          category: `${product.mainCategorySlug}/${product.subCategorySlug}`,
-          keywordCount: product.seoKeywords?.length || 0,
+          category: `${product.mainCategorySlug}/${product.subCategorySlug}/${product.subSubCategorySlug}`,
+          processingTimeMs: smartResult.processingTimeMs,
         });
-        
-        // === END AI PIPELINE ===
+
         
         // Check for duplicates
         // TODO M2: Implement proper deduplication
