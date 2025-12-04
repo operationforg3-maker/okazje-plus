@@ -3,7 +3,7 @@
 /**
  * AI Category Suggestion Flow - "The Librarian"
  * 
- * Suggests 2-level category mapping (main + sub) for products
+ * Suggests 3-level category mapping (main + sub + subsub) for products
  * using Genkit AI analysis of title and description.
  * 
  * Taxonomy: Elektronika, Dom i Ogród, Moda, Sport i Turystyka, 
@@ -24,6 +24,7 @@ export type CategorySuggestionInput = z.infer<typeof CategorySuggestionInputSche
 const CategorySuggestionOutputSchema = z.object({
   mainCategorySlug: z.string().describe('Main category slug (level 1)'),
   subCategorySlug: z.string().describe('Sub-category slug (level 2)'),
+  subSubCategorySlug: z.string().describe('Sub-sub-category slug (level 3) - REQUIRED'),
   confidence: z.number().min(0).max(1).describe('Confidence score 0-1'),
   reasoning: z.string().optional().describe('Polish explanation'),
 });
@@ -36,52 +37,81 @@ const categoryPrompt = ai.definePrompt({
   output: { schema: CategorySuggestionOutputSchema },
   prompt: `Jesteś ekspertem kategoryzacji produktów dla polskiego portalu okazji.
 
-Zadanie: Przypisz produkt do 2-poziomowej kategorii (mainCategorySlug + subCategorySlug).
+Zadanie: Przypisz produkt do 3-poziomowej kategorii (mainCategorySlug + subCategorySlug + subSubCategorySlug).
 
 Produkt:
 - Tytuł: {{{productTitle}}}
 {{#if description}}- Opis: {{{description}}}{{/if}}
 
-DOSTĘPNE KATEGORIE (użyj DOKŁADNIE tych slugów):
+DOSTĘPNE KATEGORIE 3-POZIOMOWE (użyj DOKŁADNIE tych slugów):
 
 1. **elektronika** (main)
-   Sub: smartfony, tablety, laptopy, audio, fotografia, akcesoria
+   - **smartfony** (sub): akcesoria-do-smartfonow, case-i-etui, ladowarki-i-kable, powerbanki, uchwyty-samochodowe
+   - **tablety** (sub): tablety-android, tablety-ios, akcesoria-do-tabletow
+   - **laptopy** (sub): laptopy-osobiste, laptopy-do-gier, ultrabooki, akcesoria-do-laptopow
+   - **audio** (sub): sluchawki, glosniki, systemy-audio, akcesoria-audio
+   - **fotografia** (sub): aparaty-cyfrowe, obiektywy, statywy, akcesoria-fotograficzne
+   - **akcesoria** (sub): przewody-i-kable, zasilacze, adaptery, pamiec-zewnetrzna
 
 2. **dom-i-ogrod** (main)
-   Sub: meble, dekoracje, ogrod, narzedzia, agd
+   - **meble** (sub): meble-do-salonu, meble-do-sypialni, meble-kuchenne, meble-ogrodowe
+   - **dekoracje** (sub): obrazy-i-plakaty, swiatla-dekoracyjne, wazony-i-figurki, tekstylia-domowe
+   - **ogrod** (sub): narzedzia-ogrodowe, nawadnianie, nasiona-i-rosliny
+   - **narzedzia** (sub): narzedzia-reczne, elektronarzedzia, organizery-narzedzi
+   - **agd** (sub): agd-male, agd-kuchenne, odkurzacze, agd-do-czyszczenia
 
 3. **moda** (main)
-   Sub: odziez-damska, odziez-meska, obuwie, akcesoria-modowe, bizuteria
+   - **odziez-damska** (sub): sukienki, bluzki, spodnie-damskie, kurtki-damskie, swetry-damskie
+   - **odziez-meska** (sub): koszule, spodnie-meskie, kurtki-meskie, swetry-meskie, t-shirty
+   - **obuwie** (sub): obuwie-damskie, obuwie-meskie, obuwie-sportowe, obuwie-dzieciece
+   - **akcesoria-modowe** (sub): torby-i-torebki, paski, czapki-i-kapelusze, szaliki-i-rekawiczki
+   - **bizuteria** (sub): naszyjniki, bransoletki, kolczyki, piercionki, zegarki
 
 4. **sport-i-turystyka** (main)
-   Sub: fitness, odziez-sportowa, turystyka, akcesoria-sportowe
+   - **fitness** (sub): silownia-domowa, akcesoria-fitness, odzywki-sportowe, maty-do-cwiczen
+   - **odziez-sportowa** (sub): odziez-do-biegania, odziez-rowerowa, odziez-treningowa, buty-sportowe
+   - **turystyka** (sub): namioty, plecaki-turystyczne, spiwory, akcesoria-turystyczne
+   - **akcesoria-sportowe** (sub): pilki, rakiety, ochraniacze, gadzety-sportowe
 
 5. **zdrowie-i-uroda** (main)
-   Sub: kosmetyki, suplementy, pielegnacja, sprzet-medyczny
+   - **kosmetyki** (sub): kosmetyki-do-twarzy, kosmetyki-do-ciala, makijaz, perfumy
+   - **suplementy** (sub): witaminy, mineraly, suplementy-odchudzajace, suplementy-sportowe
+   - **pielegnacja** (sub): pielegnacja-twarzy, pielegnacja-wlosow, pielegnacja-ciala, higiena
+   - **sprzet-medyczny** (sub): cisnienomierze, termometry, glukometry, maski-ochronne
 
 6. **motoryzacja** (main)
-   Sub: akcesoria-samochodowe, czesci, elektronika-samochodowa, pielegnacja-auta
+   - **akcesoria-samochodowe** (sub): organizery, uchwyty, zapachy, pokrowce
+   - **czesci** (sub): filtry, paski, zyrowki, akcesoria-do-czesci
+   - **elektronika-samochodowa** (sub): kamery-samochodowe, nawigacje, ladowarki-samochodowe
+   - **pielegnacja-auta** (sub): kosmetyki-samochodowe, odkurzacze-samochodowe, mycie-i-czyszczenie
 
 7. **zabawki** (main)
-   Sub: zabawki-dla-niemowlat, zabawki-edukacyjne, klocki, lalki-i-figurki, gry-planszowe
+   - **zabawki-dla-niemowlat** (sub): grzechotki, mobile, interaktywne-zabawki
+   - **zabawki-edukacyjne** (sub): puzzle, ksiazki-dla-dzieci, zestawy-edukacyjne
+   - **klocki** (sub): lego, klocki-drewniane, klocki-plastikowe
+   - **lalki-i-figurki** (sub): lalki, figurki-akcji, akcesoria-do-lalek
+   - **gry-planszowe** (sub): gry-rodzinne, gry-strategiczne, gry-karciane
 
 8. **inne** (main)
-   Sub: pozostale
+   - **pozostale** (sub): niesklasyfikowane, rozne, inne-produkty
 
 ZASADY:
-1. Wybierz najbardziej specyficzną kategorię pasującą do produktu
-2. confidence = 1.0 (pewny), 0.8-0.9 (dobry), 0.6-0.7 (ok), <0.6 (niepewny)
-3. reasoning w języku polskim - wyjaśnij w 1 zdaniu dlaczego ta kategoria
-4. Używaj TYLKO slugów z listy powyżej (lowercase, z myślnikami)
+1. MUSISZ zwrócić WSZYSTKIE 3 POZIOMY (main + sub + subsub)
+2. Wybierz najbardziej specyficzną subsubkategorię
+3. confidence = 1.0 (pewny), 0.8-0.9 (dobry), 0.6-0.7 (ok), <0.6 (niepewny)
+4. reasoning w języku polskim - wyjaśnij dlaczego wybrano TEN 3-poziomowy path
+5. Używaj TYLKO slugów z listy powyżej (lowercase, z myślnikami)
 
 PRZYKŁADY:
-- "iPhone 15 Pro" → main: "elektronika", sub: "smartfony", confidence: 1.0
-- "Słuchawki Sony WH-1000XM5" → main: "elektronika", sub: "audio", confidence: 1.0
-- "Adidas Ultraboost buty do biegania" → main: "sport-i-turystyka", sub: "odziez-sportowa", confidence: 0.9
-- "Krem przeciwzmarszczkowy" → main: "zdrowie-i-uroda", sub: "kosmetyki", confidence: 0.9
-- "Kabel USB-C 2m" → main: "elektronika", sub: "akcesoria", confidence: 0.8
+- "iPhone 15 Pro etui skórzane" → main: "elektronika", sub: "smartfony", subsub: "case-i-etui", confidence: 1.0
+- "Słuchawki Sony WH-1000XM5" → main: "elektronika", sub: "audio", subsub: "sluchawki", confidence: 1.0
+- "Adidas Ultraboost buty do biegania" → main: "sport-i-turystyka", sub: "odziez-sportowa", subsub: "buty-sportowe", confidence: 0.9
+- "Krem przeciwzmarszczkowy L'Oreal" → main: "zdrowie-i-uroda", sub: "kosmetyki", subsub: "kosmetyki-do-twarzy", confidence: 0.9
+- "Kabel USB-C 2m" → main: "elektronika", sub: "akcesoria", subsub: "przewody-i-kable", confidence: 0.8
 
-Jeśli produkt nie pasuje do żadnej kategorii, użyj: main: "inne", sub: "pozostale", confidence: 0.3`,
+Jeśli nie pasuje, użyj: main: "inne", sub: "pozostale", subsub: "niesklasyfikowane", confidence: 0.3
+
+ZWRÓĆ WSZYSTKIE 3 POZIOMY!`,
 });
 
 const categoryFlow = ai.defineFlow(
@@ -122,84 +152,235 @@ export async function aiSuggestCategory(
     
     // Elektronika
     if (/iphone|samsung galaxy|xiaomi|oppo|realme|smartphone|smartfon|telefon(?!.*sam)/i.test(combined)) {
+      if (/case|etui|obudowa|futerał/i.test(combined)) {
+        return {
+          mainCategorySlug: 'elektronika',
+          subCategorySlug: 'smartfony',
+          subSubCategorySlug: 'case-i-etui',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano etui do smartfona (fallback)',
+        };
+      }
       return {
         mainCategorySlug: 'elektronika',
         subCategorySlug: 'smartfony',
+        subSubCategorySlug: 'akcesoria-do-smartfonow',
         confidence: 0.7,
         reasoning: 'Rozpoznano smartfon na podstawie słów kluczowych (fallback)',
       };
     }
     
-    if (/słuchawki|headphone|earphone|airpods|earbuds|audio/i.test(combined)) {
+    if (/słuchawki|headphone|earphone|airpods|earbuds/i.test(combined)) {
       return {
         mainCategorySlug: 'elektronika',
         subCategorySlug: 'audio',
+        subSubCategorySlug: 'sluchawki',
         confidence: 0.7,
-        reasoning: 'Rozpoznano sprzęt audio na podstawie słów kluczowych (fallback)',
+        reasoning: 'Rozpoznano słuchawki na podstawie słów kluczowych (fallback)',
+      };
+    }
+    
+    if (/głośnik|speaker|audio/i.test(combined)) {
+      return {
+        mainCategorySlug: 'elektronika',
+        subCategorySlug: 'audio',
+        subSubCategorySlug: 'glosniki',
+        confidence: 0.6,
+        reasoning: 'Rozpoznano sprzęt audio (fallback)',
       };
     }
     
     if (/laptop|notebook|ultrabook|macbook/i.test(combined)) {
+      if (/gaming|gier|gra/i.test(combined)) {
+        return {
+          mainCategorySlug: 'elektronika',
+          subCategorySlug: 'laptopy',
+          subSubCategorySlug: 'laptopy-do-gier',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano laptop do gier (fallback)',
+        };
+      }
       return {
         mainCategorySlug: 'elektronika',
         subCategorySlug: 'laptopy',
+        subSubCategorySlug: 'laptopy-osobiste',
         confidence: 0.7,
-        reasoning: 'Rozpoznano laptop na podstawie słów kluczowych (fallback)',
+        reasoning: 'Rozpoznano laptop (fallback)',
       };
     }
     
     if (/tablet|ipad/i.test(combined)) {
+      if (/android/i.test(combined)) {
+        return {
+          mainCategorySlug: 'elektronika',
+          subCategorySlug: 'tablety',
+          subSubCategorySlug: 'tablety-android',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano tablet Android (fallback)',
+        };
+      }
+      if (/ipad|ios|apple/i.test(combined)) {
+        return {
+          mainCategorySlug: 'elektronika',
+          subCategorySlug: 'tablety',
+          subSubCategorySlug: 'tablety-ios',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano iPad (fallback)',
+        };
+      }
       return {
         mainCategorySlug: 'elektronika',
         subCategorySlug: 'tablety',
-        confidence: 0.7,
-        reasoning: 'Rozpoznano tablet na podstawie słów kluczowych (fallback)',
+        subSubCategorySlug: 'tablety-android',
+        confidence: 0.6,
+        reasoning: 'Rozpoznano tablet (fallback)',
       };
     }
     
-    if (/aparat|camera|obiektyw|lens|foto/i.test(combined)) {
+    if (/aparat|camera|foto/i.test(combined)) {
       return {
         mainCategorySlug: 'elektronika',
         subCategorySlug: 'fotografia',
-        confidence: 0.6,
-        reasoning: 'Rozpoznano sprzęt fotograficzny (fallback)',
+        subSubCategorySlug: 'aparaty-cyfrowe',
+        confidence: 0.7,
+        reasoning: 'Rozpoznano aparat fotograficzny (fallback)',
       };
     }
     
-    if (/kabel|cable|ładowarka|charger|powerbank|adapter|usb/i.test(combined)) {
+    if (/obiektyw|lens/i.test(combined)) {
+      return {
+        mainCategorySlug: 'elektronika',
+        subCategorySlug: 'fotografia',
+        subSubCategorySlug: 'obiektywy',
+        confidence: 0.7,
+        reasoning: 'Rozpoznano obiektyw fotograficzny (fallback)',
+      };
+    }
+    
+    if (/kabel|cable|przewód|usb-c|lightning/i.test(combined)) {
       return {
         mainCategorySlug: 'elektronika',
         subCategorySlug: 'akcesoria',
+        subSubCategorySlug: 'przewody-i-kable',
+        confidence: 0.7,
+        reasoning: 'Rozpoznano kable (fallback)',
+      };
+    }
+    
+    if (/ładowarka|charger|zasilacz/i.test(combined)) {
+      return {
+        mainCategorySlug: 'elektronika',
+        subCategorySlug: 'akcesoria',
+        subSubCategorySlug: 'zasilacze',
+        confidence: 0.7,
+        reasoning: 'Rozpoznano ładowarkę/zasilacz (fallback)',
+      };
+    }
+    
+    if (/powerbank/i.test(combined)) {
+      return {
+        mainCategorySlug: 'elektronika',
+        subCategorySlug: 'smartfony',
+        subSubCategorySlug: 'powerbanki',
+        confidence: 0.7,
+        reasoning: 'Rozpoznano powerbank (fallback)',
+      };
+    }
+    
+    if (/adapter/i.test(combined)) {
+      return {
+        mainCategorySlug: 'elektronika',
+        subCategorySlug: 'akcesoria',
+        subSubCategorySlug: 'adaptery',
         confidence: 0.6,
-        reasoning: 'Rozpoznano akcesoria elektroniczne (fallback)',
+        reasoning: 'Rozpoznano adapter (fallback)',
       };
     }
     
     // Moda
     if (/buty|but|shoe|sneaker|adidas|nike|puma|obuwie/i.test(combined)) {
+      if (/sport|running|training|fitness/i.test(combined)) {
+        return {
+          mainCategorySlug: 'moda',
+          subCategorySlug: 'obuwie',
+          subSubCategorySlug: 'obuwie-sportowe',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano obuwie sportowe (fallback)',
+        };
+      }
+      if (/damsk|women/i.test(combined)) {
+        return {
+          mainCategorySlug: 'moda',
+          subCategorySlug: 'obuwie',
+          subSubCategorySlug: 'obuwie-damskie',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano obuwie damskie (fallback)',
+        };
+      }
+      if (/męsk|men|man/i.test(combined)) {
+        return {
+          mainCategorySlug: 'moda',
+          subCategorySlug: 'obuwie',
+          subSubCategorySlug: 'obuwie-meskie',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano obuwie męskie (fallback)',
+        };
+      }
       return {
         mainCategorySlug: 'moda',
         subCategorySlug: 'obuwie',
-        confidence: 0.7,
-        reasoning: 'Rozpoznano obuwie na podstawie słów kluczowych (fallback)',
+        subSubCategorySlug: 'obuwie-meskie',
+        confidence: 0.6,
+        reasoning: 'Rozpoznano obuwie (fallback)',
       };
     }
     
-    if (/sukienka|dress|bluzka|damsk/i.test(combined)) {
+    if (/sukienka|dress/i.test(combined)) {
       return {
         mainCategorySlug: 'moda',
         subCategorySlug: 'odziez-damska',
+        subSubCategorySlug: 'sukienki',
         confidence: 0.7,
-        reasoning: 'Rozpoznano odzież damską (fallback)',
+        reasoning: 'Rozpoznano sukienkę (fallback)',
       };
     }
     
-    if (/koszula|shirt|spodnie|męsk/i.test(combined)) {
+    if (/bluzka|damsk/i.test(combined)) {
+      return {
+        mainCategorySlug: 'moda',
+        subCategorySlug: 'odziez-damska',
+        subSubCategorySlug: 'bluzki',
+        confidence: 0.7,
+        reasoning: 'Rozpoznano bluzkę damską (fallback)',
+      };
+    }
+    
+    if (/koszula|shirt/i.test(combined)) {
+      if (/męsk|men/i.test(combined)) {
+        return {
+          mainCategorySlug: 'moda',
+          subCategorySlug: 'odziez-meska',
+          subSubCategorySlug: 'koszule',
+          confidence: 0.7,
+          reasoning: 'Rozpoznano koszulę męską (fallback)',
+        };
+      }
       return {
         mainCategorySlug: 'moda',
         subCategorySlug: 'odziez-meska',
+        subSubCategorySlug: 't-shirty',
+        confidence: 0.6,
+        reasoning: 'Rozpoznano t-shirt (fallback)',
+      };
+    }
+    
+    if (/spodnie|męsk/i.test(combined)) {
+      return {
+        mainCategorySlug: 'moda',
+        subCategorySlug: 'odziez-meska',
+        subSubCategorySlug: 'spodnie-meskie',
         confidence: 0.7,
-        reasoning: 'Rozpoznano odzież męską (fallback)',
+        reasoning: 'Rozpoznano spodnie męskie (fallback)',
       };
     }
     
@@ -347,6 +528,7 @@ export async function aiSuggestCategory(
     return {
       mainCategorySlug: 'inne',
       subCategorySlug: 'pozostale',
+      subSubCategorySlug: 'niesklasyfikowane',
       confidence: 0.3,
       reasoning: 'Nie udało się dopasować do żadnej kategorii - wymaga ręcznej klasyfikacji (fallback)',
     };

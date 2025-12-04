@@ -1,0 +1,150 @@
+'use server';
+
+/**
+ * AI Deal Quality Score Flow - "The Ruthless Auditor"
+ * 
+ * Simplified quality assessment focusing on:
+ * - Shipping cost penalties (>20% of price)
+ * - Merchant rating penalties (<90%)
+ * - Sales volume penalties (<10 sold)
+ * - Rating bonuses (>4.8 stars)
+ * - Free shipping bonuses
+ */
+
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
+import { logger } from '@/lib/logging';
+
+const DealQualityInputSchema = z.object({
+  price: z.number().describe('Product price in PLN'),
+  originalPrice: z.number().optional().describe('Original price before discount'),
+  shippingCost: z.number().describe('Shipping cost (0 for free shipping)'),
+  rating: z.number().optional().describe('Product rating 0-5 stars'),
+  soldCount: z.number().optional().describe('Number of items sold'),
+  merchantRating: z.number().optional().describe('Merchant rating 0-100%'),
+});
+
+export type DealQualityInput = z.infer<typeof DealQualityInputSchema>;
+
+const DealQualityOutputSchema = z.object({
+  score: z.number().describe('Overall quality score 0-100'),
+  recommendation: z.enum(['publish', 'reject', 'manual_review']).describe('Final recommendation'),
+  reasoning: z.string().describe('Polish explanation of the decision'),
+});
+  factors: z.object({
+    priceQuality: z.number().describe('Price reasonableness (0-100)'),
+    discountLegitimacy: z.number().describe('Discount authenticity (0-100)'),
+    merchantTrust: z.number().describe('Merchant reputation (0-100)'),
+    productPopularity: z.number().describe('Product popularity (0-100)'),
+    contentQuality: z.number().describe('Content quality (0-100)'),
+  }),
+  warnings: z
+    .array(z.string())
+    .describe('List of warnings/red flags detected'),
+  reasoning: z
+    .string()
+    .describe('Brief explanation of the score and recommendation'),
+});
+
+export type DealQualityOutput = z.infer<typeof DealQualityOutputSchema>;
+
+/**
+ * AI prompt for quality scoring
+ */
+const qualityPrompt = ai.definePrompt({
+  name: 'dealQualityScorePrompt',
+  input: { schema: DealQualityInputSchema },
+  output: { schema: DealQualityOutputSchema },
+  prompt: `You are an expert e-commerce quality analyst for a Polish deals platform.
+
+Analyze the following product and provide a quality score (0-100):
+
+**Product Details:**
+- Title: {{{title}}}
+{{#if description}}- Description: {{{description}}}{{/if}}
+- Price: {{{price}}} PLN
+{{#if originalPrice}}- Original Price: {{{originalPrice}}} PLN{{/if}}
+{{#if discountPercent}}- Discount: {{{discountPercent}}}%{{/if}}
+{{#if rating}}- Rating: {{{rating}}}/5 ({{{reviewCount}}} reviews){{/if}}
+{{#if salesCount}}- Sales: {{{salesCount}}}{{/if}}
+{{#if merchantName}}- Merchant: {{{merchantName}}}{{/if}}
+{{#if category}}- Category: {{{category}}}{{/if}}
+
+**Evaluation Criteria:**
+
+1. **Price Quality (0-100)**: Is the price reasonable for the product category?
+2. **Discount Legitimacy (0-100)**: If discount exists, is it authentic (not fake inflated original price)?
+3. **Merchant Trust (0-100)**: Does the merchant appear trustworthy based on name and reputation signals?
+4. **Product Popularity (0-100)**: Based on ratings, reviews, and sales count.
+5. **Content Quality (0-100)**: Title and description quality (clear, not spammy, professional).
+
+**Red Flags to Check:**
+- Unrealistic discounts (>90%)
+- Very low price with no reviews/ratings (potential scam)
+- Spammy title (excessive caps, emojis, "FREE!!!", etc.)
+- Suspicious merchant names
+- Missing critical product information
+
+**Recommendation Guidelines:**
+- **approve**: score >= 70 (high quality, auto-publish)
+- **review**: score 40-69 (moderate quality, manual review)
+- **reject**: score < 40 (low quality, likely spam/scam)
+
+Provide detailed factor scores, list any warnings detected, and explain your reasoning in Polish.`,
+});
+
+/**
+ * Genkit flow for deal quality scoring
+ */
+const qualityFlow = ai.defineFlow(
+  {
+    name: 'dealQualityScoreFlow',
+    inputSchema: DealQualityInputSchema,
+    outputSchema: DealQualityOutputSchema,
+  },
+  async (input) => {
+    const { output } = await qualityPrompt(input);
+    return output!;
+  }
+);
+
+/**
+ * Evaluate deal quality using AI
+ * 
+ * @param input Deal information
+ * @returns Quality score and recommendation
+ */
+export async function aiDealQualityScore(
+  input: DealQualityInput
+): Promise<DealQualityOutput> {
+  logger.debug('AI deal quality scoring', { title: input.title });
+  
+  try {
+    const result = await qualityFlow(input);
+    
+    logger.info('Deal quality score completed', {
+      title: input.title,
+      score: result.score,
+      recommendation: result.recommendation,
+    });
+    
+    return result;
+  } catch (error) {
+    logger.error('AI deal quality scoring failed', { error, input });
+    
+    // Fallback: return conservative score requiring manual review
+    return {
+      score: 50,
+      recommendation: 'review',
+      factors: {
+        priceQuality: 50,
+        discountLegitimacy: 50,
+        merchantTrust: 50,
+        productPopularity: 50,
+        contentQuality: 50,
+      },
+      warnings: ['AI scoring failed - manual review required'],
+      reasoning: 'Błąd AI - produkt wymaga ręcznej weryfikacji',
+    };
+  }
+}
