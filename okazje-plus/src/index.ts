@@ -1621,6 +1621,27 @@ export * from "./triggers/autoIndexDeals";
 // Export triggers from autofillDraftDeal module
 export * from "./triggers/autofillDraftDeal";
 
+// =============================================================================
+// TELEGRAM HOT DEAL BROADCASTER
+// =============================================================================
+
+// Export triggers from telegramBroadcaster module
+export * from "./triggers/telegramBroadcaster";
+
+// =============================================================================
+// SEO ZOMBIE CLEANER CRON JOB
+// =============================================================================
+
+// Export triggers from seoZombieCleanerCron module
+export * from "./triggers/seoZombieCleanerCron";
+
+// =============================================================================
+// SMART IMAGE OPTIMIZER
+// =============================================================================
+
+// Export triggers from smartImageOptimizer module
+export * from "./triggers/smartImageOptimizer";
+
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
