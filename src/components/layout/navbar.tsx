@@ -25,7 +25,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
-import { NotificationBell } from '@/components/notification-bell';
 import { MiniCartBadge } from '@/components/smart-cart-widget';
 import { LanguageSwitcherMenu } from '@/components/locale-currency-switcher';
 import { CurrencySwitcher } from '@/components/currency-switcher';
@@ -111,10 +110,13 @@ export function Navbar() {
           </div>
           <LanguageSwitcherMenu />
           <CurrencySwitcher />
-          {/* Ikona koszyka (MiniCartBadge) */}
-          <MiniCartBadge />
-          {/* Ikona powiadomień tylko raz */}
-          {user && <NotificationBell />}
+          {/* Ikona koszyka z badge */}
+          <Link href={`${prefix}/cart`} className="relative">
+            <Button variant="ghost" size="icon" className="relative">
+              <ShoppingBag className="h-5 w-5" />
+              <MiniCartBadge />
+            </Button>
+          </Link>
           {loading ? (
             <Skeleton className="h-9 w-9 rounded-full" />
           ) : user ? (
