@@ -73,19 +73,55 @@ async function fetchProductDetails(productId: string): Promise<any | null> {
   }
 }
 
+// Helper: Translate Polish category names to English for AliExpress API
+function translateToEnglish(text: string): string {
+  const translations: Record<string, string> = {
+    'Elektronika': 'Electronics',
+    'Smartfony i telefony': 'Smartphones and phones',
+    'Smartfony': 'Smartphones',
+    'Telefony klasyczne': 'Classic phones',
+    'Akcesoria': 'Accessories',
+    'Komputery': 'Computers',
+    'Laptopy': 'Laptops',
+    'Dom i ogród': 'Home and garden',
+    'Moda': 'Fashion',
+    'Sport': 'Sports',
+    'Uroda': 'Beauty',
+    'Zabawki': 'Toys',
+    'Motoryzacja': 'Automotive',
+    'Zdrowie': 'Health',
+    'Książki': 'Books',
+    'AGD': 'Home appliances',
+    // Add more as needed
+  };
+  
+  let translated = text;
+  for (const [pl, en] of Object.entries(translations)) {
+    translated = translated.replace(new RegExp(pl, 'gi'), en);
+  }
+  return translated;
+}
+
 // Multi-query wariant: kilka zapytań + deduplikacja + sortowanie po popularności i ocenie
 async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promise<any[]> {
-  const base = categoryPath.join(' ');
+  // Translate Polish categories to English for AliExpress API
+  const translatedPath = categoryPath.map(translateToEnglish);
+  const base = translatedPath.join(' ');
+  
   const queries = [
-    `${base} bestseller`,
-    `${base} wysokie oceny`,
-    base,
-    `${base} promocja`,
+    base, // neutralne zapytanie
+    `${base} best seller`, // bestseller
+    `${base} popular`, // popularne
+    `${base} sale`, // promocja
   ];
+  console.log(`[fetchMultiQuery] Original: "${categoryPath.join(' ')}"`);
+  console.log(`[fetchMultiQuery] Translated: "${base}"`);
+  console.log(`[fetchMultiQuery] Running ${queries.length} queries`);
   const seen = new Set<string>();
   const merged: any[] = [];
   for (const q of queries) {
     const list = await fetchProductsForCategory(q, baseLimit);
+    console.log(`[fetchMultiQuery] Query "${q}" returned ${list.length} products`);
     for (const p of list) {
       const originalId = p.id || p.itemId || p.item_id || p.productId || '';
       const affiliateUrl = p.link || p.productUrl || p.url || '';
@@ -95,6 +131,7 @@ async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promi
       merged.push(p);
     }
   }
+  console.log(`[fetchMultiQuery] Total unique products: ${merged.length}`);
   merged.sort((a, b) => {
     const popularityA = (a.orders || 0) * (a.rating || 0);
     const popularityB = (b.orders || 0) * (b.rating || 0);
@@ -143,8 +180,22 @@ export async function fillSubSubcategoryProducts(params: {
     const enrichmentCache = new Map<string, any>();
 
     // Pobierz produkty z AliExpress
+    console.log(`[fillSubSubcategoryProducts] Searching AliExpress for: "${categoryName} ${subcategoryName} ${subsubcategoryName}"`);
     let aliProducts = await fetchMultiQuery([categoryName, subcategoryName, subsubcategoryName], 20);
     console.log(`[fillSubSubcategoryProducts] Found ${aliProducts.length} products (deduped)`);
+
+    if (aliProducts.length === 0) {
+      console.warn(`[fillSubSubcategoryProducts] ⚠️ No products found for "${categoryName}/${subcategoryName}/${subsubcategoryName}"`);
+      return {
+        success: true,
+        productsAdded: 0,
+        productsUpdated: 0,
+        totalProcessed: 0,
+        createdIds: [],
+        updatedIds: [],
+        warning: 'No products found from AliExpress',
+      };
+    }
 
     // Jeśli Advanced włączone
     const advanced = process.env.ALIEXPRESS_ENABLE_ADVANCED === '1' || process.env.ALIEXPRESS_ENABLE_ADVANCED === 'true';
@@ -284,6 +335,12 @@ export async function fillSubSubcategoryProducts(params: {
         }
 
         const existingId = await findExistingProduct({ originalId, affiliateUrl });
+
+        if (existingId) {
+          console.log(`[fillSubSubcategoryProducts] Product already exists: ${originalId || affiliateUrl} - will update`);
+        } else {
+          console.log(`[fillSubSubcategoryProducts] New product: ${originalId || affiliateUrl} - will create`);
+        }
 
         const originalPrice = mergedProduct.originalPrice || mergedProduct.original_price || undefined;
         const priceValue = mergedProduct.price?.value || mergedProduct.price || 0;
