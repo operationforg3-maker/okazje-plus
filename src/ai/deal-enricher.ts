@@ -39,6 +39,8 @@ export interface DealEnricherInput {
   price: number;
   originalPrice?: number;
   discount?: number;
+  shippingCost?: number; // NEW: for quality scoring
+  merchantRating?: number; // NEW: for quality scoring (0-100)
   merchant?: string;
   category?: string;
   mainCategorySlug?: string;
@@ -57,22 +59,14 @@ export interface DealEnricherInput {
 export interface EnrichedDeal {
   normalizedTitle: string;
   shortDescription: string;
-  mediumDescription: string;
-  keywords: string[];
+  htmlContent: string; // NEW: replaces mediumDescription
+  marketingTitle: string; // NEW: enhanced title
   seoDescription: string;
   seoKeywords: string[];
-  metaTitle?: string;
-  metaDescription?: string;
+  metaTitle: string;
+  metaDescription: string;
   qualityScore: number;
-  qualityRecommendation: 'approve' | 'review' | 'reject';
-  qualityFactors: {
-    priceQuality: number;
-    discountLegitimacy: number;
-    merchantTrust: number;
-    productPopularity: number;
-    contentQuality: number;
-  };
-  qualityWarnings: string[];
+  qualityRecommendation: 'approve' | 'review' | 'reject'; // Mapped from 'publish'|'reject'|'manual_review'
   qualityReasoning: string;
   enrichedAt: string;
   processingTimeMs: number;
@@ -100,19 +94,16 @@ export async function enrichDeal(input: DealEnricherInput): Promise<EnrichedDeal
     });
     logger.debug('✅ Title normalized', { normalizedTitle });
 
-    // Step 2: Generate descriptions (short, medium, keywords)
+    // Step 2: Generate descriptions (short, HTML content, marketing title)
     logger.debug('Step 2: Generating deal descriptions...');
     const descriptionResult = await aiGenerateDealDescriptionPL({
       title: normalizedTitle || input.title,
-      discount: input.discount || (input.originalPrice ? Math.round(((input.originalPrice - input.price) / input.originalPrice) * 100) : undefined),
-      price: input.price,
-      originalPrice: input.originalPrice,
-      merchant: input.merchant,
+      rawSpecifications: input.attributes ? JSON.stringify(input.attributes) : undefined,
     });
     logger.debug('✅ Descriptions generated', {
       shortLength: descriptionResult.shortDescription.length,
-      mediumLength: descriptionResult.mediumDescription.length,
-      keywordCount: descriptionResult.keywords.length,
+      htmlLength: descriptionResult.htmlContent.length,
+      marketingTitle: descriptionResult.marketingTitle,
     });
 
     // Step 3: Generate SEO content (full description, meta tags)
@@ -135,16 +126,12 @@ export async function enrichDeal(input: DealEnricherInput): Promise<EnrichedDeal
     // Step 4: Calculate quality score
     logger.debug('Step 4: Calculating quality score...');
     const qualityResult = await aiDealQualityScore({
-      title: normalizedTitle || input.title,
-      description: descriptionResult.shortDescription,
       price: input.price,
       originalPrice: input.originalPrice,
-      discountPercent: input.discount || (input.originalPrice ? Math.round(((input.originalPrice - input.price) / input.originalPrice) * 100) : undefined),
+      shippingCost: input.shippingCost || 0,
       rating: input.rating,
-      reviewCount: input.reviewCount,
-      salesCount: input.salesCount,
-      merchantName: input.merchant,
-      category: input.mainCategorySlug || input.category,
+      soldCount: input.salesCount,
+      merchantRating: input.merchantRating,
     });
     logger.debug('✅ Quality score calculated', {
       score: qualityResult.score,
@@ -155,16 +142,14 @@ export async function enrichDeal(input: DealEnricherInput): Promise<EnrichedDeal
     const enrichedDeal: EnrichedDeal = {
       normalizedTitle: normalizedTitle || input.title,
       shortDescription: descriptionResult.shortDescription,
-      mediumDescription: descriptionResult.mediumDescription,
-      keywords: descriptionResult.keywords,
+      htmlContent: descriptionResult.htmlContent,
+      marketingTitle: descriptionResult.marketingTitle,
       seoDescription: seoResult.description,
       seoKeywords: seoResult.keywords,
-      metaTitle: seoResult.metaTitle,
-      metaDescription: seoResult.metaDescription,
+      metaTitle: seoResult.metaTitle || normalizedTitle || input.title,
+      metaDescription: seoResult.metaDescription || descriptionResult.shortDescription,
       qualityScore: qualityResult.score,
-      qualityRecommendation: qualityResult.recommendation,
-      qualityFactors: qualityResult.factors,
-      qualityWarnings: qualityResult.warnings,
+      qualityRecommendation: qualityResult.recommendation as 'approve' | 'review' | 'reject',
       qualityReasoning: qualityResult.reasoning,
       enrichedAt: new Date().toISOString(),
       processingTimeMs: Date.now() - startTime,
@@ -189,23 +174,15 @@ export async function enrichDeal(input: DealEnricherInput): Promise<EnrichedDeal
     return {
       normalizedTitle: input.title,
       shortDescription: input.title,
-      mediumDescription: input.title,
-      keywords: [],
+      htmlContent: `<p>${input.title}</p>`,
+      marketingTitle: input.title,
       seoDescription: input.title,
       seoKeywords: [],
       metaTitle: input.title.slice(0, 60),
       metaDescription: input.title.slice(0, 160),
       qualityScore: 50, // neutral score on error
       qualityRecommendation: 'review',
-      qualityFactors: {
-        priceQuality: 0,
-        discountLegitimacy: 0,
-        merchantTrust: 0,
-        productPopularity: 0,
-        contentQuality: 0,
-      },
-      qualityWarnings: [`Enrichment error: ${(error as any)?.message || 'Unknown error'}`],
-      qualityReasoning: 'AI enrichment failed, fallback content used',
+      qualityReasoning: `AI enrichment failed: ${(error as any)?.message || 'Unknown error'}`,
       enrichedAt: new Date().toISOString(),
       processingTimeMs,
     };

@@ -1,23 +1,31 @@
 'use server';
 
+/**
+ * AI Deal Description Generator - "The Sales Copywriter"
+ * 
+ * Generates Polish marketing copy with:
+ * - Short description (2 sentences, benefit-focused)
+ * - HTML content with bullet points
+ * - Marketing title (enhanced version)
+ * 
+ * Focus: User benefits, not technical specs. No fluff, no spam.
+ */
+
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { logger } from '@/lib/logging';
 
 const DealDescriptionInputSchema = z.object({
-  title: z.string().min(3),
-  discount: z.number().min(0).max(100).optional(),
-  price: z.number().optional(),
-  originalPrice: z.number().optional(),
-  merchant: z.string().optional(),
+  title: z.string().describe('Original product title'),
+  rawSpecifications: z.string().optional().describe('Raw specs as JSON or text'),
 });
 
 export type DealDescriptionInput = z.infer<typeof DealDescriptionInputSchema>;
 
 const DealDescriptionOutputSchema = z.object({
-  shortDescription: z.string().describe('Zwięzły opis 1-2 zdania, PL'),
-  mediumDescription: z.string().describe('Średniej długości opis 2-4 zdania, PL'),
-  keywords: z.array(z.string()).describe('Słowa kluczowe dla tagów i SEO'),
+  shortDescription: z.string().describe('2 sentences, benefit-focused, Polish'),
+  htmlContent: z.string().describe('HTML with <ul><li> tags, user benefits'),
+  marketingTitle: z.string().describe('Enhanced marketing title, Polish'),
 });
 
 export type DealDescriptionOutput = z.infer<typeof DealDescriptionOutputSchema>;
@@ -26,23 +34,49 @@ const dealDescriptionPrompt = ai.definePrompt({
   name: 'dealDescriptionPromptPL',
   input: { schema: DealDescriptionInputSchema },
   output: { schema: DealDescriptionOutputSchema },
-  prompt: `Jesteś redaktorem polskiego serwisu z okazjami.
+  prompt: `Jesteś copywriterem sprzedażowym dla polskiego portalu z okazjami.
 
-Zadanie: Napisz krótki i średni opis okazji w języku polskim, na podstawie danych.
+Zadanie: Napisz przekonującą treść marketingową w języku polskim.
 
-Tytuł: {{{title}}}
-{{#if discount}}Zniżka: {{{discount}}}%{{/if}}
-{{#if price}}Cena: {{{price}}} PLN{{/if}}
-{{#if originalPrice}}Cena przed: {{{originalPrice}}} PLN{{/if}}
-{{#if merchant}}Sklep: {{{merchant}}}{{/if}}
+Produkt: {{{title}}}
+{{#if rawSpecifications}}Specyfikacje: {{{rawSpecifications}}}{{/if}}
 
-Zasady:
-- PL, naturalny styl, zero spamu i emotikon.
-- W short podkreśl korzyść/znaczenie zniżki.
-- W medium dodaj 1-2 najważniejsze atuty/parametry i warunki (jeśli jasno wynikają z tytułu).
-- Nie obiecuj rzeczy niepewnych. Nie dodawaj kodów/terminów jeśli nie podane.
-- Słowa kluczowe: 4-6 krótkich fraz.
-`,
+WYMAGANIA:
+
+**shortDescription** (2 zdania):
+- Pierwsza zdanie: główna korzyść/zastosowanie produktu (NIE specyfikacja)
+- Druga zdanie: dlaczego warto kupić TERAZ (np. "Idealne rozwiązanie dla...", "Zaoszczędź czas dzięki...")
+- Bez wykrzykników, emoji, "MEGA OKAZJA!!!" - naturalny język
+- Przykład: "Słuchawki bezprzewodowe z redukcją szumów zapewnią Ci cichy relaks w każdej podróży. Długa bateria (30h) oznacza tydzień słuchania bez ładowania."
+
+**htmlContent** (HTML z listą korzyści):
+- Format: <ul><li>korzyść 1</li><li>korzyść 2</li>...</ul>
+- 3-5 punktów
+- Każdy punkt = korzyść dla użytkownika, NIE sucha specyfikacja
+- Zamiast "Bluetooth 5.0" → "Połączenie bezprzewodowe do 10m od telefonu"
+- Zamiast "RAM 8GB" → "Płynna praca nawet przy 20 otwartych kartach"
+- Jeśli są specyfikacje techniczne, tłumacz je na język korzyści
+- Przykład:
+<ul>
+<li>Redukcja szumów - słuchaj muzyki bez hałasu ulicy</li>
+<li>30h baterii - cały tydzień bez ładowania</li>
+<li>Szybkie ładowanie - 10 min = 5h muzyki</li>
+<li>Wygodne nauszniki - całodniowe noszenie bez dyskomfortu</li>
+</ul>
+
+**marketingTitle** (ulepszony tytuł):
+- Bazuj na oryginalnym tytule, ale dodaj 1-2 słowa korzyści
+- Bez clickbaitu, bez "PROMOCJA!!!", bez emotikonów
+- Przykład: "{{{title}}}" → "Słuchawki Sony XM5 z redukcją szumów - 30h baterii"
+- Jeśli oryginalny tytuł ma CAPS LOCK, popraw na normalne litery
+
+ZAKAZY:
+- Bez ogólników ("wysokiej jakości", "najlepszy", "rewelacyjny")
+- Bez emotikonów i wykrzykników
+- Bez obietnic bez pokrycia (jeśli nie ma w specyfikacjach, nie wymyślaj)
+- Bez clickbaitowych fraz ("Nie uwierzysz...", "Eksperci w szoku...")
+
+Jeśli brak specyfikacji, skoncentruj się na kategorii produktu i typowych korzyściach.`,
 });
 
 const dealDescriptionFlow = ai.defineFlow(
@@ -60,17 +94,69 @@ const dealDescriptionFlow = ai.defineFlow(
 export async function aiGenerateDealDescriptionPL(
   input: DealDescriptionInput
 ): Promise<DealDescriptionOutput> {
-  logger.debug('AI deal description', { title: input.title, discount: input.discount });
+  logger.debug('AI deal description', { title: input.title });
+  
   try {
-    return await dealDescriptionFlow(input);
+    const result = await dealDescriptionFlow(input);
+    
+    logger.info('Deal description completed', {
+      title: input.title,
+      shortDescLength: result.shortDescription.length,
+      htmlContentLength: result.htmlContent.length,
+    });
+    
+    return result;
   } catch (error) {
-    logger.error('AI deal description failed', { error });
-    const base = `${input.title}`.replace(/\s+/g, ' ').trim();
-    const discountInfo = input.discount ? ` Zniżka ${input.discount}%` : '';
+    logger.error('AI deal description failed', { error, input });
+    
+    // Fallback: basic text generation
+    const title = input.title.trim();
+    const marketingTitle = title.replace(/[!]+/g, '').replace(/\s+/g, ' ');
+    
+    // Try to extract category/type from title
+    const isElectronics = /phone|tablet|laptop|słuchawki|ładowarka|powerbank|kabel|elektronika/i.test(title);
+    const isFashion = /buty|ubranie|sukienka|koszula|spodnie|but|shoe|dress|shirt/i.test(title);
+    const isHome = /meble|lampa|dywan|poduszka|kuchnia|furniture|home/i.test(title);
+    
+    let shortDescription = `${title}. `;
+    let htmlBullets: string[] = [];
+    
+    if (isElectronics) {
+      shortDescription += 'Nowoczesna technologia w przystępnej cenie.';
+      htmlBullets = [
+        'Nowoczesna technologia w przystępnej cenie',
+        'Łatwa obsługa i szybka konfiguracja',
+        'Sprawdzona jakość wykonania',
+      ];
+    } else if (isFashion) {
+      shortDescription += 'Wygoda i styl w jednym.';
+      htmlBullets = [
+        'Wygoda użytkowania na co dzień',
+        'Uniwersalny design pasujący do wielu stylizacji',
+        'Dobra jakość materiałów',
+      ];
+    } else if (isHome) {
+      shortDescription += 'Funkcjonalne rozwiązanie do Twojego domu.';
+      htmlBullets = [
+        'Praktyczne zastosowanie w codziennym użytkowaniu',
+        'Solidne wykonanie zapewniające długą żywotność',
+        'Łatwy montaż i konserwacja',
+      ];
+    } else {
+      shortDescription += 'Sprawdzona jakość w atrakcyjnej cenie.';
+      htmlBullets = [
+        'Sprawdzona jakość w atrakcyjnej cenie',
+        'Proste w użyciu i konserwacji',
+        'Dobre opinie użytkowników',
+      ];
+    }
+    
+    const htmlContent = '<ul>\n' + htmlBullets.map(b => `<li>${b}</li>`).join('\n') + '\n</ul>';
+    
     return {
-      shortDescription: `${base}.${discountInfo}`.trim(),
-      mediumDescription: `${base}.${discountInfo}`.trim(),
-      keywords: [],
+      shortDescription,
+      htmlContent,
+      marketingTitle,
     };
   }
 }

@@ -89,20 +89,15 @@ export async function fillCategoriesWithDeals() {
             // Fallback zostawia enrichedTitle
           }
 
-          // Generowanie opisu (krótki/średni) i tagów
+          // Generowanie opisu (krótki/HTML) i tytułu marketingowego
           let description = product.description || `Super okazja! ${normalizedTitle} z ${discount}% zniżką!`;
-          let tags: string[] | undefined = undefined;
           try {
             const desc = await aiGenerateDealDescriptionPL({
               title: normalizedTitle,
-              discount,
-              price: typeof product.price === 'number' ? product.price : undefined,
-              originalPrice: typeof product.originalPrice === 'number' ? product.originalPrice : undefined,
-              merchant: product.merchant || 'AliExpress',
+              rawSpecifications: product.attributes ? JSON.stringify(product.attributes) : undefined,
             });
-            // Użyj opisu średniej długości, fallback na krótki jeśli zbyt długi
-            description = (desc.mediumDescription?.length ?? 0) <= 220 ? desc.mediumDescription : (desc.shortDescription || description);
-            tags = (desc.keywords || []).slice(0, 6);
+            // Użyj shortDescription lub fallback
+            description = desc.shortDescription || description;
           } catch (_) {}
 
           // Determine stock status

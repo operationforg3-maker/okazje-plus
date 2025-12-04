@@ -280,19 +280,12 @@ export async function fillSubSubcategoryDeals(params: {
 
         // AI generowanie opisu dla dealu
         let generatedDescription = '';
-        let tags: string[] | undefined = undefined;
         try {
           const descResult = await aiGenerateDealDescriptionPL({
             title: enrichedTitle,
-            discount,
-            price: aliDeal.price || 0,
-            originalPrice: aliDeal.originalPrice || 0,
-            merchant: aliDeal.merchant || 'AliExpress',
+            rawSpecifications: undefined,
           });
-          generatedDescription = (descResult.mediumDescription?.length ?? 0) <= 220 
-            ? descResult.mediumDescription 
-            : (descResult.shortDescription || '');
-          tags = (descResult.keywords || []).slice(0, 6);
+          generatedDescription = descResult.shortDescription || '';
         } catch (e: any) {
           console.error(`[fillSubSubcategoryDeals] AI description generation failed for ${enrichedTitle}:`, e.message);
         }
