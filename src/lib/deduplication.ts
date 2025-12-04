@@ -123,15 +123,16 @@ export async function mergeProducts(
       // Example: keep best price, highest rating, combine galleries
       
       // Best price
-      const bestPrice = Math.min(...products.map(p => p.price));
-      if (bestPrice !== canonical.price) {
+      const bestPrice = Math.min(...products.map(p => typeof p.price === 'number' ? p.price : p.price.amount));
+      const canonicalPrice = typeof canonical.price === 'number' ? canonical.price : canonical.price.amount;
+      if (bestPrice !== canonicalPrice) {
         changes.push({
           field: 'price',
-          before: canonical.price,
+          before: canonicalPrice,
           after: bestPrice,
           source: 'merged',
         });
-        preservedFields.price = bestPrice;
+        preservedFields.price = typeof canonical.price === 'number' ? bestPrice : { ...canonical.price, amount: bestPrice, totalPrice: bestPrice + (canonical.price.shippingCost || 0) };
       }
       
       // Best rating (if significantly better)

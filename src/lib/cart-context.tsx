@@ -17,6 +17,8 @@ import { useAuth } from '@/lib/auth';
 import { Product, SmartPrice } from '@/lib/types';
 import { getPriceAmount, getTotalPrice } from '@/lib/i18n-utils';
 import { logger } from '@/lib/logging';
+import { db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface CartItem {
   product: Product;

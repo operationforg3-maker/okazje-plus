@@ -308,7 +308,9 @@ export const sanitizeProductPayload = (raw: Partial<Product>): Omit<Product, 'id
     translations: raw.translations,
     ratingCard,
     ratingSources,
-    price: ensureNumber(raw.price, 0),
+    price: typeof raw.price === 'number' 
+      ? { amount: raw.price, currency: 'PLN', shippingCost: 0, totalPrice: raw.price, freeShipping: true }
+      : (raw.price || { amount: 0, currency: 'PLN', shippingCost: 0, totalPrice: 0, freeShipping: true }),
     originalPrice: ensureOptionalNumber(raw.originalPrice),
     discountPercent: ensureOptionalNumber(raw.discountPercent),
     shareCount: ensureOptionalNumber(raw.shareCount),
