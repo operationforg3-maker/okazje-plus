@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, Timestamp } from "firebase/firestore";
+import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
+import { requestDealIndexing } from "@/lib/google-indexing";
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,6 +38,29 @@ export async function POST(request: NextRequest) {
       status: newStatus,
       updatedAt: Timestamp.now(),
     });
+
+    // Jeśli to deal i akcja to approval, spróbuj indeksować w Google
+    if (itemType === "deal" && action === "approve") {
+      try {
+        console.log(`[Moderation] Submitting deal ${itemId} to Google Indexing API...`);
+        const indexingResult = await requestDealIndexing(itemId, "URL_UPDATED");
+        console.log(`[Moderation] Google Indexing result:`, indexingResult);
+      } catch (indexingError) {
+        // Nie przerywa moderacji jeśli indexing nie powiódł się
+        console.error(`[Moderation] Warning: Google Indexing failed for deal ${itemId}:`, indexingError);
+      }
+    }
+
+    // Jeśli to deal i akcja to rejection, usuń z indeksu Google
+    if (itemType === "deal" && action === "reject") {
+      try {
+        console.log(`[Moderation] Removing deal ${itemId} from Google Indexing API...`);
+        const indexingResult = await requestDealIndexing(itemId, "URL_DELETED");
+        console.log(`[Moderation] Google Indexing removal result:`, indexingResult);
+      } catch (indexingError) {
+        console.error(`[Moderation] Warning: Google Indexing removal failed for deal ${itemId}:`, indexingError);
+      }
+    }
 
     return NextResponse.json(
       {
