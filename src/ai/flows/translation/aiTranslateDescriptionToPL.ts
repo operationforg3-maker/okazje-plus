@@ -4,8 +4,7 @@
  * Translates product descriptions while preserving technical details and formatting
  */
 
-import { defineFlow, run } from '@genkit-ai/flow';
-import { model } from 'genkit';
+import { defineFlow, run, model } from 'genkit';
 
 export interface TranslateDescriptionRequest {
   descriptionEN: string;

@@ -5,8 +5,7 @@
  * Batch-friendly with configurable rate limiting
  */
 
-import { defineFlow, run } from '@genkit-ai/flow';
-import { model } from 'genkit';
+import { defineFlow, run, model } from 'genkit';
 
 export interface TranslateTitleRequest {
   titleEN: string;
