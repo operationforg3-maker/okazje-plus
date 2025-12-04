@@ -57,14 +57,12 @@ const navStructure: (NavItem | NavGroup)[] = [
       { title: 'Okazje', href: '/admin/deals', icon: Flame },
       { title: 'Produkty', href: '/admin/products', icon: ShoppingCart },
       { title: 'Kategorie', href: '/admin/categories', icon: Layers },
-      { title: 'Forum', href: '/admin/forum', icon: MessageSquare },
     ],
   },
   {
     title: 'Import & Export',
     icon: Upload,
     items: [
-      { title: 'Smart Import', href: '/admin/smart-import', icon: Zap },
       { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
       { title: 'AliExpress', href: '/admin/aliexpress-import', icon: Search },
       { title: 'Bulk Import', href: '/admin/bulk-import', icon: Database },

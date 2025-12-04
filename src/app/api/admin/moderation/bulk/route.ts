@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
         uid: decoded.uid,
         email: decoded.email,
         admin: decoded.admin,
-        role: decoded.role || 'not set'
       });
     } catch (e) {
       console.error('[bulk moderation] Token verify error', e);

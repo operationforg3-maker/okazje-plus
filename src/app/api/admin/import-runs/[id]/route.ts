@@ -16,7 +16,17 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
     const token = authHeader.split('Bearer ')[1];
     const decoded = await adminAuth.verifyIdToken(token);
-    if (decoded.role !== 'admin') {
+    
+    // Verify admin access
+    let userRecord;
+    try {
+      userRecord = await adminAuth.getUser(decoded.uid);
+    } catch (error) {
+      logger.error('Failed to get user record', { error });
+      return NextResponse.json({ error: 'Failed to verify admin status' }, { status: 401 });
+    }
+    
+    if (userRecord.customClaims?.['admin'] !== true) {
       return NextResponse.json({ error: 'Forbidden - admin role required' }, { status: 403 });
     }
 

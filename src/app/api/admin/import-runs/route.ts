@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
 
     const token = authHeader.split('Bearer ')[1];
     const decoded = await adminAuth.verifyIdToken(token);
-    if (decoded.role !== 'admin') {
+    
+    // Verify admin access
+    const userRecord = await adminAuth.getUser(decoded.uid);
+    if (userRecord.customClaims?.['admin'] !== true) {
       return NextResponse.json({ error: 'Forbidden - admin role required' }, { status: 403 });
     }
 

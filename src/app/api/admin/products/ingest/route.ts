@@ -71,10 +71,21 @@ export async function POST(request: NextRequest) {
     }
     
     // 2. Authorization - check admin role
-    if (decodedToken.role !== 'admin') {
+    let userRecord;
+    try {
+      userRecord = await adminAuth.getUser(decodedToken.uid);
+    } catch (error) {
+      logger.error('Failed to get user record', { error });
+      return NextResponse.json(
+        { error: 'Failed to verify admin status' },
+        { status: 401 }
+      );
+    }
+    
+    if (userRecord.customClaims?.['admin'] !== true) {
       logger.warn('Non-admin attempted to access ingest endpoint', {
         uid: decodedToken.uid,
-        role: decodedToken.role,
+        hasAdminClaim: userRecord.customClaims?.['admin'],
       });
       
       return NextResponse.json(
