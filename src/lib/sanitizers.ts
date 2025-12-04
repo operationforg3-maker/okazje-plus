@@ -3,7 +3,7 @@ import type { Deal, Product, ProductImageEntry, ProductRatingCard, ProductRating
 type ProductMetadata = NonNullable<Product['metadata']>;
 type DealMetadata = NonNullable<Deal['metadata']>;
 
-const FALLBACK_IMAGE = '/placeholder.png';
+const FALLBACK_IMAGE = '/icon_okazjeplus.svg'; // Używamy istniejącej ikony jako fallback
 const FALLBACK_URL = '#';
 const FALLBACK_CATEGORY = 'inne';
 const PRODUCT_METADATA_SOURCES: ProductMetadata['source'][] = ['aliexpress', 'manual', 'csv'];

@@ -95,7 +95,7 @@ export default function AliExpressImporter() {
     {
       id: 'ali-1',
       title: 'Wireless Bluetooth Earphones with Charging Case - High Quality Sound',
-      imageUrl: 'https://via.placeholder.com/200',
+      imageUrl: '/icon_okazjeplus.svg',
       price: 89.99,
       originalPrice: 199.99,
       currency: 'PLN',
@@ -108,7 +108,7 @@ export default function AliExpressImporter() {
     {
       id: 'ali-2',
       title: 'Smart Watch with Heart Rate Monitor - Waterproof Fitness Tracker',
-      imageUrl: 'https://via.placeholder.com/200',
+      imageUrl: '/icon_okazjeplus.svg',
       price: 149.99,
       originalPrice: 399.99,
       currency: 'PLN',
@@ -121,7 +121,7 @@ export default function AliExpressImporter() {
     {
       id: 'ali-3',
       title: 'USB-C Fast Charging Cable 2m - Durable Braided Wire',
-      imageUrl: 'https://via.placeholder.com/200',
+      imageUrl: '/icon_okazjeplus.svg',
       price: 19.99,
       originalPrice: 49.99,
       currency: 'PLN',
@@ -171,7 +171,7 @@ export default function AliExpressImporter() {
         const normalized = data.products.map((p: any) => ({
           id: String(p.id || p.productId || p.itemId || p.sku || Math.random()),
           title: p.title || p.name || p.productName || p.itemTitle || '',
-          imageUrl: p.imageUrl || p.image || p.thumbnail || 'https://via.placeholder.com/200',
+          imageUrl: p.imageUrl || p.image || p.thumbnail || '/icon_okazjeplus.svg',
           price: p.price || p.salePrice || p.currentPrice || 0,
           originalPrice: p.originalPrice || p.listPrice || p.marketPrice || p.price || 0,
           currency: p.currency || 'PLN',

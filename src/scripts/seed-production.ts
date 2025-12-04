@@ -135,7 +135,7 @@ const COMMENT_TEMPLATES_NEUTRAL = [
   'Ktoś ma doświadczenie z tym produktem?',
 ];
 
-const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/500x500/cccccc/999999?text=Deal';
+const PLACEHOLDER_IMAGE = '/icon_okazjeplus.svg'; // Fallback do lokalnej ikony
 
 const DEAL_SOURCES: Array<'manual' | 'aliexpress' | 'reddit'> = ['manual', 'aliexpress', 'reddit'];
 

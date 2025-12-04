@@ -70,17 +70,27 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   const loadCart = async () => {
     try {
       if (user) {
-        // TODO: Load from Firestore user_carts/{userId}
-        // For now, fallback to localStorage
-        logger.info('Loading cart from Firestore (TODO: implement)');
+        // Load from Firestore for logged-in users
+        try {
+          const cartDoc = await getDoc(doc(db, 'user_carts', user.uid));
+          if (cartDoc.exists()) {
+            const cartData = cartDoc.data();
+            const firestoreItems = (cartData.items || []) as CartItem[];
+            setItems(firestoreItems);
+            logger.info(`Loaded ${firestoreItems.length} items from Firestore cart`);
+            return;
+          }
+        } catch (firestoreError) {
+          logger.warn('Failed to load from Firestore, falling back to localStorage', { error: firestoreError });
+        }
       }
       
-      // Load from localStorage
+      // Load from localStorage (guests or fallback)
       const stored = localStorage.getItem(CART_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as CartItem[];
         setItems(parsed);
-        logger.info(`Loaded ${parsed.length} items from cart`);
+        logger.info(`Loaded ${parsed.length} items from localStorage cart`);
       }
     } catch (error) {
       logger.error('Failed to load cart', { error });
@@ -94,12 +104,20 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    */
   const saveCart = async () => {
     try {
-      // Save to localStorage
+      // Save to localStorage (always, for guests and backup)
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
       
       if (user) {
-        // TODO: Save to Firestore user_carts/{userId}
-        logger.info('Saving cart to Firestore (TODO: implement)');
+        // Save to Firestore for logged-in users
+        try {
+          await setDoc(doc(db, 'user_carts', user.uid), {
+            items,
+            updatedAt: new Date().toISOString(),
+          });
+          logger.info(`Saved ${items.length} items to Firestore cart`);
+        } catch (firestoreError) {
+          logger.warn('Failed to save to Firestore, localStorage backup exists', { error: firestoreError });
+        }
       }
     } catch (error) {
       logger.error('Failed to save cart', { error });
