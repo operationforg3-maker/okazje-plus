@@ -146,7 +146,7 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
     // Import function
     const importFunc = type === 'products' 
       ? (await import('@/ai/flows/fillSubSubcategoryProducts')).fillSubSubcategoryProducts
-      : null; // TODO: create fillSubSubcategoryDeals
+      : (await import('@/ai/flows/fillSubSubcategoryDeals')).fillSubSubcategoryDeals;
 
     if (!importFunc) {
       throw new Error(`Import function not available for type: ${type}`);
@@ -181,18 +181,22 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
         const result = await importFunc({
           ...batch,
           preferredCurrency,
-          maxProducts: maxItemsPerSubcategory,
+          maxProducts: type === 'products' ? maxItemsPerSubcategory : undefined,
+          maxDeals: type === 'deals' ? maxItemsPerSubcategory : undefined,
           jobId, // Pass jobId for tracking
         });
 
         // Log success
+        const itemsAddedKey = type === 'products' ? 'productsAdded' : 'dealsAdded';
+        const itemsUpdatedKey = type === 'products' ? 'productsUpdated' : 'dealsUpdated';
+        
         const logEntry = {
           timestamp: new Date().toISOString(),
           batchIndex: i,
           subcategory: `${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`,
           status: 'success',
-          itemsAdded: result.productsAdded || 0,
-          itemsUpdated: result.productsUpdated || 0,
+          itemsAdded: result[itemsAddedKey] || 0,
+          itemsUpdated: result[itemsUpdatedKey] || 0,
         };
 
         await jobRef.update({
@@ -202,7 +206,7 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
           updatedAt: new Date().toISOString(),
         });
 
-        console.log(`[Import Processor] [${i + 1}/${batches.length}] ✓ Success: ${result.productsAdded} added, ${result.productsUpdated} updated`);
+        console.log(`[Import Processor] [${i + 1}/${batches.length}] ✓ Success: ${result[itemsAddedKey]} added, ${result[itemsUpdatedKey]} updated`);
       } catch (e: any) {
         console.error(`[Import Processor] [${i + 1}/${batches.length}] ✗ Error:`, e.message);
 
