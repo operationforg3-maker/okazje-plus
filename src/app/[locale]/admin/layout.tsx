@@ -61,6 +61,7 @@ const pathNames: Record<string, string> = {
   '/admin/moderation': 'Moderacja',
   '/admin/imports/aliexpress': 'Import AliExpress',
   '/admin/bulk-import': 'Bulk AI Import',
+  '/admin/batch-import': 'Batch Import Kategorii',
   '/admin/ai-tools': 'AI Tools',
   '/admin/analytics': 'Analityka',
   '/admin/stats': 'Statystyki',
@@ -244,6 +245,14 @@ export default function AdminLayout({
                             <Link href="/admin/bulk-import">
                               <Sparkles className="h-4 w-4" />
                               <span>Bulk AI Import</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild isActive={isActive('/admin/batch-import')}>
+                            <Link href="/admin/batch-import">
+                              <Zap className="h-4 w-4" />
+                              <span>Batch Import 5-Stage</span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
