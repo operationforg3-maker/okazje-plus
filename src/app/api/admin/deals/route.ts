@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Timestamp } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebase-admin';
 import { z } from 'zod';
-import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { enrichDeal } from '@/ai/deal-enricher';
 
 // Schemat walidacji danych okazji (minimum dla draftu)
 const dealSchema = z.object({
@@ -59,18 +59,51 @@ export async function POST(request: NextRequest) {
 
     const data = parsed.data;
 
-    // AI Enhancement (opcjonalne - tylko jeśli useAI=true)
+    // AI Enhancement (opcjonalne - tylko jeśli useAI=true lub enrichFullPipeline=true)
     let normalizedTitle = data.title;
+    let enrichmentData: any = {};
     let usedAI = false;
-    if (raw.useAI === true) {
+
+    if (raw.useAI === true || raw.enrichFullPipeline === true) {
       try {
-        console.log('[POST /api/admin/deals] 🤖 Running AI title normalization...');
-        const titleResult = await aiNormalizeTitlePL({ rawTitle: data.title });
-        normalizedTitle = titleResult;
-        usedAI = true;
-        console.log('[POST /api/admin/deals] ✅ AI normalized title:', normalizedTitle);
+        if (raw.enrichFullPipeline === true) {
+          // Full AI enrichment pipeline (KROK 3)
+          console.log('[POST /api/admin/deals] 🤖 Running full deal enrichment pipeline...');
+          const enriched = await enrichDeal({
+            title: data.title,
+            price: data.price,
+            originalPrice: data.originalPrice,
+            merchant: data.merchant,
+            mainCategorySlug: data.mainCategorySlug,
+            subCategorySlug: data.subCategorySlug,
+          });
+          
+          normalizedTitle = enriched.normalizedTitle;
+          enrichmentData = {
+            enrichedDescription: enriched.seoDescription,
+            enrichedKeywords: enriched.seoKeywords,
+            metaTitle: enriched.metaTitle,
+            metaDescription: enriched.metaDescription,
+            qualityScore: enriched.qualityScore,
+            qualityRecommendation: enriched.qualityRecommendation,
+            enrichedAt: enriched.enrichedAt,
+          };
+          usedAI = true;
+          console.log('[POST /api/admin/deals] ✅ Full enrichment complete, quality score:', enriched.qualityScore);
+        } else {
+          // Legacy: only title normalization
+          console.log('[POST /api/admin/deals] 🤖 Running AI title normalization...');
+          const titleResult = await enrichDeal({
+            title: data.title,
+            price: data.price,
+            originalPrice: data.originalPrice,
+          }).then(r => r.normalizedTitle);
+          normalizedTitle = titleResult;
+          usedAI = true;
+          console.log('[POST /api/admin/deals] ✅ AI normalized title:', normalizedTitle);
+        }
       } catch (aiError) {
-        console.error('[POST /api/admin/deals] ⚠️ AI normalization failed:', aiError);
+        console.error('[POST /api/admin/deals] ⚠️ AI enrichment failed:', aiError);
         // Kontynuuj z oryginalnym tytułem
       }
     }
@@ -82,6 +115,7 @@ export async function POST(request: NextRequest) {
     const dealDoc = {
       ...data,
       title: normalizedTitle, // Użyj znormalizowanego tytułu jeśli AI było użyte
+      ...enrichmentData, // Include enrichment results if available
       ...baseDraftFields(),
       imageHint: normalizedTitle,
       category: data.mainCategorySlug, // kompatybilność legacy
@@ -92,7 +126,7 @@ export async function POST(request: NextRequest) {
       updatedAt: Timestamp.now(),
       // Denormalizacja rabatu jeżeli dostępna cena oryginalna
       discountPercent: data.originalPrice ? Math.round(((data.originalPrice - data.price) / data.originalPrice) * 100) : undefined,
-      source: dealSource,
+      source: usedAI ? (raw.enrichFullPipeline === true ? 'enricher' : 'ai') : (raw.source || 'api'),
     };
 
     console.log('[POST /api/admin/deals] Final doc to save:', JSON.stringify(dealDoc, null, 2));
