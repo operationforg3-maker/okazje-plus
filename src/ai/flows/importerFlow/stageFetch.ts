@@ -13,7 +13,7 @@ import { AliExpressProduct, ImportStageConfig } from './types';
 export async function fetchProductsFromAliexpress(
   keywords: string[], // English keywords: ['Electronics', 'Smartphones', etc]
   config: ImportStageConfig,
-  siteUrl: string = 'http://localhost:9002'
+  siteUrl: string = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:9002'
 ): Promise<AliExpressProduct[]> {
   console.log(`[Importer:Fetch] Starting fetch stage for keywords: ${keywords.join(' -> ')}`);
   

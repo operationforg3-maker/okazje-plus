@@ -156,17 +156,17 @@ export async function saveProductsToFirestore(
       if (finalConfig.jobId && (created.length > 0 || updated.length > 0)) {
         try {
           const jobRef = adminDb.collection('import_jobs').doc(finalConfig.jobId);
-          const updates: any = {};
           
-          if (created.length > 0) {
-            updates.itemsCreated = FieldValue.arrayUnion(...created);
+          // Add items individually to avoid Firestore batch operation limits
+          for (const id of created) {
+            await jobRef.update({
+              itemsCreated: FieldValue.arrayUnion(id)
+            });
           }
-          if (updated.length > 0) {
-            updates.itemsUpdated = FieldValue.arrayUnion(...updated);
-          }
-          
-          if (Object.keys(updates).length > 0) {
-            await jobRef.update(updates);
+          for (const id of updated) {
+            await jobRef.update({
+              itemsUpdated: FieldValue.arrayUnion(id)
+            });
           }
         } catch (e: any) {
           console.warn(`[Importer:Save] Failed to update job tracking:`, e.message);

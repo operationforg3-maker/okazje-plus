@@ -185,15 +185,16 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
       console.log(`[Import Processor] [${i + 1}/${batches.length}] Processing: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
 
       try {
-        // Generate search keywords from category names
+        // Generate search keywords from ENGLISH category slugs (not Polish names!)
+        // AliExpress API expects English keywords like 'electronics', 'smartphones', etc.
         const keywords = [
-          batch.categoryName,
-          batch.subcategoryName,
-          batch.subsubcategoryName,
-          `${batch.categoryName} ${batch.subcategoryName}`,
-          `${batch.subcategoryName} bestseller`,
-          `${batch.categoryName} sale`,
-        ].filter(k => k && k !== batch.subsubcategoryName);
+          batch.categorySlug,
+          batch.subcategorySlug,
+          batch.subsubcategorySlug,
+          `${batch.subcategorySlug} ${batch.categorySlug}`,
+          `${batch.subcategorySlug} popular`,
+          `${batch.subcategorySlug} bestseller`,
+        ].filter(k => k && k !== batch.subsubcategorySlug);
 
         // Run 5-stage pipeline
         const pipelineResult = await runProductImportPipeline({

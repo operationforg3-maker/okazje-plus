@@ -6,7 +6,7 @@
  */
 
 import { defineFlow, run } from '@genkit-ai/flow';
-import { openai } from '@genkit-ai/openai';
+import { model } from 'genkit';
 
 export interface TranslateTitleRequest {
   titleEN: string;
@@ -59,12 +59,14 @@ export const aiTranslateTitleToPL = defineFlow(
     const prompt = buildTranslationPrompt(titleEN, categoryEN, subcategoryEN, context);
 
     try {
-      // Call Claude for translation
+      // Call Gemini for translation via Vertex AI
       const response = await run('translate-title', async () => {
-        const result = await openai.generateText({
+        const result = await model('vertexai/gemini-2.0-flash-exp').generate({
           prompt,
-          temperature: 0.3, // Low temperature for consistency
-          maxOutputTokens: 150,
+          config: {
+            temperature: 0.3, // Low temperature for consistency
+            maxOutputTokens: 150,
+          },
         });
         return result;
       });

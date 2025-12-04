@@ -5,7 +5,9 @@
  */
 
 import { AliExpressProduct, EnrichedProduct, ImportStageConfig } from './types';
-import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+
+// TODO: Create aiNormalizeTitleEN function for AI title normalization
+// For now, use raw AliExpress titles - normalization happens in translation stage
 
 export interface EnrichConfig extends ImportStageConfig {
   currencyTarget: 'USD' | 'PLN';
@@ -48,14 +50,10 @@ export async function enrichProducts(
     try {
       console.log(`[Importer:Enrich] [${i + 1}/${products.length}] Processing: ${product.title.slice(0, 60)}...`);
       
-      // Normalize title (AI)
+      // Use raw title from AliExpress
+      // Title normalization and translation happens in Stage 4 (Translate)
       let titleNormalizedEN = product.title;
-      try {
-        titleNormalizedEN = await aiNormalizeTitlePL({ rawTitle: product.title });
-        console.log(`  ✓ Title normalized: "${product.title.slice(0, 40)}..." → "${titleNormalizedEN.slice(0, 40)}..."`);
-      } catch (e: any) {
-        console.warn(`  ⚠️ Title normalization failed: ${e.message}`);
-      }
+      console.log(`  → Title: "${product.title.slice(0, 60)}..."`);
       
       // Currency conversion
       let priceUSD = product.price;

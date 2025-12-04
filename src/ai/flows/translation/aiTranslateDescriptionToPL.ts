@@ -5,7 +5,7 @@
  */
 
 import { defineFlow, run } from '@genkit-ai/flow';
-import { openai } from '@genkit-ai/openai';
+import { model } from 'genkit';
 
 export interface TranslateDescriptionRequest {
   descriptionEN: string;
@@ -53,10 +53,12 @@ export const aiTranslateDescriptionToPL = defineFlow(
 
     try {
       const response = await run('translate-description', async () => {
-        const result = await openai.generateText({
+        const result = await model('vertexai/gemini-2.0-flash-exp').generate({
           prompt,
-          temperature: 0.4,
-          maxOutputTokens: 500,
+          config: {
+            temperature: 0.4,
+            maxOutputTokens: 500,
+          },
         });
         return result;
       });
