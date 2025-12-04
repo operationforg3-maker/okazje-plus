@@ -1,0 +1,107 @@
+/**
+ * Stage 2: DEDUPE - usuń duplikaty i niechciane produkty
+ * 
+ * Deduplikuje po ID i URL, filtruje po cenie/ratingu
+ */
+
+import { AliExpressProduct, ImportStageConfig } from './types';
+
+export interface DedupeConfig extends ImportStageConfig {
+  minPrice?: number; // Filter out suspiciously cheap items
+  maxPrice?: number;
+  minRating?: number; // 0-5
+  minOrders?: number; // Popularity threshold
+}
+
+export async function deduplicateProducts(
+  products: AliExpressProduct[],
+  config: DedupeConfig = {
+    name: 'dedupe',
+    batchSize: 50,
+    delayBetweenItems: 0,
+    delayBetweenBatches: 100,
+    maxRetries: 1,
+    minRating: 2.5,
+    minOrders: 10,
+  }
+): Promise<AliExpressProduct[]> {
+  console.log(`[Importer:Dedupe] Starting with ${products.length} products`);
+  
+  const seenIds = new Set<string>();
+  const seenLinks = new Set<string>();
+  const filtered: AliExpressProduct[] = [];
+  
+  let filtered_price = 0;
+  let filtered_rating = 0;
+  let filtered_orders = 0;
+  let filtered_duplicate = 0;
+  
+  for (const product of products) {
+    // Check for duplicate ID or link
+    if (seenIds.has(product.id) || seenLinks.has(product.link)) {
+      filtered_duplicate++;
+      continue;
+    }
+    
+    // Price filter
+    if (config.minPrice && product.price < config.minPrice) {
+      filtered_price++;
+      continue;
+    }
+    if (config.maxPrice && product.price > config.maxPrice) {
+      filtered_price++;
+      continue;
+    }
+    
+    // Rating filter
+    if (config.minRating !== undefined && product.rating && product.rating < config.minRating) {
+      filtered_rating++;
+      continue;
+    }
+    
+    // Popularity filter (orders/volume)
+    if (config.minOrders !== undefined && product.orders && product.orders < config.minOrders) {
+      filtered_orders++;
+      continue;
+    }
+    
+    // All checks passed
+    seenIds.add(product.id);
+    seenLinks.add(product.link);
+    filtered.push(product);
+  }
+  
+  console.log(`[Importer:Dedupe] Results:`);
+  console.log(`  - Kept: ${filtered.length}`);
+  console.log(`  - Filtered (duplicate): ${filtered_duplicate}`);
+  console.log(`  - Filtered (price): ${filtered_price}`);
+  console.log(`  - Filtered (rating): ${filtered_rating}`);
+  console.log(`  - Filtered (orders): ${filtered_orders}`);
+  
+  return filtered;
+}
+
+/**
+ * Remove obviously broken/spam products
+ */
+export function sanitizeProducts(products: AliExpressProduct[]): AliExpressProduct[] {
+  return products.filter(p => {
+    // Must have title and link
+    if (!p.title || !p.link || p.link === '#') return false;
+    
+    // Must have image
+    if (!p.image) return false;
+    
+    // Must have reasonable price
+    if (p.price <= 0 || p.price > 10000) return false;
+    
+    // Filter obvious spam in title
+    const spam_keywords = ['free', 'gift', 'bonus', 'click here', 'download'];
+    const titleLower = p.title.toLowerCase();
+    if (spam_keywords.some(keyword => titleLower.includes(keyword))) {
+      return false;
+    }
+    
+    return true;
+  });
+}

@@ -120,12 +120,13 @@ export async function POST(req: NextRequest) {
 
 /**
  * Background processor - przetwórz job batch po batchu
+ * Używa nowego 5-etapowego systemu: Fetch → Dedupe → Enrich → Translate → Save
  */
 export async function processImportJob(jobId: string, type: 'products' | 'deals', maxItemsPerSubcategory: number) {
   const jobRef = adminDb.collection('import_jobs').doc(jobId);
   
   try {
-    console.log(`[Import Processor] Starting job ${jobId}`);
+    console.log(`[Import Processor] Starting job ${jobId} (type: ${type})`);
     
     // Update status to running
     await jobRef.update({
@@ -143,14 +144,29 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
 
     console.log(`[Import Processor] Processing ${batches.length} batches, starting from index ${currentIndex}`);
 
-    // Import function
-    const importFunc = type === 'products' 
-      ? (await import('@/ai/flows/fillSubSubcategoryProducts')).fillSubSubcategoryProducts
-      : (await import('@/ai/flows/fillSubSubcategoryDeals')).fillSubSubcategoryDeals;
+    // Get currency rate preference
+    let currencyRate = 4.0; // Default USD to PLN rate
+    try {
+      const configDoc = await adminDb.collection('config').doc('importSettings').get();
+      if (configDoc.exists) {
+        currencyRate = configDoc.data()?.currencyRate || 4.0;
+      }
+    } catch (_) {}
 
-    if (!importFunc) {
-      throw new Error(`Import function not available for type: ${type}`);
+    // Importuj tylko dla produktów (deals będą później)
+    if (type !== 'products') {
+      console.log(`[Import Processor] Skipping type "${type}" - use new modular system manually`);
+      await jobRef.update({
+        status: 'completed',
+        'progress.completed': batches.length,
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      return;
     }
+
+    // Import 5-stage pipeline
+    const { runProductImportPipeline } = await import('@/ai/flows/importerFlow');
 
     for (let i = currentIndex; i < batches.length; i++) {
       // Check if paused
@@ -169,34 +185,49 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
       console.log(`[Import Processor] [${i + 1}/${batches.length}] Processing: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
 
       try {
-        // Get currency preference
-        let preferredCurrency = 'USD';
-        try {
-          const currencyDoc = await adminDb.collection('config').doc('currencyPreference').get();
-          if (currencyDoc.exists) {
-            preferredCurrency = currencyDoc.data()?.currency || 'USD';
-          }
-        } catch (_) {}
+        // Generate search keywords from category names
+        const keywords = [
+          batch.categoryName,
+          batch.subcategoryName,
+          batch.subsubcategoryName,
+          `${batch.categoryName} ${batch.subcategoryName}`,
+          `${batch.subcategoryName} bestseller`,
+          `${batch.categoryName} sale`,
+        ].filter(k => k && k !== batch.subsubcategoryName);
 
-        const result = await importFunc({
-          ...batch,
-          preferredCurrency,
-          maxProducts: type === 'products' ? maxItemsPerSubcategory : undefined,
-          maxDeals: type === 'deals' ? maxItemsPerSubcategory : undefined,
-          jobId, // Pass jobId for tracking
+        // Run 5-stage pipeline
+        const pipelineResult = await runProductImportPipeline({
+          jobId,
+          keywords,
+          maxProducts: maxItemsPerSubcategory,
+          categoryPath: [batch.categoryName, batch.subcategoryName, batch.subsubcategoryName],
+          categorySlugEN: batch.categorySlug,
+          subcategorySlugEN: batch.subcategorySlug,
+          subsubcategorySlugEN: batch.subsubcategorySlug,
+          translateToPolish: true,
+          currencyRate,
+          fetch: { batchSize: 50, delayBetweenItems: 200, delayBetweenBatches: 1000 },
+          dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
+          enrich: { batchSize: 5, delayBetweenItems: 300, delayBetweenBatches: 2000 },
+          translate: { batchSize: 10, delayBetweenItems: 50, delayBetweenBatches: 300 },
+          save: { batchSize: 5, skipExisting: true },
         });
 
-        // Log success
-        const itemsAddedKey = type === 'products' ? 'productsAdded' : 'dealsAdded';
-        const itemsUpdatedKey = type === 'products' ? 'productsUpdated' : 'dealsUpdated';
-        
         const logEntry = {
           timestamp: new Date().toISOString(),
           batchIndex: i,
           subcategory: `${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`,
           status: 'success',
-          itemsAdded: result[itemsAddedKey] || 0,
-          itemsUpdated: result[itemsUpdatedKey] || 0,
+          stages: {
+            fetched: pipelineResult.fetched.length,
+            deduplicated: pipelineResult.deduplicated.length,
+            enriched: pipelineResult.enriched.length,
+            translated: pipelineResult.translated.length,
+            saved: pipelineResult.saved.created.length + pipelineResult.saved.updated.length,
+          },
+          itemsAdded: pipelineResult.saved.created.length,
+          itemsUpdated: pipelineResult.saved.updated.length,
+          timeMs: pipelineResult.totalTime,
         };
 
         await jobRef.update({
@@ -206,7 +237,7 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
           updatedAt: new Date().toISOString(),
         });
 
-        console.log(`[Import Processor] [${i + 1}/${batches.length}] ✓ Success: ${result[itemsAddedKey]} added, ${result[itemsUpdatedKey]} updated`);
+        console.log(`[Import Processor] [${i + 1}/${batches.length}] ✓ Pipeline completed in ${(pipelineResult.totalTime / 1000).toFixed(1)}s: ${pipelineResult.saved.created.length} created, ${pipelineResult.saved.updated.length} updated`);
       } catch (e: any) {
         console.error(`[Import Processor] [${i + 1}/${batches.length}] ✗ Error:`, e.message);
 
@@ -226,8 +257,8 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
         });
       }
 
-      // Sleep 2s between batches to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Sleep 3s between batches to avoid rate limits and accumulate token time
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     // Mark as completed

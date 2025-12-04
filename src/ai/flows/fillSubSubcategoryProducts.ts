@@ -27,6 +27,11 @@ async function fetchProductsForCategory(categoryName: string, count: number = 5)
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[fetchProductsForCategory] API error (${response.status}):`, errorText);
+      
+      // If 503 (not configured), log specific error
+      if (response.status === 503) {
+        console.error(`[fetchProductsForCategory] AliExpress API not configured - check environment variables`);
+      }
       return [];
     }
     
@@ -107,18 +112,23 @@ async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promi
   // Translate Polish categories to English for AliExpress API
   const translatedPath = categoryPath.map(translateToEnglish);
   const base = translatedPath.join(' ');
+  const originalBase = categoryPath.join(' ');
   
-  const queries = [
+  // Try English queries first
+  let queries = [
     base, // neutralne zapytanie
     `${base} best seller`, // bestseller
     `${base} popular`, // popularne
     `${base} sale`, // promocja
   ];
-  console.log(`[fetchMultiQuery] Original: "${categoryPath.join(' ')}"`);
-  console.log(`[fetchMultiQuery] Translated: "${base}"`);
-  console.log(`[fetchMultiQuery] Running ${queries.length} queries`);
+  
+  console.log(`[fetchMultiQuery] Original (PL): "${originalBase}"`);
+  console.log(`[fetchMultiQuery] Translated (EN): "${base}"`);
+  console.log(`[fetchMultiQuery] Running ${queries.length} English queries`);
+  
   const seen = new Set<string>();
   const merged: any[] = [];
+  
   for (const q of queries) {
     const list = await fetchProductsForCategory(q, baseLimit);
     console.log(`[fetchMultiQuery] Query "${q}" returned ${list.length} products`);
@@ -131,6 +141,36 @@ async function fetchMultiQuery(categoryPath: string[], baseLimit: number): Promi
       merged.push(p);
     }
   }
+  
+  console.log(`[fetchMultiQuery] After English queries: ${merged.length} unique products`);
+  
+  // Fallback: If English queries returned nothing, try Polish keywords as well
+  if (merged.length === 0) {
+    console.warn(`[fetchMultiQuery] ⚠️ English queries returned 0 products. Trying Polish keywords as fallback...`);
+    
+    const fallbackQueries = [
+      originalBase,
+      `${originalBase} bestseller`,
+      `${originalBase} promocja`,
+      `${originalBase} popularne`,
+    ];
+    
+    for (const q of fallbackQueries) {
+      const list = await fetchProductsForCategory(q, baseLimit);
+      console.log(`[fetchMultiQuery] Fallback query "${q}" returned ${list.length} products`);
+      for (const p of list) {
+        const originalId = p.id || p.itemId || p.item_id || p.productId || '';
+        const affiliateUrl = p.link || p.productUrl || p.url || '';
+        const key = originalId || affiliateUrl;
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        merged.push(p);
+      }
+    }
+    
+    console.log(`[fetchMultiQuery] After Polish fallback: ${merged.length} unique products`);
+  }
+  
   console.log(`[fetchMultiQuery] Total unique products: ${merged.length}`);
   merged.sort((a, b) => {
     const popularityA = (a.orders || 0) * (a.rating || 0);

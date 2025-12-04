@@ -404,6 +404,10 @@ export interface ProductImportMetadata {
   brand?: string; // Marka produktu
   rawDataStored?: boolean;
   
+  // Currency conversion metadata
+  currencyRate?: number; // USD to target currency exchange rate (e.g., 4.0 for PLN)
+  qualityScore?: number; // 0-100 overall quality score
+  
   // Advanced API fields
   promotionId?: string;
   commissionRate?: number; // Prowizja dla afiliacji (0-100)
