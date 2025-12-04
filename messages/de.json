@@ -110,6 +110,63 @@
     "bulkImport": "Massenimport",
     "moderation": "Moderation"
   },
+  "adminImports": {
+    "title": "Produktimporte",
+    "subtitle": "Importe starten, überwachen und Historie (AliExpress / Allegro)",
+    "loading": "Laden…",
+    "accessDenied": "Admin-Berechtigungen erforderlich.",
+    "errors": {
+      "profileRequired": "Gib die profileId für den Import an",
+      "loadRuns": "Importliste konnte nicht geladen werden",
+      "loadRunDetail": "Importdetails konnten nicht geladen werden",
+      "startImport": "Import konnte nicht gestartet werden"
+    },
+    "startCard": {
+      "title": "Import starten",
+      "description": "Gib die Import-Profil-ID ein. Nutze Dry-Run, um ohne Speicherung zu testen.",
+      "profileLabel": "Profile ID",
+      "profilePlaceholder": "z.B. abc123",
+      "maxLabel": "Max. Produkte (optional)",
+      "maxPlaceholder": "z.B. 20",
+      "modeLabel": "Modus",
+      "dryRun": "Dry-Run",
+      "real": "Echt",
+      "start": "Import starten",
+      "refresh": "Liste aktualisieren"
+    },
+    "listCard": {
+      "title": "Import-Läufe",
+      "description": "Letzte Läufe (Limit {limit})",
+      "empty": "Noch keine Importe.",
+      "loading": "Importe werden geladen…"
+    },
+    "details": {
+      "title": "Import-Details",
+      "runId": "Run ID",
+      "profileVendor": "Profil / Anbieter",
+      "status": "Status",
+      "time": "Zeit",
+      "errorsTitle": "Fehler",
+      "item": "Element",
+      "noData": "—",
+      "stats": {
+        "fetched": "Abgerufen",
+        "created": "Erstellt",
+        "updated": "Aktualisiert",
+        "skipped": "Übersprungen",
+        "errors": "Fehler",
+        "duplicates": "Duplikate"
+      }
+    },
+    "statusMap": {
+      "pending": "Ausstehend",
+      "running": "Läuft",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "cancelled": "Abgebrochen"
+    },
+    "dryRunSuffix": " · dry-run"
+  },
   "footer": {
     "about": "Über uns",
     "contact": "Kontakt",

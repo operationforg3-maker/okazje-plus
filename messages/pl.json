@@ -110,6 +110,63 @@
     "bulkImport": "Import masowy",
     "moderation": "Moderacja"
   },
+  "adminImports": {
+    "title": "Importy produktów",
+    "subtitle": "Start, monitorowanie i historia importów (AliExpress / Allegro)",
+    "loading": "Ładowanie…",
+    "accessDenied": "Potrzebne uprawnienia administratora.",
+    "errors": {
+      "profileRequired": "Podaj profileId importu",
+      "loadRuns": "Nie udało się pobrać listy importów",
+      "loadRunDetail": "Nie udało się pobrać szczegółów importu",
+      "startImport": "Nie udało się uruchomić importu"
+    },
+    "startCard": {
+      "title": "Uruchom import",
+      "description": "Podaj ID profilu importu. Włącz dry-run, aby przetestować bez zapisu.",
+      "profileLabel": "Profile ID",
+      "profilePlaceholder": "np. abc123",
+      "maxLabel": "Maks. produktów (opcjonalnie)",
+      "maxPlaceholder": "np. 20",
+      "modeLabel": "Tryb",
+      "dryRun": "Dry-run",
+      "real": "Real",
+      "start": "Start importu",
+      "refresh": "Odśwież listę"
+    },
+    "listCard": {
+      "title": "Lista importów",
+      "description": "Ostatnie uruchomienia (limit {limit})",
+      "empty": "Brak importów.",
+      "loading": "Ładowanie importów…"
+    },
+    "details": {
+      "title": "Szczegóły importu",
+      "runId": "Run ID",
+      "profileVendor": "Profil / Vendor",
+      "status": "Status",
+      "time": "Czas",
+      "errorsTitle": "Błędy",
+      "item": "Element",
+      "noData": "—",
+      "stats": {
+        "fetched": "Pobrane",
+        "created": "Utworzone",
+        "updated": "Zaktualizowane",
+        "skipped": "Pominięte",
+        "errors": "Błędy",
+        "duplicates": "Duplikaty"
+      }
+    },
+    "statusMap": {
+      "pending": "Oczekuje",
+      "running": "W toku",
+      "completed": "Zakończony",
+      "failed": "Błąd",
+      "cancelled": "Anulowany"
+    },
+    "dryRunSuffix": " · dry-run"
+  },
   "footer": {
     "about": "O nas",
     "contact": "Kontakt",

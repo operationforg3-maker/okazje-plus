@@ -75,7 +75,16 @@ export function Navbar() {
         
         {/* Desktop Nav */}
         <Link href={`${prefix}/`} className="mr-6 flex items-center space-x-2">
-          <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-8 md:h-9 lg:h-10" />
+          <img
+            src="/icon_okazjeplus.svg"
+            alt="Okazje+"
+            className="h-9 w-9 flex-shrink-0 md:hidden"
+          />
+          <img
+            src="/Logotyp_okazjeplus.svg"
+            alt="Okazje+"
+            className="hidden h-8 flex-shrink-0 md:block md:h-9 lg:h-10"
+          />
         </Link>
         
         <NavigationMenu className="hidden md:flex">

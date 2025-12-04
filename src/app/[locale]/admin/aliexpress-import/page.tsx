@@ -17,6 +17,43 @@ import { db, auth } from '@/lib/firebase';
 import { Category } from '@/lib/types';
 import { convertToPLN } from '@/lib/currency';
 import { useAuth } from '@/lib/auth';
+import { useLocale, useFormatter } from 'next-intl';
+
+const translations = {
+  pl: {
+    results: 'Wyniki',
+    selected: 'zaznaczonych',
+    selectAll: 'Zaznacz wszystkie',
+    deselectAll: 'Odznacz wszystkie',
+    orders: 'zamówień',
+    viewAli: 'Zobacz na AliExpress',
+    category: 'Kategoria',
+    subcategory: 'Podkategoria',
+    choose: 'Wybierz...'
+  },
+  en: {
+    results: 'Results',
+    selected: 'selected',
+    selectAll: 'Select all',
+    deselectAll: 'Deselect all',
+    orders: 'orders',
+    viewAli: 'View on AliExpress',
+    category: 'Category',
+    subcategory: 'Subcategory',
+    choose: 'Choose...'
+  },
+  de: {
+    results: 'Ergebnisse',
+    selected: 'ausgewählt',
+    selectAll: 'Alle auswählen',
+    deselectAll: 'Auswahl aufheben',
+    orders: 'Bestellungen',
+    viewAli: 'Auf AliExpress ansehen',
+    category: 'Kategorie',
+    subcategory: 'Unterkategorie',
+    choose: 'Wähle...'
+  }
+} as const;
 
 interface AliProduct {
   id: string;
@@ -34,6 +71,9 @@ interface AliProduct {
 function AliExpressImportPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const locale = useLocale();
+  const format = useFormatter();
+  const copy = translations[(locale as keyof typeof translations) || 'pl'] || translations.pl;
   const [searchQuery, setSearchQuery] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -49,6 +89,11 @@ function AliExpressImportPage() {
   const [details, setDetails] = useState<Record<string, any>>({});
   const [fieldSelection, setFieldSelection] = useState<Record<string, { title: boolean; description: boolean; images: boolean; price: boolean; rating: boolean }>>({});
   const [aiTestLoading, setAiTestLoading] = useState(false);
+
+  const formatPrice = (amount: number, currency: string = 'PLN') =>
+    format.number(amount, { style: 'currency', currency });
+
+  const formatNumber = (value?: number) => format.number(value ?? 0);
 
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
   const categories: Category[] = categoriesSnapshot?.docs.map(d => ({ id: d.id, ...d.data() } as Category)) || [];
@@ -610,11 +655,11 @@ function AliExpressImportPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Wyniki ({results.length})</CardTitle>
-                  <CardDescription>{selected.size} zaznaczonych</CardDescription>
+                  <CardTitle>{copy.results} ({results.length})</CardTitle>
+                  <CardDescription>{selected.size} {copy.selected}</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={toggleSelectAll}>
-                  {selected.size === results.length ? 'Odznacz' : 'Zaznacz'} wszystkie
+                  {selected.size === results.length ? copy.deselectAll : copy.selectAll}
                 </Button>
               </div>
             </CardHeader>
@@ -640,27 +685,27 @@ function AliExpressImportPage() {
                                 <span>{product.rating}</span>
                               </div>
                             )}
-                            {product.orders && <span>{product.orders.toLocaleString()} zamówień</span>}
+                            {product.orders && <span>{formatNumber(product.orders)} {copy.orders}</span>}
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold">{product.price} PLN</span>
+                            <span className="text-lg font-bold">{formatPrice(product.price, product.currency ?? 'PLN')}</span>
                             {product.originalPrice && product.originalPrice > product.price && (
                               <>
-                                <span className="text-sm line-through text-muted-foreground">{product.originalPrice} PLN</span>
+                                <span className="text-sm line-through text-muted-foreground">{formatPrice(product.originalPrice, product.currency ?? 'PLN')}</span>
                                 <Badge variant="destructive">-{product.discount}%</Badge>
                               </>
                             )}
                           </div>
                           <a href={product.productUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary flex items-center gap-1">
-                            Zobacz na AliExpress <ExternalLink className="h-3 w-3" />
+                            {copy.viewAli} <ExternalLink className="h-3 w-3" />
                           </a>
                         </div>
                         <div className="flex gap-2 min-w-[300px]">
                           <div className="flex-1 space-y-2">
-                            <Label className="text-xs">Kategoria</Label>
+                            <Label className="text-xs">{copy.category}</Label>
                             <Select value={map?.main || ''} onValueChange={v => setCategory(product.id, 'main', v)} disabled={!isSelected}>
                               <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Wybierz..." />
+                                <SelectValue placeholder={copy.choose} />
                               </SelectTrigger>
                               <SelectContent>
                                 {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
@@ -668,10 +713,10 @@ function AliExpressImportPage() {
                             </Select>
                           </div>
                           <div className="flex-1 space-y-2">
-                            <Label className="text-xs">Podkategoria</Label>
+                            <Label className="text-xs">{copy.subcategory}</Label>
                             <Select value={map?.sub || ''} onValueChange={v => setCategory(product.id, 'sub', v)} disabled={!isSelected || !map?.main}>
                               <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Wybierz..." />
+                                <SelectValue placeholder={copy.choose} />
                               </SelectTrigger>
                               <SelectContent>
                                 {subcats.map(s => <SelectItem key={s.slug} value={s.slug}>{s.name}</SelectItem>)}

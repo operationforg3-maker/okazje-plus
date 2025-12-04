@@ -45,6 +45,43 @@ import {
 import { toast } from 'sonner';
 import { getCategories } from '@/lib/data';
 import { Category } from '@/lib/types';
+import { useLocale, useFormatter } from 'next-intl';
+
+const translations = {
+  pl: {
+    selectAtLeast: 'Wybierz przynajmniej jedną kategorię',
+    importStarted: 'Import rozpoczęty! Job ID',
+    importFailed: 'Nie udało się rozpocząć importu',
+    importPaused: 'Import wstrzymany',
+    pauseFailed: 'Nie udało się wstrzymać importu',
+    importResumed: 'Import wznowiony',
+    resumeFailed: 'Nie udało się wznowić importu',
+    importComplete: 'Import zakończony! Utworzono',
+    products: 'produktów'
+  },
+  en: {
+    selectAtLeast: 'Select at least one category',
+    importStarted: 'Import started! Job ID',
+    importFailed: 'Failed to start import',
+    importPaused: 'Import paused',
+    pauseFailed: 'Failed to pause import',
+    importResumed: 'Import resumed',
+    resumeFailed: 'Failed to resume import',
+    importComplete: 'Import complete! Created',
+    products: 'products'
+  },
+  de: {
+    selectAtLeast: 'Wähle mindestens eine Kategorie',
+    importStarted: 'Import gestartet! Job-ID',
+    importFailed: 'Import konnte nicht gestartet werden',
+    importPaused: 'Import pausiert',
+    pauseFailed: 'Pausieren fehlgeschlagen',
+    importResumed: 'Import fortgesetzt',
+    resumeFailed: 'Fortsetzen fehlgeschlagen',
+    importComplete: 'Import abgeschlossen! Erstellt',
+    products: 'Produkte'
+  }
+} as const;
 
 interface BatchItem {
   id: string;
@@ -82,10 +119,15 @@ interface JobStatus {
 }
 
 function BatchImportPage() {
+  const locale = useLocale();
+  const format = useFormatter();
+  const copy = translations[(locale as keyof typeof translations) || 'pl'] || translations.pl;
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
   const [selectedCount, setSelectedCount] = useState(0);
+  
+  const formatNumber = (value?: number) => format.number(value ?? 0);
   
   // Import settings
   const [maxItemsPerSubcategory, setMaxItemsPerSubcategory] = useState(50);
@@ -113,7 +155,7 @@ function BatchImportPage() {
                 id: `${cat.id}-${sub.slug}-${subsub.slug}`,
                 categorySlug: cat.id,
                 subcategorySlug: sub.slug,
-                subsubcategorySlug: subsub.slug,
+                subsubcategorySlug: subsub.slug ?? '',
                 categoryName: cat.name,
                 subcategoryName: sub.name,
                 subsubcategoryName: subsub.name,
@@ -198,7 +240,7 @@ function BatchImportPage() {
     const selectedItems = batchItems.filter(item => item.selected);
     
     if (selectedItems.length === 0) {
-      toast.error('Wybierz przynajmniej jedną kategorię');
+      toast.error(copy.selectAtLeast);
       return;
     }
 
@@ -234,10 +276,10 @@ function BatchImportPage() {
       setJobStatus(data);
       setPolling(true);
       
-      toast.success(`Import rozpoczęty! Job ID: ${data.jobId}`);
+      toast.success(`${copy.importStarted}: ${data.jobId}`);
     } catch (error: any) {
       console.error('Import failed:', error);
-      toast.error(error.message || 'Nie udało się rozpocząć importu');
+      toast.error(error.message || copy.importFailed);
       setImporting(false);
     }
   };
@@ -254,10 +296,10 @@ function BatchImportPage() {
       
       if (!res.ok) throw new Error('Failed to pause');
       
-      toast.success('Import wstrzymany');
+      toast.success(copy.importPaused);
       setPolling(false);
     } catch (error) {
-      toast.error('Nie udało się wstrzymać importu');
+      toast.error(copy.pauseFailed);
     }
   };
 
@@ -273,10 +315,10 @@ function BatchImportPage() {
       
       if (!res.ok) throw new Error('Failed to resume');
       
-      toast.success('Import wznowiony');
+      toast.success(copy.importResumed);
       setPolling(true);
     } catch (error) {
-      toast.error('Nie udało się wznowić importu');
+      toast.error(copy.resumeFailed);
     }
   };
 

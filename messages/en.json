@@ -110,6 +110,63 @@
     "bulkImport": "Bulk Import",
     "moderation": "Moderation"
   },
+  "adminImports": {
+    "title": "Product imports",
+    "subtitle": "Start, monitor and review import runs (AliExpress / Allegro)",
+    "loading": "Loading…",
+    "accessDenied": "Admin permissions required.",
+    "errors": {
+      "profileRequired": "Provide the profileId for the import",
+      "loadRuns": "Failed to load import list",
+      "loadRunDetail": "Failed to load import details",
+      "startImport": "Failed to start the import"
+    },
+    "startCard": {
+      "title": "Start import",
+      "description": "Enter the import profile ID. Use dry-run to test without saving.",
+      "profileLabel": "Profile ID",
+      "profilePlaceholder": "e.g. abc123",
+      "maxLabel": "Max products (optional)",
+      "maxPlaceholder": "e.g. 20",
+      "modeLabel": "Mode",
+      "dryRun": "Dry-run",
+      "real": "Real",
+      "start": "Start import",
+      "refresh": "Refresh list"
+    },
+    "listCard": {
+      "title": "Import runs",
+      "description": "Recent runs (limit {limit})",
+      "empty": "No imports yet.",
+      "loading": "Loading imports…"
+    },
+    "details": {
+      "title": "Import details",
+      "runId": "Run ID",
+      "profileVendor": "Profile / Vendor",
+      "status": "Status",
+      "time": "Time",
+      "errorsTitle": "Errors",
+      "item": "Item",
+      "noData": "—",
+      "stats": {
+        "fetched": "Fetched",
+        "created": "Created",
+        "updated": "Updated",
+        "skipped": "Skipped",
+        "errors": "Errors",
+        "duplicates": "Duplicates"
+      }
+    },
+    "statusMap": {
+      "pending": "Pending",
+      "running": "In progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "dryRunSuffix": " · dry-run"
+  },
   "footer": {
     "about": "About",
     "contact": "Contact",

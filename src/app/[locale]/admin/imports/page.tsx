@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useAuth, isAdmin } from "@/lib/auth";
+import { useTranslations, useFormatter } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,8 @@ async function fetchWithToken<T>(url: string, options?: RequestInit): Promise<T>
 
 export default function ImportsPage() {
   const { user, loading } = useAuth();
+  const t = useTranslations("adminImports");
+  const format = useFormatter();
   const [runs, setRuns] = useState<ImportRun[]>([]);
   const [selectedRun, setSelectedRun] = useState<ImportRun | null>(null);
   const [loadingRuns, setLoadingRuns] = useState(false);
@@ -62,6 +65,16 @@ export default function ImportsPage() {
   const [starting, setStarting] = useState(false);
 
   const isUserAdmin = useMemo(() => isAdmin(user), [user]);
+
+  const formatDateTime = (value?: string) =>
+    value ? format.dateTime(new Date(value), { dateStyle: "medium", timeStyle: "short" }) : t("details.noData");
+
+  const formatDuration = (ms?: number) =>
+    ms ? `${Math.round(ms / 1000)}s` : "";
+
+  const formatNumber = (value?: number) => format.number(value ?? 0);
+
+  const statusLabel = (status: ImportRun["status"]) => t(`statusMap.${status}` as any);
 
   useEffect(() => {
     if (!isUserAdmin) return;
@@ -80,7 +93,7 @@ export default function ImportsPage() {
         setSelectedRun(data.runs[0]);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Nie udało się pobrać listy importów");
+      setError(e instanceof Error ? e.message : t("errors.loadRuns"));
     } finally {
       setLoadingRuns(false);
     }
@@ -93,7 +106,7 @@ export default function ImportsPage() {
       const data = await fetchWithToken<ImportRun>(`/api/admin/import-runs/${id}`);
       setSelectedRun(data);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Nie udało się pobrać szczegółów importu");
+      setError(e instanceof Error ? e.message : t("errors.loadRunDetail"));
     } finally {
       setLoadingRunDetail(false);
     }
@@ -101,7 +114,7 @@ export default function ImportsPage() {
 
   const startImport = async () => {
     if (!profileId) {
-      setError("Podaj profileId importu");
+      setError(t("errors.profileRequired"));
       return;
     }
     try {
@@ -124,7 +137,7 @@ export default function ImportsPage() {
         await loadRunDetail(data.importRunId);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Nie udało się uruchomić importu");
+      setError(e instanceof Error ? e.message : t("errors.startImport"));
     } finally {
       setStarting(false);
     }
@@ -133,7 +146,7 @@ export default function ImportsPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <p>Ładowanie…</p>
+        <p>{t("loading")}</p>
       </div>
     );
   }
@@ -142,7 +155,7 @@ export default function ImportsPage() {
     return (
       <div className="p-6">
         <Alert>
-          <AlertDescription>Potrzebne uprawnienia administratora.</AlertDescription>
+          <AlertDescription>{t("accessDenied")}</AlertDescription>
         </Alert>
       </div>
     );
@@ -151,8 +164,8 @@ export default function ImportsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Importy produktów</h1>
-        <p className="text-gray-500 mt-1">Start, monitorowanie i historia importów (AliExpress / Allegro)</p>
+        <h1 className="text-3xl font-bold">{t("title")}</h1>
+        <p className="text-gray-500 mt-1">{t("subtitle")}</p>
       </div>
 
       {error && (
@@ -164,27 +177,31 @@ export default function ImportsPage() {
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>Uruchom import</CardTitle>
-            <CardDescription>Podaj ID profilu importu. Włącz dry-run, aby przetestować bez zapisu.</CardDescription>
+            <CardTitle>{t("startCard.title")}</CardTitle>
+            <CardDescription>{t("startCard.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Profile ID</Label>
-              <Input value={profileId} onChange={(e) => setProfileId(e.target.value)} placeholder="np. abc123" />
+              <Label>{t("startCard.profileLabel")}</Label>
+              <Input
+                value={profileId}
+                onChange={(e) => setProfileId(e.target.value)}
+                placeholder={t("startCard.profilePlaceholder")}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Maks. produktów (opcjonalnie)</Label>
+                <Label>{t("startCard.maxLabel")}</Label>
                 <Input
                   type="number"
                   min={1}
                   value={maxItems}
                   onChange={(e) => setMaxItems(e.target.value)}
-                  placeholder="np. 20"
+                  placeholder={t("startCard.maxPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Tryb</Label>
+                <Label>{t("startCard.modeLabel")}</Label>
                 <div className="flex items-center gap-2">
                   <Button
                     type="button"
@@ -192,7 +209,7 @@ export default function ImportsPage() {
                     size="sm"
                     onClick={() => setDryRun(true)}
                   >
-                    Dry-run
+                    {t("startCard.dryRun")}
                   </Button>
                   <Button
                     type="button"
@@ -200,7 +217,7 @@ export default function ImportsPage() {
                     size="sm"
                     onClick={() => setDryRun(false)}
                   >
-                    Real
+                    {t("startCard.real")}
                   </Button>
                 </div>
               </div>
@@ -208,10 +225,10 @@ export default function ImportsPage() {
             <div className="flex gap-2">
               <Button onClick={startImport} disabled={starting}>
                 {starting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
-                Start importu
+                {t("startCard.start")}
               </Button>
               <Button variant="outline" onClick={loadRuns} disabled={loadingRuns}>
-                <RefreshCw className="h-4 w-4 mr-2" /> Odśwież listę
+                <RefreshCw className="h-4 w-4 mr-2" /> {t("startCard.refresh")}
               </Button>
             </div>
           </CardContent>
@@ -219,16 +236,16 @@ export default function ImportsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Lista importów</CardTitle>
-            <CardDescription>Ostatnie uruchomienia (limit 20)</CardDescription>
+            <CardTitle>{t("listCard.title")}</CardTitle>
+            <CardDescription>{t("listCard.description", { limit: 20 })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {loadingRuns && (
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" /> Ładowanie importów…
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("listCard.loading")}
               </div>
             )}
-            {!loadingRuns && runs.length === 0 && <p className="text-sm text-gray-500">Brak importów.</p>}
+            {!loadingRuns && runs.length === 0 && <p className="text-sm text-gray-500">{t("listCard.empty")}</p>}
             <div className="space-y-2 max-h-80 overflow-auto pr-1">
               {runs.map((run) => (
                 <button
@@ -241,17 +258,16 @@ export default function ImportsPage() {
                   <div className="flex items-center justify-between">
                     <div className="font-semibold">{run.vendorId} · {run.profileId}</div>
                     <Badge variant={run.status === "completed" ? "default" : run.status === "failed" ? "destructive" : "outline"}>
-                      {run.status}{run.dryRun ? " · dry-run" : ""}
+                      {statusLabel(run.status)}
+                      {run.dryRun ? t("dryRunSuffix") : ""}
                     </Badge>
                   </div>
                   <div className="text-xs text-gray-500 mt-1 flex gap-3">
-                    <span>Fetched: {run.stats?.fetched ?? 0}</span>
-                    <span>Created: {run.stats?.created ?? 0}</span>
-                    <span>Errors: {run.stats?.errors ?? 0}</span>
+                    <span>{t("details.stats.fetched")}: {formatNumber(run.stats?.fetched)}</span>
+                    <span>{t("details.stats.created")}: {formatNumber(run.stats?.created)}</span>
+                    <span>{t("details.stats.errors")}: {formatNumber(run.stats?.errors)}</span>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {run.startedAt}
-                  </div>
+                  <div className="text-xs text-gray-400 mt-1">{formatDateTime(run.startedAt)}</div>
                 </button>
               ))}
             </div>
@@ -262,32 +278,33 @@ export default function ImportsPage() {
       {selectedRun && (
         <Card>
           <CardHeader>
-            <CardTitle>Szczegóły importu</CardTitle>
-            <CardDescription>Run ID: {selectedRun.id}</CardDescription>
+            <CardTitle>{t("details.title")}</CardTitle>
+            <CardDescription>{t("details.runId")}: {selectedRun.id}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {loadingRunDetail && (
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" /> Ładowanie szczegółów…
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("listCard.loading")}
               </div>
             )}
             <div className="grid md:grid-cols-3 gap-3 text-sm">
               <div className="space-y-1">
-                <p className="font-semibold">Profil / Vendor</p>
+                <p className="font-semibold">{t("details.profileVendor")}</p>
                 <p className="text-gray-600">{selectedRun.profileId} · {selectedRun.vendorId}</p>
               </div>
               <div className="space-y-1">
-                <p className="font-semibold">Status</p>
+                <p className="font-semibold">{t("details.status")}</p>
                 <p className="text-gray-600">
-                  {selectedRun.status}{selectedRun.dryRun ? " · dry-run" : ""}
+                  {statusLabel(selectedRun.status)}
+                  {selectedRun.dryRun ? t("dryRunSuffix") : ""}
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="font-semibold">Czas</p>
+                <p className="font-semibold">{t("details.time")}</p>
                 <p className="text-gray-600">
-                  {selectedRun.startedAt}
-                  {selectedRun.finishedAt ? ` → ${selectedRun.finishedAt}` : ""}
-                  {selectedRun.durationMs ? ` (${Math.round(selectedRun.durationMs / 1000)}s)` : ""}
+                  {formatDateTime(selectedRun.startedAt)}
+                  {selectedRun.finishedAt ? ` → ${formatDateTime(selectedRun.finishedAt)}` : ""}
+                  {selectedRun.durationMs ? ` (${formatDuration(selectedRun.durationMs)})` : ""}
                 </p>
               </div>
             </div>
@@ -295,26 +312,32 @@ export default function ImportsPage() {
             <Separator />
 
             <div className="grid md:grid-cols-3 gap-3 text-sm">
-              <Stat label="Fetched" value={selectedRun.stats?.fetched} />
-              <Stat label="Created" value={selectedRun.stats?.created} />
-              <Stat label="Updated" value={selectedRun.stats?.updated} />
-              <Stat label="Skipped" value={selectedRun.stats?.skipped} />
-              <Stat label="Errors" value={selectedRun.stats?.errors} />
-              <Stat label="Duplicates" value={selectedRun.stats?.duplicates ?? 0} />
+              <Stat label={t("details.stats.fetched")}
+                   value={formatNumber(selectedRun.stats?.fetched)} />
+              <Stat label={t("details.stats.created")}
+                   value={formatNumber(selectedRun.stats?.created)} />
+              <Stat label={t("details.stats.updated")}
+                   value={formatNumber(selectedRun.stats?.updated)} />
+              <Stat label={t("details.stats.skipped")}
+                   value={formatNumber(selectedRun.stats?.skipped)} />
+              <Stat label={t("details.stats.errors")}
+                   value={formatNumber(selectedRun.stats?.errors)} />
+              <Stat label={t("details.stats.duplicates")}
+                   value={formatNumber(selectedRun.stats?.duplicates ?? 0)} />
             </div>
 
             {selectedRun.errorSummary && selectedRun.errorSummary.length > 0 && (
               <div className="space-y-2">
-                <p className="font-semibold">Błędy</p>
+                <p className="font-semibold">{t("details.errorsTitle")}</p>
                 <div className="space-y-1 text-sm text-gray-700">
                   {selectedRun.errorSummary.map((err, idx) => (
                     <div key={`${err.code}-${idx}`} className="border rounded-md px-3 py-2">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold">{err.code}</span>
-                        {err.itemId && <Badge variant="outline">Item: {err.itemId}</Badge>}
+                        {err.itemId && <Badge variant="outline">{t("details.item")}: {err.itemId}</Badge>}
                       </div>
                       <p className="text-gray-600 text-sm mt-1">{err.message}</p>
-                      {err.timestamp && <p className="text-xs text-gray-400 mt-1">{err.timestamp}</p>}
+                      {err.timestamp && <p className="text-xs text-gray-400 mt-1">{formatDateTime(err.timestamp)}</p>}
                     </div>
                   ))}
                 </div>
@@ -327,7 +350,7 @@ export default function ImportsPage() {
   );
 }
 
-function Stat({ label, value }: { label: string; value?: number }) {
+function Stat({ label, value }: { label: string; value?: string | number }) {
   return (
     <div className="rounded-md border px-3 py-2">
       <p className="text-xs text-gray-500">{label}</p>

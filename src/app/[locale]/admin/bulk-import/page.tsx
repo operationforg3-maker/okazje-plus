@@ -19,6 +19,76 @@ import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Category } from '@/lib/types';
+import { useLocale, useFormatter } from 'next-intl';
+
+const translations = {
+  pl: {
+    noConfig: 'Brak konfiguracji',
+    selectCategories: 'Zaznacz kategorie i wpisz search queries',
+    generating: 'Generating Preview...',
+    processing: 'Processing',
+    withAI: 'categories with AI pipeline',
+    previewReady: 'Preview Ready!',
+    generated: 'products generated with AI enrichment',
+    error: 'Błąd',
+    unknownError: 'Nieznany błąd',
+    noSelected: 'Brak zaznaczonych',
+    selectProducts: 'Zaznacz produkty do importu',
+    importComplete: 'Import Complete!',
+    productsSaved: 'products saved to database',
+    importError: 'Błąd importu',
+    autoImport: 'Auto-Import: 10 Best',
+    configuring: 'Konfigurowanie wszystkich kategorii...',
+    configured: 'Skonfigurowano!',
+    categoriesWithQuery: 'kategorii z query "bestseller" i 10 produktami każda',
+    generatingPreview: 'Generowanie podglądu...',
+    alreadyConfigured: 'kategorii już skonfigurowanych'
+  },
+  en: {
+    noConfig: 'No configuration',
+    selectCategories: 'Select categories and enter search queries',
+    generating: 'Generating Preview...',
+    processing: 'Processing',
+    withAI: 'categories with AI pipeline',
+    previewReady: 'Preview Ready!',
+    generated: 'products generated with AI enrichment',
+    error: 'Error',
+    unknownError: 'Unknown error',
+    noSelected: 'None selected',
+    selectProducts: 'Select products to import',
+    importComplete: 'Import Complete!',
+    productsSaved: 'products saved to database',
+    importError: 'Import error',
+    autoImport: 'Auto-Import: 10 Best',
+    configuring: 'Configuring all categories...',
+    configured: 'Configured!',
+    categoriesWithQuery: 'categories with "bestseller" query and 10 products each',
+    generatingPreview: 'Generating preview...',
+    alreadyConfigured: 'categories already configured'
+  },
+  de: {
+    noConfig: 'Keine Konfiguration',
+    selectCategories: 'Kategorien auswählen und Suchanfragen eingeben',
+    generating: 'Vorschau generieren...',
+    processing: 'Verarbeitung',
+    withAI: 'Kategorien mit AI-Pipeline',
+    previewReady: 'Vorschau bereit!',
+    generated: 'Produkte mit AI-Anreicherung generiert',
+    error: 'Fehler',
+    unknownError: 'Unbekannter Fehler',
+    noSelected: 'Keine ausgewählt',
+    selectProducts: 'Produkte zum Import auswählen',
+    importComplete: 'Import abgeschlossen!',
+    productsSaved: 'Produkte in Datenbank gespeichert',
+    importError: 'Import-Fehler',
+    autoImport: 'Auto-Import: 10 Beste',
+    configuring: 'Alle Kategorien konfigurieren...',
+    configured: 'Konfiguriert!',
+    categoriesWithQuery: 'Kategorien mit "bestseller" Anfrage und 10 Produkten jeweils',
+    generatingPreview: 'Vorschau generieren...',
+    alreadyConfigured: 'Kategorien bereits konfiguriert'
+  }
+} as const;
 
 interface CategoryConfig {
   mainSlug: string;
@@ -51,8 +121,13 @@ interface PreviewProduct {
 
 function BulkImportPage() {
   const { toast } = useToast();
+  const locale = useLocale();
+  const format = useFormatter();
+  const copy = translations[(locale as keyof typeof translations) || 'pl'] || translations.pl;
   // Note: useAuth() is provided by withAuth HOC wrapper, not needed here
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
+  
+  const formatNumber = (value?: number) => format.number(value ?? 0);
 
   const [categoryConfigs, setCategoryConfigs] = useState<CategoryConfig[]>([]);
   const [defaultProductsPerCategory, setDefaultProductsPerCategory] = useState(10);
@@ -111,8 +186,8 @@ function BulkImportPage() {
     
     if (enabledConfigs.length === 0) {
       toast({
-        title: 'Brak konfiguracji',
-        description: 'Zaznacz kategorie i wpisz search queries',
+        title: copy.noConfig,
+        description: copy.selectCategories,
         variant: 'destructive',
       });
       return;
@@ -128,8 +203,8 @@ function BulkImportPage() {
       if (!token) throw new Error('Brak tokena autoryzacji');
 
       toast({
-        title: '🤖 Generating Preview...',
-        description: `Processing ${enabledConfigs.length} categories with AI pipeline`,
+        title: `🤖 ${copy.generating}`,
+        description: `${copy.processing} ${formatNumber(enabledConfigs.length)} ${copy.withAI}`,
       });
 
       const response = await fetch('/api/admin/bulk-import/preview', {
@@ -154,14 +229,14 @@ function BulkImportPage() {
       setStep('preview');
       
       toast({
-        title: 'Preview Ready!',
-        description: `${data.products.length} products generated with AI enrichment`,
+        title: `${copy.previewReady}`,
+        description: `${formatNumber(data.products.length)} ${copy.generated}`,
       });
     } catch (error) {
       console.error('[Bulk Import]', error);
       toast({
-        title: 'Błąd',
-        description: error instanceof Error ? error.message : 'Nieznany błąd',
+        title: copy.error,
+        description: error instanceof Error ? error.message : copy.unknownError,
         variant: 'destructive',
       });
     } finally {
@@ -174,8 +249,8 @@ function BulkImportPage() {
     
     if (selectedProducts.length === 0) {
       toast({
-        title: 'Brak zaznaczonych',
-        description: 'Zaznacz produkty do importu',
+        title: copy.noSelected,
+        description: copy.selectProducts,
         variant: 'destructive',
       });
       return;
@@ -209,16 +284,16 @@ function BulkImportPage() {
       const data = await response.json();
       
       toast({
-        title: '✅ Import Complete!',
-        description: `${data.imported} products saved to database`,
+        title: `✅ ${copy.importComplete}`,
+        description: `${formatNumber(data.imported)} ${copy.productsSaved}`,
       });
       
       setStep('complete');
     } catch (error) {
       console.error('[Bulk Import Commit]', error);
       toast({
-        title: 'Błąd importu',
-        description: error instanceof Error ? error.message : 'Nieznany błąd',
+        title: copy.importError,
+        description: error instanceof Error ? error.message : copy.unknownError,
         variant: 'destructive',
       });
     } finally {
@@ -268,8 +343,8 @@ function BulkImportPage() {
     
     if (enabledCount === 0) {
       toast({
-        title: '🚀 Auto-Import: 10 Best',
-        description: 'Konfigurowanie wszystkich kategorii...',
+        title: `🚀 ${copy.autoImport}`,
+        description: copy.configuring,
       });
 
       // Enable all categories with "bestseller" query
@@ -283,14 +358,14 @@ function BulkImportPage() {
       );
 
       toast({
-        title: '✅ Skonfigurowano!',
-        description: `${categoryConfigs.length} kategorii z query "bestseller" i 10 produktami każda`,
+        title: `✅ ${copy.configured}`,
+        description: `${formatNumber(categoryConfigs.length)} ${copy.categoriesWithQuery}`,
       });
     } else {
       // Already configured, just generate preview
       toast({
-        title: '🤖 Generowanie podglądu...',
-        description: `${enabledCount} kategorii już skonfigurowanych`,
+        title: `🤖 ${copy.generatingPreview}`,
+        description: `${formatNumber(enabledCount)} ${copy.alreadyConfigured}`,
       });
       handleGeneratePreview();
     }
