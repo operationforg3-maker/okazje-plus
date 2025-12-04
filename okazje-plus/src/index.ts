@@ -1607,6 +1607,20 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@okazje.plus";
 const SITE_URL = process.env.SITE_URL || "https://okazje.plus";
 
+// =============================================================================
+// GOOGLE INDEXING API INTEGRATION
+// =============================================================================
+
+// Export triggers from autoIndexDeals module
+export * from "./triggers/autoIndexDeals";
+
+// =============================================================================
+// AI AUTO-FILL DRAFT DEALS INTEGRATION
+// =============================================================================
+
+// Export triggers from autofillDraftDeal module
+export * from "./triggers/autofillDraftDeal";
+
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
