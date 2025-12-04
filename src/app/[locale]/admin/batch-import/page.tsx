@@ -152,10 +152,10 @@ function BatchImportPage() {
           cat.subcategories?.forEach(sub => {
             sub.subcategories?.forEach(subsub => {
               items.push({
-                id: `${cat.id}-${sub.slug}-${subsub.slug}`,
+                id: `${cat.id}-${sub.slug}-${subsub.slug || ''}`,
                 categorySlug: cat.id,
-                subcategorySlug: sub.slug,
-                subsubcategorySlug: subsub.slug ?? '',
+                subcategorySlug: sub.slug || '',
+                subsubcategorySlug: subsub.slug || '',
                 categoryName: cat.name,
                 subcategoryName: sub.name,
                 subsubcategoryName: subsub.name,

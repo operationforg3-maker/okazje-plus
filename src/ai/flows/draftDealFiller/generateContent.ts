@@ -180,15 +180,14 @@ export function contentToDeal(
     category: generated.categorySlug,
     mainCategorySlug: generated.categorySlug,
     subCategorySlug: 'other',
-    status: 'ready_for_review',
+    status: 'ready_for_review' as const,
     createdBy: userId,
     createdAt: new Date().toISOString(),
-    source: 'auto-scraped',
-    importMetadata: {
+    source: 'auto-scraped' as const,
+    metadata: {
       source: 'draft-deal-auto-filler',
       importedAt: new Date().toISOString(),
       originalUrl: input.originalUrl,
-      draftDealId,
       contentConfidence: generated.confidence,
       generationWarnings: generated.warnings,
     },

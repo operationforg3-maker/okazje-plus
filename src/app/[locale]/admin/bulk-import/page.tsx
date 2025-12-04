@@ -154,9 +154,9 @@ function BulkImportPage() {
             configs.push({
               mainSlug: cat.id,
               mainName: cat.name,
-              subSlug: sub.slug,
+              subSlug: sub.slug || '',
               subName: sub.name,
-              subSubSlug: subSub.slug,
+              subSubSlug: subSub.slug || '',
               subSubName: subSub.name,
               searchQuery: '', // User will fill
               productsCount: defaultProductsPerCategory,
@@ -168,7 +168,7 @@ function BulkImportPage() {
           configs.push({
             mainSlug: cat.id,
             mainName: cat.name,
-            subSlug: sub.slug,
+            subSlug: sub.slug || '',
             subName: sub.name,
             searchQuery: '',
             productsCount: defaultProductsPerCategory,

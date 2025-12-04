@@ -129,7 +129,6 @@ export async function fillCategoriesWithDeals() {
             shippingCost: product.shippingInfo?.shippingCost || product.shipping_cost || null,
             deliveryTime: product.shippingInfo?.deliveryTime || product.delivery_time || '',
             warehouse: product.shippingInfo?.warehouse || product.ship_from_country || '',
-            ...(tags?.length ? { tags } : {}),
             // Advanced API metadata
             importMetadata: {
               source: 'aliexpress',

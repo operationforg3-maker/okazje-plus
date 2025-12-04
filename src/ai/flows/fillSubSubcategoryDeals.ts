@@ -346,8 +346,6 @@ export async function fillSubSubcategoryDeals(params: {
           deliveryTime: aliDeal.shippingInfo?.deliveryTime || aliDeal.delivery_time || '',
           warehouse: aliDeal.shippingInfo?.warehouse || aliDeal.ship_from_country || '',
           
-          ...(tags?.length ? { tags } : {}),
-          
           // Import metadata
           importMetadata: {
             source: 'aliexpress',

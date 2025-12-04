@@ -94,6 +94,7 @@ export default function AdminCategoriesPage() {
       // Create a new category with an empty subcategories array
       const newCategory: Omit<Category, 'id'> = {
         name: data.name,
+        slug: data.slug,
         subcategories: [],
       };
       await setDoc(categoryRef, newCategory);

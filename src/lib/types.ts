@@ -296,7 +296,7 @@ export interface Product {
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
   subSubCategorySlug?: string; // NOWE pole dla poziomu 3
-  status: 'draft' | 'approved' | 'rejected'; // Status moderacji
+  status: 'draft' | 'approved' | 'rejected' | 'ready_for_review'; // Status moderacji
   category?: string; // Stara wersja dla kompatybilności
   gallery?: ProductImageEntry[]; // Pełna galeria
   seo?: ProductSeoMeta; // Meta dane generowane przez AI / modyfikowane ręcznie
@@ -503,7 +503,7 @@ export interface Deal {
   // Links & Source
   linkedProductIds?: string[];
   externalOriginalId?: string;
-  source?: 'manual' | 'aliexpress' | 'csv' | 'pepper' | 'mydealz' | 'reddit' | 'other';
+  source?: 'manual' | 'aliexpress' | 'csv' | 'pepper' | 'mydealz' | 'reddit' | 'other' | 'auto-scraped';
   
   // Extended deal parameters
   dealType?: 'sale' | 'coupon' | 'freebie' | 'pricing-error' | 'cashback' | 'bundle';
@@ -591,6 +591,8 @@ export interface Deal {
     warehouse?: string;
     deliveryTime?: string;
     shippingMethod?: string;
+    contentConfidence?: number;
+    generationWarnings?: string[];
   };
 }
 

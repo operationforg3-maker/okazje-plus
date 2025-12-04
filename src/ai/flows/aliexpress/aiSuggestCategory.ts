@@ -388,6 +388,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'moda',
         subCategorySlug: 'akcesoria-modowe',
+        subSubCategorySlug: '',
         confidence: 0.6,
         reasoning: 'Rozpoznano akcesoria modowe (fallback)',
       };
@@ -397,6 +398,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'moda',
         subCategorySlug: 'bizuteria',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano biżuterię (fallback)',
       };
@@ -407,6 +409,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'sport-i-turystyka',
         subCategorySlug: 'fitness',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano sprzęt fitness (fallback)',
       };
@@ -416,6 +419,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'sport-i-turystyka',
         subCategorySlug: 'odziez-sportowa',
+        subSubCategorySlug: '',
         confidence: 0.6,
         reasoning: 'Rozpoznano odzież sportową (fallback)',
       };
@@ -425,6 +429,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'sport-i-turystyka',
         subCategorySlug: 'turystyka',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano sprzęt turystyczny (fallback)',
       };
@@ -435,6 +440,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zdrowie-i-uroda',
         subCategorySlug: 'kosmetyki',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano kosmetyki (fallback)',
       };
@@ -444,6 +450,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zdrowie-i-uroda',
         subCategorySlug: 'suplementy',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano suplementy (fallback)',
       };
@@ -453,6 +460,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zdrowie-i-uroda',
         subCategorySlug: 'pielegnacja',
+        subSubCategorySlug: '',
         confidence: 0.6,
         reasoning: 'Rozpoznano produkty pielęgnacyjne (fallback)',
       };
@@ -463,6 +471,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'meble',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano meble (fallback)',
       };
@@ -472,6 +481,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'dekoracje',
+        subSubCategorySlug: '',
         confidence: 0.6,
         reasoning: 'Rozpoznano dekoracje (fallback)',
       };
@@ -481,6 +491,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'agd',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano AGD (fallback)',
       };
@@ -490,6 +501,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'narzedzia',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano narzędzia (fallback)',
       };
@@ -499,6 +511,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'ogrod',
+        subSubCategorySlug: '',
         confidence: 0.7,
         reasoning: 'Rozpoznano produkty ogrodnicze (fallback)',
       };
@@ -509,6 +522,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'motoryzacja',
         subCategorySlug: 'akcesoria-samochodowe',
+        subSubCategorySlug: '',
         confidence: 0.5,
         reasoning: 'Rozpoznano tematykę motoryzacyjną (fallback)',
       };
@@ -519,6 +533,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zabawki',
         subCategorySlug: 'klocki',
+        subSubCategorySlug: '',
         confidence: 0.6,
         reasoning: 'Rozpoznano zabawki (fallback)',
       };
