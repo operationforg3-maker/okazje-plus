@@ -121,6 +121,10 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   const { formatPrice } = useCurrency();
   const totalUSD = (product.price?.baseAmount || 0) + (product.price?.shippingCostUSD || 0);
 
+  const handleDetailClick = () => {
+    void trackFirestoreClick('product', product.id, user?.uid);
+  };
+
   const handleAffiliateClick = () => {
     void trackFirestoreClick('product', product.id, user?.uid);
   };
