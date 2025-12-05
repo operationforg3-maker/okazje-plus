@@ -3,13 +3,14 @@
 Polska platforma z okazjami i produktami (Next.js 15 + Firebase + Genkit AI). Ten README jest celowo zwięzły — pełna dokumentacja została przeniesiona do `docs/`.
 
 ## 🔗 Dokumentacja
-Pełen indeks: `docs/INDEX.md`
+**Główny hub dokumentacji**: `docs/MASTER_INDEX.md`
+
 Najważniejsze:
 - Architektura / audyt: `docs/FRONTEND_BACKEND_AUDIT.md`
 - Ostatni deploy: `docs/DEPLOY_STATUS.md`
-- Optymalizacje: `docs/OPTIMIZATION_SUMMARY.md`
+- **Zestawienie implementacji vs docs**: `docs/IMPLEMENTATION_VS_DOCUMENTATION_AUDIT.md`
+- **Gotowość mobile/PWA**: `docs/MOBILE_READINESS_GUIDE.md`
 - Cache & unieważnianie: `docs/CACHE_INTEGRATION_GUIDE.md`
-- Multi-marketplace: `docs/MILESTONE_4_README.md`
 - **Notifications & Price Alerts (M5)**: `docs/M5_COMPLETION_SUMMARY.md`
 - Aktualizacje inkrementalne: `docs/updates/*`
 
