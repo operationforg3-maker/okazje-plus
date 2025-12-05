@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Coins, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const SUPPORTED_CURRENCIES = [
   { code: 'PLN', symbol: 'zł', name: 'Polski złoty', flag: '🇵🇱', enabled: true },
@@ -41,6 +42,10 @@ export function CurrencySwitcher() {
     
     setCurrency(newCurrency);
     localStorage.setItem('preferredCurrency', newCurrency);
+    
+    // Show toast notification
+    const currencyName = SUPPORTED_CURRENCIES.find(c => c.code === newCurrency)?.name || newCurrency;
+    toast.success(`Waluta zmieniona na ${currencyName}`);
     
     // Dispatch custom event for components to react to currency change
     window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: newCurrency } }));

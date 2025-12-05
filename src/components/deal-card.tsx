@@ -19,6 +19,7 @@ import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
+import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import {
   Tooltip,
   TooltipContent,
@@ -644,10 +645,19 @@ export default function DealCard({ deal }: DealCardProps) {
           >
             <Scale className="h-4 w-4" />
           </Button>
-          <Button size="sm" className="gap-1">
-            Przejdź
-            <ArrowUp className="h-3 w-3 rotate-90" />
-          </Button>
+          {deal.metadata?.isExpired ? (
+            <ExpiredDealBadge 
+              isExpired={true}
+              reason={deal.metadata?.expiryReason || 'Oferta wygasła'}
+              checkedAt={deal.metadata?.expiryCheckedAt}
+              variant="button"
+            />
+          ) : (
+            <Button size="sm" className="gap-1">
+              Przejdź
+              <ArrowUp className="h-3 w-3 rotate-90" />
+            </Button>
+          )}
         </div>
       </div>
     </Link>

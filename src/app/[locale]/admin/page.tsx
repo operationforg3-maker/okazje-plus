@@ -31,6 +31,7 @@ import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
 import TestsTab from '@/components/admin/tests-tab';
 import { ImportManager } from '@/components/admin/import-manager';
+import { ExchangeRateAlert } from '@/components/admin/exchange-rate-alert';
 
 // AI Console Component
 function AiConsole() {
@@ -315,6 +316,7 @@ function AdminPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <ExchangeRateAlert />
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/setup">
               <Settings className="h-4 w-4 mr-2" />

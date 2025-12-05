@@ -44,6 +44,7 @@ import ShareButton from '@/components/share-button';
 import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
+import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import {
   Tooltip,
   TooltipContent,
@@ -460,12 +461,22 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                 </p>
               )}
               <div className="flex gap-2">
-                <Button size="lg" asChild className="flex-1 bg-primary hover:bg-primary/90 text-base md:text-lg py-6">
-                  <a href={deal.link} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-5 w-5" />
-                    Przejdź do okazji
-                  </a>
-                </Button>
+                {deal.metadata?.isExpired ? (
+                  <ExpiredDealBadge 
+                    isExpired={true}
+                    reason={deal.metadata?.expiryReason || 'Oferta wygasła'}
+                    checkedAt={deal.metadata?.expiryCheckedAt}
+                    variant="button"
+                    className="flex-1 h-14 text-base"
+                  />
+                ) : (
+                  <Button size="lg" asChild className="flex-1 bg-primary hover:bg-primary/90 text-base md:text-lg py-6">
+                    <a href={deal.link} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-5 w-5" />
+                      Przejdź do okazji
+                    </a>
+                  </Button>
+                )}
                 <ShareButton 
                   type="deal"
                   itemId={deal.id}
