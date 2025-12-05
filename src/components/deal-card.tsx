@@ -99,6 +99,8 @@ export default function DealCard({ deal }: DealCardProps) {
   const [isVoting, setIsVoting] = useState(false);
   const [userVote, setUserVote] = useState<1 | -1 | null>(null); // Śledzimy głos użytkownika
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
+  const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   
   const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
@@ -116,12 +118,6 @@ export default function DealCard({ deal }: DealCardProps) {
   const returnPolicy = safeText(deal.importMetadata?.returnPolicy);
 
   const isHot = temperature >= 300;
-  const isNew = (() => {
-    const posted = new Date(deal.postedAt);
-    const now = new Date();
-    const diffDays = (now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays <= 7;
-  })();
 
   const temperatureColor = temperature >= 500 ? 'from-red-500 to-orange-500' 
     : temperature >= 300 ? 'from-orange-500 to-amber-500'
@@ -252,6 +248,20 @@ export default function DealCard({ deal }: DealCardProps) {
     };
   }, [deal.id]);
 
+  // Initialize time-dependent values on client to fix hydration mismatch
+  useEffect(() => {
+    // Calculate isNew
+    const posted = new Date(deal.postedAt);
+    const now = new Date();
+    const diffDays = (now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24);
+    setIsNew(diffDays <= 7);
+
+    // Calculate relative time
+    const relTime = getRelativeTime(deal.postedAt);
+    setRelativeTime(relTime);
+  }, [deal.postedAt]);
+
+
   return (
     <Link 
       href={`${prefix}/deals/${deal.id}`} 
@@ -370,7 +380,7 @@ export default function DealCard({ deal }: DealCardProps) {
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3 md:h-4 md:w-4" />
-            <span>{getRelativeTime(deal.postedAt)}</span>
+            <span>{relativeTime}</span>
           </div>
         </div>
 
