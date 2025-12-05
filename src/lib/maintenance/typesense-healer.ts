@@ -5,7 +5,7 @@
  * - Trigger endpoint for admin panel
  */
 
-import logger from "../logger";
+import { logger } from "../logger";
 import { db } from "../firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 

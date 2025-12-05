@@ -7,7 +7,7 @@
  */
 
 import crypto from "crypto";
-import logger from "../logger";
+import { logger } from "../logger";
 
 export interface AliExpressConfig {
   appKey: string;

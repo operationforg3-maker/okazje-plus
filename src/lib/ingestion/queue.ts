@@ -6,7 +6,7 @@
  * - Status tracking (pending, processing, completed, failed)
  */
 
-import logger from "../logger";
+import { logger } from "../logger";
 import { db } from "../firebase";
 import { collection, addDoc, updateDoc, doc, query, where, getDocs, QueryConstraint } from "firebase/firestore";
 

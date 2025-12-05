@@ -5,7 +5,7 @@
  * - Update all docs with new translations
  */
 
-import logger from "../logger";
+import { logger } from "../logger";
 import { db } from "../firebase";
 import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
 import { generateText } from "./vertex";

@@ -6,7 +6,7 @@
  * - Type-safe wrappers dla głównych endpointów
  */
 
-import logger from "../logger";
+import { logger } from "../logger";
 
 export interface ConvertiserConfig {
   apiToken: string;

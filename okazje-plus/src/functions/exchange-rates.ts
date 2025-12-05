@@ -8,7 +8,9 @@
 
 import * as functions from 'firebase-functions';
 import { db } from '../lib/firebase-admin';
-import { logger } from 'firebase-functions';
+
+// Use Firebase logger
+const logger = functions.logger;
 
 // Exchange rate sources (using public APIs)
 const EXCHANGE_RATE_SOURCES = {

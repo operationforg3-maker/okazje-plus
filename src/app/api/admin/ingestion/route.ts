@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import logger from "@/lib/logger";
+import { logger } from "@/lib/logger";
 import { getJobQueue } from "@/lib/ingestion/queue";
 import { executePipeline, PipelineConfig } from "@/lib/ingestion/pipeline";
 

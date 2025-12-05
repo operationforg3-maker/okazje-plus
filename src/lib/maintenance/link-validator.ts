@@ -6,7 +6,7 @@
  * - Batch validation with retry logic
  */
 
-import logger from "../logger";
+import { logger } from "../logger";
 import { db } from "../firebase";
 import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 

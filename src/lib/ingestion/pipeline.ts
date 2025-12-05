@@ -8,15 +8,15 @@
  * Step 6: Typesense Index (update search index)
  */
 
-import logger from "../logger";
+import { logger } from "../logger";
 import { db } from "../firebase";
 import { collection, addDoc, writeBatch } from "firebase/firestore";
-import { getAliExpressClient } from "./aliexpress-client";
-import { getConvertiserClient } from "./convertiser-client";
+import { getAliExpressClient } from "../integrations/aliexpress-client";
+import { getConvertiserClient } from "../integrations/convertiser-client";
 import { normalizeBatch } from "./normalizer";
-import { generateText, embedText } from "./vertex";
+import { generateText, embedText } from "../vertex";
 import { getJobQueue, Job } from "./queue";
-import { NormalizedDeal, NormalizedProduct } from "./api-interfaces";
+import { NormalizedDeal, NormalizedProduct } from "../integrations/api-interfaces";
 
 // ===== Types =====
 export type PipelineSource = "aliexpress" | "convertiser" | "manual";

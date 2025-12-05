@@ -6,7 +6,7 @@
  * - Currency detection & base currency conversion
  */
 
-import logger from "../logger";
+import { logger } from "../logger";
 import { NormalizedDeal, NormalizedProduct, TranslationMap, MoneyValue } from "./api-interfaces";
 
 const BASE_CURRENCY = "USD"; // Internal base
