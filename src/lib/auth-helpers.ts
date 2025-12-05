@@ -99,3 +99,9 @@ export async function checkModeratorAuth(req: NextRequest): Promise<AuthResult> 
 
   return authResult;
 }
+
+/**
+ * Alias for checkAdminAuth - verify admin role
+ * @deprecated Use checkAdminAuth instead
+ */
+export const verifyAdmin = checkAdminAuth;

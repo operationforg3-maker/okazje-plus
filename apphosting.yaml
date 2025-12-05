@@ -47,6 +47,12 @@ env:
       - BUILD
       - RUNTIME
   
+  - variable: GOOGLE_CLOUD_PROJECT
+    value: okazje-plus
+    availability:
+      - BUILD
+      - RUNTIME
+  
   - variable: FIREBASE_PROJECT_ID
     value: okazje-plus
     availability:

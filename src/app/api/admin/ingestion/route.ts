@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { adminAuth } from "@/lib/firebase-admin";
 import { logger } from "@/lib/logger";
 import { getJobQueue } from "@/lib/ingestion/queue";
 import { executePipeline, PipelineConfig } from "@/lib/ingestion/pipeline";
@@ -20,7 +20,7 @@ async function checkAdminAuth(req: NextRequest): Promise<{ uid: string } | null>
   }
 
   try {
-    const decodedToken = await auth.verifyIdToken(token);
+    const decodedToken = await adminAuth.verifyIdToken(token);
     // TODO: Check admin role in Firestore
     return { uid: decodedToken.uid };
   } catch (error) {

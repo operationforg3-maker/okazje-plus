@@ -8,7 +8,7 @@
 
 import { VertexAI } from "@google-cloud/vertexai";
 import { createHash } from "crypto";
-import logger from "./logger";
+import { logger } from "./logger";
 
 // ===== Init =====
 const project = process.env.GOOGLE_CLOUD_PROJECT;
