@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
+import { auth } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,18 @@ function SetupPage() {
   const [importLogs, setImportLogs] = useState<ImportLog[]>([]);
   const [importStats, setImportStats] = useState<ImportStats>({});
   const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  
+  // Load auth token on mount
+  useEffect(() => {
+    const loadToken = async () => {
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        setAuthToken(token);
+      }
+    };
+    loadToken();
+  }, []);
   
   // Scheduled import state
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -68,7 +81,9 @@ function SetupPage() {
   useEffect(() => {
     const loadIndexesSchedule = async () => {
       try {
-        const res = await fetch('/api/admin/schedule/indexes');
+        const res = await fetch('/api/admin/schedule/indexes', {
+          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+        });
         if (res.ok) {
           const data = await res.json();
           setIndexesScheduleEnabled(data.enabled || false);
@@ -82,14 +97,16 @@ function SetupPage() {
         console.error('Failed to load indexes schedule:', e);
       }
     };
-    loadIndexesSchedule();
-  }, []);
+    if (authToken) loadIndexesSchedule();
+  }, [authToken]);
 
   // Load links schedule on mount
   useEffect(() => {
     const loadLinksSchedule = async () => {
       try {
-        const res = await fetch('/api/admin/schedule/links');
+        const res = await fetch('/api/admin/schedule/links', {
+          headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+        });
         if (res.ok) {
           const data = await res.json();
           setLinksScheduleEnabled(data.enabled || false);
@@ -104,8 +121,8 @@ function SetupPage() {
         console.error('Failed to load links schedule:', e);
       }
     };
-    loadLinksSchedule();
-  }, []);
+    if (authToken) loadLinksSchedule();
+  }, [authToken]);
 
   const [categoryMode, setCategoryMode] = useState<'seeds-only' | 'ai-only' | 'hybrid'>('seeds-only');
   const [categoryPrompt, setCategoryPrompt] = useState('');
@@ -134,7 +151,10 @@ function SetupPage() {
       const useAi = categoryMode !== 'seeds-only';
       const res = await fetch('/api/admin/ai/command', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         body: JSON.stringify(
           useAi
             ? { command: 'generateCategoriesAI', params: { mode: categoryMode, prompt: categoryPrompt || undefined } }
@@ -178,7 +198,10 @@ function SetupPage() {
     try {
       const res = await fetch('/api/admin/ai/command', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         body: JSON.stringify({ command: 'fillCategoriesWithProducts' })
       });
       
@@ -218,7 +241,10 @@ function SetupPage() {
     try {
       const res = await fetch('/api/admin/ai/command', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         body: JSON.stringify({ command: 'fillCategoriesWithDeals' })
       });
       
@@ -259,7 +285,10 @@ function SetupPage() {
     try {
       const res = await fetch('/api/admin/ai/wipe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        }
       });
       
       if (!res.ok) {
@@ -292,7 +321,10 @@ function SetupPage() {
     try {
       const res = await fetch('/api/admin/schedule/deals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         body: JSON.stringify({
           enabled: newEnabled,
           frequency: scheduleFrequency,
@@ -328,7 +360,10 @@ function SetupPage() {
     try {
       const res = await fetch('/api/admin/indexes/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         body: JSON.stringify({ action: 'verify' })
       });
       
@@ -375,7 +410,7 @@ function SetupPage() {
     try {
       const res = await fetch('/api/admin/schedule/indexes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(authToken && { 'Authorization': `Bearer ${authToken}` }) },
         body: JSON.stringify({
           enabled: newEnabled,
           frequency: indexesScheduleFrequency,
@@ -407,7 +442,7 @@ function SetupPage() {
     try {
       const res = await fetch('/api/admin/links/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(authToken && { 'Authorization': `Bearer ${authToken}` }) },
         body: JSON.stringify({ 
           action: updateLinks ? 'update' : 'verify',
           limit: 1000 // Check up to 1000 items
