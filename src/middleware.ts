@@ -6,16 +6,8 @@ import {routing} from './i18n/routing';
 const intlMiddleware = createMiddleware(routing);
 
 export default function middleware(request: NextRequest) {
-  const {nextUrl} = request;
-  const {pathname, search} = nextUrl;
-
-  // Redirect non-PL locales to PL equivalent path (temporary 302)
-  if (/^\/(en|de)(\/|$)/.test(pathname)) {
-    const plPath = pathname.replace(/^\/(en|de)/, '/pl');
-    const url = new URL(plPath + search, nextUrl.origin);
-    return NextResponse.redirect(url, 302);
-  }
-
+  // Since only PL is active, next-intl middleware handles all routing
+  // No need for manual redirects
   return intlMiddleware(request);
 }
 
