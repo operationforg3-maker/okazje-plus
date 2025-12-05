@@ -2,8 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
 import { requestDealIndexing } from "@/lib/google-indexing";
+import { getAuth } from "firebase-admin/auth";
+import { initializeApp, applicationDefault, getApps } from "firebase-admin/app";
+
+if (getApps().length === 0) {
+  initializeApp({ credential: applicationDefault() });
+}
 
 export async function POST(request: NextRequest) {
+  // Weryfikacja tokena i uprawnień admina
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Brak nagłówka autoryzacji" }, { status: 401 });
+  }
+  const idToken = authHeader.substring("Bearer ".length);
+  let decoded;
+  try {
+    decoded = await getAuth().verifyIdToken(idToken);
+  } catch (e) {
+    return NextResponse.json({ error: "Nieprawidłowy token" }, { status: 401 });
+  }
+  if (!decoded.admin) {
+    return NextResponse.json({ error: "Brak uprawnień admina" }, { status: 403 });
+  }
   try {
     const { itemId, itemType, action } = await request.json();
 

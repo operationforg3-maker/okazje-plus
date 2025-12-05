@@ -69,6 +69,7 @@ export default async function RootLayout({
   return (
     <html lang={effectiveLocale} suppressHydrationWarning>
       <head>
+        <meta name="convertiser-verification" content="3bc0a4fd6e7289720f9c2784de4b87f345bcca47" />
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-4M4NQB0PQD"></script>
         <script
