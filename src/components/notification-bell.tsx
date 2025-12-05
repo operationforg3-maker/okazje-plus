@@ -19,9 +19,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
+interface NotificationWithRelativeTime extends Notification {
+  relativeTime?: string;
+}
+
 export function NotificationBell() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationWithRelativeTime[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -44,6 +48,21 @@ export function NotificationBell() {
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [user]);
+
+  // Calculate relative times on client side to prevent hydration mismatch
+  useEffect(() => {
+    const updateRelativeTimes = () => {
+      setNotifications(prev => prev.map(notif => ({
+        ...notif,
+        relativeTime: getRelativeTime(notif.createdAt)
+      })));
+    };
+
+    updateRelativeTimes();
+    // Update every minute
+    const interval = setInterval(updateRelativeTimes, 60000);
+    return () => clearInterval(interval);
+  }, [notifications.length]);
 
   const handleNotificationClick = async (notification: Notification) => {
     try {
@@ -150,7 +169,7 @@ export function NotificationBell() {
                       {notification.message}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {getRelativeTime(notification.createdAt)}
+                      {notification.relativeTime || ''}
                     </p>
                   </div>
                 </Link>

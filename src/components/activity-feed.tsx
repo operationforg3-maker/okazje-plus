@@ -30,6 +30,7 @@ interface Activity {
   itemType?: 'deal' | 'product';
   itemTitle?: string;
   timestamp: Date;
+  relativeTimestamp?: string; // Client-side calculated relative time
   icon: React.ElementType;
   iconColor: string;
   points?: number;
@@ -56,6 +57,21 @@ export function ActivityFeed({ userId, maxItems = 20, showTitle = true }: Activi
     fetchActivities();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetUserId]);
+
+  // Calculate relative timestamps on client side to prevent hydration mismatch
+  useEffect(() => {
+    const updateTimestamps = () => {
+      setActivities(prev => prev.map(activity => ({
+        ...activity,
+        relativeTimestamp: formatTimestamp(activity.timestamp)
+      })));
+    };
+
+    updateTimestamps();
+    // Update timestamps every minute
+    const interval = setInterval(updateTimestamps, 60000);
+    return () => clearInterval(interval);
+  }, [activities.length]); // Only re-run when activities list changes
 
   const fetchActivities = async () => {
     if (!targetUserId) return;
@@ -300,7 +316,7 @@ export function ActivityFeed({ userId, maxItems = 20, showTitle = true }: Activi
                       <div className="flex items-center gap-2 mt-1">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {formatTimestamp(activity.timestamp)}
+                          {activity.relativeTimestamp || ''}
                         </p>
                         {activity.points && (
                           <Badge variant="secondary" className="text-xs">

@@ -6,9 +6,11 @@ import { useState, useEffect } from 'react';
 
 export function Footer() {
   const [hydrated, setHydrated] = useState(false);
+  const [currentYear, setCurrentYear] = useState('2024');
 
   useEffect(() => {
     setHydrated(true);
+    setCurrentYear(new Date().getFullYear().toString());
   }, []);
 
   // Uptime procesu (od ostatniego startu serwera)
@@ -74,7 +76,7 @@ export function Footer() {
 
         <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
           <p>
-            &copy; {new Date().getFullYear()} Okazje+. Wszelkie prawa zastrzeżone.
+            &copy; {currentYear} Okazje+. Wszelkie prawa zastrzeżone.
           </p>
           <p className="mt-1" suppressHydrationWarning>
             Wersja: v{version} (commit <abbr title={buildInfo.commit}>#{commitShort}</abbr>) · Zbudowano: {builtLocal} · Runtime: <span suppressHydrationWarning>{hydrated ? uptimeHuman : '0 min 0 s'}</span>

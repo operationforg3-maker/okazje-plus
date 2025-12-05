@@ -13,10 +13,32 @@ import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/hooks/use-notifications';
 import { MessageSquare, Flame, Check, AlertCircle, Info, Calendar, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { Notification } from '@/lib/types';
+
+interface NotificationWithRelativeTime extends Notification {
+  relativeTime?: string;
+}
 
 export function NotificationBell() {
-  const { notifications, unreadCount, markAsRead } = useNotifications();
+  const { notifications: rawNotifications, unreadCount, markAsRead } = useNotifications();
+  const [notifications, setNotifications] = useState<NotificationWithRelativeTime[]>([]);
   const recentNotifications = notifications.slice(0, 5);
+
+  // Calculate relative times on client side to prevent hydration mismatch
+  useEffect(() => {
+    const updateRelativeTimes = () => {
+      setNotifications(rawNotifications.map(notif => ({
+        ...notif,
+        relativeTime: formatRelativeTime(notif.createdAt)
+      })));
+    };
+
+    updateRelativeTimes();
+    // Update every minute
+    const interval = setInterval(updateRelativeTimes, 60000);
+    return () => clearInterval(interval);
+  }, [rawNotifications]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -124,7 +146,7 @@ export function NotificationBell() {
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {formatRelativeTime(notification.createdAt)}
+                            {notification.relativeTime || ''}
                           </span>
                           {notification.link && (
                             <Link 
