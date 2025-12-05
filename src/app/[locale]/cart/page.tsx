@@ -113,17 +113,17 @@ export default function CartPage() {
             <div className="flex justify-center mb-4">
               <ShoppingBag className="w-16 h-16 text-gray-300" />
             </div>
-            <CardTitle className="text-2xl">Twój koszyk jest pusty</CardTitle>
+            <CardTitle className="text-2xl">{t('empty.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Dodaj produkty do koszyka, aby później wygenerować linki zakupowe.
+              {t('empty.description')}
             </p>
             <div className="flex gap-3 justify-center">
               <Button asChild>
                 <Link href={`${prefix}/products`}>
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  Przeglądaj Produkty
+                  {t('empty.cta')}
                 </Link>
               </Button>
               <Button variant="outline" asChild>
@@ -145,7 +145,7 @@ export default function CartPage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <ShoppingCart className="w-8 h-8" />
-            Twój Koszyk
+            {t('title')}
           </h1>
           <p className="text-muted-foreground mt-2">
             {itemCount} {itemCount === 1 ? 'produkt' : 'produkty'} w koszyku
@@ -264,12 +264,12 @@ export default function CartPage() {
                         size="sm"
                         onClick={() => {
                           removeItem(product.id);
-                          toast.success('Usunięto z koszyka');
+                          toast.success(t('toast.removed'));
                         }}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4 mr-1" />
-                        Usuń
+                        {t('item.remove')}
                       </Button>
                     </div>
                   </div>
@@ -283,7 +283,7 @@ export default function CartPage() {
         <div className="lg:col-span-1">
           <Card className="sticky top-24">
             <CardHeader>
-              <CardTitle>Podsumowanie</CardTitle>
+              <CardTitle>{t('summary.title')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               
@@ -347,7 +347,7 @@ export default function CartPage() {
                 ) : (
                   <>
                     <ExternalLink className="w-5 h-5 mr-2" />
-                    Przejdź do zakupów
+                    {t('summary.finalize')}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </>
                 )}

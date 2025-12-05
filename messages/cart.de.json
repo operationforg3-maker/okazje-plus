@@ -1,9 +1,9 @@
 {
-  "title": "Warenkorb",
+  "title": "Ihr Warenkorb",
   "subtitle": "Ihre ausgewählten Produkte",
   "empty": {
-    "title": "Warenkorb ist leer",
-    "description": "Sie haben noch keine Produkte in Ihren Warenkorb gelegt.",
+    "title": "Ihr Warenkorb ist leer",
+    "description": "Fügen Sie Produkte zu Ihrem Warenkorb hinzu, um später Kauflinks zu generieren.",
     "cta": "Produkte durchsuchen"
   },
   "item": {
@@ -16,7 +16,7 @@
     "shipping": "Versand",
     "free": "Kostenlos",
     "total": "Gesamt",
-    "finalize": "Bestellung abschließen"
+    "finalize": "Zur Kasse gehen"
   },
   "toast": {
     "added": "Zum Warenkorb hinzugefügt",
@@ -24,5 +24,6 @@
     "updated": "Menge aktualisiert",
     "error": "Ein Fehler ist aufgetreten"
   },
-  "loading": "Warenkorb wird geladen..."
+  "loading": "Warenkorb wird geladen...",
+  "clearCart": "Warenkorb leeren"
 }
