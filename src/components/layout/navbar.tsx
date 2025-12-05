@@ -90,21 +90,21 @@ export function Navbar() {
         <NavigationMenu className="hidden md:flex">
           <NavigationMenuList>
             <NavigationMenuItem>
-              <Link href={`${prefix}/deals`} legacyBehavior passHref>
+              <Link href={`${prefix}/deals`} passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Okazje
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link href={`${prefix}/products`} legacyBehavior passHref>
+              <Link href={`${prefix}/products`} passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Produkty
                 </NavigationMenuLink>
               </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <Link href={`${prefix}/forum`} legacyBehavior passHref>
+              <Link href={`${prefix}/forum`} passHref>
                 <NavigationMenuLink className={navigationMenuTriggerStyle()}>
                   Forum
                 </NavigationMenuLink>
