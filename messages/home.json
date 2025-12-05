@@ -1,0 +1,86 @@
+{
+  "hero": {
+    "badge": "Najgorętsze okazje w Polsce",
+    "title": {
+      "discover": "Odkryj",
+      "best": "najlepsze",
+      "deals": "okazje"
+    },
+    "subtitle": "Społeczność dzieląca się najlepszymi znaleziskami, promocjami i produktami. Oszczędzaj mądrze! 💰",
+    "searchPlaceholder": "Czego szukasz? (np. iPhone, buty sportowe, AGD...)",
+    "searchButton": "Szukaj"
+  },
+  "stats": {
+    "hotDeals": "Gorących okazji",
+    "products": "Produktów",
+    "community": "Społeczność",
+    "savings": "Oszczędności"
+  },
+  "categories": {
+    "title": "Przeglądaj kategorie",
+    "subtitle": "Znajdź to, czego szukasz",
+    "subcategories": "podkategorii",
+    "viewAll": "Zobacz wszystkie kategorie"
+  },
+  "hotDeals": {
+    "title": "Najgorętsze okazje",
+    "subtitle": "Sprawdzone przez społeczność",
+    "viewAll": "Zobacz wszystkie",
+    "empty": "Wkrótce pojawią się tutaj najgorętsze okazje!"
+  },
+  "topProducts": {
+    "title": "Najlepiej oceniane produkty",
+    "subtitle": "Sprawdzone jakościowo przez naszą społeczność",
+    "viewAll": "Zobacz katalog",
+    "empty": "Wkrótce pojawią się tutaj najlepsze produkty!"
+  },
+  "benefits": {
+    "badge": "Dołącz do społeczności",
+    "title": "Dlaczego warto się zarejestrować?",
+    "subtitle": "Odblokuj pełnię możliwości i zyskaj ekskluzywne korzyści",
+    "items": {
+      "notifications": {
+        "title": "Powiadomienia o okazjach",
+        "description": "Otrzymuj alerty o najlepszych promocjach w ulubionych kategoriach"
+      },
+      "favorites": {
+        "title": "Ulubione i listy",
+        "description": "Zapisuj interesujące produkty i śledź zmiany cen"
+      },
+      "exclusive": {
+        "title": "Ekskluzywne okazje",
+        "description": "Dostęp do specjalnych promocji tylko dla członków"
+      },
+      "community": {
+        "title": "Społeczność",
+        "description": "Dziel się znaleziskami, komentuj i oceniaj okazje"
+      },
+      "points": {
+        "title": "System punktów",
+        "description": "Zdobywaj punkty za aktywność i odbieraj nagrody"
+      },
+      "verified": {
+        "title": "Zweryfikowane oferty",
+        "description": "Priorytetowy dostęp do sprawdzonych przez moderatorów okazji"
+      }
+    },
+    "joinButton": "Dołącz za darmo",
+    "joinSubtext": "Rejestracja trwa mniej niż minutę. Bez zobowiązań."
+  },
+  "forum": {
+    "title": "Dołącz do dyskusji na forum",
+    "subtitle": "Społeczność dzieli się wiedzą, radami i najlepszymi znaleziskami. Zadaj pytanie, pomóż innym lub po prostu poczytaj ciekawe wątki!",
+    "browseButton": "Przeglądaj forum",
+    "createButton": "Utwórz wątek",
+    "stats": {
+      "threads": "Aktywnych wątków",
+      "users": "Użytkowników",
+      "replies": "Odpowiedzi dziennie"
+    }
+  },
+  "about": {
+    "badge": "Nasza misja",
+    "title": "Pomagamy oszczędzać",
+    "titleHighlight": "mądrze i efektywnie"
+  }
+}

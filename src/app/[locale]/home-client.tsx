@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ interface Props {
 
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
   const router = useRouter();
+  const t = useTranslations('home');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
@@ -65,18 +67,17 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-semibold animate-bounce">
                 <Sparkles className="h-4 w-4" />
-                Najgorętsze okazje w Polsce
+                {t('hero.badge')}
               </div>
               
               <h1 className="font-headline text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight">
-                Odkryj <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">najlepsze</span>
+                {t('hero.title.discover')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{t('hero.title.best')}</span>
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary">okazje</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary">{t('hero.title.deals')}</span>
               </h1>
               
               <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-                Społeczność dzieląca się najlepszymi znaleziskami, promocjami i produktami. 
-                Oszczędzaj mądrze! 💰
+                {t('hero.subtitle')}
               </p>
             </div>
 
@@ -86,7 +87,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input
                   type="text"
-                  placeholder="Czego szukasz? (np. iPhone, buty sportowe, AGD...)"
+                  placeholder={t('hero.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-12 pr-32 py-6 text-lg rounded-full border-2 focus:border-primary shadow-lg"
@@ -96,7 +97,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
                   size="lg"
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"
                 >
-                  Szukaj
+                  {t('hero.searchButton')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -105,10 +106,10 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
               {[
-                { icon: Flame, label: 'Gorących okazji', value: initialHotDeals.length, color: 'text-orange-500' },
-                { icon: ShoppingBag, label: 'Produktów', value: initialTopProducts.length, color: 'text-blue-500' },
-                { icon: Users, label: 'Społeczność', value: '1000+', color: 'text-green-500' },
-                { icon: Trophy, label: 'Oszczędności', value: '100k+', color: 'text-purple-500' },
+                { icon: Flame, label: t('stats.hotDeals'), value: initialHotDeals.length, color: 'text-orange-500' },
+                { icon: ShoppingBag, label: t('stats.products'), value: initialTopProducts.length, color: 'text-blue-500' },
+                { icon: Users, label: t('stats.community'), value: '1000+', color: 'text-green-500' },
+                { icon: Trophy, label: t('stats.savings'), value: '100k+', color: 'text-purple-500' },
               ].map((stat, idx) => (
                 <Card key={idx} className="border-2 hover:border-primary/50 transition-all hover:shadow-lg">
                   <CardContent className="p-4 text-center">
@@ -128,9 +129,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
             <h2 className="font-headline text-3xl md:text-4xl font-bold mb-2">
-              Przeglądaj kategorie
+              {t('categories.title')}
             </h2>
-            <p className="text-muted-foreground">Znajdź to, czego szukasz</p>
+            <p className="text-muted-foreground">{t('categories.subtitle')}</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
@@ -152,7 +153,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
                     </div>
                     {hoveredCategory === category.id && category.subcategories && (
                       <div className="text-xs text-muted-foreground">
-                        {category.subcategories.length} podkategorii
+                        {category.subcategories.length} {t('categories.subcategories')}
                       </div>
                     )}
                   </CardContent>
@@ -164,7 +165,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           <div className="text-center mt-8">
             <Button variant="outline" size="lg" asChild>
               <Link href="/products">
-                Zobacz wszystkie kategorie
+                {t('categories.viewAll')}
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -180,14 +181,14 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               <div className="flex items-center gap-2 mb-2">
                 <Flame className="h-8 w-8 text-orange-500" />
                 <h2 className="font-headline text-3xl md:text-4xl font-bold">
-                  Najgorętsze okazje
+                  {t('hotDeals.title')}
                 </h2>
               </div>
-              <p className="text-muted-foreground">Sprawdzone przez społeczność</p>
+              <p className="text-muted-foreground">{t('hotDeals.subtitle')}</p>
             </div>
             <Button variant="outline" asChild>
               <Link href="/deals">
-                Zobacz wszystkie
+                {t('hotDeals.viewAll')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -203,7 +204,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <Card className="p-12 text-center">
               <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                Wkrótce pojawią się tutaj najgorętsze okazje!
+                {t('hotDeals.empty')}
               </p>
             </Card>
           )}
@@ -218,14 +219,14 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               <div className="flex items-center gap-2 mb-2">
                 <Star className="h-8 w-8 text-amber-500" />
                 <h2 className="font-headline text-3xl md:text-4xl font-bold">
-                  Najlepiej oceniane produkty
+                  {t('topProducts.title')}
                 </h2>
               </div>
-              <p className="text-muted-foreground">Sprawdzone jakościowo przez naszą społeczność</p>
+              <p className="text-muted-foreground">{t('topProducts.subtitle')}</p>
             </div>
             <Button variant="outline" asChild>
               <Link href="/products">
-                Zobacz katalog
+                {t('topProducts.viewAll')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -241,7 +242,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <Card className="p-12 text-center">
               <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                Wkrótce pojawią się tutaj najlepsze produkty!
+                {t('topProducts.empty')}
               </p>
             </Card>
           )}
@@ -255,13 +256,13 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <div className="text-center mb-12">
               <Badge className="mb-4 text-lg px-4 py-2">
                 <Gift className="mr-2 h-5 w-5" />
-                Dołącz do społeczności
+                {t('benefits.badge')}
               </Badge>
               <h2 className="font-headline text-4xl md:text-5xl font-bold mb-4">
-                Dlaczego warto się zarejestrować?
+                {t('benefits.title')}
               </h2>
               <p className="text-xl text-muted-foreground">
-                Odblokowaj pełnię możliwości i zyskaj ekskluzywne korzyści
+                {t('benefits.subtitle')}
               </p>
             </div>
 
@@ -269,38 +270,38 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               {[
                 {
                   icon: Bell,
-                  title: 'Powiadomienia o okazjach',
-                  description: 'Otrzymuj alerty o najlepszych promocjach w ulubionych kategoriach',
+                  title: t('benefits.items.notifications.title'),
+                  description: t('benefits.items.notifications.description'),
                   color: 'from-blue-500 to-cyan-500',
                 },
                 {
                   icon: Heart,
-                  title: 'Ulubione i listy',
-                  description: 'Zapisuj interesujące produkty i śledź zmiany cen',
+                  title: t('benefits.items.favorites.title'),
+                  description: t('benefits.items.favorites.description'),
                   color: 'from-pink-500 to-rose-500',
                 },
                 {
                   icon: Zap,
-                  title: 'Ekskluzywne okazje',
-                  description: 'Dostęp do specjalnych promocji tylko dla członków',
+                  title: t('benefits.items.exclusive.title'),
+                  description: t('benefits.items.exclusive.description'),
                   color: 'from-orange-500 to-yellow-500',
                 },
                 {
                   icon: Users,
-                  title: 'Społeczność',
-                  description: 'Dziel się znaleziskami, komentuj i oceniaj okazje',
+                  title: t('benefits.items.community.title'),
+                  description: t('benefits.items.community.description'),
                   color: 'from-green-500 to-emerald-500',
                 },
                 {
                   icon: Trophy,
-                  title: 'System punktów',
-                  description: 'Zdobywaj punkty za aktywność i odbieraj nagrody',
+                  title: t('benefits.items.points.title'),
+                  description: t('benefits.items.points.description'),
                   color: 'from-purple-500 to-indigo-500',
                 },
                 {
                   icon: ShieldCheck,
-                  title: 'Zweryfikowane oferty',
-                  description: 'Priorytetowy dostęp do sprawdzonych przez moderatorów okazji',
+                  title: t('benefits.items.verified.title'),
+                  description: t('benefits.items.verified.description'),
                   color: 'from-teal-500 to-blue-500',
                 },
               ].map((benefit, idx) => (
@@ -324,11 +325,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               <Button size="lg" className="text-lg px-8 py-6" asChild>
                 <Link href="/login">
                   <Users className="mr-2 h-5 w-5" />
-                  Dołącz za darmo
+                  {t('benefits.joinButton')}
                 </Link>
               </Button>
               <p className="text-sm text-muted-foreground mt-4">
-                Rejestracja trwa mniej niż minutę. Bez zobowiązań.
+                {t('benefits.joinSubtext')}
               </p>
             </div>
           </div>
@@ -341,23 +342,22 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <MessageSquare className="h-16 w-16 mx-auto text-primary" />
             <h2 className="font-headline text-3xl md:text-4xl font-bold">
-              Dołącz do dyskusji na forum
+              {t('forum.title')}
             </h2>
             <p className="text-xl text-muted-foreground">
-              Społeczność dzieli się wiedzą, radami i najlepszymi znaleziskami.
-              Zadaj pytanie, pomóż innym lub po prostu poczytaj ciekawe wątki!
+              {t('forum.subtitle')}
             </p>
             
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" variant="outline" asChild>
                 <Link href="/forum">
-                  Przeglądaj forum
+                  {t('forum.browseButton')}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button size="lg" asChild>
                 <Link href="/forum/new">
-                  Utwórz wątek
+                  {t('forum.createButton')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -388,11 +388,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               <div className="space-y-6">
                 <Badge className="text-base px-4 py-2">
                   <Target className="mr-2 h-4 w-4" />
-                  Nasza misja
+                  {t('about.badge')}
                 </Badge>
                 <h2 className="font-headline text-3xl md:text-4xl font-bold">
-                  Pomagamy oszczędzać<br />
-                  <span className="text-primary">mądrze i efektywnie</span>
+                  {t('about.title')}<br />
+                  <span className="text-primary">{t('about.titleHighlight')}</span>
                 </h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p className="text-lg">

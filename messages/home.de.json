@@ -1,0 +1,86 @@
+{
+  "hero": {
+    "badge": "Heißeste Angebote in Polen",
+    "title": {
+      "discover": "Entdecke",
+      "best": "die besten",
+      "deals": "Angebote"
+    },
+    "subtitle": "Eine Community, die die besten Funde, Aktionen und Produkte teilt. Spare clever! 💰",
+    "searchPlaceholder": "Wonach suchen Sie? (z.B. iPhone, Sportschuhe, Haushaltsgeräte...)",
+    "searchButton": "Suchen"
+  },
+  "stats": {
+    "hotDeals": "Heiße Angebote",
+    "products": "Produkte",
+    "community": "Community",
+    "savings": "Ersparnisse"
+  },
+  "categories": {
+    "title": "Kategorien durchsuchen",
+    "subtitle": "Finde, was du suchst",
+    "subcategories": "Unterkategorien",
+    "viewAll": "Alle Kategorien anzeigen"
+  },
+  "hotDeals": {
+    "title": "Heißeste Angebote",
+    "subtitle": "Von der Community geprüft",
+    "viewAll": "Alle anzeigen",
+    "empty": "Die heißesten Angebote erscheinen hier bald!"
+  },
+  "topProducts": {
+    "title": "Bestbewertete Produkte",
+    "subtitle": "Qualität von unserer Community geprüft",
+    "viewAll": "Katalog ansehen",
+    "empty": "Die besten Produkte erscheinen hier bald!"
+  },
+  "benefits": {
+    "badge": "Tritt der Community bei",
+    "title": "Warum registrieren?",
+    "subtitle": "Alle Funktionen freischalten und exklusive Vorteile erhalten",
+    "items": {
+      "notifications": {
+        "title": "Angebots-Benachrichtigungen",
+        "description": "Erhalte Benachrichtigungen über die besten Aktionen in deinen Lieblingskategorien"
+      },
+      "favorites": {
+        "title": "Favoriten und Listen",
+        "description": "Speichere interessante Produkte und verfolge Preisänderungen"
+      },
+      "exclusive": {
+        "title": "Exklusive Angebote",
+        "description": "Zugang zu speziellen Aktionen nur für Mitglieder"
+      },
+      "community": {
+        "title": "Community",
+        "description": "Teile Funde, kommentiere und bewerte Angebote"
+      },
+      "points": {
+        "title": "Punktesystem",
+        "description": "Sammle Punkte für Aktivität und erhalte Belohnungen"
+      },
+      "verified": {
+        "title": "Verifizierte Angebote",
+        "description": "Prioritätszugang zu von Moderatoren geprüften Angeboten"
+      }
+    },
+    "joinButton": "Kostenlos beitreten",
+    "joinSubtext": "Registrierung dauert weniger als eine Minute. Keine Verpflichtungen."
+  },
+  "forum": {
+    "title": "Tritt der Forum-Diskussion bei",
+    "subtitle": "Die Community teilt Wissen, Ratschläge und die besten Funde. Stelle eine Frage, hilf anderen oder lies einfach interessante Threads!",
+    "browseButton": "Forum durchsuchen",
+    "createButton": "Thread erstellen",
+    "stats": {
+      "threads": "Aktive Threads",
+      "users": "Benutzer",
+      "replies": "Tägliche Antworten"
+    }
+  },
+  "about": {
+    "badge": "Unsere Mission",
+    "title": "Wir helfen dir zu sparen",
+    "titleHighlight": "clever und effektiv"
+  }
+}

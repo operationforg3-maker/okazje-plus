@@ -1,0 +1,86 @@
+{
+  "hero": {
+    "badge": "Hottest deals in Poland",
+    "title": {
+      "discover": "Discover",
+      "best": "the best",
+      "deals": "deals"
+    },
+    "subtitle": "A community sharing the best finds, promotions and products. Save smart! 💰",
+    "searchPlaceholder": "What are you looking for? (e.g. iPhone, sports shoes, appliances...)",
+    "searchButton": "Search"
+  },
+  "stats": {
+    "hotDeals": "Hot deals",
+    "products": "Products",
+    "community": "Community",
+    "savings": "Savings"
+  },
+  "categories": {
+    "title": "Browse categories",
+    "subtitle": "Find what you're looking for",
+    "subcategories": "subcategories",
+    "viewAll": "View all categories"
+  },
+  "hotDeals": {
+    "title": "Hottest deals",
+    "subtitle": "Verified by the community",
+    "viewAll": "View all",
+    "empty": "The hottest deals will appear here soon!"
+  },
+  "topProducts": {
+    "title": "Top rated products",
+    "subtitle": "Quality verified by our community",
+    "viewAll": "Browse catalog",
+    "empty": "The best products will appear here soon!"
+  },
+  "benefits": {
+    "badge": "Join the community",
+    "title": "Why register?",
+    "subtitle": "Unlock full features and gain exclusive benefits",
+    "items": {
+      "notifications": {
+        "title": "Deal notifications",
+        "description": "Receive alerts about the best promotions in your favorite categories"
+      },
+      "favorites": {
+        "title": "Favorites and lists",
+        "description": "Save interesting products and track price changes"
+      },
+      "exclusive": {
+        "title": "Exclusive deals",
+        "description": "Access to special promotions only for members"
+      },
+      "community": {
+        "title": "Community",
+        "description": "Share finds, comment and rate deals"
+      },
+      "points": {
+        "title": "Points system",
+        "description": "Earn points for activity and receive rewards"
+      },
+      "verified": {
+        "title": "Verified offers",
+        "description": "Priority access to moderator-verified deals"
+      }
+    },
+    "joinButton": "Join for free",
+    "joinSubtext": "Registration takes less than a minute. No obligations."
+  },
+  "forum": {
+    "title": "Join the forum discussion",
+    "subtitle": "The community shares knowledge, advice and the best finds. Ask a question, help others or just read interesting threads!",
+    "browseButton": "Browse forum",
+    "createButton": "Create thread",
+    "stats": {
+      "threads": "Active threads",
+      "users": "Users",
+      "replies": "Daily replies"
+    }
+  },
+  "about": {
+    "badge": "Our mission",
+    "title": "We help you save",
+    "titleHighlight": "smart and effectively"
+  }
+}
