@@ -76,7 +76,7 @@ export function Footer() {
           <p>
             &copy; {new Date().getFullYear()} Okazje+. Wszelkie prawa zastrzeżone.
           </p>
-          <p className="mt-1">
+          <p className="mt-1" suppressHydrationWarning>
             Wersja: v{version} (commit <abbr title={buildInfo.commit}>#{commitShort}</abbr>) · Zbudowano: {builtLocal} · Runtime: <span suppressHydrationWarning>{hydrated ? uptimeHuman : '0 min 0 s'}</span>
           </p>
         </div>

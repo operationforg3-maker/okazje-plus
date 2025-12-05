@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
 import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
 
@@ -72,6 +72,9 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isNew, setIsNew] = useState(false);
+  const [relativeTime, setRelativeTime] = useState('');
+  
   const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
   const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
@@ -84,12 +87,6 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
 
   const isHot = deal.temperature >= 300;
-  const isNew = (() => {
-    const posted = new Date(deal.postedAt);
-    const now = new Date();
-    const diffDays = (now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24);
-    return diffDays <= 7;
-  })();
 
   const temperatureColor = deal.temperature >= 500 ? 'from-red-500 to-orange-500' 
     : deal.temperature >= 300 ? 'from-orange-500 to-amber-500'
@@ -97,6 +94,17 @@ export default function DealListCard({ deal }: DealListCardProps) {
     : 'from-yellow-500 to-green-500';
 
   const temperaturePercent = Math.min((deal.temperature / 500) * 100, 100);
+
+  // Initialize time-dependent values on client to fix hydration mismatch
+  useEffect(() => {
+    const posted = new Date(deal.postedAt);
+    const now = new Date();
+    const diffDays = (now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24);
+    setIsNew(diffDays <= 7);
+    
+    const relTime = getRelativeTime(deal.postedAt);
+    setRelativeTime(relTime);
+  }, [deal.postedAt]);
 
   return (
     <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
@@ -156,7 +164,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {getRelativeTime(deal.postedAt)}
+              {relativeTime}
             </span>
             <span>przez <span className="font-medium text-foreground">{postedBy}</span></span>
             {categoryLabel && (
