@@ -1,0 +1,28 @@
+{
+  "title": "Koszyk",
+  "subtitle": "Twoje wybrane produkty",
+  "empty": {
+    "title": "Koszyk jest pusty",
+    "description": "Nie dodałeś jeszcze żadnych produktów do koszyka.",
+    "cta": "Przeglądaj produkty"
+  },
+  "item": {
+    "remove": "Usuń",
+    "quantity": "Ilość"
+  },
+  "summary": {
+    "title": "Podsumowanie",
+    "subtotal": "Suma częściowa",
+    "shipping": "Dostawa",
+    "free": "Darmowa",
+    "total": "Razem",
+    "finalize": "Finalizuj zamówienie"
+  },
+  "toast": {
+    "added": "Dodano do koszyka",
+    "removed": "Usunięto z koszyka",
+    "updated": "Zaktualizowano ilość",
+    "error": "Wystąpił błąd"
+  },
+  "loading": "Ładowanie koszyka..."
+}

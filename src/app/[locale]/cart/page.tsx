@@ -39,10 +39,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import type { Product } from '@/lib/types';
 
 export default function CartPage() {
   const params = useParams();
+  const t = useTranslations('cart');
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
   const router = useRouter();

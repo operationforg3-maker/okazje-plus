@@ -1,0 +1,32 @@
+{
+  "title": "Wyszukiwanie",
+  "subtitle": "Szukaj okazji i produktów",
+  "tabs": {
+    "products": "Produkty",
+    "deals": "Okazje"
+  },
+  "filters": {
+    "search": "Wpisz frazę...",
+    "sort": "Sortuj",
+    "quickFilters": {
+      "all": "Wszystkie",
+      "freeShipping": "Darmowa dostawa",
+      "highRating": "Wysokie oceny",
+      "onSale": "Promocja"
+    },
+    "advanced": "Zaawansowane filtry",
+    "clearAll": "Wyczyść filtry"
+  },
+  "savedSearches": {
+    "title": "Zapisane wyszukiwania",
+    "save": "Zapisz to wyszukiwanie",
+    "delete": "Usuń",
+    "empty": "Brak zapisanych wyszukiwań"
+  },
+  "results": {
+    "found": "Znaleziono {{count}} wyników",
+    "empty": "Nie znaleziono wyników",
+    "emptyDescription": "Spróbuj użyć innych słów kluczowych lub zmienić filtry."
+  },
+  "loading": "Wyszukiwanie..."
+}

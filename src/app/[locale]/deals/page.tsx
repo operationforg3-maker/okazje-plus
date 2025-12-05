@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/lib/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { FEATURES } from '@/lib/config';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
@@ -46,6 +47,7 @@ interface SavedFilter {
 
 export default function DealsPage() {
   const { user } = useAuth();
+  const t = useTranslations('deals');
   const [deals, setDeals] = useState<Deal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);

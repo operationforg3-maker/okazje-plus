@@ -1,0 +1,32 @@
+{
+  "title": "Suche",
+  "subtitle": "Suche nach Angeboten und Produkten",
+  "tabs": {
+    "products": "Produkte",
+    "deals": "Angebote"
+  },
+  "filters": {
+    "search": "Suchbegriff eingeben...",
+    "sort": "Sortieren",
+    "quickFilters": {
+      "all": "Alle",
+      "freeShipping": "Kostenloser Versand",
+      "highRating": "Hohe Bewertung",
+      "onSale": "Im Angebot"
+    },
+    "advanced": "Erweiterte Filter",
+    "clearAll": "Filter löschen"
+  },
+  "savedSearches": {
+    "title": "Gespeicherte Suchen",
+    "save": "Diese Suche speichern",
+    "delete": "Löschen",
+    "empty": "Keine gespeicherten Suchen"
+  },
+  "results": {
+    "found": "{{count}} Ergebnisse gefunden",
+    "empty": "Keine Ergebnisse gefunden",
+    "emptyDescription": "Versuchen Sie andere Suchbegriffe oder passen Sie die Filter an."
+  },
+  "loading": "Suchen..."
+}

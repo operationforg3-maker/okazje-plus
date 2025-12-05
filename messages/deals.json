@@ -1,0 +1,46 @@
+{
+  "title": "Okazje",
+  "subtitle": "Najgorętsze oferty sprawdzone przez społeczność",
+  "filters": {
+    "search": "Szukaj okazji...",
+    "sort": "Sortuj",
+    "sortOptions": {
+      "hottest": "Najgorętsze",
+      "newest": "Najnowsze",
+      "price_asc": "Cena: rosnąco",
+      "price_desc": "Cena: malejąco",
+      "discount": "Największa zniżka"
+    },
+    "type": "Typ",
+    "priceRange": "Zakres cen",
+    "quickFilters": {
+      "freeShipping": "Darmowa dostawa",
+      "bigDiscount": "Duża zniżka",
+      "today": "Dzisiaj",
+      "verified": "Zweryfikowane"
+    },
+    "clearAll": "Wyczyść filtry",
+    "saveFilter": "Zapisz filtr"
+  },
+  "viewMode": {
+    "list": "Lista",
+    "grid": "Siatka"
+  },
+  "empty": {
+    "title": "Brak okazji",
+    "description": "Nie znaleziono okazji pasujących do Twoich kryteriów. Spróbuj zmienić filtry.",
+    "inCategory": "Brak okazji w tej kategorii",
+    "cta": "Wróć do wszystkich okazji"
+  },
+  "loading": "Ładowanie okazji...",
+  "loadingMore": "Ładowanie kolejnych okazji...",
+  "showing": "Pokazano wszystkie {{count}} okazji",
+  "productOfDay": {
+    "badge": "Produkt Dnia",
+    "viewProduct": "Zobacz produkt"
+  },
+  "hotDealsQuick": "Gorące okazje",
+  "hotDealsDesc": "Sprawdź produkty z najwyższymi ocenami i opiniami",
+  "viewProducts": "Zobacz produkty",
+  "seeMore": "Zobacz więcej"
+}

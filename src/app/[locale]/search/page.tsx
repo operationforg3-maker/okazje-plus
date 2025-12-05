@@ -19,6 +19,7 @@ import { Filter, X, SlidersHorizontal, Bookmark, Zap, Truck, Star, Flame, Shield
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { QUICK_FILTERS } from '@/lib/saved-searches';
 import SavedSearchDialog from '@/components/saved-search-dialog';
+import { useTranslations } from 'next-intl';
 import type { SavedSearchFilters } from '@/lib/saved-searches';
 
 interface SearchFilters {
@@ -30,6 +31,7 @@ interface SearchFilters {
 }
 
 export default function SearchPage({ searchParams }: { searchParams: { q: string } }) {
+  const t = useTranslations('search');
   const [products, setProducts] = useState<Product[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);

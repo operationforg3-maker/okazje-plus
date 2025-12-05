@@ -18,6 +18,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
+import { useTranslations } from 'next-intl';
 
 const toSearchableText = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -27,6 +28,7 @@ const toSearchableText = (value: unknown): string => {
 
 function ProductsPageContent() {
   const searchParams = useSearchParams();
+  const t = useTranslations('products');
   const mainCategoryParam = searchParams.get('mainCategory');
   const subCategoryParam = searchParams.get('subCategory');
   const [products, setProducts] = useState<Product[]>([]);

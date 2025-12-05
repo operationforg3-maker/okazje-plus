@@ -1,0 +1,35 @@
+{
+  "title": "Produkty",
+  "subtitle": "Najlepsze produkty z AliExpress",
+  "filters": {
+    "search": "Szukaj produktów...",
+    "sort": "Sortuj",
+    "sortOptions": {
+      "popular": "Najpopularniejsze",
+      "newest": "Najnowsze",
+      "price_asc": "Cena: rosnąco",
+      "price_desc": "Cena: malejąco",
+      "rating": "Najwyżej oceniane"
+    },
+    "category": "Kategoria",
+    "priceRange": "Zakres cen",
+    "quickFilters": {
+      "freeShipping": "Darmowa dostawa",
+      "highRating": "Wysokie oceny",
+      "newArrivals": "Nowości",
+      "onSale": "Promocja"
+    },
+    "clearAll": "Wyczyść filtry"
+  },
+  "viewMode": {
+    "list": "Lista",
+    "grid": "Siatka"
+  },
+  "empty": {
+    "title": "Brak produktów",
+    "description": "Nie znaleziono produktów pasujących do Twoich kryteriów.",
+    "cta": "Wróć do wszystkich produktów"
+  },
+  "loading": "Ładowanie produktów...",
+  "addToCart": "Dodaj do koszyka"
+}

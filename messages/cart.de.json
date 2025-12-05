@@ -1,0 +1,28 @@
+{
+  "title": "Warenkorb",
+  "subtitle": "Ihre ausgewählten Produkte",
+  "empty": {
+    "title": "Warenkorb ist leer",
+    "description": "Sie haben noch keine Produkte in Ihren Warenkorb gelegt.",
+    "cta": "Produkte durchsuchen"
+  },
+  "item": {
+    "remove": "Entfernen",
+    "quantity": "Menge"
+  },
+  "summary": {
+    "title": "Zusammenfassung",
+    "subtotal": "Zwischensumme",
+    "shipping": "Versand",
+    "free": "Kostenlos",
+    "total": "Gesamt",
+    "finalize": "Bestellung abschließen"
+  },
+  "toast": {
+    "added": "Zum Warenkorb hinzugefügt",
+    "removed": "Aus dem Warenkorb entfernt",
+    "updated": "Menge aktualisiert",
+    "error": "Ein Fehler ist aufgetreten"
+  },
+  "loading": "Warenkorb wird geladen..."
+}

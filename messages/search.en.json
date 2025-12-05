@@ -1,0 +1,32 @@
+{
+  "title": "Search",
+  "subtitle": "Search for deals and products",
+  "tabs": {
+    "products": "Products",
+    "deals": "Deals"
+  },
+  "filters": {
+    "search": "Enter search term...",
+    "sort": "Sort",
+    "quickFilters": {
+      "all": "All",
+      "freeShipping": "Free Shipping",
+      "highRating": "High Rating",
+      "onSale": "On Sale"
+    },
+    "advanced": "Advanced Filters",
+    "clearAll": "Clear Filters"
+  },
+  "savedSearches": {
+    "title": "Saved Searches",
+    "save": "Save This Search",
+    "delete": "Delete",
+    "empty": "No saved searches"
+  },
+  "results": {
+    "found": "Found {{count}} results",
+    "empty": "No results found",
+    "emptyDescription": "Try using different keywords or adjust filters."
+  },
+  "loading": "Searching..."
+}

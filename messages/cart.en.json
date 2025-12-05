@@ -1,0 +1,28 @@
+{
+  "title": "Cart",
+  "subtitle": "Your selected products",
+  "empty": {
+    "title": "Cart is empty",
+    "description": "You haven't added any products to your cart yet.",
+    "cta": "Browse Products"
+  },
+  "item": {
+    "remove": "Remove",
+    "quantity": "Quantity"
+  },
+  "summary": {
+    "title": "Summary",
+    "subtotal": "Subtotal",
+    "shipping": "Shipping",
+    "free": "Free",
+    "total": "Total",
+    "finalize": "Finalize Order"
+  },
+  "toast": {
+    "added": "Added to cart",
+    "removed": "Removed from cart",
+    "updated": "Quantity updated",
+    "error": "An error occurred"
+  },
+  "loading": "Loading cart..."
+}

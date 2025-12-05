@@ -1,0 +1,35 @@
+{
+  "title": "Deals",
+  "subtitle": "Hottest offers verified by the community",
+  "filters": {
+    "search": "Search deals...",
+    "sort": "Sort",
+    "sortOptions": {
+      "hottest": "Hottest",
+      "newest": "Newest",
+      "price_asc": "Price: Low to High",
+      "price_desc": "Price: High to Low",
+      "discount": "Biggest Discount"
+    },
+    "type": "Type",
+    "priceRange": "Price Range",
+    "quickFilters": {
+      "freeShipping": "Free Shipping",
+      "bigDiscount": "Big Discount",
+      "today": "Today",
+      "verified": "Verified"
+    },
+    "clearAll": "Clear Filters",
+    "saveFilter": "Save Filter"
+  },
+  "viewMode": {
+    "list": "List",
+    "grid": "Grid"
+  },
+  "empty": {
+    "title": "No Deals",
+    "description": "No deals found matching your criteria. Try adjusting filters.",
+    "cta": "Back to All Deals"
+  },
+  "loading": "Loading deals..."
+}

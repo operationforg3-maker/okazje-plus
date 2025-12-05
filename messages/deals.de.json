@@ -1,0 +1,35 @@
+{
+  "title": "Angebote",
+  "subtitle": "Heißeste Angebote von der Community geprüft",
+  "filters": {
+    "search": "Angebote suchen...",
+    "sort": "Sortieren",
+    "sortOptions": {
+      "hottest": "Heißeste",
+      "newest": "Neueste",
+      "price_asc": "Preis: Aufsteigend",
+      "price_desc": "Preis: Absteigend",
+      "discount": "Größter Rabatt"
+    },
+    "type": "Typ",
+    "priceRange": "Preisspanne",
+    "quickFilters": {
+      "freeShipping": "Kostenloser Versand",
+      "bigDiscount": "Großer Rabatt",
+      "today": "Heute",
+      "verified": "Verifiziert"
+    },
+    "clearAll": "Filter löschen",
+    "saveFilter": "Filter speichern"
+  },
+  "viewMode": {
+    "list": "Liste",
+    "grid": "Raster"
+  },
+  "empty": {
+    "title": "Keine Angebote",
+    "description": "Keine Angebote gefunden, die Ihren Kriterien entsprechen. Versuchen Sie, die Filter anzupassen.",
+    "cta": "Zurück zu allen Angeboten"
+  },
+  "loading": "Angebote werden geladen..."
+}
