@@ -1,0 +1,15 @@
+{
+  "confirmCreateCategories": "This will create the category structure. Continue?",
+  "creatingCategories": "📁 Creating category structure...\n\nThis may take a moment...",
+  "logStartCategories": "Started creating category structure",
+  "error": "Error",
+  "unknownServerError": "Unknown server error",
+  "categoriesCreated": "✅ Category structure created!",
+  "logCategoriesCreated": "Category structure created successfully",
+  "checkInternet": "Check your internet connection",
+  "connectionError": "Connection error",
+  "logErrorCategories": "Error while creating categories",
+  "confirmFillProducts": "This will fill existing categories with products from AliExpress API. Continue?",
+  "fetchingProducts": "📦 Fetching products from AliExpress...\n\nThis may take a few minutes. Please wait...",
+  "logStartProducts": "Started fetching products from AliExpress"
+}
