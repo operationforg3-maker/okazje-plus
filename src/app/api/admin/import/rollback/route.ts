@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 
 /**
  * POST /api/admin/import/rollback
@@ -8,6 +8,19 @@ import { adminDb } from '@/lib/firebase-admin';
  */
 export async function POST(req: NextRequest) {
   try {
+    // Auth check
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    try {
+      await adminAuth.verifyIdToken(token);
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
     const { jobId } = await req.json();
 
     if (!jobId) {

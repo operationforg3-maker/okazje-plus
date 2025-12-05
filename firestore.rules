@@ -408,7 +408,40 @@ service cloud.firestore {
     ////////////////////////////////
     // DUPLICATE GROUPS
     ////////////////////////////////
-    match /duplicate_groups/{groupId} {
+    match /duplicateGroups/{groupId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // AUDIT & SNAPSHOTS
+    ////////////////////////////////
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /productSnapshots/{snapshotId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /dealSnapshots/{snapshotId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // SOCIAL & FOLLOWS
+    ////////////////////////////////
+    match /follows/{followId} {
+      allow read: if true; // Public read
+      allow write: if isSignedIn() && (
+        request.resource.data.follower == request.auth.uid ||
+        request.resource.data.followee == request.auth.uid
+      );
+    }
+
+    ////////////////////////////////
+    // INDEXING JOBS (Typesense)
+    ////////////////////////////////
+    match /indexingJobs/{jobId} {
       allow read, write: if isAdmin();
     }
 

@@ -1,12 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 
 /**
  * GET /api/admin/import/status?jobId=xxx - Pobierz status job
  * POST /api/admin/import/status - Zmień status (pause/resume)
  */
+
+// Auth middleware
+async function verifyAuth(req: NextRequest): Promise<string | null> {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.substring(7);
+  try {
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    return decodedToken.uid;
+  } catch (error) {
+    return null;
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
+    // Auth check
+    const userId = await verifyAuth(req);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
 
@@ -37,6 +60,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth check
+    const userId = await verifyAuth(req);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { jobId, action } = await req.json();
 
     if (!jobId || !action) {
