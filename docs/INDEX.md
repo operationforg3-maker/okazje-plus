@@ -1,5 +1,10 @@
 # 📚 Dokumentacja Okazje Plus — Indeks
 
+> ⚠️ **UWAGA**: Ten plik jest uproszczonym indeksem. Pełna, uporządkowana dokumentacja znajduje się w:
+> - **[MASTER_INDEX.md](./MASTER_INDEX.md)** — główny hub dokumentacji z kategoriami i statusami
+> - **[IMPLEMENTATION_VS_DOCUMENTATION_AUDIT.md](./IMPLEMENTATION_VS_DOCUMENTATION_AUDIT.md)** — zestawienie dokumentacji z implementacją
+> - **[MOBILE_READINESS_GUIDE.md](./MOBILE_READINESS_GUIDE.md)** — przygotowanie do aplikacji mobilnych
+
 Centralne miejsce dla wszystkich plików dokumentacji. Każdy plik został przeniesiony z katalogu głównego do `docs/`. Używaj wyszukiwarki w edytorze lub tej listy kategorii.
 
 ## Spis według kategorii
