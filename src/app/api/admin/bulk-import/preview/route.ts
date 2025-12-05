@@ -36,14 +36,12 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7);
     const decodedToken = await adminAuth.verifyIdToken(token);
     
-    // TODO: Re-enable admin check after fixing Firestore Rules for Admin SDK
     // Check admin role
-    // const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    // const userData = userDoc.data();
-    // if (userData?.role !== 'admin') {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
-    console.log('[Bulk Preview] User:', decodedToken.uid, '- Admin check temporarily disabled');
+    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+    const userData = userDoc.data();
+    if (userData?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden: Admin role required' }, { status: 403 });
+    }
 
     const body = await request.json();
     const { configs } = body as { configs: CategoryConfig[] };
