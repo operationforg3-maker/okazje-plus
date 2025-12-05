@@ -26,10 +26,13 @@ import {
   ListTree,
   XCircle
 } from 'lucide-react';
+
 import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
 import { ImportProgress, ImportLog, ImportStats, ImportStatus } from '@/components/admin/import-progress';
+import { useTranslations } from 'next-intl';
 
 function SetupPage() {
+  const t = useTranslations('adminSetup');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
   const [seedingStatus, setSeedingStatus] = useState<ImportStatus>('idle');
@@ -137,15 +140,15 @@ function SetupPage() {
   };
 
   const handleCreateCategories = async () => {
-    if (!confirm('To utworzy strukturę kategorii. Kontynuować?')) return;
+    if (!confirm(t('confirmCreateCategories'))) return;
     
     setLoading(true);
     setSeedingStatus('running');
     setStartedAt(new Date().toISOString());
     setImportLogs([]);
     setImportStats({});
-    setResult('📁 Tworzę strukturę kategorii...\n\nTo może zająć chwilę...');
-    addLog('info', 'Rozpoczęto tworzenie struktury kategorii', `Tryb: ${categoryMode}`);
+    setResult(t('creatingCategories'));
+    addLog('info', t('logStartCategories'), `Tryb: ${categoryMode}`);
     
     try {
       const useAi = categoryMode !== 'seeds-only';
@@ -164,21 +167,21 @@ function SetupPage() {
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
-        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
+        setResult(`❌ ${t('error')} ${res.status}: ${errorData.error || errorData.result || t('unknownServerError')}`);
         setSeedingStatus('error');
         return;
       }
       
       const data = await res.json();
-      setResult(data.result || '✅ Struktura kategorii utworzona!');
+      setResult(data.result || t('categoriesCreated'));
       setSeedingStatus('completed');
-      addLog('success', 'Struktura kategorii utworzona pomyślnie');
+      addLog('success', t('logCategoriesCreated'));
       setImportStats({ saved: data.categoriesCreated || 0 });
     } catch (e: any) {
-      const errorMsg = e.message || 'Sprawdź połączenie z internetem';
-      setResult(`❌ Błąd połączenia: ${errorMsg}`);
+      const errorMsg = e.message || t('checkInternet');
+      setResult(`❌ ${t('connectionError')}: ${errorMsg}`);
       setSeedingStatus('failed');
-      addLog('error', 'Błąd podczas tworzenia kategorii', errorMsg);
+      addLog('error', t('logErrorCategories'), errorMsg);
       console.error('Fetch error:', e);
     } finally {
       setLoading(false);
@@ -186,14 +189,14 @@ function SetupPage() {
   };
 
   const handleFillWithProducts = async () => {
-    if (!confirm('To wypełni istniejące kategorie produktami z AliExpress API. Kontynuować?')) return;
+    if (!confirm(t('confirmFillProducts'))) return;
     
     setLoading(true);
     setSeedingStatus('running');
     setStartedAt(new Date().toISOString());
     setImportLogs([]);
-    setResult('📦 Pobieram produkty z AliExpress...\n\nTo może zająć kilka minut. Proszę czekać...');
-    addLog('info', 'Rozpoczęto pobieranie produktów z AliExpress');
+    setResult(t('fetchingProducts'));
+    addLog('info', t('logStartProducts'));
     
     try {
       const res = await fetch('/api/admin/ai/command', {
