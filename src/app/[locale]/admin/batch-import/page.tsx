@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
+import { auth } from '@/lib/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -127,8 +128,20 @@ function BatchImportPage() {
   const [loading, setLoading] = useState(true);
   const [batchItems, setBatchItems] = useState<BatchItem[]>([]);
   const [selectedCount, setSelectedCount] = useState(0);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   
   const formatNumber = (value?: number) => format.number(value ?? 0);
+  
+  // Load auth token on mount
+  useEffect(() => {
+    const loadToken = async () => {
+      if (auth.currentUser) {
+        const token = await auth.currentUser.getIdToken();
+        setAuthToken(token);
+      }
+    };
+    loadToken();
+  }, []);
   
   // Import settings
   const [maxItemsPerSubcategory, setMaxItemsPerSubcategory] = useState(50);
@@ -258,6 +271,11 @@ function BatchImportPage() {
       return;
     }
 
+    if (!authToken) {
+      toast.error('Brak autoryzacji - proszę odświeżyć stronę');
+      return;
+    }
+
     setImporting(true);
     
     try {
@@ -276,7 +294,10 @@ function BatchImportPage() {
 
       const res = await fetch('/api/admin/import/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -299,12 +320,15 @@ function BatchImportPage() {
   };
 
   const pauseImport = async () => {
-    if (!jobId) return;
+    if (!jobId || !authToken) return;
     
     try {
       const res = await fetch(`/api/admin/import/status?jobId=${jobId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ status: 'paused' }),
       });
       
@@ -318,12 +342,15 @@ function BatchImportPage() {
   };
 
   const resumeImport = async () => {
-    if (!jobId) return;
+    if (!jobId || !authToken) return;
     
     try {
       const res = await fetch(`/api/admin/import/start`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ resumeJobId: jobId }),
       });
       
