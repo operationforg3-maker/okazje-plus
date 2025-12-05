@@ -167,6 +167,19 @@ function BatchImportPage() {
         });
         
         setBatchItems(items);
+        
+        // Load exchange rate
+        try {
+          const rateRes = await fetch('/api/admin/settings/currency');
+          if (rateRes.ok) {
+            const rateData = await rateRes.json();
+            if (rateData.rate) {
+              setCurrencyRate(rateData.rate);
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load currency rate:', e);
+        }
       } catch (error) {
         console.error('Failed to load categories:', error);
         toast.error('Nie udało się załadować kategorii');

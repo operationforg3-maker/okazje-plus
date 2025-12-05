@@ -21,16 +21,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Languages, Check } from 'lucide-react';
 
-const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl']; // Only PL active - EN/DE coming soon
+const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de'];
 
 export function LanguageSwitcherMenu() {
   const locale = useLocale() as SupportedLanguage;
   const pathname = usePathname();
-
-  // Hide language switcher when only one language available
-  if (SUPPORTED_LANGUAGES.length === 1) {
-    return null;
-  }
 
   return (
     <DropdownMenu>

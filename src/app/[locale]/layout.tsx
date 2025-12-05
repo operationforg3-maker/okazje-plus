@@ -62,8 +62,8 @@ export default async function RootLayout({
   params: Promise<{ locale: string }>;
 }>) {
   const { locale } = await params;
-  // Wymuszamy polskie tłumaczenia niezależnie od parametru, dopóki EN/DE nie gotowe
-  const effectiveLocale = 'pl';
+  // Use locale from params (PL/EN/DE from routing)
+  const effectiveLocale = locale || 'pl';
   const messages = await getMessages();
   
   return (
