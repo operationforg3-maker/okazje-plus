@@ -46,6 +46,7 @@ import { toast } from 'sonner';
 import { getCategories } from '@/lib/data';
 import { Category } from '@/lib/types';
 import { useLocale, useFormatter } from 'next-intl';
+import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
 
 const translations = {
   pl: {
@@ -348,6 +349,9 @@ function BatchImportPage() {
           Masowy import produktów z wielu kategorii za pomocą 5-stage AI pipeline
         </p>
       </div>
+
+      {/* System Comparison */}
+      <ImportSystemsComparison currentSystem="batch" variant="compact" />
 
       {/* Settings Card */}
       <Card>

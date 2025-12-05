@@ -25,11 +25,16 @@ import {
   ListTree,
   XCircle
 } from 'lucide-react';
+import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
+import { ImportProgress, ImportLog, ImportStats, ImportStatus } from '@/components/admin/import-progress';
 
 function SetupPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
-  const [seedingStatus, setSeedingStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [seedingStatus, setSeedingStatus] = useState<ImportStatus>('idle');
+  const [importLogs, setImportLogs] = useState<ImportLog[]>([]);
+  const [importStats, setImportStats] = useState<ImportStats>({});
+  const [startedAt, setStartedAt] = useState<string | null>(null);
   
   // Scheduled import state
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
@@ -105,12 +110,25 @@ function SetupPage() {
   const [categoryMode, setCategoryMode] = useState<'seeds-only' | 'ai-only' | 'hybrid'>('seeds-only');
   const [categoryPrompt, setCategoryPrompt] = useState('');
 
+  const addLog = (level: ImportLog['level'], message: string, details?: string) => {
+    setImportLogs(prev => [...prev, {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      details
+    }]);
+  };
+
   const handleCreateCategories = async () => {
     if (!confirm('To utworzy strukturę kategorii. Kontynuować?')) return;
     
     setLoading(true);
     setSeedingStatus('running');
+    setStartedAt(new Date().toISOString());
+    setImportLogs([]);
+    setImportStats({});
     setResult('📁 Tworzę strukturę kategorii...\n\nTo może zająć chwilę...');
+    addLog('info', 'Rozpoczęto tworzenie struktury kategorii', `Tryb: ${categoryMode}`);
     
     try {
       const useAi = categoryMode !== 'seeds-only';
@@ -133,10 +151,14 @@ function SetupPage() {
       
       const data = await res.json();
       setResult(data.result || '✅ Struktura kategorii utworzona!');
-      setSeedingStatus('success');
+      setSeedingStatus('completed');
+      addLog('success', 'Struktura kategorii utworzona pomyślnie');
+      setImportStats({ saved: data.categoriesCreated || 0 });
     } catch (e: any) {
-      setResult(`❌ Błąd połączenia: ${e.message || 'Sprawdź połączenie z internetem'}`);
-      setSeedingStatus('error');
+      const errorMsg = e.message || 'Sprawdź połączenie z internetem';
+      setResult(`❌ Błąd połączenia: ${errorMsg}`);
+      setSeedingStatus('failed');
+      addLog('error', 'Błąd podczas tworzenia kategorii', errorMsg);
       console.error('Fetch error:', e);
     } finally {
       setLoading(false);
@@ -148,7 +170,10 @@ function SetupPage() {
     
     setLoading(true);
     setSeedingStatus('running');
+    setStartedAt(new Date().toISOString());
+    setImportLogs([]);
     setResult('📦 Pobieram produkty z AliExpress...\n\nTo może zająć kilka minut. Proszę czekać...');
+    addLog('info', 'Rozpoczęto pobieranie produktów z AliExpress');
     
     try {
       const res = await fetch('/api/admin/ai/command', {
@@ -166,10 +191,14 @@ function SetupPage() {
       
       const data = await res.json();
       setResult(data.result || '✅ Produkty dodane!');
-      setSeedingStatus('success');
+      setSeedingStatus('completed');
+      addLog('success', 'Produkty dodane pomyślnie');
+      setImportStats({ fetched: data.productsFetched || 0, saved: data.productsSaved || 0 });
     } catch (e: any) {
-      setResult(`❌ Błąd połączenia: ${e.message || 'Sprawdź połączenie z internetem'}`);
-      setSeedingStatus('error');
+      const errorMsg = e.message || 'Sprawdź połączenie z internetem';
+      setResult(`❌ Błąd połączenia: ${errorMsg}`);
+      setSeedingStatus('failed');
+      addLog('error', 'Błąd podczas pobierania produktów', errorMsg);
       console.error('Fetch error:', e);
     } finally {
       setLoading(false);
@@ -181,7 +210,10 @@ function SetupPage() {
     
     setLoading(true);
     setSeedingStatus('running');
+    setStartedAt(new Date().toISOString());
+    setImportLogs([]);
     setResult('🔥 Pobieram deale z AliExpress...\n\nSzukam promocji >50% zniżki...');
+    addLog('info', 'Rozpoczęto pobieranie deali z AliExpress', 'Promocje >50% zniżki');
     
     try {
       const res = await fetch('/api/admin/ai/command', {
@@ -199,10 +231,14 @@ function SetupPage() {
       
       const data = await res.json();
       setResult(data.result || '✅ Deale pobrane z AliExpress!');
-      setSeedingStatus('success');
+      setSeedingStatus('completed');
+      addLog('success', 'Deale pobrane pomyślnie');
+      setImportStats({ fetched: data.dealsFetched || 0, saved: data.dealsSaved || 0 });
     } catch (e: any) {
-      setResult(`❌ Błąd połączenia: ${e.message}`);
-      setSeedingStatus('error');
+      const errorMsg = e.message;
+      setResult(`❌ Błąd połączenia: ${errorMsg}`);
+      setSeedingStatus('failed');
+      addLog('error', 'Błąd podczas pobierania deali', errorMsg);
       console.error('Fetch error:', e);
     } finally {
       setLoading(false);
@@ -215,7 +251,10 @@ function SetupPage() {
     
     setLoading(true);
     setSeedingStatus('running');
+    setStartedAt(new Date().toISOString());
+    setImportLogs([]);
     setResult('🗑️ Czyszczenie bazy danych...\n\nUsuwam produkty i deale...');
+    addLog('warning', 'Rozpoczęto czyszczenie bazy danych', 'NIEODWRACALNE');
     
     try {
       const res = await fetch('/api/admin/ai/wipe', {
@@ -232,10 +271,13 @@ function SetupPage() {
       
       const data = await res.json();
       setResult(data.message || '✅ Baza danych wyczyszczona');
-      setSeedingStatus('success');
+      setSeedingStatus('completed');
+      addLog('success', 'Baza danych wyczyszczona', `Usunięto: ${data.deleted || 0} elementów`);
     } catch (e: any) {
-      setResult(`❌ Błąd połączenia: ${e.message}`);
-      setSeedingStatus('error');
+      const errorMsg = e.message;
+      setResult(`❌ Błąd połączenia: ${errorMsg}`);
+      setSeedingStatus('failed');
+      addLog('error', 'Błąd podczas czyszczenia bazy', errorMsg);
       console.error('Fetch error:', e);
     } finally {
       setLoading(false);
@@ -469,18 +511,19 @@ function SetupPage() {
 
         {/* SEEDING TAB */}
         <TabsContent value="seeding" className="space-y-6">
-          {/* Status Alert */}
+          {/* System Comparison */}
+          <ImportSystemsComparison currentSystem="setup" variant="compact" />
+
+          {/* Progress Tracker */}
           {seedingStatus !== 'idle' && (
-            <Alert variant={seedingStatus === 'error' ? 'destructive' : 'default'}>
-              {seedingStatus === 'running' && <Loader2 className="h-4 w-4 animate-spin" />}
-              {seedingStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-600" />}
-              {seedingStatus === 'error' && <AlertCircle className="h-4 w-4" />}
-              <AlertDescription>
-                {seedingStatus === 'running' && 'Operacja w toku... Proszę czekać.'}
-                {seedingStatus === 'success' && 'Operacja zakończona pomyślnie!'}
-                {seedingStatus === 'error' && 'Wystąpił błąd podczas operacji.'}
-              </AlertDescription>
-            </Alert>
+            <ImportProgress
+              status={seedingStatus}
+              stats={importStats}
+              logs={importLogs}
+              startedAt={startedAt || undefined}
+              completedAt={seedingStatus === 'completed' || seedingStatus === 'failed' ? new Date().toISOString() : undefined}
+              systemType="setup"
+            />
           )}
 
           {/* Quick Actions Grid */}

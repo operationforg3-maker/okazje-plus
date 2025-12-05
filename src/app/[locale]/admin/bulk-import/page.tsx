@@ -20,6 +20,8 @@ import { collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Category } from '@/lib/types';
 import { useLocale, useFormatter } from 'next-intl';
+import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
+import { ImportProgress, ImportLog, ImportStats, ImportStatus } from '@/components/admin/import-progress';
 
 const translations = {
   pl: {
@@ -135,6 +137,21 @@ function BulkImportPage() {
   const [previewProducts, setPreviewProducts] = useState<PreviewProduct[]>([]);
   const [importing, setImporting] = useState(false);
   const [step, setStep] = useState<'config' | 'preview' | 'complete'>('config');
+  
+  // Import progress tracking
+  const [importLogs, setImportLogs] = useState<ImportLog[]>([]);
+  const [importStats, setImportStats] = useState<ImportStats>({});
+  const [importStatus, setImportStatus] = useState<ImportStatus>('idle');
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+
+  const addLog = (level: ImportLog['level'], message: string, details?: string) => {
+    setImportLogs(prev => [...prev, {
+      timestamp: new Date().toISOString(),
+      level,
+      message,
+      details
+    }]);
+  };
 
   // Initialize category configs from Firestore categories
   useEffect(() => {
@@ -194,6 +211,12 @@ function BulkImportPage() {
     }
 
     setLoading(true);
+    setImportStatus('running');
+    setStartedAt(new Date().toISOString());
+    setImportLogs([]);
+    setImportStats({});
+    addLog('info', `Rozpoczęto generowanie podglądu dla ${enabledConfigs.length} kategorii`);
+    
     try {
       // Get Firebase token - user is guaranteed to be logged in by withAuth HOC
       const firebaseUser = auth.currentUser;
@@ -217,16 +240,13 @@ function BulkImportPage() {
           configs: enabledConfigs,
         }),
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Preview generation failed');
-      }
-
       const data = await response.json();
       
       setPreviewProducts(data.products.map((p: any) => ({ ...p, selected: true })));
       setStep('preview');
+      setImportStatus('completed');
+      setImportStats({ fetched: data.stats?.totalFetched, saved: data.stats?.totalPassed });
+      addLog('success', `Wygenerowano ${data.products.length} produktów`, `Przeszło filtr: ${data.stats?.totalPassed || 0}/${data.stats?.totalFetched || 0}`);
       
       toast({
         title: `${copy.previewReady}`,
@@ -234,6 +254,8 @@ function BulkImportPage() {
       });
     } catch (error) {
       console.error('[Bulk Import]', error);
+      setImportStatus('failed');
+      addLog('error', 'Błąd podczas generowania podglądu', error instanceof Error ? error.message : 'Unknown');
       toast({
         title: copy.error,
         description: error instanceof Error ? error.message : copy.unknownError,
@@ -257,6 +279,10 @@ function BulkImportPage() {
     }
 
     setImporting(true);
+    setImportStatus('running');
+    setStartedAt(new Date().toISOString());
+    addLog('info', `Rozpoczęto zapis ${selectedProducts.length} produktów do bazy`);
+    
     try {
       // Get Firebase token - user is guaranteed to be logged in by withAuth HOC
       const firebaseUser = auth.currentUser;
@@ -283,6 +309,10 @@ function BulkImportPage() {
 
       const data = await response.json();
       
+      setImportStatus('completed');
+      setImportStats({ saved: data.imported, total: selectedProducts.length });
+      addLog('success', `Zaimportowano ${data.imported} produktów do bazy danych`);
+      
       toast({
         title: `✅ ${copy.importComplete}`,
         description: `${formatNumber(data.imported)} ${copy.productsSaved}`,
@@ -291,6 +321,8 @@ function BulkImportPage() {
       setStep('complete');
     } catch (error) {
       console.error('[Bulk Import Commit]', error);
+      setImportStatus('failed');
+      addLog('error', 'Błąd podczas zapisu produktów', error instanceof Error ? error.message : 'Unknown');
       toast({
         title: copy.importError,
         description: error instanceof Error ? error.message : copy.unknownError,
@@ -379,6 +411,21 @@ function BulkImportPage() {
           Automatyczne wypełnienie katalogu produktami z AI enrichment
         </p>
       </div>
+
+      {/* System Comparison */}
+      <ImportSystemsComparison currentSystem="bulk" variant="compact" />
+
+      {/* Import Progress */}
+      {importStatus !== 'idle' && (
+        <ImportProgress
+          status={importStatus}
+          stats={importStats}
+          logs={importLogs}
+          startedAt={startedAt || undefined}
+          completedAt={importStatus === 'completed' || importStatus === 'failed' ? new Date().toISOString() : undefined}
+          systemType="bulk"
+        />
+      )}
 
       {/* Step indicator */}
       <div className="flex items-center gap-4">
