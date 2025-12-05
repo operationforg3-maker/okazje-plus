@@ -105,7 +105,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
     <div className="container mx-auto px-4 py-8 md:py-12">
       <div className="mb-8">
         <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl mb-2">
-          Wyniki wyszukiwania
+          {t('title')}
         </h1>
         <p className="text-lg text-muted-foreground">
           Zapytanie: <span className="font-medium text-foreground">"{searchParams.q}"</span>
@@ -126,7 +126,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
             className="gap-2"
           >
             <SlidersHorizontal className="h-4 w-4" />
-            Filtry
+            {t('filters.advanced')}
             {hasActiveFilters && (
               <span className="ml-1 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
                 {[filters.minPrice, filters.maxPrice, filters.minTemperature, filters.minRating].filter(Boolean).length}
@@ -137,11 +137,11 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
             <>
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <X className="h-4 w-4 mr-2" />
-                Wyczyść filtry
+                {t('filters.clearAll')}
               </Button>
               <Button variant="outline" size="sm" onClick={() => setSaveDialogOpen(true)}>
                 <Bookmark className="h-4 w-4 mr-2" />
-                Zapisz wyszukiwanie
+                {t('savedSearches.save')}
               </Button>
             </>
           )}
@@ -150,7 +150,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
 
       {/* Quick Filters */}
       <div className="mb-6 flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-medium text-muted-foreground">Szybkie filtry:</span>
+        <span className="text-sm font-medium text-muted-foreground">{t('filters.quickFilters.all')}:</span>
         {QUICK_FILTERS.map((preset, index) => {
           const Icon = getQuickFilterIcon(preset.name);
           return (
@@ -173,7 +173,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              Zaawansowane filtry
+              {t('filters.advanced')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -265,10 +265,10 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
       ) : totalResults === 0 ? (
         <div className="text-center py-16">
           <p className="text-xl text-muted-foreground mb-4">
-            Nie znaleziono wyników dla "{searchParams.q}"
+            {t('results.empty')}: "{searchParams.q}"
           </p>
           <p className="text-sm text-muted-foreground">
-            Spróbuj użyć innych słów kluczowych lub przeglądnij kategorie
+            {t('results.emptyDescription')}
           </p>
         </div>
       ) : (
