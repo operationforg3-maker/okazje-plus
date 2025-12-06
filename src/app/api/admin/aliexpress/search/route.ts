@@ -61,6 +61,7 @@ export async function GET(request: Request) {
       page_size: Math.min(limit, 50), // Max 50 per AliExpress API
       page_no: page,
       target_language: 'EN',
+      target_currency: 'PLN', // ← Pobieraj ceny w PLN
       ship_to_country: 'PL',
     };
 
@@ -195,6 +196,7 @@ export async function GET(request: Request) {
       const hotParams: Record<string, string | number> = {
         method: hotMethod,
         target_language: 'EN',
+        target_currency: 'PLN', // ← Pobieraj w PLN
         ship_to_country: 'PL',
         page_size: Math.min(limit, 50),
         page_no: page,
@@ -281,7 +283,7 @@ export async function GET(request: Request) {
         discount: p.discount ? parseInt(p.discount) : 0,
         shipping: p.first_level_category_name || p.category_name || '',
         shippingInfo: shippingInfo,
-        currency: 'USD',
+        currency: p.target_sale_price_currency || 'PLN', // ← API zwraca walutę
         merchant: p.shop_title || p.shop_name || '',
         merchantId: p.shop_id || null,
         categoryId: p.first_level_category_id || p.category_id || '',

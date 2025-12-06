@@ -100,7 +100,7 @@ export async function fetchProductsFromAliexpress(
           orders: parseInt(p.orders || p.volume || '0', 10),
           merchant: p.merchant || p.storeName || p.shop || 'AliExpress',
           link: p.link || p.productUrl || p.url || '#',
-          currency: p.currency || 'USD', // Default USD from AliExpress
+          currency: p.currency || 'PLN', // ← API zwraca PLN, zapisujemy walutę
           
           // Additional fields for context
           description: p.description || '',

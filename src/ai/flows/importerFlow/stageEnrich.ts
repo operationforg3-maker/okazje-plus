@@ -55,17 +55,30 @@ export async function enrichProducts(
       let titleNormalizedEN = product.title;
       console.log(`  → Title: "${product.title.slice(0, 60)}..."`);
       
-      // Currency conversion
+      // Currency conversion (tylko jeśli potrzebna)
       let priceUSD = product.price;
       let pricePLN: number | undefined;
       let exchangeRate: number | undefined;
       let currencyTarget = finalConfig.currencyTarget;
       
-      if (finalConfig.currencyTarget === 'PLN') {
+      // Sprawdź walutę produktu z API
+      const productCurrency = product.currency || 'USD';
+      
+      if (productCurrency === 'PLN') {
+        // Cena już w PLN - nie konwertuj!
+        pricePLN = product.price;
+        exchangeRate = 1.0; // Brak konwersji
+        currencyTarget = 'PLN';
+        console.log(`  ✓ Price already in PLN: ${pricePLN} PLN`);
+      } else if (finalConfig.currencyTarget === 'PLN') {
+        // Konwertuj z USD/innej waluty na PLN
         const rate = finalConfig.exchangeRateUsdToPln || 4.0;
         pricePLN = Math.round(priceUSD * rate * 100) / 100; // Round to 2 decimals
         exchangeRate = rate;
-        console.log(`  $ Currency: USD ${priceUSD} → PLN ${pricePLN} (rate: ${rate})`);
+        console.log(`  $ Currency: ${productCurrency} ${priceUSD} → PLN ${pricePLN} (rate: ${rate})`);
+      } else {
+        // Pozostaw w oryginalnej walucie
+        console.log(`  $ Price in ${productCurrency}: ${priceUSD}`);
       }
       
       const enrichedProduct: EnrichedProduct = {
