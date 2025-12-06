@@ -1,13 +1,13 @@
 /**
  * Stage 4: TRANSLATE - Tłumacz tytuły i opisy na polski
  * 
- * AI-powered translation EN → PL using Genkit flows
+ * AI-powered translation EN → PL using enhanced translation service
  * Category-aware for better technical terminology
  */
 
 import { EnrichedProduct, ImportStageConfig } from './types';
-import { aiTranslateTitleToPL } from '@/ai/flows/translation/aiTranslateTitleToPL';
-import { aiTranslateDescriptionToPL } from '@/ai/flows/translation/aiTranslateDescriptionToPL';
+import { translateText } from '@/lib/translation-service';
+import type { TranslationInput } from '@/lib/translation-service';
 
 export interface TranslateConfig extends ImportStageConfig {
   targetLanguage: 'pl' | 'de' | 'fr';
@@ -41,20 +41,28 @@ export async function translateProducts(
       console.log(`[Importer:Translate] [${i + 1}/${products.length}] AI translating: ${product.titleNormalizedEN.slice(0, 60)}...`);
       
       if (finalConfig.targetLanguage === 'pl') {
-        // AI Translation with category context
+        // AI Translation with category context using enhanced translation service
         try {
-          const titleResult = await aiTranslateTitleToPL({
-            titleEN: product.titleNormalizedEN,
-            categoryEN: product.categorySlugEN,
-            subcategoryEN: product.subcategorySlugEN,
+          const titleInput: TranslationInput = {
+            text: product.titleNormalizedEN,
+            from: 'en',
+            to: 'pl',
             context: 'product_title',
-          });
+            category: product.categorySlugEN,
+            subcategory: product.subcategorySlugEN,
+          };
           
-          product.titlePL = titleResult.titlePL;
-          console.log(`  ✓ Title PL (${titleResult.confidence}% confidence): "${titleResult.titlePL.slice(0, 60)}..."`);
+          const titleResult = await translateText(titleInput);
           
-          if (titleResult.hasManualReview) {
+          product.titlePL = titleResult.translatedText;
+          console.log(`  ✓ Title PL (${titleResult.confidence}% confidence, ${titleResult.method}): "${titleResult.translatedText.slice(0, 60)}..."`);
+          
+          if (titleResult.confidence < 70) {
             console.warn(`  ⚠️ Low confidence - flagged for manual review`);
+          }
+          
+          if (titleResult.warnings) {
+            console.warn(`  ⚠️ Warnings:`, titleResult.warnings);
           }
         } catch (e: any) {
           console.error(`  ✗ Title translation failed:`, e.message);
@@ -65,17 +73,21 @@ export async function translateProducts(
         // Translate description if available
         if (product.descriptionEN && product.descriptionEN.length > 0) {
           try {
-            const descResult = await aiTranslateDescriptionToPL({
-              descriptionEN: product.descriptionEN,
-              categoryEN: product.categorySlugEN,
-              subcategoryEN: product.subcategorySlugEN,
+            const descInput: TranslationInput = {
+              text: product.descriptionEN,
+              from: 'en',
+              to: 'pl',
               context: 'product_description',
-            });
+              category: product.categorySlugEN,
+              subcategory: product.subcategorySlugEN,
+            };
             
-            product.descriptionPL = descResult.descriptionPL;
-            console.log(`  ✓ Description PL (${descResult.confidence}% confidence)`);
+            const descResult = await translateText(descInput);
             
-            if (descResult.hasManualReview) {
+            product.descriptionPL = descResult.translatedText;
+            console.log(`  ✓ Description PL (${descResult.confidence}% confidence, ${descResult.method})`);
+            
+            if (descResult.confidence < 70) {
               console.warn(`  ⚠️ Low confidence description - flagged for review`);
             }
           } catch (e: any) {
