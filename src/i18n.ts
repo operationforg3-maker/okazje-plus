@@ -1,6 +1,8 @@
 import {getRequestConfig} from 'next-intl/server';
 import {hasLocale} from 'next-intl';
 import {routing} from './i18n/routing';
+import path from 'path';
+import { readFileSync } from 'fs';
 
 const namespaces = [
   'home',
@@ -21,16 +23,19 @@ async function loadMessagesForLocale(locale: string) {
   const messages: Record<string, any> = {};
 
   for (const ns of namespaces) {
-    const path = locale === 'pl'
-      ? `../messages/${ns}.json`
-      : `../messages/${ns}.${locale}.json`;
+    const filename = locale === 'pl'
+      ? `${ns}.json`
+      : `${ns}.${locale}.json`;
+    
+    const filepath = path.join(process.cwd(), 'messages', filename);
 
     try {
-      messages[ns] = (await import(path)).default;
+      const fileContent = readFileSync(filepath, 'utf-8');
+      messages[ns] = JSON.parse(fileContent);
     } catch (error) {
       // If a namespace is missing, skip it to avoid breaking the whole app.
       if (process.env.NODE_ENV === 'development') {
-        console.warn(`[i18n] Missing messages for ${ns} (${locale}) at ${path}`);
+        console.warn(`[i18n] Missing messages for ${ns} (${locale}) at messages/${filename}`);
       }
     }
   }
