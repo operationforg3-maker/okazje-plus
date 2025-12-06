@@ -14,6 +14,11 @@ const EXTENSION_ERROR_PATTERNS = [
 export function ExtensionWarningBanner() {
   const [visible, setVisible] = useState(false);
   const [errorSource, setErrorSource] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -38,7 +43,7 @@ export function ExtensionWarningBanner() {
     return null;
   }, [errorSource]);
 
-  if (!visible) return null;
+  if (!isMounted || !visible) return null;
 
   return (
     <div className={cn(

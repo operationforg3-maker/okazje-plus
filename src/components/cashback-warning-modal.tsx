@@ -13,6 +13,11 @@ export function CashbackWarningModal() {
   const { hasCashbackExtension, extensionName } = useCashbackDetector();
   const [isVisible, setIsVisible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (hasCashbackExtension && !isDismissed) {
@@ -24,7 +29,7 @@ export function CashbackWarningModal() {
     }
   }, [hasCashbackExtension, isDismissed]);
 
-  if (!isVisible || isDismissed) return null;
+  if (!isMounted || !isVisible || isDismissed) return null;
 
   const handleDismiss = () => {
     setIsDismissed(true);

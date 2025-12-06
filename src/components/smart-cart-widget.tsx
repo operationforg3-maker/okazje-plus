@@ -20,7 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Plus, Minus, ShoppingCart, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function SmartCartWidget() {
   const { items, itemCount, totalAmount, totalWithShipping, removeItem, updateQuantity, clearCart, finalizeCart } = useSmartCart();
@@ -231,8 +231,13 @@ export function SmartCartWidget() {
  */
 export function MiniCartBadge() {
   const { itemCount } = useSmartCart();
+  const [isMounted, setIsMounted] = useState(false);
 
-  if (itemCount === 0) return null;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted || itemCount === 0) return null;
 
   return (
     <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">

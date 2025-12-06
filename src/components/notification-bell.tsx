@@ -28,6 +28,11 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationWithRelativeTime[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -123,7 +128,7 @@ export function NotificationBell() {
     return new Date(isoDate).toLocaleDateString('pl-PL');
   }
 
-  if (!user) return null;
+  if (!isMounted || !user) return null;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
