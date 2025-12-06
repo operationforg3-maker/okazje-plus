@@ -146,13 +146,40 @@ function ProductsPageContent() {
   });
 
   // Sidebar Content (reusable for desktop and mobile)
+  // Refs dla auto-scroll do wybranej kategorii
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+  const allCategoriesButtonRef = React.useRef<HTMLButtonElement>(null);
+  const categoryButtonRefs = React.useRef<Record<string, HTMLButtonElement>>({});
+
+  // Auto-scroll do wybranej kategorii/podkategorii gdy się zmienia
+  React.useEffect(() => {
+    setTimeout(() => {
+      if (!selectedCategory && allCategoriesButtonRef.current && scrollAreaRef.current) {
+        const button = allCategoriesButtonRef.current;
+        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (scrollContainer) {
+          const buttonTop = button.offsetTop;
+          scrollContainer.scrollTop = Math.max(0, buttonTop - 50);
+        }
+      } else if (selectedCategory && categoryButtonRefs.current[selectedCategory.id] && scrollAreaRef.current) {
+        const button = categoryButtonRefs.current[selectedCategory.id];
+        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (scrollContainer) {
+          const buttonTop = button.offsetTop;
+          scrollContainer.scrollTop = Math.max(0, buttonTop - 50);
+        }
+      }
+    }, 0);
+  }, [selectedCategory]);
+
   const SidebarContent = () => (
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
-      <ScrollArea className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
+      <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
         {/* Przycisk "Wszystkie" */}
         <div className="mb-1">
           <button
+            ref={allCategoriesButtonRef}
             onClick={() => {
               setSelectedCategory(null);
               setSelectedSubcategory(null);
@@ -179,6 +206,9 @@ function ProductsPageContent() {
           return (
             <div key={category.id} className="mb-1">
               <button
+                ref={(el) => {
+                  if (el) categoryButtonRefs.current[category.id] = el;
+                }}
                 onClick={() => {
                   setSelectedCategory(category);
                   setSelectedSubcategory(null);
@@ -198,27 +228,58 @@ function ProductsPageContent() {
                   isActive ? "rotate-90" : "group-hover:translate-x-1"
                 )} />
               </button>
-              {isActive && category.subcategories.length > 0 && (
+              {isActive && category.subcategories && category.subcategories.length > 0 && (
                 <div className="mt-1 ml-2 space-y-1 border-l pl-3">
                   {category.subcategories.map((sub) => {
-                    const subActive = selectedSubcategory === sub.slug;
+                    const subActive = selectedSubcategory === sub.slug || selectedSubcategory === sub.id;
                     return (
-                      <button
-                        key={sub.slug}
-                        onClick={() => setSelectedSubcategory(subActive ? null : sub.slug)}
-                        className={cn(
-                          "w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors",
-                          subActive
-                            ? "bg-primary/10 text-primary font-medium"
-                            : "hover:bg-muted"
+                      <div key={sub.slug || sub.id} className="space-y-1">
+                        <button
+                          onClick={() => setSelectedSubcategory(subActive ? null : (sub.slug || sub.id))}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors",
+                            subActive
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "hover:bg-muted"
+                          )}
+                        >
+                          {sub.icon && <span className="text-base">{sub.icon}</span>}
+                          <span className="flex-1 truncate">{sub.name}</span>
+                          {(sub.subcategories && sub.subcategories.length > 0) && (
+                            <ChevronRight className={cn(
+                              "h-3 w-3 transition-transform flex-shrink-0",
+                              subActive ? "rotate-90" : ""
+                            )} />
+                          )}
+                          {sub.highlight && (
+                            <Badge variant="secondary" className="text-[10px] px-1 py-0">Nowość</Badge>
+                          )}
+                        </button>
+
+                        {/* Pod-podkategorie (trzeci poziom) */}
+                        {subActive && sub.subcategories && sub.subcategories.length > 0 && (
+                          <div className="ml-2 space-y-1 border-l border-muted-foreground/30 pl-3">
+                            {sub.subcategories.map((subsub) => (
+                              <button
+                                key={subsub.slug || subsub.id}
+                                onClick={() => {
+                                  setSelectedSubcategory(subsub.slug || subsub.id);
+                                  setIsMobileSidebarOpen(false);
+                                }}
+                                className={cn(
+                                  "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors",
+                                  (selectedSubcategory === subsub.slug || selectedSubcategory === subsub.id)
+                                    ? "bg-primary/5 text-primary font-medium"
+                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                )}
+                              >
+                                {subsub.icon && <span className="text-sm">{subsub.icon}</span>}
+                                <span className="flex-1 truncate">{subsub.name}</span>
+                              </button>
+                            ))}
+                          </div>
                         )}
-                      >
-                        {sub.icon && <span className="text-base">{sub.icon}</span>}
-                        <span className="flex-1 truncate">{sub.name}</span>
-                        {sub.highlight && (
-                          <Badge variant="secondary" className="text-[10px] px-1 py-0">Nowość</Badge>
-                        )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
