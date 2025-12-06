@@ -127,7 +127,7 @@ export class AliExpressClient {
     try {
       const response = await this.post<TokenResponse>(
         this.baseUrl,
-        new URLSearchParams(Object.entries(params))
+        new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))
       );
 
       this.accessToken = response.access_token;
@@ -190,7 +190,7 @@ export class AliExpressClient {
     );
 
     return this.executeWithRetry<T>(() =>
-      this.post<T>(this.baseUrl, new URLSearchParams(Object.entries(requestParams)))
+      this.post<T>(this.baseUrl, new URLSearchParams(Object.entries(requestParams).map(([k, v]) => [k, String(v)])))
     );
   }
 
@@ -313,7 +313,7 @@ export class AliExpressClient {
 
     const response = await this.post<TokenResponse>(
       this.baseUrl,
-      new URLSearchParams(Object.entries(params))
+      new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))
     );
 
     this.setTokens(

@@ -8,7 +8,7 @@
 import { logger } from "../logger";
 import { db } from "../firebase";
 import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
-import { generateText } from "./vertex";
+import { generateText } from "../vertex";
 
 export type SupportedLocale = "pl" | "en" | "de" | "fr" | "es";
 
