@@ -20,8 +20,10 @@ export function ExchangeRateAlert() {
   const [isOutdated, setIsOutdated] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     checkExchangeRates();
     const interval = setInterval(checkExchangeRates, 60000); // Check every minute
     return () => clearInterval(interval);
@@ -80,7 +82,8 @@ export function ExchangeRateAlert() {
     }
   };
 
-  if (!isOutdated) {
+  // Don't render until mounted on client to avoid hydration mismatch
+  if (!isMounted || !isOutdated) {
     return null;
   }
 

@@ -3,6 +3,7 @@
 import { Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth';
+import { useEffect, useState } from 'react';
 import {
   Tooltip,
   TooltipContent,
@@ -30,9 +31,14 @@ export default function AdminEditButton({
   tooltip = 'Edytuj (admin)',
 }: AdminEditButtonProps) {
   const { user } = useAuth();
+  const [isMounted, setIsMounted] = useState(false);
 
-  // Widoczny tylko dla adminów
-  if (!user || user.role !== 'admin') return null;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Widoczny tylko dla adminów - czekaj na mount aby uniknąć hydration mismatch
+  if (!isMounted || !user || user.role !== 'admin') return null;
 
   return (
     <TooltipProvider>
