@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Category, Subcategory, SubSubcategory } from '@/lib/types';
@@ -33,7 +33,13 @@ export default function CategoryNav({
   basePath = '/deals',
 }: Props) {
   const params = useParams();
-  const locale = (params?.locale as string) || 'pl';
+  const [isMounted, setIsMounted] = useState(false);
+  const locale = isMounted ? ((params?.locale as string) || 'pl') : 'pl';
+  
+  // Hydration safety
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(selectedCategoryId ? [selectedCategoryId] : [])

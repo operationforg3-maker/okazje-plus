@@ -88,7 +88,8 @@ export default function DealCard({ deal }: DealCardProps) {
   // Przykład: const product = useProductById(deal.linkedProductIds?.[0]);
   const product = null as Product | null; // placeholder, typ jawnie Product | null
   const params = useParams();
-  const locale = (params?.locale as string) || 'pl';
+  const [isMounted, setIsMounted] = useState(false);
+  const locale = isMounted ? ((params?.locale as string) || 'pl') : 'pl';
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { addToComparison } = useComparison();
@@ -102,6 +103,11 @@ export default function DealCard({ deal }: DealCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
+  
+  // Hydration safety
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
