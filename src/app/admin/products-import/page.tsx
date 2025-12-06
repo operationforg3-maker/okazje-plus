@@ -20,10 +20,21 @@ export default function ProductsImportPage() {
     return await user.getIdToken();
   };
 
+  // Walidacja pól produktu
+  function validateProducts(products: any[]): any[] {
+    return products.map((p, idx) => ({
+      ...p,
+      description: typeof p.description === 'string' ? p.description : '',
+      seoDescription: typeof p.seoDescription === 'string' ? p.seoDescription : '',
+      longDescription: typeof p.longDescription === 'string' ? p.longDescription : '',
+    }));
+  }
+
   const dryRun = async () => {
     try {
       const token = await getAuthToken();
-      const parsed = JSON.parse(jsonInput || "[]");
+      let parsed = JSON.parse(jsonInput || "[]");
+      parsed = Array.isArray(parsed) ? validateProducts(parsed) : [];
       const payload = { products: parsed, upsert, dedupe, batchSize, dryRun: true };
       const res = await fetch("/api/admin-import/products", {
         method: "POST",
@@ -40,7 +51,8 @@ export default function ProductsImportPage() {
   const runImport = async () => {
     try {
       const token = await getAuthToken();
-      const parsed = JSON.parse(jsonInput || "[]");
+      let parsed = JSON.parse(jsonInput || "[]");
+      parsed = Array.isArray(parsed) ? validateProducts(parsed) : [];
       const payload = { products: parsed, upsert, dedupe, batchSize, dryRun: false };
       const res = await fetch("/api/admin-import/products", {
         method: "POST",
