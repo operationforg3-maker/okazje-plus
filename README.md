@@ -3,15 +3,28 @@
 Polska platforma z okazjami i produktami (Next.js 15 + Firebase + Genkit AI). Ten README jest celowo zwięzły — pełna dokumentacja została przeniesiona do `docs/`.
 
 ## 🔗 Dokumentacja
-Pełen indeks: `docs/INDEX.md`
-Najważniejsze:
-- Architektura / audyt: `docs/FRONTEND_BACKEND_AUDIT.md`
-- Ostatni deploy: `docs/DEPLOY_STATUS.md`
-- Optymalizacje: `docs/OPTIMIZATION_SUMMARY.md`
-- Cache & unieważnianie: `docs/CACHE_INTEGRATION_GUIDE.md`
-- Multi-marketplace: `docs/MILESTONE_4_README.md`
-- **Notifications & Price Alerts (M5)**: `docs/M5_COMPLETION_SUMMARY.md`
-- Aktualizacje inkrementalne: `docs/updates/*`
+
+**Pełen indeks**: [`docs/INDEX.md`](docs/INDEX.md) (zreorganizowany grudzień 2025)
+
+### Szybkie linki:
+- 🚀 **Start**: [`docs/QUICK_START.md`](docs/QUICK_START.md)
+- 👤 **Admin**: [`docs/guides/PRZEWODNIK_ADMINA.md`](docs/guides/PRZEWODNIK_ADMINA.md)
+- 🛒 **API**: [`docs/api/ALIEXPRESS_API_OVERVIEW.md`](docs/api/ALIEXPRESS_API_OVERVIEW.md)
+- 📦 **Deployment**: [`docs/deployment/DEPLOY_STATUS.md`](docs/deployment/DEPLOY_STATUS.md)
+- 🎯 **M5 (najnowszy)**: [`docs/milestones/M5_COMPLETION_SUMMARY.md`](docs/milestones/M5_COMPLETION_SUMMARY.md)
+- 🧪 **Testy**: [`docs/testing/tests-quickstart.md`](docs/testing/tests-quickstart.md)
+
+### Struktura dokumentacji:
+```
+docs/
+├── guides/       # Przewodniki użytkownika i admina
+├── api/          # Dokumentacja API i integracji
+├── deployment/   # Wdrożenia i konfiguracja
+├── milestones/   # Podsumowania M4, M5, etc.
+├── features/     # Dokumentacja funkcjonalności
+├── testing/      # Testy i QA
+└── archive/      # Starsza dokumentacja (M1-M3)
+```
 
 ## ✨ Nowe funkcje (M5 - 23.11.2025)
 
