@@ -1,0 +1,16 @@
+{
+  "title": "Imports",
+  "importHistory": "Import History",
+  "noImports": "No imports",
+  "status": "Status",
+  "createdAt": "Created",
+  "itemsCount": "Items Count",
+  "errors": "Errors",
+  "success": "Success",
+  "pending": "Pending",
+  "failed": "Failed",
+  "viewDetails": "View Details",
+  "retry": "Retry",
+  "delete": "Delete",
+  "loading": "Loading..."
+}

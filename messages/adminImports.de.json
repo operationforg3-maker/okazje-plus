@@ -1,0 +1,16 @@
+{
+  "title": "Importe",
+  "importHistory": "Importverlauf",
+  "noImports": "Keine Importe",
+  "status": "Status",
+  "createdAt": "Erstellt",
+  "itemsCount": "Anzahl der Elemente",
+  "errors": "Fehler",
+  "success": "Erfolg",
+  "pending": "Ausstehend",
+  "failed": "Fehlgeschlagen",
+  "viewDetails": "Details anzeigen",
+  "retry": "Erneut versuchen",
+  "delete": "Löschen",
+  "loading": "Wird geladen..."
+}

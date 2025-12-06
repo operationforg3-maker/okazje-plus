@@ -17,6 +17,7 @@ const namespaces = [
   'addDeal',
   'leaderboard',
   'admin',
+  'adminImports',
 ];
 
 async function loadMessagesForLocale(locale: string) {
