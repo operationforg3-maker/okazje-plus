@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { auth } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,6 +51,7 @@ interface ImportJob {
 }
 
 export function ImportManager() {
+  const { user } = useAuth();
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
   const [history, setHistory] = useState<ImportJob[]>([]);
@@ -72,7 +75,10 @@ export function ImportManager() {
 
     const poll = async () => {
       try {
-        const res = await fetch(`/api/admin/import/status?jobId=${activeJobId}`);
+        const token = await getTokenOrThrow();
+        const res = await fetch(`/api/admin/import/status?jobId=${activeJobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (res.ok) {
           const data = await res.json();
           setActiveJob(data.job);
@@ -100,12 +106,28 @@ export function ImportManager() {
     };
   }, [activeJobId]);
 
+  const getTokenOrThrow = async () => {
+    const currentUser = auth.currentUser;
+    const token = await currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('Brak tokenu. Zaloguj się ponownie.');
+    }
+    return token;
+  };
+
   const fetchHistory = async () => {
     try {
-      const res = await fetch('/api/admin/import/history?limit=10');
+      const token = await getTokenOrThrow();
+      const res = await fetch('/api/admin/import/history?limit=10', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (res.ok) {
         const data = await res.json();
         setHistory(data.jobs || []);
+      } else if (res.status === 401) {
+        toast.error('Brak autoryzacji do podglądu historii importu');
       }
     } catch (e) {
       console.error('Failed to fetch history:', e);
@@ -117,9 +139,13 @@ export function ImportManager() {
     setLoading(true);
 
     try {
+      const token = await getTokenOrThrow();
       const res = await fetch('/api/admin/import/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           type,
           maxItemsPerSubcategory: 10
@@ -145,9 +171,10 @@ export function ImportManager() {
   const pauseJob = async () => {
     if (!activeJobId) return;
     try {
+      const token = await getTokenOrThrow();
       const res = await fetch('/api/admin/import/status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ jobId: activeJobId, action: 'pause' })
       });
       if (res.ok) {
@@ -161,9 +188,10 @@ export function ImportManager() {
   const resumeJob = async () => {
     if (!activeJobId) return;
     try {
+      const token = await getTokenOrThrow();
       const res = await fetch('/api/admin/import/status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ jobId: activeJobId, action: 'resume' })
       });
       if (res.ok) {
@@ -179,9 +207,10 @@ export function ImportManager() {
     if (!confirm('Czy na pewno chcesz anulować import?')) return;
     
     try {
+      const token = await getTokenOrThrow();
       const res = await fetch('/api/admin/import/status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ jobId: activeJobId, action: 'cancel' })
       });
       if (res.ok) {
@@ -199,9 +228,10 @@ export function ImportManager() {
     
     setLoading(true);
     try {
+      const token = await getTokenOrThrow();
       const res = await fetch('/api/admin/import/rollback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ jobId })
       });
 

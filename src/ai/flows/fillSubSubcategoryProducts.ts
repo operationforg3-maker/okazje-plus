@@ -2,6 +2,9 @@ import { createProduct, findExistingProduct, updateProduct } from '@/lib/data-ad
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 import { aiProductEnrichmentPL } from '@/ai/flows/aliexpress/aiProductEnrichmentPL';
 import { aiProductEnrichmentBatchPL } from '@/ai/flows/aliexpress/aiProductEnrichmentBatchPL';
+import { aiTranslateProduct } from '@/ai/flows/aiTranslateProduct';
+import { getExchangeRateToPLN } from '@/lib/currency-service';
+import type { LocalizedText, SmartPrice } from '@/lib/types';
 
 /**
  * Wyszukuje produkty dla kategorii przez AliExpress API
@@ -105,6 +108,60 @@ function translateToEnglish(text: string): string {
     translated = translated.replace(new RegExp(pl, 'gi'), en);
   }
   return translated;
+}
+
+type SupportedImportCurrency = 'PLN' | 'USD' | 'EUR';
+
+function normalizeCurrency(input?: string): SupportedImportCurrency {
+  const code = (input || 'USD').toUpperCase();
+  if (code === 'PLN' || code === 'EUR' || code === 'USD') return code;
+  return 'USD';
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function buildMultiCurrencyPrice(amount: number, currencyInput?: string, originalPriceRaw?: number) {
+  const currency = normalizeCurrency(currencyInput);
+  const rateToPln = getExchangeRateToPLN(currency as any);
+  const amountPLN = currency === 'PLN' ? amount : round2(amount * rateToPln);
+  const amountUSD = round2(amountPLN / getExchangeRateToPLN('USD'));
+  const amountEUR = round2(amountPLN / getExchangeRateToPLN('EUR'));
+
+  const originalPln = originalPriceRaw ? (currency === 'PLN' ? originalPriceRaw : round2(originalPriceRaw * rateToPln)) : undefined;
+  const originalUsd = originalPln ? round2(originalPln / getExchangeRateToPLN('USD')) : undefined;
+  const originalEur = originalPln ? round2(originalPln / getExchangeRateToPLN('EUR')) : undefined;
+
+  return {
+    baseCurrency: currency,
+    pricePLN: createSmartPrice(amountPLN, 'PLN', { originalPrice: originalPln }),
+    priceUSD: createSmartPrice(amountUSD, 'USD', { originalPrice: originalUsd }),
+    priceEUR: createSmartPrice(amountEUR, 'EUR', { originalPrice: originalEur }),
+  } as const;
+}
+
+function createSmartPrice(
+  amount: number,
+  currency: SupportedImportCurrency,
+  options?: { originalPrice?: number }
+): SmartPrice {
+  const shippingCost = 0;
+  const totalPrice = amount + shippingCost;
+  const discountPercent = options?.originalPrice && options.originalPrice > amount
+    ? Math.round(((options.originalPrice - amount) / options.originalPrice) * 100)
+    : undefined;
+  
+  return {
+    amount,
+    currency,
+    shippingCost,
+    totalPrice,
+    freeShipping: shippingCost === 0,
+    originalPrice: options?.originalPrice,
+    discountPercent,
+    lastUpdated: new Date().toISOString(),
+  };
 }
 
 // Multi-query wariant: kilka zapytań + deduplikacja + sortowanie po popularności i ocenie
@@ -382,15 +439,43 @@ export async function fillSubSubcategoryProducts(params: {
           console.log(`[fillSubSubcategoryProducts] New product: ${originalId || affiliateUrl} - will create`);
         }
 
+        const translations = await aiTranslateProduct({
+          name: enrichedName,
+          description: shortDesc,
+          longDescription: longDesc,
+          targetLanguages: ['en', 'de'],
+        });
+
+        const localizedTitle: LocalizedText = {
+          pl: enrichedName,
+          en: translations.en?.name || enrichedName,
+          de: translations.de?.name,
+        };
+
+        const localizedShort: LocalizedText = {
+          pl: shortDesc,
+          en: translations.en?.description || shortDesc,
+          de: translations.de?.description,
+        };
+
+        const localizedLong: LocalizedText = {
+          pl: longDesc,
+          en: translations.en?.longDescription || translations.en?.description || longDesc,
+          de: translations.de?.longDescription || translations.de?.description,
+        };
+
+        const localizedSeo: LocalizedText = {
+          pl: shortDesc.slice(0, 160),
+          en: translations.en?.metaDescription || translations.en?.description?.slice(0, 160) || shortDesc.slice(0, 160),
+          de: translations.de?.metaDescription || translations.de?.description?.slice(0, 160),
+        };
+
         const originalPrice = mergedProduct.originalPrice || mergedProduct.original_price || undefined;
         const priceValue = mergedProduct.price?.value || mergedProduct.price || 0;
-        const discountPercent = (typeof originalPrice === 'number' && originalPrice > 0)
-          ? Math.round(100 - (priceValue / originalPrice) * 100)
-          : undefined;
-
         const priceCurrency = (typeof mergedProduct.price === 'object' && mergedProduct.price?.currency)
           || mergedProduct.currency
           || preferredCurrency;
+        const priceBundle = buildMultiCurrencyPrice(priceValue, priceCurrency, originalPrice);
 
         const stockStatus = mergedProduct.stock_status || mergedProduct.stockStatus ||
           (mergedProduct.volume > 1000 ? 'in_stock' : mergedProduct.volume > 100 ? 'low_stock' : 'unknown');
@@ -429,13 +514,23 @@ export async function fillSubSubcategoryProducts(params: {
         );
 
         const baseData = {
+          // Legacy fields (backward compatibility)
           name: enrichedName,
           description: shortDesc,
           longDescription: longDesc,
-          price: priceValue,
-          originalPrice,
-          discountPercent,
-          currency: priceCurrency,
+
+          // Multi-language fields
+          title: localizedTitle,
+          shortDescription: localizedShort,
+          fullDescription: localizedLong,
+          seoDescription: localizedSeo,
+
+          // Smart pricing (base PLN, variants in metadata)
+          price: priceBundle.pricePLN,
+          originalPrice: priceBundle.pricePLN.originalPrice,
+          discountPercent: priceBundle.pricePLN.discountPercent,
+          currency: priceBundle.pricePLN.currency,
+
           image: mainImage || '',
           imageHint: '',
           gallery: uniqueGallery.length > 0 ? uniqueGallery : undefined,
@@ -453,7 +548,7 @@ export async function fillSubSubcategoryProducts(params: {
             versatility: 4.5,
           },
           seoKeywords: keywords,
-          metaDescription: shortDesc.slice(0, 160),
+          metaDescription: localizedSeo.pl,
           metadata: {
             source: 'aliexpress',
             originalId: originalId || '',
@@ -481,6 +576,17 @@ export async function fillSubSubcategoryProducts(params: {
             stockStatus: stockStatus as any,
             stockLevel: mergedProduct.stock_level || mergedProduct.stockLevel || mergedProduct.available_quantity || null,
             variants: mergedProduct.variants || [],
+            priceByCurrency: {
+              baseCurrency: priceBundle.baseCurrency,
+              PLN: priceBundle.pricePLN,
+              USD: priceBundle.priceUSD,
+              EUR: priceBundle.priceEUR,
+            },
+            categoryTranslations: {
+              pl: { category: categoryName, subcategory: subcategoryName, subsubcategory: subsubcategoryName },
+              en: { category: translateToEnglish(categoryName), subcategory: translateToEnglish(subcategoryName), subsubcategory: translateToEnglish(subsubcategoryName) },
+              de: { category: translateToEnglish(categoryName), subcategory: translateToEnglish(subcategoryName), subsubcategory: translateToEnglish(subsubcategoryName) },
+            },
           }
         } as const;
 
