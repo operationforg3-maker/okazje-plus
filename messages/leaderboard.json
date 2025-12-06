@@ -1,0 +1,15 @@
+{
+  "title": "Ranking Użytkowników",
+  "subtitle": "Najlepsi łowcy okazji w społeczności Okazje Plus",
+  "leaderboard": "Leaderboard",
+  "leaderboardDesc": "Zdobywaj punkty za dodawanie okazji, komentowanie i aktywność w społeczności",
+  "rank": "Miejsce",
+  "user": "Użytkownik",
+  "points": "Punkty",
+  "kingOfDeals": "👑 Król Okazji",
+  "viceChampion": "🥈 Wicemistrz",
+  "thirdPlace": "🥉 3 miejsce",
+  "topTen": "Top 10",
+  "loading": "Ładowanie...",
+  "noData": "Brak danych rankingu"
+}

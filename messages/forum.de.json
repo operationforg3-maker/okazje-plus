@@ -1,0 +1,19 @@
+{
+  "title": "Community-Forum",
+  "subtitle": "Diskussionen über Angebote, Einkaufstipps und mehr",
+  "newThread": "Neuer Thread",
+  "searchPlaceholder": "Threads durchsuchen...",
+  "sortBy": "Sortieren",
+  "filterBy": "Filtern",
+  "newest": "Neueste",
+  "popular": "Beliebt",
+  "unanswered": "Unbeantwortet",
+  "all": "Alle",
+  "answered": "Beantwortet",
+  "pinned": "Angepinnt",
+  "replies": "Antworten",
+  "views": "Aufrufe",
+  "solved": "Gelöst",
+  "noThreads": "Keine Threads",
+  "noThreadsDesc": "Keine Threads gefunden, die Ihren Kriterien entsprechen."
+}

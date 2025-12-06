@@ -1,0 +1,21 @@
+{
+  "title": "Mój Profil",
+  "overview": "Przegląd",
+  "favorites": "Ulubione",
+  "comments": "Komentarze",
+  "activity": "Aktywność",
+  "settings": "Ustawienia",
+  "notifications": "Powiadomienia",
+  "memberSince": "Członek od",
+  "votes": "Głosy",
+  "commentsCount": "Komentarze",
+  "dealsPosted": "Dodane okazje",
+  "productsReviewed": "Ocenione produkty",
+  "favoriteDeals": "Ulubione okazje",
+  "favoriteProducts": "Ulubione produkty",
+  "recentComments": "Ostatnie komentarze",
+  "noFavorites": "Brak ulubionych",
+  "noComments": "Brak komentarzy",
+  "loading": "Ładowanie...",
+  "logout": "Wyloguj"
+}

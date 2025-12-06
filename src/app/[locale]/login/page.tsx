@@ -1,8 +1,19 @@
 import { ShoppingBag } from "lucide-react";
 import LoginForm from "@/components/auth/login-form";
 import Link from "next/link";
+import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
+
+export async function generateMetadata({ params }: { params: { locale: string } }) {
+  const t = await getTranslations({ locale: params.locale, namespace: 'login' });
+  return {
+    title: t('title'),
+  };
+}
 
 export default function LoginPage() {
+  const t = useTranslations('login');
+  
   return (
     <div className="container relative flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center py-12">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px]">
@@ -12,27 +23,27 @@ export default function LoginPage() {
               <span className="font-bold font-headline text-2xl">Okazje+</span>
             </Link>
           <h1 className="text-2xl font-semibold tracking-tight font-headline">
-            Witaj z powrotem
+            {t('title')}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Zaloguj się lub utwórz konto, aby odkrywać najlepsze okazje.
+            {t('subtitle')}
           </p>
         </div>
         <LoginForm />
         <p className="px-8 text-center text-sm text-muted-foreground">
-          Klikając Kontynuuj, zgadzasz się z naszym{' '}
+          {t('termsText')}{' '}
           <Link
             href="/terms"
             className="underline underline-offset-4 hover:text-primary"
           >
-            Regulaminem
+            {t('termsLink')}
           </Link>{' '}
-          i{' '}
+          {t('and')}{' '}
           <Link
             href="/privacy"
             className="underline underline-offset-4 hover:text-primary"
           >
-            Polityką Prywatności
+            {t('privacyLink')}
           </Link>
           .
         </p>

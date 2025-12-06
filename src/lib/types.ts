@@ -472,8 +472,16 @@ export interface ProductImportMetadata {
 
 export interface Deal {
   id: string;
+  
+  // DEPRECATED: Legacy single-language fields (keep for backward compatibility)
+  // These will be auto-populated from title.pl / description.pl for existing code
   title: string;
   description: string;
+  
+  // M4: NEW Multi-language fields (replace title/description)
+  localizedTitle?: LocalizedText;        // Deal title in multiple languages
+  localizedDescription?: LocalizedText;  // Deal description in multiple languages
+  
   price: number;
   originalPrice?: number;
   link: string;

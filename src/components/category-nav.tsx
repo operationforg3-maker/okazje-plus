@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { Category, Subcategory, SubSubcategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
 
 interface Props {
   categories: Category[];
@@ -30,6 +32,9 @@ export default function CategoryNav({
   onSubSubcategorySelect,
   basePath = '/deals',
 }: Props) {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
+  
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(selectedCategoryId ? [selectedCategoryId] : [])
   );
@@ -108,12 +113,12 @@ export default function CategoryNav({
                   {onCategorySelect ? (
                     <button type="button">
                       <span className="mr-2">{category.icon || '📁'}</span>
-                      <span className="truncate">{category.name}</span>
+                      <span className="truncate">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
                     </button>
                   ) : (
                     <Link href={`${basePath}?category=${category.slug || category.id}`}>
                       <span className="mr-2">{category.icon || '📁'}</span>
-                      <span className="truncate">{category.name}</span>
+                      <span className="truncate">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
                     </Link>
                   )}
                 </Button>
@@ -158,12 +163,12 @@ export default function CategoryNav({
                             {onSubcategorySelect ? (
                               <button type="button">
                                 <span className="mr-2 text-xs">{subcategory.icon || '📄'}</span>
-                                <span className="truncate">{subcategory.name}</span>
+                                <span className="truncate">{getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}</span>
                               </button>
                             ) : (
                               <Link href={`${basePath}?category=${category.slug || category.id}&sub=${subcategory.slug}`}>
                                 <span className="mr-2 text-xs">{subcategory.icon || '📄'}</span>
-                                <span className="truncate">{subcategory.name}</span>
+                                <span className="truncate">{getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}</span>
                               </Link>
                             )}
                           </Button>
@@ -187,12 +192,12 @@ export default function CategoryNav({
                                   {onSubSubcategorySelect ? (
                                     <button type="button">
                                       <span className="mr-2 text-xs">{subSubcategory.icon || '•'}</span>
-                                      <span className="truncate">{subSubcategory.name}</span>
+                                      <span className="truncate">{getLocalizedCategoryName(subSubcategory as any, locale as SupportedLanguage)}</span>
                                     </button>
                                   ) : (
                                     <Link href={`${basePath}?category=${category.slug || category.id}&sub=${subcategory.slug}&subsub=${subSubcategory.slug}`}>
                                       <span className="mr-2 text-xs">{subSubcategory.icon || '•'}</span>
-                                      <span className="truncate">{subSubcategory.name}</span>
+                                      <span className="truncate">{getLocalizedCategoryName(subSubcategory as any, locale as SupportedLanguage)}</span>
                                     </Link>
                                   )}
                                 </Button>

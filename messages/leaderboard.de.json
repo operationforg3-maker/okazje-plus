@@ -1,0 +1,15 @@
+{
+  "title": "Benutzer-Ranking",
+  "subtitle": "Top Schnäppchenjäger in der Okazje Plus Community",
+  "leaderboard": "Bestenliste",
+  "leaderboardDesc": "Sammeln Sie Punkte durch Hinzufügen von Angeboten, Kommentieren und Community-Aktivität",
+  "rank": "Rang",
+  "user": "Benutzer",
+  "points": "Punkte",
+  "kingOfDeals": "👑 Angebotskönig",
+  "viceChampion": "🥈 Vizemeister",
+  "thirdPlace": "🥉 3. Platz",
+  "topTen": "Top 10",
+  "loading": "Lädt...",
+  "noData": "Keine Ranking-Daten"
+}

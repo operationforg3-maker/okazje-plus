@@ -9,6 +9,12 @@ const namespaces = [
   'search',
   'deals',
   'products',
+  'login',
+  'forum',
+  'profile',
+  'addDeal',
+  'leaderboard',
+  'admin',
 ];
 
 async function loadMessagesForLocale(locale: string) {

@@ -273,3 +273,55 @@ export function isFreeShipping(price: SmartPrice | number): boolean {
   return price.freeShipping || price.shippingCost === 0;
 }
 
+/**
+ * Get localized field from Deal or Product object
+ * Handles both new LocalizedText fields and legacy string fields
+ * 
+ * @param obj Deal or Product object
+ * @param field Field name (e.g., 'title', 'description')
+ * @param lang Requested language
+ * @returns Localized string with fallback to legacy field
+ */
+export function getLocalizedField<T extends Record<string, any>>(
+  obj: T | undefined,
+  field: string,
+  lang: SupportedLanguage = 'pl'
+): string {
+  if (!obj) return '';
+  
+  // Try new localized field first (e.g., localizedTitle, localizedDescription)
+  const localizedFieldName = `localized${field.charAt(0).toUpperCase()}${field.slice(1)}`;
+  if (obj[localizedFieldName]) {
+    return getLocalizedText(obj[localizedFieldName] as LocalizedText, lang);
+  }
+  
+  // Fallback to legacy string field
+  if (typeof obj[field] === 'string') {
+    return obj[field] as string;
+  }
+  
+  return '';
+}
+
+/**
+ * Get localized category name with fallback
+ * 
+ * @param category Category object
+ * @param lang Requested language
+ * @returns Localized category name
+ */
+export function getLocalizedCategoryName(
+  category: { name: string; translations?: Record<string, { name: string; description?: string }> } | undefined,
+  lang: SupportedLanguage = 'pl'
+): string {
+  if (!category) return '';
+  
+  // Try translations first
+  if (category.translations && category.translations[lang]) {
+    return category.translations[lang].name;
+  }
+  
+  // Fallback to base name (assumed Polish)
+  return category.name;
+}
+

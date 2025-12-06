@@ -1,0 +1,19 @@
+{
+  "title": "Community Forum",
+  "subtitle": "Discussions about deals, shopping advice and more",
+  "newThread": "New Thread",
+  "searchPlaceholder": "Search threads...",
+  "sortBy": "Sort",
+  "filterBy": "Filter",
+  "newest": "Newest",
+  "popular": "Popular",
+  "unanswered": "Unanswered",
+  "all": "All",
+  "answered": "Answered",
+  "pinned": "Pinned",
+  "replies": "replies",
+  "views": "views",
+  "solved": "Solved",
+  "noThreads": "No threads",
+  "noThreadsDesc": "No threads found matching your criteria."
+}

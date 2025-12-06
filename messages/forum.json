@@ -1,0 +1,19 @@
+{
+  "title": "Forum Społeczności",
+  "subtitle": "Dyskusje o okazjach, porady zakupowe i więcej",
+  "newThread": "Nowy wątek",
+  "searchPlaceholder": "Szukaj wątków...",
+  "sortBy": "Sortuj",
+  "filterBy": "Filtruj",
+  "newest": "Najnowsze",
+  "popular": "Popularne",
+  "unanswered": "Bez odpowiedzi",
+  "all": "Wszystkie",
+  "answered": "Z odpowiedzią",
+  "pinned": "Przypięte",
+  "replies": "odpowiedzi",
+  "views": "wyświetleń",
+  "solved": "Rozwiązane",
+  "noThreads": "Brak wątków",
+  "noThreadsDesc": "Nie znaleziono wątków pasujących do kryteriów."
+}

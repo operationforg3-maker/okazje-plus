@@ -20,6 +20,7 @@ import { RatingBar } from './rating-bar';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
+import { getLocalizedField, type SupportedLanguage } from '@/lib/i18n-utils';
 import {
   Tooltip,
   TooltipContent,
@@ -111,7 +112,11 @@ export default function DealCard({ deal }: DealCardProps) {
     : null;
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
-  const description = safeText(deal.description);
+  
+  // Get localized deal title and description
+  const dealTitle = getLocalizedField(deal, 'title', locale as SupportedLanguage);
+  const dealDescription = getLocalizedField(deal, 'description', locale as SupportedLanguage);
+  
   const couponCode = safeText(deal.couponCode);
   const deliveryTime = safeText(deal.importMetadata?.deliveryTime);
   const warehouseInfo = safeText(deal.importMetadata?.warehouse);
@@ -277,7 +282,7 @@ export default function DealCard({ deal }: DealCardProps) {
         )}
         <Image
           src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
-          alt={safeText(deal.title) || 'Okazja'}
+          alt={dealTitle || 'Okazja'}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain transition-transform duration-300 group-hover:scale-105"
@@ -385,7 +390,7 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
 
         <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
-          {safeText(deal.title)}
+          {dealTitle}
         </h3>
         
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
@@ -637,7 +642,7 @@ export default function DealCard({ deal }: DealCardProps) {
           <ShareButton 
             type="deal" 
             itemId={deal.id} 
-            title={safeText(deal.title) || 'Okazja'} 
+            title={dealTitle || 'Okazja'} 
             url={`/deals/${deal.id}`} 
             variant="ghost" 
             size="sm" 

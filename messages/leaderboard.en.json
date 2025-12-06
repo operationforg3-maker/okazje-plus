@@ -1,0 +1,15 @@
+{
+  "title": "User Ranking",
+  "subtitle": "Top deal hunters in the Okazje Plus community",
+  "leaderboard": "Leaderboard",
+  "leaderboardDesc": "Earn points for adding deals, commenting and community activity",
+  "rank": "Rank",
+  "user": "User",
+  "points": "Points",
+  "kingOfDeals": "👑 Deal King",
+  "viceChampion": "🥈 Vice Champion",
+  "thirdPlace": "🥉 3rd Place",
+  "topTen": "Top 10",
+  "loading": "Loading...",
+  "noData": "No ranking data"
+}
