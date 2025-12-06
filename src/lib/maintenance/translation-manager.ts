@@ -325,6 +325,6 @@ export function isLocaleSupported(locale: string): locale is SupportedLocale {
 }
 
 // ===== Get active locales =====
-export function getActiveLo cales(): SupportedLocale[] {
+export function getActiveLocales(): SupportedLocale[] {
   return Object.keys(SUPPORTED_LOCALES) as SupportedLocale[];
 }
