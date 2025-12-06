@@ -27,6 +27,10 @@ export function LanguageSwitcherMenu() {
   const locale = useLocale() as SupportedLanguage;
   const pathname = usePathname();
 
+  // Strip existing locale prefix to avoid duplicated segments (e.g. /en/pl)
+  const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de)(\/|$)/, '/');
+  const basePath = pathnameWithoutLocale || '/';
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -39,7 +43,7 @@ export function LanguageSwitcherMenu() {
         {SUPPORTED_LANGUAGES.map((lang) => (
           <DropdownMenuItem key={lang} asChild>
             <Link
-              href={pathname}
+              href={basePath}
               locale={lang}
               className="cursor-pointer gap-2 w-full flex items-center"
             >
