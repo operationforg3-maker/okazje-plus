@@ -121,10 +121,10 @@ Wszystkie wymagane indeksy są już skonfigurowane w `firestore.indexes.json`.
 ## 📝 Dokumentacja
 
 ### Nowe/Zaktualizowane Dokumenty:
-- ✅ `docs/M5_COMPLETION_SUMMARY.md` - pełna dokumentacja M5
-- ✅ `docs/blueprint.md` - zaktualizowany z M5 features
+- ✅ `docs/milestones/M5_COMPLETION_SUMMARY.md` - pełna dokumentacja M5
+- ✅ `docs/archive/blueprint.md` - zaktualizowany z M5 features
 - ✅ `README.md` - nowe funkcje i env vars
-- ✅ `docs/PRODUCTION_DEPLOYMENT_23-11-2025.md` - ten dokument
+- ✅ `docs/deployment/PRODUCTION_DEPLOYMENT_23-11-2025.md` - ten dokument
 
 ## 🧪 Testing Status
 
@@ -232,7 +232,7 @@ W razie krytycznych błędów można wyłączyć poszczególne funkcje:
 ## ✅ Deployment Checklist
 
 - [x] Code committed and pushed (7b33e12)
-- [x] Documentation updated (M5_COMPLETION_SUMMARY.md)
+- [x] Documentation updated (milestones/M5_COMPLETION_SUMMARY.md)
 - [x] TypeScript validation passed
 - [x] Next.js build successful (0.1.311)
 - [x] Cloud Functions built without errors

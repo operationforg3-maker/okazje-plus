@@ -380,7 +380,7 @@ export async function updateLeaderboards() {
 
 ## API Reference
 
-See `docs/M3_COMPLETION_SUMMARY.md` for comprehensive API documentation.
+See `docs/archive/M3_COMPLETION_SUMMARY.md` for comprehensive API documentation.
 
 ## Next Steps
 
@@ -396,7 +396,7 @@ See `docs/M3_COMPLETION_SUMMARY.md` for comprehensive API documentation.
 ## Support
 
 For issues or questions:
-- Check `docs/M3_COMPLETION_SUMMARY.md`
+- Check `docs/archive/M3_COMPLETION_SUMMARY.md`
 - Review component source code
 - Check Firestore security rules
 - Review existing M2 implementation patterns
