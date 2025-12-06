@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useMemo, useState, Suspense } from 'react';
+import { useEffect, useMemo, useState, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
@@ -147,12 +147,12 @@ function ProductsPageContent() {
 
   // Sidebar Content (reusable for desktop and mobile)
   // Refs dla auto-scroll do wybranej kategorii
-  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
-  const allCategoriesButtonRef = React.useRef<HTMLButtonElement>(null);
-  const categoryButtonRefs = React.useRef<Record<string, HTMLButtonElement>>({});
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const allCategoriesButtonRef = useRef<HTMLButtonElement>(null);
+  const categoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
 
   // Auto-scroll do wybranej kategorii/podkategorii gdy się zmienia
-  React.useEffect(() => {
+  useEffect(() => {
     setTimeout(() => {
       if (!selectedCategory && allCategoriesButtonRef.current && scrollAreaRef.current) {
         const button = allCategoriesButtonRef.current;

@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { getHotDeals, getCategories, getNavigationShowcase, getProductById, getDealsByCategory } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { Deal, Category, Product } from '@/lib/types';
@@ -423,12 +423,12 @@ export default function DealsPage() {
   };
 
   // Refs dla auto-scroll do wybranej kategorii
-  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
-  const allCategoriesButtonRef = React.useRef<HTMLButtonElement>(null);
-  const categoryButtonRefs = React.useRef<Record<string, HTMLButtonElement>>({});
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const allCategoriesButtonRef = useRef<HTMLButtonElement>(null);
+  const categoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
 
   // Auto-scroll do wybranej kategorii/podkategorii gdy się zmienia
-  React.useEffect(() => {
+  useEffect(() => {
     setTimeout(() => {
       if (!selectedCategory && allCategoriesButtonRef.current && scrollAreaRef.current) {
         const button = allCategoriesButtonRef.current;
