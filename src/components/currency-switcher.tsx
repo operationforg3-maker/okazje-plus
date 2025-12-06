@@ -27,14 +27,14 @@ const SUPPORTED_CURRENCIES = [
 ] as const;
 
 export function CurrencySwitcher() {
+  const [isMounted, setIsMounted] = useState(false);
   const [currency, setCurrency] = useState('PLN');
 
   // Load currency from localStorage on mount
   useEffect(() => {
-    const savedCurrency = localStorage.getItem('preferredCurrency');
-    if (savedCurrency) {
-      setCurrency(savedCurrency);
-    }
+    const savedCurrency = localStorage.getItem('preferredCurrency') || 'PLN';
+    setCurrency(savedCurrency);
+    setIsMounted(true);
   }, []);
 
   const switchCurrency = (newCurrency: string, enabled: boolean) => {
@@ -50,6 +50,16 @@ export function CurrencySwitcher() {
     // Dispatch custom event for components to react to currency change
     window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: newCurrency } }));
   };
+
+  // Don't render dropdown content until mounted to avoid hydration mismatch
+  if (!isMounted) {
+    return (
+      <Button variant="ghost" size="icon" className="h-9 w-9" disabled>
+        <Coins className="h-4 w-4 md:h-5 md:w-5" />
+        <span className="sr-only">Waluta</span>
+      </Button>
+    );
+  }
 
   return (
     <DropdownMenu>
