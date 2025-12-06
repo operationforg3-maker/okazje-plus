@@ -31,8 +31,10 @@ const MAX_COMPARISON_ITEMS = 4;
 export function DealComparisonTool() {
   const [items, setItems] = useState<ComparisonItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     // Load from localStorage
     const stored = localStorage.getItem('comparisonItems');
     if (stored) {
@@ -116,7 +118,7 @@ export function DealComparisonTool() {
     return (item as Product).name;
   };
 
-  if (items.length === 0) {
+  if (!isMounted || items.length === 0) {
     return null;
   }
 
