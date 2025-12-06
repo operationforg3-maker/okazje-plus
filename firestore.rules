@@ -446,6 +446,17 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
+    // IMPORT JOBS & AI COMMANDS
+    ////////////////////////////////
+    match /import_jobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /aiCommands/{commandId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
     // CONFIG (System settings)
     ////////////////////////////////
     match /config/{configId} {
