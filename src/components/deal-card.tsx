@@ -400,7 +400,7 @@ export default function DealCard({ deal }: DealCardProps) {
         </h3>
         
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-          {description}
+          {dealDescription}
         </p>
 
         {/* Szczegóły dostawy i dodatkowe info */}
