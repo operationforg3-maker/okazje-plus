@@ -61,16 +61,23 @@ export async function saveProductsToFirestore(
         en: product.descriptionEN,
       };
       
-      // Build SmartPrice
+      // Build SmartPrice z właściwą walutą
+      // Używamy pricePLN jeśli została skonwertowana, albo oryginalną cenę z jej walutą
+      const productCurrency = product.currencyTarget || 'PLN';
+      const finalPrice = product.pricePLN || product.priceUSD;
+      
       const smartPrice: SmartPrice = {
-        amount: product.pricePLN || product.priceUSD,
-        currency: 'PLN',
+        amount: finalPrice,
+        currency: productCurrency,
         shippingCost: 0, // TODO: Calculate based on AliExpress shipping info
-        totalPrice: product.pricePLN || product.priceUSD,
+        totalPrice: finalPrice,
         originalPrice: product.originalPrice,
         discountPercent: product.discount,
         freeShipping: false, // TODO: Extract from product data
+        lastUpdated: new Date().toISOString(),
       };
+      
+      console.log(`  💰 Price: ${finalPrice} ${productCurrency}${smartPrice.originalPrice ? ` (was ${smartPrice.originalPrice})` : ''}`);
       
       if (existingId) {
         if (finalConfig.skipExisting) {

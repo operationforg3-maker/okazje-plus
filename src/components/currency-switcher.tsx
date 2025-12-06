@@ -21,9 +21,9 @@ import { toast } from 'sonner';
 
 const SUPPORTED_CURRENCIES = [
   { code: 'PLN', symbol: 'zł', name: 'Polski złoty', flag: '🇵🇱', enabled: true },
-  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺', enabled: false },
-  { code: 'USD', symbol: '$', name: 'Dolar amerykański', flag: '🇺🇸', enabled: false },
-  { code: 'GBP', symbol: '£', name: 'Funt brytyjski', flag: '🇬🇧', enabled: false },
+  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺', enabled: true },
+  { code: 'USD', symbol: '$', name: 'Dolar amerykański', flag: '🇺🇸', enabled: true },
+  { code: 'GBP', symbol: '£', name: 'Funt brytyjski', flag: '🇬🇧', enabled: true },
 ] as const;
 
 export function CurrencySwitcher() {
