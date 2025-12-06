@@ -5,8 +5,6 @@
  * - Support legacy number prices
  */
 
-'use client';
-
 import { useEffect, useState } from 'react';
 import type { SmartPrice } from './types';
 import { 

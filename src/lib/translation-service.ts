@@ -9,8 +9,9 @@
 import { generateText } from './vertex';
 import { logger } from './logger';
 import type { LocalizedText } from './types';
+import { type SupportedLanguage } from './i18n-utils';
 
-export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es';
+export type { SupportedLanguage };
 
 export interface TranslationInput {
   text: string;
