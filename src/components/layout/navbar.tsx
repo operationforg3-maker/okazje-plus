@@ -31,8 +31,13 @@ import { CurrencySwitcher } from '@/components/currency-switcher';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
   const router = useRouter();
   const { user, loading } = useAuth();
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -126,7 +131,7 @@ export function Navbar() {
               <MiniCartBadge />
             </Button>
           </Link>
-          {loading ? (
+          {!isMounted || loading ? (
             <Skeleton className="h-9 w-9 rounded-full" />
           ) : user ? (
             <UserNav />

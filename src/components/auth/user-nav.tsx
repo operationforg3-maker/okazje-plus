@@ -21,16 +21,26 @@ import {
 import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
 import { NotificationBell } from './notification-bell';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AccountMenuPanel } from '@/components/layout/account-menu-panel';
 
 export function UserNav() {
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     await auth.signOut();
   };
+
+  // Don't render until mounted to avoid hydration mismatch
+  if (!isMounted) {
+    return <div className="h-10 w-24 rounded-md bg-muted animate-pulse" />;
+  }
 
   if (loading) {
     return <div className="h-10 w-24 rounded-md bg-muted animate-pulse" />;
