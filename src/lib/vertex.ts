@@ -10,15 +10,23 @@ import { VertexAI, HarmCategory, HarmBlockThreshold, FinishReason } from "@googl
 import { createHash } from "crypto";
 import { logger } from "./logger";
 
-// ===== Init =====
-const project = process.env.GOOGLE_CLOUD_PROJECT;
-const location = process.env.VERTEX_LOCATION || "europe-west1";
+// ===== Init (Lazy) =====
+let vertexInstance: VertexAI | null = null;
 
-if (!project) {
-  throw new Error("GOOGLE_CLOUD_PROJECT is not set");
+function getVertexInstance(): VertexAI {
+  if (!vertexInstance) {
+    const project = process.env.GOOGLE_CLOUD_PROJECT;
+    const location = process.env.VERTEX_LOCATION || "europe-west1";
+
+    if (!project) {
+      throw new Error("GOOGLE_CLOUD_PROJECT is not set");
+    }
+
+    vertexInstance = new VertexAI({ project, location });
+  }
+  
+  return vertexInstance;
 }
-
-const vertex = new VertexAI({ project, location });
 
 // ===== Generowanie treści =====
 export async function generateText(
@@ -34,6 +42,7 @@ export async function generateText(
   const maxTokens = options?.maxTokens ?? 512;
 
   try {
+    const vertex = getVertexInstance();
     const genModel = vertex.preview.getGenerativeModel({ model });
     const response = await genModel.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -190,6 +199,7 @@ export interface TextModerationResult {
 
 export async function moderateText(text: string): Promise<TextModerationResult> {
   try {
+    const vertex = getVertexInstance();
     const model = vertex.preview.getGenerativeModel({
       model: "gemini-1.5-flash",
     });
@@ -277,4 +287,5 @@ export function clearEmbeddingCache(): void {
   logger.info("Embedding cache cleared");
 }
 
-export { vertex };
+// Export getVertexInstance for advanced use cases
+export { getVertexInstance };
