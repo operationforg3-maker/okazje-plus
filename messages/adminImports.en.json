@@ -1,16 +1,56 @@
 {
-  "title": "Imports",
-  "importHistory": "Import History",
-  "noImports": "No imports",
-  "status": "Status",
-  "createdAt": "Created",
-  "itemsCount": "Items Count",
-  "errors": "Errors",
-  "success": "Success",
-  "pending": "Pending",
-  "failed": "Failed",
-  "viewDetails": "View Details",
-  "retry": "Retry",
-  "delete": "Delete",
-  "loading": "Loading..."
+  "loading": "Loading...",
+  "accessDenied": "Access denied. Administrator permissions required.",
+  "title": "Smart Import",
+  "subtitle": "Manage product and profile imports",
+  "startCard": {
+    "title": "Start Import",
+    "description": "Select profile and import settings",
+    "profileLabel": "Profile ID",
+    "profilePlaceholder": "e.g. aliexpress_pl",
+    "maxLabel": "Maximum (optional)",
+    "maxPlaceholder": "e.g. 100",
+    "modeLabel": "Mode",
+    "dryRun": "Test",
+    "real": "Real",
+    "start": "Start Import",
+    "refresh": "Refresh"
+  },
+  "listCard": {
+    "title": "Import History",
+    "description": "Last {limit} imports",
+    "loading": "Loading history...",
+    "empty": "No imports in history"
+  },
+  "details": {
+    "title": "Import Details",
+    "runId": "Run ID",
+    "profileVendor": "Profile / Vendor",
+    "status": "Status",
+    "noData": "No data",
+    "stats": {
+      "fetched": "Fetched",
+      "created": "Created",
+      "updated": "Updated",
+      "skipped": "Skipped",
+      "errors": "Errors",
+      "duplicates": "Duplicates"
+    },
+    "errorsTitle": "Import Errors",
+    "item": "Item"
+  },
+  "dryRunSuffix": " (test)",
+  "statusMap": {
+    "pending": "Pending",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "errors": {
+    "loadRuns": "Failed to load import history",
+    "loadRunDetail": "Failed to load import details",
+    "startImport": "Failed to start import",
+    "profileRequired": "Profile ID field is required"
+  }
 }

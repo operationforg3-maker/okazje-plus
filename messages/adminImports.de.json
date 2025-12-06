@@ -1,16 +1,56 @@
 {
-  "title": "Importe",
-  "importHistory": "Importverlauf",
-  "noImports": "Keine Importe",
-  "status": "Status",
-  "createdAt": "Erstellt",
-  "itemsCount": "Anzahl der Elemente",
-  "errors": "Fehler",
-  "success": "Erfolg",
-  "pending": "Ausstehend",
-  "failed": "Fehlgeschlagen",
-  "viewDetails": "Details anzeigen",
-  "retry": "Erneut versuchen",
-  "delete": "Löschen",
-  "loading": "Wird geladen..."
+  "loading": "Wird geladen...",
+  "accessDenied": "Zugriff verweigert. Administratorberechtigungen erforderlich.",
+  "title": "Smart Import",
+  "subtitle": "Verwaltung von Produkt- und Profilimporten",
+  "startCard": {
+    "title": "Import starten",
+    "description": "Wählen Sie Profil und Importeinstellungen",
+    "profileLabel": "Profil-ID",
+    "profilePlaceholder": "z.B. aliexpress_pl",
+    "maxLabel": "Maximum (optional)",
+    "maxPlaceholder": "z.B. 100",
+    "modeLabel": "Modus",
+    "dryRun": "Test",
+    "real": "Echt",
+    "start": "Import starten",
+    "refresh": "Aktualisieren"
+  },
+  "listCard": {
+    "title": "Importverlauf",
+    "description": "Letzte {limit} Importe",
+    "loading": "Verlauf wird geladen...",
+    "empty": "Keine Importe im Verlauf"
+  },
+  "details": {
+    "title": "Importdetails",
+    "runId": "Ausführungs-ID",
+    "profileVendor": "Profil / Anbieter",
+    "status": "Status",
+    "noData": "Keine Daten",
+    "stats": {
+      "fetched": "Abgerufen",
+      "created": "Erstellt",
+      "updated": "Aktualisiert",
+      "skipped": "Übersprungen",
+      "errors": "Fehler",
+      "duplicates": "Duplikate"
+    },
+    "errorsTitle": "Importfehler",
+    "item": "Element"
+  },
+  "dryRunSuffix": " (Test)",
+  "statusMap": {
+    "pending": "Ausstehend",
+    "running": "Läuft",
+    "completed": "Abgeschlossen",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen"
+  },
+  "errors": {
+    "loadRuns": "Importverlauf konnte nicht geladen werden",
+    "loadRunDetail": "Importdetails konnten nicht geladen werden",
+    "startImport": "Import konnte nicht gestartet werden",
+    "profileRequired": "Das Feld Profil-ID ist erforderlich"
+  }
 }

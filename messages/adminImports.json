@@ -1,16 +1,56 @@
 {
-  "title": "Importy",
-  "importHistory": "Historia importów",
-  "noImports": "Brak importów",
-  "status": "Status",
-  "createdAt": "Utworzono",
-  "itemsCount": "Liczba elementów",
-  "errors": "Błędy",
-  "success": "Sukces",
-  "pending": "W trakcie",
-  "failed": "Niepowodzenie",
-  "viewDetails": "Szczegóły",
-  "retry": "Ponów",
-  "delete": "Usuń",
-  "loading": "Ładowanie..."
+  "loading": "Ładowanie...",
+  "accessDenied": "Brak dostępu. Wymagane uprawnienia administratora.",
+  "title": "Smart Import",
+  "subtitle": "Zarządzanie importami produktów i profili",
+  "startCard": {
+    "title": "Rozpocznij import",
+    "description": "Wybierz profil i ustawienia importu",
+    "profileLabel": "ID profilu",
+    "profilePlaceholder": "np. aliexpress_pl",
+    "maxLabel": "Maksymalnie (opcjonalnie)",
+    "maxPlaceholder": "np. 100",
+    "modeLabel": "Tryb",
+    "dryRun": "Próba",
+    "real": "Rzeczywisty",
+    "start": "Rozpocznij import",
+    "refresh": "Odśwież"
+  },
+  "listCard": {
+    "title": "Historia importów",
+    "description": "Ostatnie {limit} importów",
+    "loading": "Ładowanie historii...",
+    "empty": "Brak importów w historii"
+  },
+  "details": {
+    "title": "Szczegóły importu",
+    "runId": "ID uruchomienia",
+    "profileVendor": "Profil / Dostawca",
+    "status": "Status",
+    "noData": "Brak danych",
+    "stats": {
+      "fetched": "Pobrano",
+      "created": "Utworzono",
+      "updated": "Zaktualizowano",
+      "skipped": "Pominięto",
+      "errors": "Błędy",
+      "duplicates": "Duplikaty"
+    },
+    "errorsTitle": "Błędy importu",
+    "item": "Element"
+  },
+  "dryRunSuffix": " (próba)",
+  "statusMap": {
+    "pending": "Oczekujący",
+    "running": "W trakcie",
+    "completed": "Ukończony",
+    "failed": "Nieudany",
+    "cancelled": "Anulowany"
+  },
+  "errors": {
+    "loadRuns": "Nie udało się załadować historii importów",
+    "loadRunDetail": "Nie udało się załadować szczegółów importu",
+    "startImport": "Nie udało się rozpocząć importu",
+    "profileRequired": "Pole ID profilu jest wymagane"
+  }
 }
