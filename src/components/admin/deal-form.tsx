@@ -36,6 +36,7 @@ interface DealFormData {
   image: string;
   mainCategorySlug: string;
   subCategorySlug: string;
+  subSubCategorySlug?: string;
   merchant?: string;
   shippingCost?: number;
   status: 'draft' | 'approved' | 'rejected';
@@ -48,6 +49,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<string>('');
   const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [subsubcategories, setSubsubcategories] = useState<any[]>([]);
 
   const {
     register,
@@ -67,6 +69,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
           image: deal.image,
           mainCategorySlug: deal.mainCategorySlug,
           subCategorySlug: deal.subCategorySlug,
+          subSubCategorySlug: deal.subSubCategorySlug,
           merchant: deal.merchant,
           shippingCost: deal.shippingCost,
           status: deal.status || 'draft',
@@ -99,6 +102,13 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
         const mainCat = cats.find((c: any) => c.slug === deal.mainCategorySlug);
         if (mainCat?.subcategories) {
           setSubcategories(mainCat.subcategories);
+          
+          if (deal?.subCategorySlug) {
+            const subCat = mainCat.subcategories.find((s: any) => s.slug === deal.subCategorySlug);
+            if (subCat?.subcategories) {
+              setSubsubcategories(subCat.subcategories);
+            }
+          }
         }
       }
     }
@@ -111,8 +121,22 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
       const mainCat = categories.find((c) => c.slug === mainCategorySlug);
       setSubcategories(mainCat?.subcategories || []);
       setValue('subCategorySlug', ''); // Reset podkategorii
+      setValue('subSubCategorySlug', '');
+      setSubsubcategories([]);
     }
   }, [mainCategorySlug, categories, setValue]);
+
+  // Aktualizuj sub-subkategorie gdy zmieni się podkategoria
+  const subCategorySlug = watch('subCategorySlug');
+  useEffect(() => {
+    if (subCategorySlug) {
+      const subCat = subcategories.find((c) => c.slug === subCategorySlug);
+      setSubsubcategories(subCat?.subcategories || []);
+      setValue('subSubCategorySlug', '');
+    } else {
+      setSubsubcategories([]);
+    }
+  }, [subCategorySlug, subcategories, setValue]);
 
   const onSubmit = async (data: DealFormData) => {
     setIsSubmitting(true);
@@ -416,6 +440,30 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
                   {errors.subCategorySlug.message}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Pod-podkategoria (poziom 3) */}
+          {subsubcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="subSubCategorySlug">
+                Pod-podkategoria (opcjonalna)
+              </Label>
+              <Select
+                value={watch('subSubCategorySlug') || ''}
+                onValueChange={(value) => setValue('subSubCategorySlug', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Wybierz pod-podkategorię" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subsubcategories.map((subsubcat) => (
+                    <SelectItem key={subsubcat.slug} value={subsubcat.slug}>
+                      {subsubcat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 

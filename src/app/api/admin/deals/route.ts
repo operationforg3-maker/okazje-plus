@@ -14,6 +14,7 @@ const dealSchema = z.object({
   image: z.string().min(3), // może być URL lub ścieżka storage
   mainCategorySlug: z.string().min(1),
   subCategorySlug: z.string().min(1).optional(),
+  subSubCategorySlug: z.string().min(1).optional(),
   merchant: z.string().optional(),
   shippingCost: z.coerce.number().min(0).optional(),
 });
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
             merchant: data.merchant,
             mainCategorySlug: data.mainCategorySlug,
             subCategorySlug: data.subCategorySlug,
+            subSubCategorySlug: data.subSubCategorySlug,
           });
           
           normalizedTitle = enriched.normalizedTitle;

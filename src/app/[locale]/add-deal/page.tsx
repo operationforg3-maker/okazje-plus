@@ -5,27 +5,36 @@ export const dynamic = 'force-dynamic';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
-import { getFunctions, httpsCallable, FunctionsError } from 'firebase/functions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import ProductSuggestion from '@/components/product-suggestion';
-import { searchProductsForLinking } from '@/lib/data';
+import { searchProductsForLinking, getCategories } from '@/lib/data';
 import { linkDealToProduct } from '@/lib/data';
 import { toast } from 'sonner';
 
-// Typ dla danych nowej okazji wysyłanych do Cloud Function
+// Typ dla danych nowej okazji wysyłanych do API endpoint
 interface NewDealData {
   title: string;
   description: string;
   price: number;
-  dealUrl: string;
-  imageUrl: string;
+  originalPrice?: number;
+  link: string;
+  image: string;
+  mainCategorySlug: string;
+  subCategorySlug: string;
+  subSubCategorySlug?: string;
+  merchant?: string;
+  shippingCost?: number;
 }
-
-const functions = getFunctions();
-const createDealCallable = httpsCallable<NewDealData, { dealId: string }>(functions, 'createDeal');
 
 export default function AddDealPage() {
   const { user } = useAuth();
@@ -40,6 +49,45 @@ export default function AddDealPage() {
   const [productQuery, setProductQuery] = useState('');
   const [productResults, setProductResults] = useState<any[]>([]);
   const [productSearchLoading, setProductSearchLoading] = useState(false);
+  
+  // Kategorie
+  const [categories, setCategories] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [subsubcategories, setSubsubcategories] = useState<any[]>([]);
+  const [mainCategorySlug, setMainCategorySlug] = useState('');
+  const [subCategorySlug, setSubCategorySlug] = useState('');
+  const [subSubCategorySlug, setSubSubCategorySlug] = useState('');
+
+  // Ładowanie kategorii
+  useEffect(() => {
+    async function fetchCategories() {
+      const cats = await getCategories();
+      setCategories(cats);
+    }
+    fetchCategories();
+  }, []);
+
+  // Aktualizuj podkategorie
+  useEffect(() => {
+    if (mainCategorySlug) {
+      const mainCat = categories.find((c) => c.slug === mainCategorySlug);
+      setSubcategories(mainCat?.subcategories || []);
+      setSubCategorySlug('');
+      setSubSubCategorySlug('');
+      setSubsubcategories([]);
+    }
+  }, [mainCategorySlug, categories]);
+
+  // Aktualizuj sub-subkategorie
+  useEffect(() => {
+    if (subCategorySlug) {
+      const subCat = subcategories.find((c) => c.slug === subCategorySlug);
+      setSubsubcategories(subCat?.subcategories || []);
+      setSubSubCategorySlug('');
+    } else {
+      setSubsubcategories([]);
+    }
+  }, [subCategorySlug, subcategories]);
 
   useEffect(() => {
     const run = async () => {
@@ -72,20 +120,43 @@ export default function AddDealPage() {
         return;
     }
 
+    // Walidacja kategorii
+    if (!mainCategorySlug || !subCategorySlug) {
+        toast.error("Kategoria główna i podkategoria są wymagane.");
+        return;
+    }
+
     const newDealData: NewDealData = {
         title,
         description,
         price: parseFloat(price),
-        dealUrl: link,
-        imageUrl: image,
+        originalPrice: originalPrice ? parseFloat(originalPrice) : undefined,
+        link,
+        image,
+        mainCategorySlug,
+        subCategorySlug,
+        subSubCategorySlug: subSubCategorySlug || undefined,
     };
 
     setIsLoading(true);
     toast.info('Przetwarzanie danych...');
 
     try {
-        const result = await createDealCallable(newDealData);
-        const dealId = result.data.dealId;
+        const response = await fetch('/api/admin/deals', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newDealData),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Nie udało się utworzyć okazji');
+        }
+
+        const result = await response.json();
+        const dealId = result.id;
         // Linkowanie z produktem jeśli wybrano
         if (dealId && linkedProductId) {
           try {
@@ -99,10 +170,9 @@ export default function AddDealPage() {
         toast.success(`Okazja została pomyślnie dodana! ID: ${dealId}`);
         router.push('/deals');
     } catch (error) {
-        console.error('Błąd podczas wywoływania funkcji createDeal: ', error);
-        const httpsError = error as FunctionsError;
-        // Wyświetlamy bardziej szczegółowy komunikat błędu zwrócony z funkcji
-        toast.error(httpsError.message || 'Wystąpił nieoczekiwany błąd.');
+        console.error('Błąd podczas tworzenia okazji:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Wystąpił nieoczekiwany błąd.';
+        toast.error(errorMessage);
     } finally {
         setIsLoading(false);
     }
@@ -140,6 +210,62 @@ export default function AddDealPage() {
           <Label htmlFor="image">Link do obrazka</Label>
           <Input id="image" type="url" value={image} onChange={(e) => setImage(e.target.value)} required disabled={isLoading} />
         </div>
+        
+        {/* Kategorie - 3 poziomy */}
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="mainCategory">Kategoria główna *</Label>
+            <Select value={mainCategorySlug} onValueChange={setMainCategorySlug} disabled={isLoading}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wybierz kategorię główną" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.slug} value={cat.slug}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {subcategories.length > 0 && (
+            <div>
+              <Label htmlFor="subCategory">Podkategoria *</Label>
+              <Select value={subCategorySlug} onValueChange={setSubCategorySlug} disabled={isLoading}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wybierz podkategorię" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subcategories.map((subcat) => (
+                    <SelectItem key={subcat.slug} value={subcat.slug}>
+                      {subcat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {subsubcategories.length > 0 && (
+            <div>
+              <Label htmlFor="subSubCategory">Pod-podkategoria (opcjonalna)</Label>
+              <Select value={subSubCategorySlug} onValueChange={setSubSubCategorySlug} disabled={isLoading}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wybierz pod-podkategorię" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subsubcategories.map((subsubcat) => (
+                    <SelectItem key={subsubcat.slug} value={subsubcat.slug}>
+                      {subsubcat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+        
         <div className="space-y-2">
           <Label htmlFor="linkedProduct">Połącz z produktem (opcjonalnie)</Label>
           <Input

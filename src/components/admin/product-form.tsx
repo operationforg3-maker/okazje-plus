@@ -34,6 +34,7 @@ interface ProductFormData {
   affiliateUrl: string;
   mainCategorySlug: string;
   subCategorySlug: string;
+  subSubCategorySlug?: string;
   status: 'draft' | 'approved' | 'rejected';
   // Rating fields
   ratingAverage: number;
@@ -50,6 +51,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedMainCategory, setSelectedMainCategory] = useState<string>('');
   const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [subsubcategories, setSubsubcategories] = useState<any[]>([]);
 
   const {
     register,
@@ -69,6 +71,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
           affiliateUrl: product.affiliateUrl,
           mainCategorySlug: product.mainCategorySlug,
           subCategorySlug: product.subCategorySlug,
+          subSubCategorySlug: product.subSubCategorySlug,
           status: product.status,
           ratingAverage: product.ratingCard?.average || 0,
           ratingCount: product.ratingCard?.count || 0,
@@ -102,6 +105,13 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         const mainCat = cats.find((c: any) => c.slug === product.mainCategorySlug);
         if (mainCat?.subcategories) {
           setSubcategories(mainCat.subcategories);
+          
+          if (product?.subCategorySlug) {
+            const subCat = mainCat.subcategories.find((s: any) => s.slug === product.subCategorySlug);
+            if (subCat?.subcategories) {
+              setSubsubcategories(subCat.subcategories);
+            }
+          }
         }
       }
     }
@@ -114,8 +124,22 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
       const mainCat = categories.find((c) => c.slug === mainCategorySlug);
       setSubcategories(mainCat?.subcategories || []);
       setValue('subCategorySlug', '');
+      setValue('subSubCategorySlug', '');
+      setSubsubcategories([]);
     }
   }, [mainCategorySlug, categories, setValue]);
+
+  // Aktualizuj sub-subkategorie
+  const subCategorySlug = watch('subCategorySlug');
+  useEffect(() => {
+    if (subCategorySlug) {
+      const subCat = subcategories.find((c) => c.slug === subCategorySlug);
+      setSubsubcategories(subCat?.subcategories || []);
+      setValue('subSubCategorySlug', '');
+    } else {
+      setSubsubcategories([]);
+    }
+  }, [subCategorySlug, subcategories, setValue]);
 
   const onSubmit = async (data: ProductFormData) => {
     setIsSubmitting(true);
@@ -131,6 +155,7 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
         affiliateUrl: data.affiliateUrl,
         mainCategorySlug: data.mainCategorySlug,
         subCategorySlug: data.subCategorySlug,
+        subSubCategorySlug: data.subSubCategorySlug,
         status: data.status,
         category: data.mainCategorySlug, // Dla kompatybilności
         ratingCard: {
@@ -389,6 +414,30 @@ export function ProductForm({ product, onSuccess, onCancel }: ProductFormProps) 
                   {errors.subCategorySlug.message}
                 </p>
               )}
+            </div>
+          )}
+
+          {/* Pod-podkategoria (poziom 3) */}
+          {subsubcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="subSubCategorySlug">
+                Pod-podkategoria (opcjonalna)
+              </Label>
+              <Select
+                value={watch('subSubCategorySlug') || ''}
+                onValueChange={(value) => setValue('subSubCategorySlug', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Wybierz pod-podkategorię" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subsubcategories.map((subsubcat) => (
+                    <SelectItem key={subsubcat.slug} value={subsubcat.slug}>
+                      {subsubcat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </CardContent>
