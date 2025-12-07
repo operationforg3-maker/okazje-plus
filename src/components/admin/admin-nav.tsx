@@ -65,6 +65,9 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
       { title: 'AliExpress', href: '/admin/aliexpress-import', icon: Search },
+      { title: 'Allegro', href: '/admin/allegro-import', icon: Search },
+      { title: 'Amazon', href: '/admin/amazon-import', icon: Search },
+      { title: 'eBay', href: '/admin/ebay-import', icon: Search },
       { title: 'Bulk Import', href: '/admin/bulk-import', icon: Database },
       { title: 'Batch Import', href: '/admin/batch-import', icon: Layers },
     ],

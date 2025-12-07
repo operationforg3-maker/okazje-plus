@@ -29,9 +29,13 @@ const pathNames: Record<string, string> = {
   '/admin/navigation': 'Nawigacja',
   '/admin/imports': 'Smart Import',
   '/admin/imports/aliexpress': 'Import AliExpress',
+  '/admin/aliexpress-import': 'Import AliExpress',
+  '/admin/allegro-import': 'Import Allegro',
+  '/admin/amazon-import': 'Import Amazon',
+  '/admin/ebay-import': 'Import eBay',
   '/admin/bulk-import': 'Bulk Import',
   '/admin/batch-import': 'Batch Import',
-  '/admin/import': 'Import CSV',
+  '/admin/import': 'Import danych',
 };
 
 export default function AdminLayout({
