@@ -8,7 +8,7 @@
 
 import { VertexAI, HarmCategory, HarmBlockThreshold, FinishReason } from "@google-cloud/vertexai";
 import { createHash } from "crypto";
-import { logger } from "./logger";
+import { logger } from "@/lib/logging";
 
 // ===== Init (Lazy) =====
 let vertexInstance: VertexAI | null = null;
@@ -106,47 +106,64 @@ export async function generateText(
 
 // ===== Embeddingi =====
 /**
- * @deprecated Vertex AI embedding API has changed in latest SDK version
- * This function needs to be updated to work with the new API
- * For now, it returns an error to prevent silent failures
+ * Generuje wektory osadzeń (embeddings) tekstu używając Vertex AI text-embedding-004
+ * Zwraca numerical vector (~768 wymiarów) do Smart Deduplication i Rekomendacji
+ * @param text - Tekst do osadzenia
+ * @returns Tablica liczb reprezentujących embedding
  */
 export async function embedText(text: string): Promise<number[]> {
-  logger.warn('embedText is deprecated and needs to be updated for current Vertex AI SDK');
-  
-  // Return empty array as graceful fallback
-  // TODO: Update to use correct Vertex AI embedding API
-  return [];
-  
-  /* Original implementation - needs update:
+  if (!text || text.trim().length === 0) {
+    throw new Error("Text cannot be empty for embedding");
+  }
+
   try {
-    // Note: Embedding models don't use preview API
-    // Use the stable API for text embeddings
+    const vertex = getVertexInstance();
+    
+    // Use the embedding model from Google Cloud Vertex AI
+    // Note: embeddings don't use preview API, use getGenerativeModel directly
     const genModel = vertex.getGenerativeModel({
       model: "text-embedding-004",
     });
     
-    // For embedding models, use embedContent directly on the model
-    const result = await genModel.embedContent(text);
+    // Call embedContent with request format matching current SDK
+    const request = {
+      content: {
+        parts: [{ text }],
+      },
+    };
     
-    const embedding = result?.embeddings?.[0]?.values || [];
+    // Cast to any to work with current SDK version compatibility
+    const result = await (genModel as any).embedContent(request);
+    
+    // Extract embedding values from response
+    const embedding = result?.embedding?.values || [];
 
     if (embedding.length === 0) {
-      throw new Error("Empty embedding returned");
+      throw new Error("Empty embedding returned from Vertex AI");
     }
 
-    // Sprawdzenie długości (oczekiwane ~768)
+    // Log dimension info (expect ~768 for text-embedding-004)
     if (embedding.length !== 768) {
       logger.warn("Unexpected embedding dimension", {
         dimension: embedding.length,
+        expectedDimension: 768,
+        textLength: text.length,
       });
     }
 
+    logger.debug("Embedding generated successfully", {
+      dimension: embedding.length,
+      textLength: text.length,
+    });
+
     return embedding;
   } catch (error) {
-    logger.error("Vertex AI embedding failed", { error, textLength: text.length });
-    throw error;
+    logger.error("Vertex AI embedding failed", {
+      error: error instanceof Error ? error.message : String(error),
+      textLength: text.length,
+    });
+    throw error; // Propagate error instead of silent failure
   }
-  */
 }
 
 // ===== Batch embeddings (z cache) =====

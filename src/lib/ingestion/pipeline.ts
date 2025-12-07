@@ -3,12 +3,12 @@
  * Step 1: Iterator (fetch from APIs)
  * Step 2: Normalizer (map to schema)
  * Step 3: AI Enhancement (generate/translate)
- * Step 4: Persona Assignment (assign to fake user)
+ * Step 4: Persona Assignment (assign to AI-generated fake user via PersonaGenerator)
  * Step 5: Persist (save to Firestore)
  * Step 6: Typesense Index (update search index)
  */
 
-import { logger } from "../logger";
+import { logger } from "@/lib/logging";
 import { db } from "../firebase";
 import { collection, addDoc, writeBatch } from "firebase/firestore";
 import { getAliExpressClient } from "../integrations/aliexpress-client";
@@ -17,6 +17,7 @@ import { normalizeBatch } from "./normalizer";
 import { generateText, embedText } from "../vertex";
 import { getJobQueue, Job } from "./queue";
 import { NormalizedDeal, NormalizedProduct } from "../integrations/api-interfaces";
+import { generatePersona, personaToUser } from "../ai/persona-generator";
 
 // ===== Types =====
 export type PipelineSource = "aliexpress" | "convertiser" | "manual";
@@ -29,23 +30,44 @@ export interface PipelineConfig {
   assignPersona?: boolean;
   indexTypesense?: boolean;
   locales?: string[];
+  personaLanguage?: string; // Language for persona generation (default: 'pl')
 }
 
+/**
+ * @deprecated Use generatePersona from persona-generator.ts instead
+ * This interface is kept for backward compatibility
+ */
 export interface PersonaOption {
   id: string;
   displayName: string;
   photoURL?: string;
 }
 
-const FAKE_PERSONAS: PersonaOption[] = [
-  { id: "persona_tech_hunter", displayName: "TechHunter_99", photoURL: "🔧" },
-  { id: "persona_deal_master", displayName: "DealMaster_47", photoURL: "💎" },
-  { id: "persona_price_watcher", displayName: "PriceWatcher_82", photoURL: "👁️" },
-  { id: "persona_gadget_fan", displayName: "GadgetFan_55", photoURL: "📱" },
-];
-
-function randomPersona(): PersonaOption {
-  return FAKE_PERSONAS[Math.floor(Math.random() * FAKE_PERSONAS.length)];
+/**
+ * @deprecated Use generatePersona from persona-generator.ts instead
+ * This function is kept for backward compatibility with older code
+ */
+async function getOrGeneratePersona(
+  dealTitle: string,
+  dealCategory?: string,
+  language: string = "pl"
+): Promise<PersonaOption> {
+  try {
+    const persona = await generatePersona(dealTitle, dealCategory, language);
+    return {
+      id: persona.id,
+      displayName: persona.displayName,
+      photoURL: persona.avatar,
+    };
+  } catch (error) {
+    logger.warn("PersonaGenerator fallback triggered", { error });
+    // Fallback to simple persona if generation fails
+    return {
+      id: `persona_${Date.now()}`,
+      displayName: `User_${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+      photoURL: "👤",
+    };
+  }
 }
 
 // ===== Iterator: Fetch raw data from APIs =====
@@ -254,12 +276,21 @@ export async function executePipeline(
           ) as (NormalizedDeal | NormalizedProduct)[];
         }
 
-        // Persona Assignment
+        // Persona Assignment (AI-generated personas with PersonaGenerator)
         if (config.assignPersona) {
-          enhanced = enhanced.map((item) => ({
-            ...item,
-            assignedPersonaId: randomPersona().id,
-          }));
+          enhanced = await Promise.all(
+            enhanced.map(async (item) => {
+              const persona = await getOrGeneratePersona(
+                (item as any).name || (item as any).title || "Unknown",
+                config.categoryPath.sub,
+                config.personaLanguage || "pl"
+              );
+              return {
+                ...item,
+                assignedPersonaId: persona.id,
+              };
+            })
+          ) as (NormalizedDeal | NormalizedProduct)[];
         }
 
         // Persist
@@ -288,10 +319,19 @@ export async function executePipeline(
       }
 
       if (config.assignPersona) {
-        enhanced = enhanced.map((item) => ({
-          ...item,
-          assignedPersonaId: randomPersona().id,
-        }));
+        enhanced = await Promise.all(
+          enhanced.map(async (item) => {
+            const persona = await getOrGeneratePersona(
+              (item as any).name || (item as any).title || "Unknown",
+              config.categoryPath.sub,
+              config.personaLanguage || "pl"
+            );
+            return {
+              ...item,
+              assignedPersonaId: persona.id,
+            };
+          })
+        ) as (NormalizedDeal | NormalizedProduct)[];
       }
 
       const created = await persistBatch(enhanced, config);
