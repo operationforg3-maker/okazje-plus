@@ -548,6 +548,148 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
             </Card>
           )}
 
+          {/* 🚀 ENHANCED SHIPPING INFO (from Auto-Import Kombajn) */}
+          {((product.metadata as any)?.shipping) && (
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-900">
+                  <Truck className="h-5 w-5" />
+                  Szczegóły dostawy do Polski
+                </CardTitle>
+                <CardDescription>Obliczone przez AliExpress API</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(product.metadata as any).shipping.cost !== undefined && (
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg">
+                    <span className="text-sm font-medium">Koszt wysyłki:</span>
+                    <span className="text-lg font-bold text-blue-900">
+                      {(product.metadata as any).shipping.cost > 0 
+                        ? `${(product.metadata as any).shipping.cost} PLN` 
+                        : 'DARMOWA'}
+                    </span>
+                  </div>
+                )}
+                {(product.metadata as any).shipping.estimatedDays && (
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg">
+                    <span className="text-sm font-medium">Szacowany czas dostawy:</span>
+                    <span className="text-base font-semibold">~{(product.metadata as any).shipping.estimatedDays} dni</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 💎 PRODUCT VARIANTS (SKU Details from Auto-Import) */}
+          {((product.metadata as any)?.variants && (product.metadata as any).variants.length > 0) && (
+            <Card className="border-purple-200 bg-purple-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-purple-900">
+                  <Package className="h-5 w-5" />
+                  Dostępne warianty ({(product.metadata as any).variants.length})
+                </CardTitle>
+                <CardDescription>Różne rozmiary, kolory i opcje</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(product.metadata as any).variants.slice(0, 8).map((variant: any, idx: number) => (
+                    <div key={variant.skuId || idx} className="p-3 bg-white rounded-lg border">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">
+                          Wariant #{idx + 1}
+                        </span>
+                        <Badge variant={variant.available ? 'default' : 'secondary'}>
+                          {variant.available ? 'Dostępny' : 'Brak'}
+                        </Badge>
+                      </div>
+                      {variant.attributes && variant.attributes.length > 0 && (
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          {variant.attributes.map((attr: any, attrIdx: number) => (
+                            <div key={attrIdx}>
+                              {attr.name || attr.key}: <span className="font-medium text-foreground">{attr.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {variant.price && (
+                        <div className="mt-2 text-base font-bold text-purple-900">
+                          {variant.price} PLN
+                        </div>
+                      )}
+                      {variant.stock && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Dostępne: {variant.stock} szt.
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {(product.metadata as any).variants.length > 8 && (
+                  <p className="mt-3 text-sm text-muted-foreground text-center">
+                    +{(product.metadata as any).variants.length - 8} więcej wariantów dostępnych u sprzedawcy
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 🛡️ WARRANTY & PACKAGE INFO */}
+          {(((product.metadata as any)?.warranty?.available) || ((product.metadata as any)?.package)) && (
+            <Card className="border-green-200 bg-green-50/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-900">
+                  <ShieldCheck className="h-5 w-5" />
+                  Gwarancja i informacje o paczce
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {(product.metadata as any).warranty?.available && (
+                  <div className="p-3 bg-white rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <span className="font-semibold">Gwarancja dostępna</span>
+                    </div>
+                    {(product.metadata as any).warranty.description && (
+                      <p className="text-sm text-muted-foreground pl-7">
+                        {(product.metadata as any).warranty.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {(product.metadata as any).package && (
+                  <div className="p-3 bg-white rounded-lg space-y-2">
+                    <div className="font-semibold text-sm mb-2">Wymiary i waga paczki:</div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {(product.metadata as any).package.weight && (
+                        <div>
+                          <span className="text-muted-foreground">Waga:</span> 
+                          <span className="font-medium ml-2">{(product.metadata as any).package.weight}kg</span>
+                        </div>
+                      )}
+                      {(product.metadata as any).package.length && (
+                        <div>
+                          <span className="text-muted-foreground">Długość:</span> 
+                          <span className="font-medium ml-2">{(product.metadata as any).package.length}cm</span>
+                        </div>
+                      )}
+                      {(product.metadata as any).package.width && (
+                        <div>
+                          <span className="text-muted-foreground">Szerokość:</span> 
+                          <span className="font-medium ml-2">{(product.metadata as any).package.width}cm</span>
+                        </div>
+                      )}
+                      {(product.metadata as any).package.height && (
+                        <div>
+                          <span className="text-muted-foreground">Wysokość:</span> 
+                          <span className="font-medium ml-2">{(product.metadata as any).package.height}cm</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* AI Keywords */}
           {product.ai?.enrichment?.keywords && product.ai.enrichment.keywords.length > 0 && (
             <Card>
