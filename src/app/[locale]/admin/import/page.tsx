@@ -52,19 +52,19 @@ function ImportPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-yellow-50 dark:bg-yellow-950/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-                <h4 className="font-semibold text-sm mb-2">🚀 Wkrótce dostępne</h4>
+                <h4 className="font-semibold text-sm mb-2">✅ Dostępne</h4>
                 <p className="text-sm text-muted-foreground">
-                  Integracja z Allegro API jest w trakcie konfiguracji. Będzie możliwe wyszukiwanie i import produktów bezpośrednio z platformy Allegro.
+                  Wyszukuj i importuj produkty bezpośrednio z Allegro z automatycznym mapowaniem kategorii.
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  ✓ Pobieranie cennika z Allegro<br/>
-                  ✓ Automatyczna kategoryzacja AI<br/>
-                  ✓ Tracking zmian cen<br/>
-                  ✓ Synchronizacja statusu produktów
+                  ✓ Wyszukiwanie po frazie<br/>
+                  ✓ Filtrowanie po cenie<br/>
+                  ✓ Mapowanie kategorii 3-poziomowe<br/>
+                  ✓ Deduplikacja
                 </p>
               </div>
-              <Button disabled className="w-full">
-                Import z Allegro (wkrótce)
+              <Button className="w-full" asChild>
+                <a href="/admin/allegro-import">Import z Allegro →</a>
               </Button>
             </CardContent>
           </Card>
@@ -82,19 +82,19 @@ function ImportPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-orange-50 dark:bg-orange-950/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
-                <h4 className="font-semibold text-sm mb-2">🚀 Wkrótce dostępne</h4>
+                <h4 className="font-semibold text-sm mb-2">✅ Dostępne</h4>
                 <p className="text-sm text-muted-foreground">
-                  Integracja z Amazon Product Advertising API umożliwi import międzynarodowych produktów z pełnym wskaźnikiem cen.
+                  Importuj międzynarodowe produkty z automatyczną konwersją cen.
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
                   ✓ Wsparcie dla Amazon.com i Amazon.eu<br/>
                   ✓ Konwersja walut (USD/EUR → PLN)<br/>
-                  ✓ Linki afiliacyjne<br/>
-                  ✓ Rating i opinie klientów
+                  ✓ Rating i opinie klientów<br/>
+                  ✓ Linki afiliacyjne
                 </p>
               </div>
-              <Button disabled className="w-full">
-                Import z Amazon (wkrótce)
+              <Button className="w-full" asChild>
+                <a href="/admin/amazon-import">Import z Amazon →</a>
               </Button>
             </CardContent>
           </Card>
@@ -112,19 +112,19 @@ function ImportPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-                <h4 className="font-semibold text-sm mb-2">🚀 Wkrótce dostępne</h4>
+                <h4 className="font-semibold text-sm mb-2">✅ Dostępne</h4>
                 <p className="text-sm text-muted-foreground">
-                  eBay REST API pozwoli importować artykuły na sprzedaż, aukcje i oferty fixed-price z całej platformy.
+                  Importuj aukcje i oferty fixed-price z całej platformy eBay.
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
                   ✓ Obsługa aukcji i fixed-price<br/>
                   ✓ Filtrowanie po warunkach (nowy/używany)<br/>
-                  ✓ Historia cen i trendy<br/>
-                  ✓ Reputacja sprzedawców
+                  ✓ Reputacja sprzedawców<br/>
+                  ✓ Informacje o dostawie
                 </p>
               </div>
-              <Button disabled className="w-full">
-                Import z eBay (wkrótce)
+              <Button className="w-full" asChild>
+                <a href="/admin/ebay-import">Import z eBay →</a>
               </Button>
             </CardContent>
           </Card>
