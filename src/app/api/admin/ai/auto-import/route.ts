@@ -225,6 +225,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      // top-level summary for UI toasts
+      totalProducts: stats.totalProducts,
+      totalVariants: stats.totalVariants,
+      sourcesUsed: enabledSources.length,
+      errors: stats.errors,
+      // full stats + log for detail view
       stats,
       log,
     });

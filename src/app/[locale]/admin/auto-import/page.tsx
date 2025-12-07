@@ -69,8 +69,11 @@ export default function AutoImportPage() {
       }
 
       const result = await response.json();
-      toast.success(`✅ Auto-import ukończony! Zaimportowano ${result.totalProducts || 0} produktów z ${result.sourcesUsed || 0} źródeł.`);
-      setProgress(result.log || []);
+      const totalProducts = result.totalProducts ?? result.stats?.totalProducts ?? 0;
+      const totalVariants = result.totalVariants ?? result.stats?.totalVariants ?? 0;
+      const sourcesUsed = result.sourcesUsed ?? result.stats?.sources?.length ?? Object.keys(enabledSources).filter(([, v]) => v).length;
+      setProgress(result.log || result.stats?.log || []);
+      toast.success(`✅ Auto-import ukończony! ${totalProducts} produktów, ${totalVariants || 0} wariantów, źródła: ${sourcesUsed}`);
     } catch (error) {
       console.error('Auto-import error:', error);
       toast.error('❌ Błąd podczas auto-importu');
