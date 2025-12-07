@@ -7,7 +7,8 @@ import Link from 'next/link';
 import { ChevronRight, FolderTree, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Subcategory { name: string; slug: string; }
+interface SubSubcategory { name: string; slug: string; }
+interface Subcategory { name: string; slug: string; subcategories?: SubSubcategory[]; }
 interface CategoryDoc { id: string; name: string; slug?: string; subcategories?: Subcategory[]; }
 
 export function SidebarCategoryTree() {
@@ -159,19 +160,34 @@ export function SidebarCategoryTree() {
                   const subKey = `${cat.id}::${sub.slug}`;
                   const subC = subCounts[subKey];
                   return (
-                    <Link
-                      key={sub.slug}
-                      href={`/admin/products?mainCategory=${catSlug}&subCategory=${sub.slug}`}
-                      className="flex items-center gap-1.5 px-2 py-1 text-[10px] hover:bg-background rounded transition-colors group"
-                    >
-                      <span className="flex-1 truncate group-hover:text-primary">{sub.name}</span>
-                      {subC && (
-                        <div className="flex items-center gap-0.5 text-[8px] text-muted-foreground">
-                          <span className="px-1 py-0.5 rounded bg-background">{subC.deals}D</span>
-                          <span className="px-1 py-0.5 rounded bg-background">{subC.products}P</span>
+                    <div key={sub.slug} className="space-y-0.5">
+                      <Link
+                        href={`/admin/products?mainCategory=${catSlug}&subCategory=${sub.slug}`}
+                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] hover:bg-background rounded transition-colors group"
+                      >
+                        <span className="flex-1 truncate group-hover:text-primary">{sub.name}</span>
+                        {subC && (
+                          <div className="flex items-center gap-0.5 text-[8px] text-muted-foreground">
+                            <span className="px-1 py-0.5 rounded bg-background">{subC.deals}D</span>
+                            <span className="px-1 py-0.5 rounded bg-background">{subC.products}P</span>
+                          </div>
+                        )}
+                      </Link>
+                      {Array.isArray(sub.subcategories) && sub.subcategories.length > 0 && (
+                        <div className="pl-3 border-l border-dashed border-muted-foreground/40 space-y-0.5">
+                          {sub.subcategories.map(subsub => (
+                            <Link
+                              key={subsub.slug}
+                              href={`/admin/products?mainCategory=${catSlug}&subCategory=${sub.slug}&subSubCategory=${subsub.slug}`}
+                              className="flex items-center gap-1.5 px-2 py-1 text-[9px] hover:bg-background rounded transition-colors"
+                            >
+                              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                              <span className="truncate">{subsub.name}</span>
+                            </Link>
+                          ))}
                         </div>
                       )}
-                    </Link>
+                    </div>
                   );
                 })}
               </div>

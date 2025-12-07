@@ -26,12 +26,24 @@ import { Loader2, Trash2, Sparkles } from "lucide-react";
 
 // --- Form types ---
 type MainCategoryInputs = {
-  name: string;
+  nameEn: string;
+  namePl: string;
+  nameDe?: string;
   slug: string;
 };
 
 type SubcategoryInputs = {
-  name: string;
+  nameEn: string;
+  namePl: string;
+  nameDe?: string;
+  slug: string;
+};
+
+type SubSubcategoryInputs = {
+  parentSlug: string;
+  nameEn: string;
+  namePl: string;
+  nameDe?: string;
   slug: string;
 };
 
@@ -71,35 +83,56 @@ export default function AdminCategoriesPage() {
     setValue: setSubValue,
   } = useForm<SubcategoryInputs>();
 
-  // Auto-generate slug for main category
-  const mainName = watchMainName("name");
+  const {
+    register: registerSubSub,
+    handleSubmit: handleSubmitSubSub,
+    reset: resetSubSub,
+    watch: watchSubSubName,
+    setValue: setSubSubValue,
+  } = useForm<SubSubcategoryInputs>();
+
+  // Auto-generate slug for main category (English as primary)
+  const mainName = watchMainName("nameEn");
   useEffect(() => {
     if (mainName) {
       setMainValue("slug", generateSlug(mainName));
     }
   }, [mainName, setMainValue]);
 
-  // Auto-generate slug for subcategory
-  const subName = watchSubName("name");
+  // Auto-generate slug for subcategory (English as primary)
+  const subName = watchSubName("nameEn");
   useEffect(() => {
     if (subName) {
       setSubValue("slug", generateSlug(subName));
     }
   }, [subName, setSubValue]);
 
+  // Auto-generate slug for sub-subcategory
+  const subSubName = watchSubSubName("nameEn");
+  useEffect(() => {
+    if (subSubName) {
+      setSubSubValue("slug", generateSlug(subSubName));
+    }
+  }, [subSubName, setSubSubValue]);
+
 
   const onAddMainCategory: SubmitHandler<MainCategoryInputs> = async (data) => {
     setIsSubmittingMain(true);
     try {
       const categoryRef = doc(db, "categories", data.slug);
-      // Create a new category with an empty subcategories array
+      // Create a new category with an empty subcategories array and translations (EN primary)
       const newCategory: Omit<Category, 'id'> = {
-        name: data.name,
+        name: data.nameEn || data.namePl,
         slug: data.slug,
+        translations: {
+          en: { name: data.nameEn || data.namePl },
+          pl: { name: data.namePl || data.nameEn },
+          de: data.nameDe ? { name: data.nameDe } : undefined,
+        },
         subcategories: [],
       };
       await setDoc(categoryRef, newCategory);
-      toast.success(`Kategoria "${data.name}" została dodana.`);
+      toast.success(`Kategoria "${data.nameEn || data.namePl}" została dodana.`);
       resetMain();
     } catch (error) {
       console.error("Błąd dodawania kategorii:", error);
@@ -114,14 +147,23 @@ export default function AdminCategoriesPage() {
     setIsSubmittingSub(true);
     try {
       const categoryRef = doc(db, "categories", editingCategory.id);
-      const newSubcategory: Subcategory = { name: data.name, slug: data.slug };
+      const newSubcategory: Subcategory = {
+        name: data.nameEn || data.namePl,
+        slug: data.slug,
+        translations: {
+          en: { name: data.nameEn || data.namePl },
+          pl: { name: data.namePl || data.nameEn },
+          de: data.nameDe ? { name: data.nameDe } : undefined,
+        },
+        subcategories: [],
+      };
       
       // Atomically add the new subcategory to the "subcategories" array field.
       await updateDoc(categoryRef, {
         subcategories: arrayUnion(newSubcategory),
       });
       
-      toast.success(`Podkategoria "${data.name}" została dodana.`);
+      toast.success(`Podkategoria "${data.nameEn || data.namePl}" została dodana.`);
       resetSub();
       // The hook 'useCollection' will automatically update the UI.
     } catch (error) {
@@ -129,6 +171,58 @@ export default function AdminCategoriesPage() {
       toast.error("Wystąpił błąd. Spróbuj ponownie.");
     } finally {
       setIsSubmittingSub(false);
+    }
+  };
+
+  const onAddSubSubcategory: SubmitHandler<SubSubcategoryInputs> = async (data) => {
+    if (!editingCategory) return;
+    setIsSubmittingSub(true);
+    try {
+      const categoryRef = doc(db, "categories", editingCategory.id);
+      const latestCat = allCategories?.find(c => c.id === editingCategory.id);
+      if (!latestCat) throw new Error('Brak kategorii');
+      const updatedSubs = (latestCat.subcategories || []).map(sub => {
+        if (sub.slug !== data.parentSlug) return sub;
+        const existing = Array.isArray(sub.subcategories) ? sub.subcategories : [];
+        const newSubSub = {
+          name: data.nameEn || data.namePl,
+          slug: data.slug,
+          translations: {
+            en: { name: data.nameEn || data.namePl },
+            pl: { name: data.namePl || data.nameEn },
+            de: data.nameDe ? { name: data.nameDe } : undefined,
+          },
+        };
+        return { ...sub, subcategories: [...existing, newSubSub] };
+      });
+      await updateDoc(categoryRef, { subcategories: updatedSubs });
+      toast.success(`Pod-podkategoria "${data.nameEn || data.namePl}" została dodana.`);
+      resetSubSub();
+    } catch (error) {
+      console.error("Błąd dodawania pod-podkategorii:", error);
+      toast.error("Wystąpił błąd. Spróbuj ponownie.");
+    } finally {
+      setIsSubmittingSub(false);
+    }
+  };
+
+  const onDeleteSubSubcategory = async (parentSlug: string, subSubSlug: string) => {
+    if (!editingCategory) return;
+    if (!confirm('Czy na pewno chcesz usunąć tę pod-podkategorię?')) return;
+    try {
+      const categoryRef = doc(db, "categories", editingCategory.id);
+      const latestCat = allCategories?.find(c => c.id === editingCategory.id);
+      if (!latestCat) throw new Error('Brak kategorii');
+      const updatedSubs = (latestCat.subcategories || []).map(sub => {
+        if (sub.slug !== parentSlug) return sub;
+        const cleaned = (sub.subcategories || []).filter(s => s.slug !== subSubSlug);
+        return { ...sub, subcategories: cleaned };
+      });
+      await updateDoc(categoryRef, { subcategories: updatedSubs });
+      toast.success('Pod-podkategoria została usunięta.');
+    } catch (error) {
+      console.error("Błąd usuwania pod-podkategorii:", error);
+      toast.error('Wystąpił błąd podczas usuwania.');
     }
   };
 
@@ -251,8 +345,16 @@ export default function AdminCategoriesPage() {
         <CardContent>
           <form onSubmit={handleSubmitMain(onAddMainCategory)} className="space-y-4">
             <div>
-              <Label htmlFor="main-name">Nazwa kategorii</Label>
-              <Input id="main-name" {...registerMain("name", { required: true })} placeholder="np. Elektronika"/>
+              <Label htmlFor="main-name-en">Nazwa kategorii (EN)</Label>
+              <Input id="main-name-en" {...registerMain("nameEn", { required: true })} placeholder="Electronics"/>
+            </div>
+            <div>
+              <Label htmlFor="main-name-pl">Nazwa kategorii (PL)</Label>
+              <Input id="main-name-pl" {...registerMain("namePl", { required: true })} placeholder="Elektronika"/>
+            </div>
+            <div>
+              <Label htmlFor="main-name-de">Nazwa kategorii (DE, opcjonalnie)</Label>
+              <Input id="main-name-de" {...registerMain("nameDe") } placeholder="Elektronik"/>
             </div>
             <div>
               <Label htmlFor="main-slug">Slug (wygenerowany automatycznie)</Label>
@@ -299,12 +401,26 @@ export default function AdminCategoriesPage() {
                                     ) : (
                                         <ul className="space-y-2 max-h-48 overflow-y-auto pr-2">
                                             {currentSubcategories.map((sub, index) => (
-                                                <li key={index} className="flex items-center justify-between p-2 border rounded-md bg-secondary/50">
-                                                    <span>{sub.name} <span className="text-xs text-muted-foreground">({sub.slug})</span></span>
-                                                    <Button variant="ghost" size="icon" onClick={() => onDeleteSubcategory(sub)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive" />
-                                                    </Button>
-                                                </li>
+                                              <li key={index} className="p-2 border rounded-md bg-secondary/50 space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                  <span>{sub.name} <span className="text-xs text-muted-foreground">({sub.slug})</span></span>
+                                                  <Button variant="ghost" size="icon" onClick={() => onDeleteSubcategory(sub)}>
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                  </Button>
+                                                </div>
+                                                {Array.isArray(sub.subcategories) && sub.subcategories.length > 0 && (
+                                                  <div className="pl-2 border-l space-y-1">
+                                                    {sub.subcategories.map((subsub) => (
+                                                      <div key={subsub.slug} className="flex items-center justify-between text-sm bg-background px-2 py-1 rounded">
+                                                        <span>{subsub.name} <span className="text-xs text-muted-foreground">({subsub.slug})</span></span>
+                                                        <Button variant="ghost" size="icon" onClick={() => onDeleteSubSubcategory(sub.slug, subsub.slug)}>
+                                                          <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                )}
+                                              </li>
                                             ))}
                                         </ul>
                                     )}
@@ -314,8 +430,16 @@ export default function AdminCategoriesPage() {
                                     <h3 className="font-semibold mb-2">Dodaj nową podkategorię</h3>
                                     <form onSubmit={handleSubmitSub(onAddSubcategory)} className="space-y-4">
                                         <div>
-                                            <Label htmlFor="sub-name">Nazwa podkategorii</Label>
-                                            <Input id="sub-name" {...registerSub("name", { required: true })} placeholder="np. Smartfony"/>
+                                            <Label htmlFor="sub-name-en">Nazwa podkategorii (EN)</Label>
+                                            <Input id="sub-name-en" {...registerSub("nameEn", { required: true })} placeholder="Smartphones"/>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="sub-name-pl">Nazwa podkategorii (PL)</Label>
+                                            <Input id="sub-name-pl" {...registerSub("namePl", { required: true })} placeholder="Smartfony"/>
+                                        </div>
+                                        <div>
+                                            <Label htmlFor="sub-name-de">Nazwa podkategorii (DE, opcjonalnie)</Label>
+                                            <Input id="sub-name-de" {...registerSub("nameDe") } placeholder="Smartphones"/>
                                         </div>
                                         <div>
                                             <Label htmlFor="sub-slug">Slug (wygenerowany automatycznie)</Label>
@@ -326,6 +450,43 @@ export default function AdminCategoriesPage() {
                                             Dodaj Podkategorię
                                         </Button>
                                     </form>
+                                </div>
+
+                                <div className="mt-6 border-t pt-6">
+                                  <h3 className="font-semibold mb-2">Dodaj pod-podkategorię (3 poziom)</h3>
+                                  <form onSubmit={handleSubmitSubSub(onAddSubSubcategory)} className="space-y-4">
+                                    <div>
+                                      <Label htmlFor="subsub-parent">Wybierz podkategorię</Label>
+                                      <select id="subsub-parent" className="w-full border rounded px-3 py-2"
+                                        {...registerSubSub("parentSlug", { required: true })}
+                                      >
+                                        <option value="">-- wybierz --</option>
+                                        {currentSubcategories.map(sub => (
+                                          <option key={sub.slug} value={sub.slug}>{sub.name} ({sub.slug})</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="subsub-name-en">Nazwa (EN)</Label>
+                                      <Input id="subsub-name-en" {...registerSubSub("nameEn", { required: true })} placeholder="Phones" />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="subsub-name-pl">Nazwa (PL)</Label>
+                                      <Input id="subsub-name-pl" {...registerSubSub("namePl", { required: true })} placeholder="Telefony" />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="subsub-name-de">Nazwa (DE, opcjonalnie)</Label>
+                                      <Input id="subsub-name-de" {...registerSubSub("nameDe") } placeholder="Telefone" />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor="subsub-slug">Slug (wygenerowany automatycznie)</Label>
+                                      <Input id="subsub-slug" {...registerSubSub("slug", { required: true })} readOnly className="bg-muted" />
+                                    </div>
+                                    <Button type="submit" disabled={isSubmittingSub}>
+                                      {isSubmittingSub && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                      Dodaj pod-podkategorię
+                                    </Button>
+                                  </form>
                                 </div>
                                 
                                 <DialogFooter className="mt-4">
