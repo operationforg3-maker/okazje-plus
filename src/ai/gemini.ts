@@ -12,10 +12,9 @@ export async function runGeminiCommand(command: string): Promise<string> {
 "${command}"
 Zwróć wynik w formacie JSON lub czytelnym dla użytkownika. Jeśli polecenie dotyczy bazy lub API, użyj odpowiednich endpointów lub AI flows.`;
 
-  // Wywołanie modelu Vertex AI (Genkit)
+  // Wywołanie modelu Vertex AI (Genkit) - model consistency via genkit.ts
   const response = await ai.generate({
     prompt,
-    model: 'vertexai/gemini-1.5-flash',
     config: {
       maxOutputTokens: 1024,
       temperature: 0.2,

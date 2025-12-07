@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -80,7 +80,9 @@ export default function AdminLayout({
             </header>
             <main className="flex-1 w-full">
               <div className="w-full max-w-[1600px] mx-auto p-3 sm:p-4 md:p-6 lg:p-8 pb-16 md:pb-20">
-                {children}
+                <Suspense fallback={<div className="flex items-center justify-center h-96"><span>Ładowanie...</span></div>}>
+                  {children}
+                </Suspense>
               </div>
             </main>
           </SidebarInset>

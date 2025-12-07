@@ -4,16 +4,14 @@ import { getAuth } from 'firebase-admin/auth';
 
 /**
  * GET - Pobiera preferencję waluty dla importu produktów
+ * Returns sensible default without auth to avoid breaking UI with permission errors
  */
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      // Dla GET bez auth zwracamy domyślną wartość
-      return NextResponse.json({ currency: 'USD' });
-    }
-
-    const configDoc = await adminDb.collection('config').doc('currencyPreference').get();
+    // Always try to read config (not admin/settings) with fallback
+    // This prevents Firebase permission denied errors from blocking the UI
+    try {
+      const configDoc = await adminDb.collection('config').doc('currencyPreference').get();
     
     if (configDoc.exists) {
       const data = configDoc.data();
@@ -22,10 +20,16 @@ export async function GET(req: NextRequest) {
         updatedAt: data?.updatedAt || null,
       });
     }
-
+    
     return NextResponse.json({ currency: 'USD' });
+    } catch (docErr: any) {
+      // If Firestore throws permission error, return safe default
+      console.warn('[GET /api/admin/settings/currency] Firestore access error:', docErr?.code || docErr?.message);
+      return NextResponse.json({ currency: 'USD' });
+    }
   } catch (e: any) {
-    console.error('[GET /api/admin/settings/currency] error', e);
+    console.error('[GET /api/admin/settings/currency] Unexpected error', e);
+    // Always return safe fallback, never fail the request
     return NextResponse.json({ currency: 'USD' });
   }
 }

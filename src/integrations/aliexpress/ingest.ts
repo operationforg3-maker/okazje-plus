@@ -2,63 +2,6 @@
 
 import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
 import { smartImportProduct } from '@/integrations/smart-importer';
-
-/**
- * Ingests a single AliExpress product into Firestore with smart pricing.
- * Calculates Total Landed Cost for PL and normalizes title via AI.
- */
-export async function ingestProduct(productId: string) {
-  // 1. Simulate API Fetch (Replace with actual Client call later)
-  // const productData = await apiClient.getProductDetails(productId);
-  // const freightData = await apiClient.calculateFreight(productId, 'PL');
-
-  // MOCKED DATA FOR IMPLEMENTATION:
-  const rawProduct = {
-    title:
-      '2024 New Vintage Women Dress Summer Floral Print Boho Style Beach Party...',
-    price: 45.0,
-    currency: 'PLN',
-  };
-  const shippingCost = 15.0; // Simulated freight cost to Poland (PL)
-
-  // 2. Logic
-  const totalCost = rawProduct.price + shippingCost;
-
-  // 3. AI Magic
-  const cleanTitle = await aiNormalizeTitlePL({ rawTitle: rawProduct.title });
-
-  // 4. Save to Firestore (i18n-friendly structure)
-  const productPayload = {
-    originalId: productId,
-    title: {
-      pl: cleanTitle,
-      origin: rawProduct.title,
-    },
-    price: {
-      amount: rawProduct.price,
-      shipping: shippingCost,
-      total: totalCost,
-      currency: 'PLN',
-    },
-    isSmartImport: true,
-    updatedAt: new Date(),
-  } as const;
-
-  // Modular Firestore API
-  const productRef = doc(db, 'products', productId);
-  await setDoc(productRef, productPayload, { merge: true });
-  return productPayload;
-}
-/**
- * AliExpress ingestion pipeline (M2 Enhanced with AI)
- * 
- * Orchestrates the import process: fetch, transform, validate, and store products/deals
- * Now includes AI-powered quality scoring, title normalization, category suggestion,
- * and SEO description generation.
- */
-
-// ...istniejący kod...
-
 import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { ImportRun, ImportProfile, ImportError, Product, Deal } from '@/lib/types';
@@ -236,19 +179,43 @@ export async function runImport(
         const product = mapToProduct(aliProduct, mapperConfig);
         const deal = mapToDeal(aliProduct, mapperConfig, profile.createdBy);
         
+        // === SMART PRICING: Calculate total landed cost with shipping ===
+        let shippingCost = aliProduct.shipping?.cost || 0;
+        
+        // If shipping is not available from product, calculate it via API
+        if (!aliProduct.shipping?.cost) {
+          try {
+            shippingCost = await client.calculateShipping(aliProduct.item_id, 'PL');
+            importLogger.debug('Calculated shipping cost', {
+              productId: aliProduct.item_id,
+              shippingCost,
+            });
+          } catch (err) {
+            importLogger.warn('Failed to calculate shipping, using default', {
+              productId: aliProduct.item_id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            shippingCost = 0; // Fallback to no shipping cost
+          }
+        }
+        
+        const totalPrice = product.price + shippingCost;
+        
         // === AI PROCESSING PIPELINE (M2) - Using Smart Import Orchestration ===
         
         // Smart Import: Unified AI processing (quality score + description + category)
         importLogger.debug('Running Smart Import pipeline', {
           productId: aliProduct.item_id,
+          totalPrice,
+          shippingCost,
         });
         
         const smartResult = await smartImportProduct({
           title: product.name,
           description: product.description,
-          price: product.price,
+          price: totalPrice,
           originalPrice: product.originalPrice,
-          shippingCost: aliProduct.shipping?.cost || 0,
+          shippingCost: shippingCost,
           rating: aliProduct.rating?.score,
           soldCount: aliProduct.sales,
           merchantRating: aliProduct.merchant?.rating,

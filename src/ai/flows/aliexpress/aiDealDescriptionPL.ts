@@ -23,9 +23,10 @@ const DealDescriptionInputSchema = z.object({
 export type DealDescriptionInput = z.infer<typeof DealDescriptionInputSchema>;
 
 const DealDescriptionOutputSchema = z.object({
+  marketingTitle: z.string().describe('Enhanced marketing title, Polish - catchy & benefit-focused'),
   shortDescription: z.string().describe('2 sentences, benefit-focused, Polish'),
-  htmlContent: z.string().describe('HTML with <ul><li> tags, user benefits'),
-  marketingTitle: z.string().describe('Enhanced marketing title, Polish'),
+  htmlContent: z.string().describe('HTML with <ul><li> tags, user benefits - 3-5 points'),
+  keywords: z.array(z.string()).describe('5-7 SEO keywords in Polish'),
 });
 
 export type DealDescriptionOutput = z.infer<typeof DealDescriptionOutputSchema>;
@@ -69,6 +70,14 @@ WYMAGANIA:
 - Bez clickbaitu, bez "PROMOCJA!!!", bez emotikonów
 - Przykład: "{{{title}}}" → "Słuchawki Sony XM5 z redukcją szumów - 30h baterii"
 - Jeśli oryginalny tytuł ma CAPS LOCK, popraw na normalne litery
+
+**keywords** (tablica 5-7 słów kluczowych):
+- SEO keywords w języku polskim
+- Najważniejsze first
+- Mix: główne korzyści + kategoria + typ produktu
+- Przykład dla słuchawek: ["słuchawki bezprzewodowe", "redukcja szumów", "długa bateria", "słuchawki Bluetooth", "muzyka podróży", "wygodne słuchawki", "dźwięk HD"]
+- BRAK spacji potrójnych, tylko naturalne terminy
+- Przydatne dla: wyszukiwania, tagów, SEO
 
 ZAKAZY:
 - Bez ogólników ("wysokiej jakości", "najlepszy", "rewelacyjny")
@@ -153,10 +162,20 @@ export async function aiGenerateDealDescriptionPL(
     
     const htmlContent = '<ul>\n' + htmlBullets.map(b => `<li>${b}</li>`).join('\n') + '\n</ul>';
     
+    // Generate basic keywords from title and category
+    const keywords = (() => {
+      const base = title.toLowerCase().split(' ').filter(w => w.length > 3).slice(0, 3);
+      if (isElectronics) return [...base, 'elektronika', 'technika', 'gadżet', 'nowoczesne'];
+      if (isFashion) return [...base, 'odzież', 'moda', 'wygoda', 'styl'];
+      if (isHome) return [...base, 'dom', 'meble', 'wyposażenie', 'poprawa domu'];
+      return [...base, 'produkt', 'jakość', 'cena', 'oferta'];
+    })().slice(0, 7);
+    
     return {
+      marketingTitle,
       shortDescription,
       htmlContent,
-      marketingTitle,
+      keywords,
     };
   }
 }
