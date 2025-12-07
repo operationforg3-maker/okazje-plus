@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { collection, doc, setDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { useAuth, isAdmin } from "@/lib/auth";
 import { Category, Subcategory } from "@/lib/types";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Sparkles } from "lucide-react";
 
 // --- Form types ---
 type MainCategoryInputs = {
@@ -53,6 +53,7 @@ export default function AdminCategoriesPage() {
   const [isSubmittingMain, setIsSubmittingMain] = useState(false);
   const [isSubmittingSub, setIsSubmittingSub] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isFilling, setIsFilling] = useState(false);
 
   const {
     register: registerMain,
@@ -150,6 +151,40 @@ export default function AdminCategoriesPage() {
       }
   };
 
+  const onFillAllCategories = async () => {
+    if (!confirm('🤖 Auto-Fillier wypełni WSZYSTKIE kategorie produktami z AliExpress. To może zająć kilka minut. Kontynuować?')) {
+      return;
+    }
+
+    setIsFilling(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/admin/ai/fill-categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          maxProductsPerCategory: 20,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Fill failed');
+      }
+
+      const result = await response.json();
+      toast.success('✅ Kategorie zostały wypełnione produktami!');
+      console.log('Fill result:', result);
+    } catch (error) {
+      console.error('Fill error:', error);
+      toast.error('❌ Błąd podczas wypełniania kategorii');
+    } finally {
+      setIsFilling(false);
+    }
+  };
+
 
   if (authLoading || loadingCategories) {
     return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -166,7 +201,50 @@ export default function AdminCategoriesPage() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <h1 className="text-3xl font-bold">Zarządzanie Kategoriami</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Zarządzanie Kategoriami</h1>
+        <Button 
+          onClick={onFillAllCategories} 
+          disabled={isFilling}
+          size="lg"
+          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+        >
+          {isFilling ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Wypełniam kategorie...
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-2 h-5 w-5" />
+              🤖 Auto-Fillier: Wypełnij wszystkie kategorie
+            </>
+          )}
+        </Button>
+      </div>
+
+      <Card className="border-purple-200 bg-purple-50/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-600" />
+            Automatyczny Fillier
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>
+            <strong>Auto-Fillier</strong> automatycznie wypełnia wszystkie kategorie produktami z AliExpress używając AI:
+          </p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>Pobiera produkty dla każdej kategorii/podkategorii</li>
+            <li>Wzbogaca opisy używając AI (3 agenty: Quality Score, Copywriter, Librarian)</li>
+            <li>Automatycznie kategoryzuje produkty</li>
+            <li>Dodaje ~20 produktów na kategorię (draft status)</li>
+          </ul>
+          <p className="text-xs mt-2">
+            ⏱️ Proces może zająć 5-10 minut. Wyniki pojawią się w panelu moderacji produktów.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle>Dodaj nową kategorię główną</CardTitle></CardHeader>
