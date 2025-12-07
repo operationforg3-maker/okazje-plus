@@ -53,11 +53,6 @@ async function isAdminUser(idToken: string | null) {
   }
 }
 
-const amazonConfig: AmazonClientConfig = {
-  region: 'eu-west-1',
-  marketplace: 'www.amazon.pl',
-};
-
 export async function POST(request: NextRequest) {
   try {
     const idToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || null;
@@ -71,7 +66,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'keywords_required' }, { status: 400 });
     }
 
-    // Create Amazon client
+    // Create Amazon client with env credentials
+    const amazonConfig: AmazonClientConfig = {
+      accessKey: process.env.AMAZON_ACCESS_KEY || '',
+      secretKey: process.env.AMAZON_SECRET_KEY || '',
+      partnerTag: process.env.AMAZON_PARTNER_TAG || '',
+      region: 'eu-west-1',
+      marketplace: 'www.amazon.pl',
+    };
+
+    if (!amazonConfig.accessKey || !amazonConfig.secretKey || !amazonConfig.partnerTag) {
+      return NextResponse.json({ error: 'amazon_credentials_missing' }, { status: 500 });
+    }
+
     const client = createAmazonClient(amazonConfig);
 
     // Search for products

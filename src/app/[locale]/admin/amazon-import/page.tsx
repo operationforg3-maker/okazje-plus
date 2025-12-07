@@ -447,12 +447,12 @@ function AmazonImportPage() {
                       )}
                       {mapping.sub && (
                         <Badge variant="outline">
-                          {categories.find(c => c.slug === mapping.main)?.subcategories.find(s => s.slug === mapping.sub)?.name}
+                          {categories.find(c => c.slug === mapping.main)?.subcategories?.find(s => s.slug === mapping.sub)?.name || mapping.sub}
                         </Badge>
                       )}
                       {mapping.subSub && (
                         <Badge variant="secondary">
-                          {categories.find(c => c.slug === mapping.main)?.subcategories.find(s => s.slug === mapping.sub)?.subcategories.find(ss => ss.slug === mapping.subSub)?.name}
+                          {categories.find(c => c.slug === mapping.main)?.subcategories?.find(s => s.slug === mapping.sub)?.subcategories?.find(ss => ss.slug === mapping.subSub)?.name || mapping.subSub}
                         </Badge>
                       )}
                     </div>
