@@ -429,7 +429,10 @@ export default function DealsPage() {
 
   // Auto-scroll do wybranej kategorii/podkategorii gdy się zmienia
   useEffect(() => {
-    setTimeout(() => {
+    // Upewnij się, że to wykonuje się tylko na kliencie i po hydration
+    if (typeof window === 'undefined') return;
+    
+    const scrollTimer = requestAnimationFrame(() => {
       if (!selectedCategory && allCategoriesButtonRef.current && scrollAreaRef.current) {
         const button = allCategoriesButtonRef.current;
         const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
@@ -445,7 +448,9 @@ export default function DealsPage() {
           scrollContainer.scrollTop = Math.max(0, buttonTop - 50);
         }
       }
-    }, 0);
+    });
+    
+    return () => cancelAnimationFrame(scrollTimer);
   }, [selectedCategory]);
 
   // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
