@@ -29,6 +29,7 @@ const pathNames: Record<string, string> = {
   '/admin/navigation': 'Nawigacja',
   '/admin/imports': 'Smart Import',
   '/admin/imports/aliexpress': 'Import AliExpress',
+  '/admin/auto-import': 'Auto-Import Kombajn',
   '/admin/aliexpress-import': 'Import AliExpress',
   '/admin/allegro-import': 'Import Allegro',
   '/admin/amazon-import': 'Import Amazon',

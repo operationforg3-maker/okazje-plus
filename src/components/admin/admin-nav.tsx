@@ -20,6 +20,7 @@ import {
   Database,
   Zap,
   ChevronRight,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -63,6 +64,7 @@ const navStructure: (NavItem | NavGroup)[] = [
     title: 'Import & Export',
     icon: Upload,
     items: [
+      { title: 'Auto-Import Kombajn', href: '/admin/auto-import', icon: Sparkles, badge: 'NEW', badgeVariant: 'default' },
       { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
       { title: 'AliExpress', href: '/admin/aliexpress-import', icon: Search },
       { title: 'Allegro', href: '/admin/allegro-import', icon: Search },
