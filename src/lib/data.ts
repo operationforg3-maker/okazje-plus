@@ -935,6 +935,7 @@ export async function getCategories(): Promise<Category[]> {
                     id: ssDoc.id,
                     icon: ssData.icon,
                     description: ssData.description,
+                    translations: ssData.translations,
                     sortOrder: ssData.sortOrder,
                     image: ssData.image,
                   };
@@ -950,6 +951,7 @@ export async function getCategories(): Promise<Category[]> {
               slug: subData.slug ?? subDoc.id,
               icon: subData.icon,
               description: subData.description,
+              translations: subData.translations,
               sortOrder: subData.sortOrder,
               image: subData.image,
               highlight: subData.highlight,
@@ -994,6 +996,7 @@ export async function getCategories(): Promise<Category[]> {
         sortOrder: data.sortOrder,
         accentColor: data.accentColor,
         heroImage: data.heroImage,
+        translations: data.translations,
         promo,
         tiles,
         subcategories,

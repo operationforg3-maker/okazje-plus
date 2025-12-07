@@ -21,6 +21,7 @@ export interface Subcategory {
   description?: string;
   icon?: string;
   color?: string;
+  translations?: Record<string, { name: string; description?: string }>;
   subcategories?: SubSubcategory[];
 }
 
@@ -30,6 +31,7 @@ export interface SubSubcategory {
   description?: string;
   icon?: string;
   color?: string;
+  translations?: Record<string, { name: string; description?: string }>;
 }
 
 export interface CategoryPromo {

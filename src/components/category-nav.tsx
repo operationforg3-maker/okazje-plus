@@ -35,6 +35,7 @@ export default function CategoryNav({
   const params = useParams();
   const [isMounted, setIsMounted] = useState(false);
   const locale = isMounted ? ((params?.locale as string) || 'pl') : 'pl';
+  const allLabel = locale === 'en' ? 'All' : locale === 'de' ? 'Alle' : 'Wszystkie';
   
   // Hydration safety
   useEffect(() => {
@@ -79,7 +80,7 @@ export default function CategoryNav({
         >
           <Link href={basePath}>
             <Layers className="mr-2 h-4 w-4" />
-            Wszystkie
+            {allLabel}
           </Link>
         </Button>
 
