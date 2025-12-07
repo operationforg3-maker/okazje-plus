@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createAmazonClient } from '@/integrations/amazon/client';
-import { AmazonClientConfig } from '@/integrations/amazon/types';
+import { getConvertiserClient } from '@/lib/integrations/convertiser-client';
 
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) return admin.app();
@@ -53,11 +52,6 @@ async function isAdminUser(idToken: string | null) {
   }
 }
 
-const amazonConfig: AmazonClientConfig = {
-  region: 'eu-west-1',
-  marketplace: 'www.amazon.pl',
-};
-
 export async function POST(request: NextRequest) {
   try {
     const idToken = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || null;
@@ -65,47 +59,53 @@ export async function POST(request: NextRequest) {
     if (!allowed) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
     const body = await request.json();
-    const { keywords, minPrice, maxPrice, limit } = body;
+    const { query, category, minPrice, maxPrice, page, pageSize } = body;
 
-    if (!keywords) {
-      return NextResponse.json({ error: 'keywords_required' }, { status: 400 });
+    if (!query) {
+      return NextResponse.json({ error: 'query_required' }, { status: 400 });
     }
 
-    // Create Amazon client
-    const client = createAmazonClient(amazonConfig);
+    // Get Convertiser client
+    const client = getConvertiserClient();
 
-    // Search for products
-    const searchResponse = await client.searchProducts({
-      keywords,
-      minPrice,
-      maxPrice,
-      limit: Math.min(limit || 50, 10),
-      page: 1,
-    });
+    // Search for products using Convertiser Products API v2
+    const searchResponse = await client.searchProductsV2(
+      {
+        q: query,
+        category: category || undefined,
+        price_min: minPrice,
+        price_max: maxPrice,
+      },
+      {
+        page: page || 1,
+        page_size: pageSize || 30,
+      }
+    );
 
     // Transform response
-    const products = searchResponse.products.map(item => ({
-      asin: item.asin,
-      title: item.title,
+    const products = (searchResponse.results || []).map(item => ({
+      uuid: item.uuid,
+      name: item.name,
       price: {
-        current: item.price.current,
-        original: item.price.original,
-        currency: item.price.currency,
+        amount: item.price || 0,
+        currency: item.currency || 'PLN',
       },
-      imageUrls: item.imageUrls,
-      productUrl: item.productUrl,
-      rating: item.rating,
-      merchantInfo: item.merchantInfo,
-      description: item.description,
+      image: item.image_url || item.image,
+      description: item.description || '',
+      commission: item.commission,
+      advertiser: item.advertiser_name || item.advertiser,
+      offer_uuid: item.offer_uuid,
+      category_slug: item.category_slug,
     }));
 
     return NextResponse.json({
       success: true,
       products,
-      totalCount: searchResponse.totalResults,
+      totalCount: searchResponse.count || 0,
+      page,
     });
   } catch (error: any) {
-    console.error('Amazon search error:', error);
+    console.error('Convertiser search error:', error);
     return NextResponse.json(
       { error: error.message || 'search_failed' },
       { status: 500 }

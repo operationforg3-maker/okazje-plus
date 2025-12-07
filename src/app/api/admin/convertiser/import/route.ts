@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { product, mainCategory, subCategory, subSubCategory } = body;
 
-    if (!product?.title || !mainCategory || !subCategory) {
+    if (!product?.name || !mainCategory || !subCategory) {
       return NextResponse.json({ error: 'invalid_payload' }, { status: 400 });
     }
 
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
     const db = admin.firestore();
     const decoded = idToken ? await admin.auth().verifyIdToken(idToken) : null;
 
-    // Check for duplicates by ASIN
-    const externalId = product.asin || null;
+    // Check for duplicates by Convertiser UUID
+    const externalId = product.uuid || null;
     if (externalId) {
       const existingQuery = await db
         .collection('products')
@@ -88,30 +88,28 @@ export async function POST(request: NextRequest) {
 
     // Create product document
     const productDoc = {
-      name: product.title,
+      name: product.name,
       description: product.description || '',
       longDescription: product.description || '',
       price: parseFloat(product.price) || 0,
-      originalPrice: product.originalPrice ? parseFloat(product.originalPrice) : undefined,
-      discountPercent: product.originalPrice && product.price 
-        ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-        : 0,
-      image: product.imageUrl || '',
-      imageHint: product.title,
-      affiliateUrl: product.productUrl || '',
+      originalPrice: undefined,
+      discountPercent: 0,
+      image: product.image || '',
+      imageHint: product.name,
+      affiliateUrl: product.offerUuid ? `https://convertiser.com/offers/${product.offerUuid}/` : '',
       mainCategorySlug: mainCategory,
       subCategorySlug: subCategory,
       subSubCategorySlug: subSubCategory || undefined,
       status: 'draft',
-      rating: product.rating || 0,
+      rating: 0,
       soldCount: 0,
       merchantRating: 0,
-      merchant: product.merchant || '',
-      gallery: product.imageUrl ? [
+      merchant: product.advertiser || 'Convertiser',
+      gallery: product.image ? [
         {
-          id: `amazon_${product.asin}_0`,
-          src: product.imageUrl,
-          alt: product.title,
+          id: `convertiser_${product.uuid}_0`,
+          src: product.image,
+          alt: product.name,
           isPrimary: true,
           source: 'manual' as const,
           type: 'url' as const,
@@ -119,7 +117,7 @@ export async function POST(request: NextRequest) {
         }
       ] : [],
       ratingCard: {
-        average: product.rating || 0,
+        average: 0,
         count: 0,
         durability: 0,
         easeOfUse: 0,
@@ -132,6 +130,8 @@ export async function POST(request: NextRequest) {
         importedAt: new Date().toISOString(),
         importedBy: decoded?.uid || 'system',
         rawDataStored: false,
+        convertiserCommission: product.commission,
+        convertiserAdvertiser: product.advertiser,
       },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       productId: docRef.id,
     });
   } catch (error: any) {
-    console.error('Amazon import error:', error);
+    console.error('Convertiser import error:', error);
     return NextResponse.json(
       { error: error.message || 'import_failed' },
       { status: 500 }

@@ -28,7 +28,7 @@ function ImportPage() {
           <TabsTrigger value="aliexpress">AliExpress</TabsTrigger>
           <TabsTrigger value="allegro">Allegro</TabsTrigger>
           <TabsTrigger value="amazon">Amazon</TabsTrigger>
-          <TabsTrigger value="ebay">eBay</TabsTrigger>
+          <TabsTrigger value="convertiser">Convertiser</TabsTrigger>
           <TabsTrigger value="url">Z URL</TabsTrigger>
         </TabsList>
 
@@ -100,25 +100,55 @@ function ImportPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="convertiser" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                ⚡ Convertiser
+              </CardTitle>
+              <CardDescription>
+                Import hurtowy z platformy Convertiser - setki tysięcy produktów
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-sm mb-2">✅ Dostępne</h4>
+                <p className="text-sm text-muted-foreground">
+                  Importuj setki tysięcy produktów z afiliacyjnej platformy Convertiser z systemem prowizji i filtrami.
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  ✓ Wyszukiwanie z filtrami<br/>
+                  ✓ Tracking prowizji afiliacyjnej<br/>
+                  ✓ Setki tysięcy produktów<br/>
+                  ✓ Paginacja 30 produktów/strona
+                </p>
+              </div>
+              <Button className="w-full" asChild>
+                <a href="/admin/convertiser-import">Import z Convertiser →</a>
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="ebay" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                🔴 eBay
+                🔴 eBay (Legacy)
               </CardTitle>
               <CardDescription>
-                Import produktów z eBay - globalnego rynku aukcyjnego
+                Import produktów z eBay - globalnego rynku aukcyjnego (zastapiło Convertiser)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-                <h4 className="font-semibold text-sm mb-2">✅ Dostępne</h4>
+                <h4 className="font-semibold text-sm mb-2">✅ Dostępne (ale użyj Convertiser)</h4>
                 <p className="text-sm text-muted-foreground">
-                  Importuj aukcje i oferty fixed-price z całej platformy eBay.
+                  Importuj aukcje i oferty fixed-price. Rekomendujemy Convertiser dla lepszego wsparcia i filtrów.
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
                   ✓ Obsługa aukcji i fixed-price<br/>
-                  ✓ Filtrowanie po warunkach (nowy/używany)<br/>
+                  ✓ Filtrowanie po warunkach<br/>
                   ✓ Reputacja sprzedawców<br/>
                   ✓ Informacje o dostawie
                 </p>

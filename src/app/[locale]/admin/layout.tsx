@@ -32,6 +32,7 @@ const pathNames: Record<string, string> = {
   '/admin/aliexpress-import': 'Import AliExpress',
   '/admin/allegro-import': 'Import Allegro',
   '/admin/amazon-import': 'Import Amazon',
+  '/admin/convertiser-import': 'Import Convertiser',
   '/admin/ebay-import': 'Import eBay',
   '/admin/bulk-import': 'Bulk Import',
   '/admin/batch-import': 'Batch Import',
