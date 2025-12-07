@@ -22,7 +22,10 @@
     "seed:categories": "tsx src/scripts/seed-categories-full.ts",
     "auto-import": "tsx src/scripts/auto-import-products.ts",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts",
-    "postinstall": "node ./scripts/apply-react-hooks-shim.js || true && patch-package"
+    "postinstall": "node ./scripts/apply-react-hooks-shim.js || true && patch-package",
+    "deploy:hosting": "npm run build && firebase deploy --only hosting",
+    "deploy:functions": "npm --prefix okazje-plus run build && firebase deploy --only functions",
+    "deploy:prod": "npm run build && npm --prefix okazje-plus run build && firebase deploy --only hosting,functions"
   },
   "dependencies": {
     "@genkit-ai/next": "^1.24.0",
