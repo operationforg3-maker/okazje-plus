@@ -108,6 +108,31 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   const inCart = isInCart(product.id);
 
   // ========================================
+  // 🚀 ENHANCED METADATA FROM AUTO-IMPORT
+  // ========================================
+  
+  // Extract advanced metadata from product
+  const metadata = product.metadata || {};
+  const variants = (metadata as any).variants || [];
+  const specifications = (metadata as any).specifications || [];
+  const shippingInfo = (metadata as any).shipping || {};
+  const packageInfo = (metadata as any).package || {};
+  const warrantyInfo = (metadata as any).warranty || {};
+  const tags = (metadata as any).tags || [];
+  const commission = (metadata as any).commission;
+  const stats = (metadata as any).stats || {};
+  const source = metadata.source || 'manual';
+  
+  // Smart badges from tags
+  const isHotDeal = tags.includes('hot_deal');
+  const isBestsellerTag = tags.includes('bestseller');
+  const isNewArrival = tags.includes('new_arrival');
+  const isPolishMarket = tags.includes('polish_market');
+  const hasRealShipping = shippingInfo.cost !== undefined;
+  const hasVariants = variants.length > 0;
+  const hasSpecs = specifications.length > 0;
+
+  // ========================================
   // 💡 ANALYTICS & LIFECYCLE
   // ========================================
   
@@ -230,6 +255,41 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
             </h3>
           </Link>
 
+          {/* Enhanced Tags Row */}
+          {(isHotDeal || isBestsellerTag || isNewArrival || hasVariants || hasRealShipping) && (
+            <div className="flex flex-wrap gap-1.5">
+              {isHotDeal && (
+                <Badge variant="destructive" className="text-xs">
+                  <Flame className="w-3 h-3 mr-1" />
+                  Hot Deal
+                </Badge>
+              )}
+              {isBestsellerTag && (
+                <Badge variant="default" className="text-xs">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  Bestseller
+                </Badge>
+              )}
+              {isNewArrival && (
+                <Badge variant="secondary" className="text-xs">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Nowość
+                </Badge>
+              )}
+              {hasVariants && (
+                <Badge variant="outline" className="text-xs">
+                  {variants.length} wariantów
+                </Badge>
+              )}
+              {hasRealShipping && shippingInfo.cost > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  <Truck className="w-3 h-3 mr-1" />
+                  {shippingInfo.cost} PLN
+                </Badge>
+              )}
+            </div>
+          )}
+
           {/* Rating & Social Proof */}
           {productRating > 0 && (
             <div className="flex items-center gap-2">
@@ -255,6 +315,61 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
                 </>
               )}
             </div>
+          )}
+
+          {/* Enhanced Metadata Chips */}
+          {showFullDetails && (hasSpecs || warrantyInfo.available || packageInfo.weight) && (
+            <div className="flex flex-wrap gap-2 text-xs">
+              {hasSpecs && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="cursor-help">
+                        <Info className="w-3 h-3 mr-1" />
+                        {specifications.length} specyfikacji
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <div className="space-y-1 text-xs">
+                        {specifications.slice(0, 3).map((spec: any, idx: number) => (
+                          <div key={idx}>
+                            <span className="font-medium">{spec.name}:</span> {spec.value}
+                          </div>
+                        ))}
+                        {specifications.length > 3 && (
+                          <div className="text-muted-foreground">+{specifications.length - 3} więcej...</div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {warrantyInfo.available && (
+                <Badge variant="outline">
+                  <ShieldCheck className="w-3 h-3 mr-1" />
+                  Gwarancja
+                </Badge>
+              )}
+              {packageInfo.weight && (
+                <Badge variant="outline">
+                  <Package className="w-3 h-3 mr-1" />
+                  {packageInfo.weight}kg
+                </Badge>
+              )}
+              {shippingInfo.estimatedDays && (
+                <Badge variant="outline">
+                  <Clock className="w-3 h-3 mr-1" />
+                  ~{shippingInfo.estimatedDays} dni
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Commission Badge (for affiliates/admins) */}
+          {showFullDetails && commission && user?.role === 'admin' && (
+            <Badge variant="secondary" className="text-xs">
+              💰 Prowizja: {commission}%
+            </Badge>
           )}
 
           {/* ========================================

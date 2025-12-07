@@ -128,6 +128,28 @@ export default function DealCard({ deal }: DealCardProps) {
   const warehouseInfo = safeText(deal.importMetadata?.warehouse);
   const returnPolicy = safeText(deal.importMetadata?.returnPolicy);
 
+  // ========================================
+  // 🚀 ENHANCED METADATA FROM AUTO-IMPORT
+  // ========================================
+  
+  const metadata = deal.metadata || {};
+  const variants = (metadata as any).variants || [];
+  const specifications = (metadata as any).specifications || [];
+  const shippingInfo = (metadata as any).shipping || {};
+  const warrantyInfo = (metadata as any).warranty || {};
+  const tags = (metadata as any).tags || [];
+  const commission = (metadata as any).commission;
+  const stats = (metadata as any).stats || {};
+  const source = (metadata as any).source || 'manual';
+  
+  // Smart badges from tags
+  const isHotDealTag = tags.includes('hot_deal');
+  const isBestsellerTag = tags.includes('bestseller');
+  const isNewArrival = tags.includes('new_arrival');
+  const isPolishMarket = tags.includes('polish_market');
+  const hasVariants = variants.length > 0;
+  const hasRealShipping = shippingInfo.cost !== undefined;
+
   const isHot = temperature >= 300;
 
   const temperatureColor = temperature >= 500 ? 'from-red-500 to-orange-500' 
@@ -310,17 +332,45 @@ export default function DealCard({ deal }: DealCardProps) {
             }`}
           />
         </Button>
-        <div className="absolute right-2 top-2 flex gap-1 z-10">
+        <div className="absolute right-2 top-2 flex flex-col gap-1 z-10">
           {isHot && (
             <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg">
               <Flame className="mr-1 h-3 w-3 md:h-4 md:w-4" />
-              Hot
+              Hot {temperature}°
+            </Badge>
+          )}
+          {isHotDealTag && (
+            <Badge variant="destructive" className="shadow-lg">
+              <Zap className="mr-1 h-3 w-3" />
+              Hot Deal
+            </Badge>
+          )}
+          {isBestsellerTag && (
+            <Badge className="bg-purple-500 text-white shadow-lg">
+              <TrendingUp className="mr-1 h-3 w-3" />
+              Bestseller
+            </Badge>
+          )}
+          {isNewArrival && (
+            <Badge className="bg-blue-500 text-white shadow-lg">
+              <Sparkles className="mr-1 h-3 w-3" />
+              Nowość
             </Badge>
           )}
           {isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
               <Sparkles className="mr-1 h-3 w-3 md:h-4 md:w-4" />
-              Nowość
+              Nowa oferta
+            </Badge>
+          )}
+          {isPolishMarket && (
+            <Badge className="bg-green-500 text-white shadow-lg">
+              🇵🇱 PL Market
+            </Badge>
+          )}
+          {hasVariants && (
+            <Badge variant="secondary" className="shadow-lg">
+              {variants.length} wariantów
             </Badge>
           )}
           {deal.freeShipping && (
@@ -402,6 +452,61 @@ export default function DealCard({ deal }: DealCardProps) {
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
           {dealDescription}
         </p>
+
+        {/* Enhanced Metadata Row */}
+        {(hasRealShipping || warrantyInfo.available || specifications.length > 0) && (
+          <div className="flex flex-wrap gap-2">
+            {hasRealShipping && shippingInfo.cost > 0 && (
+              <Badge variant="outline" className="text-xs">
+                <Truck className="w-3 h-3 mr-1" />
+                Dostawa: {shippingInfo.cost} PLN
+              </Badge>
+            )}
+            {hasRealShipping && shippingInfo.estimatedDays && (
+              <Badge variant="outline" className="text-xs">
+                <Clock className="w-3 h-3 mr-1" />
+                ~{shippingInfo.estimatedDays} dni
+              </Badge>
+            )}
+            {warrantyInfo.available && (
+              <Badge variant="outline" className="text-xs">
+                <ShieldCheck className="w-3 h-3 mr-1" />
+                Gwarancja
+              </Badge>
+            )}
+            {specifications.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs cursor-help">
+                      <Info className="w-3 h-3 mr-1" />
+                      {specifications.length} spec.
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <div className="space-y-1 text-xs">
+                      {specifications.slice(0, 3).map((spec: any, idx: number) => (
+                        <div key={idx}>
+                          <span className="font-medium">{spec.name}:</span> {spec.value}
+                        </div>
+                      ))}
+                      {specifications.length > 3 && (
+                        <div className="text-muted-foreground">+{specifications.length - 3} więcej...</div>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        )}
+
+        {/* Commission Info (for admins) */}
+        {commission && user?.role === 'admin' && (
+          <Badge variant="secondary" className="text-xs w-fit">
+            💰 Prowizja: {commission}%
+          </Badge>
+        )}
 
         {/* Szczegóły dostawy i dodatkowe info */}
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
