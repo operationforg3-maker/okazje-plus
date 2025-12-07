@@ -17,10 +17,15 @@
       "freeShipping": "Free Shipping",
       "bigDiscount": "Big Discount",
       "today": "Today",
-      "verified": "Verified"
+      "verified": "Verified",
+      "couponOnly": "Coupons only",
+      "freebies": "Freebies",
+      "todayOnly": "Today only",
+      "verifiedStores": "Verified stores"
     },
     "clearAll": "Clear Filters",
-    "saveFilter": "Save Filter"
+    "saveFilter": "Save Filter",
+    "savedLabel": "Saved:"
   },
   "viewMode": {
     "list": "List",
@@ -31,5 +36,9 @@
     "description": "No deals found matching your criteria. Try adjusting filters.",
     "cta": "Back to All Deals"
   },
-  "loading": "Loading deals..."
+  "loading": "Loading deals...",
+  "sidebar": {
+    "categories": "Categories",
+    "allDeals": "All"
+  }
 }

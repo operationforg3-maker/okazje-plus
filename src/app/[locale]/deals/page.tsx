@@ -21,10 +21,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/lib/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { toast } from 'sonner';
 import { FEATURES } from '@/lib/config';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
+import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
 // Umożliwiamy nawigację przez query params z mega‑menu (mainCategory, subCategory, sort, q)
 
 type ViewMode = 'list' | 'grid';
@@ -48,6 +49,7 @@ interface SavedFilter {
 export default function DealsPage() {
   const { user } = useAuth();
   const t = useTranslations('deals');
+  const locale = useLocale();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -458,7 +460,7 @@ export default function DealsPage() {
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
       <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
-        {/* Przycisk "Wszystkie" */}
+        {/* All categories */}
         <div className="mb-1">
           <button
             ref={allCategoriesButtonRef}
@@ -475,7 +477,7 @@ export default function DealsPage() {
             )}
           >
             <Flame className="h-5 w-5" />
-            <span className="font-medium flex-1">Wszystkie okazje</span>
+            <span className="font-medium flex-1">{t('sidebar.allDeals')}</span>
             <ChevronRight className={cn(
               "h-4 w-4 transition-transform",
               !selectedCategory ? "rotate-90" : "group-hover:translate-x-1"
@@ -502,7 +504,7 @@ export default function DealsPage() {
                 )}
               >
                 {category.icon && <span className="text-xl">{category.icon}</span>}
-                <span className="font-medium flex-1">{category.name}</span>
+                <span className="font-medium flex-1">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
                 <ChevronRight className={cn(
                   "h-4 w-4 transition-transform",
                   isActive ? "rotate-90" : "group-hover:translate-x-1"
@@ -525,7 +527,7 @@ export default function DealsPage() {
                           )}
                         >
                           {sub.icon && <span className="text-base">{sub.icon}</span>}
-                          <span className="flex-1 truncate">{sub.name}</span>
+                          <span className="flex-1 truncate">{getLocalizedCategoryName(sub as any, locale as SupportedLanguage)}</span>
                           {(sub.subcategories && sub.subcategories.length > 0) && (
                             <ChevronRight className={cn(
                               "h-3 w-3 transition-transform flex-shrink-0",
@@ -555,7 +557,7 @@ export default function DealsPage() {
                                 )}
                               >
                                 {subsub.icon && <span className="text-sm">{subsub.icon}</span>}
-                                <span className="flex-1 truncate">{subsub.name}</span>
+                                <span className="flex-1 truncate">{getLocalizedCategoryName(subsub as any, locale as SupportedLanguage)}</span>
                               </button>
                             ))}
                           </div>
@@ -754,7 +756,7 @@ export default function DealsPage() {
                     onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
                   >
                     <Truck className="h-3 w-3 mr-1" />
-                    Darmowa dostawa
+                    {t('filters.quickFilters.freeShipping')}
                   </Badge>
                   {FEATURES.DEALS_TYPE_FILTER && (
                     <Badge
@@ -762,7 +764,7 @@ export default function DealsPage() {
                       className="cursor-pointer hover:bg-primary/10 transition-colors"
                       onClick={() => setTypeFilter(prev => prev === 'coupon' ? 'all' as DealTypeFilter : 'coupon')}
                     >
-                      🎟️ Tylko kupony
+                      🎟️ {t('filters.quickFilters.couponOnly')}
                     </Badge>
                   )}
                   {FEATURES.DEALS_TYPE_FILTER && (
@@ -771,7 +773,7 @@ export default function DealsPage() {
                       className="cursor-pointer hover:bg-primary/10 transition-colors"
                       onClick={() => setTypeFilter(prev => prev === 'freebie' ? 'all' as DealTypeFilter : 'freebie')}
                     >
-                      🆓 Gratisy
+                      🆓 {t('filters.quickFilters.freebies')}
                     </Badge>
                   )}
                   <Badge
@@ -780,7 +782,7 @@ export default function DealsPage() {
                     onClick={() => setQuickFilters(prev => ({ ...prev, bigDiscount: !prev.bigDiscount }))}
                   >
                     <Tag className="h-3 w-3 mr-1" />
-                    Zniżka &gt;50%
+                    {t('filters.quickFilters.bigDiscount')}
                   </Badge>
                   <Badge
                     variant={quickFilters.today ? 'default' : 'outline'}
@@ -788,7 +790,7 @@ export default function DealsPage() {
                     onClick={() => setQuickFilters(prev => ({ ...prev, today: !prev.today }))}
                   >
                     <Calendar className="h-3 w-3 mr-1" />
-                    Tylko dziś
+                    {t('filters.quickFilters.todayOnly')}
                   </Badge>
                   <Badge
                     variant={quickFilters.verified ? 'default' : 'outline'}
@@ -796,7 +798,7 @@ export default function DealsPage() {
                     onClick={() => setQuickFilters(prev => ({ ...prev, verified: !prev.verified }))}
                   >
                     <Star className="h-3 w-3 mr-1" />
-                    Sprawdzone sklepy
+                    {t('filters.quickFilters.verifiedStores')}
                   </Badge>
                 </div>
 
@@ -805,7 +807,7 @@ export default function DealsPage() {
                   <div className="flex flex-wrap gap-2 pt-2 border-t">
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <Bookmark className="h-3 w-3" />
-                      Zapisane:
+                      {t('filters.savedLabel')}
                     </span>
                     {savedFilters.map((filter) => (
                       <Badge

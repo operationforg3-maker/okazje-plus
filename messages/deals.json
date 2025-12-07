@@ -17,10 +17,15 @@
       "freeShipping": "Darmowa dostawa",
       "bigDiscount": "Duża zniżka",
       "today": "Dzisiaj",
-      "verified": "Zweryfikowane"
+      "verified": "Zweryfikowane",
+      "couponOnly": "Tylko kupony",
+      "freebies": "Gratisy",
+      "todayOnly": "Tylko dziś",
+      "verifiedStores": "Sprawdzone sklepy"
     },
     "clearAll": "Wyczyść filtry",
-    "saveFilter": "Zapisz filtr"
+    "saveFilter": "Zapisz filtr",
+    "savedLabel": "Zapisane:"
   },
   "viewMode": {
     "list": "Lista",
@@ -42,5 +47,9 @@
   "hotDealsQuick": "Gorące okazje",
   "hotDealsDesc": "Sprawdź produkty z najwyższymi ocenami i opiniami",
   "viewProducts": "Zobacz produkty",
-  "seeMore": "Zobacz więcej"
+  "seeMore": "Zobacz więcej",
+  "sidebar": {
+    "categories": "Kategorie",
+    "allDeals": "Wszystkie"
+  }
 }

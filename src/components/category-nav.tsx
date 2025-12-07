@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
+import { useTranslations } from 'next-intl';
 
 interface Props {
   categories: Category[];
@@ -32,10 +33,11 @@ export default function CategoryNav({
   onSubSubcategorySelect,
   basePath = '/deals',
 }: Props) {
+  const t = useTranslations('deals');
   const params = useParams();
   const [isMounted, setIsMounted] = useState(false);
   const locale = isMounted ? ((params?.locale as string) || 'pl') : 'pl';
-  const allLabel = locale === 'en' ? 'All' : locale === 'de' ? 'Alle' : 'Wszystkie';
+  const allLabel = t('sidebar.allDeals');
   
   // Hydration safety
   useEffect(() => {
@@ -72,6 +74,7 @@ export default function CategoryNav({
   return (
     <ScrollArea className="h-full">
       <div className="space-y-2 p-4">
+        <h2 className="font-headline text-lg font-semibold mb-2">{t('sidebar.categories')}</h2>
         {/* All Items Link */}
         <Button
           variant={!selectedCategoryId ? 'secondary' : 'ghost'}

@@ -17,10 +17,15 @@
       "freeShipping": "Kostenloser Versand",
       "bigDiscount": "Großer Rabatt",
       "today": "Heute",
-      "verified": "Verifiziert"
+      "verified": "Verifiziert",
+      "couponOnly": "Nur Gutscheine",
+      "freebies": "Gratis",
+      "todayOnly": "Nur heute",
+      "verifiedStores": "Verifizierte Shops"
     },
     "clearAll": "Filter löschen",
-    "saveFilter": "Filter speichern"
+    "saveFilter": "Filter speichern",
+    "savedLabel": "Gespeichert:"
   },
   "viewMode": {
     "list": "Liste",
@@ -31,5 +36,9 @@
     "description": "Keine Angebote gefunden, die Ihren Kriterien entsprechen. Versuchen Sie, die Filter anzupassen.",
     "cta": "Zurück zu allen Angeboten"
   },
-  "loading": "Angebote werden geladen..."
+  "loading": "Angebote werden geladen...",
+  "sidebar": {
+    "categories": "Kategorien",
+    "allDeals": "Alle"
+  }
 }
