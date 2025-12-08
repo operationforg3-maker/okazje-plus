@@ -103,7 +103,9 @@
     border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+    /* Inline base colors to avoid missing utility failures in production */
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
