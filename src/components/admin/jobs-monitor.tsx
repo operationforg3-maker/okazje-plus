@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,27 +70,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [enableAdvanced, setEnableAdvanced] = useState(true);
   const [enableAI, setEnableAI] = useState(false);
 
-  // Fetch jobs on mount
-  useEffect(() => {
-    fetchJobs();
-  }, []);
-
-  // Auto-refresh running jobs
-  useEffect(() => {
-    const hasRunningJobs = jobs.some(job => 
-      job.status === 'running' || job.status === 'pending'
-    );
-
-    if (!hasRunningJobs) return;
-
-    const interval = setInterval(() => {
-      fetchJobs();
-    }, 5000); // Poll every 5s
-
-    return () => clearInterval(interval);
-  }, [jobs]);
-
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
       const idToken = await getIdToken();
@@ -113,7 +93,27 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getIdToken]);
+
+  // Fetch jobs on mount
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  // Auto-refresh running jobs
+  useEffect(() => {
+    const hasRunningJobs = jobs.some(job => 
+      job.status === 'running' || job.status === 'pending'
+    );
+
+    if (!hasRunningJobs) return;
+
+    const interval = setInterval(() => {
+      fetchJobs();
+    }, 5000); // Poll every 5s
+
+    return () => clearInterval(interval);
+  }, [jobs, fetchJobs]);
 
   const createJob = async () => {
     const enabledSources = Object.entries(sources)
