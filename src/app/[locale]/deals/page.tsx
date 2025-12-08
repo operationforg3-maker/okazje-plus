@@ -55,6 +55,7 @@ export default function DealsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [selectedSubSubcategory, setSelectedSubSubcategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [productOfTheDay, setProductOfTheDay] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -138,6 +139,7 @@ export default function DealsPage() {
       const params = new URLSearchParams(window.location.search);
       const mainParam = params.get('mainCategory');
       const subParam = params.get('subCategory');
+      const subSubParam = params.get('subSubCategory');
       const sortParam = params.get('sort');
       const qParam = params.get('q');
       const typeParam = params.get('type');
@@ -163,9 +165,21 @@ export default function DealsPage() {
         const byId = categories.find(c => c.id === mainParam || c.slug === mainParam);
         if (byId) {
           setSelectedCategory(byId);
-          if (subParam) {
+          if (subSubParam) {
+            const parentSub = byId.subcategories?.find((s) =>
+              s.subcategories?.some((ss) => ss.slug === subSubParam || ss.id === subSubParam)
+            );
+            const matchingSubSub = parentSub?.subcategories?.find((ss) => ss.slug === subSubParam || ss.id === subSubParam);
+            if (parentSub && matchingSubSub) {
+              setSelectedSubcategory(parentSub.slug || parentSub.id);
+              setSelectedSubSubcategory(matchingSubSub.slug || matchingSubSub.id || subSubParam);
+            }
+          } else if (subParam) {
             const hasSub = byId.subcategories?.some(s => s.slug === subParam || s.id === subParam);
-            if (hasSub) setSelectedSubcategory(subParam);
+            if (hasSub) {
+              setSelectedSubcategory(subParam);
+              setSelectedSubSubcategory(null);
+            }
           }
           return; // Query params mają pierwszeństwo przed localStorage
         }
@@ -177,7 +191,22 @@ export default function DealsPage() {
         if (found) {
           setSelectedCategory(found);
           const savedSub = localStorage.getItem('deals_selected_subcategory');
-          if (savedSub) setSelectedSubcategory(savedSub);
+          const savedSubSub = localStorage.getItem('deals_selected_subsubcategory');
+          if (savedSubSub && found.subcategories?.length) {
+            const parentSub = found.subcategories.find((s) =>
+              s.subcategories?.some((ss) => ss.slug === savedSubSub || ss.id === savedSubSub)
+            );
+            const matchingSubSub = parentSub?.subcategories?.find((ss) => ss.slug === savedSubSub || ss.id === savedSubSub);
+            if (parentSub && matchingSubSub) {
+              setSelectedSubcategory(parentSub.slug || parentSub.id);
+              setSelectedSubSubcategory(matchingSubSub.slug || matchingSubSub.id || savedSubSub);
+              return;
+            }
+          }
+          if (savedSub) {
+            setSelectedSubcategory(savedSub);
+            setSelectedSubSubcategory(null);
+          }
         }
       }
     } catch {}
@@ -209,6 +238,16 @@ export default function DealsPage() {
       }
     } catch {}
   }, [selectedSubcategory]);
+
+  useEffect(() => {
+    try {
+      if (selectedSubSubcategory) {
+        localStorage.setItem('deals_selected_subsubcategory', selectedSubSubcategory);
+      } else {
+        localStorage.removeItem('deals_selected_subsubcategory');
+      }
+    } catch {}
+  }, [selectedSubSubcategory]);
 
   useEffect(() => {
     async function fetchData() {
@@ -250,6 +289,7 @@ export default function DealsPage() {
           const results = await searchDealsTypesense(q, {
             mainCategorySlug: selectedCategory?.id,
             subCategorySlug: selectedSubcategory || undefined,
+            subSubCategorySlug: selectedSubSubcategory || undefined,
             limit: 100,
           });
           if (!cancelled) setDeals(results);
@@ -258,7 +298,7 @@ export default function DealsPage() {
           const categoryDeals = await getDealsByCategory(
             selectedCategory.id,
             selectedSubcategory || undefined,
-            undefined, // subSubCategorySlug - na razie nie używamy
+            selectedSubSubcategory || undefined,
             100
           );
           if (!cancelled) setDeals(categoryDeals);
@@ -275,7 +315,7 @@ export default function DealsPage() {
     }
     const t = setTimeout(fetchDeals, 250); // debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedCategory, selectedSubcategory, searchTerm]);
+  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
 
   // Sortowanie i filtrowanie lokalne (po pobraniu z API)
   const filteredAndSortedDeals = useMemo(() => {
@@ -400,10 +440,16 @@ export default function DealsPage() {
     
     if (filter.categoryId) {
       const cat = categories.find(c => c.id === filter.categoryId);
-      if (cat) setSelectedCategory(cat);
+      if (cat) {
+        setSelectedCategory(cat);
+      }
     }
     if (filter.subcategorySlug) {
       setSelectedSubcategory(filter.subcategorySlug);
+      setSelectedSubSubcategory(null);
+    } else {
+      setSelectedSubcategory(null);
+      setSelectedSubSubcategory(null);
     }
     
     toast.success(`Załadowano filtr: ${filter.name}`);
@@ -429,6 +475,8 @@ export default function DealsPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const allCategoriesButtonRef = useRef<HTMLButtonElement>(null);
   const categoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
+  const subcategoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
+  const subSubcategoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
 
   // Auto-scroll do wybranej kategorii/podkategorii gdy się zmienia
   useEffect(() => {
@@ -436,25 +484,36 @@ export default function DealsPage() {
     if (typeof window === 'undefined') return;
     
     const scrollTimer = requestAnimationFrame(() => {
-      if (!selectedCategory && allCategoriesButtonRef.current && scrollAreaRef.current) {
-        const button = allCategoriesButtonRef.current;
-        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (scrollContainer) {
-          const buttonTop = button.offsetTop;
-          scrollContainer.scrollTop = Math.max(0, buttonTop - 50);
+      const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+      const scrollTo = (el?: HTMLElement | null) => {
+        if (el && scrollContainer) {
+          const top = el.offsetTop;
+          scrollContainer.scrollTop = Math.max(0, top - 80);
         }
-      } else if (selectedCategory && categoryButtonRefs.current[selectedCategory.id] && scrollAreaRef.current) {
-        const button = categoryButtonRefs.current[selectedCategory.id];
-        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (scrollContainer) {
-          const buttonTop = button.offsetTop;
-          scrollContainer.scrollTop = Math.max(0, buttonTop - 50);
-        }
+      };
+
+      if (selectedSubSubcategory && subSubcategoryButtonRefs.current[selectedSubSubcategory]) {
+        scrollTo(subSubcategoryButtonRefs.current[selectedSubSubcategory]);
+        return;
+      }
+
+      if (selectedSubcategory && subcategoryButtonRefs.current[selectedSubcategory]) {
+        scrollTo(subcategoryButtonRefs.current[selectedSubcategory]);
+        return;
+      }
+
+      if (selectedCategory && categoryButtonRefs.current[selectedCategory.id]) {
+        scrollTo(categoryButtonRefs.current[selectedCategory.id]);
+        return;
+      }
+
+      if (!selectedCategory && allCategoriesButtonRef.current) {
+        scrollTo(allCategoriesButtonRef.current);
       }
     });
     
     return () => cancelAnimationFrame(scrollTimer);
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory]);
 
   // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
   const SidebarContent = () => (
@@ -468,6 +527,7 @@ export default function DealsPage() {
             onClick={() => {
               setSelectedCategory(null);
               setSelectedSubcategory(null);
+              setSelectedSubSubcategory(null);
               setIsMobileSidebarOpen(false);
             }}
             className={cn(
@@ -497,6 +557,7 @@ export default function DealsPage() {
                 onClick={() => {
                   setSelectedCategory(category);
                   setSelectedSubcategory(null);
+                  setSelectedSubSubcategory(null);
                   setIsMobileSidebarOpen(false);
                 }}
                 className={cn(
@@ -515,11 +576,21 @@ export default function DealsPage() {
               {isActive && category.subcategories && category.subcategories.length > 0 && (
                 <div className="mt-1 ml-2 space-y-1 border-l pl-3">
                   {category.subcategories.map((sub) => {
-                    const subActive = selectedSubcategory === sub.slug || selectedSubcategory === sub.id;
+                    const subSlug = sub.slug || sub.id;
+                    const subActive =
+                      selectedSubcategory === subSlug ||
+                      (!!selectedSubSubcategory && sub.subcategories?.some((ss) => (ss.slug || ss.id) === selectedSubSubcategory));
                     return (
                       <div key={sub.slug || sub.id} className="space-y-1">
                         <button
-                          onClick={() => setSelectedSubcategory(subActive ? null : (sub.slug || sub.id))}
+                          ref={(el) => {
+                            if (el) subcategoryButtonRefs.current[subSlug] = el;
+                          }}
+                          onClick={() => {
+                            const willSelect = selectedSubcategory !== subSlug;
+                            setSelectedSubcategory(willSelect ? subSlug : null);
+                            setSelectedSubSubcategory(null);
+                          }}
                           className={cn(
                             "w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors",
                             subActive
@@ -543,24 +614,32 @@ export default function DealsPage() {
                         {/* Pod-podkategorie (trzeci poziom) */}
                         {subActive && sub.subcategories && sub.subcategories.length > 0 && (
                           <div className="ml-2 space-y-1 border-l border-muted-foreground/30 pl-3">
-                            {sub.subcategories.map((subsub) => (
-                              <button
-                                key={subsub.slug || subsub.id}
-                                onClick={() => {
-                                  setSelectedSubcategory(subsub.slug || subsub.id);
-                                  setIsMobileSidebarOpen(false);
-                                }}
-                                className={cn(
-                                  "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors",
-                                  (selectedSubcategory === subsub.slug || selectedSubcategory === subsub.id)
-                                    ? "bg-primary/5 text-primary font-medium"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                                )}
-                              >
-                                {subsub.icon && <span className="text-sm">{subsub.icon}</span>}
-                                <span className="flex-1 truncate">{getLocalizedCategoryName(subsub as any, locale as SupportedLanguage)}</span>
-                              </button>
-                            ))}
+                            {sub.subcategories.map((subsub) => {
+                              const subSubSlug = subsub.slug || subsub.id;
+                              return (
+                                <button
+                                  key={subSubSlug}
+                                  ref={(el) => {
+                                    if (el) subSubcategoryButtonRefs.current[subSubSlug] = el;
+                                  }}
+                                  onClick={() => {
+                                    setSelectedCategory(category);
+                                    setSelectedSubcategory(subSlug);
+                                    setSelectedSubSubcategory(subSubSlug);
+                                    setIsMobileSidebarOpen(false);
+                                  }}
+                                  className={cn(
+                                    "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors",
+                                    selectedSubSubcategory === subSubSlug
+                                      ? "bg-primary/5 text-primary font-medium"
+                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                  )}
+                                >
+                                  {subsub.icon && <span className="text-sm">{subsub.icon}</span>}
+                                  <span className="flex-1 truncate">{getLocalizedCategoryName(subsub as any, locale as SupportedLanguage)}</span>
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>

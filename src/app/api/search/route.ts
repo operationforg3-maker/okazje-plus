@@ -21,8 +21,10 @@ export async function GET(request: Request) {
   // optional filters
   const mainCategorySlug = url.searchParams.get('mainCategorySlug') || '';
   const subCategorySlug = url.searchParams.get('subCategorySlug') || '';
+  const subSubCategorySlug = url.searchParams.get('subSubCategorySlug') || '';
   const minPrice = url.searchParams.get('minPrice');
   const maxPrice = url.searchParams.get('maxPrice');
+  const minRating = url.searchParams.get('minRating');
   const minTemperature = url.searchParams.get('minTemperature');
   const sort = url.searchParams.get('sort') || '';
 
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
   const allowed = await rateLimit(ip, 60, 60);
   if (!allowed) return NextResponse.json({ error: 'rate_limited', message: 'Too many requests' }, { status: 429 });
 
-  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${minPrice}:${maxPrice}:${minTemperature}:${sort}`;
+  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}`;
   const cached = await cacheGet(key);
   if (cached) return NextResponse.json(cached as any);
 
@@ -54,11 +56,26 @@ export async function GET(request: Request) {
         } catch (err) {
           products = [];
         }
+        if (products && products.length > 0) {
+          if (mainCategorySlug) products = products.filter((p: any) => p.mainCategorySlug === mainCategorySlug);
+          if (subCategorySlug) products = products.filter((p: any) => p.subCategorySlug === subCategorySlug);
+          if (subSubCategorySlug) products = products.filter((p: any) => p.subSubCategorySlug === subSubCategorySlug);
+          if (minPrice) products = products.filter((p: any) => typeof p.price === 'number' && p.price >= Number(minPrice));
+          if (maxPrice) products = products.filter((p: any) => typeof p.price === 'number' && p.price <= Number(maxPrice));
+          if (minRating) products = products.filter((p: any) => (p.ratingCard?.average || 0) >= Number(minRating));
+        }
         if (!products || products.length === 0) {
           // Broader scan (limited) with substring match
           const candidates = await getRecommendedProducts(200);
           const nq = q.toLowerCase();
-          products = candidates.filter((p: any) => ((p.name || '') + ' ' + (p.description || '')).toLowerCase().includes(nq)).slice(0, limit);
+          let filtered = candidates.filter((p: any) => ((p.name || '') + ' ' + (p.description || '')).toLowerCase().includes(nq));
+          if (mainCategorySlug) filtered = filtered.filter((p: any) => p.mainCategorySlug === mainCategorySlug);
+          if (subCategorySlug) filtered = filtered.filter((p: any) => p.subCategorySlug === subCategorySlug);
+          if (subSubCategorySlug) filtered = filtered.filter((p: any) => p.subSubCategorySlug === subSubCategorySlug);
+          if (minPrice) filtered = filtered.filter((p: any) => typeof p.price === 'number' && p.price >= Number(minPrice));
+          if (maxPrice) filtered = filtered.filter((p: any) => typeof p.price === 'number' && p.price <= Number(maxPrice));
+          if (minRating) filtered = filtered.filter((p: any) => (p.ratingCard?.average || 0) >= Number(minRating));
+          products = filtered.slice(0, limit);
         } else {
           products = products.slice(0, limit);
         }
@@ -77,6 +94,7 @@ export async function GET(request: Request) {
           let filtered = candidates.filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(nq));
           if (mainCategorySlug) filtered = filtered.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
           if (subCategorySlug) filtered = filtered.filter((d: any) => d.subCategorySlug === subCategorySlug);
+            if (subSubCategorySlug) filtered = filtered.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
           if (minPrice) filtered = filtered.filter((d: any) => typeof d.price === 'number' && d.price >= Number(minPrice));
           if (maxPrice) filtered = filtered.filter((d: any) => typeof d.price === 'number' && d.price <= Number(maxPrice));
           if (minTemperature) filtered = filtered.filter((d: any) => typeof d.temperature === 'number' && d.temperature >= Number(minTemperature));
@@ -110,7 +128,20 @@ export async function GET(request: Request) {
 
     const tasks: Promise<any>[] = [];
     if (type === 'products' || type === 'all') {
-      tasks.push(typesenseServerClient.collections('products').documents().search({ q, query_by: 'name,description', per_page: limit }, {}));
+      const productFilters: string[] = [];
+      if (mainCategorySlug) productFilters.push(`mainCategorySlug:=${mainCategorySlug}`);
+      if (subCategorySlug) productFilters.push(`subCategorySlug:=${subCategorySlug}`);
+      if (subSubCategorySlug) productFilters.push(`subSubCategorySlug:=${subSubCategorySlug}`);
+      if (minPrice) productFilters.push(`price:>=${Number(minPrice)}`);
+      if (maxPrice) productFilters.push(`price:<=${Number(maxPrice)}`);
+      if (minRating) productFilters.push(`ratingCard.average:>=${Number(minRating)}`);
+
+      tasks.push(typesenseServerClient.collections('products').documents().search({ 
+        q, 
+        query_by: 'name,description', 
+        per_page: limit,
+        filter_by: productFilters.join(' && '),
+      }, {}));
     } else {
       tasks.push(Promise.resolve({ hits: [] }));
     }
@@ -119,6 +150,7 @@ export async function GET(request: Request) {
       const filters: string[] = [];
       if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
       if (subCategorySlug) filters.push(`subCategorySlug:=${subCategorySlug}`);
+      if (subSubCategorySlug) filters.push(`subSubCategorySlug:=${subSubCategorySlug}`);
       if (minPrice) filters.push(`price:>=${Number(minPrice)}`);
       if (maxPrice) filters.push(`price:<=${Number(maxPrice)}`);
       if (minTemperature) filters.push(`temperature:>=${Number(minTemperature)}`);

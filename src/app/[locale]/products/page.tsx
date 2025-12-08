@@ -32,10 +32,12 @@ function ProductsPageContent() {
   const t = useTranslations('products');
   const mainCategoryParam = searchParams.get('mainCategory');
   const subCategoryParam = searchParams.get('subCategory');
+  const subSubCategoryParam = searchParams.get('subSubCategory');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [selectedSubSubcategory, setSelectedSubSubcategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [dealOfTheDay, setDealOfTheDay] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,8 +60,18 @@ function ProductsPageContent() {
           const foundCategory = fetchedCategories.find(c => c.id === mainCategoryParam || c.slug === mainCategoryParam);
           if (foundCategory) {
             setSelectedCategory(foundCategory);
-            if (subCategoryParam) {
+            if (subSubCategoryParam) {
+              const parentSub = foundCategory.subcategories?.find((s) =>
+                s.subcategories?.some((ss) => ss.slug === subSubCategoryParam || ss.id === subSubCategoryParam)
+              );
+              const matchingSubSub = parentSub?.subcategories?.find((ss) => ss.slug === subSubCategoryParam || ss.id === subSubCategoryParam);
+              if (parentSub && matchingSubSub) {
+                setSelectedSubcategory(parentSub.slug || parentSub.id);
+                setSelectedSubSubcategory(matchingSubSub.slug || matchingSubSub.id || subSubCategoryParam);
+              }
+            } else if (subCategoryParam) {
               setSelectedSubcategory(subCategoryParam);
+              setSelectedSubSubcategory(null);
             }
           }
           // Jeśli nie znaleziono kategorii z URL, pozostaw null (wszystkie produkty)
@@ -92,6 +104,7 @@ function ProductsPageContent() {
           const results = await searchProductsTypesense(q, {
             mainCategorySlug: selectedCategory?.slug || selectedCategory?.id,
             subCategorySlug: selectedSubcategory || undefined,
+            subSubCategorySlug: selectedSubSubcategory || undefined,
             limit: 100,
           });
           if (!cancelled) setProducts(results);
@@ -104,7 +117,7 @@ function ProductsPageContent() {
           const categoryProducts = await getProductsByCategory(
             selectedCategory.slug || selectedCategory.id,
             selectedSubcategory || undefined,
-            undefined,
+            selectedSubSubcategory || undefined,
             100
           );
           if (!cancelled) setProducts(categoryProducts);
@@ -117,7 +130,7 @@ function ProductsPageContent() {
     }
     const t = setTimeout(fetchProducts, 250); // drobny debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedCategory, selectedSubcategory, searchTerm]);
+  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products;
@@ -151,6 +164,8 @@ function ProductsPageContent() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const allCategoriesButtonRef = useRef<HTMLButtonElement>(null);
   const categoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
+  const subcategoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
+  const subSubcategoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
 
   // Auto-scroll do wybranej kategorii/podkategorii gdy się zmienia
   useEffect(() => {
@@ -158,25 +173,36 @@ function ProductsPageContent() {
     if (typeof window === 'undefined') return;
     
     const scrollTimer = requestAnimationFrame(() => {
-      if (!selectedCategory && allCategoriesButtonRef.current && scrollAreaRef.current) {
-        const button = allCategoriesButtonRef.current;
-        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (scrollContainer) {
-          const buttonTop = button.offsetTop;
-          scrollContainer.scrollTop = Math.max(0, buttonTop - 50);
+      const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement | null;
+      const scrollTo = (el?: HTMLElement | null) => {
+        if (el && scrollContainer) {
+          const buttonTop = el.offsetTop;
+          scrollContainer.scrollTop = Math.max(0, buttonTop - 80);
         }
-      } else if (selectedCategory && categoryButtonRefs.current[selectedCategory.id] && scrollAreaRef.current) {
-        const button = categoryButtonRefs.current[selectedCategory.id];
-        const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (scrollContainer) {
-          const buttonTop = button.offsetTop;
-          scrollContainer.scrollTop = Math.max(0, buttonTop - 50);
-        }
+      };
+
+      if (selectedSubSubcategory && subSubcategoryButtonRefs.current[selectedSubSubcategory]) {
+        scrollTo(subSubcategoryButtonRefs.current[selectedSubSubcategory]);
+        return;
+      }
+
+      if (selectedSubcategory && subcategoryButtonRefs.current[selectedSubcategory]) {
+        scrollTo(subcategoryButtonRefs.current[selectedSubcategory]);
+        return;
+      }
+
+      if (selectedCategory && categoryButtonRefs.current[selectedCategory.id]) {
+        scrollTo(categoryButtonRefs.current[selectedCategory.id]);
+        return;
+      }
+
+      if (!selectedCategory && allCategoriesButtonRef.current) {
+        scrollTo(allCategoriesButtonRef.current);
       }
     });
     
     return () => cancelAnimationFrame(scrollTimer);
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory]);
 
   const SidebarContent = () => (
     <div className="space-y-2">
@@ -189,6 +215,7 @@ function ProductsPageContent() {
             onClick={() => {
               setSelectedCategory(null);
               setSelectedSubcategory(null);
+              setSelectedSubSubcategory(null);
               setIsMobileSidebarOpen(false);
             }}
             className={cn(
@@ -218,6 +245,7 @@ function ProductsPageContent() {
                 onClick={() => {
                   setSelectedCategory(category);
                   setSelectedSubcategory(null);
+                  setSelectedSubSubcategory(null);
                   setIsMobileSidebarOpen(false);
                 }}
                 className={cn(
@@ -237,11 +265,21 @@ function ProductsPageContent() {
               {isActive && category.subcategories && category.subcategories.length > 0 && (
                 <div className="mt-1 ml-2 space-y-1 border-l pl-3">
                   {category.subcategories.map((sub) => {
-                    const subActive = selectedSubcategory === sub.slug || selectedSubcategory === sub.id;
+                    const subSlug = sub.slug || sub.id;
+                    const subActive =
+                      selectedSubcategory === subSlug ||
+                      (!!selectedSubSubcategory && sub.subcategories?.some((ss) => (ss.slug || ss.id) === selectedSubSubcategory));
                     return (
                       <div key={sub.slug || sub.id} className="space-y-1">
                         <button
-                          onClick={() => setSelectedSubcategory(subActive ? null : (sub.slug || sub.id))}
+                          ref={(el) => {
+                            if (el) subcategoryButtonRefs.current[subSlug] = el;
+                          }}
+                          onClick={() => {
+                            const willSelect = selectedSubcategory !== subSlug;
+                            setSelectedSubcategory(willSelect ? subSlug : null);
+                            setSelectedSubSubcategory(null);
+                          }}
                           className={cn(
                             "w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors",
                             subActive
@@ -265,24 +303,32 @@ function ProductsPageContent() {
                         {/* Pod-podkategorie (trzeci poziom) */}
                         {subActive && sub.subcategories && sub.subcategories.length > 0 && (
                           <div className="ml-2 space-y-1 border-l border-muted-foreground/30 pl-3">
-                            {sub.subcategories.map((subsub) => (
-                              <button
-                                key={subsub.slug || subsub.id}
-                                onClick={() => {
-                                  setSelectedSubcategory(subsub.slug || subsub.id);
-                                  setIsMobileSidebarOpen(false);
-                                }}
-                                className={cn(
-                                  "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors",
-                                  (selectedSubcategory === subsub.slug || selectedSubcategory === subsub.id)
-                                    ? "bg-primary/5 text-primary font-medium"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                                )}
-                              >
-                                {subsub.icon && <span className="text-sm">{subsub.icon}</span>}
-                                <span className="flex-1 truncate">{subsub.name}</span>
-                              </button>
-                            ))}
+                            {sub.subcategories.map((subsub) => {
+                              const subSubSlug = subsub.slug || subsub.id;
+                              return (
+                                <button
+                                  key={subSubSlug}
+                                  ref={(el) => {
+                                    if (el) subSubcategoryButtonRefs.current[subSubSlug] = el;
+                                  }}
+                                  onClick={() => {
+                                    setSelectedCategory(category);
+                                    setSelectedSubcategory(subSlug);
+                                    setSelectedSubSubcategory(subSubSlug);
+                                    setIsMobileSidebarOpen(false);
+                                  }}
+                                  className={cn(
+                                    "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors",
+                                    selectedSubSubcategory === subSubSlug
+                                      ? "bg-primary/5 text-primary font-medium"
+                                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                  )}
+                                >
+                                  {subsub.icon && <span className="text-sm">{subsub.icon}</span>}
+                                  <span className="flex-1 truncate">{subsub.name}</span>
+                                </button>
+                              );
+                            })}
                           </div>
                         )}
                       </div>

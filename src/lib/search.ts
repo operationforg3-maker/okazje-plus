@@ -5,6 +5,7 @@ import { searchProducts as fallbackSearch } from '@/lib/data';
 export type ProductSearchOptions = {
   mainCategorySlug?: string;
   subCategorySlug?: string;
+  subSubCategorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
   minRating?: number;
@@ -20,6 +21,7 @@ export async function searchProductsTypesense(
   const { 
     mainCategorySlug, 
     subCategorySlug, 
+    subSubCategorySlug,
     minPrice, 
     maxPrice, 
     minRating,
@@ -34,6 +36,12 @@ export async function searchProductsTypesense(
       params.set('q', q);
       params.set('type', 'products');
       params.set('limit', String(limit));
+      if (mainCategorySlug) params.set('mainCategorySlug', String(mainCategorySlug));
+      if (subCategorySlug) params.set('subCategorySlug', String(subCategorySlug));
+      if (subSubCategorySlug) params.set('subSubCategorySlug', String(subSubCategorySlug));
+      if (minPrice !== undefined) params.set('minPrice', String(minPrice));
+      if (maxPrice !== undefined) params.set('maxPrice', String(maxPrice));
+      if (minRating !== undefined) params.set('minRating', String(minRating));
       const res = await fetch(`/api/search?${params.toString()}`);
       if (!res.ok) return [];
       const body = await res.json();
@@ -51,6 +59,7 @@ export async function searchProductsTypesense(
   const filters: string[] = [];
   if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
   if (subCategorySlug) filters.push(`subCategorySlug:=${subCategorySlug}`);
+  if (subSubCategorySlug) filters.push(`subSubCategorySlug:=${subSubCategorySlug}`);
   if (minPrice !== undefined) filters.push(`price:>=${minPrice}`);
   if (maxPrice !== undefined) filters.push(`price:<=${maxPrice}`);
   if (minRating !== undefined) filters.push(`ratingCard.average:>=${minRating}`);
@@ -96,6 +105,7 @@ export async function searchProductsTypesense(
 export type DealSearchOptions = {
   mainCategorySlug?: string;
   subCategorySlug?: string;
+  subSubCategorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
   minTemperature?: number;
@@ -110,6 +120,7 @@ export async function searchDealsTypesense(
   const { 
     mainCategorySlug, 
     subCategorySlug, 
+    subSubCategorySlug,
     minPrice,
     maxPrice,
     minTemperature,
@@ -126,6 +137,7 @@ export async function searchDealsTypesense(
       params.set('limit', String(limit));
       if (mainCategorySlug) params.set('mainCategorySlug', String(mainCategorySlug));
       if (subCategorySlug) params.set('subCategorySlug', String(subCategorySlug));
+      if (subSubCategorySlug) params.set('subSubCategorySlug', String(subSubCategorySlug));
       if (minPrice !== undefined) params.set('minPrice', String(minPrice));
       if (maxPrice !== undefined) params.set('maxPrice', String(maxPrice));
       if (minTemperature !== undefined) params.set('minTemperature', String(minTemperature));
@@ -154,6 +166,7 @@ export async function searchDealsTypesense(
   const filters: string[] = [];
   if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
   if (subCategorySlug) filters.push(`subCategorySlug:=${subCategorySlug}`);
+  if (subSubCategorySlug) filters.push(`subSubCategorySlug:=${subSubCategorySlug}`);
   if (minPrice !== undefined) filters.push(`price:>=${minPrice}`);
   if (maxPrice !== undefined) filters.push(`price:<=${maxPrice}`);
   if (minTemperature !== undefined) filters.push(`temperature:>=${minTemperature}`);
