@@ -889,11 +889,13 @@ export async function getCategories(): Promise<Category[]> {
   const cacheKey = 'categories:all';
   const cached = await cacheGet(cacheKey);
   if (cached) {
+    console.log('[getCategories] Returning cached categories, count:', Array.isArray(cached) ? cached.length : 0);
     return cached as Category[];
   }
 
   const categoriesRef = collection(db, "categories");
   const snapshot = await getDocs(categoriesRef);
+  console.log('[getCategories] Firestore snapshot loaded, docs count:', snapshot.docs.length);
 
   const categories = await Promise.all(
     snapshot.docs.map(async (categoryDoc) => {
@@ -1005,6 +1007,7 @@ export async function getCategories(): Promise<Category[]> {
   );
 
   const sortedCategories = categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  console.log('[getCategories] Final result, count:', sortedCategories.length, 'with subcategories count:', sortedCategories.reduce((sum, c) => sum + (c.subcategories?.length || 0), 0));
   
   // Cache the result for 1 hour (3600 seconds)
   await cacheSet(cacheKey, sortedCategories, 3600);
