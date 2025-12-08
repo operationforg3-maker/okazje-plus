@@ -237,6 +237,14 @@ export function AIEnhancer({ onConsoleLog, onEnhancementStarted, onEnhancementCo
           </AlertDescription>
         </Alert>
 
+        <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
+            <strong>Uwaga:</strong> AI enrichment może trwać długo (&gt;100 produktów). 
+            Dla większych operacji użyj zakładki <strong>Jobs</strong>.
+          </AlertDescription>
+        </Alert>
+
         {/* Action */}
         <Button onClick={handleEnhance} disabled={loading} className="w-full" size="lg">
           {loading ? (

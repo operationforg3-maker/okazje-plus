@@ -224,6 +224,14 @@ export function ProductImporter({ onConsoleLog, onImportStarted, onImportComplet
           </AlertDescription>
         </Alert>
 
+        <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-sm text-blue-900 dark:text-blue-100">
+            <strong>Pro tip:</strong> Dla dużych importów (&gt;5 kategorii lub z AI) użyj zakładki <strong>Jobs</strong> - 
+            import będzie działał w tle bez ryzyka timeout.
+          </AlertDescription>
+        </Alert>
+
         {/* Action */}
         <Button
           onClick={handleImport}

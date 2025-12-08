@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryBuilder } from '@/components/admin/category-builder';
 import { ProductImporter } from '@/components/admin/product-importer';
 import { AIEnhancer } from '@/components/admin/ai-enhancer';
 import { ImportConsole, ConsoleLine } from '@/components/admin/import-console';
-import { withAuth } from '@/lib/auth';
-import { Combine, ListTree, Package, Sparkles } from 'lucide-react';
+import { withAuth } from '@/components/auth/withAuth';
+import { Combine, ListTree, Package, Sparkles, Clock } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { JobsMonitor } from '@/components/admin/jobs-monitor';
 
 function HarvesterPage() {
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLine[]>([]);
@@ -51,7 +52,7 @@ function HarvesterPage() {
         {/* Main Content */}
         <div className="col-span-2 space-y-6">
           <Tabs defaultValue="categories" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="categories" className="gap-2">
                 <ListTree className="h-4 w-4" />
                 <span>Kategorie</span>
@@ -63,6 +64,10 @@ function HarvesterPage() {
               <TabsTrigger value="enhance" className="gap-2">
                 <Sparkles className="h-4 w-4" />
                 <span>Ulepszanie</span>
+              </TabsTrigger>
+              <TabsTrigger value="jobs" className="gap-2">
+                <Clock className="h-4 w-4" />
+                <span>Jobs</span>
               </TabsTrigger>
             </TabsList>
 
@@ -97,6 +102,10 @@ function HarvesterPage() {
                   addLog(`📊 Ulepszone: ${stats.enhanced}, Średnia jakość: ${(stats.avgQualityScore * 100).toFixed(1)}%`, 'success');
                 }}
               />
+            </TabsContent>
+
+            <TabsContent value="jobs" className="space-y-4">
+              <JobsMonitor onConsoleLog={addLog} />
             </TabsContent>
           </Tabs>
         </div>
