@@ -28,6 +28,7 @@
     "deploy:prod": "npm run build && npm --prefix okazje-plus run build && firebase deploy --only hosting,functions"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "4.1.17",
     "@genkit-ai/next": "^1.24.0",
     "@genkit-ai/vertexai": "^1.24.0",
     "@google-cloud/secret-manager": "^6.1.1",
