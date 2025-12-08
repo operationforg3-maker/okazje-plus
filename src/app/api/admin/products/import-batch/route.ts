@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdminApp } from '@/lib/firebase-admin';
-import { withAuth } from '@/lib/auth-middleware';
+import { checkAdminAuth } from '@/lib/auth-helpers';
 
 interface ImportConfig {
   source: 'aliexpress' | 'allegro' | 'amazon' | 'ebay' | 'convertiser';
@@ -12,9 +11,18 @@ interface ImportConfig {
   draftStatus: 'draft' | 'pending_ai' | 'ready_to_publish';
 }
 
-async function handler(req: NextRequest) {
+export async function POST(req: NextRequest) {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
+  }
+
+  // Check admin authorization
+  const authResult = await checkAdminAuth(req);
+  if (!authResult.authorized) {
+    return NextResponse.json(
+      { error: authResult.error || 'Unauthorized' },
+      { status: 401 }
+    );
   }
 
   try {
@@ -41,5 +49,3 @@ async function handler(req: NextRequest) {
     );
   }
 }
-
-export const POST = withAuth(handler, { requiredRole: 'admin' });

@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdminApp } from '@/lib/firebase-admin';
-import { withAuth } from '@/lib/auth-middleware';
+import { adminDb } from '@/lib/firebase-admin';
+import { checkAdminAuth } from '@/lib/auth-helpers';
 import type { Category } from '@/lib/types';
 
-async function handler(req: NextRequest) {
+export async function POST(req: NextRequest) {
   if (req.method !== 'POST') {
     return NextResponse.json({ error: 'Method not allowed' }, { status: 405 });
+  }
+
+  // Check admin authorization
+  const authResult = await checkAdminAuth(req);
+  if (!authResult.authorized) {
+    return NextResponse.json(
+      { error: authResult.error || 'Unauthorized' },
+      { status: 401 }
+    );
   }
 
   try {
@@ -15,14 +24,11 @@ async function handler(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid categories data' }, { status: 400 });
     }
 
-    const app = getFirebaseAdminApp();
-    const db = app.firestore();
-
     let docCount = 0;
 
     for (const category of categories) {
       // Save main category
-      const mainCatRef = db.collection('categories').doc(category.slug);
+      const mainCatRef = adminDb.collection('categories').doc(category.slug);
       await mainCatRef.set({
         id: category.slug,
         slug: category.slug,
@@ -72,5 +78,3 @@ async function handler(req: NextRequest) {
     );
   }
 }
-
-export const POST = withAuth(handler, { requiredRole: 'admin' });

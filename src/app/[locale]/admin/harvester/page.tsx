@@ -11,26 +11,19 @@ import { Combine, ListTree, Package, Sparkles } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 function HarvesterPage() {
-  const [consoleLogo, setConsoleLogs] = useState<ConsoleLine[]>([]);
+  const [consoleLogs, setConsoleLogs] = useState<ConsoleLine[]>([]);
 
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
+    const timestamp = new Date().toLocaleTimeString('pl-PL', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
     setConsoleLogs(prev => [
       ...prev,
       {
         id: uuidv4(),
-        timestamp: new Date().toLocaleTimeString('pl-PL'),
-        message,
-        type,
-      },
-    ]);
-  };
-
-  const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
-    setConsoleLogs(prev => [
-      ...prev,
-      {
-        id: uuidv4(),
-        timestamp: new Date().toLocaleTimeString('pl-PL'),
+        timestamp,
         message,
         type,
       },
@@ -110,17 +103,17 @@ function HarvesterPage() {
 
         {/* Console Sidebar */}
         <div>
-          <ImportConsole lines={consoleLogo} onClear={clearLogs} />
+          <ImportConsole lines={consoleLogs} onClear={clearLogs} />
         </div>
       </div>
 
       {/* Info */}
       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Jak używać?</h3>
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Jak uzywac?</h3>
         <ol className="text-sm text-blue-900 dark:text-blue-100 space-y-1 list-decimal list-inside">
-          <li><strong>Krok 1:</strong> Utwórz strukturę kategorii za pomocą "Konstruktora kategorii"</li>
-          <li><strong>Krok 2:</strong> Importuj produkty/okazje z wybranych źródeł do schowka roboczego (drafty)</li>
-          <li><strong>Krok 3:</strong> Użyj AI do ulepszenia drafty'ów - poprawi tytuły, opisy, kategoryzację</li>
+          <li><strong>Krok 1:</strong> Utworz strukture kategorii za pomoca "Konstruktora kategorii"</li>
+          <li><strong>Krok 2:</strong> Importuj produkty/okazje z wybranych zrodel do schowka roboczego (drafty)</li>
+          <li><strong>Krok 3:</strong> Uzyj AI do ulepszenia draftow - poprawi tytuły, opisy, kategoryzacje</li>
           <li><strong>Krok 4:</strong> Przejrzyj wyniki w konsoli i publikuj gotowe itemy</li>
         </ol>
       </div>

@@ -27,6 +27,7 @@ const pathNames: Record<string, string> = {
   '/admin/stats': 'Statystyki',
   '/admin/settings': 'Ustawienia',
   '/admin/navigation': 'Nawigacja',
+  '/admin/harvester': 'Kombajn',
   '/admin/imports': 'Smart Import',
   '/admin/imports/aliexpress': 'Import AliExpress',
   '/admin/auto-import': 'Auto-Import Kombajn',
