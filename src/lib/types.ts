@@ -32,6 +32,7 @@ export interface SubSubcategory {
   icon?: string;
   color?: string;
   translations?: Record<string, { name: string; description?: string }>;
+  importKeywords?: string[]; // frazy pomocne w importach/wyszukiwaniu
 }
 
 export interface CategoryPromo {
