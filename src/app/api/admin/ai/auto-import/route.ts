@@ -72,6 +72,13 @@ interface ImportStats {
 /**
  * POST /api/admin/ai/auto-import
  * 
+ * ⚠️ WARNING: This endpoint may timeout for large imports (>5 categories or AI enrichment)
+ * 
+ * For production use, consider:
+ * 1. Use POST /api/admin/import/queue to create background job
+ * 2. Poll GET /api/admin/import/queue/{jobId} for progress
+ * 3. Deploy as Cloud Function with extended timeout (540s)
+ * 
  * 🚀 SUPER-POWERED MULTI-SOURCE AUTO-IMPORT KOMBAJN
  * 
  * Advanced Features:
@@ -105,6 +112,8 @@ export async function POST(request: NextRequest) {
       enableAdvancedFeatures = true, // SKU details, shipping, variants
       enableAIEnrichment = true,     // AI description enhancement
       saveDraftsOnly = true,          // Save as draft for moderation
+      maxCategories = 5,              // Limit categories to prevent timeout
+      timeoutWarningMs = 50000,       // Warn if approaching 60s timeout
     } = body;
 
     const enabledSources = Object.entries(sources).filter(([_, enabled]) => enabled).map(([source]) => source);
@@ -113,8 +122,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'no_sources_enabled' }, { status: 400 });
     }
 
+    // Timeout safety check
+    const elapsedTime = Date.now() - startTime;
+    if (elapsedTime > timeoutWarningMs) {
+      return NextResponse.json({
+        error: 'timeout_risk',
+        message: 'Request is taking too long. Use POST /api/admin/import/queue for background processing.',
+        suggestion: 'Reduce maxCategories, disable AI enrichment, or use queue API',
+      }, { status: 408 });
+    }
+
     console.log('[AUTO-IMPORT] 🚀 Starting SUPER-POWERED import with:', {
       maxProductsPerCategory,
+      maxCategories,
       sources: enabledSources,
       advancedFeatures: enableAdvancedFeatures,
       aiEnrichment: enableAIEnrichment,
@@ -133,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Get all categories from Firestore
     const app = initializeFirebaseAdmin();
     const db = admin.firestore();
-    const categoriesSnapshot = await db.collection('categories').get();
+    const categoriesSnapshot = await db.collection('categories').limit(maxCategories).get();
     const categories = categoriesSnapshot.docs.map(doc => ({ 
       id: doc.id, 
       ...doc.data(),
@@ -141,13 +161,22 @@ export async function POST(request: NextRequest) {
     }));
 
     stats.totalCategories = categories.length;
-    log.push(`[AUTO-IMPORT] 📊 Found ${categories.length} categories`);
+    log.push(`[AUTO-IMPORT] 📊 Found ${categories.length} categories (limited to ${maxCategories} to prevent timeout)`);
     log.push(`[AUTO-IMPORT] 🎯 Enabled sources: ${enabledSources.join(', ')}`);
     log.push(`[AUTO-IMPORT] ⚡ Advanced features: ${enableAdvancedFeatures ? 'ENABLED' : 'DISABLED'}`);
     log.push(`[AUTO-IMPORT] 🤖 AI enrichment: ${enableAIEnrichment ? 'ENABLED' : 'DISABLED'}`);
+    log.push(`[AUTO-IMPORT] ⚠️ For large imports (>5 categories or AI), use /api/admin/import/queue`);
 
     // Run imports for each source
     for (const source of enabledSources) {
+      // Check timeout before starting new source
+      const elapsedTime = Date.now() - startTime;
+      if (elapsedTime > timeoutWarningMs) {
+        log.push(`\n[AUTO-IMPORT] ⚠️ Approaching timeout (${Math.round(elapsedTime / 1000)}s), stopping early`);
+        stats.errors.push('Partial import - timeout risk. Use queue API for full import.');
+        break;
+      }
+
       const sourceStartTime = Date.now();
       log.push(`\n[AUTO-IMPORT] === Starting ${source.toUpperCase()} import ===`);
       
