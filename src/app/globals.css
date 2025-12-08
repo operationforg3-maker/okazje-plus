@@ -76,7 +76,8 @@
 
 @layer base {
   * {
-    @apply border-border;
+    /* Tailwind v4 does not allow applying custom utilities from utilities layer inside base */
+    border-color: hsl(var(--border));
   }
   body {
     @apply bg-background text-foreground;
