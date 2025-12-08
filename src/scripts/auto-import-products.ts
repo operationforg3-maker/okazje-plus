@@ -33,7 +33,8 @@ async function getAllSubSubCategories(): Promise<ImportJob[]> {
       
       for (const subSubCatDoc of subSubCatsSnap.docs) {
         const data = subSubCatDoc.data();
-        const keywords = data.aliexpressKeywords || [];
+        // Support both 'importKeywords' (new generic) and 'aliexpressKeywords' (legacy)
+        const keywords = data.importKeywords || data.aliexpressKeywords || [];
         
         if (keywords.length > 0) {
           jobs.push({
