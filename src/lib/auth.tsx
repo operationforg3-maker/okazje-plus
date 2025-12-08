@@ -31,16 +31,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setFirebaseUser(null);
   };
 
-  const getTokenForUser = async (): Promise<string | null> => {
-    try {
-      if (!firebaseUser) return null;
-      return await getIdToken(firebaseUser);
-    } catch (error) {
-      console.error('Error getting ID token:', error);
-      return null;
-    }
-  };
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUserObj: FirebaseUser | null) => {
       setFirebaseUser(firebaseUserObj);
@@ -82,7 +72,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const contextValue = useMemo(() => ({ user, loading, logout, getIdToken: getTokenForUser }), [user, loading, firebaseUser]);
+  const contextValue = useMemo(() => {
+    const getTokenForUser = async (): Promise<string | null> => {
+      try {
+        if (!firebaseUser) {
+          console.warn('[AuthProvider] getIdToken called but firebaseUser is null');
+          return null;
+        }
+        const token = await getIdToken(firebaseUser);
+        console.log('[AuthProvider] Successfully obtained ID token for user:', firebaseUser.uid);
+        return token;
+      } catch (error) {
+        console.error('[AuthProvider] Error getting ID token:', error);
+        return null;
+      }
+    };
+
+    return { user, loading, logout, getIdToken: getTokenForUser };
+  }, [user, loading, firebaseUser]);
 
   return (
     <AuthContext.Provider value={contextValue}>
