@@ -30,6 +30,7 @@ import {
 
 import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
 import { ImportProgress, ImportLog, ImportStats, ImportStatus } from '@/components/admin/import-progress';
+import { CategoryBuilder } from '@/components/admin/category-builder';
 import { useTranslations } from 'next-intl';
 
 function SetupPage() {
@@ -568,80 +569,15 @@ function SetupPage() {
           {/* Quick Actions Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Create Categories Structure */}
-            <Card className="relative overflow-hidden group hover:shadow-xl transition-all border-2">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-bl-full" />
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                    <Database className="h-6 w-6 text-white" />
-                  </div>
-                  <Badge variant="secondary">Krok 1</Badge>
-                </div>
-                <CardTitle className="text-xl">Utwórz Kategorie</CardTitle>
-                <CardDescription>
-                  Tworzy 3-poziomową strukturę kategorii (Seed/AI/Hybryda)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Tryb tworzenia kategorii</label>
-                  <select
-                    value={categoryMode}
-                    onChange={(e) => setCategoryMode(e.target.value as any)}
-                    className="w-full p-2 text-sm border rounded-md bg-background"
-                    disabled={loading}
-                  >
-                    <option value="seeds-only">Z seedów (statyczne)</option>
-                    <option value="ai-only">AI (na podstawie promptu)</option>
-                    <option value="hybrid">Hybryda (seedy + AI)</option>
-                  </select>
-                </div>
-                {categoryMode !== 'seeds-only' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Prompt dla AI</label>
-                    <textarea
-                      value={categoryPrompt}
-                      onChange={(e) => setCategoryPrompt(e.target.value)}
-                      placeholder="Np. Rozszerz elektronikę o smart home, wearables, narzędzia pomiarowe; dodaj zwierzęta i biuro"
-                      className="w-full p-2 text-sm border rounded-md bg-background h-24"
-                      disabled={loading}
-                    />
-                    <p className="text-xs text-muted-foreground">AI wygeneruje drzewo (3 poziomy) po polsku z poprawnymi slugami.</p>
-                  </div>
-                )}
-                <ul className="text-sm space-y-2 text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <span>15+ kategorii głównych (rozszerzone)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <span>70+ podkategorii</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <span>350+ sub-podkategorii</span>
-                  </li>
-                </ul>
-                <Button
-                  onClick={handleCreateCategories}
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Tworzę...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Utwórz
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+            <div className="lg:col-span-2">
+              <CategoryBuilder
+                onConsoleLog={addLog}
+                onCategoriesCreated={(cats) => {
+                  addLog('success', `✅ Struktura kategorii przygotowana (${cats.length} kategorii)`);
+                  setImportStats(prev => ({ ...prev, categories: cats.length }));
+                }}
+              />
+            </div>
 
             {/* Fill with Products */}
             <Card className="relative overflow-hidden group hover:shadow-xl transition-all border-2">
