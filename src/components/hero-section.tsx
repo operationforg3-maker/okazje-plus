@@ -15,12 +15,15 @@ export default function HeroSection() {
       <div className="container mx-auto px-4 md:px-6 z-10">
         <div className="max-w-4xl mx-auto text-center space-y-8">
                     {/* Logo */}
-                    <div className="flex justify-center mb-6">
+                    <div className="relative flex justify-center mb-6">
                       <img 
                         src="/Logotyp_okazjeplus.svg" 
                         alt="Okazje+" 
                         className="h-16 md:h-20 lg:h-24"
                       />
+                      <span className="absolute -top-2 -right-4 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground shadow-lg md:-right-6 md:-top-3 md:h-7 md:w-7">
+                        +
+                      </span>
                     </div>
           
           {/* Główny nagłówek */}

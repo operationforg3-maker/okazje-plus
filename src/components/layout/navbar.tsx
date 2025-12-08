@@ -73,16 +73,21 @@ export function Navbar() {
 
           {/* Brand */}
           <Link href={`${prefix}/`} className="flex items-center gap-2">
-            <img
-              src="/icon_okazjeplus.svg"
-              alt="Okazje+"
-              className="h-8 w-8 flex-shrink-0 md:hidden"
-            />
-            <img
-              src="/Logotyp_okazjeplus.svg"
-              alt="Okazje+"
-              className="hidden h-8 flex-shrink-0 md:block md:h-9 lg:h-10"
-            />
+            <div className="relative flex items-center justify-center">
+              <img
+                src="/icon_okazjeplus.svg"
+                alt="Okazje+"
+                className="h-8 w-8 flex-shrink-0 md:hidden"
+              />
+              <img
+                src="/Logotyp_okazjeplus.svg"
+                alt="Okazje+"
+                className="hidden h-8 flex-shrink-0 md:block md:h-9 lg:h-10"
+              />
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm">
+                +
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Nav */}
