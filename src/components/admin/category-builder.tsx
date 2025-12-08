@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,21 +38,8 @@ interface CategoryForm {
 }
 
 export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userProp, getIdToken: getIdTokenProp }: CategoryBuilderProps) {
-  let user = userProp || null;
-  let getIdTokenFn = getIdTokenProp || (async () => null);
-  
-  // Try to get from context if not provided as props
-  try {
-    const authContext = useAuth();
-    if (authContext && !userProp) {
-      user = authContext.user;
-    }
-    if (authContext && !getIdTokenProp) {
-      getIdTokenFn = authContext.getIdToken || (async () => null);
-    }
-  } catch (e) {
-    // Hook not available in this context, use prop values or continue with defaults
-  }
+  const user = userProp || null;
+  const getIdTokenFn = getIdTokenProp || (async () => null);
 
   const [loading, setLoading] = useState(false);
   const [autoLoading, setAutoLoading] = useState(false);
@@ -93,9 +79,13 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
         throw new Error('Brak uwierzytelnienia użytkownika');
       }
 
+      if (!getIdTokenProp) {
+        log('⚠️ Ostrzeżenie: getIdToken nie został przesłany jako prop', 'warning');
+      }
+
       const token = await getIdTokenFn();
       if (!token) {
-        throw new Error('Nie udało się pobrać tokenu autoryzacji');
+        throw new Error('Nie udało się pobrać tokenu autoryzacji (getIdToken zwrócił null)');
       }
 
       const res = await fetch('/api/admin/categories/auto-build', { 
@@ -203,9 +193,13 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
       // TODO: Save to Firestore
       log('💾 Wysyłam dane do bazy...', 'info');
 
+      if (!getIdTokenProp) {
+        log('⚠️ Ostrzeżenie: getIdToken nie został przesłany jako prop', 'warning');
+      }
+
       const token = await getIdTokenFn();
       if (!token) {
-        throw new Error('Nie udało się pobrać tokenu autoryzacji');
+        throw new Error('Nie udało się pobrać tokenu autoryzacji (getIdToken zwrócił null)');
       }
 
       const response = await fetch('/api/admin/categories/create', {
