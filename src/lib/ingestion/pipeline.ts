@@ -9,8 +9,7 @@
  */
 
 import { logger } from "@/lib/logging";
-import { db } from "../firebase";
-import { collection, addDoc, writeBatch } from "firebase/firestore";
+import { adminDb } from "../firebase-admin";
 import { getAliExpressClient } from "../integrations/aliexpress-client";
 import { getConvertiserClient } from "../integrations/convertiser-client";
 import { normalizeBatch } from "./normalizer";
@@ -199,13 +198,13 @@ async function persistBatch(
   items: (NormalizedDeal | NormalizedProduct)[],
   config: PipelineConfig
 ): Promise<string[]> {
-  const batch = writeBatch(db);
-  const dealsCollection = collection(db, "deals");
+  const batch = adminDb.batch();
   const createdIds: string[] = [];
 
   try {
     for (const item of items) {
-      const dealRef = addDoc(dealsCollection, {
+      const docRef = adminDb.collection("deals").doc();
+      batch.set(docRef, {
         ...item,
         mainCategorySlug: config.categoryPath.main,
         subCategorySlug: config.categoryPath.sub,
@@ -214,13 +213,9 @@ async function persistBatch(
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-
-      // Note: writeBatch doesn't support addDoc; use set instead for new docs
-      // This is a simplification; in production, handle this differently
-      createdIds.push(item.id || "");
+      createdIds.push(docRef.id);
     }
 
-    // Commit batch
     await batch.commit();
     logger.info("Batch persisted", { count: items.length });
     return createdIds;

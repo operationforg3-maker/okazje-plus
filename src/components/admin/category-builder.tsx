@@ -100,9 +100,18 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
         throw new Error(`API error: ${res.status}`);
       }
       const body = await res.json();
-      log(`✅ Zakończono auto-build. Zapisano ${body.created || 0} dokumentów.`, 'success');
-      // Opcjonalnie poinformuj wyżej, że struktura jest gotowa (bez danych szczegółowych)
-      onCategoriesCreated?.([]);
+      const createdDocs = body.created || 0;
+      const rootCount = body.categories || 0;
+      log(`✅ Zakończono auto-build. Zapisano ${createdDocs} dokumentów (${rootCount} kategorii głównych).`, 'success');
+
+      // Poinformuj wyżej z poprawną licznością, nawet jeśli nie ściągamy pełnych danych (używane do logów)
+      const stubCategories = Array.from({ length: rootCount }, (_, idx) => ({
+        id: `auto-${idx}`,
+        slug: `auto-${idx}`,
+        name: `Kategoria ${idx + 1}`,
+        subcategories: [],
+      })) as unknown as Category[];
+      onCategoriesCreated?.(stubCategories);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Nieznany błąd';
       log(`❌ Auto-build kategorii nie powiódł się: ${message}`, 'error');
