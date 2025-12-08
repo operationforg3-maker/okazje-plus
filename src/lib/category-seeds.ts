@@ -13,6 +13,9 @@ const withTranslations = (
   de: string
 ): SubSubcategory => ({
   ...subsub,
+  // Auto-populate importKeywords from English name if not provided
+  // This ensures all subcategories have English search terms for AliExpress/APIs
+  importKeywords: subsub.importKeywords || [en],
   translations: {
     en: { name: en },
     de: { name: de }
