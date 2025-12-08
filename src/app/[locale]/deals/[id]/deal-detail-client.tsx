@@ -36,6 +36,9 @@ import {
   Zap,
   Star,
   Package,
+  Heart,
+  Scale,
+  ArrowDown,
 } from 'lucide-react';
 import DealCard from '@/components/deal-card';
 import CommentSection from '@/components/comment-section';
@@ -45,6 +48,9 @@ import { useAuth } from '@/lib/auth';
 import { toast } from 'sonner';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
+import { useComparison } from '@/components/deal-comparison-tool';
+import { useFavorites } from '@/hooks/use-favorites';
+import { SpecCardGrid } from '@/components/spec-card-grid';
 import {
   Tooltip,
   TooltipContent,
@@ -96,6 +102,13 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
   const [timeRemaining, setTimeRemaining] = useState<string | null>(
     deal.expiryDate ? getTimeRemaining(deal.expiryDate) : null
   );
+  const [temperature, setTemperature] = useState(deal.temperature);
+  const [voteCount, setVoteCount] = useState(deal.voteCount);
+  const [userVote, setUserVote] = useState<1 | -1 | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
+  const { addToComparison } = useComparison();
+  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
+  const [activeTab, setActiveTab] = useState<'discussion' | 'specifications'>('discussion');
 
   // Update countdown every minute
   useEffect(() => {
@@ -120,7 +133,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price)
     : null;
 
-  const isHot = deal.temperature >= 300;
+  const isHot = temperature >= 300;
   const isNew = (() => {
     const posted = new Date(deal.postedAt);
     const now = new Date();
@@ -128,17 +141,19 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
     return diffDays <= 7;
   })();
 
-  const temperatureColor = deal.temperature >= 500 ? 'from-red-500 to-orange-500' 
-    : deal.temperature >= 300 ? 'from-orange-500 to-amber-500'
-    : deal.temperature >= 100 ? 'from-amber-500 to-yellow-500'
+  const temperatureColor = temperature >= 500 ? 'from-red-500 to-orange-500' 
+    : temperature >= 300 ? 'from-orange-500 to-amber-500'
+    : temperature >= 100 ? 'from-amber-500 to-yellow-500'
     : 'from-yellow-500 to-green-500';
 
-  const temperaturePercent = Math.min((deal.temperature / 500) * 100, 100);
+  const temperaturePercent = Math.min((temperature / 500) * 100, 100);
 
   // Galeria - użyj deal.gallery jeśli istnieje
   const images = deal.gallery && deal.gallery.length > 0 
     ? deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }))
     : [{ id: '0', src: deal.image, alt: deal.title }];
+
+  const specifications = (deal.metadata as any)?.specifications || [];
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -165,6 +180,68 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
       navigator.clipboard.writeText(deal.couponCode);
       toast.success('Kod skopiowany do schowka!');
     }
+  };
+
+  const handleVote = async (action: 'up' | 'down') => {
+    if (!user) {
+      toast.error('Musisz być zalogowany, aby głosować.');
+      return;
+    }
+
+    const oldTemperature = temperature;
+    const oldVoteCount = voteCount;
+    const oldUserVote = userVote;
+
+    let tempDelta = 0;
+    let voteDelta = 0;
+    const newVoteValue = action === 'up' ? 1 : -1;
+
+    if (userVote === null) {
+      tempDelta = newVoteValue;
+      voteDelta = newVoteValue;
+    } else if (userVote === newVoteValue) {
+      return;
+    } else {
+      tempDelta = newVoteValue - userVote;
+      voteDelta = newVoteValue - userVote;
+    }
+
+    setTemperature((prev) => prev + tempDelta);
+    setVoteCount((prev) => prev + voteDelta);
+    setUserVote(newVoteValue);
+    setIsVoting(true);
+
+    try {
+      const response = await fetch(`/api/deals/${deal.id}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, userId: user.uid }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Błąd głosowania');
+      }
+
+      setTemperature(data.temperature);
+      setVoteCount(data.voteCount);
+      setUserVote(data.userVote);
+      toast.success('Dzięki za głos!');
+    } catch (error: any) {
+      setTemperature(oldTemperature);
+      setVoteCount(oldVoteCount);
+      setUserVote(oldUserVote);
+      toast.error(error?.message || 'Nie udało się zapisać głosu.');
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  const scrollToDiscussion = () => {
+    setActiveTab('discussion');
+    setTimeout(() => {
+      document.getElementById('deal-discussion')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   return (
@@ -346,6 +423,17 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
               {deal.description}
             </p>
 
+            {/* Spec cards highlight */}
+            <SpecCardGrid
+              specs={specifications.map((s: any) => ({
+                key: s.key || s.name,
+                label: s.name || s.key,
+                value: s.value,
+              }))}
+              title="Parametry produktu"
+              className="mt-4"
+            />
+
             {/* Tags */}
             {deal.tags && deal.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-4">
@@ -486,6 +574,58 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                   variant="outline"
                 />
               </div>
+
+              {/* Action strip: głosowanie, ulubione, porównanie, komentarze */}
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <Button
+                  variant={userVote === 1 ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleVote('up')}
+                  disabled={isVoting}
+                  className="justify-center"
+                >
+                  <ArrowUp className="h-4 w-4 mr-2" />
+                  Głosuj +
+                </Button>
+                <Button
+                  variant={userVote === -1 ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleVote('down')}
+                  disabled={isVoting}
+                  className="justify-center"
+                >
+                  <ArrowDown className="h-4 w-4 mr-2" />
+                  Głosuj -
+                </Button>
+                <Button
+                  variant={isFavorited ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFavorite()}
+                  disabled={isFavoriteLoading}
+                  className="justify-center"
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                  Ulubione
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addToComparison({ ...deal, type: 'deal' })}
+                  className="justify-center"
+                >
+                  <Scale className="h-4 w-4 mr-2" />
+                  Porównaj
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={scrollToDiscussion}
+                  className="col-span-2 sm:col-span-4 justify-center"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Opinie i komentarze
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -501,7 +641,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Temperatura</span>
-                  <span className="font-bold text-lg">{deal.temperature}°</span>
+                  <span className="font-bold text-lg">{temperature}°</span>
                 </div>
                 <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
                   <div 
@@ -518,7 +658,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                   <ArrowUp className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-xs text-muted-foreground">Głosy</p>
-                    <p className="text-lg font-semibold">{deal.voteCount}</p>
+                    <p className="text-lg font-semibold">{voteCount}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -613,7 +753,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
       </div>
 
       {/* Tabs Section */}
-      <Tabs defaultValue="discussion" className="mb-12">
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="mb-12">
         <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
           <TabsTrigger value="discussion">Dyskusja ({liveComments.count})</TabsTrigger>
           {((deal.metadata as any)?.specifications && (deal.metadata as any).specifications.length > 0) && (
@@ -621,7 +761,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
           )}
         </TabsList>
         
-        <TabsContent value="discussion" className="mt-6">
+        <TabsContent value="discussion" className="mt-6" id="deal-discussion">
           <CommentSection collectionName="deals" docId={deal.id} />
         </TabsContent>
 

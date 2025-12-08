@@ -33,6 +33,10 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight as ChevronRightIcon,
+  Heart,
+  Scale,
+  ShoppingCart,
+  MessageSquare,
 } from 'lucide-react';
 import ProductCard from '@/components/product-card';
 import CommentSection from '@/components/comment-section';
@@ -48,6 +52,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { SpecCardGrid } from '@/components/spec-card-grid';
+import { useComparison } from '@/components/deal-comparison-tool';
+import { useFavorites } from '@/hooks/use-favorites';
+import { useSmartCart } from '@/lib/cart-context';
 
 interface Props {
   product: Product;
@@ -60,6 +68,11 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
   const [userRating, setUserRating] = useState<ProductRating | null>(null);
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const { addToComparison } = useComparison();
+  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(product.id, 'product');
+  const { addItem, isInCart } = useSmartCart();
+  const [activeTab, setActiveTab] = useState<'description' | 'reviews' | 'rate' | 'external-reviews'>('description');
 
   const fetchRatings = async () => {
     if (user) {
@@ -111,6 +124,23 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
   const isInStock = !stockStatus || stockStatus === 'in_stock';
   const isLowStock = stockStatus === 'low_stock';
   const isOutOfStock = stockStatus === 'out_of_stock';
+
+  const handleAddToSharedCart = async () => {
+    setIsAddingToCart(true);
+    try {
+      addItem(product, 1);
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
+
+  const scrollToOpinions = (targetTab: typeof activeTab) => {
+    setActiveTab(targetTab);
+    setTimeout(() => {
+      document.getElementById('product-reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   return (
     <div className="container mx-auto px-4 py-4 md:py-8 lg:py-12">
@@ -316,6 +346,17 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               {product.description}
             </p>
 
+            {/* Spec cards highlight */}
+            <SpecCardGrid
+              specs={specifications.map((s: any) => ({
+                key: s.key || s.name,
+                label: s.name || s.key,
+                value: s.value,
+              }))}
+              title="Kluczowe parametry"
+              className="mt-4"
+            />
+
             {/* AI Features */}
             {product.ai?.enrichment?.features && product.ai.enrichment.features.length > 0 && (
               <ul className="mt-4 space-y-2">
@@ -423,6 +464,48 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               <p className="text-xs text-muted-foreground mt-3 text-center">
                 Link afiliacyjny - wspierasz naszą platformę
               </p>
+
+              {/* Action strip: wspólny koszyk, porównanie, ulubione, opinie */}
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <Button
+                  variant={isInCart ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={handleAddToSharedCart}
+                  disabled={isAddingToCart}
+                  className="justify-center"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  {isInCart ? 'Wspólny koszyk' : isAddingToCart ? 'Dodawanie...' : 'Dodaj do koszyka'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addToComparison({ ...product, type: 'product' })}
+                  className="justify-center"
+                >
+                  <Scale className="h-4 w-4 mr-2" />
+                  Porównaj
+                </Button>
+                <Button
+                  variant={isFavorited ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleFavorite()}
+                  disabled={isFavoriteLoading}
+                  className="justify-center"
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                  Ulubione
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => scrollToOpinions('reviews')}
+                  className="col-span-2 sm:col-span-4 justify-center"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Opinie i komentarze
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -460,7 +543,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
       </div>
 
       {/* Tabs Section */}
-      <Tabs defaultValue="description" className="mb-12">
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="mb-12">
         <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
           <TabsTrigger value="description">Opis i specyfikacja</TabsTrigger>
           <TabsTrigger value="reviews">Opinie ({ratingCount})</TabsTrigger>
@@ -712,7 +795,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
           )}
         </TabsContent>
 
-        <TabsContent value="reviews" className="mt-6 space-y-6">
+        <TabsContent value="reviews" className="mt-6 space-y-6" id="product-reviews">
           {/* Recent user ratings */}
           {recentRatings.length > 0 && (
             <Card>
@@ -804,7 +887,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
           </TabsContent>
         )}
 
-        <TabsContent value="rate" className="mt-6">
+        <TabsContent value="rate" className="mt-6" id="product-rate">
           <RatingInput
             productId={product.id}
             existingRating={userRating}

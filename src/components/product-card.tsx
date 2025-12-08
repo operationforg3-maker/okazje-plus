@@ -22,7 +22,7 @@ import { useParams } from 'next/navigation';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
-  TrendingDown, Award, Clock, Check, Plus, Eye
+  TrendingDown, Award, Clock, Check, Plus, Eye, Scale
 } from 'lucide-react';
 import { RatingBar } from './rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
@@ -53,6 +53,7 @@ import {
   getDiscountPercent 
 } from '@/lib/i18n-utils';
 import { cn } from '@/lib/utils';
+import { useComparison } from '@/components/deal-comparison-tool';
 
 interface ProductCardProps {
   product: Product;
@@ -68,6 +69,7 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   const { isFavorited, isLoading, toggleFavorite } = useFavorites(product.id, 'product');
   const { user } = useAuth();
   const { count: commentsCount } = useCommentsCount('products', product.id);
+  const { addToComparison } = useComparison();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -315,6 +317,16 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
                   </span>
                 </>
               )}
+
+              {commentsCount >= 0 && (
+                <>
+                  <span className="text-gray-300 dark:text-gray-600">•</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3" />
+                    {commentsCount} opinii
+                  </span>
+                </>
+              )}
             </div>
           )}
 
@@ -372,6 +384,26 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
               💰 Prowizja: {commission}%
             </Badge>
           )}
+
+          {/* Feature badges to highlight available actions */}
+          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            <Badge variant="outline" className="gap-1">
+              <Scale className="w-3 h-3" />
+              Porównaj
+            </Badge>
+            <Badge variant="outline" className="gap-1">
+              <ShoppingCart className="w-3 h-3" />
+              Wspólny koszyk
+            </Badge>
+            <Badge variant="outline" className="gap-1">
+              <Heart className="w-3 h-3" />
+              Ulubione
+            </Badge>
+            <Badge variant="outline" className="gap-1">
+              <MessageSquare className="w-3 h-3" />
+              Opinie
+            </Badge>
+          </div>
 
           {/* ========================================
               💎 TOTAL LANDED COST (Trust-First Hero)
@@ -449,9 +481,24 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
               ) : (
                 <>
                   <ShoppingCart className="w-4 h-4 mr-2" />
-                  Dodaj do listy
+                  Do wspólnego koszyka
                 </>
               )}
+            </Button>
+
+            {/* Compare Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addToComparison({ ...product, type: 'product' });
+              }}
+              className="px-3"
+            >
+              <Scale className="w-4 h-4 mr-2" />
+              Porównaj
             </Button>
 
             {/* Favorite Button */}

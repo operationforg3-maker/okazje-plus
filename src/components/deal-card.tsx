@@ -718,6 +718,25 @@ export default function DealCard({ deal }: DealCardProps) {
             )}
           </div>
         </div>
+
+        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+          <Badge variant="outline" className="gap-1">
+            <Scale className="h-3 w-3" />
+            Porównaj
+          </Badge>
+          <Badge variant="outline" className="gap-1">
+            <Heart className="h-3 w-3" />
+            Ulubione
+          </Badge>
+          <Badge variant="outline" className="gap-1">
+            <MessageSquare className="h-3 w-3" />
+            Komentarze
+          </Badge>
+          <Badge variant="outline" className="gap-1">
+            <ArrowUp className="h-3 w-3" />
+            Głosowanie
+          </Badge>
+        </div>
       </div>
       
       <div className="flex items-center justify-between gap-2 border-t bg-muted/30 p-3">

@@ -88,6 +88,20 @@ export default async function RootLayout({
         {/* hreflang alternate links (only PL live) */}
         <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="pl" />
         <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="x-default" />
+        {/* Minimal fallback styles in case global CSS fails to load on hosting */}
+        <style
+          id="critical-fallback"
+          dangerouslySetInnerHTML={{
+            __html: `
+              :root { color-scheme: light; }
+              body { margin: 0; font-family: 'Roboto', system-ui, -apple-system, sans-serif; background: #f9f7f3; color: #0f172a; }
+              a { color: #0f766e; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+              .container { max-width: 1200px; margin: 0 auto; padding: 0 12px; }
+              button { font-family: inherit; }
+            `,
+          }}
+        />
       </head>
       <body className={cn('min-h-screen bg-background font-body antialiased')}
         style={{ WebkitOverflowScrolling: 'touch' }}>
