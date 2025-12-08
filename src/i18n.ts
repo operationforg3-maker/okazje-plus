@@ -1,8 +1,6 @@
 import {getRequestConfig} from 'next-intl/server';
 import {hasLocale} from 'next-intl';
 import {routing} from './i18n/routing';
-import path from 'path';
-import { readFileSync } from 'fs';
 
 const namespaces = [
   'home',
@@ -27,12 +25,11 @@ async function loadMessagesForLocale(locale: string) {
     const filename = locale === 'pl'
       ? `${ns}.json`
       : `${ns}.${locale}.json`;
-    
-    const filepath = path.join(process.cwd(), 'messages', filename);
 
     try {
-      const fileContent = readFileSync(filepath, 'utf-8');
-      messages[ns] = JSON.parse(fileContent);
+      // Dynamic import keeps us compatible with the Edge runtime (no fs/path/process)
+      const mod = await import(`../messages/${filename}`);
+      messages[ns] = mod.default;
     } catch (error) {
       // If a namespace is missing, skip it to avoid breaking the whole app.
       if (process.env.NODE_ENV === 'development') {
