@@ -2,11 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Tailwind v4 no longer ships the shadcn alias `border-border`; recreate minimal utilities */
-.border-border { border-color: hsl(var(--border)); }
-.border-border\/40 { border-color: hsl(var(--border) / 0.4); }
-.border-border\/50 { border-color: hsl(var(--border) / 0.5); }
-.border-border\/60 { border-color: hsl(var(--border) / 0.6); }
+@layer utilities {
+  /* Tailwind v4 no longer ships the shadcn alias `border-border`; recreate minimal utilities */
+  .border-border { border-color: hsl(var(--border)); }
+  .border-border\/40 { border-color: hsl(var(--border) / 0.4); }
+  .border-border\/50 { border-color: hsl(var(--border) / 0.5); }
+  .border-border\/60 { border-color: hsl(var(--border) / 0.6); }
+}
 
 @layer base {
   :root {
