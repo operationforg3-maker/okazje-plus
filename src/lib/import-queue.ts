@@ -132,11 +132,14 @@ export class ImportQueueManager {
     const snapshot = await adminDb
       .collection(this.COLLECTION)
       .where('createdBy', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .limit(limit)
       .get();
 
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ImportJob));
+    const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ImportJob));
+    
+    // Sort by createdAt descending on server side
+    jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return jobs.slice(0, limit);
   }
 
   /**
