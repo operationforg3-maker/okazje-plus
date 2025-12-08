@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ interface CategoryForm {
 }
 
 export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryBuilderProps) {
+  const { user, getIdToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [autoLoading, setAutoLoading] = useState(false);
   const [form, setForm] = useState<CategoryForm>({
@@ -69,7 +71,24 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryB
     setAutoLoading(true);
     try {
       log('🤖 Uruchamiam automatyczne budowanie pełnego drzewa kategorii...', 'info');
-      const res = await fetch('/api/admin/categories/auto-build', { method: 'POST' });
+      
+      if (!user) {
+        throw new Error('Brak uwierzytelnienia użytkownika');
+      }
+
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error('Nie udało się pobrać tokenu autoryzacji');
+      }
+
+      const res = await fetch('/api/admin/categories/auto-build', { 
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`);
       }
@@ -134,6 +153,10 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryB
     try {
       log('🏗️ Rozpoczynam tworzenie struktury kategorii...', 'info');
 
+      if (!user) {
+        throw new Error('Brak uwierzytelnienia użytkownika');
+      }
+
       const categories: Category[] = [
         {
           id: form.mainCategory.slug,
@@ -163,9 +186,17 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryB
       // TODO: Save to Firestore
       log('💾 Wysyłam dane do bazy...', 'info');
 
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error('Nie udało się pobrać tokenu autoryzacji');
+      }
+
       const response = await fetch('/api/admin/categories/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ categories }),
       });
 
