@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CATEGORY_STRUCTURE } from '@/lib/category-structure';
+import { CATEGORY_SEEDS } from '@/lib/category-seeds';
 import { adminDb } from '@/lib/firebase-admin';
 import { checkAdminAuth } from '@/lib/auth-helpers';
 
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   try {
     let written = 0;
-    for (const main of CATEGORY_STRUCTURE) {
+    for (const main of CATEGORY_SEEDS) {
       const mainRef = adminDb.collection('categories').doc(main.slug);
       await mainRef.set({
         id: main.slug,
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, created: written, categories: CATEGORY_STRUCTURE.length });
+    return NextResponse.json({ success: true, created: written, categories: CATEGORY_SEEDS.length });
   } catch (err: any) {
     console.error('auto-build categories failed', err);
     return NextResponse.json({ error: err?.message || 'Failed to auto-build categories' }, { status: 500 });
