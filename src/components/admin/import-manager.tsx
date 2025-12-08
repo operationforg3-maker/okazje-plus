@@ -470,7 +470,7 @@ export function ImportManager() {
                             </span>
                             {getStatusBadge(job.status)}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-muted-foreground" suppressHydrationWarning>
                             {new Date(job.createdAt).toLocaleString('pl')}
                           </div>
                         </div>
