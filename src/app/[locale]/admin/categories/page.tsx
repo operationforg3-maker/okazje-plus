@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useCollection } from "react-firebase-hooks/firestore";
 import { collection, doc, setDoc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
@@ -62,6 +62,12 @@ const generateSlug = (name: string) => {
 export default function AdminCategoriesPage() {
   const { user, loading: authLoading } = useAuth();
   const [categoriesData, loadingCategories, errorCategories] = useCollection(collection(db, "categories"));
+
+  // Calculate allCategories early so it can be used in handlers
+  const allCategories = useMemo(() => 
+    categoriesData?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)) || [],
+    [categoriesData]
+  );
 
   const [isSubmittingMain, setIsSubmittingMain] = useState(false);
   const [isSubmittingSub, setIsSubmittingSub] = useState(false);
@@ -288,8 +294,6 @@ export default function AdminCategoriesPage() {
   if (!user || !isAdmin(user)) {
     return <div className="text-center py-10">Brak uprawnień. Ta strona jest dostępna tylko dla administratorów.</div>;
   }
-  
-  const allCategories = categoriesData?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category));
 
   // Get current subcategories for the dialog to ensure UI updates instantly after deletion
   const currentSubcategories = allCategories?.find(c => c.id === editingCategory?.id)?.subcategories || [];
