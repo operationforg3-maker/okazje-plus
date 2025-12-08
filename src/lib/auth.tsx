@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from 'react';
-import { onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, signOut, getIdToken } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase'; 
 import { User } from '@/lib/types';
@@ -10,36 +10,52 @@ interface AuthContextType {
   user: User | null; 
   loading: boolean;
   logout: () => Promise<void>;
+  getIdToken: () => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType>({ 
   user: null, 
   loading: true,
-  logout: async () => {}
+  logout: async () => {},
+  getIdToken: async () => null
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
 
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    setFirebaseUser(null);
+  };
+
+  const getTokenForUser = async (): Promise<string | null> => {
+    try {
+      if (!firebaseUser) return null;
+      return await getIdToken(firebaseUser);
+    } catch (error) {
+      console.error('Error getting ID token:', error);
+      return null;
+    }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUserObj: FirebaseUser | null) => {
+      setFirebaseUser(firebaseUserObj);
+      
+      if (firebaseUserObj) {
+        const userRef = doc(db, 'users', firebaseUserObj.uid);
         const docSnap = await getDoc(userRef);
 
         if (docSnap.exists()) {
           const existingData = docSnap.data() as Partial<User>;
           const normalizedUser: User = {
-            uid: firebaseUser.uid,
-            email: existingData.email ?? firebaseUser.email ?? null,
-            displayName: existingData.displayName ?? firebaseUser.displayName ?? null,
-            photoURL: existingData.photoURL ?? firebaseUser.photoURL ?? null,
+            uid: firebaseUserObj.uid,
+            email: existingData.email ?? firebaseUserObj.email ?? null,
+            displayName: existingData.displayName ?? firebaseUserObj.displayName ?? null,
+            photoURL: existingData.photoURL ?? firebaseUserObj.photoURL ?? null,
             role: existingData.role ?? 'user',
           };
 
@@ -48,10 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(normalizedUser);
         } else {
           const newUser: User = {
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            photoURL: firebaseUser.photoURL,
+            uid: firebaseUserObj.uid,
+            email: firebaseUserObj.email,
+            displayName: firebaseUserObj.displayName,
+            photoURL: firebaseUserObj.photoURL,
             role: 'user', 
           };
           await setDoc(userRef, newUser);
@@ -66,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const contextValue = useMemo(() => ({ user, loading, logout }), [user, loading]);
+  const contextValue = useMemo(() => ({ user, loading, logout, getIdToken: getTokenForUser }), [user, loading, firebaseUser]);
 
   return (
     <AuthContext.Provider value={contextValue}>

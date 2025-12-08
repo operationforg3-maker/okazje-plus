@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { adminAuth } from './firebase-admin';
+import { adminAuth, adminDb } from './firebase-admin';
 
 export interface AuthResult {
   authorized: boolean;
@@ -17,6 +17,7 @@ export interface AuthResult {
 /**
  * Verify Firebase auth token from request headers
  * Checks for Authorization: Bearer <token> header
+ * Falls back to Firestore for role if not in JWT claims
  */
 export async function verifyAuthToken(req: NextRequest): Promise<AuthResult> {
   try {
@@ -41,11 +42,27 @@ export async function verifyAuthToken(req: NextRequest): Promise<AuthResult> {
     // Verify token with Firebase Admin SDK
     const decodedToken = await adminAuth.verifyIdToken(token);
     
+    let role = decodedToken.role || 'user';
+    
+    // Fallback to Firestore if role not in JWT claims
+    if (!decodedToken.role) {
+      try {
+        const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          role = userData?.role || 'user';
+        }
+      } catch (firestoreError) {
+        console.warn('Could not fetch user role from Firestore:', firestoreError);
+        // Continue with default 'user' role
+      }
+    }
+    
     return {
       authorized: true,
       uid: decodedToken.uid,
       email: decodedToken.email,
-      role: decodedToken.role || 'user'
+      role: role
     };
 
   } catch (error: any) {
