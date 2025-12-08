@@ -63,8 +63,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('[POST /api/admin/import/queue] Error:', error);
+    console.error('[POST /api/admin/import/queue] Error stack:', error?.stack);
+    console.error('[POST /api/admin/import/queue] Error message:', error?.message);
     return NextResponse.json(
-      { error: error.message || 'Failed to create import job' },
+      { error: error.message || 'Failed to create import job', details: error?.toString() },
       { status: 500 }
     );
   }
@@ -95,8 +97,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('[GET /api/admin/import/queue] Error:', error);
+    console.error('[GET /api/admin/import/queue] Error stack:', error?.stack);
+    console.error('[GET /api/admin/import/queue] Error message:', error?.message);
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch jobs' },
+      { error: error.message || 'Failed to fetch jobs', details: error?.toString() },
       { status: 500 }
     );
   }

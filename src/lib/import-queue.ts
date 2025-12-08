@@ -129,17 +129,33 @@ export class ImportQueueManager {
    * List user's jobs
    */
   static async listUserJobs(userId: string, limit = 20): Promise<ImportJob[]> {
-    const snapshot = await adminDb
-      .collection(this.COLLECTION)
-      .where('createdBy', '==', userId)
-      .get();
+    try {
+      console.log('[ImportQueueManager.listUserJobs] Starting fetch for userId:', userId);
+      
+      const snapshot = await adminDb
+        .collection(this.COLLECTION)
+        .where('createdBy', '==', userId)
+        .get();
 
-    const jobs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ImportJob));
-    
-    // Sort by createdAt descending on server side
-    jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
-    return jobs.slice(0, limit);
+      console.log('[ImportQueueManager.listUserJobs] Got snapshot with', snapshot.docs.length, 'docs');
+
+      const jobs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('[ImportQueueManager.listUserJobs] Processing doc:', doc.id, data);
+        return { id: doc.id, ...data } as ImportJob;
+      });
+      
+      // Sort by createdAt descending on server side
+      jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      console.log('[ImportQueueManager.listUserJobs] Returning', jobs.length, 'sorted jobs');
+      return jobs.slice(0, limit);
+    } catch (error: any) {
+      console.error('[ImportQueueManager.listUserJobs] Error:', error);
+      console.error('[ImportQueueManager.listUserJobs] Error message:', error?.message);
+      console.error('[ImportQueueManager.listUserJobs] Error stack:', error?.stack);
+      throw error;
+    }
   }
 
   /**
