@@ -4,6 +4,7 @@ const tsParser = require('@typescript-eslint/parser');
 const tsPlugin = require('@typescript-eslint/eslint-plugin');
 const reactPlugin = require('eslint-plugin-react');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
+const nextPlugin = require('@next/eslint-plugin-next');
 
 module.exports = {
   files: ['**/*.{js,jsx,ts,tsx}'],
@@ -24,8 +25,13 @@ module.exports = {
     '@typescript-eslint': tsPlugin,
     react: reactPlugin,
     'react-hooks': reactHooksPlugin,
+    '@next/next': nextPlugin,
   },
   rules: {
+    ...nextPlugin.configs.recommended.rules,
+    ...nextPlugin.configs['core-web-vitals'].rules,
+    '@next/next/no-html-link-for-pages': 'off',
+    '@next/next/no-img-element': 'off',
   'react-hooks/rules-of-hooks': 'warn',
   // re-enable exhaustive-deps for compatibility testing. If this crashes,
   // we will iterate plugin versions and @typescript-eslint to find a safe combo.

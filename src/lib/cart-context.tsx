@@ -12,7 +12,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Product, SmartPrice } from '@/lib/types';
 import { getPriceAmount, getTotalPrice } from '@/lib/i18n-utils';
@@ -54,22 +54,10 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load cart from storage on mount
-  useEffect(() => {
-    loadCart();
-  }, [user]);
-
-  // Save cart to storage whenever it changes
-  useEffect(() => {
-    if (!isLoading) {
-      saveCart();
-    }
-  }, [items, isLoading]);
-
   /**
    * Load cart from localStorage (guests) or Firestore (logged-in users)
    */
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     try {
       if (user) {
         // Load from Firestore for logged-in users
@@ -99,12 +87,17 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  // Load cart from storage on mount/user change
+  useEffect(() => {
+    loadCart();
+  }, [loadCart]);
 
   /**
    * Save cart to localStorage (and Firestore if logged in)
    */
-  const saveCart = async () => {
+  const saveCart = useCallback(async () => {
     try {
       // Save to localStorage (always, for guests and backup)
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
@@ -124,7 +117,14 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       logger.error('Failed to save cart', { error });
     }
-  };
+  }, [items, user]);
+
+  // Save cart to storage whenever it changes
+  useEffect(() => {
+    if (!isLoading) {
+      saveCart();
+    }
+  }, [items, isLoading, saveCart]);
 
   /**
    * Add item to cart

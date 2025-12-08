@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,9 +59,38 @@ export function ImportManager() {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   // Fetch history on mount
+  const getTokenOrThrow = useCallback(async () => {
+    const currentUser = auth.currentUser;
+    const token = await currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('Brak tokenu. Zaloguj się ponownie.');
+    }
+    return token;
+  }, []);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const token = await getTokenOrThrow();
+      const res = await fetch('/api/admin/import/history?limit=10', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.jobs || []);
+      } else if (res.status === 401) {
+        toast.error('Brak autoryzacji do podglądu historii importu');
+      }
+    } catch (e) {
+      console.error('Failed to fetch history:', e);
+    }
+  }, [getTokenOrThrow]);
+
+  // Fetch history on mount
   useEffect(() => {
     fetchHistory();
-  }, []);
+  }, [fetchHistory]);
 
   // Poll active job status
   useEffect(() => {
@@ -104,35 +133,7 @@ export function ImportManager() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [activeJobId]);
-
-  const getTokenOrThrow = async () => {
-    const currentUser = auth.currentUser;
-    const token = await currentUser?.getIdToken();
-    if (!token) {
-      throw new Error('Brak tokenu. Zaloguj się ponownie.');
-    }
-    return token;
-  };
-
-  const fetchHistory = async () => {
-    try {
-      const token = await getTokenOrThrow();
-      const res = await fetch('/api/admin/import/history?limit=10', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setHistory(data.jobs || []);
-      } else if (res.status === 401) {
-        toast.error('Brak autoryzacji do podglądu historii importu');
-      }
-    } catch (e) {
-      console.error('Failed to fetch history:', e);
-    }
-  };
+  }, [activeJobId, pollingInterval, fetchHistory, getTokenOrThrow]);
 
   const startImport = async (type: 'products' | 'deals') => {
     if (loading) return;

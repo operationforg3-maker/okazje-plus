@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { useAuth, isAdmin } from "@/lib/auth";
 import { useTranslations, useFormatter } from "next-intl";
@@ -76,12 +76,7 @@ export default function ImportsPage() {
 
   const statusLabel = (status: ImportRun["status"]) => t(`statusMap.${status}` as any);
 
-  useEffect(() => {
-    if (!isUserAdmin) return;
-    loadRuns();
-  }, [isUserAdmin]);
-
-  const loadRuns = async () => {
+  const loadRuns = useCallback(async () => {
     try {
       setLoadingRuns(true);
       setError(null);
@@ -97,7 +92,12 @@ export default function ImportsPage() {
     } finally {
       setLoadingRuns(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (!isUserAdmin) return;
+    loadRuns();
+  }, [isUserAdmin, loadRuns]);
 
   const loadRunDetail = async (id: string) => {
     try {
