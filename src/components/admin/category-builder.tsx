@@ -15,6 +15,8 @@ import type { Category, Subcategory, SubSubcategory } from '@/lib/types';
 interface CategoryBuilderProps {
   onCategoriesCreated?: (categories: Category[]) => void;
   onConsoleLog?: (message: string, type: 'info' | 'success' | 'error' | 'warning') => void;
+  user?: any;
+  getIdToken?: () => Promise<string | null>;
 }
 
 interface CategoryForm {
@@ -36,8 +38,23 @@ interface CategoryForm {
   }>;
 }
 
-export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryBuilderProps) {
-  const { user, getIdToken } = useAuth();
+export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userProp, getIdToken: getIdTokenProp }: CategoryBuilderProps) {
+  let user = userProp || null;
+  let getIdTokenFn = getIdTokenProp || (async () => null);
+  
+  // Try to get from context if not provided as props
+  try {
+    const authContext = useAuth();
+    if (authContext && !userProp) {
+      user = authContext.user;
+    }
+    if (authContext && !getIdTokenProp) {
+      getIdTokenFn = authContext.getIdToken || (async () => null);
+    }
+  } catch (e) {
+    // Hook not available in this context, use prop values or continue with defaults
+  }
+
   const [loading, setLoading] = useState(false);
   const [autoLoading, setAutoLoading] = useState(false);
   const [form, setForm] = useState<CategoryForm>({
@@ -76,7 +93,7 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryB
         throw new Error('Brak uwierzytelnienia użytkownika');
       }
 
-      const token = await getIdToken();
+      const token = await getIdTokenFn();
       if (!token) {
         throw new Error('Nie udało się pobrać tokenu autoryzacji');
       }
@@ -186,7 +203,7 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryB
       // TODO: Save to Firestore
       log('💾 Wysyłam dane do bazy...', 'info');
 
-      const token = await getIdToken();
+      const token = await getIdTokenFn();
       if (!token) {
         throw new Error('Nie udało się pobrać tokenu autoryzacji');
       }

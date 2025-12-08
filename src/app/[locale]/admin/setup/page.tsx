@@ -1,6 +1,8 @@
 // @ts-nocheck
 'use client';
 
+import { useAuth } from '@/lib/auth';
+
 import { useState, useEffect } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
 import { auth } from '@/lib/firebase';
@@ -34,6 +36,7 @@ import { CategoryBuilder } from '@/components/admin/category-builder';
 import { useTranslations } from 'next-intl';
 
 function SetupPage() {
+  const { user, getIdToken } = useAuth();
   const t = useTranslations('adminSetup');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
@@ -571,6 +574,8 @@ function SetupPage() {
             {/* Create Categories Structure */}
             <div className="lg:col-span-2">
               <CategoryBuilder
+                user={user}
+                getIdToken={getIdToken}
                 onConsoleLog={addLog}
                 onCategoriesCreated={(cats) => {
                   addLog('success', `✅ Struktura kategorii przygotowana (${cats.length} kategorii)`);
