@@ -2,7 +2,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useMemo, useState, Suspense, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
@@ -573,16 +573,5 @@ function ProductsPageContent() {
 }
 
 export default function ProductsPage() {
-  return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/4"></div>
-          <div className="h-96 bg-muted rounded"></div>
-        </div>
-      </div>
-    }>
-      <ProductsPageContent />
-    </Suspense>
-  );
+  return <ProductsPageContent />;
 }

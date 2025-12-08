@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CATEGORY_SEEDS } from '@/lib/category-seeds';
 import { adminDb } from '@/lib/firebase-admin';
 import { checkAdminAuth } from '@/lib/auth-helpers';
+import { cacheDel } from '@/lib/cache';
 
 export async function POST(req: NextRequest) {
   const auth = await checkAdminAuth(req);
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest) {
         }
       }
     }
+
+    // Clear cache after successfully building categories
+    await cacheDel('categories:all');
+    console.log('[auto-build] Cache cleared for categories:all');
 
     return NextResponse.json({ success: true, created: written, categories: CATEGORY_SEEDS.length });
   } catch (err: any) {
