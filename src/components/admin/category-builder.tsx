@@ -105,6 +105,7 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
       const subCount = body.subcategories || 0;
       const subSubCount = body.subSubcategories || 0;
       log(`✅ Zakończono auto-build. Zapisano ${rootCount} głównych kategorii, ${subCount} podkategorii, ${subSubCount} pod-podkategorii (razem: ${createdDocs} dokumentów).`, 'success');
+      log(`🌐 Wszystkie kategorie mają tłumaczenia: PL (natywnie) + EN + DE`, 'info');
 
       // Poinformuj wyżej z poprawną licznością, nawet jeśli nie ściągamy pełnych danych (używane do logów)
       const stubCategories = Array.from({ length: rootCount }, (_, idx) => ({

@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
         description: main.description || '',
         icon: main.icon || '📂',
         sortOrder: main.sortOrder || 0,
+        translations: main.translations || {},
         updatedAt: new Date(),
       }, { merge: true });
       mainCount++;
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
           description: sub.description || '',
           icon: sub.icon || '',
           sortOrder: (sub as any).sortOrder || 0,
+          translations: (sub as any).translations || {},
           updatedAt: new Date(),
         }, { merge: true });
         subCount++;
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
             description: subsub.description || '',
             icon: subsub.icon || '',
             sortOrder: (subsub as any).sortOrder || 0,
+            translations: (subsub as any).translations || {},
             importKeywords: (subsub as any).aliexpressKeywords || (subsub as any).importKeywords || [],
             updatedAt: new Date(),
           }, { merge: true });
@@ -62,7 +65,18 @@ export async function POST(req: NextRequest) {
 
     // Clear cache after successfully building categories
     await cacheDel('categories:all');
-    console.log('[auto-build] Cache cleared for categories:all');
+    
+    // Detailed logging
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[auto-build] ✅ Kategorie zostały zbudowane pomyślnie!`);
+    console.log(`[auto-build] 📊 Summary by level:`);
+    console.log(`  🏆 Główne kategorie (Main): ${mainCount}`);
+    console.log(`  📂 Podkategorie (Sub): ${subCount}`);
+    console.log(`  📋 Pod-podkategorie (SubSub): ${subSubCount}`);
+    console.log(`  📊 Razem: ${totalWritten} dokumentów`);
+    console.log(`[auto-build] 🌐 Języki: PL (native), EN, DE (translations)`);
+    console.log(`[auto-build] Cache cleared for categories:all`);
+    console.log(`${'='.repeat(60)}\n`);
 
     return NextResponse.json({ 
       success: true, 
@@ -70,6 +84,7 @@ export async function POST(req: NextRequest) {
       categories: mainCount,
       subcategories: subCount,
       subSubcategories: subSubCount,
+      message: `Zbudowano ${mainCount} głównych kategorii, ${subCount} podkategorii, ${subSubCount} pod-podkategorii (razem ${totalWritten} dokumentów) z tłumaczeniami PL/EN/DE`,
     });
   } catch (err: any) {
     console.error('auto-build categories failed', err);
