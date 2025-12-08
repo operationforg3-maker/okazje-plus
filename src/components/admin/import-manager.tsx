@@ -43,6 +43,14 @@ interface ImportJob {
     status: 'success' | 'error';
     itemsAdded?: number;
     itemsUpdated?: number;
+    itemsSkipped?: number;
+    stages?: {
+      fetched: number;
+      deduplicated: number;
+      enriched: number;
+      translated: number;
+      saved: number;
+    };
     error?: string;
   }>;
   itemsCreated?: string[];
@@ -410,8 +418,13 @@ export function ImportManager() {
                           </span>
                         </div>
                         {log.status === 'success' ? (
-                          <div className="text-xs mt-1">
-                            ✓ Dodano: {log.itemsAdded}, Zaktualizowano: {log.itemsUpdated}
+                          <div className="text-xs mt-1 space-y-0.5">
+                            <div>💾 Dodano: {log.itemsAdded}, Zaktualizowano: {log.itemsUpdated}{log.itemsSkipped ? `, Pominięto: ${log.itemsSkipped}` : ''}</div>
+                            {log.stages && (
+                              <div className="text-muted-foreground">
+                                📊 Fetch: {log.stages.fetched} → Dedupe: {log.stages.deduplicated} → Enrich: {log.stages.enriched} → Translate: {log.stages.translated} → Save: {log.stages.saved}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="text-xs mt-1">✗ {log.error}</div>

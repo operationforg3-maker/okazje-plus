@@ -241,6 +241,7 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
           },
           itemsAdded: pipelineResult.saved.created.length,
           itemsUpdated: pipelineResult.saved.updated.length,
+          itemsSkipped: pipelineResult.saved.skipped.length,
           timeMs: pipelineResult.totalTime,
         };
 
@@ -251,7 +252,9 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
           updatedAt: new Date().toISOString(),
         });
 
-        console.log(`[Import Processor] [${i + 1}/${batches.length}] ✓ Pipeline completed in ${(pipelineResult.totalTime / 1000).toFixed(1)}s: ${pipelineResult.saved.created.length} created, ${pipelineResult.saved.updated.length} updated`);
+        console.log(`[Import Processor] [${i + 1}/${batches.length}] ✓ Pipeline completed in ${(pipelineResult.totalTime / 1000).toFixed(1)}s`);
+        console.log(`  📊 Fetched: ${pipelineResult.fetched.length}, Deduped: ${pipelineResult.deduplicated.length}, Enriched: ${pipelineResult.enriched.length}, Translated: ${pipelineResult.translated.length}`);
+        console.log(`  💾 Saved: ${pipelineResult.saved.created.length} created, ${pipelineResult.saved.updated.length} updated, ${pipelineResult.saved.skipped.length} skipped`);
       } catch (e: any) {
         console.error(`[Import Processor] [${i + 1}/${batches.length}] ✗ Error:`, e.message);
 

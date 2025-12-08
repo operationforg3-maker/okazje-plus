@@ -102,7 +102,9 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
       const body = await res.json();
       const createdDocs = body.created || 0;
       const rootCount = body.categories || 0;
-      log(`✅ Zakończono auto-build. Zapisano ${createdDocs} dokumentów (${rootCount} kategorii głównych).`, 'success');
+      const subCount = body.subcategories || 0;
+      const subSubCount = body.subSubcategories || 0;
+      log(`✅ Zakończono auto-build. Zapisano ${rootCount} głównych kategorii, ${subCount} podkategorii, ${subSubCount} pod-podkategorii (razem: ${createdDocs} dokumentów).`, 'success');
 
       // Poinformuj wyżej z poprawną licznością, nawet jeśli nie ściągamy pełnych danych (używane do logów)
       const stubCategories = Array.from({ length: rootCount }, (_, idx) => ({

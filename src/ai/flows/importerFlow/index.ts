@@ -179,6 +179,12 @@ export async function runProductImportPipeline(
     const totalTime = Date.now() - startTime;
     console.log(`${'='.repeat(60)}`);
     console.log(`[ProductImporter] Pipeline completed in ${(totalTime / 1000).toFixed(1)}s`);
+    console.log(`[ProductImporter] ✅ SUMMARY:`);
+    console.log(`  📦 Fetched: ${fetched.length} products`);
+    console.log(`  🔍 Deduplicated: ${deduplicated.length} products`);
+    console.log(`  ✨ Enriched: ${enriched.length} products`);
+    console.log(`  🌐 Translated: ${translated.length} products`);
+    console.log(`  💾 Saved: ${saved.created.length} created, ${saved.updated.length} updated, ${saved.skipped.length} skipped`);
     console.log(`${'='.repeat(60)}\n`);
     
     return {

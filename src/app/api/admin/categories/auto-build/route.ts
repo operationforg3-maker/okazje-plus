@@ -11,7 +11,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    let written = 0;
+    let mainCount = 0;
+    let subCount = 0;
+    let subSubCount = 0;
+
     for (const main of CATEGORY_SEEDS) {
       const mainRef = adminDb.collection('categories').doc(main.slug);
       await mainRef.set({
@@ -23,7 +26,7 @@ export async function POST(req: NextRequest) {
         sortOrder: main.sortOrder || 0,
         updatedAt: new Date(),
       }, { merge: true });
-      written++;
+      mainCount++;
 
       const subcats = main.subcategories || [];
       for (const sub of subcats) {
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
           sortOrder: (sub as any).sortOrder || 0,
           updatedAt: new Date(),
         }, { merge: true });
-        written++;
+        subCount++;
 
         const subsubs = sub.subcategories || [];
         for (const subsub of subsubs) {
@@ -50,16 +53,24 @@ export async function POST(req: NextRequest) {
             importKeywords: (subsub as any).aliexpressKeywords || (subsub as any).importKeywords || [],
             updatedAt: new Date(),
           }, { merge: true });
-          written++;
+          subSubCount++;
         }
       }
     }
+
+    const totalWritten = mainCount + subCount + subSubCount;
 
     // Clear cache after successfully building categories
     await cacheDel('categories:all');
     console.log('[auto-build] Cache cleared for categories:all');
 
-    return NextResponse.json({ success: true, created: written, categories: CATEGORY_SEEDS.length });
+    return NextResponse.json({ 
+      success: true, 
+      created: totalWritten, 
+      categories: mainCount,
+      subcategories: subCount,
+      subSubcategories: subSubCount,
+    });
   } catch (err: any) {
     console.error('auto-build categories failed', err);
     return NextResponse.json({ error: err?.message || 'Failed to auto-build categories' }, { status: 500 });
