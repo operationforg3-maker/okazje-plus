@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Trash2, CheckCircle, AlertCircle, Loader2, ListTree } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, AlertCircle, Loader2, ListTree, Sparkles } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import type { Category, Subcategory, SubSubcategory } from '@/lib/types';
 
@@ -37,6 +37,7 @@ interface CategoryForm {
 
 export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryBuilderProps) {
   const [loading, setLoading] = useState(false);
+  const [autoLoading, setAutoLoading] = useState(false);
   const [form, setForm] = useState<CategoryForm>({
     mainCategory: {
       name: 'Elektronika',
@@ -62,6 +63,26 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryB
     const logMessage = `[${timestamp}] ${message}`;
     console.log(`[${type.toUpperCase()}] ${logMessage}`);
     onConsoleLog?.(logMessage, type);
+  };
+
+  const handleAutoBuild = async () => {
+    setAutoLoading(true);
+    try {
+      log('🤖 Uruchamiam automatyczne budowanie pełnego drzewa kategorii...', 'info');
+      const res = await fetch('/api/admin/categories/auto-build', { method: 'POST' });
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+      const body = await res.json();
+      log(`✅ Zakończono auto-build. Zapisano ${body.created || 0} dokumentów.`, 'success');
+      // Opcjonalnie poinformuj wyżej, że struktura jest gotowa (bez danych szczegółowych)
+      onCategoriesCreated?.([]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Nieznany błąd';
+      log(`❌ Auto-build kategorii nie powiódł się: ${message}`, 'error');
+    } finally {
+      setAutoLoading(false);
+    }
   };
 
   const handleAddSubcategory = () => {
@@ -171,6 +192,23 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog }: CategoryB
           Konstruktor Kategorii
         </CardTitle>
         <CardDescription>Tworzenie struktury kategorii, podkategorii i pod-podkategorii</CardDescription>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleAutoBuild}
+            disabled={autoLoading}
+            className="gap-2"
+          >
+            {autoLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Auto: pełne drzewo (import ready)
+          </Button>
+          <Alert className="py-2 px-3 border-dashed">
+            <AlertDescription className="text-xs">
+              Użyj automatu aby wgrać kompletną 3‑poziomową taksonomię zgodną z importami (AliExpress/Convertiser/Deals&Products).
+            </AlertDescription>
+          </Alert>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Main Category */}
