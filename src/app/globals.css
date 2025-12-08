@@ -2,6 +2,99 @@
 
 @source "../**/*.{js,ts,jsx,tsx,mdx}";
 
+/**
+ * ╔════════════════════════════════════════════════════════════════════════════╗
+ * ║                       OKAZJE+ DESIGN SYSTEM v1.0                          ║
+ * ║                        Color, Spacing & Border Radius Standards             ║
+ * ╚════════════════════════════════════════════════════════════════════════════╝
+ * 
+ * This global CSS file defines the unified design system for Okazje+ platform.
+ * All UI components should follow these standards for visual consistency.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * COLOR SYSTEM (HSL Format)
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * PRIMARY (Teal - #357D58):
+ *   - Use for: CTAs, active states, brand identity, primary buttons
+ *   - Light: 142.1° 76.2% 36.3%
+ *   - Dark:  142.1° 70.6% 45.3% (lighter for dark mode contrast)
+ *
+ * SECONDARY (Light Blue - #C5E0EC):
+ *   - Use for: Secondary actions, subtle backgrounds, hover states
+ *   - Light: 210° 40% 96.1%
+ *   - Dark:  12.2° 6.5% 15.1%
+ *
+ * ACCENT (Orange - #FF6B35):
+ *   - Use for: Promotions, hot deals, badges, highlights
+ *   - Light: 24.6° 95% 53.1%
+ *   - Dark:  20.5° 90.2% 48.2%
+ *
+ * DESTRUCTIVE (Red - #EF4444):
+ *   - Use for: Errors, warnings, deletion actions
+ *   - Light: 0° 84.2% 60.2%
+ *   - Dark:  0° 62.8% 30.6%
+ *
+ * MUTED (Subtle Gray):
+ *   - Use for: Disabled states, subtle backgrounds, secondary text
+ *   - Light: 210° 40% 96.1%
+ *   - Dark:  12.2° 6.5% 15.1%
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * BORDER RADIUS STANDARD
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Base radius: 0.5rem (8px) applied via --radius CSS variable
+ * 
+ * Usage guidelines:
+ *   - rounded-md:    Input fields, buttons, small cards (8px)
+ *   - rounded-lg:    Deal cards, product cards, larger containers (12px)
+ *   - rounded-xl:    Modal dialogs, hero sections (16px+)
+ *   - rounded-full:  Badges, avatars, circular buttons (50%)
+ *
+ * NO HARDCODED RADIUS VALUES - always use Tailwind utility classes
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * SPACING SCALE (Tailwind Default)
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Mobile-first responsive approach:
+ *   - Gap/Padding: p-4 (mobile), md:p-6 (tablet+)
+ *   - Grid columns: grid-cols-1 (mobile), sm:grid-cols-2, lg:grid-cols-3+
+ *   - Text size: text-sm (mobile), sm:text-base, md:text-lg
+ *
+ * Container max-width: max-w-screen-2xl (1400px), centered, 2rem padding
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * COMPONENT USAGE PATTERNS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Card (bg-card border border-border rounded-lg):
+ *   - Deal cards, product cards, containers
+ *   - Light: White with subtle gray border
+ *   - Dark: Dark gray with subtle light border
+ * 
+ * Buttons:
+ *   - Primary: bg-primary text-primary-foreground rounded-md
+ *   - Secondary: bg-secondary text-secondary-foreground rounded-md
+ *   - Outline: border border-border rounded-md
+ *
+ * Text hierarchy:
+ *   - Headings: font-headline (Space Grotesk) font-bold
+ *   - Body: font-body (Roboto) font-normal
+ *   - Muted: text-muted-foreground
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * DARK MODE
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Applied via .dark class on <html> element
+ * All colors automatically adjust via CSS variables
+ * No component-level dark: prefixes needed - use CSS variables directly
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
 @theme {
   /* Map shadcn CSS variables to Tailwind v4 color tokens */
   --color-background: hsl(var(--background));
@@ -35,65 +128,83 @@
 
 @layer base {
   :root {
-    --background: 47 33% 96.1%; /* Jasny, ciepły szary */
-    --foreground: 20 14.3% 4.1%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 20 14.3% 4.1%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 20 14.3% 4.1%;
-
-    --primary: 142.1 76.2% 36.3%; /* Ciemny zielony */
-    --primary-foreground: 355.7 100% 97.3%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 84% 4.9%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 24.6 95% 53.1%; /* Pomarańczowy */
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 142.1 76.2% 36.3%;
+    /* ================== LIGHT MODE COLOR PALETTE ==================
+       Design System: Teal-Primary, Orange-Accent, Professional Neutral
+       All values in HSL format: hue saturation lightness
+       
+       USAGE GUIDELINES:
+       - Primary (Teal): CTA buttons, active states, brand color
+       - Secondary (Light Blue): Secondary actions, backgrounds
+       - Accent (Orange): Highlights, badges, promotional elements
+       - Muted: Subtle backgrounds, disabled states
+       - Destructive: Warnings, errors, deletions
+       - Radius Standard: 0.5rem (8px) for all borders/corners
+       ============================================================== */
     
-    --radius: 0.5rem;
+    --background: 47 33% 96.1%; /* Jasny, ciepły szary - tło stron */
+    --foreground: 20 14.3% 4.1%; /* Prawie czarny - tekst podstawowy */
+
+    --card: 0 0% 100%; /* Biały - karty, kontenery */
+    --card-foreground: 20 14.3% 4.1%; /* Prawie czarny - tekst na kartach */
+
+    --popover: 0 0% 100%; /* Biały - wyskakujące elementy */
+    --popover-foreground: 20 14.3% 4.1%; /* Prawie czarny */
+
+    --primary: 142.1 76.2% 36.3%; /* Ciemny zielony (teal) - akcje, przyciski CTA */
+    --primary-foreground: 355.7 100% 97.3%; /* Prawie biały - tekst na primary */
+
+    --secondary: 210 40% 96.1%; /* Jasny niebieski - elementy drugorzędne */
+    --secondary-foreground: 222 84% 4.9%; /* Ciemnogranatowy */
+
+    --muted: 210 40% 96.1%; /* Jasny niebieski - tła subtlne */
+    --muted-foreground: 215.4 16.3% 46.9%; /* Szary - tekst wyciszony */
+
+    --accent: 24.6 95% 53.1%; /* Pomarańczowy (orange) - promocje, hot deals */
+    --accent-foreground: 0 0% 98%; /* Prawie biały */
+
+    --destructive: 0 84.2% 60.2%; /* Czerwony - błędy, usuwanie */
+    --destructive-foreground: 0 0% 98%; /* Biały */
+
+    --border: 214.3 31.8% 91.4%; /* Jasny szary - obramowania, separatory */
+    --input: 214.3 31.8% 91.4%; /* Jasny szary - pola wejścia */
+    --ring: 142.1 76.2% 36.3%; /* Teal - focus ring (accessibility) */
+    
+    --radius: 0.5rem; /* 8px - standardowe zaokrąglenie dla wszystkich elementów */
   }
 
   .dark {
-    --background: 20 14.3% 4.1%;
-    --foreground: 0 0% 98%;
+    /* ================== DARK MODE COLOR PALETTE ==================
+       Same design system applied to dark theme
+       High contrast for accessibility in low-light environments
+       ============================================================== */
+    
+    --background: 20 14.3% 4.1%; /* Prawie czarny - tło stron */
+    --foreground: 0 0% 98%; /* Prawie biały - tekst podstawowy */
 
-    --card: 24 9.8% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 24 9.8% 10%; /* Ciemnoszary - karty, kontenery */
+    --card-foreground: 0 0% 98%; /* Prawie biały */
 
-    --popover: 20 14.3% 4.1%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 20 14.3% 4.1%; /* Prawie czarny */
+    --popover-foreground: 0 0% 98%; /* Prawie biały */
 
-    --primary: 142.1 70.6% 45.3%;
-    --primary-foreground: 144.9 80.4% 10%;
+    --primary: 142.1 70.6% 45.3%; /* Jaśniejszy teal - dla kontrastu w ciemności */
+    --primary-foreground: 144.9 80.4% 10%; /* Ciemny teal - tekst na primary */
 
-    --secondary: 12.2 6.5% 15.1%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 12.2 6.5% 15.1%; /* Ciemnoszary - elementy drugorzędne */
+    --secondary-foreground: 0 0% 98%; /* Prawie biały */
 
-    --muted: 12.2 6.5% 15.1%;
-    --muted-foreground: 24 5.4% 63.9%;
+    --muted: 12.2 6.5% 15.1%; /* Ciemnoszary - tła subtlne */
+    --muted-foreground: 24 5.4% 63.9%; /* Średni szary - tekst wyciszony */
 
-    --accent: 20.5 90.2% 48.2%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 20.5 90.2% 48.2%; /* Jaśniejszy pomarańczowy - dla kontrastu */
+    --accent-foreground: 0 0% 98%; /* Prawie biały */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%; /* Ciemniejszy czerwony - dla kontrastu */
+    --destructive-foreground: 0 0% 98%; /* Prawie biały */
 
-    --border: 12.2 6.5% 15.1%;
-    --input: 12.2 6.5% 15.1%;
-    --ring: 142.1 70.6% 45.3%;
+    --border: 12.2 6.5% 15.1%; /* Ciemnoszary - obramowania */
+    --input: 12.2 6.5% 15.1%; /* Ciemnoszary - pola wejścia */
+    --ring: 142.1 70.6% 45.3%; /* Jaśniejszy teal - focus ring */
   }
 }
 

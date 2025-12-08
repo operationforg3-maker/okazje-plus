@@ -72,7 +72,7 @@ export function Navbar() {
           </Sheet>
 
           {/* Brand */}
-          <Link href={`${prefix}/`} className="flex items-center gap-3 rounded-full border border-border/40 bg-card/80 px-3 py-2 shadow-sm">
+          <Link href={`${prefix}/`} className="flex items-center gap-2">
             <img
               src="/icon_okazjeplus.svg"
               alt="Okazje+"
