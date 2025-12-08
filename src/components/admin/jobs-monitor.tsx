@@ -53,7 +53,7 @@ interface JobsMonitorProps {
 }
 
 export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
-  const { user } = useAuth();
+  const { user, getIdToken } = useAuth();
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -93,7 +93,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const idToken = await user?.getIdToken();
+      const idToken = await getIdToken();
       
       const response = await fetch('/api/admin/import/queue', {
         headers: {
@@ -127,7 +127,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
 
     try {
       setCreating(true);
-      const idToken = await user?.getIdToken();
+      const idToken = await getIdToken();
 
       onConsoleLog?.(`🚀 Tworzenie nowego joba importu...`, 'info');
       onConsoleLog?.(`📦 Zrodla: ${enabledSources.join(', ')}`, 'info');
@@ -170,7 +170,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
 
   const cancelJob = async (jobId: string) => {
     try {
-      const idToken = await user?.getIdToken();
+      const idToken = await getIdToken();
 
       const response = await fetch(`/api/admin/import/queue/${jobId}`, {
         method: 'DELETE',

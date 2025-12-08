@@ -59,7 +59,7 @@ export async function verifyAuthToken(req: NextRequest): Promise<AuthResult> {
       console.log('[verifyAuthToken] No role in JWT, checking Firestore...');
       try {
         const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-        if (userDoc.exists()) {
+        if (userDoc.exists) {
           const userData = userDoc.data();
           role = userData?.role || 'user';
           console.log('[verifyAuthToken] Role from Firestore:', role);

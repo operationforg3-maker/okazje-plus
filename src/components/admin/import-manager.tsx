@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { auth } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,7 +50,7 @@ interface ImportJob {
 }
 
 export function ImportManager() {
-  const { user } = useAuth();
+  const { user, getIdToken: getIdTokenFromContext } = useAuth();
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
   const [history, setHistory] = useState<ImportJob[]>([]);
@@ -60,13 +59,12 @@ export function ImportManager() {
 
   // Fetch history on mount
   const getTokenOrThrow = useCallback(async () => {
-    const currentUser = auth.currentUser;
-    const token = await currentUser?.getIdToken();
+    const token = await getIdTokenFromContext();
     if (!token) {
       throw new Error('Brak tokenu. Zaloguj się ponownie.');
     }
     return token;
-  }, []);
+  }, [getIdTokenFromContext]);
 
   const fetchHistory = useCallback(async () => {
     try {
