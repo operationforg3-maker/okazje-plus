@@ -27,54 +27,58 @@ export function Footer() {
     : builtAt;
 
   return (
-    <footer className="border-t bg-card">
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:grid-cols-4">
-          <div className="lg:col-span-1">
+    <footer className="mt-10 border-t border-border/40 bg-background/70 backdrop-blur">
+      <div className="mx-auto max-w-screen-2xl px-4 py-10 md:px-6">
+        <div className="grid gap-8 md:grid-cols-3 lg:grid-cols-12">
+          <div className="lg:col-span-4 rounded-2xl border border-border/50 bg-card/80 p-6 shadow-lg shadow-primary/5">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-8 md:h-10 lg:h-12" />
+              <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-10 md:h-12" />
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
-              Twoje zaufane źródło najlepszych okazji zakupowych w internecie.
+              Zaufana społeczność wyszukująca najlepsze okazje. Nowy wygląd, ta sama solidna baza ofert.
             </p>
-          </div>
-
-          <div>
-            <h3 className="font-headline font-semibold">Nawigacja</h3>
-            <div className="mt-4 flex flex-col space-y-2">
-              <Link href="/deals" className="text-sm text-muted-foreground hover:text-primary transition-colors">Okazje</Link>
-              <Link href="/products" className="text-sm text-muted-foreground hover:text-primary transition-colors">Produkty</Link>
-              <Link href="/forum" className="text-sm text-muted-foreground hover:text-primary transition-colors">Forum</Link>
-              <Link href="/add-deal" className="text-sm text-muted-foreground hover:text-primary transition-colors">Dodaj okazję</Link>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-medium text-foreground/80">
+              <ShoppingBag className="h-4 w-4" />
+              Świeże promocje dodawane codziennie
             </div>
           </div>
 
-          <div>
-            <h3 className="font-headline font-semibold">Informacje</h3>
-            <div className="mt-4 flex flex-col space-y-2">
-              <Link href="/#o-projekcie" className="text-sm text-muted-foreground hover:text-primary transition-colors">O nas</Link>
-              <Link href="mailto:business@okazjeplus.pl" className="text-sm text-muted-foreground hover:text-primary transition-colors">Kontakt</Link>
-              <Link href="/polityka-prywatnosci" className="text-sm text-muted-foreground hover:text-primary transition-colors">Polityka prywatności</Link>
-              <Link href="/regulamin" className="text-sm text-muted-foreground hover:text-primary transition-colors">Regulamin</Link>
+          <div className="lg:col-span-3">
+            <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">Nawigacja</h3>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+              <Link href="/deals" className="transition-colors hover:text-primary">Okazje</Link>
+              <Link href="/products" className="transition-colors hover:text-primary">Produkty</Link>
+              <Link href="/forum" className="transition-colors hover:text-primary">Forum</Link>
+              <Link href="/add-deal" className="transition-colors hover:text-primary">Dodaj okazję</Link>
             </div>
           </div>
-          
-          <div>
-      <h3 className="font-headline font-semibold">Social Media</h3>
-      <div className="mt-4 flex space-x-4">
-        <Link href="https://www.facebook.com/people/Okazje-Plus/61583646609859" className="text-muted-foreground hover:text-primary transition-colors" target="_blank" rel="noopener noreferrer">
-          <Facebook className="h-5 w-5 md:h-6 md:w-6" />
-          <span className="sr-only">Facebook</span>
-        </Link>
-        <Link href="https://www.instagram.com/okazje_plus/" className="text-muted-foreground hover:text-primary transition-colors" target="_blank" rel="noopener noreferrer">
-          <Instagram className="h-5 w-5 md:h-6 md:w-6" />
-          <span className="sr-only">Instagram</span>
-        </Link>
-      </div>
+
+          <div className="lg:col-span-3">
+            <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">Informacje</h3>
+            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-muted-foreground">
+              <Link href="/#o-projekcie" className="transition-colors hover:text-primary">O nas</Link>
+              <Link href="mailto:business@okazjeplus.pl" className="transition-colors hover:text-primary">Kontakt</Link>
+              <Link href="/polityka-prywatnosci" className="transition-colors hover:text-primary">Polityka prywatności</Link>
+              <Link href="/regulamin" className="transition-colors hover:text-primary">Regulamin</Link>
+            </div>
+          </div>
+
+          <div className="lg:col-span-2">
+            <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">Social</h3>
+            <div className="mt-4 flex gap-3">
+              <Link href="https://www.facebook.com/people/Okazje-Plus/61583646609859" className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary" target="_blank" rel="noopener noreferrer">
+                <Facebook className="h-5 w-5" />
+                <span className="sr-only">Facebook</span>
+              </Link>
+              <Link href="https://www.instagram.com/okazje_plus/" className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary" target="_blank" rel="noopener noreferrer">
+                <Instagram className="h-5 w-5" />
+                <span className="sr-only">Instagram</span>
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
+        <div className="mt-10 rounded-2xl border border-border/50 bg-card/80 px-4 py-4 text-center text-sm text-muted-foreground shadow-inner">
           <p>
             &copy; {currentYear} Okazje+. Wszelkie prawa zastrzeżone.
           </p>

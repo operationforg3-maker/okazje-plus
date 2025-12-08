@@ -106,6 +106,12 @@
     /* Inline base colors to avoid missing utility failures in production */
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    /* Warstwowany gradient tła dla mocniejszego, nowoczesnego wyglądu */
+    background-image:
+      radial-gradient(circle at 20% 20%, color-mix(in srgb, hsl(var(--primary)) 12%, transparent) 0, transparent 35%),
+      radial-gradient(circle at 80% 0%, color-mix(in srgb, hsl(var(--accent)) 10%, transparent) 0, transparent 40%),
+      linear-gradient(135deg, color-mix(in srgb, hsl(var(--background)) 100%, transparent) 0%, color-mix(in srgb, hsl(var(--muted)) 60%, transparent) 100%);
+    background-attachment: fixed;
   }
 }
 
