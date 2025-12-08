@@ -300,7 +300,7 @@ export default function DealCard({ deal }: DealCardProps) {
     <Link 
       href={`${prefix}/deals/${deal.id}`} 
       onClick={handleDetailClick}
-      className="group flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/50"
+      className="card-interactive group flex h-full flex-col overflow-hidden"
     >
       <div className="relative overflow-hidden aspect-square bg-muted">
         {/* Pasek ocen produktu jeśli powiązany */}
@@ -319,7 +319,7 @@ export default function DealCard({ deal }: DealCardProps) {
         <Button
           size="icon"
           variant="ghost"
-          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white hover:scale-110 transition-all z-10"
+          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white transition-all z-10 btn-icon-hover"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -328,14 +328,14 @@ export default function DealCard({ deal }: DealCardProps) {
           disabled={isFavoriteLoading}
         >
           <Heart
-            className={`h-4 w-4 md:h-5 md:w-5 transition-all ${
-              isFavorited ? 'fill-red-500 text-red-500' : 'text-gray-600'
+            className={`h-4 w-4 md:h-5 md:w-5 btn-favorite ${
+              isFavorited ? 'btn-favorite-active' : ''
             }`}
           />
         </Button>
         <div className="absolute right-2 top-2 flex flex-col gap-1 z-10">
           {isHot && (
-            <Badge className="bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg">
+            <Badge className="badge-hot badge-trust">
               <Flame className="mr-1 h-3 w-3 md:h-4 md:w-4" />
               Hot {temperature}°
             </Badge>
@@ -359,7 +359,7 @@ export default function DealCard({ deal }: DealCardProps) {
             </Badge>
           )}
           {isNew && (
-            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg">
+            <Badge className="badge-cool badge-trust">
               <Sparkles className="mr-1 h-3 w-3 md:h-4 md:w-4" />
               Nowa oferta
             </Badge>
@@ -375,14 +375,14 @@ export default function DealCard({ deal }: DealCardProps) {
             </Badge>
           )}
           {deal.freeShipping && (
-            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg">
+            <Badge className="bg-emerald-500 text-white badge-trust">
               <Truck className="mr-1 h-3 w-3 md:h-4 md:w-4" />
               Darmowa dostawa
             </Badge>
           )}
           {/* Usunięto badge kuponów z live API - dane powinny być w Firestore */}
           {deal.importMetadata?.hotProduct && (
-            <Badge className="bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg animate-pulse">
+            <Badge className="badge-hot badge-trust animate-pulse">
               <Zap className="mr-1 h-3 w-3" />
               HOT
             </Badge>

@@ -1,6 +1,4 @@
-@import "tailwindcss/theme" layer(theme);
-@import "tailwindcss/preflight" layer(base);
-@import "tailwindcss/utilities" layer(utilities);
+@import "tailwindcss";
 
 @source "../**/*.{js,ts,jsx,tsx,mdx}";
 
@@ -179,3 +177,162 @@
     @apply text-sm font-semibold text-foreground break-words;
   }
 }
+
+@layer components {
+  /* Unified Card System */
+  .card-base {
+    background-color: hsl(var(--card));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border: 1px solid hsl(var(--border) / 0.6);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    border-color: hsl(var(--primary) / 0.2);
+    transform: translateY(-0.25rem);
+  }
+
+  .card-interactive {
+    background-color: hsl(var(--card));
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border: 1px solid hsl(var(--border) / 0.6);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-interactive:hover {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    border-color: hsl(var(--primary) / 0.2);
+    transform: translateY(-0.25rem);
+  }
+
+  /* Badge System */
+  .badge-trust {
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    border: none;
+    font-weight: 500;
+  }
+
+  .badge-hot {
+    background: linear-gradient(to right, rgb(239 68 68), rgb(249 115 22));
+    color: white;
+  }
+
+  .badge-warm {
+    background: linear-gradient(to right, rgb(249 115 22), rgb(251 146 60));
+    color: white;
+  }
+
+  .badge-cool {
+    background: linear-gradient(to right, rgb(251 146 60), rgb(234 179 8));
+    color: white;
+  }
+
+  .badge-neutral {
+    background: linear-gradient(to right, rgb(234 179 8), rgb(34 197 94));
+    color: white;
+  }
+
+  /* Action Buttons */
+  .btn-icon-hover {
+    transition: all 0.2s ease;
+  }
+
+  .btn-icon-hover:hover {
+    transform: scale(1.1);
+    color: hsl(var(--primary));
+  }
+
+  .btn-favorite {
+    transition: color 0.2s ease;
+  }
+
+  .btn-favorite:hover {
+    color: rgb(239 68 68);
+  }
+
+  .btn-favorite-active {
+    color: rgb(239 68 68);
+    fill: rgb(239 68 68);
+  }
+
+  /* Price Display */
+  .price-main {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: hsl(var(--foreground));
+  }
+
+  .price-old {
+    font-size: 0.875rem;
+    text-decoration: line-through;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .price-discount {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgb(220 38 38);
+  }
+
+  /* Temperature/Heat Display */
+  .temperature-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0.25rem;
+    transition: all 0.5s ease;
+  }
+
+  .temperature-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  /* Image Overlays */
+  .image-overlay-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.5), transparent, transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .group:hover .image-overlay-gradient {
+    opacity: 1;
+  }
+
+  /* Action Strip */
+  .action-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border-top: 1px solid hsl(var(--border) / 0.6);
+    background-color: hsl(var(--muted) / 0.2);
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    transition: color 0.2s ease;
+  }
+
+  .action-btn:hover {
+    color: hsl(var(--primary));
+  }
+}
+

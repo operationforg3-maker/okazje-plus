@@ -188,7 +188,7 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   
   return (
     <>
-      <div className="group relative flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="card-interactive group relative flex flex-col overflow-hidden">
         
         {/* Admin Edit Button (Top-right overlay) */}
         {user?.role === 'admin' && (
@@ -209,28 +209,28 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
           {/* Trust Badges Overlay (Top-left) */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
             {hasFreeShipping && (
-              <Badge className="bg-emerald-500 text-white border-0 shadow-lg backdrop-blur-sm font-medium">
+              <Badge className="bg-emerald-500 text-white badge-trust">
                 <Truck className="w-3 h-3 mr-1" />
                 Darmowa dostawa
               </Badge>
             )}
             
             {hasPriceGuarantee && (
-              <Badge className="bg-blue-500 text-white border-0 shadow-lg backdrop-blur-sm font-medium">
+              <Badge className="bg-blue-500 text-white badge-trust">
                 <ShieldCheck className="w-3 h-3 mr-1" />
                 Gwarancja ceny
               </Badge>
             )}
             
             {hasFastShipping && (
-              <Badge className="bg-amber-500 text-white border-0 shadow-lg backdrop-blur-sm font-medium">
+              <Badge className="bg-amber-500 text-white badge-trust">
                 <Zap className="w-3 h-3 mr-1" />
                 Szybka dostawa
               </Badge>
             )}
             
             {isVerifiedMerchant && (
-              <Badge className="bg-indigo-500 text-white border-0 shadow-lg backdrop-blur-sm font-medium">
+              <Badge className="bg-indigo-500 text-white badge-trust">
                 <Award className="w-3 h-3 mr-1" />
                 Zweryfikowany
               </Badge>
@@ -240,7 +240,7 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
           {/* Discount Badge (Top-right corner) */}
           {discountPercent && discountPercent > 0 && (
             <div className="absolute top-3 right-3 z-10">
-              <Badge className="bg-red-500 text-white border-0 shadow-lg text-base font-bold px-3 py-1.5">
+              <Badge className="badge-hot badge-trust text-base font-bold px-3 py-1.5">
                 <TrendingDown className="w-4 h-4 mr-1" />
                 -{discountPercent}%
               </Badge>
@@ -515,14 +515,14 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
                     }}
                     disabled={isLoading}
                     className={cn(
-                      "px-3",
+                      "px-3 btn-icon-hover",
                       isFavorited && "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
                     )}
                   >
                     <Heart 
                       className={cn(
-                        "w-4 h-4",
-                        isFavorited && "fill-red-500 text-red-500"
+                        "w-4 h-4 btn-favorite",
+                        isFavorited && "btn-favorite-active"
                       )} 
                     />
                   </Button>
