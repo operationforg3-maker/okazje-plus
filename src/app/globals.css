@@ -1,6 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/theme" layer(theme);
+@import "tailwindcss/preflight" layer(base);
+@import "tailwindcss/utilities" layer(utilities);
+
+@source "../**/*.{js,ts,jsx,tsx,mdx}";
 
 @theme {
   /* Map shadcn CSS variables to Tailwind v4 color tokens */
@@ -146,5 +148,34 @@
   
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     @apply bg-transparent;
+  }
+
+  /* SpecCardGrid explicit utility classes */
+  .spec-card-grid {
+    @apply rounded-xl border border-border/60 bg-card/70 shadow-sm backdrop-blur-sm;
+  }
+
+  .spec-card-grid-header {
+    @apply flex items-center justify-between px-4 pt-4;
+  }
+
+  .spec-card-grid-title {
+    @apply flex items-center gap-2 text-sm font-semibold text-foreground;
+  }
+
+  .spec-card-grid-container {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4;
+  }
+
+  .spec-card-grid-item {
+    @apply rounded-lg border border-border/50 bg-muted/40 p-3 shadow-xs;
+  }
+
+  .spec-card-grid-label {
+    @apply text-xs uppercase tracking-wide text-muted-foreground mb-1;
+  }
+
+  .spec-card-grid-value {
+    @apply text-sm font-semibold text-foreground break-words;
   }
 }
