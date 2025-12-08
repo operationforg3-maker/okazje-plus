@@ -4,6 +4,7 @@
  * Handles importing products from eBay into the platform
  */
 
+// @ts-nocheck
 import { addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logging';

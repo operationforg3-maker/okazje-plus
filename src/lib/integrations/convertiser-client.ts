@@ -224,6 +224,11 @@ export class ConvertiserClient {
     });
   }
 
+  // Alias used by legacy callers
+  async getOfferDetails(uuid: string): Promise<any> {
+    return this.getOfferDetail(uuid);
+  }
+
   async generateOfferTrackingLink(uuid: string, params?: any): Promise<any> {
     return this.request<any>(
       `publisher/offers/${uuid}/tracking_link/`,

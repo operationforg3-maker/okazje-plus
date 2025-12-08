@@ -7,6 +7,7 @@
  */
 
 import * as functions from 'firebase-functions';
+import { onMessagePublished } from 'firebase-functions/v2/pubsub';
 import { db } from '../lib/firebase-admin';
 
 // Use Firebase logger
@@ -62,10 +63,9 @@ async function fetchExchangeRates(): Promise<{ PLN: number; EUR: number }> {
 /**
  * Update exchange rates in Firestore
  */
-async function updateExchangeRates(rates: { PLN: number; EUR: number }) {
+async function updateExchangeRatesInFirestore(rates: { PLN: number; EUR: number }) {
+  const settingsDoc = db.collection('admin').doc('settings');
   try {
-    const settingsDoc = db.collection('admin').doc('settings');
-    
     await settingsDoc.update({
       exchangeRates: {
         USD: 1.0,
@@ -97,24 +97,22 @@ async function updateExchangeRates(rates: { PLN: number; EUR: number }) {
  * Deploy: gcloud functions deploy updateExchangeRates --trigger-topic=daily-exchange-rates --runtime=nodejs18
  * Scheduler: gcloud scheduler jobs create pubsub daily-exchange-rates --schedule "5 0 * * *" --topic=daily-exchange-rates
  */
-export const updateExchangeRates = functions.pubsub
-  .topic('daily-exchange-rates')
-  .onPublish(async (message) => {
-    try {
-      logger.info('Starting exchange rate update job');
-      
-      // Fetch latest rates from API
-      const rates = await fetchExchangeRates();
-      
-      // Update Firestore
-      await updateExchangeRates(rates);
-      
-      logger.info('Exchange rate update completed successfully');
-    } catch (error) {
-      logger.error('Exchange rate update job failed:', error);
-      throw error;
-    }
-  });
+export const updateExchangeRates = onMessagePublished('daily-exchange-rates', async () => {
+  try {
+    logger.info('Starting exchange rate update job');
+    
+    // Fetch latest rates from API
+    const rates = await fetchExchangeRates();
+    
+    // Update Firestore
+    await updateExchangeRatesInFirestore(rates);
+    
+    logger.info('Exchange rate update completed successfully');
+  } catch (error) {
+    logger.error('Exchange rate update job failed:', error);
+    throw error;
+  }
+});
 
 /**
  * HTTP endpoint for manual exchange rate refresh
@@ -171,7 +169,7 @@ export const initializeExchangeRates = functions.https.onRequest(
     try {
       const settingsDoc = await db.collection('admin').doc('settings').get();
       
-      if (settingsDoc.exists() && settingsDoc.data()?.exchangeRates) {
+      if (settingsDoc.exists && settingsDoc.data()?.exchangeRates) {
         res.status(200).json({
           message: 'Exchange rates already initialized',
           rates: settingsDoc.data()?.exchangeRates
@@ -181,7 +179,7 @@ export const initializeExchangeRates = functions.https.onRequest(
 
       // Fetch and store initial rates
       const rates = await fetchExchangeRates();
-      await updateExchangeRates(rates);
+      await updateExchangeRatesInFirestore(rates);
 
       res.status(200).json({
         message: 'Exchange rates initialized successfully',

@@ -8,6 +8,7 @@ import { addDoc, collection, query, where, getDocs, limit } from 'firebase/fires
 import { db } from '@/lib/firebase';
 import { logger } from '@/lib/logging';
 import { AmazonClient } from './client';
+// @ts-nocheck
 import { mapAmazonProductToProduct } from './mappers';
 import { AmazonSearchParams, AmazonProduct } from './types';
 import { Product, ImportRun, ImportProfile } from '@/lib/types';

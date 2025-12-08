@@ -8,7 +8,7 @@
 
 import { logger } from "../logger";
 import { db } from "../firebase";
-import { collection, addDoc, updateDoc, doc, query, where, getDocs, QueryConstraint } from "firebase/firestore";
+import { collection, addDoc, updateDoc, doc, query, where, getDocs, QueryConstraint, deleteDoc } from "firebase/firestore";
 
 export type JobStatus = "pending" | "processing" | "completed" | "failed" | "paused";
 
@@ -233,7 +233,7 @@ export class JobQueue {
     try {
       const snapshot = await getDocs(q);
       for (const doc of snapshot.docs) {
-        await doc.ref.delete();
+        await deleteDoc(doc.ref);
       }
       logger.info("Cleanup completed", { deletedCount: snapshot.docs.length });
     } catch (error) {

@@ -34,7 +34,8 @@ interface DraftDeal {
  * Firebase Function: Auto-fill draft deals
  * Triggers when user adds new draft_deal document
  */
-export const autofillDraftDeal = onDocumentCreated(
+// V2 suffix to avoid HTTPS->background rename conflict with legacy deployment
+export const autofillDraftDealV2 = onDocumentCreated(
   {
     document: 'draft_deals/{draftDealId}',
     region: 'europe-west1',

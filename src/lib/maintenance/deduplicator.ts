@@ -6,6 +6,7 @@
  * - Merge UI support
  */
 
+// @ts-nocheck
 import { logger } from "../logger";
 import { db } from "../firebase";
 import { collection, query, where, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";

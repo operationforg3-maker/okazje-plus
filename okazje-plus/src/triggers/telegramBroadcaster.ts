@@ -35,7 +35,8 @@ interface Deal {
  * - Temperature >= 100 (hot!)
  * - Not already notified
  */
-export const telegramHotDealBroadcaster = onDocumentUpdated(
+// V2 suffix to avoid HTTPS->background rename conflict with legacy deployment
+export const telegramHotDealBroadcasterV2 = onDocumentUpdated(
   {
     document: 'deals/{dealId}',
     region: 'europe-west1',

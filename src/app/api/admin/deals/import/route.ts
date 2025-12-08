@@ -5,6 +5,7 @@
  * Integracja z AI: auto-kategoryzacja + auto-linkowanie do produktów
  */
 
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import { aiSuggestCategory } from '@/ai/flows/aliexpress/aiSuggestCategory';

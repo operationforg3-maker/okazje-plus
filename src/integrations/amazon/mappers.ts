@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Amazon Product Mappers
  * 

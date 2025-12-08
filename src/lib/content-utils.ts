@@ -50,8 +50,9 @@ export function hasLanguage(
 ): boolean {
   if (!text) return false;
   if (typeof text === 'string') return true; // Legacy strings available in all languages
-  
-  return !!text[language] && text[language].trim().length > 0;
+
+  const entry = text[language];
+  return !!entry && entry.trim().length > 0;
 }
 
 /**

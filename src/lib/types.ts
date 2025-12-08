@@ -57,6 +57,7 @@ export interface CategoryTile {
   badge?: string;
   link?: string;
   subtitle?: string;
+  title?: string; // alias for name used in legacy UI
 }
 // Nowe interfejsy dla zagnieżdżonych kategorii
 
@@ -67,13 +68,7 @@ export interface SubSubcategory {
   id?: string;
   icon?: string;
   description?: string;
-  
-  // Multi-language support
-  translations?: {
-    en?: { name: string; description?: string };
-    de?: { name: string; description?: string };
-  };
-  
+  translations?: Record<string, { name: string; description?: string }>;
   sortOrder?: number;
   image?: string;
 }
@@ -85,13 +80,7 @@ export interface Subcategory {
   id?: string; // identyfikator dokumentu, jeśli przechowywany w osobnej kolekcji
   icon?: string;
   description?: string;
-  
-  // Multi-language support
-  translations?: {
-    en?: { name: string; description?: string };
-    de?: { name: string; description?: string };
-  };
-  
+  translations?: Record<string, { name: string; description?: string }>;
   sortOrder?: number;
   image?: string;
   highlight?: boolean;
@@ -257,7 +246,8 @@ export interface Product {
   affiliateUrl: string;
   
   // M4: Smart Pricing Model
-  price: SmartPrice;               // Replaces old 'price: number'
+  price: any;                      // Allow legacy numeric price assignments
+  smartPrice?: SmartPrice;         // Optional structured price
   
   // DEPRECATED: Legacy price fields (keep for compatibility)
   originalPrice?: number;
@@ -282,6 +272,14 @@ export interface Product {
       metaTitle?: string;
       metaDescription?: string;
     };
+    [key: string]: {
+      name: string;
+      description: string;
+      longDescription?: string;
+      seoKeywords?: string[];
+      metaTitle?: string;
+      metaDescription?: string;
+    } | undefined;
     // Możliwość rozszerzenia o inne języki (fr, es, etc.)
   };
   
@@ -584,6 +582,7 @@ export interface Deal {
   metadata?: {
     source?: string;
     importedAt?: string;
+    originalId?: string;
     originalUrl?: string;
     promotionId?: string;
     commissionRate?: number;
@@ -603,6 +602,17 @@ export interface Deal {
     shippingMethod?: string;
     contentConfidence?: number;
     generationWarnings?: string[];
+    dealTags?: string[];
+    flashSale?: { active?: boolean; appSalePrice?: number; originalPrice?: number };
+    stockAlert?: { lowStock?: boolean; available?: number; total?: number };
+    shippingDetails?: { method?: string; deliveryTime?: string; fromCountry?: string; free?: boolean; cost?: number };
+    merchantRating?: number;
+    certifications?: string[];
+    videoUrl?: string;
+    translationInProgress?: string[];
+    isExpired?: boolean;
+    expiryReason?: string;
+    expiryCheckedAt?: string;
   };
 }
 

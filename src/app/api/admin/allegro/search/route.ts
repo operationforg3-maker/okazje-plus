@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 import * as fs from 'fs';

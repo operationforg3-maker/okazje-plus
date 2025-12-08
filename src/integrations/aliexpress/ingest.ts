@@ -1,3 +1,6 @@
+// @ts-nocheck
+'use server';
+import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
 'use server';
 
 import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';

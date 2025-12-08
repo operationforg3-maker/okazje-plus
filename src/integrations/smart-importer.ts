@@ -56,18 +56,26 @@ export interface SmartImportResult {
   dealId?: string;
   reason?: string;
   qualityScore: number;
-  qualityRecommendation: 'publish' | 'reject' | 'manual_review';
+  qualityRecommendation: 'publish' | 'reject' | 'manual_review' | 'approve' | 'review';
+  qualityReasoning?: string;
+  categoryConfidence?: number;
+  categoryReasoning?: string;
   category?: {
     main: string;
     sub: string;
     subsub: string;
     confidence: number;
+    mainCategorySlug?: string;
+    subCategorySlug?: string;
+    subSubCategorySlug?: string;
   };
   generatedContent?: {
     normalizedTitle: string;
     shortDescription: string;
     htmlContent: string;
     marketingTitle: string;
+    /** Optional extra enriched content blob */
+    generatedContent?: Record<string, any>;
   };
   processingTimeMs: number;
 }

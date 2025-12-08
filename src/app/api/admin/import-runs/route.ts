@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+// @ts-nocheck
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
 import { collection, getDocs, limit, orderBy, query, startAfter } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logging';

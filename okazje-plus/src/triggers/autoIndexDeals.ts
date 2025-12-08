@@ -15,7 +15,7 @@ import type { Deal } from '../../../src/lib/types';
  * 
  * When a new deal is created, automatically request Google to index it.
  */
-export const autoIndexNewDeal = onDocumentCreated({
+export const autoIndexNewDealV2 = onDocumentCreated({
   document: 'deals/{dealId}',
   region: 'europe-west1',
 }, async (event) => {
@@ -72,7 +72,8 @@ export const autoIndexNewDeal = onDocumentCreated({
  * 
  * Re-index when deal status changes to 'approved'
  */
-export const reIndexOnApproval = onDocumentUpdated({
+// V2 suffix to avoid HTTPS->background rename conflict with legacy deployment
+export const reIndexOnApprovalV2 = onDocumentUpdated({
   document: 'deals/{dealId}',
   region: 'europe-west1',
 }, async (event) => {

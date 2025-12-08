@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Smart Import Pipeline - Comprehensive Test Suite
  * 

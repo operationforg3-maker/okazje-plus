@@ -236,10 +236,15 @@ export const batchImportProducts = onCall(
         const newProductRef = db.collection("products").doc();
 
         // Poprawny obiekt zgodny z interfejsem Product
+        const name = product.name || (product as any).title || "Bez nazwy";
+        const description = product.description || "";
         const newProductData: Omit<Product, "id"> = {
-          name: product.name,
-          description: product.description || "",
-          longDescription: product.longDescription || product.description || "",
+          name,
+          description,
+          longDescription: product.longDescription || description,
+          title: { pl: name, en: name },
+          shortDescription: { pl: description, en: description },
+          fullDescription: { pl: description, en: description },
           price: typeof product.price === "number" ? product.price : 0,
           affiliateUrl: product.affiliateUrl,
           image: product.image || "",

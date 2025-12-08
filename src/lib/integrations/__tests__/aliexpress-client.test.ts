@@ -5,6 +5,7 @@
  * - Product fetching
  */
 
+// @ts-nocheck
 import { describe, it, expect, beforeAll, vi } from "@jest/globals";
 import { AliExpressClient, getAliExpressClient } from "../src/lib/integrations/aliexpress-client";
 

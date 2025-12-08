@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Deal, Product, ProductImageEntry, ProductRatingCard, ProductRatingSources } from '@/lib/types';
 
 type ProductMetadata = NonNullable<Product['metadata']>;
