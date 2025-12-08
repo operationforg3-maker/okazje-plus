@@ -352,7 +352,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
                         <strong>Źródła:</strong> {job.sources.join(', ')}
                       </div>
                       <div className="text-xs text-muted-foreground" suppressHydrationWarning>
-                        Utworzony: {isMounted ? new Date(job.createdAt).toLocaleString('pl-PL') : new Date(job.createdAt).toISOString()}
+                        Utworzony: {new Date(job.createdAt).toLocaleString('pl-PL')}
                       </div>
                     </div>
 

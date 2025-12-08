@@ -317,7 +317,7 @@ export default function JobMonitorWidget({
                       log.level === 'info' && 'text-muted-foreground'
                     )}
                   >
-                    <span className="text-muted-foreground/50 flex-shrink-0">
+                    <span className="text-muted-foreground/50 flex-shrink-0" suppressHydrationWarning>
                       {new Date(log.timestamp).toLocaleTimeString()}
                     </span>
                     <span className="flex-1 break-all">{log.message}</span>
@@ -334,7 +334,7 @@ export default function JobMonitorWidget({
           <div className="mt-3 text-xs text-muted-foreground space-y-1">
             <div>Job ID: {activeJob.id}</div>
             {activeJob.startedAt && (
-              <div>
+              <div suppressHydrationWarning>
                 Started: {new Date(
                   typeof activeJob.startedAt === 'number'
                     ? activeJob.startedAt
