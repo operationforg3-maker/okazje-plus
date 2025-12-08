@@ -146,7 +146,11 @@ export class ImportQueueManager {
       });
       
       // Sort by createdAt descending on server side
-      jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      jobs.sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
       
       console.log('[ImportQueueManager.listUserJobs] Returning', jobs.length, 'sorted jobs');
       return jobs.slice(0, limit);
