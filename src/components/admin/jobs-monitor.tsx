@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +57,13 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const isMounted = useRef(false);
+  
+  // Hydration guard
+  useEffect(() => {
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
   
   // New job form
   const [sources, setSources] = useState({
@@ -71,6 +78,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [enableAI, setEnableAI] = useState(false);
 
   const fetchJobs = useCallback(async () => {
+    if (!isMounted.current) return;
     try {
       setLoading(true);
       const idToken = await getIdToken();
