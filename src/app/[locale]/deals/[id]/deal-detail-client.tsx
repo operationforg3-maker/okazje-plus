@@ -424,15 +424,17 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
             </p>
 
             {/* Spec cards highlight */}
-            <SpecCardGrid
-              specs={specifications.map((s: any) => ({
-                key: s.key || s.name,
-                label: s.name || s.key,
-                value: s.value,
-              }))}
-              title="Parametry produktu"
-              className="mt-4"
-            />
+            {specifications && specifications.length > 0 && (
+              <SpecCardGrid
+                specs={specifications.map((s: any) => ({
+                  key: s.key || s.name,
+                  label: s.name || s.key,
+                  value: s.value,
+                }))}
+                title="Parametry produktu"
+                className="mt-4"
+              />
+            )}
 
             {/* Tags */}
             {deal.tags && deal.tags.length > 0 && (

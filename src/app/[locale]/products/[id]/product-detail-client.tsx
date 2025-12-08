@@ -347,15 +347,17 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
             </p>
 
             {/* Spec cards highlight */}
-            <SpecCardGrid
-              specs={specifications.map((s: any) => ({
-                key: s.key || s.name,
-                label: s.name || s.key,
-                value: s.value,
-              }))}
-              title="Kluczowe parametry"
-              className="mt-4"
-            />
+            {specifications && specifications.length > 0 && (
+              <SpecCardGrid
+                specs={specifications.map((s: any) => ({
+                  key: s.key || s.name,
+                  label: s.name || s.key,
+                  value: s.value,
+                }))}
+                title="Kluczowe parametry"
+                className="mt-4"
+              />
+            )}
 
             {/* AI Features */}
             {product.ai?.enrichment?.features && product.ai.enrichment.features.length > 0 && (
@@ -578,7 +580,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
           </Card>
 
           {/* Technical specifications */}
-          {specifications.length > 0 && (
+          {specifications && specifications.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
