@@ -57,12 +57,11 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [jobs, setJobs] = useState<ImportJob[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const isMounted = useRef(false);
+  const [isMounted, setIsMounted] = useState(false);
   
   // Hydration guard
   useEffect(() => {
-    isMounted.current = true;
-    return () => { isMounted.current = false; };
+    setIsMounted(true);
   }, []);
   
   // New job form
@@ -78,7 +77,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [enableAI, setEnableAI] = useState(false);
 
   const fetchJobs = useCallback(async () => {
-    if (!isMounted.current) return;
+    if (!isMounted) return;
     try {
       setLoading(true);
       const idToken = await getIdToken();
@@ -101,7 +100,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     } finally {
       setLoading(false);
     }
-  }, [getIdToken]);
+  }, [getIdToken, isMounted]);
 
   // Fetch jobs on mount
   useEffect(() => {
@@ -352,8 +351,8 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
                       <div className="text-sm">
                         <strong>Źródła:</strong> {job.sources.join(', ')}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Utworzony: {new Date(job.createdAt).toLocaleString('pl-PL')}
+                      <div className="text-xs text-muted-foreground" suppressHydrationWarning>
+                        Utworzony: {isMounted ? new Date(job.createdAt).toLocaleString('pl-PL') : new Date(job.createdAt).toISOString()}
                       </div>
                     </div>
 
