@@ -14,6 +14,7 @@ interface CategoryDoc { id: string; name: string; slug?: string; subcategories?:
 export function SidebarCategoryTree() {
   const [categories, setCategories] = useState<CategoryDoc[]>([]);
   const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({});
+  const [expandedSubs, setExpandedSubs] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [catCounts, setCatCounts] = useState<Record<string, { products: number; deals: number }>>({});
@@ -34,6 +35,7 @@ export function SidebarCategoryTree() {
   }, []);
 
   const toggleCat = (id: string) => setExpandedCats(p => ({ ...p, [id]: !p[id] }));
+  const toggleSub = (key: string) => setExpandedSubs(p => ({ ...p, [key]: !p[key] }));
 
   // Fuzzy search
   const filteredCategories = useMemo(() => {
@@ -159,30 +161,43 @@ export function SidebarCategoryTree() {
                 {cat.subcategories.map((sub) => {
                   const subKey = `${cat.id}::${sub.slug}`;
                   const subC = subCounts[subKey];
+                  const isSubOpen = expandedSubs[subKey];
+                  const hasSubSubs = Array.isArray(sub.subcategories) && sub.subcategories.length > 0;
                   return (
                     <div key={sub.slug} className="space-y-0.5">
-                      <Link
-                        href={`/admin/products?mainCategory=${catSlug}&subCategory=${sub.slug}`}
-                        className="flex items-center gap-1.5 px-2 py-1 text-[10px] hover:bg-background rounded transition-colors group"
-                      >
-                        <span className="flex-1 truncate group-hover:text-primary">{sub.name}</span>
-                        {subC && (
-                          <div className="flex items-center gap-0.5 text-[8px] text-muted-foreground">
-                            <span className="px-1 py-0.5 rounded bg-background">{subC.deals}D</span>
-                            <span className="px-1 py-0.5 rounded bg-background">{subC.products}P</span>
-                          </div>
+                      <div className="flex items-center gap-0.5">
+                        {hasSubSubs && (
+                          <button
+                            onClick={() => toggleSub(subKey)}
+                            className="p-0.5 hover:bg-background rounded transition-colors"
+                          >
+                            <ChevronRight className={cn('h-3 w-3 text-muted-foreground transition-transform', isSubOpen && 'rotate-90')} />
+                          </button>
                         )}
-                      </Link>
-                      {Array.isArray(sub.subcategories) && sub.subcategories.length > 0 && (
-                        <div className="pl-3 border-l border-dashed border-muted-foreground/40 space-y-0.5">
-                          {sub.subcategories.map(subsub => (
+                        {!hasSubSubs && <div className="w-5" />}
+                        <Link
+                          href={`/admin/products?mainCategory=${cat.slug || cat.id}&subCategory=${sub.slug}`}
+                          className="flex-1 flex items-center gap-1.5 px-1.5 py-1 text-[10px] hover:bg-background rounded transition-colors group"
+                        >
+                          <span className="flex-1 truncate group-hover:text-primary">{sub.name}</span>
+                          {subC && (
+                            <div className="flex items-center gap-0.5 text-[8px] text-muted-foreground">
+                              <span className="px-1 py-0.5 rounded bg-background">{subC.deals}D</span>
+                              <span className="px-1 py-0.5 rounded bg-background">{subC.products}P</span>
+                            </div>
+                          )}
+                        </Link>
+                      </div>
+                      {isSubOpen && hasSubSubs && (
+                        <div className="pl-5 border-l border-dashed border-muted-foreground/40 space-y-0.5">
+                          {sub.subcategories!.map(subsub => (
                             <Link
                               key={subsub.slug}
-                              href={`/admin/products?mainCategory=${catSlug}&subCategory=${sub.slug}&subSubCategory=${subsub.slug}`}
-                              className="flex items-center gap-1.5 px-2 py-1 text-[9px] hover:bg-background rounded transition-colors"
+                              href={`/admin/products?mainCategory=${cat.slug || cat.id}&subCategory=${sub.slug}&subSubCategory=${subsub.slug}`}
+                              className="flex items-center gap-1.5 px-2 py-1 text-[9px] hover:bg-background rounded transition-colors group"
                             >
-                              <ChevronRight className="h-3 w-3 text-muted-foreground" />
-                              <span className="truncate">{subsub.name}</span>
+                              <span className="text-muted-foreground group-hover:text-primary">▪</span>
+                              <span className="flex-1 truncate group-hover:text-primary">{subsub.name}</span>
                             </Link>
                           ))}
                         </div>
