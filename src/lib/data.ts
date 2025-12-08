@@ -928,6 +928,7 @@ export async function getCategories(): Promise<Category[]> {
             try {
               const subSubRef = collection(db, "categories", categoryDoc.id, "subcategories", subDoc.id, "subcategories");
               const subSubSnap = await getDocs(subSubRef);
+              console.log(`[getCategories] Loaded subsub for ${categoryDoc.id}/${subDoc.id}: ${subSubSnap.docs.length} items`);
               if (!subSubSnap.empty) {
                 subSubcategories = subSubSnap.docs.map((ssDoc) => {
                   const ssData = ssDoc.data();
@@ -943,8 +944,9 @@ export async function getCategories(): Promise<Category[]> {
                   };
                 }).sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
               }
-            } catch (_) {
+            } catch (err) {
               // Jeśli subcollection nie istnieje, zostaw embedded array
+              console.warn(`[getCategories] Failed to load subsub for ${categoryDoc.id}/${subDoc.id}:`, err);
             }
 
             return {
