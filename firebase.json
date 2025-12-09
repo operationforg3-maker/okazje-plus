@@ -11,7 +11,13 @@
     ],
     "frameworksBackend": {
       "region": "europe-west4"
-    }
+    },
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "server"
+      }
+    ]
   },
   "functions": {
     "source": "okazje-plus",
