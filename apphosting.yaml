@@ -94,20 +94,6 @@ env:
     availability:
       - RUNTIME
 
-  # Allegro integration (server-side only)
-  - variable: ALLEGRO_APP_KEY
-    secret: ALLEGRO_APP_KEY
-    availability:
-      - RUNTIME
-  - variable: ALLEGRO_APP_SECRET
-    secret: ALLEGRO_APP_SECRET
-    availability:
-      - RUNTIME
-  - variable: ALLEGRO_SANDBOX
-    secret: ALLEGRO_SANDBOX
-    availability:
-      - RUNTIME
-
   # Amazon Product Advertising API (server-side only)
   - variable: AMAZON_ACCESS_KEY
     secret: AMAZON_ACCESS_KEY
