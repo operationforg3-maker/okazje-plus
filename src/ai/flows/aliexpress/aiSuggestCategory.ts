@@ -11,7 +11,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { logger } from '@/lib/logging';
 
 const CategorySuggestionInputSchema = z.object({

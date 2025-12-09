@@ -1,4 +1,4 @@
-import {genkit} from 'genkit';
+import {genkit} from '@genkit-ai/flow';
 import {vertexAI} from '@genkit-ai/vertexai';
 
 // Vertex AI uses Application Default Credentials (ADC) or service account

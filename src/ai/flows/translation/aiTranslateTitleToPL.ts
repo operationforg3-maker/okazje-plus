@@ -5,7 +5,9 @@
  * Batch-friendly with configurable rate limiting
  */
 
-import { defineFlow, run, model } from 'genkit';
+import { defineFlow, run } from 'genkit';
+import { generate } from '@genkit-ai/ai';
+import { gemini15Flash } from '@genkit-ai/vertexai';
 
 export interface TranslateTitleRequest {
   titleEN: string;
@@ -59,19 +61,17 @@ export const aiTranslateTitleToPL = defineFlow(
 
     try {
       // Call Gemini for translation via Vertex AI
-      const response = await run('translate-title', async () => {
-        const result = await model('vertexai/gemini-2.0-flash-exp').generate({
-          prompt,
-          config: {
-            temperature: 0.3, // Low temperature for consistency
-            maxOutputTokens: 150,
-          },
-        });
-        return result;
+      const response = await generate({
+        model: gemini15Flash,
+        prompt,
+        config: {
+          temperature: 0.3, // Low temperature for consistency
+          maxOutputTokens: 150,
+        },
       });
 
       // Parse response
-      const generatedText = response.text || '';
+      const generatedText = response.text() || '';
       
       // Extract Polish title (usually in quotes or first line)
       const titlePL = extractPolishTitle(generatedText);

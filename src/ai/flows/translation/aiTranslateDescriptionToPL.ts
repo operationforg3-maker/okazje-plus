@@ -4,7 +4,9 @@
  * Translates product descriptions while preserving technical details and formatting
  */
 
-import { defineFlow, run, model } from 'genkit';
+import { defineFlow, run } from 'genkit';
+import { generate } from '@genkit-ai/ai';
+import { gemini15Flash } from '@genkit-ai/vertexai';
 
 export interface TranslateDescriptionRequest {
   descriptionEN: string;
@@ -51,18 +53,16 @@ export const aiTranslateDescriptionToPL = defineFlow(
     const prompt = buildDescriptionPrompt(descriptionEN, categoryEN, subcategoryEN, context);
 
     try {
-      const response = await run('translate-description', async () => {
-        const result = await model('vertexai/gemini-2.0-flash-exp').generate({
-          prompt,
-          config: {
-            temperature: 0.4,
-            maxOutputTokens: 500,
-          },
-        });
-        return result;
+      const response = await generate({
+        model: gemini15Flash,
+        prompt,
+        config: {
+          temperature: 0.4,
+          maxOutputTokens: 500,
+        },
       });
 
-      const descriptionPL = response.text?.trim() || descriptionEN;
+      const descriptionPL = response.text()?.trim() || descriptionEN;
       const confidence = assessDescriptionConfidence(descriptionEN, descriptionPL);
 
       return {

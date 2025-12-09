@@ -1,6 +1,6 @@
 "use server";
 
-import { defineFlow } from '@genkit-ai/flow';
+import { defineFlow } from 'genkit';
 import { gemini15Flash } from '@genkit-ai/vertexai';
 import { generate } from '@genkit-ai/ai';
 import { z } from 'zod';
