@@ -94,6 +94,18 @@ env:
     availability:
       - RUNTIME
 
+  # Convertiser API (server-side only)
+  - variable: CONVERTISER_API_TOKEN
+    secret: CONVERTISER_API_TOKEN
+    availability:
+      - RUNTIME
+
+  # Cron job security (background task processing)
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
+    availability:
+      - RUNTIME
+
   # Typesense (wyszukiwarka) – host/port/protocol używane także w build (embed do klienta)
   - variable: NEXT_PUBLIC_TYPESENSE_HOST
     secret: TYPESENSE_HOST
