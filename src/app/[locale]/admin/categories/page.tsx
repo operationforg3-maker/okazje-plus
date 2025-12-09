@@ -73,6 +73,7 @@ export default function AdminCategoriesPage() {
   const [isSubmittingSub, setIsSubmittingSub] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isFilling, setIsFilling] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const {
     register: registerMain,
@@ -252,6 +253,49 @@ export default function AdminCategoriesPage() {
       }
   };
 
+  const onGenerateAIContext = async (
+    categoryId: string,
+    mainCategoryName: string,
+    subcategoryName: string,
+    subsubcategoryName: string,
+    subcategorySlug: string,
+    subsubcategorySlug: string
+  ) => {
+    setIsGeneratingAI(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/admin/categories/generate-context', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          categoryId,
+          subcategoryId: subcategorySlug,
+          subsubcategoryId: subsubcategorySlug,
+          mainCategoryName,
+          subcategoryName,
+          subsubcategoryName,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success('✨ Kontekst kategorii został wygenerowany i zapisany!');
+        // Refresh the categories to show updated data
+        // The hook will automatically fetch new data from Firestore
+      } else {
+        toast.error('Błąd: ' + (data.error || 'Nieznany błąd'));
+      }
+    } catch (error) {
+      console.error("Błąd generowania kontekstu AI:", error);
+      toast.error('Błąd przy generowaniu kontekstu.');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const onFillAllCategories = async () => {
     if (!confirm('🤖 Auto-Fillier wypełni WSZYSTKIE kategorie produktami z AliExpress. To może zająć kilka minut. Kontynuować?')) {
       return;
@@ -418,9 +462,29 @@ export default function AdminCategoriesPage() {
                                                     {sub.subcategories.map((subsub) => (
                                                       <div key={subsub.slug} className="flex items-center justify-between text-sm bg-background px-2 py-1 rounded">
                                                         <span>{subsub.name} <span className="text-xs text-muted-foreground">({subsub.slug})</span></span>
-                                                        <Button variant="ghost" size="icon" onClick={() => onDeleteSubSubcategory(sub.slug, subsub.slug)}>
-                                                          <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
+                                                        <div className="flex gap-1">
+                                                          <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            disabled={isGeneratingAI}
+                                                            onClick={() =>
+                                                              onGenerateAIContext(
+                                                                editingCategory!.id,
+                                                                editingCategory!.name,
+                                                                sub.name,
+                                                                subsub.name,
+                                                                sub.slug,
+                                                                subsub.slug
+                                                              )
+                                                            }
+                                                            title="Wygeneruj opis i słowa kluczowe AI"
+                                                          >
+                                                            <Sparkles className="h-4 w-4 text-yellow-500" />
+                                                          </Button>
+                                                          <Button variant="ghost" size="icon" onClick={() => onDeleteSubSubcategory(sub.slug, subsub.slug)}>
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                          </Button>
+                                                        </div>
                                                       </div>
                                                     ))}
                                                   </div>

@@ -176,17 +176,22 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
             // Build English keywords from multiple sources with fallback chain
             let englishKeywords: string[] = [];
             
-            // Priority 1: Use importKeywords from Firestore if present
-            if (subsub.importKeywords?.length) {
+            // Priority 1: Use searchKeywords from AI (NEW - generated via admin panel)
+            if (subsub.searchKeywords?.length) {
+              englishKeywords = subsub.searchKeywords;
+              console.log(`  [keywords] Using AI-generated searchKeywords for ${subsub.slug}: ${englishKeywords.join(', ')}`);
+            }
+            // Priority 2: Use importKeywords from Firestore if present
+            else if (subsub.importKeywords?.length) {
               englishKeywords = subsub.importKeywords;
               console.log(`  [keywords] Using Firestore importKeywords for ${subsub.slug}: ${englishKeywords.join(', ')}`);
             }
-            // Priority 2: Use translations.en.name
+            // Priority 3: Use translations.en.name
             else if (subsub.translations?.en?.name) {
               englishKeywords = [subsub.translations.en.name];
               console.log(`  [keywords] Using translations.en.name for ${subsub.slug}: ${englishKeywords.join(', ')}`);
             }
-            // Priority 3: Fallback to category-structure.ts
+            // Priority 4: Fallback to category-structure.ts
             else {
               const structureKeywords = getImportKeywordsFromStructure(cat.slug, sub.slug, subsub.slug);
               if (structureKeywords.length) {
@@ -194,7 +199,7 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
                 console.log(`  [keywords] Using category-structure.ts for ${subsub.slug}: ${englishKeywords.join(', ')}`);
               }
             }
-            // Priority 4: Last resort - use English name of subcategory
+            // Priority 5: Last resort - use English name of subcategory
             if (!englishKeywords.length) {
               englishKeywords = [subsub.name];
               console.warn(`  [keywords] WARNING: Using fallback name for ${subsub.slug}: ${englishKeywords.join(', ')}`);
