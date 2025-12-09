@@ -1,3 +1,28 @@
+/**
+ * Link Verifier - Weryfikacja linków afiliacyjnych
+ *
+ * Funkcjonalność:
+ * - Monitoruje zdrowie linków ze wszystkich platform (AliExpress, Allegro, Amazon, eBay, Convertiser)
+ * - Weryfikuje dostępność (HTTP status code)
+ * - Mierzy szybkość (response time)
+ * - Umożliwia zastąpienie martwych linków
+ * - Śledzi źródło linku w bazie danych
+ *
+ * API:
+ * - GET /api/admin/links/list - Załaduj linki
+ * - POST /api/admin/links/verify-all - Weryfikuj wszystkie
+ * - POST /api/admin/links/replace - Zamień martwą
+ *
+ * Baza Danych:
+ * - affiliateLinks/{linkId} - Nowa kolekcja
+ *
+ * Todo:
+ * - HTTP health check z timeout (5s)
+ * - Batch verification (10 równocześnie)
+ * - Auto-replace dead links
+ * - Retry logic z exponential backoff
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

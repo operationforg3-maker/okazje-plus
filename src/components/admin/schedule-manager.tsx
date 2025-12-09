@@ -1,3 +1,21 @@
+/**
+ * Schedule Manager - Harmonogramy zadań dla bazy danych
+ *
+ * Funkcjonalność:
+ * - Tworzy automatyczne harmonogramy dla aktualizacji produktów/okazji
+ * - Wspiera: daily, weekly, monthly, manual
+ * - Loguje wykonanie w Cloud Logs
+ * - Integruje się z JobQueue dla background processing
+ *
+ * API:
+ * - POST /api/admin/schedule/run - Uruchom zadanie
+ *
+ * Todo:
+ * - Persystencja harmonogramów w Firestore
+ * - Cloud Scheduler integration
+ * - Retry logic dla nieudanych zadań
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

@@ -1,3 +1,30 @@
+/**
+ * Firebase Index Manager - Diagnoza i naprawa Firestore indexes
+ *
+ * Funkcjonalność:
+ * - Analizuje istniejące indexes
+ * - Diagnozuje nieudane zapytania z Cloud Logging
+ * - Sugeruje brakujące indexes
+ * - Tworzy indexes w Firebase Firestore
+ * - Monitoruje postęp tworzenia
+ *
+ * API:
+ * - POST /api/admin/indexes/diagnose - Diagnoza indexes i failed queries
+ * - POST /api/admin/indexes/create - Utwórz index
+ * - POST /api/admin/indexes/create-batch - Batch create indexes
+ *
+ * Tabs:
+ * 1. Przegląd - Wszystkie istniejące indexes
+ * 2. Sugerowane - Brakujące indexes do stworzenia
+ * 3. Błędne Zapytania - Historia failed queries
+ *
+ * Todo:
+ * - Cloud Logging parser dla failed queries
+ * - Firebase Admin SDK listIndexes() i createIndex()
+ * - Monitor progress 0-100% dla CREATING state
+ * - Estimate time to build dla dużych collections
+ */
+
 'use client';
 
 import { useState, useEffect } from 'react';

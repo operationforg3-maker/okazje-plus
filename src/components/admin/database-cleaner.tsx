@@ -1,3 +1,32 @@
+/**
+ * Database Cleaner - Masowe usuwanie i czyszczenie bazy danych
+ *
+ * Funkcjonalność:
+ * - Usuwa produkty, okazje, kategorie, użytkowników, osierocone wpisy
+ * - Filtrowanie po kategorii, statusie, dacie, cenie
+ * - Preview przed wykonaniem (policz + pokaż sample)
+ * - Potwierdzenie kodem dla bezpieczeństwa
+ * - Anonimizacja użytkowników dla GDPR
+ * - Kaskaadowe usuwanie dla kategorii
+ *
+ * API:
+ * - POST /api/admin/delete/preview - Przygotuj podgląd
+ * - POST /api/admin/delete/execute - Wykonaj usuwanie
+ *
+ * Bezpieczeństwo:
+ * - Wymaga potwierdzenia kodem "USUŃ_WSZYSTKO"
+ * - Wyświetla ostrzeżenia (kaskaada, GDPR)
+ * - Backup reminder
+ * - Sample preview (pierwsze 10 elementów)
+ *
+ * Todo:
+ * - Firestore batch transaction delete
+ * - Cascade delete handler
+ * - User anonymization flow
+ * - Orphaned document detection
+ * - Rollback support (backup)
+ */
+
 'use client';
 
 import { useState } from 'react';
