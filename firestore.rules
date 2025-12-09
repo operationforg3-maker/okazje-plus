@@ -465,6 +465,11 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // Import jobs from admin UI (camelCase version)
+    match /importJobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
     match /aiCommands/{commandId} {
       allow read, write: if isAdmin();
     }

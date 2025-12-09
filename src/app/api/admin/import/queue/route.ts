@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/auth-helpers';
-import { ImportQueueManager } from '@/lib/import-queue';
+import { ImportQueueManager, ImportJob } from '@/lib/import-queue';
+import { adminDb } from '@/lib/firebase-admin';
+import { getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/data-admin';
 
 /**
  * POST /api/admin/import/queue
  * 
- * Create new background import job
+ * Create new background import job and start processing immediately
  * Returns immediately with job ID for tracking
  */
 export async function POST(req: NextRequest) {
@@ -52,14 +54,23 @@ export async function POST(req: NextRequest) {
       authResult.uid!
     );
 
-    // Trigger Cloud Function to process job
-    // Note: In production, this would be a Pub/Sub trigger or Cloud Tasks
-    // For now, we'll process it in the background via separate endpoint
+    // Start processing immediately in background (don't wait)
+    processImportJobInBackground(jobId, {
+      sources: enabledSources,
+      config: {
+        maxProductsPerCategory,
+        enableAdvancedFeatures,
+        enableAIEnrichment,
+        saveDraftsOnly,
+      },
+    }).catch((e) => {
+      console.error(`[POST /api/admin/import/queue] Background processor failed for job ${jobId}:`, e);
+    });
     
     return NextResponse.json({
       success: true,
       jobId,
-      message: 'Import job created. Use GET /api/admin/import/queue/{jobId} to track progress.',
+      message: 'Import job created and processing started. Use GET /api/admin/import/queue/{jobId} to track progress.',
     });
   } catch (error: any) {
     console.error('[POST /api/admin/import/queue] Error:', error);
@@ -69,6 +80,179 @@ export async function POST(req: NextRequest) {
       { error: error.message || 'Failed to create import job', details: error?.toString() },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Process import job in background
+ */
+async function processImportJobInBackground(jobId: string, jobData: { sources: string[]; config: ImportJob['config'] }): Promise<void> {
+  const jobRef = adminDb.collection('importJobs').doc(jobId);
+
+  try {
+    console.log(`[Import Queue] Starting background processing for job ${jobId}`);
+
+    // Mark as running
+    await jobRef.update({
+      status: 'running',
+      startedAt: new Date().toISOString(),
+    });
+
+    const { sources, config } = jobData;
+    const maxProductsPerCategory = config.maxProductsPerCategory || 20;
+
+    // Get all categories with sub-subcategories
+    const categories = await getAllCategories();
+    
+    const batches: Array<{
+      categoryId: string;
+      categoryName: string;
+      categorySlug: string;
+      subcategoryId: string;
+      subcategoryName: string;
+      subcategorySlug: string;
+      subsubcategoryId: string;
+      subsubcategoryName: string;
+      subsubcategorySlug: string;
+    }> = [];
+
+    for (const cat of categories) {
+      const subcategories = await getSubcategories(cat.id);
+      for (const sub of subcategories) {
+        const subsubcategories = await getSubSubcategories(cat.id, sub.id);
+        
+        if (subsubcategories.length > 0) {
+          for (const subsub of subsubcategories) {
+            batches.push({
+              categoryId: cat.id,
+              categoryName: cat.name,
+              categorySlug: cat.slug,
+              subcategoryId: sub.id,
+              subcategoryName: sub.name,
+              subcategorySlug: sub.slug,
+              subsubcategoryId: subsub.id,
+              subsubcategoryName: subsub.name,
+              subsubcategorySlug: subsub.slug,
+            });
+          }
+        } else {
+          batches.push({
+            categoryId: cat.id,
+            categoryName: cat.name,
+            categorySlug: cat.slug,
+            subcategoryId: sub.id,
+            subcategoryName: sub.name,
+            subcategorySlug: sub.slug,
+            subsubcategoryId: sub.id,
+            subsubcategoryName: sub.name,
+            subsubcategorySlug: sub.slug,
+          });
+        }
+      }
+    }
+
+    console.log(`[Import Queue] Job ${jobId}: Created ${batches.length} batches`);
+
+    // Update total count
+    await jobRef.update({
+      'progress.totalCategories': batches.length,
+    });
+
+    // Get currency rate
+    let currencyRate = 4.0;
+    try {
+      const configDoc = await adminDb.collection('config').doc('importSettings').get();
+      if (configDoc.exists) {
+        currencyRate = configDoc.data()?.currencyRate || 4.0;
+      }
+    } catch (_) {}
+
+    // Run import pipeline
+    const { runProductImportPipeline } = await import('@/ai/flows/importerFlow');
+
+    let totalImported = 0;
+    let processedCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+
+      // Check if cancelled
+      const currentSnap = await jobRef.get();
+      const currentData = currentSnap.data();
+      if (currentData?.status === 'cancelled') {
+        console.log(`[Import Queue] Job ${jobId} cancelled`);
+        return;
+      }
+
+      console.log(`[Import Queue] Job ${jobId}: Processing batch ${i + 1}/${batches.length}: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
+
+      try {
+        const keywords = [
+          batch.categorySlug,
+          batch.subcategorySlug,
+          batch.subsubcategorySlug,
+          `${batch.subcategorySlug} ${batch.categorySlug}`,
+        ].filter(k => k && k !== batch.subsubcategorySlug);
+
+        const pipelineResult = await runProductImportPipeline({
+          jobId,
+          keywords,
+          maxProducts: maxProductsPerCategory,
+          categoryPath: [batch.categoryName, batch.subcategoryName, batch.subsubcategoryName],
+          categorySlugEN: batch.categorySlug,
+          subcategorySlugEN: batch.subcategorySlug,
+          subsubcategorySlugEN: batch.subsubcategorySlug,
+          translateToPolish: true,
+          currencyRate,
+          fetch: { batchSize: 50, delayBetweenItems: 200, delayBetweenBatches: 1000 },
+          dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
+          enrich: { batchSize: 5, delayBetweenItems: 300, delayBetweenBatches: 2000 },
+          translate: { batchSize: 10, delayBetweenItems: 50, delayBetweenBatches: 300 },
+          save: { batchSize: 5, skipExisting: true },
+        });
+
+        totalImported += pipelineResult.saved.created.length + pipelineResult.saved.updated.length;
+        processedCount++;
+
+        await jobRef.update({
+          'progress.processedCategories': processedCount,
+          'progress.currentCategory': `${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`,
+          'progress.importedProducts': totalImported,
+        });
+
+      } catch (err) {
+        const errorMsg = `Batch ${i + 1} failed: ${err instanceof Error ? err.message : String(err)}`;
+        errors.push(errorMsg);
+        console.error(`[Import Queue] Job ${jobId} batch failed:`, errorMsg);
+      }
+    }
+
+    // Mark as completed
+    await jobRef.update({
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      'progress.errors': errors,
+      results: {
+        totalProducts: totalImported,
+        totalVariants: 0,
+        duration: Date.now(),
+      },
+    });
+
+    console.log(`[Import Queue] Job ${jobId} completed: ${totalImported} products imported`);
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[Import Queue] Job ${jobId} failed:`, errorMessage);
+
+    await jobRef.update({
+      status: 'failed',
+      completedAt: new Date().toISOString(),
+      'progress.errors': [errorMessage],
+    });
+
+    throw error;
   }
 }
 

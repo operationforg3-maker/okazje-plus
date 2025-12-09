@@ -79,9 +79,22 @@ export async function POST(req: NextRequest) {
       ...doc.data(),
     }));
 
+    // ===== FETCH PENDING IMPORT_JOBS from UI system ('importJobs' camelCase collection) =====
+    const uiImportJobsSnapshot = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'pending')
+      .limit(5)
+      .get();
+
+    const uiImportJobsToProcess = uiImportJobsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
     logger.info('Cron job processor started', {
       jobsFound: jobs.length,
       importJobsQueued: importJobsToResume.length,
+      uiImportJobsPending: uiImportJobsToProcess.length,
       maxPerRun: MAX_JOBS_PER_RUN,
     });
 
@@ -97,10 +110,20 @@ export async function POST(req: NextRequest) {
       })
     );
 
+    // ===== PROCESS UI IMPORT JOBS (from importJobs collection) =====
+    const uiImportResults = await Promise.allSettled(
+      uiImportJobsToProcess.map(async (uiJob: any) => {
+        logger.info('Processing UI import job', { jobId: uiJob.id, sources: uiJob.sources });
+        return processUIImportJob(uiJob);
+      })
+    );
+
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
     const importSuccessful = importResults.filter(r => r.status === 'fulfilled').length;
     const importFailed = importResults.filter(r => r.status === 'rejected').length;
+    const uiImportSuccessful = uiImportResults.filter(r => r.status === 'fulfilled').length;
+    const uiImportFailed = uiImportResults.filter(r => r.status === 'rejected').length;
     const durationMs = Date.now() - startTime;
 
     logger.info('Cron job processor completed', {
@@ -110,6 +133,9 @@ export async function POST(req: NextRequest) {
       importJobsResumed: importJobsToResume.length,
       importSuccessful,
       importFailed,
+      uiImportJobsProcessed: uiImportJobsToProcess.length,
+      uiImportSuccessful,
+      uiImportFailed,
       durationMs,
     });
 
@@ -121,6 +147,9 @@ export async function POST(req: NextRequest) {
       importJobsResumed: importJobsToResume.length,
       importSuccessful,
       importFailed,
+      uiImportJobsProcessed: uiImportJobsToProcess.length,
+      uiImportSuccessful,
+      uiImportFailed,
       durationMs,
       timestamp: new Date().toISOString(),
     });
@@ -483,4 +512,198 @@ async function handleRepairIndexes(job: Job): Promise<void> {
   // 3. Log progress and errors
 
   throw new Error('Index repair not implemented');
+}
+
+/**
+ * Process UI Import Job (from importJobs collection created by admin harvester UI)
+ * This handles jobs created via /api/admin/import/queue endpoint
+ */
+async function processUIImportJob(uiJob: any): Promise<void> {
+  const jobRef = adminDb.collection('importJobs').doc(uiJob.id);
+
+  try {
+    logger.info('UI Import job processing started', {
+      jobId: uiJob.id,
+      sources: uiJob.sources,
+      config: uiJob.config,
+    });
+
+    // Mark as running
+    await jobRef.update({
+      status: 'running',
+      startedAt: new Date().toISOString(),
+    });
+
+    const sources = uiJob.sources || [];
+    const config = uiJob.config || {};
+    const maxProductsPerCategory = config.maxProductsPerCategory || 20;
+
+    // Get all categories with sub-subcategories
+    const { getAllCategories, getSubcategories, getSubSubcategories } = await import('@/lib/data-admin');
+    const categories = await getAllCategories();
+    
+    const batches: Array<{
+      categoryId: string;
+      categoryName: string;
+      categorySlug: string;
+      subcategoryId: string;
+      subcategoryName: string;
+      subcategorySlug: string;
+      subsubcategoryId: string;
+      subsubcategoryName: string;
+      subsubcategorySlug: string;
+    }> = [];
+
+    for (const cat of categories) {
+      const subcategories = await getSubcategories(cat.id);
+      for (const sub of subcategories) {
+        const subsubcategories = await getSubSubcategories(cat.id, sub.id);
+        
+        if (subsubcategories.length > 0) {
+          for (const subsub of subsubcategories) {
+            batches.push({
+              categoryId: cat.id,
+              categoryName: cat.name,
+              categorySlug: cat.slug,
+              subcategoryId: sub.id,
+              subcategoryName: sub.name,
+              subcategorySlug: sub.slug,
+              subsubcategoryId: subsub.id,
+              subsubcategoryName: subsub.name,
+              subsubcategorySlug: subsub.slug,
+            });
+          }
+        } else {
+          batches.push({
+            categoryId: cat.id,
+            categoryName: cat.name,
+            categorySlug: cat.slug,
+            subcategoryId: sub.id,
+            subcategoryName: sub.name,
+            subcategorySlug: sub.slug,
+            subsubcategoryId: sub.id,
+            subsubcategoryName: sub.name,
+            subsubcategorySlug: sub.slug,
+          });
+        }
+      }
+    }
+
+    logger.info('UI Import job batches created', {
+      jobId: uiJob.id,
+      totalBatches: batches.length,
+    });
+
+    // Update total count
+    await jobRef.update({
+      'progress.totalCategories': batches.length,
+    });
+
+    // Get currency rate
+    let currencyRate = 4.0;
+    try {
+      const configDoc = await adminDb.collection('config').doc('importSettings').get();
+      if (configDoc.exists) {
+        currencyRate = configDoc.data()?.currencyRate || 4.0;
+      }
+    } catch (_) {}
+
+    // Run import pipeline
+    const { runProductImportPipeline } = await import('@/ai/flows/importerFlow');
+
+    let totalImported = 0;
+    let processedCount = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+
+      // Check if cancelled
+      const currentSnap = await jobRef.get();
+      const currentData = currentSnap.data();
+      if (currentData?.status === 'cancelled') {
+        logger.info('UI Import job cancelled', { jobId: uiJob.id });
+        return;
+      }
+
+      logger.info(`UI Import processing batch ${i + 1}/${batches.length}`, {
+        jobId: uiJob.id,
+        category: `${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`,
+      });
+
+      try {
+        const keywords = [
+          batch.categorySlug,
+          batch.subcategorySlug,
+          batch.subsubcategorySlug,
+          `${batch.subcategorySlug} ${batch.categorySlug}`,
+        ].filter(k => k && k !== batch.subsubcategorySlug);
+
+        const pipelineResult = await runProductImportPipeline({
+          jobId: uiJob.id,
+          keywords,
+          maxProducts: maxProductsPerCategory,
+          categoryPath: [batch.categoryName, batch.subcategoryName, batch.subsubcategoryName],
+          categorySlugEN: batch.categorySlug,
+          subcategorySlugEN: batch.subcategorySlug,
+          subsubcategorySlugEN: batch.subsubcategorySlug,
+          translateToPolish: true,
+          currencyRate,
+          fetch: { batchSize: 50, delayBetweenItems: 200, delayBetweenBatches: 1000 },
+          dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
+          enrich: { batchSize: 5, delayBetweenItems: 300, delayBetweenBatches: 2000 },
+          translate: { batchSize: 10, delayBetweenItems: 50, delayBetweenBatches: 300 },
+          save: { batchSize: 5, skipExisting: true },
+        });
+
+        totalImported += pipelineResult.saved.created.length + pipelineResult.saved.updated.length;
+        processedCount++;
+
+        await jobRef.update({
+          'progress.processedCategories': processedCount,
+          'progress.currentCategory': `${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`,
+          'progress.importedProducts': totalImported,
+        });
+
+      } catch (err) {
+        const errorMsg = `Batch ${i + 1} failed: ${err instanceof Error ? err.message : String(err)}`;
+        errors.push(errorMsg);
+        logger.error('UI Import batch failed', { jobId: uiJob.id, batch: i, error: errorMsg });
+      }
+    }
+
+    // Mark as completed
+    await jobRef.update({
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      'progress.errors': errors,
+      results: {
+        totalProducts: totalImported,
+        totalVariants: 0,
+        duration: Date.now() - new Date(uiJob.createdAt).getTime(),
+      },
+    });
+
+    logger.info('UI Import job completed', {
+      jobId: uiJob.id,
+      totalImported,
+      processedCount,
+      errors: errors.length,
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('UI Import job failed', {
+      jobId: uiJob.id,
+      error: errorMessage,
+    });
+
+    await jobRef.update({
+      status: 'failed',
+      completedAt: new Date().toISOString(),
+      'progress.errors': [errorMessage],
+    });
+
+    throw error;
+  }
 }
