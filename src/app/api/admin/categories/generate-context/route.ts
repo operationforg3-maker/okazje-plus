@@ -55,27 +55,63 @@ export async function POST(req: NextRequest) {
     if (categoryId && subcategoryId && subsubcategoryId) {
       try {
         console.log('[POST /api/admin/categories/generate-context] Saving to Firestore...');
-        
-        // Get the current category document
+
+        // --- Primary path: subcollections (CategoryBuilder + import pipeline) ---
+        const subSubRef = adminDb
+          .collection('categories')
+          .doc(categoryId)
+          .collection('subcategories')
+          .doc(subcategoryId)
+          .collection('subcategories')
+          .doc(subsubcategoryId);
+
+        const subSubSnap = await subSubRef.get();
+        if (subSubSnap.exists) {
+          await subSubRef.set({
+            description: result.descriptionPl,
+            searchKeywords: result.searchKeywords,
+            exampleProducts: result.exampleProducts,
+            updatedAt: new Date().toISOString(),
+            translations: {
+              ...(subSubSnap.data()?.translations || {}),
+              en: {
+                ...(subSubSnap.data()?.translations?.en || {}),
+                description: result.descriptionEn,
+              },
+            },
+          }, { merge: true });
+          console.log('[POST /api/admin/categories/generate-context] ✅ Saved to subcollection');
+        } else {
+          // If doc missing, create it
+          await subSubRef.set({
+            slug: subsubcategoryId,
+            name: subsubcategoryName,
+            description: result.descriptionPl,
+            searchKeywords: result.searchKeywords,
+            exampleProducts: result.exampleProducts,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            translations: {
+              en: { description: result.descriptionEn },
+            },
+          });
+          console.log('[POST /api/admin/categories/generate-context] ✅ Created subcollection doc');
+        }
+
+        // --- Fallback path: embedded arrays (AdminCategoriesPage editor) ---
         const categoryRef = adminDb.collection('categories').doc(categoryId);
         const categoryDoc = await categoryRef.get();
-        
-        if (!categoryDoc.exists) {
-          console.warn(`[POST /api/admin/categories/generate-context] Category ${categoryId} not found`);
-        } else {
+        if (categoryDoc.exists) {
           const categoryData = categoryDoc.data() || {};
           const subcategories = categoryData.subcategories || [];
-          
-          // Find and update the subcategory
+
           const updatedSubcategories = subcategories.map((sub: any) => {
             if (sub.slug !== subcategoryId) return sub;
-            
-            // Found the right subcategory, now update its nested subcategories
+
             const subSubcategories = sub.subcategories || [];
             const updatedSubSubs = subSubcategories.map((subsub: any) => {
               if (subsub.slug !== subsubcategoryId) return subsub;
-              
-              // Found the right sub-subcategory, update it
+
               return {
                 ...subsub,
                 description: result.descriptionPl,
@@ -90,20 +126,18 @@ export async function POST(req: NextRequest) {
                 },
               };
             });
-            
+
             return {
               ...sub,
               subcategories: updatedSubSubs,
             };
           });
-          
-          // Update the entire category with the updated subcategories
+
           await categoryRef.update({
             subcategories: updatedSubcategories,
             updatedAt: new Date().toISOString(),
           });
-          
-          console.log('[POST /api/admin/categories/generate-context] ✅ Saved to Firestore');
+          console.log('[POST /api/admin/categories/generate-context] ✅ Saved to embedded array');
         }
       } catch (firestoreError: any) {
         console.error('[POST /api/admin/categories/generate-context] Failed to save to Firestore:', firestoreError);

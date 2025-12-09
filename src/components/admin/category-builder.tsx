@@ -74,6 +74,70 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
     onConsoleLog?.(logMessage, type);
   };
 
+  // Build payload for Firestore based on current form state
+  const buildCategoriesPayload = (): Category[] => {
+    return [
+      {
+        id: form.mainCategory.slug,
+        slug: form.mainCategory.slug,
+        name: form.mainCategory.name,
+        description: form.mainCategory.description,
+        icon: form.mainCategory.icon,
+        subcategories: form.subCategories.map(sub => ({
+          slug: sub.slug,
+          name: sub.name,
+          description: sub.description,
+          subcategories: sub.subSubCategories.map(subsub => ({
+            slug: subsub.slug,
+            name: subsub.name,
+            description: subsub.description,
+            // Persist AI-generated fields when present
+            searchKeywords: (subsub as any).searchKeywords,
+            exampleProducts: (subsub as any).exampleProducts,
+            translations: (subsub as any).descriptionEn
+              ? { en: { description: (subsub as any).descriptionEn } }
+              : undefined,
+          })),
+        })),
+      },
+    ];
+  };
+
+  // Persist current form to Firestore so IDs exist before AI generation
+  const saveCategories = async () => {
+    if (!user) {
+      throw new Error('Brak uwierzytelnienia użytkownika');
+    }
+
+    if (!getIdTokenProp) {
+      log('⚠️ Ostrzeżenie: getIdToken nie został przesłany jako prop', 'warning');
+    }
+
+    const token = await getIdTokenFn();
+    if (!token) {
+      throw new Error('Nie udało się pobrać tokenu autoryzacji (getIdToken zwrócił null)');
+    }
+
+    const categories = buildCategoriesPayload();
+
+    const response = await fetch('/api/admin/categories/create', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ categories }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const result = await response.json();
+    log(`✅ Kategorie zapisane (docCount=${result.count ?? '?'})`, 'success');
+    return categories;
+  };
+
   const handleAutoBuild = async () => {
     setAutoLoading(true);
     try {
