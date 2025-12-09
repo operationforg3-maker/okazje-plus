@@ -56,6 +56,11 @@ service cloud.firestore {
       match /subcategories/{subcategoryId} {
         allow read: if true;
         allow write: if isAdmin();
+        // Sub-subkategorie (poziom 3)
+        match /subcategories/{subsubcategoryId} {
+          allow read: if true;
+          allow write: if isAdmin();
+        }
       }
       // Kafelki promocyjne kategorii
       match /tiles/{tileId} {
