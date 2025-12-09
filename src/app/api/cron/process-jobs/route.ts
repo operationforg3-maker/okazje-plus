@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     const startTime = Date.now();
 
-    // ===== FETCH PENDING JOBS =====
+    // ===== FETCH PENDING JOBS (old system: 'jobs' collection) =====
     const pendingJobsSnapshot = await adminDb
       .collection('jobs')
       .where('status', '==', 'pending')
@@ -67,22 +67,49 @@ export async function POST(req: NextRequest) {
       ...doc.data(),
     })) as Job[];
 
+    // ===== FETCH QUEUED IMPORT_JOBS (new system: 'import_jobs' collection) =====
+    const queuedImportJobsSnapshot = await adminDb
+      .collection('import_jobs')
+      .where('status', '==', 'queued')
+      .limit(5)
+      .get();
+
+    const importJobsToResume = queuedImportJobsSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
     logger.info('Cron job processor started', {
       jobsFound: jobs.length,
+      importJobsQueued: importJobsToResume.length,
       maxPerRun: MAX_JOBS_PER_RUN,
     });
 
-    // ===== PROCESS EACH JOB =====
+    // ===== PROCESS OLD SYSTEM JOBS =====
     const results = await Promise.allSettled(jobs.map(job => processJob(job)));
+
+    // ===== RESUME QUEUED IMPORT_JOBS =====
+    const importResults = await Promise.allSettled(
+      importJobsToResume.map(async (importJob: any) => {
+        logger.info('Resuming queued import_job', { jobId: importJob.id, type: importJob.type });
+        const { processImportJob } = await import('@/app/api/admin/import/start/route');
+        return processImportJob(importJob.id, importJob.type, importJob.maxItemsPerSubcategory);
+      })
+    );
 
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
+    const importSuccessful = importResults.filter(r => r.status === 'fulfilled').length;
+    const importFailed = importResults.filter(r => r.status === 'rejected').length;
     const durationMs = Date.now() - startTime;
 
     logger.info('Cron job processor completed', {
       processed: jobs.length,
       successful,
       failed,
+      importJobsResumed: importJobsToResume.length,
+      importSuccessful,
+      importFailed,
       durationMs,
     });
 
@@ -91,6 +118,9 @@ export async function POST(req: NextRequest) {
       processed: jobs.length,
       successful,
       failed,
+      importJobsResumed: importJobsToResume.length,
+      importSuccessful,
+      importFailed,
       durationMs,
       timestamp: new Date().toISOString(),
     });
