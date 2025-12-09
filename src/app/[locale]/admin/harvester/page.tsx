@@ -9,9 +9,13 @@ import { ProductImporter } from '@/components/admin/product-importer';
 import { AIEnhancer } from '@/components/admin/ai-enhancer';
 import { ImportConsole, ConsoleLine } from '@/components/admin/import-console';
 import { withAuth } from '@/components/auth/withAuth';
-import { Combine, ListTree, Package, Sparkles, Clock } from 'lucide-react';
+import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { JobsMonitor } from '@/components/admin/jobs-monitor';
+import { ScheduleManager } from '@/components/admin/schedule-manager';
+import { LinkVerifier } from '@/components/admin/link-verifier';
+import { FirebaseIndexManager } from '@/components/admin/firebase-index-manager';
+import { DatabaseCleaner } from '@/components/admin/database-cleaner';
 
 function HarvesterPage() {
   const { user, getIdToken } = useAuth();
@@ -55,22 +59,38 @@ function HarvesterPage() {
         {/* Main Content */}
         <div className="col-span-2 space-y-6">
           <Tabs defaultValue="categories" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="categories" className="gap-2">
+            <TabsList className="grid w-full grid-cols-8">
+              <TabsTrigger value="categories" className="gap-1 px-1 text-xs">
                 <ListTree className="h-4 w-4" />
                 <span>Kategorie</span>
               </TabsTrigger>
-              <TabsTrigger value="import" className="gap-2">
+              <TabsTrigger value="import" className="gap-1 px-1 text-xs">
                 <Package className="h-4 w-4" />
                 <span>Import</span>
               </TabsTrigger>
-              <TabsTrigger value="enhance" className="gap-2">
+              <TabsTrigger value="enhance" className="gap-1 px-1 text-xs">
                 <Sparkles className="h-4 w-4" />
                 <span>Ulepszanie</span>
               </TabsTrigger>
-              <TabsTrigger value="jobs" className="gap-2">
+              <TabsTrigger value="jobs" className="gap-1 px-1 text-xs">
                 <Clock className="h-4 w-4" />
-                <span>Jobs</span>
+                <span>Zadania</span>
+              </TabsTrigger>
+              <TabsTrigger value="schedule" className="gap-1 px-1 text-xs">
+                <Clock className="h-4 w-4" />
+                <span>Harmonogramy</span>
+              </TabsTrigger>
+              <TabsTrigger value="links" className="gap-1 px-1 text-xs">
+                <Shield className="h-4 w-4" />
+                <span>Linki</span>
+              </TabsTrigger>
+              <TabsTrigger value="indexes" className="gap-1 px-1 text-xs">
+                <Database className="h-4 w-4" />
+                <span>Indexes</span>
+              </TabsTrigger>
+              <TabsTrigger value="cleanup" className="gap-1 px-1 text-xs">
+                <Trash2 className="h-4 w-4" />
+                <span>Czyszczenie</span>
               </TabsTrigger>
             </TabsList>
 
@@ -103,7 +123,7 @@ function HarvesterPage() {
                 onEnhancementStarted={() => {
                   addLog('🤖 Sesja ulepszania AI rozpoczęta', 'info');
                 }}
-                onEnhancementCompleted={stats => {
+                onEnhancementCompleted={(stats: any) => {
                   addLog(`📊 Ulepszone: ${stats.enhanced}, Średnia jakość: ${(stats.avgQualityScore * 100).toFixed(1)}%`, 'success');
                 }}
               />
@@ -111,6 +131,22 @@ function HarvesterPage() {
 
             <TabsContent value="jobs" className="space-y-4">
               <JobsMonitor onConsoleLog={addLog} />
+            </TabsContent>
+
+            <TabsContent value="schedule" className="space-y-4">
+              <ScheduleManager onConsoleLog={addLog} />
+            </TabsContent>
+
+            <TabsContent value="links" className="space-y-4">
+              <LinkVerifier onConsoleLog={addLog} />
+            </TabsContent>
+
+            <TabsContent value="indexes" className="space-y-4">
+              <FirebaseIndexManager onConsoleLog={addLog} />
+            </TabsContent>
+
+            <TabsContent value="cleanup" className="space-y-4">
+              <DatabaseCleaner onConsoleLog={addLog} />
             </TabsContent>
           </Tabs>
         </div>
