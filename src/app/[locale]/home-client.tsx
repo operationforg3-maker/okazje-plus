@@ -62,7 +62,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
         </div>
 
-        <div className="container relative mx-auto px-4 py-16 md:py-24 lg:py-32">
+        <div className="page-container relative py-16 md:py-24 lg:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             {/* Logo & Tagline */}
             <div className="space-y-4">
@@ -127,7 +127,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* CATEGORIES SHOWCASE */}
       <section className="py-12 bg-card/50">
-        <div className="container mx-auto px-4">
+        <div className="page-container">
           <div className="text-center mb-8">
             <h2 className="font-headline text-3xl md:text-4xl font-bold mb-2">
               {t('categories.title')}
@@ -176,7 +176,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* HOT DEALS SECTION */}
       <section className="py-16">
-        <div className="container mx-auto px-4">
+        <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -214,7 +214,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* TOP PRODUCTS SECTION */}
       <section className="py-16 bg-card/50">
-        <div className="container mx-auto px-4">
+        <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -252,7 +252,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* BENEFITS SECTION - Zachęta do rejestracji */}
       <section className="py-16">
-        <div className="container mx-auto px-4">
+        <div className="page-container">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <Badge className="mb-4 text-lg px-4 py-2">
@@ -339,7 +339,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* FORUM TEASER */}
       <section className="py-16 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent">
-        <div className="container mx-auto px-4">
+        <div className="page-container">
           <div className="max-w-4xl mx-auto text-center space-y-6">
             <MessageSquare className="h-16 w-16 mx-auto text-primary" />
             <h2 className="font-headline text-3xl md:text-4xl font-bold">
@@ -383,7 +383,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* ABOUT / MISSION */}
       <section className="py-16">
-        <div className="container mx-auto px-4">
+        <div className="page-container">
           <div className="max-w-4xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="space-y-6">
@@ -456,7 +456,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* CTA SECTION */}
       <section className="py-16 bg-gradient-to-r from-primary to-accent text-white">
-        <div className="container mx-auto px-4 text-center">
+        <div className="page-container text-center">
           <div className="max-w-3xl mx-auto space-y-6">
             <h2 className="font-headline text-3xl md:text-5xl font-bold">
               Gotowy na najlepsze okazje?

@@ -170,6 +170,31 @@
     --ring: 142.1 76.2% 36.3%; /* Teal - focus ring (accessibility) */
     
     --radius: 0.5rem; /* 8px - standardowe zaokrąglenie dla wszystkich elementów */
+    
+    /* ============ PAGE LAYOUT SPACING ============
+       Unified padding system for consistent UI edges
+       Mobile: 16px, Tablet: 24px, Desktop: 32px, Wide: 48px
+       ============================================= */
+    --page-padding-x: 1rem;      /* 16px mobile */
+    --page-max-width: 1400px;    /* max-w-screen-2xl */
+  }
+  
+  @media (min-width: 640px) {
+    :root {
+      --page-padding-x: 1.5rem;  /* 24px sm */
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    :root {
+      --page-padding-x: 2rem;    /* 32px lg */
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    :root {
+      --page-padding-x: 3rem;    /* 48px xl */
+    }
   }
 
   .dark {
@@ -290,6 +315,28 @@
 }
 
 @layer components {
+  /* ============ PAGE CONTAINER SYSTEM ============
+     Use .page-container for all main page content
+     Provides consistent max-width and padding
+     ============================================== */
+  .page-container {
+    width: 100%;
+    max-width: var(--page-max-width);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--page-padding-x);
+    padding-right: var(--page-padding-x);
+  }
+  
+  /* Full-width sections that need edge-to-edge background but contained content */
+  .page-section {
+    width: 100%;
+  }
+  
+  .page-section > .page-container {
+    /* Inherits container styles */
+  }
+
   /* Unified Card System */
   .card-base {
     background-color: hsl(var(--card));

@@ -102,7 +102,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
   const totalResults = products.length + deals.length;
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12">
+    <div className="page-container py-8 md:py-12">
       <div className="mb-8">
         <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl mb-2">
           {t('title')}

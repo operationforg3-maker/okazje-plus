@@ -35,7 +35,7 @@ export function StatsStrip() {
 
   return (
     <div className="w-full bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 border-y py-6">
-      <div className="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <div className="page-container grid grid-cols-1 sm:grid-cols-3 gap-6">
         <StatCard
           icon={<Boxes className="h-5 w-5 md:h-6 md:w-6" />}
           label="Produkty w katalogu"

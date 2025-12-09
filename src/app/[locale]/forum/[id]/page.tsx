@@ -187,15 +187,15 @@ export default function ThreadPage() {
   };
 
   if (loading) {
-    return <div className="container mx-auto p-6">Ładowanie...</div>;
+    return <div className="page-container py-6">Ładowanie...</div>;
   }
 
   if (!thread) {
-    return <div className="container mx-auto p-6 text-muted-foreground">Wątek nie istnieje.</div>;
+    return <div className="page-container py-6 text-muted-foreground">Wątek nie istnieje.</div>;
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="page-container py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <div className="flex items-center gap-2">

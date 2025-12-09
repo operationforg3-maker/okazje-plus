@@ -12,7 +12,7 @@ export default function HeroSection() {
   const prefix = `/${locale}`;
   return (
     <section className="relative w-full bg-gradient-to-br from-primary/5 via-accent/5 to-background py-16 md:py-24 lg:py-32">
-      <div className="container mx-auto px-4 md:px-6 z-10">
+      <div className="page-container z-10">
         <div className="max-w-4xl mx-auto text-center space-y-8">
                     {/* Logo */}
                     <div className="relative flex justify-center mb-6">

@@ -109,9 +109,9 @@ export default async function RootLayout({
           <AuthProvider>
             <CurrencyProvider>
               <SmartCartProvider>
-                <div className="flex flex-col min-h-screen w-full max-w-screen-2xl mx-auto px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
+                <div className="flex flex-col min-h-screen w-full">
                   <ConditionalNav>
-                    <main className="flex-1 w-full max-w-full px-0 sm:px-2 md:px-4 lg:px-8 xl:px-0">
+                    <main className="flex-1 w-full">
                       {children}
                     </main>
                   </ConditionalNav>

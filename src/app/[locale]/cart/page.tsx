@@ -96,7 +96,7 @@ export default function CartPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-12">
+      <div className="page-container py-12">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
         </div>
@@ -107,7 +107,7 @@ export default function CartPage() {
   // Empty State
   if (items.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-12">
+      <div className="page-container py-12">
         <Card className="max-w-2xl mx-auto text-center">
           <CardHeader>
             <div className="flex justify-center mb-4">
@@ -139,7 +139,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:py-12">
+    <div className="page-container py-8 lg:py-12">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

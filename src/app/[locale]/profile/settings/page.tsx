@@ -239,7 +239,7 @@ function SettingsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl">
+    <div className="page-container py-8 md:py-12 max-w-4xl">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">

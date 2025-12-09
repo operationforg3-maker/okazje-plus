@@ -179,7 +179,7 @@ export default function AddDealPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 md:py-12 max-w-2xl">
+    <div className="page-container py-8 md:py-12 max-w-2xl">
       <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl mb-8">
         Dodaj nową okazję
       </h1>

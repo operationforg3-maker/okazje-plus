@@ -45,7 +45,7 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="page-container py-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-4xl font-bold flex items-center justify-center gap-3">

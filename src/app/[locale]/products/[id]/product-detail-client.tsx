@@ -143,7 +143,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
   };
 
   return (
-    <div className="container mx-auto px-4 py-4 md:py-8 lg:py-12">
+    <div className="page-container py-4 md:py-8 lg:py-12">
       {/* Breadcrumbs */}
       <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
         <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>

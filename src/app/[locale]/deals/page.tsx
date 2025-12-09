@@ -658,7 +658,7 @@ export default function DealsPage() {
     <div className="w-full">
       {/* Breadcrumb */}
       <div className="border-b bg-muted/30">
-        <div className="container mx-auto px-4 py-3">
+        <div className="page-container py-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-primary transition-colors">
               Strona główna
@@ -683,7 +683,7 @@ export default function DealsPage() {
 
       {/* Main Content - Mega Menu Style */}
       <div className="border-b bg-background">
-        <div className="container mx-auto px-4">
+        <div className="page-container">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 py-4 lg:py-6">
             {/* Mobile Filter Button */}
             <div className="lg:hidden col-span-1 mb-2">

@@ -104,7 +104,7 @@ export default function ForumHomePage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="page-container py-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Forum</h1>

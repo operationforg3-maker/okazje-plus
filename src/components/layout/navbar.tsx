@@ -42,7 +42,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 px-4 py-3 md:px-6">
+      <div className="page-container flex flex-col gap-3 py-3">
         <div className="flex items-center gap-3">
           {/* Mobile Nav */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
