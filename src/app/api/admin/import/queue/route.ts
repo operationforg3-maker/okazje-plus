@@ -42,10 +42,14 @@ function getImportKeywordsFromStructure(categorySlug: string, subcategorySlug: s
  * Returns immediately with job ID for tracking
  */
 export async function POST(req: NextRequest) {
+  console.log('[POST /api/admin/import/queue] ===== REQUEST START =====');
   try {
     // Check admin authorization
+    console.log('[POST /api/admin/import/queue] Checking admin authorization...');
     const authResult = await checkAdminAuth(req);
+    console.log('[POST /api/admin/import/queue] Auth result:', { authorized: authResult.authorized, uid: authResult.uid });
     if (!authResult.authorized) {
+      console.error('[POST /api/admin/import/queue] ❌ Not authorized:', authResult.error);
       return NextResponse.json(
         { error: authResult.error || 'Unauthorized' },
         { status: 401 }
@@ -53,6 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    console.log('[POST /api/admin/import/queue] Request body:', body);
     const {
       sources = {},
       maxProductsPerCategory = 20,
@@ -66,7 +71,10 @@ export async function POST(req: NextRequest) {
       .filter(([_, enabled]) => enabled)
       .map(([source]) => source);
 
+    console.log('[POST /api/admin/import/queue] Enabled sources:', enabledSources);
+
     if (enabledSources.length === 0) {
+      console.error('[POST /api/admin/import/queue] ❌ No sources enabled');
       return NextResponse.json(
         { error: 'No sources enabled' },
         { status: 400 }
@@ -74,6 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create job
+    console.log('[POST /api/admin/import/queue] Creating job in Firestore...');
     const jobId = await ImportQueueManager.createJob(
       enabledSources,
       {
@@ -84,8 +93,10 @@ export async function POST(req: NextRequest) {
       },
       authResult.uid!
     );
+    console.log('[POST /api/admin/import/queue] ✅ Job created:', jobId);
 
     // Start processing immediately in background (don't wait)
+    console.log('[POST /api/admin/import/queue] Starting background processor (async)...');
     processImportJobInBackground(jobId, {
       sources: enabledSources,
       config: {
@@ -95,15 +106,17 @@ export async function POST(req: NextRequest) {
         saveDraftsOnly,
       },
     }).catch((e) => {
-      console.error(`[POST /api/admin/import/queue] Background processor failed for job ${jobId}:`, e);
+      console.error(`[POST /api/admin/import/queue] ❌ Background processor failed for job ${jobId}:`, e);
     });
     
+    console.log('[POST /api/admin/import/queue] ===== RESPONSE SUCCESS =====');
     return NextResponse.json({
       success: true,
       jobId,
       message: 'Import job created and processing started. Use GET /api/admin/import/queue/{jobId} to track progress.',
     });
   } catch (error: any) {
+    console.error('[POST /api/admin/import/queue] ===== ERROR =====');
     console.error('[POST /api/admin/import/queue] Error:', error);
     console.error('[POST /api/admin/import/queue] Error stack:', error?.stack);
     console.error('[POST /api/admin/import/queue] Error message:', error?.message);
@@ -121,19 +134,24 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
   const jobRef = adminDb.collection('importJobs').doc(jobId);
 
   try {
-    console.log(`[Import Queue] Starting background processing for job ${jobId}`);
+    console.log(`[Import Queue] ===== BACKGROUND PROCESSOR START for job ${jobId} =====`);
+    console.log(`[Import Queue] Job config:`, jobData);
 
     // Mark as running
+    console.log(`[Import Queue] Marking job ${jobId} as running...`);
     await jobRef.update({
       status: 'running',
       startedAt: new Date().toISOString(),
     });
+    console.log(`[Import Queue] ✅ Job ${jobId} marked as running`);
 
     const { sources, config } = jobData;
     const maxProductsPerCategory = config.maxProductsPerCategory || 20;
 
     // Get all categories with sub-subcategories
+    console.log(`[Import Queue] Fetching all categories...`);
     const categories = await getAllCategories();
+    console.log(`[Import Queue] Found ${categories.length} categories`);
     
     const batches: Array<{
       categoryId: string;
@@ -213,28 +231,37 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       }
     }
 
-    console.log(`[Import Queue] Job ${jobId}: Created ${batches.length} batches`);
+    console.log(`[Import Queue] Built ${batches.length} batches from categories`);
 
     // Update total count
+    console.log(`[Import Queue] Updating job ${jobId} with total categories: ${batches.length}`);
     await jobRef.update({
       'progress.totalCategories': batches.length,
     });
 
     // Get currency rate
+    console.log(`[Import Queue] Fetching currency rate...`);
     let currencyRate = 4.0;
     try {
       const configDoc = await adminDb.collection('config').doc('importSettings').get();
       if (configDoc.exists) {
         currencyRate = configDoc.data()?.currencyRate || 4.0;
+        console.log(`[Import Queue] Currency rate: ${currencyRate}`);
       }
-    } catch (_) {}
+    } catch (_) {
+      console.warn(`[Import Queue] Could not fetch currency rate, using default: ${currencyRate}`);
+    }
 
     // Run import pipeline
+    console.log(`[Import Queue] Loading import pipeline...`);
     const { runProductImportPipeline } = await import('@/ai/flows/importerFlow');
+    console.log(`[Import Queue] ✅ Pipeline loaded`);
 
     let totalImported = 0;
     let processedCount = 0;
     const errors: string[] = [];
+
+    console.log(`[Import Queue] ===== STARTING BATCH PROCESSING (${batches.length} batches) =====`);
 
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
@@ -243,11 +270,13 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       const currentSnap = await jobRef.get();
       const currentData = currentSnap.data();
       if (currentData?.status === 'cancelled') {
-        console.log(`[Import Queue] Job ${jobId} cancelled`);
+        console.log(`[Import Queue] Job ${jobId} cancelled by user`);
         return;
       }
 
-      console.log(`[Import Queue] Job ${jobId}: Processing batch ${i + 1}/${batches.length}: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
+      console.log(`[Import Queue] Job ${jobId}: Batch ${i + 1}/${batches.length} START`);
+      console.log(`[Import Queue]   Category: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
+      console.log(`[Import Queue]   Keywords: ${batch.importKeywords.join(', ')}`);
 
       try {
         // Use English importKeywords for AliExpress API search
@@ -255,12 +284,14 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
           ? batch.importKeywords 
           : [batch.subsubcategoryName]; // Fallback
         
+        console.log(`[Import Queue]   Using keywords: ${keywords.join(', ')}`);
+
         // If keywords are weak (only 1 or Polish name), enhance with AI-generated keywords
         const shouldEnhanceKeywords = keywords.length <= 1 || keywords.some(k => k.match(/[ąćęłńóśźż]/i));
         
         if (shouldEnhanceKeywords && config.enableAIEnrichment) {
           try {
-            console.log(`  [AI Keywords] Enhancing weak keywords with AI for ${batch.subsubcategoryName}...`);
+            console.log(`[Import Queue]   🤖 Enhancing weak keywords with AI...`);
             const aiKeywords = await aiGenerateSearchKeywords({
               categoryName: batch.categoryName,
               subcategoryName: batch.subcategoryName,
@@ -268,13 +299,14 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
               fallbackKeywords: keywords,
             });
             keywords = aiKeywords.keywords;
-            console.log(`  [AI Keywords] Generated ${keywords.length} keywords: ${keywords.join(', ')}`);
+            console.log(`[Import Queue]   ✅ AI enhanced to ${keywords.length} keywords: ${keywords.join(', ')}`);
           } catch (e) {
-            console.warn(`  [AI Keywords] AI generation failed, using fallback keywords`);
+            console.warn(`[Import Queue]   ⚠️ AI keyword enhancement failed, using original keywords`);
             // Keep original keywords
           }
         }
 
+        console.log(`[Import Queue]   Running pipeline for keywords: ${keywords.join(', ')}`);
         const pipelineResult = await runProductImportPipeline({
           jobId,
           keywords,
@@ -292,7 +324,10 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
           save: { batchSize: 5, skipExisting: true },
         });
 
-        totalImported += pipelineResult.saved.created.length + pipelineResult.saved.updated.length;
+        const batchTotal = pipelineResult.saved.created.length + pipelineResult.saved.updated.length;
+        console.log(`[Import Queue] Job ${jobId}: Batch ${i + 1} result: created=${pipelineResult.saved.created.length}, updated=${pipelineResult.saved.updated.length}, total=${batchTotal}`);
+        
+        totalImported += batchTotal;
         processedCount++;
 
         await jobRef.update({
@@ -304,15 +339,20 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       } catch (err) {
         const errorMsg = `Batch ${i + 1} failed: ${err instanceof Error ? err.message : String(err)}`;
         errors.push(errorMsg);
-        console.error(`[Import Queue] Job ${jobId} batch failed:`, errorMsg);
+        console.error(`[Import Queue] Job ${jobId} batch ${i + 1} FAILED:`, errorMsg);
       }
     }
+
+    console.log(`[Import Queue] ===== BATCH PROCESSING COMPLETE =====`);
+    console.log(`[Import Queue] Job ${jobId}: Total processed: ${processedCount}/${batches.length}, Total imported: ${totalImported}`);
 
     // Get job start time for duration calculation
     const jobSnap = await jobRef.get();
     const startedAtStr = jobSnap.data()?.startedAt;
     const startTime = startedAtStr ? new Date(startedAtStr).getTime() : Date.now();
     const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+
+    console.log(`[Import Queue] Job ${jobId}: Finalizing... (duration: ${durationSeconds}s)`);
 
     // Mark as completed
     await jobRef.update({
@@ -326,11 +366,14 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       },
     });
 
-    console.log(`[Import Queue] Job ${jobId} completed: ${totalImported} products imported`);
+    console.log(`[Import Queue] ===== BACKGROUND PROCESSOR SUCCESS =====`);
+    console.log(`[Import Queue] Job ${jobId} completed: ${totalImported} products imported in ${durationSeconds}s`);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[Import Queue] ===== BACKGROUND PROCESSOR ERROR =====`);
     console.error(`[Import Queue] Job ${jobId} failed:`, errorMessage);
+    console.error(`[Import Queue] Error stack:`, error instanceof Error ? error.stack : 'N/A');
 
     await jobRef.update({
       status: 'failed',
