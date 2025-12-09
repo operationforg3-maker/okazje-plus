@@ -4,6 +4,7 @@ import { ImportQueueManager, ImportJob } from '@/lib/import-queue';
 import { adminDb } from '@/lib/firebase-admin';
 import { getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/data-admin';
 import { CATEGORY_STRUCTURE } from '@/lib/category-structure';
+import { aiGenerateSearchKeywords } from '@/ai/flows/aliexpress/aiGenerateSearchKeywords';
 
 /**
  * Helper: Get importKeywords from Firestore or fallback to category-structure.ts
@@ -250,9 +251,29 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
 
       try {
         // Use English importKeywords for AliExpress API search
-        const keywords = batch.importKeywords.length > 0 
+        let keywords = batch.importKeywords.length > 0 
           ? batch.importKeywords 
           : [batch.subsubcategoryName]; // Fallback
+        
+        // If keywords are weak (only 1 or Polish name), enhance with AI-generated keywords
+        const shouldEnhanceKeywords = keywords.length <= 1 || keywords.some(k => k.match(/[ąćęłńóśźż]/i));
+        
+        if (shouldEnhanceKeywords && config.enableAIEnrichment) {
+          try {
+            console.log(`  [AI Keywords] Enhancing weak keywords with AI for ${batch.subsubcategoryName}...`);
+            const aiKeywords = await aiGenerateSearchKeywords({
+              categoryName: batch.categoryName,
+              subcategoryName: batch.subcategoryName,
+              subsubcategoryName: batch.subsubcategoryName,
+              fallbackKeywords: keywords,
+            });
+            keywords = aiKeywords.keywords;
+            console.log(`  [AI Keywords] Generated ${keywords.length} keywords: ${keywords.join(', ')}`);
+          } catch (e) {
+            console.warn(`  [AI Keywords] AI generation failed, using fallback keywords`);
+            // Keep original keywords
+          }
+        }
 
         const pipelineResult = await runProductImportPipeline({
           jobId,
