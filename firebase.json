@@ -9,9 +9,10 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "frameworksBackend": {
-      "region": "europe-west4"
-    },
+    "predeploy": [
+      "npm install",
+      "npm run build"
+    ],
     "rewrites": [
       {
         "source": "**",
