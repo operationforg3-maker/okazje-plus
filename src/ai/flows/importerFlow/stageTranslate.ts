@@ -28,11 +28,20 @@ export async function translateProducts(
 ): Promise<EnrichedProduct[]> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   
-  console.log(`[Importer:Translate] Starting AI translation for ${products.length} products to ${finalConfig.targetLanguage}`);
+  console.log(`[Importer:Translate] ===== STAGE 4 START =====`);
+  console.log(`[Importer:Translate] Input: ${products.length} products`);
+  if (products.length === 0) {
+    console.error(`[Importer:Translate] ❌ CRITICAL: Zero input! Stage 3 (Enrich) returned 0 products.`);
+    return [];
+  }
+  console.log(`[Importer:Translate] Target language: ${finalConfig.targetLanguage}`);
   
   const translated: EnrichedProduct[] = [];
   let processed = 0;
   let aiErrors = 0;
+  let titles_translated = 0;
+  let descriptions_translated = 0;
+  let low_confidence = 0;
   
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
@@ -55,14 +64,10 @@ export async function translateProducts(
           const titleResult = await translateText(titleInput);
           
           product.titlePL = titleResult.translatedText;
-          console.log(`  ✓ Title PL (${titleResult.confidence}% confidence, ${titleResult.method}): "${titleResult.translatedText.slice(0, 60)}..."`);
+          titles_translated++;
           
           if (titleResult.confidence < 70) {
-            console.warn(`  ⚠️ Low confidence - flagged for manual review`);
-          }
-          
-          if (titleResult.warnings) {
-            console.warn(`  ⚠️ Warnings:`, titleResult.warnings);
+            low_confidence++;
           }
         } catch (e: any) {
           console.error(`  ✗ Title translation failed:`, e.message);
@@ -85,10 +90,10 @@ export async function translateProducts(
             const descResult = await translateText(descInput);
             
             product.descriptionPL = descResult.translatedText;
-            console.log(`  ✓ Description PL (${descResult.confidence}% confidence, ${descResult.method})`);
+            descriptions_translated++;
             
             if (descResult.confidence < 70) {
-              console.warn(`  ⚠️ Low confidence description - flagged for review`);
+              low_confidence++;
             }
           } catch (e: any) {
             console.error(`  ✗ Description translation failed:`, e.message);
@@ -119,7 +124,21 @@ export async function translateProducts(
     }
   }
   
-  console.log(`[Importer:Translate] Completed: ${translated.length} products translated (${aiErrors} errors)`);
+  console.log(`[Importer:Translate] ===== STAGE 4 END =====`);
+  console.log(`[Importer:Translate] Results:`);
+  console.log(`  - Processed: ${processed}/${products.length}`);
+  console.log(`  - Titles translated: ${titles_translated}`);
+  console.log(`  - Descriptions translated: ${descriptions_translated}`);
+  console.log(`  - Low confidence items: ${low_confidence}`);
+  console.log(`  - AI errors: ${aiErrors}`);
+  console.log(`  - Output: ${translated.length} products`);
+  
+  if (translated.length === 0) {
+    console.error(`[Importer:Translate] ❌ CRITICAL: Output is ZERO! Translation failed for all products.`);
+  } else {
+    console.log(`[Importer:Translate] ✅ Passing ${translated.length} products to Stage 5 (Save)`);
+  }
+  
   return translated;
 }
 

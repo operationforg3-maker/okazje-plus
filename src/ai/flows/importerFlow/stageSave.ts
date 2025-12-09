@@ -30,12 +30,18 @@ export async function saveProductsToFirestore(
 ): Promise<{ created: string[]; updated: string[]; skipped: string[] }> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   
-  console.log(`[Importer:Save] Starting save for ${products.length} products`);
+  console.log(`[Importer:Save] ===== STAGE 5 START =====`);
+  console.log(`[Importer:Save] Input: ${products.length} products`);
+  if (products.length === 0) {
+    console.error(`[Importer:Save] ❌ CRITICAL: Zero input! Stage 4 (Translate) returned 0 products.`);
+    return { created: [], updated: [], skipped: [] };
+  }
   console.log(`[Importer:Save] Config:`, { skipExisting: finalConfig.skipExisting, jobId: finalConfig.jobId });
   
   const created: string[] = [];
   const updated: string[] = [];
   const skipped: string[] = [];
+  let errors = 0;
   
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
@@ -63,7 +69,7 @@ export async function saveProductsToFirestore(
       
       // Build SmartPrice z właściwą walutą
       // Używamy pricePLN jeśli została skonwertowana, albo oryginalną cenę z jej walutą
-      const productCurrency = product.currencyTarget || 'PLN';
+      const productCurrency = product.currency || 'PLN';
       const finalPrice = product.pricePLN || product.priceUSD;
       
       const smartPrice: SmartPrice = {
@@ -188,15 +194,24 @@ export async function saveProductsToFirestore(
       }
       
     } catch (error: any) {
+      errors++;
       console.error(`[Importer:Save] Failed to save product ${product.originalId}:`, error.message);
     }
   }
   
-  console.log(`[Importer:Save] Completed:`, {
-    created: created.length,
-    updated: updated.length,
-    skipped: skipped.length,
-  });
+  console.log(`[Importer:Save] ===== STAGE 5 END =====`);
+  console.log(`[Importer:Save] Results:`);
+  console.log(`  - Created: ${created.length}`);
+  console.log(`  - Updated: ${updated.length}`);
+  console.log(`  - Skipped: ${skipped.length}`);
+  console.log(`  - Errors: ${errors}`);
+  console.log(`  - Total processed: ${created.length + updated.length + skipped.length + errors}/${products.length}`);
+  
+  if (created.length === 0 && updated.length === 0) {
+    console.error(`[Importer:Save] ❌ CRITICAL: No products created or updated! All were skipped or errored.`);
+  } else {
+    console.log(`[Importer:Save] ✅ SUCCESS: Saved ${created.length + updated.length} products to Firestore`);
+  }
   
   return { created, updated, skipped };
 }

@@ -25,7 +25,12 @@ export async function deduplicateProducts(
     minOrders: 10,
   }
 ): Promise<AliExpressProduct[]> {
-  console.log(`[Importer:Dedupe] Starting with ${products.length} products`);
+  console.log(`[Importer:Dedupe] ===== STAGE 2 START =====`);
+  console.log(`[Importer:Dedupe] Input: ${products.length} products`);
+  if (products.length === 0) {
+    console.error(`[Importer:Dedupe] ❌ CRITICAL: Zero input! Stage 1 (Fetch) returned 0 products.`);
+    return [];
+  }
   
   const seenIds = new Set<string>();
   const seenLinks = new Set<string>();
@@ -71,12 +76,20 @@ export async function deduplicateProducts(
     filtered.push(product);
   }
   
-  console.log(`[Importer:Dedupe] Results:`);
+  console.log(`[Importer:Dedupe] Filter Breakdown:`);
   console.log(`  - Kept: ${filtered.length}`);
   console.log(`  - Filtered (duplicate): ${filtered_duplicate}`);
   console.log(`  - Filtered (price): ${filtered_price}`);
   console.log(`  - Filtered (rating): ${filtered_rating}`);
   console.log(`  - Filtered (orders): ${filtered_orders}`);
+  
+  if (filtered.length === 0) {
+    console.error(`[Importer:Dedupe] ❌ CRITICAL: Output is ZERO! Filters were too aggressive.`);
+    console.error(`[Importer:Dedupe] Filtering breakdown: duplicate=${filtered_duplicate}, price=${filtered_price}, rating=${filtered_rating}, orders=${filtered_orders}`);
+    console.error(`[Importer:Dedupe] Config used: minPrice=${config.minPrice}, maxPrice=${config.maxPrice}, minRating=${config.minRating}, minOrders=${config.minOrders}`);
+  } else {
+    console.log(`[Importer:Dedupe] ✅ STAGE 2 END: Passing ${filtered.length} products to Stage 3 (Enrich)`);
+  }
   
   return filtered;
 }

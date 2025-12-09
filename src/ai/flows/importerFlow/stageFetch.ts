@@ -15,7 +15,9 @@ export async function fetchProductsFromAliexpress(
   config: ImportStageConfig,
   siteUrl: string = resolveSiteUrl()
 ): Promise<AliExpressProduct[]> {
-  console.log(`[Importer:Fetch] Starting fetch stage for keywords: ${keywords.join(' -> ')}`);
+  console.log(`[Importer:Fetch] ===== STAGE 1 START =====`);
+  console.log(`[Importer:Fetch] Site URL: ${siteUrl}`);
+  console.log(`[Importer:Fetch] Keywords (${keywords.length}): ${keywords.join(' | ')}`);
   
   const allProducts: AliExpressProduct[] = [];
   const seenIds = new Set<string>();
@@ -122,7 +124,16 @@ export async function fetchProductsFromAliexpress(
     }
   }
   
-  console.log(`[Importer:Fetch] Completed: ${allProducts.length} unique products from ${keywords.length} queries`);
+  console.log(`[Importer:Fetch] ===== RESULTS =====`);
+  console.log(`[Importer:Fetch]   Output: ${allProducts.length} unique products from ${keywords.length} keyword queries`);
+  if (allProducts.length === 0) {
+    console.error(`[Importer:Fetch] ❌ CRITICAL: 0 products fetched! Check:`);
+    console.error(`     - Site URL: ${siteUrl}`);
+    console.error(`     - Keywords: ${keywords.join(', ')}`);
+    console.error(`     - /api/admin/aliexpress/search endpoint reachable?`);
+    console.error(`     - ALIEXPRESS_APP_KEY/SECRET configured?`);
+  }
+  console.log(`[Importer:Fetch] ===== STAGE 1 END =====\n`);
   return allProducts;
 }
 

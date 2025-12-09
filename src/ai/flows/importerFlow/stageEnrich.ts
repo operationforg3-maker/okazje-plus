@@ -33,7 +33,12 @@ export async function enrichProducts(
 ): Promise<EnrichedProduct[]> {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
   
-  console.log(`[Importer:Enrich] Starting enrichment for ${products.length} products`);
+  console.log(`[Importer:Enrich] ===== STAGE 3 START =====`);
+  console.log(`[Importer:Enrich] Input: ${products.length} products`);
+  if (products.length === 0) {
+    console.error(`[Importer:Enrich] ❌ CRITICAL: Zero input! Stage 2 (Dedupe) returned 0 products.`);
+    return [];
+  }
   console.log(`[Importer:Enrich] Config:`, {
     batchSize: finalConfig.batchSize,
     currencyTarget: finalConfig.currencyTarget,
@@ -43,6 +48,7 @@ export async function enrichProducts(
   const enriched: EnrichedProduct[] = [];
   let processed = 0;
   let errors = 0;
+  let currency_converted = 0;
   
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
@@ -69,16 +75,14 @@ export async function enrichProducts(
         pricePLN = product.price;
         exchangeRate = 1.0; // Brak konwersji
         currencyTarget = 'PLN';
-        console.log(`  ✓ Price already in PLN: ${pricePLN} PLN`);
       } else if (finalConfig.currencyTarget === 'PLN') {
         // Konwertuj z USD/innej waluty na PLN
         const rate = finalConfig.exchangeRateUsdToPln || 4.0;
         pricePLN = Math.round(priceUSD * rate * 100) / 100; // Round to 2 decimals
         exchangeRate = rate;
-        console.log(`  $ Currency: ${productCurrency} ${priceUSD} → PLN ${pricePLN} (rate: ${rate})`);
+        currency_converted++;
       } else {
         // Pozostaw w oryginalnej walucie
-        console.log(`  $ Price in ${productCurrency}: ${priceUSD}`);
       }
       
       const enrichedProduct: EnrichedProduct = {
@@ -138,11 +142,18 @@ export async function enrichProducts(
     }
   }
   
-  console.log(`[Importer:Enrich] Completed:`,  {
-    processed,
-    errors,
-    total: enriched.length,
-  });
+  console.log(`[Importer:Enrich] ===== STAGE 3 END =====`);
+  console.log(`[Importer:Enrich] Results:`);
+  console.log(`  - Processed: ${processed}/${products.length}`);
+  console.log(`  - Currency conversions: ${currency_converted}`);
+  console.log(`  - Errors: ${errors}`);
+  console.log(`  - Output: ${enriched.length} products`);
+  
+  if (enriched.length === 0) {
+    console.error(`[Importer:Enrich] ❌ CRITICAL: Output is ZERO! Enrichment failed for all products.`);
+  } else {
+    console.log(`[Importer:Enrich] ✅ Passing ${enriched.length} products to Stage 4 (Translate)`);
+  }
   
   return enriched;
 }
