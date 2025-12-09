@@ -138,6 +138,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    ////////////////////////////////
+    // ADMIN SETTINGS (kursy walut, konfiguracja panelu)
+    ////////////////////////////////
+    match /admin/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
     // Komentarze jako subkolekcje (products/{productId}/comments i deals/{dealId}/comments)
     ////////////////////////////////
     // PRODUCT COMMENTS
