@@ -57,7 +57,7 @@ export async function aiTranslateTitleToPL(input: TranslateTitleRequest): Promis
       const hasManualReview = confidence < 70;
 
       return {
-            titlePL,
+        titlePL,
         confidence,
         hasManualReview,
       };
