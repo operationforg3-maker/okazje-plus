@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,21 +57,48 @@ interface ImportJob {
   itemsUpdated?: string[];
 }
 
+// Polling interval in ms - longer to prevent resource exhaustion
+const POLLING_INTERVAL_MS = 5000;
+
 export function ImportManager() {
   const { user, getIdToken: getIdTokenFromContext } = useAuth();
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
   const [history, setHistory] = useState<ImportJob[]>([]);
   const [loading, setLoading] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  // Use refs to avoid stale closures and infinite loops
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const isPollingRef = useRef(false);
 
-  // Fetch history on mount
+  // Get token once and cache it
   const getTokenOrThrow = useCallback(async () => {
+    // Reuse cached token if available (tokens last ~1hr)
+    if (tokenRef.current) {
+      return tokenRef.current;
+    }
     const token = await getIdTokenFromContext();
     if (!token) {
       throw new Error('Brak tokenu. Zaloguj się ponownie.');
     }
+    tokenRef.current = token;
     return token;
+  }, [getIdTokenFromContext]);
+
+  // Refresh token periodically (every 30 min)
+  useEffect(() => {
+    const refreshToken = async () => {
+      try {
+        const token = await getIdTokenFromContext();
+        tokenRef.current = token;
+      } catch (e) {
+        console.error('Failed to refresh token:', e);
+      }
+    };
+    
+    const interval = setInterval(refreshToken, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [getIdTokenFromContext]);
 
   const fetchHistory = useCallback(async () => {
@@ -86,60 +113,87 @@ export function ImportManager() {
         const data = await res.json();
         setHistory(data.jobs || []);
       } else if (res.status === 401) {
-        toast.error('Brak autoryzacji do podglądu historii importu');
+        // Token expired, clear cache
+        tokenRef.current = null;
+        toast.error('Sesja wygasła. Odśwież stronę.');
       }
     } catch (e) {
       console.error('Failed to fetch history:', e);
     }
   }, [getTokenOrThrow]);
 
-  // Fetch history on mount
+  // Fetch history on mount (once)
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Poll active job status
+  // Poll active job status - fixed to prevent infinite loops
   useEffect(() => {
+    // Clear any existing polling
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    // Don't poll if no active job
     if (!activeJobId) {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-        setPollingInterval(null);
-      }
+      isPollingRef.current = false;
       return;
     }
 
+    isPollingRef.current = true;
+
     const poll = async () => {
+      // Skip if polling was stopped
+      if (!isPollingRef.current) return;
+      
       try {
         const token = await getTokenOrThrow();
         const res = await fetch(`/api/admin/import/status?jobId=${activeJobId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.ok) {
-          const data = await res.json();
-          setActiveJob(data.job);
-
-          // Stop polling if job finished
-          if (['completed', 'failed', 'cancelled'].includes(data.job.status)) {
-            if (pollingInterval) {
-              clearInterval(pollingInterval);
-              setPollingInterval(null);
-            }
-            fetchHistory(); // Refresh history
+        
+        if (!res.ok) {
+          if (res.status === 401) {
+            tokenRef.current = null;
           }
+          console.error('Polling error: status', res.status);
+          return;
+        }
+        
+        const data = await res.json();
+        setActiveJob(data.job);
+
+        // Stop polling if job finished
+        if (['completed', 'failed', 'cancelled', 'rolled_back'].includes(data.job.status)) {
+          isPollingRef.current = false;
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          fetchHistory(); // Refresh history once
         }
       } catch (e) {
         console.error('Polling error:', e);
       }
     };
 
-    poll(); // Initial fetch
-    const interval = setInterval(poll, 3000); // Poll every 3s
-    setPollingInterval(interval);
+    // Initial fetch
+    poll();
+    
+    // Set up interval polling
+    pollingIntervalRef.current = setInterval(poll, POLLING_INTERVAL_MS);
 
+    // Cleanup on unmount or when activeJobId changes
     return () => {
-      if (interval) clearInterval(interval);
+      isPollingRef.current = false;
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
     };
-  }, [activeJobId, pollingInterval, fetchHistory, getTokenOrThrow]);
+  }, [activeJobId, getTokenOrThrow, fetchHistory]);
 
   const startImport = async (type: 'products' | 'deals') => {
     if (loading) return;
