@@ -1,13 +1,11 @@
 /**
  * AI-Powered Translation: English → Polish Product Titles
  * 
- * Uses Claude with context about product category for accurate technical terminology
+ * Uses Gemini via Vertex AI for context-aware translation
  * Batch-friendly with configurable rate limiting
  */
 
-import { defineFlow, run } from 'genkit';
-import { generate } from '@genkit-ai/ai';
-import { gemini15Flash } from '@genkit-ai/vertexai';
+import { ai } from '@/ai/genkit';
 
 export interface TranslateTitleRequest {
   titleEN: string;
@@ -25,56 +23,32 @@ export interface TranslateTitleResult {
 /**
  * Flow: AI Translate English Product Title to Polish
  * 
- * Context-aware translation using Claude, optimized for e-commerce product names
+ * Context-aware translation using Gemini, optimized for e-commerce product names
  */
-export const aiTranslateTitleToPL = defineFlow(
-  {
-    name: 'aiTranslateTitleToPL',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        titleEN: { type: 'string', description: 'English product title' },
-        categoryEN: { type: 'string', description: 'Product category in English (e.g., "electronics")' },
-        subcategoryEN: { type: 'string', description: 'Product subcategory in English (e.g., "smartphones")' },
-        context: { type: 'string', enum: ['product_title', 'product_description', 'deal_title'] },
+export async function aiTranslateTitleToPL(input: TranslateTitleRequest): Promise<TranslateTitleResult> {
+  const { titleEN, categoryEN, subcategoryEN, context = 'product_title' } = input;
+
+  // Build category context for better translation
+  const categoryContext = [categoryEN, subcategoryEN].filter(Boolean).join(' → ');
+  const contextHint = categoryContext ? `(Category: ${categoryContext})` : '';
+
+  const prompt = buildTranslationPrompt(titleEN, categoryEN, subcategoryEN, context);
+
+  try {
+    // Call Gemini for translation via Vertex AI
+    const response = await ai.generate({
+      prompt,
+      config: {
+        temperature: 0.3, // Low temperature for consistency
+        maxOutputTokens: 150,
       },
-      required: ['titleEN'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        titlePL: { type: 'string', description: 'Translated Polish title' },
-        confidence: { type: 'number', minimum: 0, maximum: 100 },
-        hasManualReview: { type: 'boolean' },
-      },
-      required: ['titlePL', 'confidence'],
-    },
-  },
-  async (input: TranslateTitleRequest): Promise<TranslateTitleResult> => {
-    const { titleEN, categoryEN, subcategoryEN, context = 'product_title' } = input;
+    });
 
-    // Build category context for better translation
-    const categoryContext = [categoryEN, subcategoryEN].filter(Boolean).join(' → ');
-    const contextHint = categoryContext ? `(Category: ${categoryContext})` : '';
-
-    const prompt = buildTranslationPrompt(titleEN, categoryEN, subcategoryEN, context);
-
-    try {
-      // Call Gemini for translation via Vertex AI
-      const response = await generate({
-        model: gemini15Flash,
-        prompt,
-        config: {
-          temperature: 0.3, // Low temperature for consistency
-          maxOutputTokens: 150,
-        },
-      });
-
-      // Parse response
-      const generatedText = response.text() || '';
-      
-      // Extract Polish title (usually in quotes or first line)
-      const titlePL = extractPolishTitle(generatedText);
+    // Parse response
+    const generatedText = response.text() || '';
+    
+    // Extract Polish title (usually in quotes or first line)
+    const titlePL = extractPolishTitle(generatedText);
       
       // Calculate confidence based on response quality
       const confidence = assessConfidence(titleEN, titlePL, generatedText);
@@ -83,7 +57,7 @@ export const aiTranslateTitleToPL = defineFlow(
       const hasManualReview = confidence < 70;
 
       return {
-        titlePL,
+            titlePL,
         confidence,
         hasManualReview,
       };
@@ -97,11 +71,10 @@ export const aiTranslateTitleToPL = defineFlow(
         hasManualReview: true,
       };
     }
-  }
-);
+}
 
 /**
- * Build detailed prompt for Claude to ensure high-quality translations
+ * Build detailed prompt for Gemini to ensure high-quality translations
  */
 function buildTranslationPrompt(
   titleEN: string,
