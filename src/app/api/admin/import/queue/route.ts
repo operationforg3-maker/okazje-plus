@@ -114,6 +114,7 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       subsubcategoryId: string;
       subsubcategoryName: string;
       subsubcategorySlug: string;
+      importKeywords: string[]; // English keywords for AliExpress API
     }> = [];
 
     for (const cat of categories) {
@@ -123,6 +124,13 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
         
         if (subsubcategories.length > 0) {
           for (const subsub of subsubcategories) {
+            // Build English keywords from importKeywords or translations.en.name
+            const englishKeywords = subsub.importKeywords?.length 
+              ? subsub.importKeywords 
+              : subsub.translations?.en?.name 
+                ? [subsub.translations.en.name]
+                : [subsub.name]; // Fallback to name (may be Polish)
+            
             batches.push({
               categoryId: cat.id,
               categoryName: cat.name,
@@ -133,9 +141,11 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
               subsubcategoryId: subsub.id,
               subsubcategoryName: subsub.name,
               subsubcategorySlug: subsub.slug,
+              importKeywords: englishKeywords,
             });
           }
         } else {
+          // No sub-subcategories, use subcategory as target
           batches.push({
             categoryId: cat.id,
             categoryName: cat.name,
@@ -146,6 +156,7 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
             subsubcategoryId: sub.id,
             subsubcategoryName: sub.name,
             subsubcategorySlug: sub.slug,
+            importKeywords: [sub.name], // Use subcategory name as keyword
           });
         }
       }
@@ -188,12 +199,10 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       console.log(`[Import Queue] Job ${jobId}: Processing batch ${i + 1}/${batches.length}: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
 
       try {
-        const keywords = [
-          batch.categorySlug,
-          batch.subcategorySlug,
-          batch.subsubcategorySlug,
-          `${batch.subcategorySlug} ${batch.categorySlug}`,
-        ].filter(k => k && k !== batch.subsubcategorySlug);
+        // Use English importKeywords for AliExpress API search
+        const keywords = batch.importKeywords.length > 0 
+          ? batch.importKeywords 
+          : [batch.subsubcategoryName]; // Fallback
 
         const pipelineResult = await runProductImportPipeline({
           jobId,
@@ -228,6 +237,12 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       }
     }
 
+    // Get job start time for duration calculation
+    const jobSnap = await jobRef.get();
+    const startedAtStr = jobSnap.data()?.startedAt;
+    const startTime = startedAtStr ? new Date(startedAtStr).getTime() : Date.now();
+    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+
     // Mark as completed
     await jobRef.update({
       status: 'completed',
@@ -236,7 +251,7 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
       results: {
         totalProducts: totalImported,
         totalVariants: 0,
-        duration: Date.now(),
+        duration: durationSeconds, // Duration in seconds, not timestamp!
       },
     });
 

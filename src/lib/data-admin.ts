@@ -382,7 +382,15 @@ export async function getSubcategories(categoryId: string): Promise<Array<{ id: 
 /**
  * Pobiera wszystkie sub-subcategories dla danej subcategory
  */
-export async function getSubSubcategories(categoryId: string, subcategoryId: string): Promise<Array<{ id: string; name: string; slug: string; icon?: string; sortOrder?: number }>> {
+export async function getSubSubcategories(categoryId: string, subcategoryId: string): Promise<Array<{ 
+  id: string; 
+  name: string; 
+  slug: string; 
+  icon?: string; 
+  sortOrder?: number;
+  importKeywords?: string[];
+  translations?: { en?: { name: string }; de?: { name: string } };
+}>> {
   const snapshot = await adminDb
     .collection('categories')
     .doc(categoryId)
@@ -391,11 +399,16 @@ export async function getSubSubcategories(categoryId: string, subcategoryId: str
     .collection('subcategories')
     .orderBy('sortOrder', 'asc')
     .get();
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    name: doc.data().name,
-    slug: doc.data().slug,
-    icon: doc.data().icon,
-    sortOrder: doc.data().sortOrder,
-  }));
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      name: data.name,
+      slug: data.slug,
+      icon: data.icon,
+      sortOrder: data.sortOrder,
+      importKeywords: data.importKeywords,
+      translations: data.translations,
+    };
+  });
 }
