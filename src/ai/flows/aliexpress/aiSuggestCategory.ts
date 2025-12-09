@@ -35,83 +35,7 @@ const categoryPrompt = ai.definePrompt({
   name: 'categorySuggestionPrompt',
   input: { schema: CategorySuggestionInputSchema },
   output: { schema: CategorySuggestionOutputSchema },
-  prompt: `Jesteś ekspertem kategoryzacji produktów dla polskiego portalu okazji.
-
-Zadanie: Przypisz produkt do 3-poziomowej kategorii (mainCategorySlug + subCategorySlug + subSubCategorySlug).
-
-Produkt:
-- Tytuł: {{{productTitle}}}
-{{#if description}}- Opis: {{{description}}}{{/if}}
-
-DOSTĘPNE KATEGORIE 3-POZIOMOWE (użyj DOKŁADNIE tych slugów):
-
-1. **elektronika** (main)
-   - **smartfony** (sub): akcesoria-do-smartfonow, case-i-etui, ladowarki-i-kable, powerbanki, uchwyty-samochodowe
-   - **tablety** (sub): tablety-android, tablety-ios, akcesoria-do-tabletow
-   - **laptopy** (sub): laptopy-osobiste, laptopy-do-gier, ultrabooki, akcesoria-do-laptopow
-   - **audio** (sub): sluchawki, glosniki, systemy-audio, akcesoria-audio
-   - **fotografia** (sub): aparaty-cyfrowe, obiektywy, statywy, akcesoria-fotograficzne
-   - **akcesoria** (sub): przewody-i-kable, zasilacze, adaptery, pamiec-zewnetrzna
-
-2. **dom-i-ogrod** (main)
-   - **meble** (sub): meble-do-salonu, meble-do-sypialni, meble-kuchenne, meble-ogrodowe
-   - **dekoracje** (sub): obrazy-i-plakaty, swiatla-dekoracyjne, wazony-i-figurki, tekstylia-domowe
-   - **ogrod** (sub): narzedzia-ogrodowe, nawadnianie, nasiona-i-rosliny
-   - **narzedzia** (sub): narzedzia-reczne, elektronarzedzia, organizery-narzedzi
-   - **agd** (sub): agd-male, agd-kuchenne, odkurzacze, agd-do-czyszczenia
-
-3. **moda** (main)
-   - **odziez-damska** (sub): sukienki, bluzki, spodnie-damskie, kurtki-damskie, swetry-damskie
-   - **odziez-meska** (sub): koszule, spodnie-meskie, kurtki-meskie, swetry-meskie, t-shirty
-   - **obuwie** (sub): obuwie-damskie, obuwie-meskie, obuwie-sportowe, obuwie-dzieciece
-   - **akcesoria-modowe** (sub): torby-i-torebki, paski, czapki-i-kapelusze, szaliki-i-rekawiczki
-   - **bizuteria** (sub): naszyjniki, bransoletki, kolczyki, piercionki, zegarki
-
-4. **sport-i-turystyka** (main)
-   - **fitness** (sub): silownia-domowa, akcesoria-fitness, odzywki-sportowe, maty-do-cwiczen
-   - **odziez-sportowa** (sub): odziez-do-biegania, odziez-rowerowa, odziez-treningowa, buty-sportowe
-   - **turystyka** (sub): namioty, plecaki-turystyczne, spiwory, akcesoria-turystyczne
-   - **akcesoria-sportowe** (sub): pilki, rakiety, ochraniacze, gadzety-sportowe
-
-5. **zdrowie-i-uroda** (main)
-   - **kosmetyki** (sub): kosmetyki-do-twarzy, kosmetyki-do-ciala, makijaz, perfumy
-   - **suplementy** (sub): witaminy, mineraly, suplementy-odchudzajace, suplementy-sportowe
-   - **pielegnacja** (sub): pielegnacja-twarzy, pielegnacja-wlosow, pielegnacja-ciala, higiena
-   - **sprzet-medyczny** (sub): cisnienomierze, termometry, glukometry, maski-ochronne
-
-6. **motoryzacja** (main)
-   - **akcesoria-samochodowe** (sub): organizery, uchwyty, zapachy, pokrowce
-   - **czesci** (sub): filtry, paski, zyrowki, akcesoria-do-czesci
-   - **elektronika-samochodowa** (sub): kamery-samochodowe, nawigacje, ladowarki-samochodowe
-   - **pielegnacja-auta** (sub): kosmetyki-samochodowe, odkurzacze-samochodowe, mycie-i-czyszczenie
-
-7. **zabawki** (main)
-   - **zabawki-dla-niemowlat** (sub): grzechotki, mobile, interaktywne-zabawki
-   - **zabawki-edukacyjne** (sub): puzzle, ksiazki-dla-dzieci, zestawy-edukacyjne
-   - **klocki** (sub): lego, klocki-drewniane, klocki-plastikowe
-   - **lalki-i-figurki** (sub): lalki, figurki-akcji, akcesoria-do-lalek
-   - **gry-planszowe** (sub): gry-rodzinne, gry-strategiczne, gry-karciane
-
-8. **inne** (main)
-   - **pozostale** (sub): niesklasyfikowane, rozne, inne-produkty
-
-ZASADY:
-1. MUSISZ zwrócić WSZYSTKIE 3 POZIOMY (main + sub + subsub)
-2. Wybierz najbardziej specyficzną subsubkategorię
-3. confidence = 1.0 (pewny), 0.8-0.9 (dobry), 0.6-0.7 (ok), <0.6 (niepewny)
-4. reasoning w języku polskim - wyjaśnij dlaczego wybrano TEN 3-poziomowy path
-5. Używaj TYLKO slugów z listy powyżej (lowercase, z myślnikami)
-
-PRZYKŁADY:
-- "iPhone 15 Pro etui skórzane" → main: "elektronika", sub: "smartfony", subsub: "case-i-etui", confidence: 1.0
-- "Słuchawki Sony WH-1000XM5" → main: "elektronika", sub: "audio", subsub: "sluchawki", confidence: 1.0
-- "Adidas Ultraboost buty do biegania" → main: "sport-i-turystyka", sub: "odziez-sportowa", subsub: "buty-sportowe", confidence: 0.9
-- "Krem przeciwzmarszczkowy L'Oreal" → main: "zdrowie-i-uroda", sub: "kosmetyki", subsub: "kosmetyki-do-twarzy", confidence: 0.9
-- "Kabel USB-C 2m" → main: "elektronika", sub: "akcesoria", subsub: "przewody-i-kable", confidence: 0.8
-
-Jeśli nie pasuje, użyj: main: "inne", sub: "pozostale", subsub: "niesklasyfikowane", confidence: 0.3
-
-ZWRÓĆ WSZYSTKIE 3 POZIOMY!`,
+  prompt: `Jesteś ekspertem kategoryzacji produktów dla polskiego portalu okazji.\n\nZadanie: Przypisz produkt do 3-poziomowej kategorii (mainCategorySlug + subCategorySlug + subSubCategorySlug).\n\nProdukt:\n- Tytuł: {{{productTitle}}}\n{{#if description}}- Opis: {{{description}}}{{/if}}\n\nDOSTĘPNE KATEGORIE 3-POZIOMOWE (użyj DOKŁADNIE tych slugów):\n\n1. **elektronika** (main)\n   - **smartfony** (sub): akcesoria-do-smartfonow, case-i-etui, ladowarki-i-kable, powerbanki, uchwyty-samochodowe\n   - **tablety** (sub): tablety-android, tablety-ios, akcesoria-do-tabletow\n   - **laptopy** (sub): laptopy-osobiste, laptopy-do-gier, ultrabooki, akcesoria-do-laptopow\n   - **audio** (sub): sluchawki, glosniki, systemy-audio, akcesoria-audio\n   - **fotografia** (sub): aparaty-cyfrowe, obiektywy, statywy, akcesoria-fotograficzne\n   - **akcesoria** (sub): przewody-i-kable, zasilacze, adaptery, pamiec-zewnetrzna\n\n2. **dom-i-ogrod** (main)\n   - **meble** (sub): meble-do-salonu, meble-do-sypialni, meble-kuchenne, meble-ogrodowe\n   - **dekoracje** (sub): obrazy-i-plakaty, swiatla-dekoracyjne, wazony-i-figurki, tekstylia-domowe\n   - **ogrod** (sub): narzedzia-ogrodowe, nawadnianie, nasiona-i-rosliny\n   - **narzedzia** (sub): narzedzia-reczne, elektronarzedzia, organizery-narzedzi\n   - **agd** (sub): agd-male, agd-kuchenne, odkurzacze, agd-do-czyszczenia\n\n3. **moda** (main)\n   - **odziez-damska** (sub): sukienki, bluzki, spodnie-damskie, kurtki-damskie, swetry-damskie\n   - **odziez-meska** (sub): koszule, spodnie-meskie, kurtki-meskie, swetry-meskie, t-shirty\n   - **obuwie** (sub): obuwie-damskie, obuwie-meskie, obuwie-sportowe, obuwie-dzieciece\n   - **akcesoria-modowe** (sub): torby-i-torebki, paski, czapki-i-kapelusze, szaliki-i-rekawiczki\n   - **bizuteria** (sub): naszyjniki, bransoletki, kolczyki, piercionki, zegarki\n\n4. **sport-i-turystyka** (main)\n   - **fitness** (sub): silownia-domowa, akcesoria-fitness, odzywki-sportowe, maty-do-cwiczen\n   - **odziez-sportowa** (sub): odziez-do-biegania, odziez-rowerowa, odziez-treningowa, buty-sportowe\n   - **turystyka** (sub): namioty, plecaki-turystyczne, spiwory, akcesoria-turystyczne\n   - **akcesoria-sportowe** (sub): pilki, rakiety, ochraniacze, gadzety-sportowe\n\n5. **zdrowie-i-uroda** (main)\n   - **kosmetyki** (sub): kosmetyki-do-twarzy, kosmetyki-do-ciala, makijaz, perfumy\n   - **suplementy** (sub): witaminy, mineraly, suplementy-odchudzajace, suplementy-sportowe\n   - **pielegnacja** (sub): pielegnacja-twarzy, pielegnacja-wlosow, pielegnacja-ciala, higiena\n   - **sprzet-medyczny** (sub): cisnienomierze, termometry, glukometry, maski-ochronne\n\n6. **motoryzacja** (main)\n   - **akcesoria-samochodowe** (sub): organizery, uchwyty, zapachy, pokrowce\n   - **czesci** (sub): filtry, paski, zyrowki, akcesoria-do-czesci\n   - **elektronika-samochodowa** (sub): kamery-samochodowe, nawigacje, ladowarki-samochodowe\n   - **pielegnacja-auta** (sub): kosmetyki-samochodowe, odkurzacze-samochodowe, mycie-i-czyszczenie\n\n7. **zabawki** (main)\n   - **zabawki-dla-niemowlat** (sub): grzechotki, mobile, interaktywne-zabawki\n   - **zabawki-edukacyjne** (sub): puzzle, ksiazki-dla-dzieci, zestawy-edukacyjne\n   - **klocki** (sub): lego, klocki-drewniane, klocki-plastikowe\n   - **lalki-i-figurki** (sub): lalki, figurki-akcji, akcesoria-do-lalek\n   - **gry-planszowe** (sub): gry-rodzinne, gry-strategiczne, gry-karciane\n\n8. **inne** (main)\n   - **pozostale** (sub): niesklasyfikowane, rozne, inne-produkty\n\nZASADY:\n1. MUSISZ zwrócić WSZYSTKIE 3 POZIOMY (main + sub + subsub)\n2. Wybierz najbardziej specyficzną subsubkategorię\n3. confidence = 1.0 (pewny), 0.8-0.9 (dobry), 0.6-0.7 (ok), <0.6 (niepewny)\n4. reasoning w języku polskim - wyjaśnij dlaczego wybrano TEN 3-poziomowy path\n5. Używaj TYLKO slugów z listy powyżej (lowercase, z myślnikami)\n\nPRZYKŁADY:\n- "iPhone 15 Pro etui skórzane" → main: "elektronika", sub: "smartfony", subsub: "case-i-etui", confidence: 1.0\n- "Słuchawki Sony WH-1000XM5" → main: "elektronika", sub: "audio", subsub: "sluchawki", confidence: 1.0\n- "Adidas Ultraboost buty do biegania" → main: "sport-i-turystyka", sub: "odziez-sportowa", subsub: "buty-sportowe", confidence: 0.9\n- "Krem przeciwzmarszczkowy L'Oreal" → main: "zdrowie-i-uroda", sub: "kosmetyki", subsub: "kosmetyki-do-twarzy", confidence: 0.9\n- "Kabel USB-C 2m" → main: "elektronika", sub: "akcesoria", subsub: "przewody-i-kable", confidence: 0.8\n\nJeśli nie pasuje, użyj: main: "inne", sub: "pozostale", subsub: "niesklasyfikowane", confidence: 0.3\n\nZWRÓĆ WSZYSTKIE 3 POZIOMY!`,
 });
 
 const categoryFlow = ai.defineFlow(
@@ -388,7 +312,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'moda',
         subCategorySlug: 'akcesoria-modowe',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'torby-i-torebki',
         confidence: 0.6,
         reasoning: 'Rozpoznano akcesoria modowe (fallback)',
       };
@@ -398,7 +322,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'moda',
         subCategorySlug: 'bizuteria',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'zegarki',
         confidence: 0.7,
         reasoning: 'Rozpoznano biżuterię (fallback)',
       };
@@ -409,7 +333,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'sport-i-turystyka',
         subCategorySlug: 'fitness',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'akcesoria-fitness',
         confidence: 0.7,
         reasoning: 'Rozpoznano sprzęt fitness (fallback)',
       };
@@ -419,7 +343,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'sport-i-turystyka',
         subCategorySlug: 'odziez-sportowa',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'odziez-treningowa',
         confidence: 0.6,
         reasoning: 'Rozpoznano odzież sportową (fallback)',
       };
@@ -429,7 +353,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'sport-i-turystyka',
         subCategorySlug: 'turystyka',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'akcesoria-turystyczne',
         confidence: 0.7,
         reasoning: 'Rozpoznano sprzęt turystyczny (fallback)',
       };
@@ -440,7 +364,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zdrowie-i-uroda',
         subCategorySlug: 'kosmetyki',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'kosmetyki-do-twarzy',
         confidence: 0.7,
         reasoning: 'Rozpoznano kosmetyki (fallback)',
       };
@@ -450,7 +374,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zdrowie-i-uroda',
         subCategorySlug: 'suplementy',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'witaminy',
         confidence: 0.7,
         reasoning: 'Rozpoznano suplementy (fallback)',
       };
@@ -460,7 +384,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zdrowie-i-uroda',
         subCategorySlug: 'pielegnacja',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'pielegnacja-ciala',
         confidence: 0.6,
         reasoning: 'Rozpoznano produkty pielęgnacyjne (fallback)',
       };
@@ -471,7 +395,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'meble',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'meble-do-salonu',
         confidence: 0.7,
         reasoning: 'Rozpoznano meble (fallback)',
       };
@@ -481,7 +405,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'dekoracje',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'tekstylia-domowe',
         confidence: 0.6,
         reasoning: 'Rozpoznano dekoracje (fallback)',
       };
@@ -491,7 +415,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'agd',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'agd-do-czyszczenia',
         confidence: 0.7,
         reasoning: 'Rozpoznano AGD (fallback)',
       };
@@ -501,7 +425,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'narzedzia',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'narzedzia-reczne',
         confidence: 0.7,
         reasoning: 'Rozpoznano narzędzia (fallback)',
       };
@@ -511,7 +435,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'dom-i-ogrod',
         subCategorySlug: 'ogrod',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'nasiona-i-rosliny',
         confidence: 0.7,
         reasoning: 'Rozpoznano produkty ogrodnicze (fallback)',
       };
@@ -522,7 +446,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'motoryzacja',
         subCategorySlug: 'akcesoria-samochodowe',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'uchwyty',
         confidence: 0.5,
         reasoning: 'Rozpoznano tematykę motoryzacyjną (fallback)',
       };
@@ -533,7 +457,7 @@ export async function aiSuggestCategory(
       return {
         mainCategorySlug: 'zabawki',
         subCategorySlug: 'klocki',
-        subSubCategorySlug: '',
+        subSubCategorySlug: 'klocki-plastikowe',
         confidence: 0.6,
         reasoning: 'Rozpoznano zabawki (fallback)',
       };

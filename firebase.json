@@ -1,7 +1,4 @@
 {
-  "firestore": {
-    "rules": "firestore.rules"
-  },
   "hosting": {
     "source": ".",
     "ignore": [
@@ -12,19 +9,5 @@
     "frameworksBackend": {
       "region": "europe-west4"
     }
-  },
-  "functions": {
-    "source": "okazje-plus",
-    "ignore": [
-      "node_modules",
-      ".git",
-      "firebase-debug.log",
-      "firebase-debug.*.log",
-      "*.local"
-    ],
-    "predeploy": [
-      "npm --prefix \"$RESOURCE_DIR\" run lint",
-      "npm --prefix \"$RESOURCE_DIR\" run build"
-    ]
   }
 }
