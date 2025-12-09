@@ -1,9 +1,5 @@
-'use server';
-
 import { NextResponse } from 'next/server';
 import { healthChecks, HealthCheckResult } from '@/lib/health/tests';
-
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const results = await Promise.all(healthChecks.map(check => check()));
