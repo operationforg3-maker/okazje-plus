@@ -33,6 +33,8 @@ export interface SubSubcategory {
   color?: string;
   translations?: Record<string, { name: string; description?: string }>;
   importKeywords?: string[]; // frazy pomocne w importach/wyszukiwaniu
+  exampleProducts?: Array<{ name: string; category: string }>; // przykładowe produkty z tej kategorii
+  searchKeywords?: string[]; // słowa kluczowe do wyszukiwania (AI-generated)
 }
 
 export interface CategoryPromo {

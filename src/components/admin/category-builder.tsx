@@ -33,6 +33,9 @@ interface CategoryForm {
       name: string;
       slug: string;
       description: string;
+      descriptionEn?: string;
+      exampleProducts?: Array<{ name: string; category: string }>;
+      searchKeywords?: string[];
     }>;
   }>;
 }
@@ -43,6 +46,7 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
 
   const [loading, setLoading] = useState(false);
   const [autoLoading, setAutoLoading] = useState(false);
+  const [generatingContext, setGeneratingContext] = useState<string | null>(null); // tracks which subsub is being generated
   const [form, setForm] = useState<CategoryForm>({
     mainCategory: {
       name: 'Elektronika',
@@ -165,6 +169,67 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
       ].subSubCategories.filter((_, i) => i !== subSubCatIndex);
       return newForm;
     });
+  };
+
+  const handleGenerateContext = async (subCatIndex: number, subSubCatIndex: number) => {
+    const subSubCat = form.subCategories[subCatIndex]?.subSubCategories[subSubCatIndex];
+    if (!subSubCat?.name) {
+      log('❌ Podaj nazwę pod-podkategorii przed generowaniem', 'error');
+      return;
+    }
+
+    const contextKey = `${subCatIndex}-${subSubCatIndex}`;
+    setGeneratingContext(contextKey);
+    
+    try {
+      log(`🤖 Generuję kontekst dla ${subSubCat.name}...`, 'info');
+      
+      const token = await getIdTokenFn();
+      if (!token) {
+        throw new Error('Nie udało się pobrać tokenu autoryzacji');
+      }
+
+      const res = await fetch('/api/admin/categories/generate-context', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mainCategoryName: form.mainCategory.name,
+          subcategoryName: form.subCategories[subCatIndex].name,
+          subsubcategoryName: subSubCat.name,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Generowanie nie powiodło się');
+      }
+
+      // Update the sub-subcategory with generated data
+      setForm(prev => {
+        const newForm = { ...prev };
+        const target = newForm.subCategories[subCatIndex].subSubCategories[subSubCatIndex];
+        target.description = data.descriptionPl;
+        // Store English description and keywords in a way that can be used later
+        (target as any).descriptionEn = data.descriptionEn;
+        (target as any).exampleProducts = data.exampleProducts;
+        (target as any).searchKeywords = data.searchKeywords;
+        return newForm;
+      });
+
+      log(`✅ Wygenerowano kontekst: "${data.descriptionPl.substring(0, 50)}..."`, 'success');
+      log(`   📝 Słowa kluczowe: ${data.searchKeywords.join(', ')}`, 'info');
+    } catch (error: any) {
+      log(`❌ Błąd generowania: ${error.message}`, 'error');
+    } finally {
+      setGeneratingContext(null);
+    }
   };
 
   const handleCreateCategories = async () => {
@@ -417,6 +482,21 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
                           placeholder="Slug"
                           className="text-xs h-8 flex-1"
                         />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleGenerateContext(subIdx, subSubIdx)}
+                          disabled={generatingContext === `${subIdx}-${subSubIdx}` || !subSubCat.name}
+                          className="h-7 px-2 gap-1 text-xs"
+                          title="Generate description and keywords with AI"
+                        >
+                          {generatingContext === `${subIdx}-${subSubIdx}` ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-3 w-3" />
+                          )}
+                          AI
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
