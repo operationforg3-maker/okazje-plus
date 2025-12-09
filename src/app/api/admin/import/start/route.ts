@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, FieldValue } from '@/lib/firebase-admin';
 import { getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/data-admin';
 import { CATEGORY_STRUCTURE } from '@/lib/category-structure';
+import { getAliExpressCategoryIds } from '@/lib/aliexpress-category-mapping';
 
 /**
  * Helper: Get importKeywords from Firestore or fallback to category-structure.ts
@@ -53,13 +54,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    const { type = 'products', maxItemsPerSubcategory = 10 } = await req.json();
+    const { type = 'products', maxItemsPerSubcategory = 10, importerType = 'keyword-search' } = await req.json();
 
     if (!['products', 'deals'].includes(type)) {
       return NextResponse.json({ error: 'Invalid type. Use "products" or "deals"' }, { status: 400 });
     }
+    
+    if (!['keyword-search', 'hot-products', 'category-direct'].includes(importerType)) {
+      return NextResponse.json({ error: 'Invalid importerType' }, { status: 400 });
+    }
 
-    console.log(`[Import Start] Type: ${type}, Max items per subcategory: ${maxItemsPerSubcategory}`);
+    console.log(`[Import Start] Type: ${type}, Importer: ${importerType}, Max items per subcategory: ${maxItemsPerSubcategory}`);
 
     // Pobierz wszystkie kategorie i pod-podkategorie
     const categories = await getAllCategories();
@@ -120,6 +125,7 @@ export async function POST(req: NextRequest) {
     await jobRef.set({
       id: jobId,
       type,
+      importerType, // NEW: store which importer is used
       status: 'queued', // queued | running | paused | completed | failed
       progress: {
         total: batches.length,
@@ -141,7 +147,7 @@ export async function POST(req: NextRequest) {
     console.log(`[Import Start] Job created: ${jobId}`);
 
     // Uruchom processor w tle (nie czekaj)
-    processImportJob(jobId, type, maxItemsPerSubcategory).catch((e) => {
+    processImportJob(jobId, type, maxItemsPerSubcategory, importerType).catch((e) => {
       console.error(`[Import Start] Background processor failed for job ${jobId}:`, e);
     });
 
@@ -149,8 +155,9 @@ export async function POST(req: NextRequest) {
       success: true,
       jobId,
       status: 'queued',
+      importerType,
       totalBatches: batches.length,
-      message: `Import started. Processing ${batches.length} subcategories with max ${maxItemsPerSubcategory} items each.`,
+      message: `Import started using ${importerType}. Processing ${batches.length} subcategories with max ${maxItemsPerSubcategory} items each.`,
     }, { status: 202 }); // Accepted
   } catch (error: any) {
     console.error('[Import Start] Error:', error);
@@ -165,7 +172,12 @@ export async function POST(req: NextRequest) {
  * Background processor - przetwórz job batch po batchu
  * Używa nowego 5-etapowego systemu: Fetch → Dedupe → Enrich → Translate → Save
  */
-export async function processImportJob(jobId: string, type: 'products' | 'deals', maxItemsPerSubcategory: number) {
+export async function processImportJob(
+  jobId: string, 
+  type: 'products' | 'deals', 
+  maxItemsPerSubcategory: number,
+  importerType: 'keyword-search' | 'hot-products' | 'category-direct' = 'keyword-search'
+) {
   const jobRef = adminDb.collection('import_jobs').doc(jobId);
   
   try {
@@ -226,18 +238,46 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
 
       const batch = batches[i];
       console.log(`[Import Processor] [${i + 1}/${batches.length}] Processing: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
+      console.log(`[Import Processor] Importer Type: ${importerType}`);
 
       try {
-        // Generate search keywords from ENGLISH category slugs (not Polish names!)
-        // AliExpress API expects English keywords like 'electronics', 'smartphones', etc.
-        const keywords = [
-          batch.categorySlug,
-          batch.subcategorySlug,
-          batch.subsubcategorySlug,
-          `${batch.subcategorySlug} ${batch.categorySlug}`,
-          `${batch.subcategorySlug} popular`,
-          `${batch.subcategorySlug} bestseller`,
-        ].filter(k => k && k !== batch.subsubcategorySlug);
+        // NEW: Prepare keywords or category IDs based on importer type
+        let keywords: string[] = [];
+        let aliexpressCategoryIds: string[] = [];
+        
+        if (importerType === 'hot-products') {
+          // Hot Products mode: use AliExpress category IDs
+          aliexpressCategoryIds = getAliExpressCategoryIds(
+            batch.categorySlug,
+            batch.subcategorySlug,
+            batch.subsubcategorySlug
+          );
+          
+          if (aliexpressCategoryIds.length === 0) {
+            console.warn(`[Import Processor] No AliExpress category mapping for ${batch.categorySlug}/${batch.subcategorySlug}/${batch.subsubcategorySlug}`);
+            console.warn(`[Import Processor] Falling back to keyword search...`);
+            // Fallback to keyword search if no mapping
+            keywords = [
+              batch.categorySlug,
+              batch.subcategorySlug,
+              batch.subsubcategorySlug,
+            ].filter(Boolean);
+          } else {
+            // Use category IDs as "keywords" (stageFetch will detect hot-products mode)
+            keywords = aliexpressCategoryIds;
+            console.log(`[Import Processor] Using AliExpress category IDs: ${keywords.join(', ')}`);
+          }
+        } else {
+          // Keyword Search mode (original)
+          keywords = [
+            batch.categorySlug,
+            batch.subcategorySlug,
+            batch.subsubcategorySlug,
+            `${batch.subcategorySlug} ${batch.categorySlug}`,
+            `${batch.subcategorySlug} popular`,
+            `${batch.subcategorySlug} bestseller`,
+          ].filter(k => k && k !== batch.subsubcategorySlug);
+        }
 
         // Run 5-stage pipeline
         const pipelineResult = await runProductImportPipeline({
@@ -250,6 +290,8 @@ export async function processImportJob(jobId: string, type: 'products' | 'deals'
           subsubcategorySlugEN: batch.subsubcategorySlug,
           translateToPolish: true,
           currencyRate,
+          importerType, // NEW: pass importer type
+          aliexpressCategoryIds, // NEW: pass category IDs
           fetch: { batchSize: 50, delayBetweenItems: 200, delayBetweenBatches: 1000 },
           dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
           enrich: { batchSize: 5, delayBetweenItems: 300, delayBetweenBatches: 2000 },

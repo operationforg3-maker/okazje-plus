@@ -32,6 +32,8 @@ export interface PipelineConfig extends Partial<ImportJobConfig> {
   subsubcategorySlugEN?: string;
   translateToPolish?: boolean;
   currencyRate?: number;
+  importerType?: 'keyword-search' | 'hot-products' | 'category-direct'; // NEW: wybór metody importu
+  aliexpressCategoryIds?: string[]; // NEW: dla hot-products i category-direct
   fetch?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
   dedupe?: { batchSize?: number; minPrice?: number; maxPrice?: number; minRating?: number; minOrders?: number };
   enrich?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
@@ -59,6 +61,8 @@ export async function runProductImportPipeline(
   try {
     // STAGE 1: FETCH
     console.log(`[ProductImporter] Stage 1: FETCH from AliExpress`);
+    console.log(`[ProductImporter] Importer Type: ${config.importerType || 'keyword-search'}`);
+    
     const fetched = await fetchProductsFromAliexpress(
       config.keywords,
       {
@@ -67,6 +71,7 @@ export async function runProductImportPipeline(
         delayBetweenItems: config.fetch?.delayBetweenItems || 200,
         delayBetweenBatches: config.fetch?.delayBetweenBatches || 1000,
         maxRetries: config.fetch?.maxRetries || 2,
+        importerType: config.importerType || 'keyword-search', // NEW: pass importer type
       }
     );
     

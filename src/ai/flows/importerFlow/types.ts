@@ -15,6 +15,7 @@ export interface ImportStageConfig {
   delayBetweenItems: number; // ms
   delayBetweenBatches: number; // ms
   maxRetries: number;
+  importerType?: 'keyword-search' | 'hot-products' | 'category-direct'; // How to fetch products
 }
 
 export interface ProductImportState {
@@ -25,6 +26,7 @@ export interface ProductImportState {
   subcategorySlugEN: string;
   subsubcategoryNameEN: string;
   subsubcategorySlugEN: string;
+  importerType?: 'keyword-search' | 'hot-products' | 'category-direct';
   
   // Processing
   aliexpressProductData: AliExpressProduct[];

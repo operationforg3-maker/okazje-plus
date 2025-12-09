@@ -63,6 +63,7 @@ export default function ImportsPage() {
   const [maxItems, setMaxItems] = useState<string>("");
   const [dryRun, setDryRun] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [importerType, setImporterType] = useState<'keyword-search' | 'hot-products' | 'category-direct'>('keyword-search');
 
   const isUserAdmin = useMemo(() => isAdmin(user), [user]);
 
@@ -120,7 +121,11 @@ export default function ImportsPage() {
     try {
       setStarting(true);
       setError(null);
-      const payload: any = { profileId, dryRun };
+      const payload: any = { 
+        profileId, 
+        dryRun,
+        importerType, // NEW: przekaż typ importera
+      };
       if (maxItems) payload.maxItems = Number(maxItems);
 
       const data = await fetchWithToken<{ importRunId?: string; stats?: any }>(
@@ -220,6 +225,51 @@ export default function ImportsPage() {
                     {t("startCard.real")}
                   </Button>
                 </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Typ Importera (Eksperyment) 🧪</Label>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setImporterType('keyword-search')}
+                  className={`text-left border rounded-md p-3 transition ${
+                    importerType === 'keyword-search' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-semibold">🔍 Keyword Search (Obecny)</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    AI generuje keywords → wyszukuje produkty → filtry
+                  </div>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setImporterType('hot-products')}
+                  className={`text-left border rounded-md p-3 transition ${
+                    importerType === 'hot-products' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-semibold">🔥 Hot Products (Nowy)</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Bezpośrednie bestsellery z AliExpress category IDs
+                  </div>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setImporterType('category-direct')}
+                  className={`text-left border rounded-md p-3 transition ${
+                    importerType === 'category-direct' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  disabled
+                >
+                  <div className="font-semibold text-gray-400">📂 Category Direct (Wkrótce)</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Przeglądanie kategorii bez keywords (w przygotowaniu)
+                  </div>
+                </button>
               </div>
             </div>
             <div className="flex gap-2">

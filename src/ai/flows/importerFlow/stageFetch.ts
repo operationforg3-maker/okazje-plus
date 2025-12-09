@@ -7,6 +7,111 @@
 import { AliExpressProduct, ImportStageConfig } from './types';
 
 /**
+ * NEW: Fetch hot products directly by category IDs (no keywords needed!)
+ * Uses aliexpress.affiliate.hotproduct.query method
+ */
+export async function fetchHotProductsByCategory(
+  categoryIds: string[],
+  config: ImportStageConfig,
+  siteUrl: string = resolveSiteUrl()
+): Promise<AliExpressProduct[]> {
+  console.log(`[Importer:Fetch:HotProducts] ===== STAGE 1 START (HOT PRODUCTS) =====`);
+  console.log(`[Importer:Fetch:HotProducts] Site URL: ${siteUrl}`);
+  console.log(`[Importer:Fetch:HotProducts] Category IDs: ${categoryIds.join(', ')}`);
+  
+  const allProducts: AliExpressProduct[] = [];
+  const seenIds = new Set<string>();
+  
+  try {
+    // Call our backend endpoint that uses AliExpressClient.getHotProducts()
+    const response = await fetch(`${siteUrl}/api/admin/import/bestsellers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        categoryIds: categoryIds,
+        limit: config.batchSize,
+        currency: 'PLN'
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Importer:Fetch:HotProducts] API error ${response.status}: ${errorText.slice(0, 200)}`);
+      
+      if (response.status === 503) {
+        console.error(`[Importer:Fetch:HotProducts] ❌ CRITICAL: AliExpress API not configured!`);
+        throw new Error(`AliExpress API not configured (status 503)`);
+      }
+      
+      throw new Error(`Hot products API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    const products = data.products || [];
+    
+    console.log(`[Importer:Fetch:HotProducts] Got ${products.length} hot products`);
+    
+    // Normalize to our schema
+    for (const p of products) {
+      const productId = String(p.id || p.itemId || p.item_id || p.productId);
+      
+      if (!productId || seenIds.has(productId)) {
+        continue;
+      }
+      
+      seenIds.add(productId);
+      
+      const priceRaw = p.price || p.salePrice || p.sale_price || 0;
+      let price = 0;
+      if (typeof priceRaw === 'number') {
+        price = priceRaw;
+      } else if (typeof priceRaw === 'string') {
+        price = parseFloat(priceRaw.replace(/[^0-9.]/g, ''));
+      }
+      
+      const originalPriceRaw = p.originalPrice || p.original_price || p.marketPrice;
+      let originalPrice = price;
+      if (originalPriceRaw) {
+        if (typeof originalPriceRaw === 'number') {
+          originalPrice = originalPriceRaw;
+        } else if (typeof originalPriceRaw === 'string') {
+          originalPrice = parseFloat(originalPriceRaw.replace(/[^0-9.]/g, ''));
+        }
+      }
+      
+      const discount = originalPrice > 0 
+        ? Math.round(((originalPrice - price) / originalPrice) * 100)
+        : 0;
+      
+      allProducts.push({
+        id: productId,
+        title: p.title || p.name || 'Untitled',
+        image: p.image || p.productImage || p.product_main_image_url || '',
+        price,
+        originalPrice: originalPrice > price ? originalPrice : undefined,
+        discount: discount > 0 ? discount : undefined,
+        rating: parseFloat(p.rating || p.shopRating || '0'),
+        orders: parseInt(p.orders || p.volume || '0', 10),
+        merchant: p.merchant || p.storeName || p.shop || 'AliExpress',
+        link: p.link || p.productUrl || p.url || '#',
+        currency: p.currency || 'PLN',
+        description: p.description || '',
+        images: p.images || (p.image ? [p.image] : []),
+        ...p
+      });
+    }
+  } catch (error: any) {
+    console.error(`[Importer:Fetch:HotProducts] Error:`, error.message);
+  }
+  
+  console.log(`[Importer:Fetch:HotProducts] ===== RESULTS =====`);
+  console.log(`[Importer:Fetch:HotProducts]   Output: ${allProducts.length} hot products`);
+  console.log(`[Importer:Fetch:HotProducts] ===== STAGE 1 END =====\n`);
+  
+  return allProducts;
+}
+
+/**
  * Pobiera produkty z AliExpress API dla danego kategoria
  * Zwraca surowe dane z AliExpress
  */
@@ -15,8 +120,19 @@ export async function fetchProductsFromAliexpress(
   config: ImportStageConfig,
   siteUrl: string = resolveSiteUrl()
 ): Promise<AliExpressProduct[]> {
+  // NEW: Switch based on importerType
+  const importerType = config.importerType || 'keyword-search';
+  
   console.log(`[Importer:Fetch] ===== STAGE 1 START =====`);
+  console.log(`[Importer:Fetch] Importer Type: ${importerType.toUpperCase()}`);
   console.log(`[Importer:Fetch] Site URL: ${siteUrl}`);
+  
+  // NEW: If hot-products mode, use category-based fetch instead
+  if (importerType === 'hot-products' && keywords.length > 0) {
+    // Keywords are treated as category IDs in hot-products mode
+    return fetchHotProductsByCategory(keywords, config, siteUrl);
+  }
+  
   console.log(`[Importer:Fetch] Keywords (${keywords.length}): ${keywords.join(' | ')}`);
   
   const allProducts: AliExpressProduct[] = [];

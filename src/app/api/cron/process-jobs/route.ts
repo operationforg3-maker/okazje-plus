@@ -104,9 +104,14 @@ export async function POST(req: NextRequest) {
     // ===== RESUME QUEUED IMPORT_JOBS =====
     const importResults = await Promise.allSettled(
       importJobsToResume.map(async (importJob: any) => {
-        logger.info('Resuming queued import_job', { jobId: importJob.id, type: importJob.type });
+        logger.info('Resuming queued import_job', { jobId: importJob.id, type: importJob.type, importerType: importJob.importerType });
         const { processImportJob } = await import('@/app/api/admin/import/start/route');
-        return processImportJob(importJob.id, importJob.type, importJob.maxItemsPerSubcategory);
+        return processImportJob(
+          importJob.id, 
+          importJob.type, 
+          importJob.maxItemsPerSubcategory,
+          importJob.importerType || 'keyword-search' // Default to keyword-search for old jobs
+        );
       })
     );
 
