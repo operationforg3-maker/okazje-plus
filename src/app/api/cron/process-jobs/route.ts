@@ -665,7 +665,23 @@ async function processUIImportJob(uiJob: any): Promise<void> {
           save: { batchSize: 5, skipExisting: true },
         });
 
-        totalImported += pipelineResult.saved.created.length + pipelineResult.saved.updated.length;
+        const batchCreated = pipelineResult.saved.created.length;
+        const batchUpdated = pipelineResult.saved.updated.length;
+        const batchTotal = batchCreated + batchUpdated;
+        
+        if (batchTotal === 0) {
+          logger.warn('UI Import batch yielded 0 products', {
+            jobId: uiJob.id,
+            batch: i,
+            category: `${batch.categorySlug}/${batch.subcategorySlug}/${batch.subsubcategorySlug}`,
+            fetched: pipelineResult.fetched.length,
+            deduplicated: pipelineResult.deduplicated.length,
+            enriched: pipelineResult.enriched.length,
+            translated: pipelineResult.translated.length,
+          });
+        }
+        
+        totalImported += batchTotal;
         processedCount++;
 
         await jobRef.update({

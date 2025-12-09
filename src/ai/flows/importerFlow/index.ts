@@ -70,8 +70,14 @@ export async function runProductImportPipeline(
       }
     );
     
+    console.log(`[ProductImporter] ✅ Fetched: ${fetched.length} products`);
     if (fetched.length === 0) {
-      console.warn(`[ProductImporter] No products fetched, aborting pipeline`);
+      console.error(`[ProductImporter] ❌ PROBLEM: No products fetched!`);
+      console.error(`[ProductImporter] Possible reasons:`);
+      console.error(`  1. AliExpress API not configured - check .env.local`);
+      console.error(`  2. Keywords don't match products: ${config.keywords.join(', ')}`);
+      console.error(`  3. API rate limiting or network issue`);
+      console.error(`[ProductImporter] Aborting pipeline for ${config.categorySlugEN}/${config.subcategorySlugEN}`);
       return {
         fetched: [],
         deduplicated: [],
