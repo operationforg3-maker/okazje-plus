@@ -22,6 +22,7 @@ const BatchOutputSchema = z.array(z.object({
   longDescription: z.string(),
   features: z.array(z.string()),
   keywords: z.array(z.string()),
+  keywordsEN: z.array(z.string()),
 }));
 
 const productEnrichmentBatchPrompt = ai.definePrompt({
@@ -37,7 +38,8 @@ Dla każdego produktu zwróć JSON z polami:
 - shortDescription: Krótki opis 1-2 zdania (przyjazny język, najważniejsze cechy)
 - longDescription: Szczegółowy opis 3-5 zdań (przyjazny język, dokładne specyfikacje, korzyści)
 - features: Lista 5-10 cech (konkretne parametry, bez wymyślania)
-- keywords: 4-8 słów kluczowych (polskie, SEO-friendly)
+- keywords: 4-8 słów kluczowych po POLSKU (SEO-friendly dla polskiego rynku)
+- keywordsEN: 4-8 słów kluczowych po ANGIELSKU (dla AliExpress API - muszą być wyszukiwalne!)
 
 NIE WYMYŚLAJ parametrów – korzystaj tylko z tytułu/opisu. Język: przyjazny polski (konwersacyjny styl).
 
@@ -50,7 +52,10 @@ KATEGORIA: {{#each categoryPath}}{{this}}/{{/each}}
 {{#if rating}}OCENA: {{{rating}}}{{/if}} {{#if orders}}ZAMÓWIENIA: {{{orders}}}{{/if}}
 {{/each}}
 
-PAMIĘTAJ: Przyjazny, naturalny polski. Dokładność i precyzja tłumaczenia. Brak literalnych tłumaczeń.`,
+PAMIĘTAJ: 
+- Przyjazny, naturalny polski (keywords i shortDescription/longDescription)
+- English keywords muszą być przydatne do AliExpress API search
+- Dokładność i precyzja tłumaczenia. Brak literalnych tłumaczeń.`,
 });
 
 const productEnrichmentBatchFlow = ai.defineFlow({
@@ -68,6 +73,7 @@ export async function aiProductEnrichmentBatchPL(items: ProductEnrichmentInput[]
   longDescription: string;
   features: string[];
   keywords: string[];
+  keywordsEN: string[];
 }>> {
   logger.debug('AI batch enrichment', { count: items.length });
   try {
@@ -77,12 +83,14 @@ export async function aiProductEnrichmentBatchPL(items: ProductEnrichmentInput[]
     return items.map((i) => {
       const base = i.originalTitle.replace(/\s+/g, ' ').trim();
       const raw = (i.rawDescription || '').replace(/\s+/g, ' ').trim();
+      const enKeywords = base.toLowerCase().split(/\s+/).slice(0, 3);
       return {
         normalizedName: base,
         shortDescription: raw ? raw.slice(0, 120) : base,
         longDescription: raw || base,
         features: [],
         keywords: [],
+        keywordsEN: enKeywords,
       };
     });
   }

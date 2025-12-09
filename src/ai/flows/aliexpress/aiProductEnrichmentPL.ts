@@ -23,7 +23,8 @@ const ProductEnrichmentOutputSchema = z.object({
   shortDescription: z.string().describe('Krótki opis 1-2 zdania po polsku'),
   longDescription: z.string().describe('Dłuższy opis 3-6 zdań z kluczowymi parametrami'),
   features: z.array(z.string()).describe('Lista cech / parametrów (max 10)'),
-  keywords: z.array(z.string()).describe('Frazy kluczowe SEO (4-8)'),
+  keywords: z.array(z.string()).describe('Frazy kluczowe SEO po polsku (4-8)'),
+  keywordsEN: z.array(z.string()).describe('English search keywords for AliExpress API (4-8 terms)'),
 });
 export type ProductEnrichmentOutput = z.infer<typeof ProductEnrichmentOutputSchema>;
 
@@ -33,7 +34,7 @@ const productEnrichmentPrompt = ai.definePrompt({
   output: { schema: ProductEnrichmentOutputSchema },
   prompt: `Jesteś ekspertem ds. contentu e-commerce w Polsce, specjalizujesz się w tłumaczeniu i normalizacji produktów z AliExpress.
 
-ZADANIE: Przetłumacz i wzbogać treść produktu na polski rynek.
+ZADANIE: Przetłumacz i wzbogać treść produktu na polski rynek, generując też angielskie słowa kluczowe dla AliExpress API.
 
 DANE WEJŚCIOWE:
 • TYTUŁ ORYGINALNY: {{{originalTitle}}}
@@ -75,11 +76,18 @@ INSTRUKCJE SZCZEGÓŁOWE:
    • Tylko to co wiesz z tytułu/opisu – NIE wymyślaj
    • Jeśli brak parametrów, zwróć pustą listę []
 
-5. **keywords** (Frazy SEO, 5-10 fraz):
+5. **keywords** (Frazy SEO PO POLSKU, 5-8 fraz):
    • Naturalne frazy wyszukiwania po polsku: "smartfon xiaomi", "powerbank 20000mah", "słuchawki bluetooth"
    • Małe litery, bez znaków specjalnych, bez powtórzeń
    • Mix ogólnych ("słuchawki bezprzewodowe") i konkretnych ("redmi note 13 5g")
    • Przykłady: "xiaomi mi band 8", "opaska fitness", "smartwatch z pulsometrem"
+
+6. **keywordsEN** (English search keywords for AliExpress API, 4-8 terms):
+   • English product type and features: "smartphone xiaomi", "power bank 20000mah", "bluetooth headphones"
+   • Lowercase, no special characters, no duplicates
+   • Include: product category, brand, main specs
+   • Example keywords: "xiaomi redmi note", "portable charger", "wireless earbuds", "fast charging"
+   • Used for AliExpress API product search queries – must be in English!
 
 ZASADY OGÓLNE:
 ✓ Tłumacz na naturalny polski (nie kalka językowa)
@@ -88,6 +96,7 @@ ZASADY OGÓLNE:
 ✓ Zero marketingowych kłamstw i pustych frazesów
 ✓ Konkretne dane liczbowe zamiast ogólników
 ✓ Ton: rzeczowy, profesjonalny, pomocny – nie nachalny
+✓ Angielskie keywords muszą być wyszukiwalne na AliExpress
 
 Wygeneruj treść:`,
 });
@@ -116,6 +125,7 @@ export async function aiProductEnrichmentPL(input: ProductEnrichmentInput): Prom
       longDescription: raw || base,
       features: [],
       keywords: [],
+      keywordsEN: [base.toLowerCase().split(/\s+/).slice(0, 3).join(' ')], // Fallback: first 3 words from title
     };
   }
 }

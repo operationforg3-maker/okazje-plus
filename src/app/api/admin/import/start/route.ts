@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, FieldValue } from '@/lib/firebase-admin';
 import { getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/data-admin';
+import { CATEGORY_STRUCTURE } from '@/lib/category-structure';
+
+/**
+ * Helper: Get importKeywords from Firestore or fallback to category-structure.ts
+ */
+function getImportKeywordsFromStructure(categorySlug: string, subcategorySlug: string, subsubSlug: string): string[] {
+  try {
+    // Search in CATEGORY_STRUCTURE for matching slugs
+    for (const cat of CATEGORY_STRUCTURE) {
+      if (cat.slug !== categorySlug) continue;
+      
+      if (cat.subcategories) {
+        for (const sub of cat.subcategories) {
+          if (sub.slug !== subcategorySlug) continue;
+          
+          if (sub.subcategories) {
+            for (const subsub of sub.subcategories) {
+              if (subsub.slug === subsubSlug && subsub.importKeywords?.length) {
+                return subsub.importKeywords;
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[getImportKeywordsFromStructure] Error searching structure:', e);
+  }
+  return [];
+}
 
 /**
  * Uruchamia import produktów/okazji w trybie batch

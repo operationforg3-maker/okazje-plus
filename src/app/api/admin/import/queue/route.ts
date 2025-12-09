@@ -3,6 +3,36 @@ import { checkAdminAuth } from '@/lib/auth-helpers';
 import { ImportQueueManager, ImportJob } from '@/lib/import-queue';
 import { adminDb } from '@/lib/firebase-admin';
 import { getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/data-admin';
+import { CATEGORY_STRUCTURE } from '@/lib/category-structure';
+
+/**
+ * Helper: Get importKeywords from Firestore or fallback to category-structure.ts
+ */
+function getImportKeywordsFromStructure(categorySlug: string, subcategorySlug: string, subsubSlug: string): string[] {
+  try {
+    // Search in CATEGORY_STRUCTURE for matching slugs
+    for (const cat of CATEGORY_STRUCTURE) {
+      if (cat.slug !== categorySlug) continue;
+      
+      if (cat.subcategories) {
+        for (const sub of cat.subcategories) {
+          if (sub.slug !== subcategorySlug) continue;
+          
+          if (sub.subcategories) {
+            for (const subsub of sub.subcategories) {
+              if (subsub.slug === subsubSlug && subsub.importKeywords?.length) {
+                return subsub.importKeywords;
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[getImportKeywordsFromStructure] Error searching structure:', e);
+  }
+  return [];
+}
 
 /**
  * POST /api/admin/import/queue
@@ -124,12 +154,32 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
         
         if (subsubcategories.length > 0) {
           for (const subsub of subsubcategories) {
-            // Build English keywords from importKeywords or translations.en.name
-            const englishKeywords = subsub.importKeywords?.length 
-              ? subsub.importKeywords 
-              : subsub.translations?.en?.name 
-                ? [subsub.translations.en.name]
-                : [subsub.name]; // Fallback to name (may be Polish)
+            // Build English keywords from multiple sources with fallback chain
+            let englishKeywords: string[] = [];
+            
+            // Priority 1: Use importKeywords from Firestore if present
+            if (subsub.importKeywords?.length) {
+              englishKeywords = subsub.importKeywords;
+              console.log(`  [keywords] Using Firestore importKeywords for ${subsub.slug}: ${englishKeywords.join(', ')}`);
+            }
+            // Priority 2: Use translations.en.name
+            else if (subsub.translations?.en?.name) {
+              englishKeywords = [subsub.translations.en.name];
+              console.log(`  [keywords] Using translations.en.name for ${subsub.slug}: ${englishKeywords.join(', ')}`);
+            }
+            // Priority 3: Fallback to category-structure.ts
+            else {
+              const structureKeywords = getImportKeywordsFromStructure(cat.slug, sub.slug, subsub.slug);
+              if (structureKeywords.length) {
+                englishKeywords = structureKeywords;
+                console.log(`  [keywords] Using category-structure.ts for ${subsub.slug}: ${englishKeywords.join(', ')}`);
+              }
+            }
+            // Priority 4: Last resort - use English name of subcategory
+            if (!englishKeywords.length) {
+              englishKeywords = [subsub.name];
+              console.warn(`  [keywords] WARNING: Using fallback name for ${subsub.slug}: ${englishKeywords.join(', ')}`);
+            }
             
             batches.push({
               categoryId: cat.id,
