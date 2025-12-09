@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, signOut, getIdToken } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase'; 
@@ -24,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const tokenLogOnceRef = useRef(false);
 
   const logout = async () => {
     await signOut(auth);
@@ -80,7 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return null;
         }
         const token = await getIdToken(firebaseUser);
-        console.log('[AuthProvider] Successfully obtained ID token for user:', firebaseUser.uid);
+        if (!tokenLogOnceRef.current) {
+          console.debug('[AuthProvider] ID token fetched');
+          tokenLogOnceRef.current = true;
+        }
         return token;
       } catch (error) {
         console.error('[AuthProvider] Error getting ID token:', error);

@@ -20,6 +20,8 @@ export interface ImportJob {
     enableAIEnrichment: boolean;
     saveDraftsOnly: boolean;
   };
+  cancelledAt?: string;
+  cancelledBy?: string;
   progress: {
     currentSource: string;
     currentCategory: string;
@@ -165,8 +167,11 @@ export class ImportQueueManager {
   /**
    * Cancel running job
    */
-  static async cancelJob(jobId: string): Promise<void> {
-    await this.updateJobStatus(jobId, 'cancelled');
+  static async cancelJob(jobId: string, cancelledBy?: string): Promise<void> {
+    await this.updateJobStatus(jobId, 'cancelled', {
+      cancelledAt: new Date().toISOString(),
+      cancelledBy: cancelledBy || 'unknown',
+    });
   }
 
   /**

@@ -97,7 +97,7 @@ export async function DELETE(
 
     // Only cancel if running or pending
     if (job.status === 'running' || job.status === 'pending') {
-      await ImportQueueManager.cancelJob(jobId);
+      await ImportQueueManager.cancelJob(jobId, authResult.uid!);
     }
 
     return NextResponse.json({
