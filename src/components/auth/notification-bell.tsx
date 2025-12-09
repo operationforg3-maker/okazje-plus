@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell } from 'lucide-react';
+import { Bell, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,6 +15,8 @@ import { MessageSquare, Flame, Check, AlertCircle, Info, Calendar, ExternalLink 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Notification } from '@/lib/types';
+import { deleteNotification } from '@/lib/data';
+import { toast } from 'sonner';
 
 interface NotificationWithRelativeTime extends Notification {
   relativeTime?: string;
@@ -39,6 +41,21 @@ export function NotificationBell() {
     const interval = setInterval(updateRelativeTimes, 60000);
     return () => clearInterval(interval);
   }, [rawNotifications]);
+
+  const handleDeleteNotification = async (e: React.MouseEvent, notificationId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      await deleteNotification(notificationId);
+      // Remove from local state
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      toast.success('Powiadomienie usunięte');
+    } catch (error) {
+      toast.error('Nie udało się usunąć powiadomienia');
+      console.error('Error deleting notification:', error);
+    }
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -143,21 +160,32 @@ export function NotificationBell() {
                         <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
                           {notification.message}
                         </p>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {notification.relativeTime || ''}
                           </span>
-                          {notification.link && (
-                            <Link 
-                              href={notification.link}
-                              className="text-xs text-primary hover:underline flex items-center gap-1"
-                              onClick={() => !notification.read && markAsRead(notification.id)}
+                          <div className="flex items-center gap-1">
+                            {notification.link && (
+                              <Link 
+                                href={notification.link}
+                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                                onClick={() => !notification.read && markAsRead(notification.id)}
+                              >
+                                <span>Zobacz</span>
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={(e) => handleDeleteNotification(e, notification.id)}
+                              title="Usuń powiadomienie"
                             >
-                              <span>Zobacz</span>
-                              <ExternalLink className="h-3 w-3" />
-                            </Link>
-                          )}
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                       

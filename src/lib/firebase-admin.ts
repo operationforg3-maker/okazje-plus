@@ -69,9 +69,18 @@ if (!getApps().length) {
 
 // Configure Firestore with ignoreUndefinedProperties for better dev experience
 const adminDb = getFirestore(adminApp);
-adminDb.settings({
-  ignoreUndefinedProperties: true,
-});
+
+// Only set settings if not already configured
+try {
+  adminDb.settings({
+    ignoreUndefinedProperties: true,
+  });
+} catch (error: any) {
+  // Settings already configured, ignore
+  if (!error.message?.includes('already been initialized')) {
+    throw error;
+  }
+}
 
 const adminAuth = getAuth(adminApp);
 

@@ -1,492 +1,456 @@
 /**
  * Job Processing Worker
  * 
- * Cron endpoint for executing queued background jobs.
- * Processes jobs based on type and updates status/logs in Firestore.
+ * Cron endpoint that:
+ * 1. Fetches pending jobs from Firestore
+ * 2. Executes each job based on type
+ * 3. Updates job status (pending → processing → completed/failed)
+ * 4. Handles retries and error logging
  * 
- * Designed to be called by:
- * - Firebase Scheduled Functions (Cloud Scheduler)
- * - Manual admin triggers
- * - Health check monitors
+ * Call this endpoint periodically via Cloud Scheduler:
+ * POST /api/cron/process-jobs?secret=CRON_SECRET
  * 
- * Job Types:
- * - import_filling: AliExpress product import with AI enhancement
- * - audit_seo: SEO quality checks
- * - audit_content: Content quality analysis
- * - validate_links: Affiliate link health checks
- * - maintenance_typesense: Search index synchronization
- * - create_category: New category/subcategory creation
+ * Job Types Supported:
+ * - import_aliexpress: Product import from AliExpress (via import-batch endpoint)
+ * - import_allegro: Product import from Allegro
+ * - import_amazon: Product import from Amazon
+ * - import_ebay: Product import from eBay
+ * - verify_links: Validate affiliate URLs
+ * - cleanup_products: Delete orphaned/invalid products
+ * - repair_indexes: Rebuild Firestore/Typesense indexes
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { JobQueue, Job } from '@/lib/ingestion/queue';
-import { AliExpressClient } from '@/integrations/aliexpress/client';
-import { TypesenseHealer } from '@/lib/maintenance/typesense-healer';
-import { LinkValidator } from '@/lib/maintenance/link-validator';
-import { generateText } from '@/lib/vertex';
 import { adminDb } from '@/lib/firebase-admin';
-import type { AliExpressProduct } from '@/integrations/aliexpress/types';
-import typesenseServerClient from '@/lib/typesense-server';
+import { logger } from '@/lib/logger';
 
-const jobQueue = new JobQueue();
+interface Job {
+  id: string;
+  type: 'import_aliexpress' | 'import_allegro' | 'import_amazon' | 'import_ebay' | 'verify_links' | 'cleanup_products' | 'repair_indexes';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  payload: Record<string, any>;
+  createdAt: Date;
+  startedAt?: Date;
+  completedAt?: Date;
+  error?: string;
+  retryCount?: number;
+  maxRetries?: number;
+}
 
-// Verify cron secret for security
 const CRON_SECRET = process.env.CRON_SECRET || 'dev-secret-change-in-production';
+const MAX_JOBS_PER_RUN = 10;
+const MAX_RETRIES = 3;
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify authorization
-    const authHeader = req.headers.get('authorization');
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    // ===== SECURITY: Verify CRON_SECRET =====
+    const secret = req.nextUrl.searchParams.get('secret') || req.headers.get('x-cron-secret');
+    if (secret !== CRON_SECRET) {
+      logger.warn('Cron job unauthorized access attempt');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - invalid CRON_SECRET' },
         { status: 401 }
       );
     }
 
-    // Fetch pending jobs manually (JobQueue doesn't have queryJobs)
+    const startTime = Date.now();
+
+    // ===== FETCH PENDING JOBS =====
     const pendingJobsSnapshot = await adminDb
       .collection('jobs')
       .where('status', '==', 'pending')
-      .limit(10)
+      .limit(MAX_JOBS_PER_RUN)
       .get();
 
-    const pendingJobs = pendingJobsSnapshot.docs.map((doc) => ({
+    const jobs = pendingJobsSnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Job[];
 
-    console.log(`[JobWorker] Found ${pendingJobs.length} pending jobs`);
+    logger.info('Cron job processor started', {
+      jobsFound: jobs.length,
+      maxPerRun: MAX_JOBS_PER_RUN,
+    });
 
-    const results = await Promise.allSettled(
-      pendingJobs.map((job: Job) => processJob(job.id!))
-    );
+    // ===== PROCESS EACH JOB =====
+    const results = await Promise.allSettled(jobs.map(job => processJob(job)));
 
-    const successful = results.filter((r: PromiseSettledResult<void>) => r.status === 'fulfilled').length;
-    const failed = results.filter((r: PromiseSettledResult<void>) => r.status === 'rejected').length;
+    const successful = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    const durationMs = Date.now() - startTime;
+
+    logger.info('Cron job processor completed', {
+      processed: jobs.length,
+      successful,
+      failed,
+      durationMs,
+    });
 
     return NextResponse.json({
       success: true,
-      processed: pendingJobs.length,
+      processed: jobs.length,
       successful,
       failed,
-      timestamp: Date.now(),
+      durationMs,
+      timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
-    console.error('[JobWorker] Fatal error:', error);
+  } catch (error) {
+    logger.error('Cron job processor fatal error', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return NextResponse.json(
-      { error: error.message || 'Worker execution failed' },
+      {
+        error: 'Cron processor failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }
 }
 
-async function processJob(jobId: string) {
-  const job = await jobQueue.getJob(jobId);
-  if (!job) {
-    throw new Error(`Job ${jobId} not found`);
-  }
-
-  console.log(`[JobWorker] Processing job ${jobId} (type: ${job.type})`);
+/**
+ * Process a single job:
+ * 1. Mark as processing
+ * 2. Execute based on type
+ * 3. Mark as completed or failed
+ * 4. Handle retries
+ */
+async function processJob(job: Job): Promise<void> {
+  const jobRef = adminDb.collection('jobs').doc(job.id);
 
   try {
-    // Mark as processing
-    await adminDb.collection('jobs').doc(jobId).update({
-      status: 'processing',
-      startedAt: Date.now(),
+    logger.info('Job processing started', {
+      jobId: job.id,
+      type: job.type,
+      payload: job.payload,
     });
 
-    // Route to appropriate handler
+    // Mark as processing
+    await jobRef.update({
+      status: 'processing',
+      startedAt: new Date(),
+    });
+
+    // Execute based on type
     switch (job.type) {
-      case 'import_filling':
-        await handleImportFilling(jobId, job.payload);
+      case 'import_aliexpress':
+        await handleImportAliExpress(job);
         break;
 
-      case 'audit_seo':
-        await handleAuditSEO(jobId, job.payload);
+      case 'import_allegro':
+        await handleImportAllegro(job);
         break;
 
-      case 'audit_content':
-        await handleAuditContent(jobId, job.payload);
+      case 'import_amazon':
+        await handleImportAmazon(job);
         break;
 
-      case 'validate_links':
-        await handleValidateLinks(jobId, job.payload);
+      case 'import_ebay':
+        await handleImportEBay(job);
         break;
 
-      case 'maintenance_typesense':
-        await handleMaintenanceTypesense(jobId, job.payload);
+      case 'verify_links':
+        await handleVerifyLinks(job);
         break;
 
-      case 'create_category':
-        await handleCreateCategory(jobId, job.payload);
+      case 'cleanup_products':
+        await handleCleanupProducts(job);
+        break;
+
+      case 'repair_indexes':
+        await handleRepairIndexes(job);
         break;
 
       default:
         throw new Error(`Unknown job type: ${job.type}`);
     }
 
-    await jobQueue.markComplete(jobId, { success: true });
-    console.log(`[JobWorker] Job ${jobId} completed successfully`);
-  } catch (error: any) {
-    console.error(`[JobWorker] Job ${jobId} failed:`, error);
-    await jobQueue.markFailed(jobId, error.message);
+    // Mark as completed
+    await jobRef.update({
+      status: 'completed',
+      completedAt: new Date(),
+    });
+
+    logger.info('Job completed', { jobId: job.id, type: job.type });
+  } catch (error) {
+    const retryCount = (job.retryCount || 0) + 1;
+    const maxRetries = job.maxRetries || MAX_RETRIES;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    logger.error('Job processing failed', {
+      jobId: job.id,
+      type: job.type,
+      error: errorMessage,
+      retryCount,
+      maxRetries,
+    });
+
+    if (retryCount < maxRetries) {
+      // Retry: reset to pending
+      await jobRef.update({
+        status: 'pending',
+        retryCount,
+        error: errorMessage,
+      });
+    } else {
+      // Max retries reached: mark as failed
+      await jobRef.update({
+        status: 'failed',
+        error: errorMessage,
+        retryCount,
+        completedAt: new Date(),
+      });
+    }
+
     throw error;
   }
 }
 
-// ========== Job Handlers ==========
+// ===== JOB HANDLERS =====
 
-async function handleImportFilling(
-  jobId: string,
-  payload: {
-    category: string;
-    subcategory?: string;
-    count: number;
-    keywords?: string;
-  }
-) {
-  await addJobLog(jobId, 'info', `Starting import: ${payload.count} products from ${payload.category}`);
+/**
+ * Handle import_aliexpress job
+ * Calls the real import-batch endpoint via fetch
+ * Uses internal secret for inter-service authentication
+ */
+async function handleImportAliExpress(job: Job): Promise<void> {
+  const { mainCategory, subCategory, subSubCategory, itemsPerCategory, draftStatus } = job.payload;
 
-  // Initialize AliExpress client
-  const aliExpressClient = new AliExpressClient(
-    {
-      appKey: process.env.ALIEXPRESS_APP_KEY!,
-      appSecret: process.env.ALIEXPRESS_APP_SECRET!,
+  // Call the real import-batch endpoint
+  // For production: use x-internal-secret to bypass Firebase auth
+  const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/products/import-batch`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-secret': process.env.CRON_SECRET || '',
     },
-    'default-vendor',
-    'default-account'
+    body: JSON.stringify({
+      source: 'aliexpress',
+      mainCategory,
+      subCategory,
+      subSubCategory,
+      itemsPerCategory: itemsPerCategory || 50,
+      importType: 'products',
+      draftStatus: draftStatus || 'pending_ai',
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`AliExpress import failed: ${response.status} - ${error}`);
+  }
+
+  const result = await response.json();
+  logger.info('AliExpress import result', result);
+}
+
+/**
+ * Handle import_allegro job
+ * Calls import-batch endpoint with Allegro source
+ */
+async function handleImportAllegro(job: Job): Promise<void> {
+  const { mainCategory, subCategory, subSubCategory, itemsPerCategory, draftStatus } = job.payload;
+
+  if (!mainCategory || !subCategory || !subSubCategory) {
+    throw new Error('Missing required category parameters for Allegro import');
+  }
+
+  logger.info('Allegro import started', {
+    jobId: job.id,
+    mainCategory,
+    subCategory,
+    subSubCategory,
+  });
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/products/import-batch`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': process.env.CRON_SECRET || '',
+      },
+      body: JSON.stringify({
+        source: 'allegro',
+        mainCategory,
+        subCategory,
+        subSubCategory,
+        itemsPerCategory: itemsPerCategory || 50,
+        draftStatus: draftStatus || 'pending_ai',
+      }),
+    }
   );
 
-  await addJobLog(jobId, 'info', 'AliExpress client initialized');
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Allegro import failed: ${response.status} - ${errorText}`);
+  }
 
-  // Search for products
-  const searchQuery = payload.keywords || payload.subcategory || payload.category;
-  const searchResults = await aliExpressClient.searchProducts({
-    q: searchQuery,
-    limit: payload.count,
+  const result = await response.json();
+  logger.info('Allegro import completed', {
+    jobId: job.id,
+    result,
+  });
+}
+
+/**
+ * Handle import_amazon job
+ * Calls import-batch endpoint with Amazon source
+ */
+async function handleImportAmazon(job: Job): Promise<void> {
+  const { mainCategory, subCategory, subSubCategory, itemsPerCategory, draftStatus } = job.payload;
+
+  if (!mainCategory || !subCategory || !subSubCategory) {
+    throw new Error('Missing required category parameters for Amazon import');
+  }
+
+  logger.info('Amazon import started', {
+    jobId: job.id,
+    mainCategory,
+    subCategory,
+    subSubCategory,
   });
 
-  await addJobLog(jobId, 'info', `Found ${searchResults.products.length} products`);
-
-  let imported = 0;
-  let skipped = 0;
-
-  for (const product of searchResults.products) {
-    try {
-      // Check if already exists
-      const existingQuery = await adminDb
-        .collection('products')
-        .where('externalId', '==', product.item_id)
-        .limit(1)
-        .get();
-
-      if (!existingQuery.empty) {
-        skipped++;
-        continue;
-      }
-
-      // AI enhancement of description
-      let enhancedDescription = product.title;
-      try {
-        const aiPrompt = `Improve this product description for SEO and readability (Polish language):
-        
-Title: ${product.title}
-Category: ${payload.category}
-
-Return a 2-3 sentence product description that is engaging and optimized for search.`;
-
-        enhancedDescription = await generateText(aiPrompt, {
-          temperature: 0.7,
-          maxTokens: 200,
-        });
-      } catch (aiError) {
-        console.warn('[ImportFilling] AI enhancement failed, using original');
-      }
-
-      // Save to Firestore
-      const productData = {
-        externalId: product.item_id,
-        title: product.title,
-        description: enhancedDescription,
-        originalPrice: product.price.original || product.price.current,
-        price: product.price.current,
-        imageUrl: product.image_urls[0] || '',
-        affiliateUrl: product.product_url,
-        category: payload.category,
-        subcategory: payload.subcategory || '',
-        source: 'aliexpress',
-        currency: product.price.currency,
-        createdAt: Date.now(),
-        status: 'draft', // Require manual approval
-      };
-
-      await adminDb.collection('products').add(productData);
-      imported++;
-
-      await updateJobProgress(jobId, imported, searchResults.products.length);
-    } catch (productError: any) {
-      await addJobLog(jobId, 'warn', `Failed to import ${product.item_id}: ${productError.message}`);
-    }
-  }
-
-  await addJobLog(jobId, 'success', `Import complete: ${imported} added, ${skipped} skipped`);
-  await updateJobStats(jobId, { imported, skipped, total: searchResults.products.length });
-}
-
-async function handleAuditSEO(
-  jobId: string,
-  payload: { scope: string; days?: number }
-) {
-  await addJobLog(jobId, 'info', `Starting SEO audit (scope: ${payload.scope})`);
-
-  let query = adminDb.collection('deals').where('status', '==', 'approved');
-
-  if (payload.scope === 'recent' && payload.days) {
-    const cutoffTime = Date.now() - payload.days * 24 * 60 * 60 * 1000;
-    query = query.where('createdAt', '>=', cutoffTime);
-  }
-
-  const dealsSnapshot = await query.limit(100).get();
-  await addJobLog(jobId, 'info', `Found ${dealsSnapshot.size} deals to audit`);
-
-  let passed = 0;
-  let warnings = 0;
-  let failed = 0;
-
-  for (const doc of dealsSnapshot.docs) {
-    const deal = doc.data();
-    const issues: string[] = [];
-
-    // Check title length
-    if (!deal.title || deal.title.length < 20) {
-      issues.push('Title too short (< 20 chars)');
-    }
-    if (deal.title && deal.title.length > 120) {
-      issues.push('Title too long (> 120 chars)');
-    }
-
-    // Check description
-    if (!deal.description || deal.description.length < 50) {
-      issues.push('Description too short (< 50 chars)');
-    }
-
-    // Check images
-    if (!deal.imageUrl) {
-      issues.push('Missing image');
-    }
-
-    // Check category
-    if (!deal.mainCategorySlug) {
-      issues.push('Missing category');
-    }
-
-    if (issues.length === 0) {
-      passed++;
-    } else if (issues.length <= 2) {
-      warnings++;
-      await addJobLog(jobId, 'warn', `Deal ${doc.id}: ${issues.join(', ')}`);
-    } else {
-      failed++;
-      await addJobLog(jobId, 'error', `Deal ${doc.id}: ${issues.join(', ')}`);
-      
-      // Mark deal for review
-      await doc.ref.update({
-        seoIssues: issues,
-        seoAuditedAt: Date.now(),
-      });
-    }
-
-    await updateJobProgress(jobId, passed + warnings + failed, dealsSnapshot.size);
-  }
-
-  await addJobLog(jobId, 'success', `SEO audit complete: ${passed} passed, ${warnings} warnings, ${failed} failed`);
-  await updateJobStats(jobId, { passed, warnings, failed });
-}
-
-async function handleAuditContent(
-  jobId: string,
-  payload: { scope: string; category?: string }
-) {
-  await addJobLog(jobId, 'info', `Starting content audit (scope: ${payload.scope})`);
-  // Similar to SEO audit but focused on content quality
-  // Implementation would check grammar, readability, spam patterns, etc.
-  await addJobLog(jobId, 'success', 'Content audit placeholder - implement as needed');
-}
-
-async function handleValidateLinks(
-  jobId: string,
-  payload: { scope: string; category?: string }
-) {
-  await addJobLog(jobId, 'info', `Starting link validation (scope: ${payload.scope})`);
-
-  const linkValidator = new LinkValidator();
-  let query = adminDb.collection('deals').where('status', '==', 'approved');
-
-  if (payload.scope === 'category' && payload.category) {
-    query = query.where('mainCategorySlug', '==', payload.category);
-  }
-
-  const dealsSnapshot = await query.limit(50).get(); // Process 50 at a time
-  await addJobLog(jobId, 'info', `Validating ${dealsSnapshot.size} links`);
-
-  let valid = 0;
-  let invalid = 0;
-  let errors = 0;
-
-  for (const doc of dealsSnapshot.docs) {
-    const deal = doc.data();
-    
-    try {
-      const result = await linkValidator.validateLink(deal.dealUrl);
-      
-      if (result.isValid) {
-        valid++;
-      } else {
-        invalid++;
-        await addJobLog(jobId, 'warn', `Invalid link: ${doc.id} - ${result.reason}`);
-        
-        // Mark deal as expired
-        await doc.ref.update({
-          status: 'expired',
-          expiredReason: result.reason,
-          lastCheckedAt: Date.now(),
-        });
-      }
-    } catch (error: any) {
-      errors++;
-      await addJobLog(jobId, 'error', `Error checking ${doc.id}: ${error.message}`);
-    }
-
-    await updateJobProgress(jobId, valid + invalid + errors, dealsSnapshot.size);
-  }
-
-  await addJobLog(jobId, 'success', `Link validation complete: ${valid} valid, ${invalid} invalid, ${errors} errors`);
-  await updateJobStats(jobId, { valid, invalid, errors });
-}
-
-async function handleMaintenanceTypesense(
-  jobId: string,
-  payload: { action: string }
-) {
-  await addJobLog(jobId, 'info', `Starting Typesense ${payload.action}`);
-
-  if (!typesenseServerClient) {
-    throw new Error('Typesense client not configured');
-  }
-
-  // TypesenseHealer expects admin client with different interface
-  // For now, implement sync directly here
-  
-  if (payload.action === 'rebuild') {
-    await addJobLog(jobId, 'warn', 'Rebuild action requires admin API key - skipping wipe');
-  }
-
-  // Sync all approved deals
-  const dealsSnapshot = await adminDb
-    .collection('deals')
-    .where('status', '==', 'approved')
-    .limit(500) // Reasonable limit
-    .get();
-
-  await addJobLog(jobId, 'info', `Syncing ${dealsSnapshot.size} deals...`);
-
-  const documents = dealsSnapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-
-  // Note: SearchClient can only search, not upsert
-  // For full sync, we need admin client configured on server
-  // This is a placeholder that logs the operation
-  
-  await addJobLog(jobId, 'warn', 'Full Typesense sync requires admin API key configuration');
-  await addJobLog(jobId, 'info', `Would sync ${documents.length} documents`);
-
-  await updateJobStats(jobId, { would_sync: documents.length });
-}
-
-async function handleCreateCategory(
-  jobId: string,
-  payload: { name: string; parent?: string }
-) {
-  await addJobLog(jobId, 'info', `Creating category: ${payload.name}`);
-  
-  // Implementation would create category in Firestore
-  // This is a placeholder
-  
-  await addJobLog(jobId, 'success', `Category created: ${payload.name}`);
-}
-
-// ========== Job Logging Helpers ==========
-
-async function addJobLog(
-  jobId: string,
-  level: 'info' | 'warn' | 'error' | 'success',
-  message: string
-) {
-  const logEntry = {
-    timestamp: Date.now(),
-    level,
-    message,
-  };
-
-  // Fetch current logs and append
-  const jobDoc = await adminDb.collection('jobs').doc(jobId).get();
-  const currentLogs = jobDoc.data()?.metadata?.logs || [];
-
-  await adminDb
-    .collection('jobs')
-    .doc(jobId)
-    .update({
-      'metadata.logs': [...currentLogs, logEntry],
-    });
-
-  console.log(`[Job ${jobId}] [${level}] ${message}`);
-}
-
-async function updateJobProgress(jobId: string, current: number, total: number) {
-  const percentage = Math.round((current / total) * 100);
-
-  await adminDb
-    .collection('jobs')
-    .doc(jobId)
-    .update({
-      'metadata.progress': {
-        current,
-        total,
-        percentage,
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/products/import-batch`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': process.env.CRON_SECRET || '',
       },
-    });
-}
+      body: JSON.stringify({
+        source: 'amazon',
+        mainCategory,
+        subCategory,
+        subSubCategory,
+        itemsPerCategory: itemsPerCategory || 50,
+        draftStatus: draftStatus || 'pending_ai',
+      }),
+    }
+  );
 
-async function updateJobStats(jobId: string, stats: Record<string, number>) {
-  await adminDb
-    .collection('jobs')
-    .doc(jobId)
-    .update({
-      'metadata.stats': stats,
-    });
-}
-
-// GET handler for health checks
-export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Amazon import failed: ${response.status} - ${errorText}`);
   }
 
-  const statsSnapshot = await adminDb.collection('jobs').limit(100).get();
-  const stats = statsSnapshot.docs.map((doc) => doc.data()) as Job[];
-  
-  const statusCounts = stats.reduce((acc: Record<string, number>, job: Job) => {
-    acc[job.status] = (acc[job.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  return NextResponse.json({
-    healthy: true,
-    queueStats: statusCounts,
-    timestamp: Date.now(),
+  const result = await response.json();
+  logger.info('Amazon import completed', {
+    jobId: job.id,
+    result,
   });
+}
+
+/**
+ * Handle import_ebay job
+ * Calls import-batch endpoint with eBay source
+ */
+async function handleImportEBay(job: Job): Promise<void> {
+  const { mainCategory, subCategory, subSubCategory, itemsPerCategory, draftStatus } = job.payload;
+
+  if (!mainCategory || !subCategory || !subSubCategory) {
+    throw new Error('Missing required category parameters for eBay import');
+  }
+
+  logger.info('eBay import started', {
+    jobId: job.id,
+    mainCategory,
+    subCategory,
+    subSubCategory,
+  });
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/products/import-batch`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-secret': process.env.CRON_SECRET || '',
+      },
+      body: JSON.stringify({
+        source: 'ebay',
+        mainCategory,
+        subCategory,
+        subSubCategory,
+        itemsPerCategory: itemsPerCategory || 50,
+        draftStatus: draftStatus || 'pending_ai',
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`eBay import failed: ${response.status} - ${errorText}`);
+  }
+
+  const result = await response.json();
+  logger.info('eBay import completed', {
+    jobId: job.id,
+    result,
+  });
+}
+
+/**
+ * Handle verify_links job
+ * Validates affiliate URLs and checks HTTP status
+ * TODO: Real implementation with actual HTTP checks
+ */
+async function handleVerifyLinks(job: Job): Promise<void> {
+  const { categorySlug, limit } = job.payload;
+
+  logger.info('Link verification started', {
+    categorySlug,
+    limit: limit || 100,
+  });
+
+  // TODO: Implement actual HTTP health checks
+  // 1. Fetch products from category
+  // 2. Check each affiliateUrl with HEAD/GET request
+  // 3. Update status in Firestore
+  // 4. Track results
+
+  throw new Error('Link verification not implemented');
+}
+
+/**
+ * Handle cleanup_products job
+ * Deletes orphaned or invalid products
+ * TODO: Real implementation with batch delete
+ */
+async function handleCleanupProducts(job: Job): Promise<void> {
+  const { minDaysOld, minPrice } = job.payload;
+
+  logger.info('Product cleanup started', {
+    minDaysOld: minDaysOld || 30,
+    minPrice: minPrice || 0,
+  });
+
+  // TODO: Implement batch product deletion
+  // 1. Query products matching criteria
+  // 2. Delete in batches of 500
+  // 3. Update category product counts
+  // 4. Return stats
+
+  throw new Error('Product cleanup not implemented');
+}
+
+/**
+ * Handle repair_indexes job
+ * Rebuilds Firestore composite indexes and Typesense sync
+ * TODO: Real implementation
+ */
+async function handleRepairIndexes(job: Job): Promise<void> {
+  const { indexType } = job.payload; // 'firestore', 'typesense', or 'all'
+
+  logger.info('Index repair started', { indexType: indexType || 'all' });
+
+  // TODO: Implement index repair
+  // 1. For Firestore: Check missing indexes via Admin SDK
+  // 2. For Typesense: Rebuild collections from products collection
+  // 3. Log progress and errors
+
+  throw new Error('Index repair not implemented');
 }

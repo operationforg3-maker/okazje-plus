@@ -94,6 +94,60 @@ env:
     availability:
       - RUNTIME
 
+  # Allegro integration (server-side only)
+  - variable: ALLEGRO_APP_KEY
+    secret: ALLEGRO_APP_KEY
+    availability:
+      - RUNTIME
+  - variable: ALLEGRO_APP_SECRET
+    secret: ALLEGRO_APP_SECRET
+    availability:
+      - RUNTIME
+  - variable: ALLEGRO_SANDBOX
+    secret: ALLEGRO_SANDBOX
+    availability:
+      - RUNTIME
+
+  # Amazon Product Advertising API (server-side only)
+  - variable: AMAZON_ACCESS_KEY
+    secret: AMAZON_ACCESS_KEY
+    availability:
+      - RUNTIME
+  - variable: AMAZON_SECRET_KEY
+    secret: AMAZON_SECRET_KEY
+    availability:
+      - RUNTIME
+  - variable: AMAZON_PARTNER_TAG
+    secret: AMAZON_PARTNER_TAG
+    availability:
+      - RUNTIME
+
+  # eBay API (server-side only)
+  - variable: EBAY_CLIENT_ID
+    secret: EBAY_CLIENT_ID
+    availability:
+      - RUNTIME
+  - variable: EBAY_CLIENT_SECRET
+    secret: EBAY_CLIENT_SECRET
+    availability:
+      - RUNTIME
+  - variable: EBAY_SANDBOX
+    secret: EBAY_SANDBOX
+    availability:
+      - RUNTIME
+
+  # Convertiser API (server-side only)
+  - variable: CONVERTISER_API_TOKEN
+    secret: CONVERTISER_API_TOKEN
+    availability:
+      - RUNTIME
+
+  # Cron job security (background task processing)
+  - variable: CRON_SECRET
+    secret: CRON_SECRET
+    availability:
+      - RUNTIME
+
   # Typesense (wyszukiwarka) – host/port/protocol używane także w build (embed do klienta)
   - variable: NEXT_PUBLIC_TYPESENSE_HOST
     secret: TYPESENSE_HOST

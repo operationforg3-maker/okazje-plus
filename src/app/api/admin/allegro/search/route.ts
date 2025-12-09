@@ -66,6 +66,14 @@ export async function POST(request: NextRequest) {
     const allowed = await isAdminUser(idToken);
     if (!allowed) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
+    // Validate Allegro credentials
+    if (!allegroConfig.clientId || !allegroConfig.clientSecret) {
+      return NextResponse.json(
+        { error: 'allegro_credentials_missing', message: 'ALLEGRO_APP_KEY or ALLEGRO_APP_SECRET not configured' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { phrase, minPrice, maxPrice, limit } = body;
 

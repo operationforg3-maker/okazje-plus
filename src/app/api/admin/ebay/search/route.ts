@@ -66,6 +66,14 @@ export async function POST(request: NextRequest) {
     const allowed = await isAdminUser(idToken);
     if (!allowed) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
+    // Validate eBay credentials
+    if (!ebayConfig.clientId || !ebayConfig.clientSecret) {
+      return NextResponse.json(
+        { error: 'ebay_credentials_missing', message: 'EBAY_CLIENT_ID or EBAY_CLIENT_SECRET not configured' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { q, minPrice, maxPrice, limit } = body;
 

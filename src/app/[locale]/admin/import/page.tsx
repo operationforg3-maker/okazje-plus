@@ -9,6 +9,7 @@ import { Link2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import EnhancedCsvImporter from '@/components/admin/enhanced-csv-importer';
 import AliExpressImporter from '@/components/admin/aliexpress-importer';
+import { JobQueueManager } from '@/components/admin/job-queue-manager';
 
 function ImportPage() {
   return (
@@ -23,13 +24,14 @@ function ImportPage() {
 
       {/* Import Methods */}
       <Tabs defaultValue="csv" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6 auto-cols-max">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-7 auto-cols-max">
           <TabsTrigger value="csv">CSV</TabsTrigger>
           <TabsTrigger value="aliexpress">AliExpress</TabsTrigger>
           <TabsTrigger value="allegro">Allegro</TabsTrigger>
           <TabsTrigger value="amazon">Amazon</TabsTrigger>
           <TabsTrigger value="convertiser">Convertiser</TabsTrigger>
           <TabsTrigger value="url">Z URL</TabsTrigger>
+          <TabsTrigger value="jobs">Cron Jobs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="csv" className="space-y-4">
@@ -199,6 +201,10 @@ function ImportPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="jobs" className="space-y-4">
+          <JobQueueManager />
         </TabsContent>
       </Tabs>
     </div>
