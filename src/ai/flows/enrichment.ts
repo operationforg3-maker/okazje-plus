@@ -6,9 +6,9 @@
  * - Safety & moderation
  */
 
-import { defineFlow, run } from "@genkit-ai/flow";
+import { defineFlow, run } from "genkit";
 import { generate } from "@genkit-ai/ai";
-import { gemini15Flash } from "@genkit-ai/google-genai";
+import { gemini15Flash } from "@genkit-ai/vertexai";
 import logger from "../logger";
 import { parseJsonFromResponse, moderateText } from "./vertex";
 

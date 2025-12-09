@@ -4,7 +4,7 @@
  * Translates product descriptions while preserving technical details and formatting
  */
 
-import { defineFlow, run, model } from 'genkit';
+import { ai } from '@/ai/genkit';
 
 export interface TranslateDescriptionRequest {
   descriptionEN: string;
@@ -22,65 +22,38 @@ export interface TranslateDescriptionResult {
 /**
  * Flow: AI Translate English Product Description to Polish
  */
-export const aiTranslateDescriptionToPL = defineFlow(
-  {
-    name: 'aiTranslateDescriptionToPL',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        descriptionEN: { type: 'string', description: 'English product description' },
-        categoryEN: { type: 'string', description: 'Product category' },
-        subcategoryEN: { type: 'string', description: 'Product subcategory' },
-        context: { type: 'string', enum: ['product_description', 'product_features', 'deal_description'] },
+export async function aiTranslateDescriptionToPL(input: TranslateDescriptionRequest): Promise<TranslateDescriptionResult> {
+  const { descriptionEN, categoryEN, subcategoryEN, context = 'product_description' } = input;
+
+  const prompt = buildDescriptionPrompt(descriptionEN, categoryEN, subcategoryEN, context);
+
+  try {
+    const response = await ai.generate({
+      prompt,
+      config: {
+        temperature: 0.4,
+        maxOutputTokens: 500,
       },
-      required: ['descriptionEN'],
-    },
-    outputSchema: {
-      type: 'object',
-      properties: {
-        descriptionPL: { type: 'string', description: 'Translated Polish description' },
-        confidence: { type: 'number', minimum: 0, maximum: 100 },
-        hasManualReview: { type: 'boolean' },
-      },
-      required: ['descriptionPL', 'confidence'],
-    },
-  },
-  async (input: TranslateDescriptionRequest): Promise<TranslateDescriptionResult> => {
-    const { descriptionEN, categoryEN, subcategoryEN, context = 'product_description' } = input;
+    });
 
-    const prompt = buildDescriptionPrompt(descriptionEN, categoryEN, subcategoryEN, context);
+    const descriptionPL = response.text()?.trim() || descriptionEN;
+    const confidence = assessDescriptionConfidence(descriptionEN, descriptionPL);
 
-    try {
-      const response = await run('translate-description', async () => {
-        const result = await model('vertexai/gemini-2.0-flash-exp').generate({
-          prompt,
-          config: {
-            temperature: 0.4,
-            maxOutputTokens: 500,
-          },
-        });
-        return result;
-      });
-
-      const descriptionPL = response.text?.trim() || descriptionEN;
-      const confidence = assessDescriptionConfidence(descriptionEN, descriptionPL);
-
-      return {
-        descriptionPL,
-        confidence,
-        hasManualReview: confidence < 65,
-      };
-    } catch (error: any) {
-      console.error('[aiTranslateDescriptionToPL] Failed:', error.message);
-      
-      return {
-        descriptionPL: descriptionEN,
+    return {
+      descriptionPL,
+      confidence,
+      hasManualReview: confidence < 65,
+    };
+  } catch (error: any) {
+    console.error('[aiTranslateDescriptionToPL] Failed:', error.message);
+    
+    return {
+      descriptionPL: descriptionEN,
         confidence: 0,
         hasManualReview: true,
       };
     }
-  }
-);
+}
 
 /**
  * Build prompt for description translation
