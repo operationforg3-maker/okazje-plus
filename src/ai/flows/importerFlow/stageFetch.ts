@@ -13,7 +13,7 @@ import { AliExpressProduct, ImportStageConfig } from './types';
 export async function fetchProductsFromAliexpress(
   keywords: string[], // English keywords: ['Electronics', 'Smartphones', etc]
   config: ImportStageConfig,
-  siteUrl: string = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:9002'
+  siteUrl: string = resolveSiteUrl()
 ): Promise<AliExpressProduct[]> {
   console.log(`[Importer:Fetch] Starting fetch stage for keywords: ${keywords.join(' -> ')}`);
   
@@ -124,6 +124,22 @@ export async function fetchProductsFromAliexpress(
   
   console.log(`[Importer:Fetch] Completed: ${allProducts.length} unique products from ${keywords.length} queries`);
   return allProducts;
+}
+
+/**
+ * Resolve base site URL for internal API calls (works locally and in hosting).
+ */
+function resolveSiteUrl(): string {
+  const candidates = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.VERCEL_URL,
+    'https://okazje-plus.web.app',
+  ].filter(Boolean) as string[];
+
+  const raw = candidates[0] || 'http://localhost:9002';
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw.replace(/\/$/, '');
+  return `https://${raw.replace(/\/$/, '')}`;
 }
 
 function sleep(ms: number): Promise<void> {
