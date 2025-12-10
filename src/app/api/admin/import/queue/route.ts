@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
   console.log('[Queue] ===== POST /api/admin/import/queue =====');
   
   try {
+    const authHeader = req.headers.get('authorization') || '';
     // Check admin authorization
     const authResult = await checkAdminAuth(req);
     
@@ -61,8 +62,8 @@ export async function POST(req: NextRequest) {
 
     console.log('[Queue] Delegating to /api/admin/import/start with importerType:', finalImporterType);
 
-    // Get admin token from auth result
-    const adminIdToken = authResult.idToken || '';
+    // Reuse the same Authorization header to keep Firebase token intact
+    const adminIdToken = authHeader;
 
     // Delegate to new system
     const delegateUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://okazjeplus.pl';
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminIdToken}`,
+        'Authorization': adminIdToken,
       },
       body: JSON.stringify({
         type: 'products',
@@ -164,9 +165,94 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
     const jobId = pathParts[pathParts.length - 1];
-
+    // LIST MODE: /api/admin/import/queue
     if (!jobId || jobId === 'queue') {
-      return NextResponse.json({ error: 'Job ID required' }, { status: 400 });
+      console.log('[Queue GET] Listing jobs (new + compat)');
+
+      const jobs: any[] = [];
+
+      try {
+        const snap = await adminDb
+          .collection('import_jobs')
+          .orderBy('createdAt', 'desc')
+          .limit(25)
+          .get();
+
+        snap.forEach((doc) => {
+          const data = doc.data() || {};
+          jobs.push({
+            id: data.id || doc.id,
+            status: data.status || 'unknown',
+            sources: data.sources || [],
+            config: {
+              maxProductsPerCategory: data.config?.maxProductsPerCategory ?? data.maxProductsPerCategory ?? 20,
+              enableAdvancedFeatures: data.config?.enableAdvancedFeatures ?? false,
+              enableAIEnrichment: data.config?.enableAIEnrichment ?? false,
+              saveDraftsOnly: data.config?.saveDraftsOnly ?? false,
+            },
+            progress: data.progress || {
+              currentSource: data.progress?.currentSource || '',
+              currentCategory: data.progress?.currentCategory || '',
+              processedCategories: data.progress?.processedCategories || 0,
+              totalCategories: data.progress?.totalCategories || 0,
+              importedProducts: data.progress?.importedProducts || 0,
+              errors: data.progress?.errors || [],
+            },
+            createdAt: data.createdAt,
+            startedAt: data.startedAt,
+            completedAt: data.completedAt,
+            source: 'import_jobs (new)',
+          });
+        });
+      } catch (e) {
+        console.warn('[Queue GET] Failed to list import_jobs');
+      }
+
+      try {
+        const snap = await adminDb
+          .collection('importJobs')
+          .orderBy('createdAt', 'desc')
+          .limit(25)
+          .get();
+
+        snap.forEach((doc) => {
+          const data = doc.data() || {};
+          jobs.push({
+            id: data.id || doc.id,
+            status: data.status || 'unknown',
+            sources: data.sources || [],
+            config: {
+              maxProductsPerCategory: data.config?.maxProductsPerCategory ?? data.maxProductsPerCategory ?? 20,
+              enableAdvancedFeatures: data.config?.enableAdvancedFeatures ?? false,
+              enableAIEnrichment: data.config?.enableAIEnrichment ?? false,
+              saveDraftsOnly: data.config?.saveDraftsOnly ?? false,
+            },
+            progress: data.progress || {
+              currentSource: data.progress?.currentSource || '',
+              currentCategory: data.progress?.currentCategory || '',
+              processedCategories: data.progress?.processedCategories || 0,
+              totalCategories: data.progress?.totalCategories || 0,
+              importedProducts: data.progress?.importedProducts || 0,
+              errors: data.progress?.errors || [],
+            },
+            createdAt: data.createdAt,
+            startedAt: data.startedAt,
+            completedAt: data.completedAt,
+            source: 'importJobs (compat)',
+          });
+        });
+      } catch (e) {
+        console.warn('[Queue GET] Failed to list importJobs');
+      }
+
+      // Sort combined list by createdAt desc if available
+      const sorted = jobs.sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
+      });
+
+      return NextResponse.json({ jobs: sorted });
     }
 
     console.log('[Queue GET] Fetching job:', jobId);
