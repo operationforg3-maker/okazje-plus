@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
     const jobRef = adminDb.collection('import_jobs').doc();
     const jobId = jobRef.id;
 
+    const now = new Date().toISOString();
     await jobRef.set({
       id: jobId,
       type,
@@ -135,9 +136,9 @@ export async function POST(req: NextRequest) {
       },
       batches,
       maxItemsPerSubcategory,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      startedAt: null,
+      createdAt: now,
+      updatedAt: now,
+      startedAt: now, // Set to now so sorting works
       completedAt: null,
       logs: [],
       itemsCreated: [], // Track IDs for rollback

@@ -28,17 +28,22 @@ export async function GET(request: NextRequest) {
     const pageSize = Number.isFinite(limitParam) && limitParam > 0 && limitParam <= 50 ? limitParam : DEFAULT_LIMIT;
 
     let baseQuery = query(
-      collection(adminDb, 'importRuns'),
-      orderBy('startedAt', 'desc'),
+      collection(adminDb, 'import_jobs'),
+      orderBy('createdAt', 'desc'),
       limit(pageSize)
     );
 
     if (cursor) {
-      baseQuery = query(baseQuery, startAfter(cursor));
+      baseQuery = query(
+        collection(adminDb, 'import_jobs'),
+        orderBy('createdAt', 'desc'),
+        startAfter(cursor),
+        limit(pageSize)
+      );
     }
 
     const snapshot = await getDocs(baseQuery);
-    const runs = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    const runs = snapshot.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
     const nextCursor = snapshot.size === pageSize ? snapshot.docs[snapshot.size - 1]?.get('startedAt') : null;
 
     return NextResponse.json({ runs, nextCursor });
