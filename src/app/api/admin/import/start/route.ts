@@ -270,14 +270,28 @@ export async function processImportJob(
           }
         } else {
           // Keyword Search mode (original)
-          keywords = [
+          // Try to get importKeywords from category structure first
+          const importKeywords = getImportKeywordsFromStructure(
             batch.categorySlug,
             batch.subcategorySlug,
-            batch.subsubcategorySlug,
-            `${batch.subcategorySlug} ${batch.categorySlug}`,
-            `${batch.subcategorySlug} popular`,
-            `${batch.subcategorySlug} bestseller`,
-          ].filter(k => k && k !== batch.subsubcategorySlug);
+            batch.subsubcategorySlug
+          );
+          
+          if (importKeywords && importKeywords.length > 0) {
+            // Use predefined keywords from category-structure.ts
+            keywords = importKeywords;
+            console.log(`[Import Processor] Using predefined keywords: ${keywords.join(', ')}`);
+          } else {
+            // Fallback to slug-based keywords if no importKeywords defined
+            console.warn(`[Import Processor] No importKeywords for ${batch.subsubcategorySlug} - using slug fallback`);
+            keywords = [
+              batch.subsubcategorySlug,
+              batch.subcategorySlug,
+              `${batch.subsubcategorySlug} ${batch.subcategorySlug}`,
+              `${batch.subsubcategorySlug} popular`,
+              `${batch.subsubcategorySlug} bestseller`,
+            ].filter(k => k && k.trim());
+          }
         }
 
         // Run 5-stage pipeline
