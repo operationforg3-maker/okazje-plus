@@ -6,8 +6,8 @@
  */
 
 // @ts-nocheck
-import { describe, it, expect, beforeAll, vi } from "@jest/globals";
-import { ConvertiserClient, getConvertiserClient } from "../src/lib/integrations/convertiser-client";
+import { describe, it, expect, beforeAll } from "@jest/globals";
+import { ConvertiserClient, getConvertiserClient } from "../convertiser-client";
 
 describe("ConvertiserClient", () => {
   let client: ConvertiserClient;

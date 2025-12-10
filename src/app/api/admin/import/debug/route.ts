@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Stage 5: Save (optional write)
-    let saved = { created: [], updated: [], skipped: [] as string[] };
+    let saved: { created: string[]; updated: string[]; skipped: string[] } = { created: [], updated: [], skipped: [] };
     if (writeToDb) {
       saved = await saveProductsToFirestore(translated, {
         name: 'save',

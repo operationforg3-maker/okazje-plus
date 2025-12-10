@@ -6,8 +6,8 @@
  */
 
 // @ts-nocheck
-import { describe, it, expect, beforeAll, vi } from "@jest/globals";
-import { AliExpressClient, getAliExpressClient } from "../src/lib/integrations/aliexpress-client";
+import { describe, it, expect, beforeAll } from "@jest/globals";
+import { AliExpressClient, getAliExpressClient } from "../aliexpress-client";
 
 describe("AliExpressClient", () => {
   let client: AliExpressClient;
@@ -74,7 +74,7 @@ describe("AliExpressClient", () => {
   describe("Error handling", () => {
     it("should handle network errors gracefully", async () => {
       // Mock fetch to simulate network error
-      global.fetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
+      global.fetch = jest.fn().mockRejectedValueOnce(new Error("Network error"));
 
       await expect(
         client.getProductInfo("test_product_id")

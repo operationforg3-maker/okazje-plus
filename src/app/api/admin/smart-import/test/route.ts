@@ -9,7 +9,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { runSmartImportTests, runBatchPerformanceTest, testCategoryMapping } from '@/integrations/smart-importer.test';
 import { optimizer } from '@/integrations/smart-importer-optimizer';
 import { logger } from '@/lib/logging';
 

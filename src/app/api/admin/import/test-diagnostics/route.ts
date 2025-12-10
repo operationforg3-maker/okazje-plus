@@ -77,8 +77,8 @@ export async function POST(req: NextRequest) {
     // Check 5: Genkit AI
     console.log('[Diagnostics] Testing Genkit AI...');
     try {
-      const { generateText } = await import('@/ai/genkit');
-      if (generateText) {
+      const { ai } = await import('@/ai/genkit');
+      if (ai) {
         diagnostics.checks.genkit = { status: 'OK', message: 'Genkit AI available' };
       } else {
         diagnostics.checks.genkit = { status: 'FAIL', message: 'Genkit AI not available' };
