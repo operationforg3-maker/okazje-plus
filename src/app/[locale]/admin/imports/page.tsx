@@ -145,12 +145,13 @@ export default function ImportsPage() {
     try {
       setLoadingRuns(true);
       setError(null);
-      const data = await fetchWithToken<{ runs: ImportRun[]; nextCursor?: string }>(
-        "/api/admin/import-runs?limit=20"
+      const data = await fetchWithToken<{ runs?: ImportRun[]; jobs?: any[] }>(
+        "/api/admin/import/queue"
       );
-      setRuns(data.runs);
-      if (data.runs.length) {
-        setSelectedRun(data.runs[0]);
+      const runsList = data.runs || data.jobs || [];
+      setRuns(runsList as ImportRun[]);
+      if (runsList && runsList.length > 0) {
+        setSelectedRun(runsList[0] as ImportRun);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.loadRuns"));
@@ -168,7 +169,7 @@ export default function ImportsPage() {
     try {
       setLoadingRunDetail(true);
       setError(null);
-      const data = await fetchWithToken<ImportRun>(`/api/admin/import-runs/${id}`);
+      const data = await fetchWithToken<ImportRun>(`/api/admin/import/queue/${id}`);
       setSelectedRun(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.loadRunDetail"));
@@ -342,31 +343,35 @@ export default function ImportsPage() {
             )}
             {!loadingRuns && runs.length === 0 && <p className="text-sm text-gray-500">{t("listCard.empty")}</p>}
             <div className="space-y-2 max-h-80 overflow-auto pr-1">
-              {runs.map((run) => (
-                <button
-                  key={run.id}
-                  onClick={() => loadRunDetail(run.id)}
-                  className={`w-full text-left border rounded-md px-3 py-2 hover:border-primary transition ${
-                    selectedRun?.id === run.id ? "border-primary bg-primary/5" : "border-gray-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="font-semibold">
-                      {run.type === 'products' ? '📦 Produkty' : '🆕 Okazje'} · {run.source} 
-                      {run.importerType && ` · ${run.importerType === 'hot-products' ? '🔥' : '🔍'}`}
+              {runs && runs.length > 0 ? (
+                runs.map((run) => (
+                  <button
+                    key={run?.id || Math.random()}
+                    onClick={() => run?.id && loadRunDetail(run.id)}
+                    className={`w-full text-left border rounded-md px-3 py-2 hover:border-primary transition ${
+                      selectedRun?.id === run?.id ? "border-primary bg-primary/5" : "border-gray-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="font-semibold">
+                        {run?.type === 'products' ? '📦 Produkty' : '🆕 Okazje'} · {run?.source} 
+                        {run?.importerType && ` · ${run?.importerType === 'hot-products' ? '🔥' : '🔍'}`}
+                      </div>
+                      <Badge variant={run?.status === "completed" ? "default" : run?.status === "failed" ? "destructive" : "outline"}>
+                        {statusLabel(run?.status || 'unknown')}
+                      </Badge>
                     </div>
-                    <Badge variant={run.status === "completed" ? "default" : run.status === "failed" ? "destructive" : "outline"}>
-                      {statusLabel(run.status)}
-                    </Badge>
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1 flex gap-3">
-                    <span>{t("details.stats.fetched")}: {formatNumber(run.stats?.fetched)}</span>
-                    <span>{t("details.stats.created")}: {formatNumber(run.stats?.created)}</span>
-                    <span>{t("details.stats.errors")}: {formatNumber(run.stats?.errors)}</span>
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">{formatDateTime(run.startedAt)}</div>
-                </button>
-              ))}
+                    <div className="text-xs text-gray-500 mt-1 flex gap-3">
+                      <span>{t("details.stats.fetched")}: {formatNumber(run?.stats?.fetched)}</span>
+                      <span>{t("details.stats.created")}: {formatNumber(run?.stats?.created)}</span>
+                      <span>{t("details.stats.errors")}: {formatNumber(run?.stats?.errors)}</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">{formatDateTime(run?.startedAt)}</div>
+                  </button>
+                ))
+              ) : (
+                !loadingRuns && <p className="text-sm text-gray-500">{t("listCard.empty")}</p>
+              )}
             </div>
           </CardContent>
         </Card>
