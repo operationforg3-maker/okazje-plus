@@ -27,6 +27,7 @@
     "runId": "Ausführungs-ID",
     "profileVendor": "Profil / Anbieter",
     "status": "Status",
+    "time": "Zeit",
     "noData": "Keine Daten",
     "stats": {
       "fetched": "Abgerufen",
@@ -45,7 +46,8 @@
     "running": "Läuft",
     "completed": "Abgeschlossen",
     "failed": "Fehlgeschlagen",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "paused": "Pausiert"
   },
   "errors": {
     "loadRuns": "Importverlauf konnte nicht geladen werden",

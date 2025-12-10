@@ -27,6 +27,7 @@
     "runId": "Run ID",
     "profileVendor": "Profile / Vendor",
     "status": "Status",
+    "time": "Time",
     "noData": "No data",
     "stats": {
       "fetched": "Fetched",
@@ -45,7 +46,8 @@
     "running": "Running",
     "completed": "Completed",
     "failed": "Failed",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "paused": "Paused"
   },
   "errors": {
     "loadRuns": "Failed to load import history",
