@@ -81,32 +81,97 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Pre-flight check: Validate AliExpress API configuration if aliexpress is enabled
+    // Pre-flight check: Validate API configuration for all enabled sources
+    console.log('[POST /api/admin/import/queue] Validating API configuration for sources:', enabledSources);
+    const configErrors: string[] = [];
+    const missingVarsBySource: Record<string, string[]> = {};
+
+    // AliExpress validation
     if (enabledSources.includes('aliexpress')) {
-      console.log('[POST /api/admin/import/queue] Checking AliExpress API configuration...');
       const API_BASE = process.env.ALIEXPRESS_API_BASE;
       const APP_KEY = process.env.ALIEXPRESS_APP_KEY;
       const APP_SECRET = process.env.ALIEXPRESS_APP_SECRET;
 
       if (!API_BASE || !APP_KEY || !APP_SECRET) {
-        console.error('[POST /api/admin/import/queue] ❌ AliExpress API not configured');
         const missingVars = [];
         if (!API_BASE) missingVars.push('ALIEXPRESS_API_BASE');
         if (!APP_KEY) missingVars.push('ALIEXPRESS_APP_KEY');
         if (!APP_SECRET) missingVars.push('ALIEXPRESS_APP_SECRET');
-        
-        return NextResponse.json(
-          { 
-            error: 'AliExpress API not configured',
-            message: `Cannot create import job: AliExpress API credentials are missing. Please configure: ${missingVars.join(', ')}`,
-            missingVariables: missingVars,
-            configured: false,
-          },
-          { status: 503 }
-        );
+        missingVarsBySource['aliexpress'] = missingVars;
+        configErrors.push(`AliExpress: ${missingVars.join(', ')}`);
       }
-      console.log('[POST /api/admin/import/queue] ✅ AliExpress API configured');
     }
+
+    // Convertiser validation
+    if (enabledSources.includes('convertiser')) {
+      const API_TOKEN = process.env.CONVERTISER_API_TOKEN;
+
+      if (!API_TOKEN) {
+        missingVarsBySource['convertiser'] = ['CONVERTISER_API_TOKEN'];
+        configErrors.push('Convertiser: CONVERTISER_API_TOKEN');
+      }
+    }
+
+    // Allegro validation
+    if (enabledSources.includes('allegro')) {
+      const APP_KEY = process.env.ALLEGRO_APP_KEY;
+      const APP_SECRET = process.env.ALLEGRO_APP_SECRET;
+
+      if (!APP_KEY || !APP_SECRET) {
+        const missingVars = [];
+        if (!APP_KEY) missingVars.push('ALLEGRO_APP_KEY');
+        if (!APP_SECRET) missingVars.push('ALLEGRO_APP_SECRET');
+        missingVarsBySource['allegro'] = missingVars;
+        configErrors.push(`Allegro: ${missingVars.join(', ')}`);
+      }
+    }
+
+    // Amazon validation
+    if (enabledSources.includes('amazon')) {
+      const ACCESS_KEY = process.env.AMAZON_ACCESS_KEY;
+      const SECRET_KEY = process.env.AMAZON_SECRET_KEY;
+      const PARTNER_TAG = process.env.AMAZON_PARTNER_TAG;
+
+      if (!ACCESS_KEY || !SECRET_KEY || !PARTNER_TAG) {
+        const missingVars = [];
+        if (!ACCESS_KEY) missingVars.push('AMAZON_ACCESS_KEY');
+        if (!SECRET_KEY) missingVars.push('AMAZON_SECRET_KEY');
+        if (!PARTNER_TAG) missingVars.push('AMAZON_PARTNER_TAG');
+        missingVarsBySource['amazon'] = missingVars;
+        configErrors.push(`Amazon: ${missingVars.join(', ')}`);
+      }
+    }
+
+    // eBay validation
+    if (enabledSources.includes('ebay')) {
+      const APP_ID = process.env.EBAY_APP_ID;
+      const CERT_ID = process.env.EBAY_CERT_ID;
+
+      if (!APP_ID || !CERT_ID) {
+        const missingVars = [];
+        if (!APP_ID) missingVars.push('EBAY_APP_ID');
+        if (!CERT_ID) missingVars.push('EBAY_CERT_ID');
+        missingVarsBySource['ebay'] = missingVars;
+        configErrors.push(`eBay: ${missingVars.join(', ')}`);
+      }
+    }
+
+    // If any source has missing credentials, return error
+    if (configErrors.length > 0) {
+      console.error('[POST /api/admin/import/queue] ❌ API configuration errors:', configErrors);
+      return NextResponse.json(
+        { 
+          error: 'Marketplace API credentials not configured',
+          message: `Cannot create import job: Some marketplace APIs are missing credentials. Please configure: ${configErrors.join(' | ')}`,
+          missingVariables: missingVarsBySource,
+          configured: false,
+          sources: enabledSources,
+        },
+        { status: 503 }
+      );
+    }
+
+    console.log('[POST /api/admin/import/queue] ✅ All enabled sources configured');
 
     // Create job
     console.log('[POST /api/admin/import/queue] Creating job in Firestore...');
