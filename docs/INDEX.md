@@ -124,6 +124,14 @@ docs/
 
 ---
 
+## 🔧 Troubleshooting (troubleshooting/)
+
+### Rozwiązywanie problemów
+- **[troubleshooting/IMPORT_JOBS_NOT_WORKING.md](troubleshooting/IMPORT_JOBS_NOT_WORKING.md)** – **NOWE!** Rozwiązywanie problemów z importem produktów
+- **[troubleshooting/README.md](troubleshooting/README.md)** – Indeks problemów i rozwiązań
+
+---
+
 ## 🔄 Updates (updates/)
 
 Chronologiczne aktualizacje i zmiany w projekcie:
