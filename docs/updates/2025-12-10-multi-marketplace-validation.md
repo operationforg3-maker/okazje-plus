@@ -34,7 +34,7 @@ Returns configuration status for all marketplace sources:
 
 ```json
 {
-  "ok": true,
+  "ok": true,  // NOTE: true means "at least one source is configured", not all
   "sources": {
     "aliexpress": { 
       "configured": true, 

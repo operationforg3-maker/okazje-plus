@@ -81,7 +81,7 @@ export async function GET() {
     const unconfiguredSources = totalSources - configuredSources;
 
     const response: HealthCheckResponse = {
-      ok: configuredSources > 0, // At least one source must be configured
+      ok: configuredSources > 0, // At least one source is configured (not all sources required)
       sources,
       summary: {
         totalSources,

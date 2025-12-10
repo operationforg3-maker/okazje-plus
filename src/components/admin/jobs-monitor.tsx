@@ -174,7 +174,9 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     }
 
     // Check if any enabled source is not configured
-    const unconfiguredSources = enabledSources.filter(source => !apiConfigStatus.configured[source]);
+    const unconfiguredSources = enabledSources.filter(source => 
+      apiConfigStatus.checked && apiConfigStatus.configured[source] !== true
+    );
     
     if (unconfiguredSources.length > 0) {
       const sourceNames = unconfiguredSources.join(', ');
@@ -325,7 +327,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
             <Label className="text-sm font-medium mb-2 block">Źródła importu</Label>
             <div className="grid grid-cols-2 gap-3">
               {Object.entries(sources).map(([source, enabled]) => {
-                const isConfigured = apiConfigStatus.configured[source];
+                const isConfigured = apiConfigStatus.checked ? apiConfigStatus.configured[source] === true : false;
                 const showStatus = apiConfigStatus.checked;
                 
                 return (
@@ -398,8 +400,8 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
           <Button 
             onClick={createJob} 
             disabled={creating || (
-              Object.entries(sources).some(([source, enabled]) => 
-                enabled && !apiConfigStatus.configured[source]
+              apiConfigStatus.checked && Object.entries(sources).some(([source, enabled]) => 
+                enabled && apiConfigStatus.configured[source] !== true
               )
             )}
             className="w-full"
@@ -416,8 +418,8 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
               </>
             )}
           </Button>
-          {Object.entries(sources).some(([source, enabled]) => 
-            enabled && !apiConfigStatus.configured[source]
+          {apiConfigStatus.checked && Object.entries(sources).some(([source, enabled]) => 
+            enabled && apiConfigStatus.configured[source] !== true
           ) && (
             <p className="text-xs text-yellow-600 dark:text-yellow-400 text-center">
               Niektóre wybrane źródła nie są skonfigurowane
