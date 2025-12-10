@@ -84,12 +84,12 @@ export async function POST(req: NextRequest) {
     // ========== TEST 2: Categories ==========
     results.tests['2-categories'] = {
       name: 'Categories',
-      endpoint: 'GET /api/admin/categories',
+      endpoint: 'GET /api/categories',
       status: 'pending',
     };
 
     try {
-      const response = await fetch(`${baseUrl}/api/admin/categories`, {
+      const response = await fetch(`${baseUrl}/api/categories`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
