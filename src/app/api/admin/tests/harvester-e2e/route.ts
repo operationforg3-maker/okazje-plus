@@ -34,9 +34,15 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Harvester E2E Test] Admin: ${decodedToken.email}`);
 
+    // Build base URL from request headers
+    const protocol = req.headers.get('x-forwarded-proto') || 'https';
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || 'okazjeplus.pl';
+    const baseUrl = `${protocol}://${host}`;
+
     const results: any = {
       timestamp: new Date().toISOString(),
       admin: decodedToken.email,
+      baseUrl: baseUrl,
       tests: {},
       summary: {
         passed: 0,
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/test-fill-data', {
+      const response = await fetch(`${baseUrl}/api/admin/test-fill-data`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -83,7 +89,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/categories', {
+      const response = await fetch(`${baseUrl}/api/admin/categories`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -112,7 +118,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/import/start', {
+      const response = await fetch(`${baseUrl}/api/admin/import/start`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: 'test', items: 1 }),
@@ -143,7 +149,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/import/queue', {
+      const response = await fetch(`${baseUrl}/api/admin/import/queue`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -172,7 +178,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/products/enhance-ai', {
+      const response = await fetch(`${baseUrl}/api/admin/products/enhance-ai`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ maxItems: 1 }),
@@ -202,7 +208,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/schedule/deals', {
+      const response = await fetch(`${baseUrl}/api/admin/schedule/deals`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -226,12 +232,12 @@ export async function POST(req: NextRequest) {
     // ========== TEST 7: Link Verification ==========
     results.tests['7-links'] = {
       name: 'Link Verification',
-      endpoint: 'POST /api/admin/verify-links',
+      endpoint: 'POST /api/admin/links/verify',
       status: 'pending',
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/verify-links', {
+      const response = await fetch(`${baseUrl}/api/admin/links/verify`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ links: ['https://example.com'] }),
@@ -261,7 +267,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const response = await fetch('http://localhost:3000/api/admin/delete/preview', {
+      const response = await fetch(`${baseUrl}/api/admin/delete/preview`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ type: 'products' }),
@@ -292,8 +298,8 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const productsResponse = await fetch('http://localhost:3000/pl/products');
-      const dealsResponse = await fetch('http://localhost:3000/pl/deals');
+      const productsResponse = await fetch(`${baseUrl}/pl/products`);
+      const dealsResponse = await fetch(`${baseUrl}/pl/deals`);
 
       results.tests['9-catalog'] = {
         ...results.tests['9-catalog'],
