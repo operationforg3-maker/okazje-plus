@@ -15,10 +15,10 @@ import { Loader2, Play, RefreshCw } from "lucide-react";
 
 interface ImportRun {
   id: string;
-  profileId: string;
-  vendorId: string;
+  type: 'products' | 'deals';
+  source: 'aliexpress' | 'manual';
+  importerType?: 'keyword-search' | 'hot-products' | 'category-direct';
   status: "pending" | "running" | "completed" | "failed" | "cancelled";
-  dryRun: boolean;
   stats: {
     fetched: number;
     created: number;
@@ -27,7 +27,8 @@ interface ImportRun {
     errors: number;
     duplicates?: number;
   };
-  startedAt: string;
+  createdAt: string;
+  startedAt?: string;
   finishedAt?: string;
   durationMs?: number;
   triggeredBy: "scheduled" | "manual";
@@ -95,9 +96,9 @@ export default function ImportsPage() {
   }, [t]);
 
   useEffect(() => {
-    if (!isUserAdmin) return;
+    if (!isUserAdmin || !user || loading) return;
     loadRuns();
-  }, [isUserAdmin, loadRuns]);
+  }, [isUserAdmin, user, loading, loadRuns]);
 
   const loadRunDetail = async (id: string) => {
     try {
@@ -113,10 +114,6 @@ export default function ImportsPage() {
   };
 
   const startImport = async () => {
-    if (!profileId) {
-      setError(t("errors.profileRequired"));
-      return;
-    }
     try {
       setStarting(true);
       setError(null);
@@ -277,10 +274,12 @@ export default function ImportsPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="font-semibold">{run.vendorId} · {run.profileId}</div>
+                    <div className="font-semibold">
+                      {run.type === 'products' ? '📦 Produkty' : '🆕 Okazje'} · {run.source} 
+                      {run.importerType && ` · ${run.importerType === 'hot-products' ? '🔥' : '🔍'}`}
+                    </div>
                     <Badge variant={run.status === "completed" ? "default" : run.status === "failed" ? "destructive" : "outline"}>
                       {statusLabel(run.status)}
-                      {run.dryRun ? t("dryRunSuffix") : ""}
                     </Badge>
                   </div>
                   <div className="text-xs text-gray-500 mt-1 flex gap-3">
@@ -310,14 +309,16 @@ export default function ImportsPage() {
             )}
             <div className="grid md:grid-cols-3 gap-3 text-sm">
               <div className="space-y-1">
-                <p className="font-semibold">{t("details.profileVendor")}</p>
-                <p className="text-gray-600">{selectedRun.profileId} · {selectedRun.vendorId}</p>
+                <p className="font-semibold">Źródło</p>
+                <p className="text-gray-600">
+                  {selectedRun.type === 'products' ? 'Produkty' : 'Okazje'} · {selectedRun.source}
+                  {selectedRun.importerType && ` · ${selectedRun.importerType}`}
+                </p>
               </div>
               <div className="space-y-1">
                 <p className="font-semibold">{t("details.status")}</p>
                 <p className="text-gray-600">
                   {statusLabel(selectedRun.status)}
-                  {selectedRun.dryRun ? t("dryRunSuffix") : ""}
                 </p>
               </div>
               <div className="space-y-1">
