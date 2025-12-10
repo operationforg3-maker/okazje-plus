@@ -83,7 +83,7 @@ describe("AliExpressClient", () => {
 
     it("should retry on 429 (rate limit)", async () => {
       let callCount = 0;
-      global.fetch = vi.fn(async () => {
+      global.fetch = jest.fn(async () => {
         callCount++;
         if (callCount === 1) {
           return new Response(null, { status: 429 });

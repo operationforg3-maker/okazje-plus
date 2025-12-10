@@ -21,7 +21,7 @@ describe("ConvertiserClient", () => {
 
   describe("Authentication", () => {
     it("should include Authorization header in requests", async () => {
-      global.fetch = vi.fn(async (url, options) => {
+      global.fetch = jest.fn(async (url, options) => {
         expect(options.headers.Authorization).toBe("Token test_token_12345");
         return new Response(
           JSON.stringify({ results: [] }),
@@ -39,7 +39,7 @@ describe("ConvertiserClient", () => {
     });
 
     it("should throw on 401 Unauthorized", async () => {
-      global.fetch = vi.fn(async () => {
+      global.fetch = jest.fn(async () => {
         return new Response("Unauthorized", { status: 401 });
       });
 
@@ -62,7 +62,7 @@ describe("ConvertiserClient", () => {
         next: null,
       };
 
-      global.fetch = vi.fn(async () => {
+      global.fetch = jest.fn(async () => {
         return new Response(JSON.stringify(mockResponse), { status: 200 });
       });
 
@@ -72,7 +72,7 @@ describe("ConvertiserClient", () => {
     });
 
     it("should handle empty responses (204 No Content)", async () => {
-      global.fetch = vi.fn(async () => {
+      global.fetch = jest.fn(async () => {
         return new Response(null, { status: 204 });
       });
 
@@ -84,7 +84,7 @@ describe("ConvertiserClient", () => {
 
   describe("Pagination", () => {
     it("should add pagination parameters to query", async () => {
-      global.fetch = vi.fn(async (url) => {
+      global.fetch = jest.fn(async (url) => {
         expect(url.toString()).toContain("page=2");
         expect(url.toString()).toContain("page_size=50");
         return new Response(
@@ -106,7 +106,7 @@ describe("ConvertiserClient", () => {
   describe("Error handling", () => {
     it("should retry on 429 (rate limit)", async () => {
       let callCount = 0;
-      global.fetch = vi.fn(async () => {
+      global.fetch = jest.fn(async () => {
         callCount++;
         if (callCount === 1) {
           return new Response("Too many requests", { status: 429 });
@@ -129,7 +129,7 @@ describe("ConvertiserClient", () => {
     });
 
     it("should handle 301 redirect gracefully", async () => {
-      global.fetch = vi.fn(async (url) => {
+      global.fetch = jest.fn(async (url) => {
         // First call returns redirect
         if (!url.toString().endsWith("/")) {
           return new Response(null, {
