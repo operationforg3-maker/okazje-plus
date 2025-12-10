@@ -275,11 +275,6 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     }
   };
 
-  const getProgressPercent = (job: ImportJob) => {
-    if (job.progress.totalCategories === 0) return 0;
-    return Math.round((job.progress.processedCategories / job.progress.totalCategories) * 100);
-  };
-
   return (
     <div className="space-y-6">
       {/* API Configuration Status */}
@@ -457,83 +452,100 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
             </div>
           ) : (
             <div className="space-y-4">
-              {jobs.map((job) => (
-                <div
-                  key={job.id}
-                  className="border rounded-lg p-4 space-y-3"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(job.status)}
-                        <span className="text-xs text-muted-foreground">
-                          ID: {job.id.slice(0, 8)}...
-                        </span>
+              {jobs.map((job) => {
+                const progress = job.progress ?? {
+                  currentSource: '-',
+                  currentCategory: '-',
+                  processedCategories: 0,
+                  totalCategories: 0,
+                  importedProducts: 0,
+                  errors: [] as string[],
+                };
+
+                const progressPercent = progress.totalCategories
+                  ? Math.round((progress.processedCategories / progress.totalCategories) * 100)
+                  : 0;
+
+                const errorsCount = progress.errors?.length ?? 0;
+
+                return (
+                  <div
+                    key={job.id}
+                    className="border rounded-lg p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(job.status)}
+                          <span className="text-xs text-muted-foreground">
+                            ID: {job.id.slice(0, 8)}...
+                          </span>
+                        </div>
+                        <div className="text-sm">
+                          <strong>Źródła:</strong> {job.sources?.join(', ') || 'brak danych'}
+                        </div>
+                        <div className="text-xs text-muted-foreground" suppressHydrationWarning>
+                          Utworzony: {new Date(job.createdAt).toLocaleString('pl-PL')}
+                        </div>
                       </div>
-                      <div className="text-sm">
-                        <strong>Źródła:</strong> {job.sources.join(', ')}
-                      </div>
-                      <div className="text-xs text-muted-foreground" suppressHydrationWarning>
-                        Utworzony: {new Date(job.createdAt).toLocaleString('pl-PL')}
-                      </div>
+
+                      {(job.status === 'running' || job.status === 'pending') && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => cancelJob(job.id)}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Anuluj
+                        </Button>
+                      )}
                     </div>
 
-                    {(job.status === 'running' || job.status === 'pending') && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => cancelJob(job.id)}
-                      >
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Anuluj
-                      </Button>
+                    {job.status === 'running' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {progress.currentSource} → {progress.currentCategory}
+                          </span>
+                          <span className="font-medium">
+                            {progressPercent}%
+                          </span>
+                        </div>
+                        <Progress value={progressPercent} />
+                        <div className="text-xs text-muted-foreground">
+                          Produktów: {progress.importedProducts} | 
+                          Kategorie: {progress.processedCategories}/{progress.totalCategories}
+                        </div>
+                      </div>
+                    )}
+
+                    {job.status === 'completed' && job.results && (
+                      <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded p-3 text-sm">
+                        <div className="font-medium text-green-900 dark:text-green-100 mb-1">
+                          ✅ Import zakończony
+                        </div>
+                        <div className="text-green-800 dark:text-green-200 space-y-0.5">
+                          <div>Produktów: {job.results.totalProducts}</div>
+                          <div>Wariantów: {job.results.totalVariants}</div>
+                          <div>Czas: {Math.round(job.results.duration)}s</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {job.status === 'failed' && (
+                      <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded p-3 text-sm">
+                        <div className="font-medium text-red-900 dark:text-red-100 mb-1">
+                          <AlertCircle className="inline h-4 w-4 mr-1" />
+                          Import nie powiódł się
+                        </div>
+                        <div className="text-red-800 dark:text-red-200">
+                          Błędów: {errorsCount}
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  {job.status === 'running' && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {job.progress.currentSource} → {job.progress.currentCategory}
-                        </span>
-                        <span className="font-medium">
-                          {getProgressPercent(job)}%
-                        </span>
-                      </div>
-                      <Progress value={getProgressPercent(job)} />
-                      <div className="text-xs text-muted-foreground">
-                        Produktów: {job.progress.importedProducts} | 
-                        Kategorie: {job.progress.processedCategories}/{job.progress.totalCategories}
-                      </div>
-                    </div>
-                  )}
-
-                  {job.status === 'completed' && job.results && (
-                    <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded p-3 text-sm">
-                      <div className="font-medium text-green-900 dark:text-green-100 mb-1">
-                        ✅ Import zakończony
-                      </div>
-                      <div className="text-green-800 dark:text-green-200 space-y-0.5">
-                        <div>Produktów: {job.results.totalProducts}</div>
-                        <div>Wariantów: {job.results.totalVariants}</div>
-                        <div>Czas: {Math.round(job.results.duration)}s</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {job.status === 'failed' && (
-                    <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded p-3 text-sm">
-                      <div className="font-medium text-red-900 dark:text-red-100 mb-1">
-                        <AlertCircle className="inline h-4 w-4 mr-1" />
-                        Import nie powiódł się
-                      </div>
-                      <div className="text-red-800 dark:text-red-200">
-                        Błędów: {job.progress.errors.length}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

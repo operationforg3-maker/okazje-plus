@@ -27,6 +27,7 @@
     "runId": "ID uruchomienia",
     "profileVendor": "Profil / Dostawca",
     "status": "Status",
+    "time": "Czas",
     "noData": "Brak danych",
     "stats": {
       "fetched": "Pobrano",
@@ -45,7 +46,8 @@
     "running": "W trakcie",
     "completed": "Ukończony",
     "failed": "Nieudany",
-    "cancelled": "Anulowany"
+    "cancelled": "Anulowany",
+    "paused": "Wstrzymany"
   },
   "errors": {
     "loadRuns": "Nie udało się załadować historii importów",
