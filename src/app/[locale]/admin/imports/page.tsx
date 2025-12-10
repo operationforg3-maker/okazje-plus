@@ -59,8 +59,7 @@ export default function ImportsPage() {
   const [loadingRuns, setLoadingRuns] = useState(false);
   const [loadingRunDetail, setLoadingRunDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [profileId, setProfileId] = useState("");
-  const [maxItems, setMaxItems] = useState<string>("");
+  const [maxItems, setMaxItems] = useState<string>("20");
   const [dryRun, setDryRun] = useState(true);
   const [starting, setStarting] = useState(false);
   const [importerType, setImporterType] = useState<'keyword-search' | 'hot-products' | 'category-direct'>('keyword-search');
@@ -122,14 +121,13 @@ export default function ImportsPage() {
       setStarting(true);
       setError(null);
       const payload: any = { 
-        profileId, 
-        dryRun,
-        importerType, // NEW: przekaż typ importera
+        type: 'products', // NEW: specify import type
+        maxItemsPerSubcategory: maxItems ? Number(maxItems) : 10,
+        importerType, // NEW: specify importer method
       };
-      if (maxItems) payload.maxItems = Number(maxItems);
 
-      const data = await fetchWithToken<{ importRunId?: string; stats?: any }>(
-        "/api/admin/products/ingest",
+      const data = await fetchWithToken<{ success: boolean; jobId?: string; totalBatches?: number; message?: string }>(
+        "/api/admin/import/start",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -137,10 +135,12 @@ export default function ImportsPage() {
         }
       );
 
-      if (data.importRunId) {
+      if (data.jobId) {
         await loadRuns();
-        await loadRunDetail(data.importRunId);
       }
+      
+      setError(null);
+      alert(`✅ Import started! Job ID: ${data.jobId}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("errors.startImport"));
     } finally {
@@ -187,45 +187,16 @@ export default function ImportsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>{t("startCard.profileLabel")}</Label>
+              <Label>{t("startCard.maxLabel")}</Label>
               <Input
-                value={profileId}
-                onChange={(e) => setProfileId(e.target.value)}
-                placeholder={t("startCard.profilePlaceholder")}
+                type="number"
+                min={1}
+                max={100}
+                value={maxItems}
+                onChange={(e) => setMaxItems(e.target.value)}
+                placeholder="20"
               />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>{t("startCard.maxLabel")}</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={maxItems}
-                  onChange={(e) => setMaxItems(e.target.value)}
-                  placeholder={t("startCard.maxPlaceholder")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>{t("startCard.modeLabel")}</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant={dryRun ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setDryRun(true)}
-                  >
-                    {t("startCard.dryRun")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={!dryRun ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setDryRun(false)}
-                  >
-                    {t("startCard.real")}
-                  </Button>
-                </div>
-              </div>
+              <p className="text-xs text-gray-500">Maksymalnie produktów na każdą pod-podkategorię</p>
             </div>
             
             <div className="space-y-2">
