@@ -307,10 +307,11 @@ export async function processImportJob(
           currencyRate,
           importerType, // NEW: pass importer type
           aliexpressCategoryIds, // NEW: pass category IDs
-          fetch: { batchSize: 50, delayBetweenItems: 200, delayBetweenBatches: 1000 },
+          // OPTIMIZED: Faster, iterative processing with reduced delays
+          fetch: { batchSize: 50, delayBetweenItems: 100, delayBetweenBatches: 500 }, // 50% faster
           dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
-          enrich: { batchSize: 5, delayBetweenItems: 300, delayBetweenBatches: 2000 },
-          translate: { batchSize: 10, delayBetweenItems: 50, delayBetweenBatches: 300 },
+          enrich: { batchSize: 5, delayBetweenItems: 200, delayBetweenBatches: 1000 }, // 50% faster
+          translate: { batchSize: 10, delayBetweenItems: 30, delayBetweenBatches: 200 }, // 60% faster
           save: { batchSize: 5, skipExisting: true },
         });
 
