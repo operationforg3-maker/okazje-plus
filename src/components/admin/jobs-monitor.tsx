@@ -58,6 +58,11 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [apiConfigStatus, setApiConfigStatus] = useState<{
+    configured: Record<string, boolean>;
+    issues: Record<string, string[]>;
+    checked: boolean;
+  }>({ configured: {}, issues: {}, checked: false });
   
   // Hydration guard
   useEffect(() => {
@@ -102,6 +107,42 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     }
   }, [getIdToken, isMounted]);
 
+  // Check API configuration on mount
+  useEffect(() => {
+    const checkApiConfig = async () => {
+      try {
+        const response = await fetch('/api/admin/marketplaces/health');
+        if (response.ok) {
+          const data = await response.json();
+          const configured: Record<string, boolean> = {};
+          const issues: Record<string, string[]> = {};
+          
+          Object.entries(data.sources).forEach(([source, status]: [string, any]) => {
+            configured[source] = status.configured;
+            if (!status.configured) {
+              issues[source] = status.missingVars;
+            }
+          });
+          
+          setApiConfigStatus({
+            configured,
+            issues,
+            checked: true,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to check API config:', error);
+        setApiConfigStatus({
+          configured: {},
+          issues: {},
+          checked: true,
+        });
+      }
+    };
+
+    checkApiConfig();
+  }, []);
+
   // Fetch jobs on mount
   useEffect(() => {
     fetchJobs();
@@ -132,6 +173,24 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
       return;
     }
 
+    // Check if any enabled source is not configured
+    const unconfiguredSources = enabledSources.filter(source => 
+      apiConfigStatus.checked && apiConfigStatus.configured[source] !== true
+    );
+    
+    if (unconfiguredSources.length > 0) {
+      const sourceNames = unconfiguredSources.join(', ');
+      const errorDetails = unconfiguredSources.map(source => {
+        const missing = apiConfigStatus.issues[source] || [];
+        return `${source}: ${missing.join(', ')}`;
+      }).join(' | ');
+      
+      toast.error(`Źródła nie skonfigurowane: ${sourceNames}`);
+      onConsoleLog?.(`❌ Nie można utworzyć joba: Źródła nie skonfigurowane`, 'error');
+      onConsoleLog?.(`   ${errorDetails}`, 'error');
+      return;
+    }
+
     try {
       setCreating(true);
       const idToken = await getIdToken();
@@ -155,7 +214,9 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create job');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Failed to create job';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -221,6 +282,38 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
 
   return (
     <div className="space-y-6">
+      {/* API Configuration Status */}
+      {apiConfigStatus.checked && Object.keys(apiConfigStatus.issues).length > 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
+                ⚠️ Niektóre źródła nie są skonfigurowane
+              </h3>
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                Nie można importować z następujących źródeł bez konfiguracji API:
+              </p>
+              <div className="space-y-1">
+                {Object.entries(apiConfigStatus.issues).map(([source, missing]) => (
+                  <div key={source} className="text-xs text-yellow-700 dark:text-yellow-300 font-mono">
+                    <span className="font-bold capitalize">{source}:</span> {missing.join(', ')}
+                  </div>
+                ))}
+              </div>
+              {Object.keys(apiConfigStatus.configured).length > Object.keys(apiConfigStatus.issues).length && (
+                <p className="text-sm text-green-700 dark:text-green-300 mt-2">
+                  ✅ Skonfigurowane źródła: {Object.entries(apiConfigStatus.configured)
+                    .filter(([_, conf]) => conf)
+                    .map(([source]) => source)
+                    .join(', ')}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Create New Job */}
       <Card>
         <CardHeader>
@@ -233,20 +326,38 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
           <div>
             <Label className="text-sm font-medium mb-2 block">Źródła importu</Label>
             <div className="grid grid-cols-2 gap-3">
-              {Object.entries(sources).map(([source, enabled]) => (
-                <div key={source} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={source}
-                    checked={enabled}
-                    onCheckedChange={(checked) => 
-                      setSources(prev => ({ ...prev, [source]: checked === true }))
-                    }
-                  />
-                  <Label htmlFor={source} className="capitalize cursor-pointer">
-                    {source}
-                  </Label>
-                </div>
-              ))}
+              {Object.entries(sources).map(([source, enabled]) => {
+                const isConfigured = apiConfigStatus.checked ? apiConfigStatus.configured[source] === true : false;
+                const showStatus = apiConfigStatus.checked;
+                
+                return (
+                  <div key={source} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={source}
+                      checked={enabled}
+                      onCheckedChange={(checked) => 
+                        setSources(prev => ({ ...prev, [source]: checked === true }))
+                      }
+                      disabled={showStatus && !isConfigured}
+                    />
+                    <Label 
+                      htmlFor={source} 
+                      className={`capitalize cursor-pointer flex items-center gap-1 ${
+                        showStatus && !isConfigured ? 'opacity-50' : ''
+                      }`}
+                    >
+                      {source}
+                      {showStatus && (
+                        isConfigured ? (
+                          <span className="text-xs text-green-600 dark:text-green-400">✓</span>
+                        ) : (
+                          <span className="text-xs text-yellow-600 dark:text-yellow-400">⚠</span>
+                        )
+                      )}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -288,7 +399,11 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
 
           <Button 
             onClick={createJob} 
-            disabled={creating}
+            disabled={creating || (
+              apiConfigStatus.checked && Object.entries(sources).some(([source, enabled]) => 
+                enabled && apiConfigStatus.configured[source] !== true
+              )
+            )}
             className="w-full"
           >
             {creating ? (
@@ -303,6 +418,13 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
               </>
             )}
           </Button>
+          {apiConfigStatus.checked && Object.entries(sources).some(([source, enabled]) => 
+            enabled && apiConfigStatus.configured[source] !== true
+          ) && (
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 text-center">
+              Niektóre wybrane źródła nie są skonfigurowane
+            </p>
+          )}
         </CardContent>
       </Card>
 

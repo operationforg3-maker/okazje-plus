@@ -161,9 +161,10 @@ export async function fetchProductsFromAliexpress(
         // If 503 (not configured) - critical issue, must fail loudly
         if (response.status === 503) {
           console.error(`[Importer:Fetch] ❌ CRITICAL: AliExpress API not configured!`);
-          console.error(`[Importer:Fetch] Missing env vars: ALIEXPRESS_APP_KEY, ALIEXPRESS_APP_SECRET`);
+          console.error(`[Importer:Fetch] Missing env vars: ALIEXPRESS_APP_KEY, ALIEXPRESS_APP_SECRET, ALIEXPRESS_API_BASE`);
           console.error(`[Importer:Fetch] This is why products are not being fetched!`);
-          throw new Error(`AliExpress API not configured (status 503) - check .env.local for ALIEXPRESS_APP_KEY/ALIEXPRESS_APP_SECRET`);
+          console.error(`[Importer:Fetch] Please add these variables to .env.local (see README.md)`);
+          throw new Error(`AliExpress API not configured (status 503) - Missing environment variables. Check server logs for details.`);
         }
         
         throw new Error(`AliExpress API error: ${response.status}`);
