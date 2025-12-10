@@ -81,6 +81,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Pre-flight check: Validate AliExpress API configuration if aliexpress is enabled
+    if (enabledSources.includes('aliexpress')) {
+      console.log('[POST /api/admin/import/queue] Checking AliExpress API configuration...');
+      const API_BASE = process.env.ALIEXPRESS_API_BASE;
+      const APP_KEY = process.env.ALIEXPRESS_APP_KEY;
+      const APP_SECRET = process.env.ALIEXPRESS_APP_SECRET;
+
+      if (!API_BASE || !APP_KEY || !APP_SECRET) {
+        console.error('[POST /api/admin/import/queue] ❌ AliExpress API not configured');
+        const missingVars = [];
+        if (!API_BASE) missingVars.push('ALIEXPRESS_API_BASE');
+        if (!APP_KEY) missingVars.push('ALIEXPRESS_APP_KEY');
+        if (!APP_SECRET) missingVars.push('ALIEXPRESS_APP_SECRET');
+        
+        return NextResponse.json(
+          { 
+            error: 'AliExpress API not configured',
+            message: `Cannot create import job: AliExpress API credentials are missing. Please configure: ${missingVars.join(', ')}`,
+            missingVariables: missingVars,
+            configured: false,
+          },
+          { status: 503 }
+        );
+      }
+      console.log('[POST /api/admin/import/queue] ✅ AliExpress API configured');
+    }
+
     // Create job
     console.log('[POST /api/admin/import/queue] Creating job in Firestore...');
     const jobId = await ImportQueueManager.createJob(
@@ -342,9 +369,21 @@ async function processImportJobInBackground(jobId: string, jobData: { sources: s
         });
 
       } catch (err) {
-        const errorMsg = `Batch ${i + 1} failed: ${err instanceof Error ? err.message : String(err)}`;
+        const errorMsg = `Batch ${i + 1} (${batch.subsubcategoryName}): ${err instanceof Error ? err.message : String(err)}`;
         errors.push(errorMsg);
         console.error(`[Import Queue] Job ${jobId} batch ${i + 1} FAILED:`, errorMsg);
+        
+        // Check if it's a critical error (API not configured) - fail fast
+        if (err instanceof Error && (
+          err.message.includes('AliExpress API not configured') ||
+          err.message.includes('status 503') ||
+          err.message.includes('ALIEXPRESS_APP_KEY')
+        )) {
+          console.error(`[Import Queue] Job ${jobId}: Critical API configuration error detected, aborting job`);
+          throw new Error(`AliExpress API not configured: ${err.message}`);
+        }
+        
+        // For other errors, continue with next batch
       }
     }
 

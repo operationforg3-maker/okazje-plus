@@ -58,6 +58,11 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [apiConfigStatus, setApiConfigStatus] = useState<{
+    configured: boolean;
+    issues: string[];
+    checked: boolean;
+  }>({ configured: false, issues: [], checked: false });
   
   // Hydration guard
   useEffect(() => {
@@ -102,6 +107,32 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     }
   }, [getIdToken, isMounted]);
 
+  // Check API configuration on mount
+  useEffect(() => {
+    const checkApiConfig = async () => {
+      try {
+        const response = await fetch('/api/admin/aliexpress/health');
+        if (response.ok) {
+          const data = await response.json();
+          setApiConfigStatus({
+            configured: data.configured && data.hasAppKeySecret,
+            issues: data.issues || [],
+            checked: true,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to check API config:', error);
+        setApiConfigStatus({
+          configured: false,
+          issues: ['Nie można sprawdzić konfiguracji API'],
+          checked: true,
+        });
+      }
+    };
+
+    checkApiConfig();
+  }, []);
+
   // Fetch jobs on mount
   useEffect(() => {
     fetchJobs();
@@ -132,6 +163,14 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
       return;
     }
 
+    // Check if AliExpress is enabled but not configured
+    if (enabledSources.includes('aliexpress') && !apiConfigStatus.configured) {
+      toast.error('AliExpress API nie jest skonfigurowane. Skontaktuj się z administratorem.');
+      onConsoleLog?.(`❌ Nie można utworzyć joba: AliExpress API nie jest skonfigurowane`, 'error');
+      onConsoleLog?.(`   Brakujące zmienne: ${apiConfigStatus.issues.join(', ')}`, 'error');
+      return;
+    }
+
     try {
       setCreating(true);
       const idToken = await getIdToken();
@@ -155,7 +194,9 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create job');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Failed to create job';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -221,6 +262,28 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
 
   return (
     <div className="space-y-6">
+      {/* API Configuration Status */}
+      {apiConfigStatus.checked && !apiConfigStatus.configured && (
+        <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
+                ⚠️ AliExpress API nie jest skonfigurowane
+              </h3>
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                Nie można importować produktów bez skonfigurowania AliExpress API. Skontaktuj się z administratorem.
+              </p>
+              {apiConfigStatus.issues.length > 0 && (
+                <div className="text-xs text-yellow-700 dark:text-yellow-300 font-mono">
+                  Brakujące zmienne: {apiConfigStatus.issues.join(', ')}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Create New Job */}
       <Card>
         <CardHeader>
@@ -288,7 +351,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
 
           <Button 
             onClick={createJob} 
-            disabled={creating}
+            disabled={creating || (sources.aliexpress && !apiConfigStatus.configured)}
             className="w-full"
           >
             {creating ? (
@@ -303,6 +366,11 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
               </>
             )}
           </Button>
+          {sources.aliexpress && !apiConfigStatus.configured && (
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 text-center">
+              Wyłącz AliExpress lub skonfiguruj API
+            </p>
+          )}
         </CardContent>
       </Card>
 
