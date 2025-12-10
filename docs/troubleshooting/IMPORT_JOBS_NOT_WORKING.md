@@ -19,7 +19,7 @@ The most common cause is **missing AliExpress API credentials**. The import syst
 2. **Server Logs:**
    ```
    [Importer:Fetch] ❌ CRITICAL: AliExpress API not configured!
-   [Importer:Fetch] Missing env vars: ALIEXPRESS_APP_KEY, ALIEXPRESS_APP_SECRET
+   [Importer:Fetch] Missing env vars: ALIEXPRESS_APP_KEY, ALIEXPRESS_APP_SECRET, ALIEXPRESS_API_BASE
    ```
 
 3. **API Response:**
