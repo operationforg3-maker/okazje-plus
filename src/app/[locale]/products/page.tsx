@@ -212,6 +212,25 @@ function ProductsPageContent() {
     return [selected, ...categories.filter(c => c.id !== selectedCategory.id)];
   }, [categories, selectedCategory]);
 
+  // Sortuj podkategorie - wybrana podkategoria na górze
+  const sortedSubcategories = useMemo(() => {
+    if (!selectedCategory?.subcategories) return [];
+    if (!selectedSubcategory) return selectedCategory.subcategories;
+    const selected = selectedCategory.subcategories.find(s => (s.slug || s.id) === selectedSubcategory);
+    if (!selected) return selectedCategory.subcategories;
+    return [selected, ...selectedCategory.subcategories.filter(s => (s.slug || s.id) !== selectedSubcategory)];
+  }, [selectedCategory, selectedSubcategory]);
+
+  // Sortuj pod-podkategorie - wybrana pod-podkategoria na górze
+  const sortedSubSubcategories = useMemo(() => {
+    const currentSub = sortedSubcategories.find(s => (s.slug || s.id) === selectedSubcategory);
+    if (!currentSub?.subcategories) return [];
+    if (!selectedSubSubcategory) return currentSub.subcategories;
+    const selected = currentSub.subcategories.find(ss => (ss.slug || ss.id) === selectedSubSubcategory);
+    if (!selected) return currentSub.subcategories;
+    return [selected, ...currentSub.subcategories.filter(ss => (ss.slug || ss.id) !== selectedSubSubcategory)];
+  }, [sortedSubcategories, selectedSubcategory, selectedSubSubcategory]);
+
   const SidebarContent = () => (
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
@@ -270,9 +289,9 @@ function ProductsPageContent() {
                   isActive ? "rotate-90" : "group-hover:translate-x-1"
                 )} />
               </button>
-              {isActive && category.subcategories && category.subcategories.length > 0 && (
+              {isActive && sortedSubcategories && sortedSubcategories.length > 0 && (
                 <div className="mt-1 ml-2 space-y-1 border-l pl-3">
-                  {category.subcategories.map((sub) => {
+                  {sortedSubcategories.map((sub) => {
                     const subSlug = sub.slug || sub.id;
                     const subActive =
                       selectedSubcategory === subSlug ||
@@ -309,9 +328,9 @@ function ProductsPageContent() {
                         </button>
 
                         {/* Pod-podkategorie (trzeci poziom) */}
-                        {subActive && sub.subcategories && sub.subcategories.length > 0 && (
+                        {subActive && sortedSubSubcategories && sortedSubSubcategories.length > 0 && (
                           <div className="ml-2 space-y-1 border-l border-muted-foreground/30 pl-3">
-                            {sub.subcategories.map((subsub) => {
+                            {sortedSubSubcategories.map((subsub) => {
                               const subSubSlug = subsub.slug || subsub.id;
                               return (
                                 <button
