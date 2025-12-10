@@ -135,13 +135,74 @@ export async function fetchProductsFromAliexpress(
   
   console.log(`[Importer:Fetch] Keywords (${keywords.length}): ${keywords.join(' | ')}`);
   
+  // TRY DIRECT CLIENT CALL FIRST (for Cloud Functions compatibility)
+  console.log(`[Importer:Fetch] Attempting direct AliExpress client...`);
+  try {
+    const { getAliExpressClient } = await import('@/lib/integrations/aliexpress-client');
+    const client = getAliExpressClient();
+    console.log(`[Importer:Fetch] ✅ AliExpress client loaded`);
+    
+    const allProducts: AliExpressProduct[] = [];
+    const seenIds = new Set<string>();
+    
+    for (const keyword of keywords) {
+      try {
+        console.log(`[Importer:Fetch] Direct: Searching "${keyword}"...`);
+        const results = await client.smartMatch(keyword);
+        const products = results?.products?.items || [];
+        
+        console.log(`[Importer:Fetch] Direct: Got ${products.length} products for "${keyword}"`);
+        
+        for (const p of products) {
+          const productId = String(p.product_id || p.id);
+          if (!productId || seenIds.has(productId)) continue;
+          
+          seenIds.add(productId);
+          
+          allProducts.push({
+            id: productId,
+            title: p.product_title || 'Untitled',
+            image: p.product_main_image_url || p.product_image || '',
+            price: parseFloat(p.sale_price || p.price || '0'),
+            originalPrice: parseFloat(p.original_price || p.list_price || '0') || undefined,
+            discount: p.discount || undefined,
+            rating: parseFloat(p.evaluation_rate || '0'),
+            orders: parseInt(p.total_transaction_seller || '0', 10),
+            merchant: p.shop_name || 'AliExpress',
+            link: p.product_detail_url || '#',
+            currency: 'USD',
+            description: p.product_description || '',
+            images: p.product_images || (p.product_main_image_url ? [p.product_main_image_url] : []),
+            ...p
+          });
+          
+          await sleep(config.delayBetweenItems || 50);
+        }
+      } catch (error: any) {
+        console.warn(`[Importer:Fetch] Direct search failed for "${keyword}":`, error.message);
+      }
+    }
+    
+    if (allProducts.length > 0) {
+      console.log(`[Importer:Fetch] ✅ Direct call SUCCESS: ${allProducts.length} products`);
+      console.log(`[Importer:Fetch] ===== STAGE 1 END =====\n`);
+      return allProducts;
+    }
+    
+    console.warn(`[Importer:Fetch] Direct call returned 0 products, falling back to HTTP API...`);
+  } catch (error: any) {
+    console.warn(`[Importer:Fetch] Direct client failed:`, error.message);
+    console.log(`[Importer:Fetch] Falling back to HTTP API call...`);
+  }
+  
+  // FALLBACK: Use HTTP API call (works from localhost)
   const allProducts: AliExpressProduct[] = [];
   const seenIds = new Set<string>();
   let batchCount = 0;
   
   for (const keyword of keywords) {
     try {
-      console.log(`[Importer:Fetch] Fetching batch ${++batchCount}/${keywords.length}: "${keyword}"`);
+      console.log(`[Importer:Fetch] HTTP: Fetching batch ${++batchCount}/${keywords.length}: "${keyword}"`);
       
       const response = await fetch(`${siteUrl}/api/admin/aliexpress/search`, {
         method: 'POST',
@@ -173,7 +234,7 @@ export async function fetchProductsFromAliexpress(
       const data = await response.json();
       const products = data.products || [];
       
-      console.log(`[Importer:Fetch] Got ${products.length} products for "${keyword}"`);
+      console.log(`[Importer:Fetch] HTTP: Got ${products.length} products for "${keyword}"`);
       
       // Normalize AliExpress response to our schema
       for (const p of products) {
@@ -289,13 +350,80 @@ export async function fetchProductsFromConvertiser(
   console.log(`[Importer:Fetch:Convertiser] Keywords (${keywords.length}): ${keywords.join(' | ')}`);
   console.log(`[Importer:Fetch:Convertiser] Site URL: ${siteUrl}`);
   
+  // TRY DIRECT CLIENT CALL FIRST (for Cloud Functions compatibility)
+  console.log(`[Importer:Fetch:Convertiser] Attempting direct Convertiser client...`);
+  try {
+    const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
+    const client = getConvertiserClient();
+    console.log(`[Importer:Fetch:Convertiser] ✅ Convertiser client loaded`);
+    
+    const allProducts: AliExpressProduct[] = [];
+    const seenIds = new Set<string>();
+    
+    for (const keyword of keywords) {
+      try {
+        console.log(`[Importer:Fetch:Convertiser] Direct: Searching "${keyword}"...`);
+        const results = await client.searchProductsV2(keyword, { page: 1, page_size: config.batchSize || 50 });
+        const products = results?.results || [];
+        
+        console.log(`[Importer:Fetch:Convertiser] Direct: Got ${products.length} products for "${keyword}"`);
+        
+        for (const p of products) {
+          const productId = String(p.id || p.productId);
+          if (!productId || seenIds.has(productId)) continue;
+          
+          seenIds.add(productId);
+          
+          const price = parseFloat(p.price || p.salePrice || '0');
+          const originalPrice = parseFloat(p.originalPrice || p.listPrice || '0');
+          const discount = originalPrice > price 
+            ? Math.round(((originalPrice - price) / originalPrice) * 100)
+            : 0;
+          
+          allProducts.push({
+            id: productId,
+            title: p.name || p.title || 'Untitled',
+            image: p.image || p.photo || '',
+            price,
+            originalPrice: originalPrice > price ? originalPrice : undefined,
+            discount: discount > 0 ? discount : undefined,
+            rating: parseFloat(p.rating || p.stars || '0'),
+            orders: parseInt(p.reviews || p.soldCount || '0', 10),
+            merchant: p.advertiser || p.seller || 'Convertiser',
+            link: p.url || p.link || '#',
+            currency: p.currency || 'PLN',
+            description: p.description || '',
+            images: p.images || (p.image ? [p.image] : []),
+            ...p
+          });
+          
+          await sleep(config.delayBetweenItems || 100);
+        }
+      } catch (error: any) {
+        console.warn(`[Importer:Fetch:Convertiser] Direct search failed for "${keyword}":`, error.message);
+      }
+    }
+    
+    if (allProducts.length > 0) {
+      console.log(`[Importer:Fetch:Convertiser] ✅ Direct call SUCCESS: ${allProducts.length} products`);
+      console.log(`[Importer:Fetch:Convertiser] ===== STAGE 1 END =====\n`);
+      return allProducts;
+    }
+    
+    console.warn(`[Importer:Fetch:Convertiser] Direct call returned 0 products, falling back to HTTP API...`);
+  } catch (error: any) {
+    console.warn(`[Importer:Fetch:Convertiser] Direct client failed:`, error.message);
+    console.log(`[Importer:Fetch:Convertiser] Falling back to HTTP API call...`);
+  }
+  
+  // FALLBACK: Use HTTP API call (works from localhost)
   const allProducts: AliExpressProduct[] = [];
   const seenIds = new Set<string>();
   let batchCount = 0;
   
   for (const keyword of keywords) {
     try {
-      console.log(`[Importer:Fetch:Convertiser] Fetching batch ${++batchCount}/${keywords.length}: "${keyword}"`);
+      console.log(`[Importer:Fetch:Convertiser] HTTP: Fetching batch ${++batchCount}/${keywords.length}: "${keyword}"`);
       
       const response = await fetch(`${siteUrl}/api/admin/convertiser/search`, {
         method: 'POST',
@@ -316,7 +444,7 @@ export async function fetchProductsFromConvertiser(
       const data = await response.json();
       const products = data.results || [];
       
-      console.log(`[Importer:Fetch:Convertiser] Got ${products.length} products for "${keyword}"`);
+      console.log(`[Importer:Fetch:Convertiser] HTTP: Got ${products.length} products for "${keyword}"`);
       
       // Normalize to our schema
       for (const p of products) {
