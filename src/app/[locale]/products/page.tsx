@@ -204,6 +204,14 @@ function ProductsPageContent() {
     return () => cancelAnimationFrame(scrollTimer);
   }, [selectedCategory, selectedSubcategory, selectedSubSubcategory]);
 
+  // Sortuj kategorie - wybrana kategoria na górze
+  const sortedCategories = useMemo(() => {
+    if (!selectedCategory) return categories;
+    const selected = categories.find(c => c.id === selectedCategory.id);
+    if (!selected) return categories;
+    return [selected, ...categories.filter(c => c.id !== selectedCategory.id)];
+  }, [categories, selectedCategory]);
+
   const SidebarContent = () => (
     <div className="space-y-2">
       <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
@@ -234,7 +242,7 @@ function ProductsPageContent() {
           </button>
         </div>
 
-        {categories.map((category) => {
+        {sortedCategories.map((category) => {
           const isActive = selectedCategory?.id === category.id;
           return (
             <div key={category.id} className="mb-1">
