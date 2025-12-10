@@ -15,7 +15,7 @@
  * ```
  */
 
-import { fetchProductsFromAliexpress } from './stageFetch';
+import { fetchProductsFromAliexpress, fetchProductsFromConvertiser } from './stageFetch';
 import { deduplicateProducts, sanitizeProducts } from './stageDedupe';
 import { enrichProducts } from './stageEnrich';
 import { translateProducts } from './stageTranslate';
@@ -32,7 +32,7 @@ export interface PipelineConfig extends Partial<ImportJobConfig> {
   subsubcategorySlugEN?: string;
   translateToPolish?: boolean;
   currencyRate?: number;
-  importerType?: 'keyword-search' | 'hot-products' | 'category-direct'; // NEW: wybór metody importu
+  importerType?: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'; // NEW: wybór metody importu
   aliexpressCategoryIds?: string[]; // NEW: dla hot-products i category-direct
   fetch?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
   dedupe?: { batchSize?: number; minPrice?: number; maxPrice?: number; minRating?: number; minOrders?: number };
@@ -60,26 +60,45 @@ export async function runProductImportPipeline(
   
   try {
     // STAGE 1: FETCH
-    console.log(`[ProductImporter] Stage 1: FETCH from AliExpress`);
+    const sourceLabel = config.importerType === 'convertiser' ? 'Convertiser' : 'AliExpress';
+    console.log(`[ProductImporter] Stage 1: FETCH from ${sourceLabel}`);
     console.log(`[ProductImporter] Importer Type: ${config.importerType || 'keyword-search'}`);
     
-    const fetched = await fetchProductsFromAliexpress(
-      config.keywords,
-      {
-        name: 'fetch',
-        batchSize: config.fetch?.batchSize || 50,
-        delayBetweenItems: config.fetch?.delayBetweenItems || 200,
-        delayBetweenBatches: config.fetch?.delayBetweenBatches || 1000,
-        maxRetries: config.fetch?.maxRetries || 2,
-        importerType: config.importerType || 'keyword-search', // NEW: pass importer type
-      }
-    );
+    let fetched: AliExpressProduct[] = [];
+    
+    if (config.importerType === 'convertiser') {
+      // Fetch from Convertiser instead of AliExpress
+      fetched = await fetchProductsFromConvertiser(
+        config.keywords,
+        {
+          name: 'fetch',
+          batchSize: config.fetch?.batchSize || 50,
+          delayBetweenItems: config.fetch?.delayBetweenItems || 100,
+          delayBetweenBatches: config.fetch?.delayBetweenBatches || 500,
+          maxRetries: config.fetch?.maxRetries || 1,
+          importerType: 'convertiser',
+        }
+      );
+    } else {
+      // Fetch from AliExpress (default, hot-products, category-direct)
+      fetched = await fetchProductsFromAliexpress(
+        config.keywords,
+        {
+          name: 'fetch',
+          batchSize: config.fetch?.batchSize || 50,
+          delayBetweenItems: config.fetch?.delayBetweenItems || 200,
+          delayBetweenBatches: config.fetch?.delayBetweenBatches || 1000,
+          maxRetries: config.fetch?.maxRetries || 2,
+          importerType: config.importerType || 'keyword-search', // NEW: pass importer type
+        }
+      );
+    }
     
     console.log(`[ProductImporter] ✅ Fetched: ${fetched.length} products`);
     if (fetched.length === 0) {
       console.error(`[ProductImporter] ❌ PROBLEM: No products fetched!`);
       console.error(`[ProductImporter] Possible reasons:`);
-      console.error(`  1. AliExpress API not configured - check .env.local`);
+      console.error(`  1. ${sourceLabel} API not configured - check .env.local`);
       console.error(`  2. Keywords don't match products: ${config.keywords.join(', ')}`);
       console.error(`  3. API rate limiting or network issue`);
       console.error(`[ProductImporter] Aborting pipeline for ${config.categorySlugEN}/${config.subcategorySlugEN}`);
@@ -213,7 +232,7 @@ export async function runProductImportPipeline(
   }
 }
 
-export { fetchProductsFromAliexpress } from './stageFetch';
+export { fetchProductsFromAliexpress, fetchProductsFromConvertiser } from './stageFetch';
 export { deduplicateProducts, sanitizeProducts } from './stageDedupe';
 export { enrichProducts } from './stageEnrich';
 export { translateProducts } from './stageTranslate';

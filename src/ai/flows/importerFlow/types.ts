@@ -15,7 +15,7 @@ export interface ImportStageConfig {
   delayBetweenItems: number; // ms
   delayBetweenBatches: number; // ms
   maxRetries: number;
-  importerType?: 'keyword-search' | 'hot-products' | 'category-direct'; // How to fetch products
+  importerType?: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'; // How to fetch products
 }
 
 export interface ProductImportState {

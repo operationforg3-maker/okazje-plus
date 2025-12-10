@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid type. Use "products" or "deals"' }, { status: 400 });
     }
     
-    if (!['keyword-search', 'hot-products', 'category-direct'].includes(importerType)) {
+    if (!['keyword-search', 'hot-products', 'convertiser', 'category-direct'].includes(importerType)) {
       return NextResponse.json({ error: 'Invalid importerType' }, { status: 400 });
     }
 
@@ -177,7 +177,7 @@ export async function processImportJob(
   jobId: string, 
   type: 'products' | 'deals', 
   maxItemsPerSubcategory: number,
-  importerType: 'keyword-search' | 'hot-products' | 'category-direct' = 'keyword-search'
+  importerType: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct' = 'keyword-search'
 ) {
   const jobRef = adminDb.collection('import_jobs').doc(jobId);
   
@@ -267,6 +267,26 @@ export async function processImportJob(
             // Use category IDs as "keywords" (stageFetch will detect hot-products mode)
             keywords = aliexpressCategoryIds;
             console.log(`[Import Processor] Using AliExpress category IDs: ${keywords.join(', ')}`);
+          }
+        } else if (importerType === 'convertiser') {
+          // Convertiser mode: use importKeywords or category slugs
+          const importKeywords = getImportKeywordsFromStructure(
+            batch.categorySlug,
+            batch.subcategorySlug,
+            batch.subsubcategorySlug
+          );
+          
+          if (importKeywords && importKeywords.length > 0) {
+            keywords = importKeywords;
+            console.log(`[Import Processor] Using Convertiser keywords: ${keywords.join(', ')}`);
+          } else {
+            // Fallback to slug-based keywords for Convertiser
+            console.warn(`[Import Processor] No importKeywords for Convertiser ${batch.subsubcategorySlug} - using slug fallback`);
+            keywords = [
+              batch.subsubcategorySlug,
+              batch.subcategorySlug,
+              `${batch.subsubcategorySlug} popular`,
+            ].filter(k => k && k.trim());
           }
         } else {
           // Keyword Search mode (original)

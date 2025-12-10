@@ -277,6 +277,99 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
+ * Fetch products from Convertiser by keywords
+ * Uses /api/admin/convertiser/search endpoint
+ */
+export async function fetchProductsFromConvertiser(
+  keywords: string[],
+  config: ImportStageConfig,
+  siteUrl: string = resolveSiteUrl()
+): Promise<AliExpressProduct[]> {
+  console.log(`[Importer:Fetch:Convertiser] ===== STAGE 1 START =====`);
+  console.log(`[Importer:Fetch:Convertiser] Keywords (${keywords.length}): ${keywords.join(' | ')}`);
+  console.log(`[Importer:Fetch:Convertiser] Site URL: ${siteUrl}`);
+  
+  const allProducts: AliExpressProduct[] = [];
+  const seenIds = new Set<string>();
+  let batchCount = 0;
+  
+  for (const keyword of keywords) {
+    try {
+      console.log(`[Importer:Fetch:Convertiser] Fetching batch ${++batchCount}/${keywords.length}: "${keyword}"`);
+      
+      const response = await fetch(`${siteUrl}/api/admin/convertiser/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: keyword,
+          pageSize: config.batchSize || 50,
+          page: 1
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`[Importer:Fetch:Convertiser] API error ${response.status} for "${keyword}": ${errorText.slice(0, 200)}`);
+        continue;
+      }
+      
+      const data = await response.json();
+      const products = data.results || [];
+      
+      console.log(`[Importer:Fetch:Convertiser] Got ${products.length} products for "${keyword}"`);
+      
+      // Normalize to our schema
+      for (const p of products) {
+        const productId = String(p.id || p.productId || p.item_id);
+        
+        if (!productId || seenIds.has(productId)) {
+          continue;
+        }
+        
+        seenIds.add(productId);
+        
+        const price = parseFloat(p.price || p.salePrice || '0');
+        const originalPrice = parseFloat(p.originalPrice || p.listPrice || p.price || '0');
+        const discount = originalPrice > price 
+          ? Math.round(((originalPrice - price) / originalPrice) * 100)
+          : 0;
+        
+        allProducts.push({
+          id: productId,
+          title: p.name || p.title || 'Untitled',
+          image: p.image || p.photo || '',
+          price,
+          originalPrice: originalPrice > price ? originalPrice : undefined,
+          discount: discount > 0 ? discount : undefined,
+          rating: parseFloat(p.rating || p.stars || '0'),
+          orders: parseInt(p.reviews || p.soldCount || '0', 10),
+          merchant: p.advertiser || p.seller || 'Convertiser',
+          link: p.url || p.link || '#',
+          currency: p.currency || 'PLN',
+          description: p.description || '',
+          images: p.images || (p.image ? [p.image] : []),
+          ...p
+        });
+        
+        // Respect rate limiting
+        await sleep(100);
+      }
+      
+      // Delay between keywords
+      await sleep(config.fetchDelay || 100);
+    } catch (error: any) {
+      console.error(`[Importer:Fetch:Convertiser] Error fetching "${keyword}":`, error.message);
+    }
+  }
+  
+  console.log(`[Importer:Fetch:Convertiser] ===== RESULTS =====`);
+  console.log(`[Importer:Fetch:Convertiser]   Output: ${allProducts.length} products`);
+  console.log(`[Importer:Fetch:Convertiser] ===== STAGE 1 END =====\n`);
+  
+  return allProducts;
+}
+
+/**
  * Generate keywords in English for a category path
  * E.g., ['Electronics', 'Smartphones', 'Android'] → multiple queries
  */

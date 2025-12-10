@@ -16,8 +16,8 @@ import { Loader2, Play, RefreshCw } from "lucide-react";
 interface ImportRun {
   id: string;
   type: 'products' | 'deals';
-  source: 'aliexpress' | 'manual';
-  importerType?: 'keyword-search' | 'hot-products' | 'category-direct';
+  source: 'aliexpress' | 'convertiser' | 'manual';
+  importerType?: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct';
   status: "pending" | "running" | "completed" | "failed" | "cancelled";
   stats: {
     fetched: number;
@@ -63,7 +63,7 @@ export default function ImportsPage() {
   const [maxItems, setMaxItems] = useState<string>("20");
   const [dryRun, setDryRun] = useState(true);
   const [starting, setStarting] = useState(false);
-  const [importerType, setImporterType] = useState<'keyword-search' | 'hot-products' | 'category-direct'>('keyword-search');
+  const [importerType, setImporterType] = useState<'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'>('keyword-search');
 
   const isUserAdmin = useMemo(() => isAdmin(user), [user]);
 
@@ -219,9 +219,22 @@ export default function ImportsPage() {
                     importerType === 'hot-products' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="font-semibold">🔥 Hot Products (Nowy)</div>
+                  <div className="font-semibold">🔥 Hot Products (AliExpress)</div>
                   <div className="text-xs text-gray-500 mt-1">
                     Bezpośrednie bestsellery z AliExpress category IDs
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setImporterType('convertiser')}
+                  className={`text-left border rounded-md p-3 transition ${
+                    importerType === 'convertiser' ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-semibold">🌍 Convertiser (Nowy!)</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Produkty z Convertiser API po pod-pod-kategoriach
                   </div>
                 </button>
                 
