@@ -64,6 +64,18 @@ export default function ImportsPage() {
   const [dryRun, setDryRun] = useState(true);
   const [starting, setStarting] = useState(false);
   const [importerType, setImporterType] = useState<'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'>('keyword-search');
+  const [debugKeywords, setDebugKeywords] = useState<string>('smartphone');
+  const [debugCategory, setDebugCategory] = useState<string>('electronics');
+  const [debugSubcategory, setDebugSubcategory] = useState<string>('phones');
+  const [debugSubsubcategory, setDebugSubsubcategory] = useState<string>('smartphones');
+  const [debugStage, setDebugStage] = useState<'fetch' | 'dedupe' | 'enrich' | 'translate' | 'save' | 'all'>('fetch');
+  const [debugMaxProducts, setDebugMaxProducts] = useState<string>('10');
+  const [debugSampleSize, setDebugSampleSize] = useState<string>('3');
+  const [debugWriteToDb, setDebugWriteToDb] = useState<boolean>(false);
+  const [debugTranslate, setDebugTranslate] = useState<boolean>(true);
+  const [debugRunning, setDebugRunning] = useState<boolean>(false);
+  const [debugResult, setDebugResult] = useState<any | null>(null);
+  const [debugHistory, setDebugHistory] = useState<Array<{ id: string; payload: any; response: any; at: string }>>([]);
 
   const isUserAdmin = useMemo(() => isAdmin(user), [user]);
 
@@ -76,6 +88,58 @@ export default function ImportsPage() {
   const formatNumber = (value?: number) => format.number(value ?? 0);
 
   const statusLabel = (status: ImportRun["status"]) => t(`statusMap.${status}` as any);
+
+  const parseKeywords = (value: string) =>
+    value
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
+
+  const runDebug = async () => {
+    try {
+      setDebugRunning(true);
+      setError(null);
+      const keywords = parseKeywords(debugKeywords);
+      if (!keywords.length) {
+        throw new Error('Podaj co najmniej jedno keyword');
+      }
+
+      const payload: any = {
+        keywords,
+        categorySlugEN: debugCategory,
+        subcategorySlugEN: debugSubcategory,
+        subsubcategorySlugEN: debugSubsubcategory || undefined,
+        importerType,
+        stage: debugStage,
+        maxProducts: debugMaxProducts ? Number(debugMaxProducts) : undefined,
+        translateToPolish: debugTranslate,
+        writeToDb: debugWriteToDb,
+        sampleSize: debugSampleSize ? Number(debugSampleSize) : 3,
+      };
+
+      const res = await fetchWithToken<any>(
+        '/api/admin/import/debug',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const entry = {
+        id: `${Date.now()}`,
+        payload,
+        response: res,
+        at: new Date().toISOString(),
+      };
+      setDebugResult(res);
+      setDebugHistory((prev) => [entry, ...prev].slice(0, 5));
+    } catch (e: any) {
+      setError(e instanceof Error ? e.message : t('errors.startImport'));
+    } finally {
+      setDebugRunning(false);
+    }
+  };
 
   const loadRuns = useCallback(async () => {
     try {
@@ -307,6 +371,113 @@ export default function ImportsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Debug: etapowy test importu */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Debug importu (API /import/debug)</CardTitle>
+          <CardDescription>Uruchom pojedynczy etap lub całość i zobacz próbki</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Keywords (comma-separated)</Label>
+              <Input value={debugKeywords} onChange={(e) => setDebugKeywords(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Importer Type</Label>
+              <select
+                className="w-full border rounded-md h-10 px-2"
+                value={importerType}
+                onChange={(e) => setImporterType(e.target.value as any)}
+              >
+                <option value="keyword-search">🔍 Keyword Search</option>
+                <option value="hot-products">🔥 Hot Products</option>
+                <option value="convertiser">🌍 Convertiser</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Stage</Label>
+              <select
+                className="w-full border rounded-md h-10 px-2"
+                value={debugStage}
+                onChange={(e) => setDebugStage(e.target.value as any)}
+              >
+                <option value="fetch">fetch</option>
+                <option value="dedupe">dedupe</option>
+                <option value="enrich">enrich</option>
+                <option value="translate">translate</option>
+                <option value="save">save</option>
+                <option value="all">all</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Max products</Label>
+              <Input type="number" min={1} max={200} value={debugMaxProducts} onChange={(e) => setDebugMaxProducts(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Sample size</Label>
+              <Input type="number" min={1} max={20} value={debugSampleSize} onChange={(e) => setDebugSampleSize(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Category (EN)</Label>
+              <Input value={debugCategory} onChange={(e) => setDebugCategory(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Subcategory (EN)</Label>
+              <Input value={debugSubcategory} onChange={(e) => setDebugSubcategory(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Subsubcategory (EN)</Label>
+              <Input value={debugSubsubcategory} onChange={(e) => setDebugSubsubcategory(e.target.value)} placeholder="opcjonalne" />
+            </div>
+            <div className="space-y-2">
+              <Label>Opcje</Label>
+              <div className="flex items-center gap-4 text-sm text-gray-700">
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={debugTranslate} onChange={(e) => setDebugTranslate(e.target.checked)} />
+                  Translate to PL
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={debugWriteToDb} onChange={(e) => setDebugWriteToDb(e.target.checked)} />
+                  Write to DB
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={runDebug} disabled={debugRunning}>
+              {debugRunning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+              Uruchom debug
+            </Button>
+            <Button variant="outline" onClick={() => setDebugResult(null)}>
+              Wyczyść wynik
+            </Button>
+          </div>
+
+          {debugResult && (
+            <div className="border rounded-md p-3 bg-slate-50">
+              <div className="text-sm font-semibold mb-2">Ostatni wynik</div>
+              <pre className="text-xs whitespace-pre-wrap break-words max-h-96 overflow-auto">{JSON.stringify(debugResult, null, 2)}</pre>
+            </div>
+          )}
+
+          {debugHistory.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-sm font-semibold">Historia (ostatnie 5)</div>
+              <div className="space-y-2">
+                {debugHistory.map((h) => (
+                  <div key={h.id} className="border rounded-md p-3 bg-white">
+                    <div className="text-xs text-gray-500 mb-1">{new Date(h.at).toLocaleString()}</div>
+                    <pre className="text-xs whitespace-pre-wrap break-words max-h-48 overflow-auto">{JSON.stringify(h.response, null, 2)}</pre>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {selectedRun && (
         <Card>
