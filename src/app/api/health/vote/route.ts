@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, limit, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit, doc, getDoc, orderBy } from 'firebase/firestore';
 
 /**
  * Voting system health check
@@ -20,10 +20,11 @@ export async function GET(request: NextRequest) {
     // 1. Znajdź przykładową okazję z głosami
     let dealsSnapshot;
     try {
+      // Używamy orderBy zamiast where dla lepszej zgodności z indeksem
       const dealsQuery = query(
         collection(db, 'deals'),
         where('status', '==', 'approved'),
-        where('voteCount', '>', 0),
+        orderBy('voteCount', 'desc'),
         limit(1)
       );
       dealsSnapshot = await getDocs(dealsQuery);
