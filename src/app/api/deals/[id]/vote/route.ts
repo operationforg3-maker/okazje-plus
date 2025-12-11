@@ -50,10 +50,10 @@ function checkRateLimit(userId: string): boolean {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const startTime = Date.now();
-  const dealId = params.id;
+  const { id: dealId } = await params;
   let action: 'up' | 'down' | 'remove' | null = null;
   
   try {
