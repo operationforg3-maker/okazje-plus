@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, limit, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import { adminAuth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 
 interface VoteTest {
   name: string;
@@ -28,7 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get auth header for vote endpoint test
     const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({
         status: 'error',
         message: 'Authorization header required',
@@ -43,16 +41,39 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Test 1: Firestore connectivity
+    // Verify token (same pattern as import-functional test)
+    let token: string;
+    try {
+      token = authHeader.substring(7);
+      await adminAuth.verifyIdToken(token);
+    } catch (error: any) {
+      return NextResponse.json({
+        status: 'error',
+        message: 'Invalid token',
+        tests: [
+          {
+            name: 'Authorization Check',
+            status: 'fail',
+            message: error?.message || 'Invalid token',
+            duration: 0,
+          }
+        ]
+      }, { status: 401 });
+    }
+
+    // Test 1: Firestore connectivity (admin)
     let start = Date.now();
     try {
-      const dealsSnapshot = await getDocs(
-        query(collection(db, 'deals'), where('status', '==', 'approved'), limit(1))
-      );
+      const snapshot = await adminDb
+        .collection('deals')
+        .where('status', '==', 'approved')
+        .limit(1)
+        .get();
+
       tests.push({
         name: 'Firestore Connectivity',
-        status: dealsSnapshot.size > 0 ? 'pass' : 'skip',
-        message: dealsSnapshot.size > 0 ? `Found ${dealsSnapshot.size} deal(s)` : 'No approved deals in DB',
+        status: snapshot.size > 0 ? 'pass' : 'skip',
+        message: snapshot.size > 0 ? `Found ${snapshot.size} deal(s)` : 'No approved deals in DB',
         duration: Date.now() - start,
       });
     } catch (error: any) {
@@ -88,16 +109,18 @@ export async function POST(request: NextRequest) {
     start = Date.now();
     let testDealId: string | null = null;
     try {
-      const allDealsSnapshot = await getDocs(
-        query(collection(db, 'deals'), where('status', '==', 'approved'), limit(50))
-      );
+      const allDealsSnapshot = await adminDb
+        .collection('deals')
+        .where('status', '==', 'approved')
+        .limit(50)
+        .get();
       
       let dealWithVotes = null;
-      for (const doc of allDealsSnapshot.docs) {
-        const data = doc.data();
+      for (const d of allDealsSnapshot.docs) {
+        const data = d.data();
         if ((data.voteCount || 0) > 0) {
-          dealWithVotes = { id: doc.id, ...data };
-          testDealId = doc.id;
+          dealWithVotes = { id: d.id, ...data };
+          testDealId = d.id;
           break;
         }
       }
@@ -121,8 +144,12 @@ export async function POST(request: NextRequest) {
         if (allDealsSnapshot.docs.length > 0) {
           const firstDeal = allDealsSnapshot.docs[0];
           testDealId = firstDeal.id;
-          const voteRef = doc(db, 'deals', testDealId, 'votes', 'test-user-' + Date.now());
-          await setDoc(voteRef, {
+          const voteRef = adminDb
+            .collection('deals')
+            .doc(testDealId)
+            .collection('votes')
+            .doc('test-user-' + Date.now());
+          await voteRef.set({
             vote: 1,
             userId: 'test-user',
             createdAt: new Date().toISOString(),
@@ -142,9 +169,13 @@ export async function POST(request: NextRequest) {
     if (testDealId) {
       start = Date.now();
       try {
-        const votesSnapshot = await getDocs(collection(db, 'deals', testDealId, 'votes'));
-        const hasProperStructure = votesSnapshot.docs.every(doc => {
-          const data = doc.data();
+        const votesSnapshot = await adminDb
+          .collection('deals')
+          .doc(testDealId)
+          .collection('votes')
+          .get();
+        const hasProperStructure = votesSnapshot.docs.every(v => {
+          const data = v.data();
           return data.vote !== undefined && (data.userId !== undefined || data.createdAt !== undefined);
         });
 
@@ -168,10 +199,14 @@ export async function POST(request: NextRequest) {
     if (testDealId) {
       start = Date.now();
       try {
-        const dealDoc = await getDoc(doc(db, 'deals', testDealId));
-        const votesSnapshot = await getDocs(collection(db, 'deals', testDealId, 'votes'));
+        const dealDoc = await adminDb.collection('deals').doc(testDealId).get();
+        const votesSnapshot = await adminDb
+          .collection('deals')
+          .doc(testDealId)
+          .collection('votes')
+          .get();
         
-        const dealData = dealDoc.data();
+        const dealData = dealDoc.data() || {};
         const voteCountField = dealData?.voteCount || 0;
         const votesDocCount = votesSnapshot.size;
 
