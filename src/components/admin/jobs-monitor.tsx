@@ -59,6 +59,9 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'failed'>('active');
+  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'status'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [apiConfigStatus, setApiConfigStatus] = useState<{
     configured: Record<string, boolean>;
     issues: Record<string, string[]>;
@@ -124,7 +127,15 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
       setLoading(true);
       const idToken = await getIdToken();
       
-      const response = await fetch('/api/admin/import/queue', {
+      // Build query params
+      const params = new URLSearchParams({
+        status: statusFilter,
+        sortBy: sortBy,
+        sortOrder: sortOrder,
+        limit: '50',
+      });
+      
+      const response = await fetch(`/api/admin/import/queue?${params}`, {
         headers: {
           'Authorization': `Bearer ${idToken}`,
         },
@@ -142,7 +153,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     } finally {
       setLoading(false);
     }
-  }, [getIdToken, isMounted]);
+  }, [getIdToken, isMounted, statusFilter, sortBy, sortOrder]);
 
   // Check API configuration on mount
   useEffect(() => {
@@ -469,41 +480,90 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Twoje joby importu</CardTitle>
-              <CardDescription>Ostatnie 20 jobów</CardDescription>
+              <CardDescription>
+                {statusFilter === 'active' ? 'Aktywne joby' : statusFilter === 'all' ? 'Wszystkie joby' : `Joby: ${statusFilter}`}
+              </CardDescription>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchJobs}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
-            {jobs.some(j => ['running', 'queued', 'paused'].includes(j.status)) && (
+            <div className="flex gap-2">
               <Button 
-                variant="destructive" 
+                variant="outline" 
                 size="sm" 
-                onClick={killAllJobs}
-                disabled={killingAll}
-                className="gap-1"
+                onClick={fetchJobs}
+                disabled={loading}
               >
-                {killingAll ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Zatrzymywanie...
-                  </>
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <Zap className="h-4 w-4" />
-                    Kill All
-                  </>
+                  <RefreshCw className="h-4 w-4" />
                 )}
               </Button>
-            )}
+              {jobs.some(j => ['running', 'queued', 'paused'].includes(j.status)) && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={killAllJobs}
+                  disabled={killingAll}
+                  className="gap-1"
+                >
+                  {killingAll ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Zatrzymywanie...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      Kill All
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          {/* Filter/Sort Controls */}
+          <div className="flex gap-3 mt-4 flex-wrap items-center">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Status:</Label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+              >
+                <option value="active">Aktywne</option>
+                <option value="all">Wszystkie</option>
+                <option value="completed">Ukończone</option>
+                <option value="failed">Nieudane</option>
+                <option value="queued">Kolejkowane</option>
+                <option value="running">W toku</option>
+                <option value="paused">Wstrzymane</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Sortuj:</Label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+              >
+                <option value="createdAt">Data utworzenia</option>
+                <option value="updatedAt">Data aktualizacji</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label className="text-sm">Kierunek:</Label>
+              <select
+                className="border rounded px-2 py-1 text-sm"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+              >
+                <option value="desc">Malejąco</option>
+                <option value="asc">Rosnąco</option>
+              </select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
