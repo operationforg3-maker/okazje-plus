@@ -23,13 +23,29 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Kill All] Starting emergency kill all for user ${authResult.uid}`);
 
-    // Get all active jobs from new system
-    const newJobsSnap = await adminDb
+    // Get all active jobs from new system (separate queries since no composite index)
+    const queuedJobsSnap = await adminDb
       .collection('import_jobs')
-      .where('status', 'in', ['queued', 'running', 'paused'])
+      .where('status', '==', 'queued')
       .get();
 
-    console.log(`[Kill All] Found ${newJobsSnap.size} active jobs in import_jobs`);
+    const runningJobsSnap = await adminDb
+      .collection('import_jobs')
+      .where('status', '==', 'running')
+      .get();
+
+    const pausedJobsSnap = await adminDb
+      .collection('import_jobs')
+      .where('status', '==', 'paused')
+      .get();
+
+    const newJobDocs = [
+      ...queuedJobsSnap.docs,
+      ...runningJobsSnap.docs,
+      ...pausedJobsSnap.docs,
+    ];
+
+    console.log(`[Kill All] Found ${newJobDocs.length} active jobs in import_jobs`);
 
     const killResults = {
       killed: 0,
@@ -38,7 +54,7 @@ export async function POST(req: NextRequest) {
     };
 
     // Kill each job
-    for (const jobDoc of newJobsSnap.docs) {
+    for (const jobDoc of newJobDocs) {
       try {
         const jobId = jobDoc.id;
         const jobData = jobDoc.data();
@@ -126,26 +142,44 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get active jobs
-    const newJobsSnap = await adminDb
+    // Get active jobs (separate queries since no composite index)
+    const newQueuedSnap = await adminDb
       .collection('import_jobs')
-      .where('status', 'in', ['queued', 'running', 'paused'])
+      .where('status', '==', 'queued')
       .get();
 
-    const oldJobsSnap = await adminDb
-      .collection('importJobs')
-      .where('status', 'in', ['pending', 'running'])
+    const newRunningSnap = await adminDb
+      .collection('import_jobs')
+      .where('status', '==', 'running')
       .get();
+
+    const newPausedSnap = await adminDb
+      .collection('import_jobs')
+      .where('status', '==', 'paused')
+      .get();
+
+    const oldPendingSnap = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'pending')
+      .get();
+
+    const oldRunningSnap = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'running')
+      .get();
+
+    const newJobDocs = [...newQueuedSnap.docs, ...newRunningSnap.docs, ...newPausedSnap.docs];
+    const oldJobDocs = [...oldPendingSnap.docs, ...oldRunningSnap.docs];
 
     const activeJobs = [
-      ...newJobsSnap.docs.map(doc => ({
+      ...newJobDocs.map(doc => ({
         id: doc.id,
         system: 'new',
         status: doc.data().status,
         createdAt: doc.data().createdAt,
         type: doc.data().type,
       })),
-      ...oldJobsSnap.docs.map(doc => ({
+      ...oldJobDocs.map(doc => ({
         id: doc.id,
         system: 'old',
         status: doc.data().status,
