@@ -167,39 +167,18 @@ export async function GET(req: NextRequest) {
     const jobId = pathParts[pathParts.length - 1];
     // LIST MODE: /api/admin/import/queue
     if (!jobId || jobId === 'queue') {
-      // Query params for filtering/sorting
-      const statusFilter = url.searchParams.get('status'); // e.g., 'active', 'failed', 'completed', or specific status
-      const sortBy = url.searchParams.get('sortBy') || 'createdAt'; // createdAt, updatedAt, status
-      const sortOrder = url.searchParams.get('sortOrder') || 'desc'; // asc, desc
-      const limitParam = url.searchParams.get('limit');
-      const limit = limitParam ? parseInt(limitParam, 10) : 50;
-
-      console.log(`[Queue GET] Listing jobs - status=${statusFilter}, sortBy=${sortBy}, sortOrder=${sortOrder}, limit=${limit}`);
+      console.log('[Queue GET] Listing jobs (new + compat)');
 
       const jobs: any[] = [];
 
       try {
-        // Query new system
-        let query = adminDb.collection('import_jobs') as any;
-        
-        // Add status filter if specified
-        if (statusFilter && statusFilter !== 'all') {
-          if (statusFilter === 'active') {
-            // Can't use 'in' without composite index, so we'll filter in memory
-            console.log('[Queue GET] Will filter active jobs in memory');
-          } else {
-            query = query.where('status', '==', statusFilter);
-          }
-        }
-        
-        // Add ordering (only if not filtering by status or sortBy is explicitly set)
-        if (sortBy === 'createdAt' || sortBy === 'updatedAt') {
-          query = query.orderBy(sortBy, sortOrder);
-        }
-        
-        const snap = await query.limit(100).get(); // Get more for filtering
+        const snap = await adminDb
+          .collection('import_jobs')
+          .orderBy('createdAt', 'desc')
+          .limit(25)
+          .get();
 
-        snap.forEach((doc: any) => {
+        snap.forEach((doc) => {
           const data = doc.data() || {};
           jobs.push({
             id: data.id || doc.id,
@@ -222,29 +201,21 @@ export async function GET(req: NextRequest) {
             createdAt: data.createdAt,
             startedAt: data.startedAt,
             completedAt: data.completedAt,
-            updatedAt: data.updatedAt,
             source: 'import_jobs (new)',
           });
         });
       } catch (e) {
-        console.warn('[Queue GET] Failed to list import_jobs:', e);
+        console.warn('[Queue GET] Failed to list import_jobs');
       }
 
       try {
-        // Query old system (backward compat)
-        let query = adminDb.collection('importJobs') as any;
-        
-        if (statusFilter && statusFilter !== 'all' && statusFilter !== 'active') {
-          query = query.where('status', '==', statusFilter);
-        }
-        
-        if (sortBy === 'createdAt' || sortBy === 'updatedAt') {
-          query = query.orderBy(sortBy, sortOrder);
-        }
-        
-        const snap = await query.limit(100).get();
+        const snap = await adminDb
+          .collection('importJobs')
+          .orderBy('createdAt', 'desc')
+          .limit(25)
+          .get();
 
-        snap.forEach((doc: any) => {
+        snap.forEach((doc) => {
           const data = doc.data() || {};
           jobs.push({
             id: data.id || doc.id,
@@ -267,55 +238,21 @@ export async function GET(req: NextRequest) {
             createdAt: data.createdAt,
             startedAt: data.startedAt,
             completedAt: data.completedAt,
-            updatedAt: data.updatedAt,
             source: 'importJobs (compat)',
           });
         });
       } catch (e) {
-        console.warn('[Queue GET] Failed to list importJobs:', e);
+        console.warn('[Queue GET] Failed to list importJobs');
       }
 
-      // In-memory filtering for 'active' status (queued|running|paused|pending)
-      let filtered = jobs;
-      if (statusFilter === 'active') {
-        filtered = jobs.filter(job => 
-          ['queued', 'running', 'paused', 'pending', 'cancelled'].includes(job.status)
-        );
-      }
-
-      // Sort combined list
-      const sorted = filtered.sort((a, b) => {
-        let aVal: any;
-        let bVal: any;
-        
-        if (sortBy === 'status') {
-          aVal = a.status;
-          bVal = b.status;
-        } else if (sortBy === 'updatedAt') {
-          aVal = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-          bVal = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-        } else { // createdAt (default)
-          aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-          bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        }
-        
-        if (sortOrder === 'asc') {
-          return aVal > bVal ? 1 : -1;
-        } else {
-          return aVal < bVal ? 1 : -1;
-        }
+      // Sort combined list by createdAt desc if available
+      const sorted = jobs.sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bDate - aDate;
       });
 
-      // Apply limit
-      const limited = sorted.slice(0, limit);
-
-      console.log(`[Queue GET] Returning ${limited.length} jobs (filtered from ${jobs.length})`);
-
-      return NextResponse.json({ 
-        jobs: limited,
-        total: filtered.length,
-        showing: limited.length,
-      });
+      return NextResponse.json({ jobs: sorted });
     }
 
     console.log('[Queue GET] Fetching job:', jobId);

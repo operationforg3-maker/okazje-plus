@@ -85,15 +85,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Also try old system for completeness
-    const oldJobsSnap = await adminDb
+    // Also try old system for completeness - check ALL possible active statuses
+    // Old system can have: pending|running|queued|cancelled (not just pending|running)
+    const oldPendingSnap = await adminDb
       .collection('importJobs')
-      .where('status', 'in', ['pending', 'running'])
+      .where('status', '==', 'pending')
       .get();
 
-    console.log(`[Kill All] Found ${oldJobsSnap.size} active jobs in importJobs (old system)`);
+    const oldRunningSnap = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'running')
+      .get();
 
-    for (const jobDoc of oldJobsSnap.docs) {
+    const oldQueuedSnap = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'queued')
+      .get();
+
+    const oldCancelledSnap = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'cancelled')
+      .get();
+
+    const oldJobDocs = [
+      ...oldPendingSnap.docs,
+      ...oldRunningSnap.docs,
+      ...oldQueuedSnap.docs,
+      ...oldCancelledSnap.docs,
+    ];
+
+    console.log(`[Kill All] Found ${oldJobDocs.length} active jobs in importJobs (old system)`);
+
+    for (const jobDoc of oldJobDocs) {
       try {
         const jobId = jobDoc.id;
 
@@ -181,8 +204,18 @@ export async function GET(req: NextRequest) {
       .where('status', '==', 'running')
       .get();
 
+    const oldQueuedSnap = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'queued')
+      .get();
+
+    const oldCancelledSnap = await adminDb
+      .collection('importJobs')
+      .where('status', '==', 'cancelled')
+      .get();
+
     const newJobDocs = [...newQueuedSnap.docs, ...newRunningSnap.docs, ...newPausedSnap.docs, ...newCancelledSnap.docs];
-    const oldJobDocs = [...oldPendingSnap.docs, ...oldRunningSnap.docs];
+    const oldJobDocs = [...oldPendingSnap.docs, ...oldRunningSnap.docs, ...oldQueuedSnap.docs, ...oldCancelledSnap.docs];
 
     const activeJobs = [
       ...newJobDocs.map(doc => ({
