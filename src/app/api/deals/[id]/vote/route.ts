@@ -54,13 +54,25 @@ export async function POST(
 ) {
   const startTime = Date.now();
   const dealId = params.id;
+  let action: 'up' | 'down' | 'remove' | null = null;
   
   try {
-    const body = await request.json();
-    const { action } = body as { action: 'up' | 'down' | 'remove' };
+    // Bezpieczne parsowanie body z error handling
+    let body: any = {};
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      console.error('JSON parse error:', parseError.message);
+      return NextResponse.json(
+        { success: false, message: 'Invalid JSON in request body', error: parseError.message },
+        { status: 400 }
+      );
+    }
+    
+    action = body.action as 'up' | 'down' | 'remove';
 
     // Walidacja akcji
-    if (!['up', 'down', 'remove'].includes(action)) {
+    if (!['up', 'down', 'remove'].includes(action || '')) {
       return NextResponse.json(
         { success: false, message: 'Nieprawidłowa akcja. Dozwolone: up, down, remove' },
         { status: 400 }
@@ -88,6 +100,23 @@ export async function POST(
 
     const dealRef = doc(db, 'deals', dealId);
     const voteRef = doc(db, 'deals', dealId, 'votes', userId);
+
+    // Pre-check: Sprawdź czy deal istnieje bez transakcji
+    try {
+      const dealPreCheck = await getDoc(dealRef);
+      if (!dealPreCheck.exists()) {
+        return NextResponse.json(
+          { success: false, message: 'Okazja nie została znaleziona' },
+          { status: 404 }
+        );
+      }
+    } catch (preCheckError: any) {
+      console.error('Pre-check deal error:', preCheckError.message);
+      return NextResponse.json(
+        { success: false, message: 'Nie można sprawdzić okazji. Spróbuj później.' },
+        { status: 503 }
+      );
+    }
 
     // Transakcja zapewniająca spójność
     const result = await runTransaction(db, async (transaction) => {
@@ -179,9 +208,12 @@ export async function POST(
       ...result,
     };
     
-    console.log(`Vote response for ${dealId}:`, responseData);
+    console.log(`Vote response for ${dealId}:`, JSON.stringify(responseData));
     
-    return NextResponse.json(responseData);
+    // Wyraźna odpowiedź JSON
+    const response = NextResponse.json(responseData, { status: 200 });
+    response.headers.set('Content-Type', 'application/json');
+    return response;
 
   } catch (error: any) {
     const duration = Date.now() - startTime;
