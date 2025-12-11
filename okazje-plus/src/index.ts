@@ -2037,11 +2037,7 @@ export const activatePreRegistration = onCall(
   }
 );
 
-// Import job processor trigger
-import {processImportJob} from "./triggers/importJobProcessor";
-
 // Eksporty wymagane przez Firebase Functions deploy
 exports.trackShareStats = trackShareStats;
 exports.checkSavedSearches = checkSavedSearches;
 exports.sendWeeklyDigest = sendWeeklyDigest;
-exports.processImportJob = processImportJob;
