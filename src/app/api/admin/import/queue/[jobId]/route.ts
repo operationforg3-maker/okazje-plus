@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/auth-helpers';
+import { adminDb } from '@/lib/firebase-admin';
 import { ImportQueueManager } from '@/lib/import-queue';
 
 interface RouteContext {
@@ -11,7 +12,7 @@ interface RouteContext {
 /**
  * GET /api/admin/import/queue/[jobId]
  * 
- * Get job status and progress
+ * Get job status and progress (supports both old and new import systems)
  */
 export async function GET(
   req: NextRequest,
@@ -28,8 +29,23 @@ export async function GET(
     }
 
     const { jobId } = context.params;
-    const job = await ImportQueueManager.getJob(jobId);
 
+    // Try new import_jobs collection first (new system)
+    const newJobDoc = await adminDb.collection('import_jobs').doc(jobId).get();
+    if (newJobDoc.exists) {
+      const jobData = newJobDoc.data();
+      return NextResponse.json({
+        success: true,
+        job: {
+          id: jobId,
+          ...jobData,
+          system: 'new', // Mark which system
+        },
+      });
+    }
+
+    // Fall back to old ImportQueueManager system
+    const job = await ImportQueueManager.getJob(jobId);
     if (!job) {
       return NextResponse.json(
         { error: 'Job not found' },
@@ -37,7 +53,7 @@ export async function GET(
       );
     }
 
-    // Check if user owns the job
+    // Check if user owns the job (old system only)
     if (job.createdBy !== authResult.uid) {
       return NextResponse.json(
         { error: 'Forbidden' },
@@ -47,7 +63,10 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      job,
+      job: {
+        ...job,
+        system: 'old', // Mark which system
+      },
     });
   } catch (error: any) {
     console.error('[GET /api/admin/import/queue/[jobId]] Error:', error);
@@ -61,7 +80,7 @@ export async function GET(
 /**
  * DELETE /api/admin/import/queue/[jobId]
  * 
- * Cancel running job
+ * Cancel running job (supports both old and new import systems)
  */
 export async function DELETE(
   req: NextRequest,
@@ -78,8 +97,31 @@ export async function DELETE(
     }
 
     const { jobId } = context.params;
-    const job = await ImportQueueManager.getJob(jobId);
 
+    // Try new import_jobs collection first (new system)
+    const newJobDoc = await adminDb.collection('import_jobs').doc(jobId).get();
+    if (newJobDoc.exists) {
+      const jobData = newJobDoc.data();
+      
+      // Only cancel if running, queued, or paused
+      if (['running', 'queued', 'paused'].includes(jobData?.status)) {
+        await adminDb.collection('import_jobs').doc(jobId).update({
+          status: 'failed',
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          error: 'Job cancelled by user',
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Job cancelled',
+        jobId,
+      });
+    }
+
+    // Fall back to old ImportQueueManager system
+    const job = await ImportQueueManager.getJob(jobId);
     if (!job) {
       return NextResponse.json(
         { error: 'Job not found' },
@@ -87,7 +129,7 @@ export async function DELETE(
       );
     }
 
-    // Check if user owns the job
+    // Check if user owns the job (old system only)
     if (job.createdBy !== authResult.uid) {
       return NextResponse.json(
         { error: 'Forbidden' },
@@ -103,6 +145,7 @@ export async function DELETE(
     return NextResponse.json({
       success: true,
       message: 'Job cancelled',
+      jobId,
     });
   } catch (error: any) {
     console.error('[DELETE /api/admin/import/queue/[jobId]] Error:', error);
