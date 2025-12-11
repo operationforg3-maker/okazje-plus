@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     console.log(`[Kill All] Starting emergency kill all for user ${authResult.uid}`);
 
     // Get all active jobs from new system (separate queries since no composite index)
+    // Also catch zombie 'cancelled' jobs that may have been created in new system
     const queuedJobsSnap = await adminDb
       .collection('import_jobs')
       .where('status', '==', 'queued')
@@ -39,10 +40,16 @@ export async function POST(req: NextRequest) {
       .where('status', '==', 'paused')
       .get();
 
+    const cancelledJobsSnap = await adminDb
+      .collection('import_jobs')
+      .where('status', '==', 'cancelled')
+      .get();
+
     const newJobDocs = [
       ...queuedJobsSnap.docs,
       ...runningJobsSnap.docs,
       ...pausedJobsSnap.docs,
+      ...cancelledJobsSnap.docs,
     ];
 
     console.log(`[Kill All] Found ${newJobDocs.length} active jobs in import_jobs`);
@@ -143,6 +150,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get active jobs (separate queries since no composite index)
+    // Also catch zombie 'cancelled' jobs
     const newQueuedSnap = await adminDb
       .collection('import_jobs')
       .where('status', '==', 'queued')
@@ -158,6 +166,11 @@ export async function GET(req: NextRequest) {
       .where('status', '==', 'paused')
       .get();
 
+    const newCancelledSnap = await adminDb
+      .collection('import_jobs')
+      .where('status', '==', 'cancelled')
+      .get();
+
     const oldPendingSnap = await adminDb
       .collection('importJobs')
       .where('status', '==', 'pending')
@@ -168,7 +181,7 @@ export async function GET(req: NextRequest) {
       .where('status', '==', 'running')
       .get();
 
-    const newJobDocs = [...newQueuedSnap.docs, ...newRunningSnap.docs, ...newPausedSnap.docs];
+    const newJobDocs = [...newQueuedSnap.docs, ...newRunningSnap.docs, ...newPausedSnap.docs, ...newCancelledSnap.docs];
     const oldJobDocs = [...oldPendingSnap.docs, ...oldRunningSnap.docs];
 
     const activeJobs = [
