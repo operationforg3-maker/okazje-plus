@@ -58,16 +58,20 @@ export async function deduplicateProducts(
       continue;
     }
     
-    // Rating filter
-    if (config.minRating !== undefined && product.rating && product.rating < config.minRating) {
-      filtered_rating++;
-      continue;
+    // Rating filter - only apply if product HAS rating data
+    if (config.minRating !== undefined && product.rating !== undefined && product.rating !== null && product.rating > 0) {
+      if (product.rating < config.minRating) {
+        filtered_rating++;
+        continue;
+      }
     }
     
-    // Popularity filter (orders/volume)
-    if (config.minOrders !== undefined && product.orders && product.orders < config.minOrders) {
-      filtered_orders++;
-      continue;
+    // Popularity filter (orders/volume) - only apply if product HAS orders data
+    if (config.minOrders !== undefined && product.orders !== undefined && product.orders !== null && product.orders > 0) {
+      if (product.orders < config.minOrders) {
+        filtered_orders++;
+        continue;
+      }
     }
     
     // All checks passed
