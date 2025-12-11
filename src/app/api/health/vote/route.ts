@@ -18,13 +18,42 @@ export async function GET(request: NextRequest) {
 
   try {
     // 1. Znajdź przykładową okazję z głosami
-    const dealsQuery = query(
-      collection(db, 'deals'),
-      where('status', '==', 'approved'),
-      where('voteCount', '>', 0),
-      limit(1)
-    );
-    const dealsSnapshot = await getDocs(dealsQuery);
+    let dealsSnapshot;
+    try {
+      const dealsQuery = query(
+        collection(db, 'deals'),
+        where('status', '==', 'approved'),
+        where('voteCount', '>', 0),
+        limit(1)
+      );
+      dealsSnapshot = await getDocs(dealsQuery);
+    } catch (indexError: any) {
+      // Brak indeksu - użyj prostszego query
+      results.checks.indexWarning = {
+        status: 'warning',
+        message: 'Missing Firestore index for status+voteCount query',
+        action: 'Run: firebase deploy --only firestore:indexes',
+      };
+      
+      // Fallback: pobierz wszystkie approved i filtruj w pamięci
+      const simpleQuery = query(
+        collection(db, 'deals'),
+        where('status', '==', 'approved'),
+        limit(100)
+      );
+      const allDeals = await getDocs(simpleQuery);
+      const dealsWithVotes = allDeals.docs.filter(d => (d.data().voteCount || 0) > 0);
+      
+      if (dealsWithVotes.length === 0) {
+        results.checks.sampleDeal = {
+          status: 'warning',
+          message: 'No deals with votes found (using fallback query)',
+        };
+        dealsSnapshot = { empty: true, docs: [] } as any;
+      } else {
+        dealsSnapshot = { empty: false, docs: [dealsWithVotes[0]] } as any;
+      }
+    }
 
     if (dealsSnapshot.empty) {
       results.checks.sampleDeal = {
