@@ -45,6 +45,7 @@ import CommentSection from '@/components/comment-section';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import ShareButton from '@/components/share-button';
 import { useAuth } from '@/lib/auth';
+import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
@@ -212,10 +213,20 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
     setIsVoting(true);
 
     try {
+      // Pobierz token Firebase Auth
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Sesja wygasła - zaloguj się ponownie');
+      }
+      const token = await firebaseUser.getIdToken();
+
       const response = await fetch(`/api/deals/${deal.id}/vote`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, userId: user.uid }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action }),
       });
 
       const data = await response.json();

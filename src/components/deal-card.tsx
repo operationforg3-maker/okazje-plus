@@ -8,6 +8,7 @@ import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { useAuth } from '@/lib/auth';
+import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2 } from "lucide-react";
@@ -196,13 +197,20 @@ export default function DealCard({ deal }: DealCardProps) {
     setIsVoting(true);
 
     try {
+      // Pobierz token Firebase Auth
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Sesja wygasła - zaloguj się ponownie');
+      }
+      const token = await firebaseUser.getIdToken();
+
       const response = await fetch(`/api/deals/${deal.id}/vote`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action,
-          userId: user.uid // TYMCZASOWE - w produkcji token w headerze
-        }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ action }),
       });
 
       const data = await response.json();
