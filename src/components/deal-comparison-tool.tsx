@@ -119,17 +119,22 @@ export function DealComparisonTool() {
     return (item as Product).name;
   };
 
-  if (!isMounted || items.length === 0) {
+  if (!isMounted) {
     return null;
   }
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button - zawsze widoczny */}
       <div className="fixed bottom-6 right-6 z-50">
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button size="lg" className="rounded-full shadow-lg gap-2">
+            <Button 
+              size="lg" 
+              className="rounded-full shadow-lg gap-2" 
+              disabled={items.length === 0}
+              variant={items.length === 0 ? 'outline' : 'default'}
+            >
               <Scale className="h-5 w-5" />
               Porównaj ({items.length})
             </Button>
@@ -141,16 +146,38 @@ export function DealComparisonTool() {
                   <Scale className="h-5 w-5" />
                   Porównanie {items.length === 1 ? 'elementu' : 'elementów'}
                 </span>
-                <Button variant="outline" size="sm" onClick={clearAll}>
-                  Wyczyść wszystko
-                </Button>
+                {items.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={clearAll}>
+                    Wyczyść wszystko
+                  </Button>
+                )}
               </SheetTitle>
               <SheetDescription>
-                Porównaj ceny, dostępność i parametry {items.length} {items.length === 1 ? 'elementu' : 'elementów'}
+                {items.length === 0 
+                  ? 'Kliknij przycisk "Porównaj" (ikona wagi) na kartach okazji, aby dodać je do porównania'
+                  : `Porównaj ceny, dostępność i parametry ${items.length} ${items.length === 1 ? 'elementu' : 'elementów'}`
+                }
               </SheetDescription>
             </SheetHeader>
 
-            <div className="mt-6 overflow-auto max-h-[calc(80vh-140px)]">
+            {items.length === 0 ? (
+              <div className="mt-12 flex flex-col items-center justify-center gap-4 text-center">
+                <Scale className="h-16 w-16 text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Brak elementów do porównania</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Przejdź na stronę z okazjami i kliknij przycisk porównania (ikona wagi <Scale className="inline h-4 w-4" />) 
+                    na kartach produktów, które chcesz porównać. Możesz dodać do 4 elementów.
+                  </p>
+                </div>
+                <Button asChild variant="default" size="lg">
+                  <Link href="/deals">
+                    Przeglądaj okazje
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-6 overflow-auto max-h-[calc(80vh-140px)]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -303,6 +330,7 @@ export function DealComparisonTool() {
                 </TableBody>
               </Table>
             </div>
+            )}
           </SheetContent>
         </Sheet>
       </div>
