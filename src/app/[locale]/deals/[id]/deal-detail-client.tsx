@@ -229,8 +229,20 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
         body: JSON.stringify({ action }),
       });
 
+      // Debug: sprawdź czy response jest OK
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('Vote response error:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseBody: responseText,
+          contentType: response.headers.get('content-type'),
+        });
+        throw new Error(`Serwer zwrócił błąd ${response.status}: ${responseText || response.statusText}`);
+      }
+
       const data = await response.json();
-      if (!response.ok || !data?.success) {
+      if (!data?.success) {
         throw new Error(data?.message || 'Błąd głosowania');
       }
 

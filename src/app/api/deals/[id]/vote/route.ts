@@ -52,8 +52,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const startTime = Date.now();
+  const dealId = params.id;
+  
   try {
-    const dealId = params.id;
     const body = await request.json();
     const { action } = body as { action: 'up' | 'down' | 'remove' };
 
@@ -170,21 +172,26 @@ export async function POST(
     });
     
     // Logging dla audytu (opcjonalnie zapisz do Firestore analytics)
-    console.log(`Vote logged: user=${userId}, deal=${dealId}, action=${action}, newVote=${result.userVote}`);
+    console.log(`Vote logged: user=${userId}, deal=${dealId}, action=${action}, newVote=${result.userVote}, duration=${Date.now() - startTime}ms`);
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
       ...result,
-    });
+    };
+    
+    console.log(`Vote response for ${dealId}:`, responseData);
+    
+    return NextResponse.json(responseData);
 
   } catch (error: any) {
-    console.error('Vote error:', error);
-    console.error('Vote error stack:', error.stack);
-    console.error('Vote error details:', {
+    const duration = Date.now() - startTime;
+    console.error('Vote error:', {
       dealId,
+      duration: `${duration}ms`,
       message: error.message,
       name: error.name,
       code: error.code,
+      stack: error.stack,
     });
     
     if (error.message === 'Deal not found') {
@@ -194,15 +201,16 @@ export async function POST(
       );
     }
 
-    // Więcej szczegółów w odpowiedzi (tylko dev/staging)
-    const isDev = process.env.NODE_ENV === 'development';
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Wystąpił błąd podczas głosowania',
-        ...(isDev && { error: error.message, stack: error.stack })
-      },
-      { status: 500 }
-    );
+    // Zawsze zwróć prawidłowy JSON
+    const errorResponse = { 
+      success: false, 
+      message: 'Wystąpił błąd podczas głosowania',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    };
+    
+    console.error('Returning error response:', errorResponse);
+    
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
