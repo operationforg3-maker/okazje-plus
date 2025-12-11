@@ -225,9 +225,10 @@ export async function processImportJob(
     const { runProductImportPipeline } = await import('@/ai/flows/importerFlow');
 
     for (let i = currentIndex; i < batches.length; i++) {
-      // Check if paused
+      // Check if paused or cancelled
       const currentJobSnap = await jobRef.get();
       const currentJobData = currentJobSnap.data();
+      
       if (currentJobData?.status === 'paused') {
         console.log(`[Import Processor] Job ${jobId} paused at batch ${i}`);
         await jobRef.update({
@@ -235,6 +236,11 @@ export async function processImportJob(
           updatedAt: new Date().toISOString(),
         });
         return; // Exit gracefully
+      }
+      
+      if (currentJobData?.status === 'failed') {
+        console.log(`[Import Processor] Job ${jobId} cancelled at batch ${i}`);
+        return; // Exit - job was cancelled by user
       }
 
       const batch = batches[i];
