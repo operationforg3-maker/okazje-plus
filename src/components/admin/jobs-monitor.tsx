@@ -15,7 +15,8 @@ import {
   CheckCircle, 
   Clock, 
   Loader2,
-  AlertCircle 
+  AlertCircle,
+  Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth';
@@ -80,6 +81,42 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const [maxProducts, setMaxProducts] = useState(20);
   const [enableAdvanced, setEnableAdvanced] = useState(true);
   const [enableAI, setEnableAI] = useState(false);
+  const [killingAll, setKillingAll] = useState(false);
+
+  const killAllJobs = async () => {
+    if (!confirm('⚠️ NIEODWRACALNE: Czy na pewno chcesz zatrzymać WSZYSTKIE zadania importu?')) {
+      return;
+    }
+
+    try {
+      setKillingAll(true);
+      const idToken = await getIdToken();
+
+      const response = await fetch('/api/admin/import/kill-all', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to kill all jobs');
+      }
+
+      const data = await response.json();
+      toast.success(`Zatrzymano ${data.results.killed} zadań`);
+      onConsoleLog?.(`🔥 EMERGENCY: Zatrzymano ${data.results.killed} wszystkich zadań`, 'error');
+      
+      // Refresh immediately
+      fetchJobs();
+    } catch (error: any) {
+      console.error('Error killing all jobs:', error);
+      toast.error('Nie udało się zatrzymać wszystkich zadań');
+    } finally {
+      setKillingAll(false);
+    }
+  };
 
   const fetchJobs = useCallback(async () => {
     if (!isMounted) return;
@@ -446,6 +483,27 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
                 <RefreshCw className="h-4 w-4" />
               )}
             </Button>
+            {jobs.some(j => ['running', 'queued', 'paused'].includes(j.status)) && (
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={killAllJobs}
+                disabled={killingAll}
+                className="gap-1"
+              >
+                {killingAll ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Zatrzymywanie...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4" />
+                    Kill All
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
