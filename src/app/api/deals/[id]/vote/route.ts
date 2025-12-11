@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, runTransaction, increment } from 'firebase/firestore';
-import { adminAuth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth, FieldValue } from '@/lib/firebase-admin';
 
 /**
  * Weryfikacja tokenu Firebase z wykorzystaniem Admin SDK
@@ -98,13 +96,13 @@ export async function POST(
       );
     }
 
-    const dealRef = doc(db, 'deals', dealId);
-    const voteRef = doc(db, 'deals', dealId, 'votes', userId);
+    const dealRef = adminDb.collection('deals').doc(dealId);
+    const voteRef = dealRef.collection('votes').doc(userId);
 
     // Pre-check: Sprawdź czy deal istnieje bez transakcji
     try {
-      const dealPreCheck = await getDoc(dealRef);
-      if (!dealPreCheck.exists()) {
+      const dealPreCheck = await dealRef.get();
+      if (!dealPreCheck.exists) {
         return NextResponse.json(
           { success: false, message: 'Okazja nie została znaleziona' },
           { status: 404 }
@@ -119,10 +117,10 @@ export async function POST(
     }
 
     // Transakcja zapewniająca spójność
-    const result = await runTransaction(db, async (transaction) => {
+    const result = await adminDb.runTransaction(async (transaction) => {
       // Sprawdź czy deal istnieje
       const dealDoc = await transaction.get(dealRef);
-      if (!dealDoc.exists()) {
+      if (!dealDoc.exists) {
         throw new Error('Deal not found');
       }
 
@@ -189,8 +187,8 @@ export async function POST(
 
       // Aktualizuj deal
       transaction.update(dealRef, {
-        temperature: increment(temperatureChange),
-        voteCount: increment(voteCountChange),
+        temperature: FieldValue.increment(temperatureChange),
+        voteCount: FieldValue.increment(voteCountChange),
       });
 
       return {
