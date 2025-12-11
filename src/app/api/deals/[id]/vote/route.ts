@@ -179,6 +179,13 @@ export async function POST(
 
   } catch (error: any) {
     console.error('Vote error:', error);
+    console.error('Vote error stack:', error.stack);
+    console.error('Vote error details:', {
+      dealId,
+      message: error.message,
+      name: error.name,
+      code: error.code,
+    });
     
     if (error.message === 'Deal not found') {
       return NextResponse.json(
@@ -187,8 +194,14 @@ export async function POST(
       );
     }
 
+    // Więcej szczegółów w odpowiedzi (tylko dev/staging)
+    const isDev = process.env.NODE_ENV === 'development';
     return NextResponse.json(
-      { success: false, message: 'Wystąpił błąd podczas głosowania' },
+      { 
+        success: false, 
+        message: 'Wystąpił błąd podczas głosowania',
+        ...(isDev && { error: error.message, stack: error.stack })
+      },
       { status: 500 }
     );
   }

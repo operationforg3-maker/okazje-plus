@@ -36,21 +36,26 @@ export function DealComparisonTool() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Load from localStorage
-    const stored = localStorage.getItem('comparisonItems');
-    if (stored) {
-      try {
-        setItems(JSON.parse(stored));
-      } catch (error) {
-        console.error('Error parsing comparison items:', error);
+    // Load from localStorage only on client
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('comparisonItems');
+      if (stored) {
+        try {
+          setItems(JSON.parse(stored));
+        } catch (error) {
+          console.error('Error parsing comparison items:', error);
+          localStorage.removeItem('comparisonItems');
+        }
       }
     }
   }, []);
 
   useEffect(() => {
-    // Save to localStorage
-    localStorage.setItem('comparisonItems', JSON.stringify(items));
-  }, [items]);
+    // Save to localStorage only on client
+    if (typeof window !== 'undefined' && isMounted) {
+      localStorage.setItem('comparisonItems', JSON.stringify(items));
+    }
+  }, [items, isMounted]);
 
   const addItem = (item: ComparisonItem) => {
     if (items.length >= MAX_COMPARISON_ITEMS) {
