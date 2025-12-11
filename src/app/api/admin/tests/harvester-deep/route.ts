@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const jobsSnap = await adminDb.collection('importJobs').limit(5).get();
+      const jobsSnap = await adminDb.collection('import_jobs').limit(5).get();
       const jobs = jobsSnap.docs;
 
       // Check if jobs collection exists and has proper structure

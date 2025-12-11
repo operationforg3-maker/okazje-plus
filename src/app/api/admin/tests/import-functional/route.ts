@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         attempts++;
 
         // Check job status
-        const jobSnap = await adminDb.collection('importJobs').doc(jobId1).get();
+        const jobSnap = await adminDb.collection('import_jobs').doc(jobId1).get();
         if (jobSnap.exists) {
           jobData = jobSnap.data();
           if (jobData.status === 'completed' || jobData.status === 'failed') {
@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
         await new Promise(r => setTimeout(r, 1000));
         attempts++;
 
-        const jobSnap = await adminDb.collection('importJobs').doc(jobId2).get();
+        const jobSnap = await adminDb.collection('import_jobs').doc(jobId2).get();
         if (jobSnap.exists) {
           jobData = jobSnap.data();
           if (jobData.status === 'completed' || jobData.status === 'failed') {
