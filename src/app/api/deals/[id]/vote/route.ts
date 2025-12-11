@@ -1,30 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, FieldValue } from '@/lib/firebase-admin';
 
-/**
- * Weryfikacja tokenu Firebase z wykorzystaniem Admin SDK
- * PRODUCTION-READY implementation
- */
-async function getUserFromRequest(request: NextRequest): Promise<{ uid: string } | null> {
-  try {
-    const authHeader = request.headers.get('authorization');
-    
-    if (!authHeader?.startsWith('Bearer ')) {
-      return null;
-    }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    
-    // Weryfikuj token używając Firebase Admin SDK
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    
-    return { uid: decodedToken.uid };
-  } catch (error) {
-    console.error('Token verification failed:', error);
-    return null;
-  }
-}
-
 // Rate limiting - prosta implementacja w pamięci (dla produkcji użyj Redis)
 const voteRateLimit = new Map<string, { count: number; resetAt: number }>();
 
@@ -77,16 +53,27 @@ export async function POST(
       );
     }
 
-    // AUTORYZACJA - wymagany zweryfikowany token
-    const user = await getUserFromRequest(request);
-    if (!user) {
+    // AUTORYZACJA - wymagany zweryfikowany token (tak jak w testach importów)
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
-        { success: false, message: 'Unauthorized - musisz być zalogowany' },
+        { success: false, message: 'Unauthorized - missing Bearer token' },
         { status: 401 }
       );
     }
-    
-    const userId = user.uid;
+
+    let userId: string;
+    try {
+      const token = authHeader.substring(7);
+      const decoded = await adminAuth.verifyIdToken(token);
+      userId = decoded.uid;
+    } catch (error: any) {
+      console.error('Token verification failed:', error?.message || error);
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized - invalid token' },
+        { status: 401 }
+      );
+    }
     
     // Rate limiting
     if (!checkRateLimit(userId)) {
