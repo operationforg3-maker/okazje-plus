@@ -95,9 +95,11 @@ export async function POST(req: NextRequest) {
         const jobSnap = await adminDb.collection('import_jobs').doc(jobId1).get();
         if (jobSnap.exists) {
           jobData = jobSnap.data();
-          if (jobData.status === 'completed' || jobData.status === 'failed') {
+          if (jobData?.status === 'completed' || jobData?.status === 'failed') {
             jobCompleted = true;
           }
+        } else {
+          jobData = null;
         }
       }
 
@@ -212,9 +214,11 @@ export async function POST(req: NextRequest) {
         const jobSnap = await adminDb.collection('import_jobs').doc(jobId2).get();
         if (jobSnap.exists) {
           jobData = jobSnap.data();
-          if (jobData.status === 'completed' || jobData.status === 'failed') {
+          if (jobData?.status === 'completed' || jobData?.status === 'failed') {
             jobCompleted = true;
           }
+        } else {
+          jobData = null;
         }
       }
 

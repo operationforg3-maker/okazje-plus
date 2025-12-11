@@ -83,7 +83,7 @@ export default function ImportTestPage() {
             <Input
               type="number"
               value={maxProducts}
-              onChange={(e) => setMaxProducts(e.target.value)}
+              onChange={(e) => setMaxProducts(Number(e.target.value))}
               min={1}
               max={20}
             />

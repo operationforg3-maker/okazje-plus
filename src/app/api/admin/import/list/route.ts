@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/auth-helpers';
 import { adminDb } from '@/lib/firebase-admin';
+import type { DocumentData, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 interface ImportJob {
   id: string;
@@ -60,7 +61,7 @@ export async function GET(req: NextRequest) {
 
       const newSnapshot = await query.get();
 
-      newSnapshot.docs.forEach(doc => {
+      newSnapshot.docs.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
         allJobs.push({
           id: doc.id,
           system: 'new',
@@ -88,7 +89,7 @@ export async function GET(req: NextRequest) {
 
       const oldSnapshot = await query.get();
 
-      oldSnapshot.docs.forEach(doc => {
+      oldSnapshot.docs.forEach((doc: QueryDocumentSnapshot<DocumentData>) => {
         allJobs.push({
           id: doc.id,
           system: 'old',

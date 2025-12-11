@@ -275,4 +275,4 @@ function SystemHealthPage() {
   );
 }
 
-export default withAuth(SystemHealthPage, { requireAdmin: true });
+export default withAuth(SystemHealthPage, { requiredRole: 'admin' });

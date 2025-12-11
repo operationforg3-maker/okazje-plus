@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         .limit(50)
         .get();
       
-      let dealWithVotes = null;
+      let dealWithVotes: { id: string; voteCount?: number } | null = null;
       for (const d of allDealsSnapshot.docs) {
         const data = d.data();
         if ((data.voteCount || 0) > 0) {
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
         tests.push({
           name: 'Find Deal With Votes',
           status: 'pass',
-          message: `Found deal ${testDealId} with voteCount=${dealWithVotes.voteCount}`,
+          message: `Found deal ${testDealId} with voteCount=${dealWithVotes.voteCount ?? 0}`,
           duration: Date.now() - start,
         });
       } else {
