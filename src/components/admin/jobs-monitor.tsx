@@ -22,7 +22,7 @@ import { useAuth } from '@/lib/auth';
 
 interface ImportJob {
   id: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'queued' | 'paused';
   sources: string[];
   config: {
     maxProductsPerCategory: number;
@@ -151,7 +151,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   // Auto-refresh running jobs
   useEffect(() => {
     const hasRunningJobs = jobs.some(job => 
-      job.status === 'running' || job.status === 'pending'
+      job.status === 'running' || job.status === 'pending' || job.status === 'queued' || job.status === 'paused'
     );
 
     if (!hasRunningJobs) return;
@@ -263,9 +263,12 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
   const getStatusBadge = (status: ImportJob['status']) => {
     switch (status) {
       case 'pending':
+      case 'queued':
         return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Oczekuje</Badge>;
       case 'running':
         return <Badge variant="default" className="gap-1"><Loader2 className="h-3 w-3 animate-spin" />W trakcie</Badge>;
+      case 'paused':
+        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Wstrzymany</Badge>;
       case 'completed':
         return <Badge variant="default" className="gap-1 bg-green-500"><CheckCircle className="h-3 w-3" />Ukończony</Badge>;
       case 'failed':
@@ -489,7 +492,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
                         </div>
                       </div>
 
-                      {(job.status === 'running' || job.status === 'pending') && (
+                      {(job.status === 'running' || job.status === 'pending' || job.status === 'queued' || job.status === 'paused') && (
                         <Button
                           variant="destructive"
                           size="sm"
