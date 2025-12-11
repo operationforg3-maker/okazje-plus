@@ -85,8 +85,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Also try old system for completeness - check ALL possible active statuses
-    // Old system can have: pending|running|queued|cancelled (not just pending|running)
+    // Also try old system for completeness - check ONLY active statuses
+    // Old system active: pending|running|queued (NOT cancelled - that's terminal!)
     const oldPendingSnap = await adminDb
       .collection('importJobs')
       .where('status', '==', 'pending')
@@ -102,16 +102,10 @@ export async function POST(req: NextRequest) {
       .where('status', '==', 'queued')
       .get();
 
-    const oldCancelledSnap = await adminDb
-      .collection('importJobs')
-      .where('status', '==', 'cancelled')
-      .get();
-
     const oldJobDocs = [
       ...oldPendingSnap.docs,
       ...oldRunningSnap.docs,
       ...oldQueuedSnap.docs,
-      ...oldCancelledSnap.docs,
     ];
 
     console.log(`[Kill All] Found ${oldJobDocs.length} active jobs in importJobs (old system)`);
@@ -209,13 +203,8 @@ export async function GET(req: NextRequest) {
       .where('status', '==', 'queued')
       .get();
 
-    const oldCancelledSnap = await adminDb
-      .collection('importJobs')
-      .where('status', '==', 'cancelled')
-      .get();
-
     const newJobDocs = [...newQueuedSnap.docs, ...newRunningSnap.docs, ...newPausedSnap.docs, ...newCancelledSnap.docs];
-    const oldJobDocs = [...oldPendingSnap.docs, ...oldRunningSnap.docs, ...oldQueuedSnap.docs, ...oldCancelledSnap.docs];
+    const oldJobDocs = [...oldPendingSnap.docs, ...oldRunningSnap.docs, ...oldQueuedSnap.docs];
 
     const activeJobs = [
       ...newJobDocs.map(doc => ({
