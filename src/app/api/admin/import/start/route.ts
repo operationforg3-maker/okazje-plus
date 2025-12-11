@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
       id: jobId,
       type,
       importerType, // NEW: store which importer is used
+      sources: [importerType], // Track which sources are being imported
       status: 'queued', // queued | running | paused | completed | failed
       progress: {
         total: batches.length,
