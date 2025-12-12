@@ -142,9 +142,8 @@ export async function runProductImportPipeline(
     console.log(`[ProductImporter] Stage 2: DEDUPLICATE & SANITIZE`);
     await logToJob(jobId, `Stage 2: Deduplicating...`);
     
-    // TEMP: bypass sanitize to validate end-to-end saving on production
-    // let deduplicated = sanitizeProducts(fetched);
-    let deduplicated = fetched;
+    // Sanitize with relaxed rules
+    let deduplicated = sanitizeProducts(fetched);
     deduplicated = await deduplicateProducts(
       deduplicated,
       {
@@ -191,12 +190,12 @@ export async function runProductImportPipeline(
       config.subsubcategorySlugEN || config.subcategorySlugEN,
       {
         name: 'enrich',
-        batchSize: config.enrich?.batchSize || 5,
-        delayBetweenItems: config.enrich?.delayBetweenItems || 300,
-        delayBetweenBatches: config.enrich?.delayBetweenBatches || 2000,
-        maxRetries: config.enrich?.maxRetries || 1,
+        batchSize: config.enrich?.batchSize ?? 10,
+        delayBetweenItems: config.enrich?.delayBetweenItems ?? 200,
+        delayBetweenBatches: config.enrich?.delayBetweenBatches ?? 1000,
+        maxRetries: config.enrich?.maxRetries ?? 1,
         currencyTarget: 'PLN',
-        exchangeRateUsdToPln: config.currencyRate || 4.0,
+        exchangeRateUsdToPln: config.currencyRate ?? 4.0,
       }
     );
     
@@ -212,10 +211,10 @@ export async function runProductImportPipeline(
         enriched,
         {
           name: 'translate',
-          batchSize: config.translate?.batchSize || 10,
-          delayBetweenItems: config.translate?.delayBetweenItems || 50,
-          delayBetweenBatches: config.translate?.delayBetweenBatches || 300,
-          maxRetries: config.translate?.maxRetries || 0,
+          batchSize: config.translate?.batchSize ?? 20,
+          delayBetweenItems: config.translate?.delayBetweenItems ?? 30,
+          delayBetweenBatches: config.translate?.delayBetweenBatches ?? 200,
+          maxRetries: config.translate?.maxRetries ?? 0,
         }
       );
       

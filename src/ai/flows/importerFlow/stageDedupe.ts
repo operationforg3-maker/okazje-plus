@@ -106,14 +106,14 @@ export function sanitizeProducts(products: AliExpressProduct[]): AliExpressProdu
     // Must have title and link
     if (!p.title || !p.link || p.link === '#') return false;
     
-    // Must have image
-    if (!p.image) return false;
+    // Relax: allow products without images (enrich can add placeholder)
+    // if (!p.image) return false;
     
-    // Must have reasonable price
-    if (p.price <= 0 || p.price > 10000) return false;
+    // Relax: allow wider price range (0.01 to 50000 PLN)
+    if (p.price <= 0.01 || p.price > 50000) return false;
     
-    // Filter obvious spam in title
-    const spam_keywords = ['free', 'gift', 'bonus', 'click here', 'download'];
+    // Relax: only filter obvious malicious spam
+    const spam_keywords = ['click here', 'download now', 'virus', 'hack'];
     const titleLower = p.title.toLowerCase();
     if (spam_keywords.some(keyword => titleLower.includes(keyword))) {
       return false;
