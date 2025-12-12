@@ -21,7 +21,7 @@ const DEFAULT_CONFIG: SaveConfig = {
   delayBetweenItems: 100,
   delayBetweenBatches: 500,
   maxRetries: 1,
-  skipExisting: true,
+  skipExisting: false,
 };
 
 export async function saveProductsToFirestore(

@@ -233,7 +233,7 @@ export async function runProductImportPipeline(
         delayBetweenItems: config.save?.delayBetweenItems || 100,
         delayBetweenBatches: config.save?.delayBetweenBatches || 500,
         maxRetries: 0,
-        skipExisting: config.save?.skipExisting !== false,
+        skipExisting: config.save?.skipExisting ?? false,
         jobId,
       }
     );

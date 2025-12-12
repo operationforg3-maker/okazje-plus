@@ -338,11 +338,9 @@ export async function processImportJob(
           fetch: { batchSize: 50, delayBetweenItems: 100, delayBetweenBatches: 500 }, // 50% faster
           dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
           enrich: { batchSize: 5, delayBetweenItems: 200, delayBetweenBatches: 1000 }, // 50% faster
-          translate: { batchSize: 10, delayBetweenItems: 30, delayBetweenBatches: 200 }, // 60% faster
-          save: { batchSize: 5, skipExisting: true },
-        });
-
-        const logEntry = {
+              translate: { batchSize: 10, delayBetweenItems: 30, delayBetweenBatches: 200 }, // 60% faster
+              save: { batchSize: 5, skipExisting: false },
+            });        const logEntry = {
           timestamp: new Date().toISOString(),
           batchIndex: i,
           subcategory: `${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`,
