@@ -398,10 +398,10 @@ export default function AdminDealsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {deal.price.toFixed(2)} zł
+                      {Number.isFinite(deal.price) ? deal.price.toFixed(2) : '—'} zł
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {deal.originalPrice?.toFixed(2) || 'N/A'} zł
+                      {Number.isFinite(deal.originalPrice) ? (deal.originalPrice as number).toFixed(2) : 'N/A'} zł
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {deal.temperature}°

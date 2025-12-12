@@ -605,7 +605,7 @@ function BulkImportPage() {
                         </div>
                       </div>
                       <div className="text-right space-y-1">
-                        <div className="text-lg font-bold">{product.price.toFixed(2)} PLN</div>
+                        <div className="text-lg font-bold">{Number.isFinite(product.price) ? product.price.toFixed(2) : '—'} PLN</div>
                         <Badge
                           variant={
                             product.aiQuality.recommendation === 'approve'

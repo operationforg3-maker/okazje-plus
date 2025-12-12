@@ -399,7 +399,7 @@ export default function AdminProductsPage() {
                       <Badge variant="outline">{product.category}</Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {product.price.toFixed(2)} zł
+                      {Number.isFinite(product.price) ? product.price.toFixed(2) : '—'} zł
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {product.ratingCard.count}

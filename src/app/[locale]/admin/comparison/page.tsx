@@ -97,13 +97,13 @@ function ComparisonPage() {
                       <div>
                         <span className="text-muted-foreground">Najniższa: </span>
                         <span className="font-bold text-green-600">
-                          {comparison.lowestPrice.toFixed(2)} PLN
+                          {Number.isFinite(comparison.lowestPrice) ? comparison.lowestPrice.toFixed(2) : '—'} PLN
                         </span>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Najwyższa: </span>
                         <span className="font-bold text-red-600">
-                          {comparison.highestPrice.toFixed(2)} PLN
+                          {Number.isFinite(comparison.highestPrice) ? comparison.highestPrice.toFixed(2) : '—'} PLN
                         </span>
                       </div>
                       <div>
@@ -145,11 +145,11 @@ function ComparisonPage() {
                           </TableCell>
                           <TableCell>
                             <div className="font-bold">
-                              {price.price.toFixed(2)} {price.currency}
+                              {Number.isFinite(price.price) ? price.price.toFixed(2) : '—'} {price.currency}
                             </div>
                             {price.originalPrice && (
                               <div className="text-xs text-muted-foreground line-through">
-                                {price.originalPrice.toFixed(2)} {price.currency}
+                                {Number.isFinite(price.originalPrice) ? (price.originalPrice as number).toFixed(2) : '—'} {price.currency}
                               </div>
                             )}
                           </TableCell>
