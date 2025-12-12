@@ -25,73 +25,68 @@ export async function fetchHotProductsByCategory(
     // Use direct AliExpress client to fetch hot products
     console.log(`[Importer:Fetch:HotProducts] Attempting direct AliExpress client...`);
     try {
-      const { getAliExpressClient } = await import('@/lib/integrations/aliexpress-client');
-      const client = getAliExpressClient();
+      const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
+      const client = createAliExpressClient();
       console.log(`[Importer:Fetch:HotProducts] ✅ AliExpress client loaded`);
       
-      const response = await client.getAffiliateHotProducts(
+      // getHotProducts returns already parsed array of products
+      const products = await client.getHotProducts(
         categoryIds && categoryIds.length ? categoryIds : undefined,
+        'PLN',
         config.maxItemsPerSubcategory || 50
       );
       
-      console.log(`[Importer:Fetch:HotProducts] Raw API response:`, JSON.stringify(response, null, 2));
+      console.log(`[Importer:Fetch:HotProducts] Direct: Got ${products.length} hot products from API`);
       
-      const products = response?.result?.products || response?.products || [];
+      // Debug: show first product structure
+      if (products.length > 0) {
+        console.log(`[Importer:Fetch:HotProducts] 📦 Sample product structure:`, JSON.stringify(products[0], null, 2));
+      }
       
-      console.log(`[Importer:Fetch:HotProducts] Direct: Got ${products.length} hot products`);
-      
-      // Normalize to our schema
+      // Normalize to our schema - products from getHotProducts are already parsed
       for (const p of products) {
-        const productId = String(p.product_id || p.id || p.item_id || p.itemId || '');
+        const productId = String(p.product_id || p.item_id || '');
         
         if (!productId || productId === 'undefined' || seenIds.has(productId)) {
-          console.log(`[Importer:Fetch:HotProducts] Skipping product - invalid ID or duplicate`);
+          console.log(`[Importer:Fetch:HotProducts] ⚠️ Skipping - invalid/duplicate ID:`, productId);
           continue;
         }
         
         seenIds.add(productId);
         
-        // Parse price with multiple fallbacks
-        const priceRaw = p.target_sale_price || p.sale_price || p.price || p.app_sale_price;
-        let price = 0;
-        if (typeof priceRaw === 'number') {
-          price = priceRaw;
-        } else if (typeof priceRaw === 'string') {
-          const parsed = parseFloat(String(priceRaw).replace(/[^0-9.]/g, ''));
-          price = isNaN(parsed) ? 0 : parsed;
-        }
+        // Parse price - affiliate API returns strings like "25.99"
+        const priceStr = p.target_sale_price || p.sale_price || '0';
+        const price = parseFloat(String(priceStr));
         
         // Parse original price
-        const originalPriceRaw = p.target_original_price || p.original_price || p.marketPrice || p.target_app_sale_price;
-        let originalPrice = price;
-        if (originalPriceRaw) {
-          if (typeof originalPriceRaw === 'number') {
-            originalPrice = originalPriceRaw;
-          } else if (typeof originalPriceRaw === 'string') {
-            const parsed = parseFloat(String(originalPriceRaw).replace(/[^0-9.]/g, ''));
-            originalPrice = isNaN(parsed) ? price : parsed;
-          }
+        const originalPriceStr = p.target_original_price || p.original_price || '0';
+        const originalPrice = parseFloat(String(originalPriceStr));
+        
+        // Validate price
+        if (!price || price <= 0 || isNaN(price)) {
+          console.log(`[Importer:Fetch:HotProducts] ⚠️ Skipping ${productId} - invalid price: "${priceStr}" => ${price}`);
+          console.log(`[Importer:Fetch:HotProducts]   Full product data:`, JSON.stringify(p, null, 2));
+          continue;
         }
         
-        // Skip products without valid price
-        if (!price || price <= 0 || isNaN(price)) {
-          console.log(`[Importer:Fetch:HotProducts] Skipping product ${productId} - invalid price:`, price);
+        // Extract other fields
+        const title = p.product_title || p.title || '';
+        const image = p.product_main_image_url || p.image_url || '';
+        const link = p.promotion_link || p.product_detail_url || '';
+        
+        // Validate essential fields
+        if (!title || !link || !image) {
+          console.log(`[Importer:Fetch:HotProducts] ⚠️ Skipping ${productId} - missing data:`, {
+            hasTitle: !!title,
+            hasLink: !!link, 
+            hasImage: !!image
+          });
           continue;
         }
         
         const discount = originalPrice > price 
           ? Math.round(((originalPrice - price) / originalPrice) * 100)
           : 0;
-        
-        const linkUrl = p.promotion_link || p.product_detail_url || p.productUrl || p.url;
-        const title = p.product_title || p.title || p.name || '';
-        const image = p.product_main_image_url || p.image_url || p.image || p.productImage || '';
-        
-        // Skip products without essential data
-        if (!title || !linkUrl || !image) {
-          console.log(`[Importer:Fetch:HotProducts] Skipping product ${productId} - missing essential data (title: ${!!title}, link: ${!!linkUrl}, image: ${!!image})`);
-          continue;
-        }
         
         const normalizedProduct = {
           id: productId,
@@ -100,17 +95,18 @@ export async function fetchHotProductsByCategory(
           price,
           originalPrice: originalPrice > price ? originalPrice : undefined,
           discount: discount > 0 ? discount : undefined,
-          rating: p.evaluate_rate ? parseFloat(String(p.evaluate_rate)) / 20 : (p.rating ? parseFloat(String(p.rating)) : 0),
-          orders: parseInt(String(p.lastest_volume || p.volume || p.orders || '0'), 10),
-          merchant: p.shop_title || p.merchant || p.storeName || p.shop || 'AliExpress',
-          link: linkUrl,
+          rating: p.evaluate_rate ? parseFloat(String(p.evaluate_rate)) : 0,
+          orders: parseInt(String(p.sale_count || p.volume || '0'), 10),
+          merchant: p.shop_title || 'AliExpress',
+          link,
           currency: p.target_sale_price_currency || 'PLN',
-          description: p.product_description || p.description || title,
-          images: (p.product_small_image_urls && Array.isArray(p.product_small_image_urls) ? p.product_small_image_urls : []) || (image ? [image] : []),
-          ...p
+          description: p.product_description || title,
+          images: Array.isArray(p.product_small_image_urls) ? p.product_small_image_urls : [image],
+          // Keep raw data for debugging
+          _raw: p
         };
         
-        console.log(`[Importer:Fetch:HotProducts] ✅ Normalized product: ${productId} | ${title.substring(0, 40)} | ${price} ${normalizedProduct.currency}`);
+        console.log(`[Importer:Fetch:HotProducts] ✅ OK: ${productId} | ${title.substring(0, 50)}... | ${price} ${normalizedProduct.currency}`);
         allProducts.push(normalizedProduct);
       }
       
