@@ -271,6 +271,26 @@ export class AliExpressClient {
     return this.call("aliexpress.solution.product.hot.query.get", filters);
   }
 
+  // Hot products for affiliates (Affiliate API) - returns products with affiliate links and pricing
+  async getAffiliateHotProducts(
+    categoryIds?: string[],
+    pageSize: number = 50
+  ): Promise<any> {
+    const params: Record<string, any> = {
+      page_size: pageSize,
+      target_currency: 'PLN',
+      target_language: 'PL',
+      sort: 'SALE_PRICE_ASC'
+    };
+    
+    if (categoryIds && categoryIds.length > 0) {
+      params.category_ids = categoryIds.join(',');
+    }
+    
+    // endpoint: aliexpress.affiliate.hotproduct.query
+    return this.call("aliexpress.affiliate.hotproduct.query", params);
+  }
+
   // Smart match (Advanced API)
   async smartMatch(keywords: string): Promise<any> {
     // endpoint: aliexpress.solution.product.smart.match (docId w portalu)

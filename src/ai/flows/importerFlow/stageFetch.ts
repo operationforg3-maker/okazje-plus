@@ -29,49 +29,74 @@ export async function fetchHotProductsByCategory(
       const client = getAliExpressClient();
       console.log(`[Importer:Fetch:HotProducts] ✅ AliExpress client loaded`);
       
-      const hotProducts = await client.getHotProducts(categoryIds && categoryIds.length ? categoryIds : undefined);
-      const products = Array.isArray(hotProducts) ? hotProducts : [];
+      const response = await client.getAffiliateHotProducts(
+        categoryIds && categoryIds.length ? categoryIds : undefined,
+        config.maxItemsPerSubcategory || 50
+      );
+      
+      console.log(`[Importer:Fetch:HotProducts] Raw API response:`, JSON.stringify(response, null, 2));
+      
+      const products = response?.result?.products || response?.products || [];
       
       console.log(`[Importer:Fetch:HotProducts] Direct: Got ${products.length} hot products`);
       
       // Normalize to our schema
       for (const p of products) {
-        const productId = String(p.product_id || p.id || p.item_id || p.itemId);
+        const productId = String(p.product_id || p.id || p.item_id || p.itemId || '');
         
-        if (!productId || seenIds.has(productId)) {
+        if (!productId || productId === 'undefined' || seenIds.has(productId)) {
+          console.log(`[Importer:Fetch:HotProducts] Skipping product - invalid ID or duplicate`);
           continue;
         }
         
         seenIds.add(productId);
         
-        const priceRaw = p.target_sale_price || p.sale_price || p.price || 0;
+        // Parse price with multiple fallbacks
+        const priceRaw = p.target_sale_price || p.sale_price || p.price || p.app_sale_price;
         let price = 0;
         if (typeof priceRaw === 'number') {
           price = priceRaw;
         } else if (typeof priceRaw === 'string') {
-          price = parseFloat(String(priceRaw).replace(/[^0-9.]/g, ''));
+          const parsed = parseFloat(String(priceRaw).replace(/[^0-9.]/g, ''));
+          price = isNaN(parsed) ? 0 : parsed;
         }
         
-        const originalPriceRaw = p.target_original_price || p.original_price || p.marketPrice;
+        // Parse original price
+        const originalPriceRaw = p.target_original_price || p.original_price || p.marketPrice || p.target_app_sale_price;
         let originalPrice = price;
         if (originalPriceRaw) {
           if (typeof originalPriceRaw === 'number') {
             originalPrice = originalPriceRaw;
           } else if (typeof originalPriceRaw === 'string') {
-            originalPrice = parseFloat(String(originalPriceRaw).replace(/[^0-9.]/g, ''));
+            const parsed = parseFloat(String(originalPriceRaw).replace(/[^0-9.]/g, ''));
+            originalPrice = isNaN(parsed) ? price : parsed;
           }
         }
         
-        const discount = originalPrice > 0 
+        // Skip products without valid price
+        if (!price || price <= 0 || isNaN(price)) {
+          console.log(`[Importer:Fetch:HotProducts] Skipping product ${productId} - invalid price:`, price);
+          continue;
+        }
+        
+        const discount = originalPrice > price 
           ? Math.round(((originalPrice - price) / originalPrice) * 100)
           : 0;
         
-        const linkUrl = p.promotion_link || p.product_detail_url || p.productUrl || p.url || '#';
+        const linkUrl = p.promotion_link || p.product_detail_url || p.productUrl || p.url;
+        const title = p.product_title || p.title || p.name || '';
+        const image = p.product_main_image_url || p.image_url || p.image || p.productImage || '';
         
-        allProducts.push({
+        // Skip products without essential data
+        if (!title || !linkUrl || !image) {
+          console.log(`[Importer:Fetch:HotProducts] Skipping product ${productId} - missing essential data (title: ${!!title}, link: ${!!linkUrl}, image: ${!!image})`);
+          continue;
+        }
+        
+        const normalizedProduct = {
           id: productId,
-          title: p.product_title || p.title || p.name || 'Untitled',
-          image: p.product_main_image_url || p.image_url || p.image || p.productImage || '',
+          title,
+          image,
           price,
           originalPrice: originalPrice > price ? originalPrice : undefined,
           discount: discount > 0 ? discount : undefined,
@@ -80,14 +105,18 @@ export async function fetchHotProductsByCategory(
           merchant: p.shop_title || p.merchant || p.storeName || p.shop || 'AliExpress',
           link: linkUrl,
           currency: p.target_sale_price_currency || 'PLN',
-          description: p.product_description || p.description || '',
-          images: (p.product_small_image_urls && Array.isArray(p.product_small_image_urls) ? p.product_small_image_urls : []) || (p.image ? [p.image] : []),
+          description: p.product_description || p.description || title,
+          images: (p.product_small_image_urls && Array.isArray(p.product_small_image_urls) ? p.product_small_image_urls : []) || (image ? [image] : []),
           ...p
-        });
+        };
+        
+        console.log(`[Importer:Fetch:HotProducts] ✅ Normalized product: ${productId} | ${title.substring(0, 40)} | ${price} ${normalizedProduct.currency}`);
+        allProducts.push(normalizedProduct);
       }
       
       if (allProducts.length > 0) {
-        console.log(`[Importer:Fetch:HotProducts] ✅ Direct call SUCCESS: ${allProducts.length} products`);
+        console.log(`[Importer:Fetch:HotProducts] ✅ Direct call SUCCESS: ${allProducts.length} products with complete data`);
+        console.log(`[Importer:Fetch:HotProducts] Sample product:`, JSON.stringify(allProducts[0], null, 2));
         console.log(`[Importer:Fetch:HotProducts] ===== STAGE 1 END =====\n`);
         return allProducts;
       }
