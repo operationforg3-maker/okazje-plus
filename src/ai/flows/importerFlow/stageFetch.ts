@@ -16,97 +16,89 @@ export async function fetchHotProductsByCategory(
   siteUrl: string = resolveSiteUrl()
 ): Promise<AliExpressProduct[]> {
   console.log(`[Importer:Fetch:HotProducts] ===== STAGE 1 START (HOT PRODUCTS) =====`);
-  console.log(`[Importer:Fetch:HotProducts] Site URL: ${siteUrl}`);
   console.log(`[Importer:Fetch:HotProducts] Category IDs: ${categoryIds.join(', ')}`);
   
   const allProducts: AliExpressProduct[] = [];
   const seenIds = new Set<string>();
   
   try {
-    // Build query params as the endpoint expects searchParams (not JSON body)
-    const params = new URLSearchParams();
-    if (categoryIds && categoryIds.length) params.set('categoryIds', categoryIds.join(','));
-    params.set('limit', String(config.batchSize || 20));
-    params.set('currency', 'PLN');
-
-    // Provide Authorization for admin-only endpoint (dev verifier checks for Bearer token length)
-    const bearerToken = process.env.ADMIN_INTERNAL_TOKEN || process.env.ADMIN_API_TOKEN || 'internal-admin-token-00000000000000000000';
-
-    // Call our backend endpoint that uses AliExpressClient.getHotProducts()
-    const response = await fetch(`${siteUrl}/api/admin/import/bestsellers?${params.toString()}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${bearerToken}`,
-      },
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[Importer:Fetch:HotProducts] API error ${response.status}: ${errorText.slice(0, 200)}`);
+    // Use direct AliExpress client to fetch hot products
+    console.log(`[Importer:Fetch:HotProducts] Attempting direct AliExpress client...`);
+    try {
+      const { getAliExpressClient } = await import('@/lib/integrations/aliexpress-client');
+      const client = getAliExpressClient();
+      console.log(`[Importer:Fetch:HotProducts] ✅ AliExpress client loaded`);
       
-      if (response.status === 503) {
-        console.error(`[Importer:Fetch:HotProducts] ❌ CRITICAL: AliExpress API not configured!`);
-        throw new Error(`AliExpress API not configured (status 503)`);
-      }
+      const hotProducts = await client.getHotProducts(categoryIds && categoryIds.length ? categoryIds : undefined);
+      const products = Array.isArray(hotProducts) ? hotProducts : [];
       
-      throw new Error(`Hot products API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const products = data.products || [];
-    
-    console.log(`[Importer:Fetch:HotProducts] Got ${products.length} hot products`);
-    
-    // Normalize to our schema
-    for (const p of products) {
-      const productId = String(p.id || p.itemId || p.item_id || p.productId);
+      console.log(`[Importer:Fetch:HotProducts] Direct: Got ${products.length} hot products`);
       
-      if (!productId || seenIds.has(productId)) {
-        continue;
-      }
-      
-      seenIds.add(productId);
-      
-      const priceRaw = p.price || p.salePrice || p.sale_price || 0;
-      let price = 0;
-      if (typeof priceRaw === 'number') {
-        price = priceRaw;
-      } else if (typeof priceRaw === 'string') {
-        price = parseFloat(priceRaw.replace(/[^0-9.]/g, ''));
-      }
-      
-      const originalPriceRaw = p.originalPrice || p.original_price || p.marketPrice;
-      let originalPrice = price;
-      if (originalPriceRaw) {
-        if (typeof originalPriceRaw === 'number') {
-          originalPrice = originalPriceRaw;
-        } else if (typeof originalPriceRaw === 'string') {
-          originalPrice = parseFloat(originalPriceRaw.replace(/[^0-9.]/g, ''));
+      // Normalize to our schema
+      for (const p of products) {
+        const productId = String(p.product_id || p.id || p.item_id || p.itemId);
+        
+        if (!productId || seenIds.has(productId)) {
+          continue;
         }
+        
+        seenIds.add(productId);
+        
+        const priceRaw = p.target_sale_price || p.sale_price || p.price || 0;
+        let price = 0;
+        if (typeof priceRaw === 'number') {
+          price = priceRaw;
+        } else if (typeof priceRaw === 'string') {
+          price = parseFloat(String(priceRaw).replace(/[^0-9.]/g, ''));
+        }
+        
+        const originalPriceRaw = p.target_original_price || p.original_price || p.marketPrice;
+        let originalPrice = price;
+        if (originalPriceRaw) {
+          if (typeof originalPriceRaw === 'number') {
+            originalPrice = originalPriceRaw;
+          } else if (typeof originalPriceRaw === 'string') {
+            originalPrice = parseFloat(String(originalPriceRaw).replace(/[^0-9.]/g, ''));
+          }
+        }
+        
+        const discount = originalPrice > 0 
+          ? Math.round(((originalPrice - price) / originalPrice) * 100)
+          : 0;
+        
+        const linkUrl = p.promotion_link || p.product_detail_url || p.productUrl || p.url || '#';
+        
+        allProducts.push({
+          id: productId,
+          title: p.product_title || p.title || p.name || 'Untitled',
+          image: p.product_main_image_url || p.image_url || p.image || p.productImage || '',
+          price,
+          originalPrice: originalPrice > price ? originalPrice : undefined,
+          discount: discount > 0 ? discount : undefined,
+          rating: p.evaluate_rate ? parseFloat(String(p.evaluate_rate)) / 20 : (p.rating ? parseFloat(String(p.rating)) : 0),
+          orders: parseInt(String(p.lastest_volume || p.volume || p.orders || '0'), 10),
+          merchant: p.shop_title || p.merchant || p.storeName || p.shop || 'AliExpress',
+          link: linkUrl,
+          currency: p.target_sale_price_currency || 'PLN',
+          description: p.product_description || p.description || '',
+          images: (p.product_small_image_urls && Array.isArray(p.product_small_image_urls) ? p.product_small_image_urls : []) || (p.image ? [p.image] : []),
+          ...p
+        });
       }
       
-      const discount = originalPrice > 0 
-        ? Math.round(((originalPrice - price) / originalPrice) * 100)
-        : 0;
-      
-      allProducts.push({
-        id: productId,
-        title: p.title || p.name || 'Untitled',
-        image: p.image || p.productImage || p.product_main_image_url || '',
-        price,
-        originalPrice: originalPrice > price ? originalPrice : undefined,
-        discount: discount > 0 ? discount : undefined,
-        rating: parseFloat(p.rating || p.shopRating || '0'),
-        orders: parseInt(p.orders || p.volume || '0', 10),
-        merchant: p.merchant || p.storeName || p.shop || 'AliExpress',
-        link: p.link || p.productUrl || p.url || '#',
-        currency: p.currency || 'PLN',
-        description: p.description || '',
-        images: p.images || (p.image ? [p.image] : []),
-        ...p
-      });
+      if (allProducts.length > 0) {
+        console.log(`[Importer:Fetch:HotProducts] ✅ Direct call SUCCESS: ${allProducts.length} products`);
+        console.log(`[Importer:Fetch:HotProducts] ===== STAGE 1 END =====\n`);
+        return allProducts;
+      }
+    } catch (error: any) {
+      console.warn(`[Importer:Fetch:HotProducts] Direct client failed:`, error.message);
     }
+    
+    console.error(`[Importer:Fetch:HotProducts] ❌ CRITICAL: No products fetched! Check:`);
+    console.error(`[Importer:Fetch:HotProducts]   - AliExpress API credentials configured?`);
+    console.error(`[Importer:Fetch:HotProducts]   - Category IDs valid?`);
+    console.error(`[Importer:Fetch:HotProducts]   - API rate limit hit?`);
   } catch (error: any) {
     console.error(`[Importer:Fetch:HotProducts] Error:`, error.message);
   }
