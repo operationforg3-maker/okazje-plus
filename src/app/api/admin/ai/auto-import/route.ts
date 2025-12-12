@@ -296,7 +296,7 @@ async function fetchFromAliExpressAdvanced(
   enableAdvanced: boolean, 
   log: string[]
 ): Promise<{ products: number; variants: number }> {
-  const { getAliExpressClient } = await import('@/integrations/aliexpress/client');
+  const { getAliExpressClient } = await import('@/lib/integrations/aliexpress-client');
   let totalProducts = 0;
   let totalVariants = 0;
   
