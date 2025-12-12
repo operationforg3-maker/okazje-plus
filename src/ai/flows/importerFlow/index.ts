@@ -21,14 +21,14 @@ import { enrichProducts } from './stageEnrich';
 import { translateProducts } from './stageTranslate';
 import { saveProductsToFirestore, SaveConfig } from './stageSave';
 import { EnrichedProduct, ImportJobConfig, AliExpressProduct } from './types';
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 
 // Helper to log to Firestore job document
 async function logToJob(jobId: string | undefined, message: string, details?: any) {
   if (!jobId) return;
   try {
-    const db = getFirestore();
-    await db.collection('import_jobs').doc(jobId).update({
+    await adminDb.collection('import_jobs').doc(jobId).update({
       logs: FieldValue.arrayUnion({
         timestamp: new Date().toISOString(),
         message,
