@@ -42,6 +42,7 @@
   },
   "dryRunSuffix": " (Test)",
   "statusMap": {
+    "queued": "In der Warteschlange",
     "pending": "Ausstehend",
     "running": "Läuft",
     "completed": "Abgeschlossen",

@@ -42,6 +42,7 @@
   },
   "dryRunSuffix": " (test)",
   "statusMap": {
+    "queued": "Queued",
     "pending": "Pending",
     "running": "Running",
     "completed": "Completed",

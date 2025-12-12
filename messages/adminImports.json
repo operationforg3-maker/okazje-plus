@@ -42,6 +42,7 @@
   },
   "dryRunSuffix": " (próba)",
   "statusMap": {
+    "queued": "W kolejce",
     "pending": "Oczekujący",
     "running": "W trakcie",
     "completed": "Ukończony",
