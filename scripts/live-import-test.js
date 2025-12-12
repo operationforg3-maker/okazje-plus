@@ -31,7 +31,7 @@ async function runLiveImportTest() {
     // Create minimal job for testing
     await jobRef.set({
       id: jobId,
-      type: 'test',
+      type: 'products',  // Must be 'products' for pipeline to run!
       importerType: 'keyword-search',
       status: 'queued',
       sources: ['keyword-search'],
@@ -47,7 +47,8 @@ async function runLiveImportTest() {
           subcategorySlug: 'smartfony-telefony',
           subsubcategoryId: 'smartfony',
           subsubcategoryName: 'Smartfony',
-          subsubcategorySlug: 'smartfony'
+          subsubcategorySlug: 'smartfony',
+          importKeywords: ['smartfon', 'telefon', 'smartphone']  // Add keywords for pipeline
         }
       ],
       createdAt: new Date(),
