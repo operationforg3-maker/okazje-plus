@@ -147,14 +147,14 @@ export async function runProductImportPipeline(
       deduplicated,
       {
         name: 'dedupe',
-        batchSize: config.dedupe?.batchSize || 50,
+        batchSize: config.dedupe?.batchSize ?? 50,
         delayBetweenItems: 0,
         delayBetweenBatches: 0,
         maxRetries: 0,
-        minPrice: config.dedupe?.minPrice || 5,
-        maxPrice: config.dedupe?.maxPrice || 10000,
-        minRating: config.dedupe?.minRating || 2.5,
-        minOrders: config.dedupe?.minOrders || 10,
+        minPrice: config.dedupe?.minPrice ?? 5,
+        maxPrice: config.dedupe?.maxPrice ?? 10000,
+        minRating: config.dedupe?.minRating ?? 2.5,
+        minOrders: config.dedupe?.minOrders ?? 10,
       }
     );
     
