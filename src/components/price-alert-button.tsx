@@ -229,12 +229,12 @@ export function PriceAlertButton({
                 id="targetPrice"
                 type="number"
                 step="0.01"
-                placeholder={`Mniej niż ${currentPrice.toFixed(2)}`}
+                placeholder={`Mniej niż ${Number.isFinite(currentPrice) ? currentPrice.toFixed(2) : '—'}`}
                 value={targetPrice}
                 onChange={(e) => setTargetPrice(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Aktualna cena: {currentPrice.toFixed(2)} PLN
+                Aktualna cena: {Number.isFinite(currentPrice) ? currentPrice.toFixed(2) : '—'} PLN
               </p>
             </div>
           ) : (

@@ -75,8 +75,10 @@ export function PriceHistoryChart({ itemId, itemType }: PriceHistoryChartProps) 
     );
   }
 
-  const priceChange = history.currentPrice - history.lowestPrice;
-  const priceChangePercent = ((priceChange / history.lowestPrice) * 100).toFixed(1);
+  const priceChange = (Number(history.currentPrice) || 0) - (Number(history.lowestPrice) || 0);
+  const priceChangePercent = Number.isFinite(priceChange) && Number(history.lowestPrice) > 0
+    ? ((priceChange / Number(history.lowestPrice)) * 100).toFixed(1)
+    : '0.0';
   const isIncreasing = priceChange > 0;
 
   return (
@@ -87,15 +89,15 @@ export function PriceHistoryChart({ itemId, itemType }: PriceHistoryChartProps) 
           <div className="flex items-center gap-4 mt-2">
             <div>
               <span className="text-sm text-muted-foreground">Aktualna cena: </span>
-              <span className="font-bold text-lg">{history.currentPrice.toFixed(2)} PLN</span>
+              <span className="font-bold text-lg">{Number.isFinite(history.currentPrice) ? Number(history.currentPrice).toFixed(2) : '—'} PLN</span>
             </div>
             <div>
               <span className="text-sm text-muted-foreground">Najniższa: </span>
-              <span className="font-semibold">{history.lowestPrice.toFixed(2)} PLN</span>
+              <span className="font-semibold">{Number.isFinite(history.lowestPrice) ? Number(history.lowestPrice).toFixed(2) : '—'} PLN</span>
             </div>
             <div>
               <span className="text-sm text-muted-foreground">Najwyższa: </span>
-              <span className="font-semibold">{history.highestPrice.toFixed(2)} PLN</span>
+              <span className="font-semibold">{Number.isFinite(history.highestPrice) ? Number(history.highestPrice).toFixed(2) : '—'} PLN</span>
             </div>
             <div className="flex items-center gap-1">
               {isIncreasing ? (
@@ -122,7 +124,7 @@ export function PriceHistoryChart({ itemId, itemType }: PriceHistoryChartProps) 
             <XAxis dataKey="date" />
             <YAxis />
             <Tooltip
-              formatter={(value: number) => `${value.toFixed(2)} PLN`}
+              formatter={(value: number) => `${Number.isFinite(value) ? value.toFixed(2) : '—'} PLN`}
               labelStyle={{ color: '#000' }}
             />
             <Line

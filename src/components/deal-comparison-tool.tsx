@@ -220,7 +220,7 @@ export function DealComparisonTool() {
                         <TableCell key={item.id}>
                           <div className="flex items-center gap-2">
                             <span className={`text-lg font-bold ${isLowest ? 'text-green-600' : ''}`}>
-                              {price.toFixed(2)} zł
+                              {Number.isFinite(price) ? price.toFixed(2) : '—'} zł
                             </span>
                             {isLowest && <Check className="h-5 w-5 text-green-600" />}
                           </div>
@@ -274,15 +274,15 @@ export function DealComparisonTool() {
                       {items.map((item) => {
                         if (item.type === 'product') {
                           const product = item as Product;
-                          const rating = product.ratingCard?.average || 0;
+                          const rating = product.ratingCard?.average ?? undefined;
                           const count = product.ratingCard?.count || 0;
                           return (
                             <TableCell key={item.id}>
-                              {rating > 0 ? (
+                              {Number.isFinite(rating) && (rating as number) > 0 ? (
                                 <div className="flex items-center gap-2">
                                   <div className="flex items-center gap-1">
                                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                    <span className="font-semibold">{rating.toFixed(1)}</span>
+                                    <span className="font-semibold">{Number(rating).toFixed(1)}</span>
                                   </div>
                                   <span className="text-sm text-muted-foreground">({count})</span>
                                 </div>
