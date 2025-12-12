@@ -142,7 +142,9 @@ export async function runProductImportPipeline(
     console.log(`[ProductImporter] Stage 2: DEDUPLICATE & SANITIZE`);
     await logToJob(jobId, `Stage 2: Deduplicating...`);
     
-    let deduplicated = sanitizeProducts(fetched);
+    // TEMP: bypass sanitize to validate end-to-end saving on production
+    // let deduplicated = sanitizeProducts(fetched);
+    let deduplicated = fetched;
     deduplicated = await deduplicateProducts(
       deduplicated,
       {
