@@ -142,6 +142,7 @@ export async function saveProductsToFirestore(
           originalPrice: product.originalPrice,
           discountPercent: product.discount,
           currency: 'PLN',
+          importJobId: finalConfig.jobId,
           metadata: {
             source: 'aliexpress' as const,
             originalId: product.originalId,
