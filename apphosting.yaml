@@ -1,6 +1,6 @@
 # Settings for Backend (on Cloud Run).
 # See https://firebase.google.com/docs/app-hosting/configure#cloud-run
-# Updated: 2025-12-11 22:27 - Force rebuild with dedupe fix
+# Updated: 2025-12-12 15:35 - Force rebuild with skipExisting=false fix
 runConfig:
   minInstances: 0
 
