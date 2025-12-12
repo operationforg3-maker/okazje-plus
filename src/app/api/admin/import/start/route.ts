@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     if (!['products', 'deals'].includes(type)) {
       return NextResponse.json({ error: 'Invalid type. Use "products" or "deals"' }, { status: 400 });
     }
-    
+
     if (!['keyword-search', 'hot-products', 'convertiser', 'category-direct'].includes(importerType)) {
       return NextResponse.json({ error: 'Invalid importerType' }, { status: 400 });
     }
