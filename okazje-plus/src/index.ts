@@ -11,6 +11,7 @@ import {
   HttpsError,
   CallableRequest,
 } from "firebase-functions/v2/https";
+import { onRequest } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import {
   onDocumentWritten,
@@ -764,6 +765,56 @@ export const scheduleAliExpressSync = onSchedule(
         error instanceof Error ? error.message : error
       );
       throw error; // Re-throw to mark function as failed
+    }
+  }
+);
+
+// ============================================
+// Import Jobs Trigger (bridge to Next.js cron)
+// ============================================
+
+/**
+ * HTTP trigger to start processing import jobs via Next.js route.
+ * It forwards a POST to `/api/cron/process-jobs` on the public site.
+ * Requires env `SITE_URL` and optional `IMPORT_ADMIN_TOKEN` for auth.
+ */
+export const processImportJobsTrigger = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 120,
+    memory: "256MiB",
+    secrets: ["CRON_SECRET"],
+  },
+  async (req, res) => {
+    const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
+    const adminToken = process.env.IMPORT_ADMIN_TOKEN || process.env.ADMIN_BEARER || "";
+    const incomingSecret =
+      (req.query?.secret as string | undefined) ||
+      (req.headers["x-cron-secret"] as string | undefined) ||
+      "";
+    const cronSecret = process.env.CRON_SECRET || incomingSecret;
+
+    try {
+      const url = cronSecret
+        ? `${siteUrl}/api/cron/process-jobs?secret=${encodeURIComponent(cronSecret)}`
+        : `${siteUrl}/api/cron/process-jobs`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+          ...(cronSecret ? { "x-cron-secret": cronSecret } : {}),
+        },
+      });
+
+      const text = await response.text();
+      const ok = response.ok;
+      logger.info("Forwarded process-jobs POST", { status: response.status, ok });
+      res.status(ok ? 200 : response.status).send(text);
+    } catch (error) {
+      logger.error("processImportJobsTrigger failed", error as any);
+      res.status(500).json({ ok: false, error: (error as Error).message });
     }
   }
 );

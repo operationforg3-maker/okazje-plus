@@ -21,6 +21,25 @@ import { enrichProducts } from './stageEnrich';
 import { translateProducts } from './stageTranslate';
 import { saveProductsToFirestore, SaveConfig } from './stageSave';
 import { EnrichedProduct, ImportJobConfig, AliExpressProduct } from './types';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+
+// Helper to log to Firestore job document
+async function logToJob(jobId: string | undefined, message: string, details?: any) {
+  if (!jobId) return;
+  try {
+    const db = getFirestore();
+    await db.collection('import_jobs').doc(jobId).update({
+      logs: FieldValue.arrayUnion({
+        timestamp: new Date().toISOString(),
+        message,
+        details,
+      }),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('[ProductImporter] Failed to log to job:', err);
+  }
+}
 
 export interface PipelineConfig extends Partial<ImportJobConfig> {
   jobId?: string;
@@ -58,11 +77,15 @@ export async function runProductImportPipeline(
   console.log(`[ProductImporter] Starting pipeline for ${config.subcategorySlugEN}`);
   console.log(`${'='.repeat(60)}\n`);
   
+  await logToJob(jobId, `Starting pipeline for ${config.subcategorySlugEN}`);
+  
   try {
     // STAGE 1: FETCH
     const sourceLabel = config.importerType === 'convertiser' ? 'Convertiser' : 'AliExpress';
     console.log(`[ProductImporter] Stage 1: FETCH from ${sourceLabel}`);
     console.log(`[ProductImporter] Importer Type: ${config.importerType || 'keyword-search'}`);
+    
+    await logToJob(jobId, `Stage 1: Fetching from ${sourceLabel}`, { importerType: config.importerType });
     
     let fetched: AliExpressProduct[] = [];
     
@@ -95,6 +118,8 @@ export async function runProductImportPipeline(
     }
     
     console.log(`[ProductImporter] ✅ Fetched: ${fetched.length} products`);
+    await logToJob(jobId, `Stage 1: Fetched ${fetched.length} products`, { source: sourceLabel });
+    
     if (fetched.length === 0) {
       console.error(`[ProductImporter] ❌ PROBLEM: No products fetched!`);
       console.error(`[ProductImporter] Possible reasons:`);
@@ -102,6 +127,7 @@ export async function runProductImportPipeline(
       console.error(`  2. Keywords don't match products: ${config.keywords.join(', ')}`);
       console.error(`  3. API rate limiting or network issue`);
       console.error(`[ProductImporter] Aborting pipeline for ${config.categorySlugEN}/${config.subcategorySlugEN}`);
+      await logToJob(jobId, `Aborting: No products fetched from ${sourceLabel}`);
       return {
         fetched: [],
         deduplicated: [],
@@ -114,6 +140,8 @@ export async function runProductImportPipeline(
     
     // STAGE 2: DEDUPE
     console.log(`[ProductImporter] Stage 2: DEDUPLICATE & SANITIZE`);
+    await logToJob(jobId, `Stage 2: Deduplicating...`);
+    
     let deduplicated = sanitizeProducts(fetched);
     deduplicated = await deduplicateProducts(
       deduplicated,
@@ -131,6 +159,7 @@ export async function runProductImportPipeline(
     );
     
     console.log(`[ProductImporter] Deduplicated: ${deduplicated.length} products\n`);
+    await logToJob(jobId, `Stage 2: Deduplicated to ${deduplicated.length} products`);
     
     if (deduplicated.length === 0) {
       console.warn(`[ProductImporter] No products after deduplication, aborting`);
@@ -170,11 +199,13 @@ export async function runProductImportPipeline(
     );
     
     console.log(`[ProductImporter] Enriched: ${enriched.length} products\n`);
+    await logToJob(jobId, `Stage 3: Enriched ${enriched.length} products`);
     
     // STAGE 4: TRANSLATE (optional)
     let translated = enriched;
     if (config.translateToPolish !== false) {
       console.log(`[ProductImporter] Stage 4: TRANSLATE to Polish`);
+      await logToJob(jobId, `Stage 4: Translating to Polish...`);
       translated = await translateProducts(
         enriched,
         {
@@ -187,10 +218,12 @@ export async function runProductImportPipeline(
       );
       
       console.log(`[ProductImporter] Translated: ${translated.length} products\n`);
+      await logToJob(jobId, `Stage 4: Translated ${translated.length} products`);
     }
     
     // STAGE 5: SAVE
     console.log(`[ProductImporter] Stage 5: SAVE to Firestore`);
+    await logToJob(jobId, `Stage 5: Saving to Firestore...`);
     const saved = await saveProductsToFirestore(
       translated,
       {
