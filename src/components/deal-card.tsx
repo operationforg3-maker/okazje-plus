@@ -582,7 +582,7 @@ export default function DealCard({ deal }: DealCardProps) {
                 <TooltipTrigger asChild>
                   <span className="flex items-center gap-1 cursor-help">
                     <Star className="h-3 w-3 md:h-4 md:w-4 fill-yellow-400 text-yellow-400" />
-                    Sprzedawca: {deal.metadata.merchantRating.toFixed(1)}
+                    Sprzedawca: {Number.isFinite(deal.metadata.merchantRating) ? deal.metadata.merchantRating.toFixed(1) : '—'}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -638,7 +638,7 @@ export default function DealCard({ deal }: DealCardProps) {
                 <TooltipTrigger asChild>
                   <span className="flex items-center gap-1 cursor-help">
                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    Sprzedawca: {deal.importMetadata.sellerRating.toFixed(1)}
+                    Sprzedawca: {Number.isFinite(deal.importMetadata.sellerRating) ? deal.importMetadata.sellerRating.toFixed(1) : '—'}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>

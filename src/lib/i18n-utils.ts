@@ -259,6 +259,9 @@ export function formatPrice(price: SmartPrice | number, currency: string = 'PLN'
   const amount = getPriceAmount(price);
   const currencyCode = typeof price === 'number' ? currency : price.currency;
   
+  if (typeof amount !== 'number' || isNaN(amount)) {
+    return `— ${currencyCode}`;
+  }
   return `${amount.toFixed(2).replace('.', ',')} ${currencyCode}`;
 }
 

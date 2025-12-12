@@ -158,20 +158,20 @@ export function SmartCartWidget() {
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Suma produktów:</span>
-            <span className="font-medium">{totalAmount.toFixed(2)} PLN</span>
+            <span className="font-medium">{Number.isFinite(totalAmount) ? totalAmount.toFixed(2) : '—'} PLN</span>
           </div>
           
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Wysyłka:</span>
             <span className="font-medium">
-              {(totalWithShipping - totalAmount).toFixed(2)} PLN
+              {Number.isFinite(totalWithShipping - totalAmount) ? (totalWithShipping - totalAmount).toFixed(2) : '—'} PLN
             </span>
           </div>
           
           <div className="border-t pt-3 flex justify-between">
             <span className="font-semibold text-lg">Razem do zapłaty:</span>
             <span className="font-bold text-xl text-primary">
-              {totalWithShipping.toFixed(2)} PLN
+              {Number.isFinite(totalWithShipping) ? totalWithShipping.toFixed(2) : '—'} PLN
             </span>
           </div>
         </div>

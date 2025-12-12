@@ -44,8 +44,8 @@ export function ProductPreviewDialog({
   const [selectedImage, setSelectedImage] = useState(0);
   const images = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
   
-  const priceInPLN = (product.price * 4).toFixed(2); // Approx conversion
-  const originalPriceInPLN = product.originalPrice ? (product.originalPrice * 4).toFixed(2) : null;
+  const priceInPLN = Number.isFinite(product.price) ? (product.price * 4).toFixed(2) : '—'; // Approx conversion
+  const originalPriceInPLN = Number.isFinite(product.originalPrice) ? (product.originalPrice * 4).toFixed(2) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,7 +143,7 @@ export function ProductPreviewDialog({
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   <div>
-                    <div className="font-semibold">{product.rating.toFixed(1)}</div>
+                    <div className="font-semibold">{Number.isFinite(product.rating) ? product.rating.toFixed(1) : '—'}</div>
                     <div className="text-xs text-muted-foreground">Ocena</div>
                   </div>
                 </div>

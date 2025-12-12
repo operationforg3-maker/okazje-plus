@@ -299,7 +299,7 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {productRating.toFixed(1)}
+                  {Number.isFinite(productRating) ? productRating.toFixed(1) : '—'}
                 </span>
               </div>
               
@@ -564,7 +564,7 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
                   isVerifiedMerchant ? "text-green-500" : "text-gray-400"
                 )} />
                 <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Sprzedawca: {merchantRating.toFixed(0)}%
+                  Sprzedawca: {Number.isFinite(merchantRating) ? merchantRating.toFixed(0) : '—'}%
                 </span>
               </div>
               {isBestseller && (

@@ -77,7 +77,7 @@ export function PriceAlertDialog({ itemId, itemType, itemTitle, currentPrice }: 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Aktualna cena</Label>
-              <div className="text-2xl font-bold">{currentPrice.toFixed(2)} zł</div>
+              <div className="text-2xl font-bold">{Number.isFinite(currentPrice) ? currentPrice.toFixed(2) : '—'} zł</div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="targetPrice">Cena docelowa</Label>
@@ -95,7 +95,7 @@ export function PriceAlertDialog({ itemId, itemType, itemTitle, currentPrice }: 
             <div className="rounded-lg bg-primary/10 p-3 text-sm">
               <p className="font-medium">To będzie {discount}% zniżki! 🎉</p>
               <p className="text-muted-foreground mt-1">
-                Oszczędzisz {(currentPrice - parseFloat(targetPrice || '0')).toFixed(2)} zł
+                {Number.isFinite(currentPrice - parseFloat(targetPrice || '0')) ? `Oszczędzisz ${(currentPrice - parseFloat(targetPrice || '0')).toFixed(2)} zł` : ''}
               </p>
             </div>
           )}
