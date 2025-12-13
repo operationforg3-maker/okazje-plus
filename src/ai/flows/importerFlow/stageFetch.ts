@@ -156,6 +156,8 @@ function validateProduct(product: any, source: string = 'unknown'): { valid: boo
 
 /**
  * Fetch products from AliExpress API
+ */
+export async function fetchProductsFromAliexpress(
   keywords: string[], // English keywords: ['Electronics', 'Smartphones', etc]
   config: ImportStageConfig,
   siteUrl: string = resolveSiteUrl()
