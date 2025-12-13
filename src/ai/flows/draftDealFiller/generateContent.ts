@@ -46,8 +46,13 @@ export async function generateDealContent(
   const warnings: string[] = [];
 
   try {
-    // Import ai inside function to avoid circular imports
-    const { ai } = await import('@/ai/genkit');
+    // Import ai inside function to avoid circular imports (with timeout)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Genkit AI loading timeout (20s)')), 20000)
+    );
+    const genkitModulePromise = import('@/ai/genkit');
+    const genkitModule = await Promise.race([genkitModulePromise, timeoutPromise]) as any;
+    const { ai } = genkitModule;
 
     // Build Gemini prompt with context
     const prompt = buildContentPrompt(input);
