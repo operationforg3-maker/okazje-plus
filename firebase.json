@@ -10,6 +10,10 @@
       "region": "europe-west4"
     }
   },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
   "functions": [
     {
       "source": "okazje-plus",
