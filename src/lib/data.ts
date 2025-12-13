@@ -1678,17 +1678,31 @@ export async function getAdminDashboardStats() {
   try {
     const categoriesQuery = query(collection(db, 'categories'));
     const categoriesSnapshot = await getDocs(categoriesQuery);
-    const categories = categoriesSnapshot.docs.map(doc => doc.data());
     
-    categoriesStats.main = categories.length;
-    categoriesStats.sub = categories.reduce((sum: number, cat: any) => 
-      sum + (cat.subcategories?.length || 0), 0
-    );
-    categoriesStats.subSub = categories.reduce((sum: number, cat: any) => 
-      sum + (cat.subcategories || []).reduce((subSum: number, sub: any) => 
-        subSum + (sub.subsubcategories?.length || 0), 0
-      ), 0
-    );
+    // Zliczamy dokumenty głównych kategorii
+    categoriesStats.main = categoriesSnapshot.size;
+    
+    // Dla podkategorii i pod-podkategorii musimy sprawdzić zagnieżdżone kolekcje
+    let totalSub = 0;
+    let totalSubSub = 0;
+    
+    for (const catDoc of categoriesSnapshot.docs) {
+      const catId = catDoc.id;
+      
+      // Podkategorie jako subcollection
+      const subCatsSnapshot = await getDocs(collection(db, 'categories', catId, 'subcategories'));
+      totalSub += subCatsSnapshot.size;
+      
+      // Pod-podkategorie dla każdej podkategorii (też w 'subcategories')
+      for (const subDoc of subCatsSnapshot.docs) {
+        const subId = subDoc.id;
+        const subSubSnapshot = await getDocs(collection(db, 'categories', catId, 'subcategories', subId, 'subcategories'));
+        totalSubSub += subSubSnapshot.size;
+      }
+    }
+    
+    categoriesStats.sub = totalSub;
+    categoriesStats.subSub = totalSubSub;
     categoriesStats.total = categoriesStats.main + categoriesStats.sub + categoriesStats.subSub;
   } catch (error) {
     console.warn('Categories stats query failed:', error);

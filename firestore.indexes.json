@@ -50,6 +50,15 @@
       ]
     },
     {
+      "collectionGroup": "import_jobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "completedAt", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "deals",
       "queryScope": "COLLECTION",
       "fields": [
