@@ -74,20 +74,20 @@ export async function saveProductsToFirestore(
       
       // Validate price before saving
       if (!finalPrice || finalPrice <= 0 || isNaN(finalPrice)) {
-        console.error(`  ❌ CRITICAL: Invalid price for ${product.originalId}: ${finalPrice}`);
-        console.error(`     pricePLN: ${product.pricePLN}, priceUSD: ${product.priceUSD}, price: ${product.price}`);
-        errors++;
+        console.error(`  ❌ SKIP-PRICE: Invalid price for ${product.originalId}`);
+        console.error(`     finalPrice: ${finalPrice}, pricePLN: ${product.pricePLN}, priceUSD: ${product.priceUSD}, original: ${product.price}`);
         skipped.push(product.originalId);
         continue;
       }
       
       // Validate image before saving
       if (!product.image || !product.image.startsWith('http')) {
-        console.error(`  ❌ CRITICAL: Invalid image for ${product.originalId}: ${product.image}`);
-        errors++;
+        console.error(`  ❌ SKIP-IMAGE: Invalid image for ${product.originalId}: ${product.image}`);
         skipped.push(product.originalId);
         continue;
       }
+      
+      console.log(`  ✓ Validation passed - will create/update`);
       
       const smartPrice: SmartPrice = {
         amount: finalPrice,
@@ -170,7 +170,7 @@ export async function saveProductsToFirestore(
               product.quality.priceReliability
             ) / 3),
           },
-          status: 'draft' as const,
+          status: 'approved' as const,
           ratingCard: {
             score: 0,
             count: 0,
@@ -179,7 +179,7 @@ export async function saveProductsToFirestore(
         
         const newId = await createProduct(productData as any);
         
-        console.log(`  ✓ Created: ${newId}`);
+        console.log(`  ✓ Created: ${newId} (status: draft)`);
         created.push(newId);
       }
       
