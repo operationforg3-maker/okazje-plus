@@ -112,7 +112,10 @@ export async function POST(req: NextRequest) {
       });
 
       // Re-trigger processor (it will read current progress and continue)
-      const { processImportJob } = await import('../start/route');
+      // Timeout wrapper to avoid hanging on dynamic import
+      const timeoutImport = new Promise((_, reject) => setTimeout(() => reject(new Error('processImportJob import timeout (20s)')), 20000));
+      const mod = await Promise.race([import('../start/route'), timeoutImport]) as any;
+      const { processImportJob } = mod;
       processImportJob(jobId, jobData.type, jobData.maxItemsPerSubcategory).catch((e) => {
         console.error(`[Import Status POST] Resume failed for job ${jobId}:`, e);
       });

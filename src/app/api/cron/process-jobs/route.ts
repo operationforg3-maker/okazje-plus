@@ -105,7 +105,10 @@ export async function POST(req: NextRequest) {
     const importResults = await Promise.allSettled(
       importJobsToResume.map(async (importJob: any) => {
         logger.info('Resuming queued import_job', { jobId: importJob.id, type: importJob.type, importerType: importJob.importerType });
-        const { processImportJob } = await import('@/app/api/admin/import/start/route');
+        // Timeout wrapper to avoid hanging on dynamic import
+        const timeout1 = new Promise((_, reject) => setTimeout(() => reject(new Error('processImportJob import timeout (20s)')), 20000));
+        const mod1 = await Promise.race([import('@/app/api/admin/import/start/route'), timeout1]) as any;
+        const { processImportJob } = mod1;
         return processImportJob(
           importJob.id, 
           importJob.type, 
@@ -625,7 +628,10 @@ async function processUIImportJob(uiJob: any): Promise<void> {
     } catch (_) {}
 
     // Run import pipeline
-    const { runProductImportPipeline } = await import('@/ai/flows/importerFlow');
+    // Timeout wrapper for importerFlow
+    const timeout2 = new Promise((_, reject) => setTimeout(() => reject(new Error('importerFlow import timeout (20s)')), 20000));
+    const mod2 = await Promise.race([import('@/ai/flows/importerFlow'), timeout2]) as any;
+    const { runProductImportPipeline } = mod2;
 
     let totalImported = 0;
     let processedCount = 0;

@@ -35,7 +35,9 @@ export async function POST(req: NextRequest) {
     if (importerType === 'aliexpress') {
       console.log('[QUICK TEST] Loading AliExpress client...');
       try {
-        const { getAliExpressClient } = await import('@/lib/integrations/aliexpress-client');
+        const timeoutAli = new Promise((_, reject) => setTimeout(() => reject(new Error('AliExpress client import timeout (15s)')), 15000));
+        const aliMod = await Promise.race([import('@/lib/integrations/aliexpress-client'), timeoutAli]) as any;
+        const { getAliExpressClient } = aliMod;
         const client = getAliExpressClient();
         console.log('[QUICK TEST] ✅ Client loaded');
 
@@ -74,7 +76,9 @@ export async function POST(req: NextRequest) {
     } else if (importerType === 'convertiser') {
       console.log('[QUICK TEST] Loading Convertiser client...');
       try {
-        const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
+        const timeoutConv = new Promise((_, reject) => setTimeout(() => reject(new Error('Convertiser client import timeout (15s)')), 15000));
+        const convMod = await Promise.race([import('@/lib/integrations/convertiser-client'), timeoutConv]) as any;
+        const { getConvertiserClient } = convMod;
         const client = getConvertiserClient();
         console.log('[QUICK TEST] ✅ Client loaded');
 

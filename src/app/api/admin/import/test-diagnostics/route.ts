@@ -36,7 +36,9 @@ export async function POST(req: NextRequest) {
     // Check 2: AliExpress Client initialization
     console.log('[Diagnostics] Testing AliExpress client...');
     try {
-      const { getAliExpressClient } = await import('@/lib/integrations/aliexpress-client');
+      const timeoutAli = new Promise((_, reject) => setTimeout(() => reject(new Error('AliExpress client import timeout (15s)')), 15000));
+      const aliMod = await Promise.race([import('@/lib/integrations/aliexpress-client'), timeoutAli]) as any;
+      const { getAliExpressClient } = aliMod;
       const client = getAliExpressClient();
       if (client) {
         diagnostics.checks.aliexpressClient = { status: 'OK', message: 'Client initialized' };
