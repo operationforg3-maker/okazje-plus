@@ -25,7 +25,13 @@ export async function fetchHotProductsByCategory(
     // Use direct AliExpress client to fetch hot products
     console.log(`[Importer:Fetch:HotProducts] Attempting direct AliExpress client...`);
     try {
-      const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
+        // NEW: Add timeout to prevent hanging on AliExpress client load
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('AliExpress client loading timeout (20s)')), 20000)
+        );
+        const clientModulePromise = import('@/integrations/aliexpress/client');
+        const clientModule = await Promise.race([clientModulePromise, timeoutPromise]) as any;
+        const { createAliExpressClient } = clientModule;
       const client = createAliExpressClient();
       console.log(`[Importer:Fetch:HotProducts] ✅ AliExpress client loaded`);
       
