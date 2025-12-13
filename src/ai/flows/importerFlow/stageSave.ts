@@ -68,9 +68,18 @@ export async function saveProductsToFirestore(
       };
       
       // Build SmartPrice z właściwą walutą
-      // Używamy pricePLN jeśli została skonwertowana, albo oryginalną cenę z jej walutą
-      const productCurrency = product.currency || 'PLN';
-      const finalPrice = product.pricePLN || product.priceUSD;
+      // Priority: pricePLN > priceUSD > price (original from API)
+      const finalPrice = product.pricePLN || product.priceUSD || product.price;
+      const productCurrency = product.pricePLN ? 'PLN' : (product.currency || 'PLN');
+      
+      // Validate price before saving
+      if (!finalPrice || finalPrice <= 0 || isNaN(finalPrice)) {
+        console.error(`  ❌ CRITICAL: Invalid price for ${product.originalId}: ${finalPrice}`);
+        console.error(`     pricePLN: ${product.pricePLN}, priceUSD: ${product.priceUSD}, price: ${product.price}`);
+        errors++;
+        skipped.push(product.originalId);
+        continue;
+      }
       
       const smartPrice: SmartPrice = {
         amount: finalPrice,
