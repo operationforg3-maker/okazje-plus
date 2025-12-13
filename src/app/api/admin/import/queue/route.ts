@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         'Authorization': adminIdToken,
       },
       body: JSON.stringify({
-        type: 'products',
+        type: req.body.type || 'products',
         maxItemsPerSubcategory: maxProductsPerCategory,
         importerType: finalImporterType,
       }),

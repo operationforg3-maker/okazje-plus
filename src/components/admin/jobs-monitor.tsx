@@ -78,6 +78,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
     amazon: false,
     ebay: false,
   });
+  const [jobType, setJobType] = useState<'products' | 'deals'>('products');
   const [maxProducts, setMaxProducts] = useState(20);
   const [enableAdvanced, setEnableAdvanced] = useState(true);
   const [enableAI, setEnableAI] = useState(false);
@@ -247,6 +248,7 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
           enableAdvancedFeatures: enableAdvanced,
           enableAIEnrichment: enableAI,
           saveDraftsOnly: true,
+          type: jobType,
         }),
       });
 
@@ -359,7 +361,40 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label className="text-sm font-medium mb-2 block">Źródła importu</Label>
+            <Label className="text-sm font-medium mb-2 block">Typ importu</Label>
+            <div className="flex gap-3">
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="type-products"
+                  name="jobType"
+                  value="products"
+                  checked={jobType === 'products'}
+                  onChange={(e) => setJobType('products')}
+                  className="mr-2"
+                />
+                <Label htmlFor="type-products" className="cursor-pointer mb-0">
+                  📦 Produkty
+                </Label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="type-deals"
+                  name="jobType"
+                  value="deals"
+                  checked={jobType === 'deals'}
+                  onChange={(e) => setJobType('deals')}
+                  className="mr-2"
+                />
+                <Label htmlFor="type-deals" className="cursor-pointer mb-0">
+                  🔥 Okazje (min 30% zniżka)
+                </Label>
+              </div>
+            </div>
+          </div>
+
+          <div>
             <div className="grid grid-cols-2 gap-3">
               {Object.entries(sources).map(([source, enabled]) => {
                 const isConfigured = apiConfigStatus.checked ? apiConfigStatus.configured[source] === true : false;
