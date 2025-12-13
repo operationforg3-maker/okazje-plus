@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+// Force dynamic rendering and cap runtime to avoid long waits on degraded envs
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 /**
  * Health check endpoint - weryfikuje wszystkie kluczowe systemy
@@ -19,18 +22,31 @@ export async function GET(request: NextRequest) {
   };
 
   try {
+    // Fast-fail if missing client Firebase config (avoids long timeouts)
+    const hasClientFirebaseConfig = Boolean(
+      process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    );
+
     // 1. Firestore connectivity
     try {
-      const dealsQuery = query(
-        collection(db, 'deals'),
-        where('status', '==', 'approved'),
-        limit(1)
-      );
-      const snapshot = await getDocs(dealsQuery);
-      results.checks.firestore = {
-        status: 'ok',
-        message: `Connected, found ${snapshot.size} deal(s)`,
-      };
+      if (hasClientFirebaseConfig) {
+        const dealsQuery = query(
+          collection(db, 'deals'),
+          where('status', '==', 'approved'),
+          limit(1)
+        );
+        const snapshot = await getDocs(dealsQuery);
+        results.checks.firestore = {
+          status: 'ok',
+          message: `Connected, found ${snapshot.size} deal(s)`,
+        };
+      } else {
+        results.checks.firestore = {
+          status: 'warning',
+          message: 'Missing client Firebase config; skipping Firestore check',
+        };
+        results.status = 'degraded';
+      }
     } catch (error: any) {
       results.checks.firestore = {
         status: 'error',
