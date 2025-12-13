@@ -128,6 +128,10 @@ async function downloadAndUploadImage(
  * Wymaga uprawnień administratora.
  */
 export const batchImportDeals = onCall(
+  {
+    timeoutSeconds: 300,
+    memory: "512MiB",
+  },
   async (request: CallableRequest<{deals: ImportDealData[]}>) => {
     await ensureAdmin(request.auth ?? null);
 
@@ -196,6 +200,10 @@ export const batchImportDeals = onCall(
  * Wymaga uprawnień administratora.
  */
 export const batchImportProducts = onCall(
+  {
+    timeoutSeconds: 300,
+    memory: "512MiB",
+  },
   async (
     request: CallableRequest<{products: ImportProductData[]}>
   ) => {

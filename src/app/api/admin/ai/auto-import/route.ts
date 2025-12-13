@@ -4,6 +4,10 @@ import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Force dynamic rendering and extend timeout for long-running imports
+export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes for AI-enhanced imports
+
 function initializeFirebaseAdmin() {
   if (admin.apps.length > 0) return admin.app();
   try {
