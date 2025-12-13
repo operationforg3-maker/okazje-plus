@@ -252,7 +252,7 @@ async function runTests() {
     productsExist: await testProductsExist(),
   };
   
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log('📊 TEST SUMMARY');
   console.log('='.repeat(60));
   

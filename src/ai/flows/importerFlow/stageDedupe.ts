@@ -22,10 +22,8 @@ export async function deduplicateProducts(
     delayBetweenBatches: 100,
     maxRetries: 1,
     // RELAXED DEFAULTS: Accept products with ANY rating/orders
-    // minRating: undefined (no filter),
-    // minOrders: undefined (no filter)
-    minRating: 0,  // Accept even unrated products
-    minOrders: 0,  // Accept even products with 0 orders
+    minRating: 0,  // Accept even unrated products (0 = no filter)
+    minOrders: 0,  // Accept even products with 0 orders (0 = no filter)
   }
 ): Promise<AliExpressProduct[]> {
   console.log(`[Importer:Dedupe] ===== STAGE 2 START =====`);

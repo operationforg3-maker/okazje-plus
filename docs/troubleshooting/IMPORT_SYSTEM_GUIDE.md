@@ -9,7 +9,7 @@ The Okazje+ import system fetches products/deals from marketplace APIs (AliExpre
 
 ## Architecture
 
-### 5-Stage Pipeline (Stage 1)
+### Stage 1: 5-Stage Import Pipeline
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
