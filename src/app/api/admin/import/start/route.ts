@@ -233,7 +233,31 @@ export async function processImportJob(
     }
 
     // Import 5-stage pipeline
-    const { runProductImportPipeline } = await import('@/ai/flows/importerFlow');
+      // NEW: Add timeout wrapper for import
+      let runProductImportPipeline: any = null;
+      try {
+        console.log(`[Import Processor] Loading import pipeline (timeout: 30s)...`);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Import pipeline loading timeout (30s)')), 30000)
+        );
+        const importPromise = import('@/ai/flows/importerFlow');
+        const moduleOrTimeout = await Promise.race([importPromise, timeoutPromise]) as any;
+        runProductImportPipeline = moduleOrTimeout.runProductImportPipeline;
+      
+        if (!runProductImportPipeline) {
+          throw new Error('runProductImportPipeline not exported from module');
+        }
+        console.log(`[Import Processor] ✅ Pipeline loaded successfully`);
+      } catch (importError: any) {
+        console.error(`[Import Processor] ❌ Failed to load import pipeline:`, importError.message);
+        await jobRef.update({
+          status: 'failed',
+          error: `Failed to load import pipeline: ${importError.message}`,
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        throw importError;
+      }
 
     for (let i = currentIndex; i < batches.length; i++) {
       // Check if paused or cancelled
