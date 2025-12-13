@@ -144,13 +144,40 @@ export async function fetchHotProductsByCategory(
 /**
  * Validate that a product has all essential fields
  * Returns validation result with reason if invalid
+ * 
+ * RELAXED VALIDATION: Only reject products with critical missing data
+ * - Accepts products with low ratings, few orders, no reviews
+ * - Accepts very short titles
+ * - Focus: Must have ID, title, price > 0, image, and link
  */
 function validateProduct(product: any, source: string = 'unknown'): { valid: boolean; reason?: string } {
-  if (!product.id) return { valid: false, reason: 'Missing ID' };
-  if (!product.title || product.title.length < 3) return { valid: false, reason: 'Missing/short title' };
-  if (!product.price || product.price <= 0 || isNaN(product.price)) return { valid: false, reason: `Invalid price: ${product.price}` };
-  if (!product.image || !product.image.startsWith('http')) return { valid: false, reason: 'Missing/invalid image URL' };
-  if (!product.link || !product.link.startsWith('http')) return { valid: false, reason: 'Missing/invalid link' };
+  // CRITICAL: Must have ID
+  if (!product.id || String(product.id).trim() === '' || product.id === 'undefined') {
+    return { valid: false, reason: 'Missing/invalid ID' };
+  }
+  
+  // CRITICAL: Must have title (even very short ones OK - removed length check)
+  if (!product.title || product.title.trim().length === 0) {
+    return { valid: false, reason: 'Missing title' };
+  }
+  
+  // CRITICAL: Must have valid price > 0
+  if (!product.price || product.price <= 0 || isNaN(product.price)) {
+    return { valid: false, reason: `Invalid price: ${product.price}` };
+  }
+  
+  // CRITICAL: Must have image URL
+  if (!product.image || !product.image.startsWith('http')) {
+    return { valid: false, reason: 'Missing/invalid image URL' };
+  }
+  
+  // CRITICAL: Must have link
+  if (!product.link || !product.link.startsWith('http')) {
+    return { valid: false, reason: 'Missing/invalid link' };
+  }
+  
+  // ✅ PASSED all critical checks - accept product
+  // No checks for ratings, orders, or reviews - let dedupe stage handle quality
   return { valid: true };
 }
 
