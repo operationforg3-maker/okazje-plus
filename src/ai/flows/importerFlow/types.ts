@@ -16,6 +16,10 @@ export interface ImportStageConfig {
   delayBetweenBatches: number; // ms
   maxRetries: number;
   importerType?: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'; // How to fetch products
+  // Optional legacy aliases used by some stages
+  // Keep for backward-compat between stage implementations
+  maxItemsPerSubcategory?: number;
+  fetchDelay?: number; // ms
 }
 
 export interface ProductImportState {

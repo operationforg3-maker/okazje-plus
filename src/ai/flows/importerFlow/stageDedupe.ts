@@ -21,8 +21,9 @@ export async function deduplicateProducts(
     delayBetweenItems: 0,
     delayBetweenBatches: 100,
     maxRetries: 1,
-    minRating: 2.5,
-    minOrders: 10,
+    // RELAXED DEFAULTS: Accept products with ANY rating/orders
+    minRating: 0,  // Accept even unrated products (0 = no filter)
+    minOrders: 0,  // Accept even products with 0 orders (0 = no filter)
   }
 ): Promise<AliExpressProduct[]> {
   console.log(`[Importer:Dedupe] ===== STAGE 2 START =====`);
@@ -58,17 +59,19 @@ export async function deduplicateProducts(
       continue;
     }
     
-    // Rating filter - only apply if product HAS rating data
-    if (config.minRating !== undefined && product.rating !== undefined && product.rating !== null && product.rating > 0) {
-      if (product.rating < config.minRating) {
+    // Rating filter - ONLY apply if config.minRating is set AND > 0
+    // Accept products without rating data (undefined/null/0)
+    if (config.minRating && config.minRating > 0 && product.rating !== undefined && product.rating !== null) {
+      if (product.rating > 0 && product.rating < config.minRating) {
         filtered_rating++;
         continue;
       }
     }
     
-    // Popularity filter (orders/volume) - only apply if product HAS orders data
-    if (config.minOrders !== undefined && product.orders !== undefined && product.orders !== null && product.orders > 0) {
-      if (product.orders < config.minOrders) {
+    // Popularity filter (orders/volume) - ONLY apply if config.minOrders is set AND > 0
+    // Accept products without orders data (undefined/null/0)
+    if (config.minOrders && config.minOrders > 0 && product.orders !== undefined && product.orders !== null) {
+      if (product.orders > 0 && product.orders < config.minOrders) {
         filtered_orders++;
         continue;
       }

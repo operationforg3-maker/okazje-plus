@@ -144,13 +144,40 @@ export async function fetchHotProductsByCategory(
 /**
  * Validate that a product has all essential fields
  * Returns validation result with reason if invalid
+ * 
+ * RELAXED VALIDATION: Only reject products with critical missing data
+ * - Accepts products with low ratings, few orders, no reviews
+ * - Accepts very short titles
+ * - Focus: Must have ID, title, price > 0, image, and link
  */
 function validateProduct(product: any, source: string = 'unknown'): { valid: boolean; reason?: string } {
-  if (!product.id) return { valid: false, reason: 'Missing ID' };
-  if (!product.title || product.title.length < 3) return { valid: false, reason: 'Missing/short title' };
-  if (!product.price || product.price <= 0 || isNaN(product.price)) return { valid: false, reason: `Invalid price: ${product.price}` };
-  if (!product.image || !product.image.startsWith('http')) return { valid: false, reason: 'Missing/invalid image URL' };
-  if (!product.link || !product.link.startsWith('http')) return { valid: false, reason: 'Missing/invalid link' };
+  // CRITICAL: Must have ID
+  if (!product.id || String(product.id).trim() === '' || product.id === 'undefined') {
+    return { valid: false, reason: 'Missing/invalid ID' };
+  }
+  
+  // CRITICAL: Must have title (even very short ones OK - removed length check)
+  if (!product.title || product.title.trim().length === 0) {
+    return { valid: false, reason: 'Missing title' };
+  }
+  
+  // CRITICAL: Must have valid price > 0
+  if (!product.price || product.price <= 0 || isNaN(product.price)) {
+    return { valid: false, reason: `Invalid price: ${product.price}` };
+  }
+  
+  // CRITICAL: Must have image URL
+  if (!product.image || !product.image.startsWith('http')) {
+    return { valid: false, reason: 'Missing/invalid image URL' };
+  }
+  
+  // CRITICAL: Must have link
+  if (!product.link || !product.link.startsWith('http')) {
+    return { valid: false, reason: 'Missing/invalid link' };
+  }
+  
+  // ✅ PASSED all critical checks - accept product
+  // No checks for ratings, orders, or reviews - let dedupe stage handle quality
   return { valid: true };
 }
 
@@ -254,6 +281,7 @@ export async function fetchProductsFromAliexpress(
   for (const keyword of keywords) {
     try {
       console.log(`[Importer:Fetch] HTTP: Fetching batch ${++batchCount}/${keywords.length}: "${keyword}"`);
+      console.log(`[Importer:Fetch] HTTP: Calling ${siteUrl}/api/admin/aliexpress/search`);
       
       const response = await fetch(`${siteUrl}/api/admin/aliexpress/search`, {
         method: 'POST',
@@ -265,6 +293,8 @@ export async function fetchProductsFromAliexpress(
         })
       });
       
+      console.log(`[Importer:Fetch] HTTP: Response status: ${response.status} ${response.statusText}`);
+      
       if (!response.ok) {
         const errorText = await response.text();
         const errorMsg = `API error ${response.status}: ${errorText.slice(0, 200)}`;
@@ -275,10 +305,14 @@ export async function fetchProductsFromAliexpress(
           console.error(`[Importer:Fetch] ❌ CRITICAL: AliExpress API not configured!`);
           console.error(`[Importer:Fetch] Missing env vars: ALIEXPRESS_APP_KEY, ALIEXPRESS_APP_SECRET, ALIEXPRESS_API_BASE`);
           console.error(`[Importer:Fetch] This is why products are not being fetched!`);
-          console.error(`[Importer:Fetch] Please add these variables to .env.local (see README.md)`);
+          console.error(`[Importer:Fetch] Fix: Add these variables to .env.local or Firebase secrets`);
+          console.error(`[Importer:Fetch] See: docs/troubleshooting/IMPORT_SYSTEM_GUIDE.md for setup instructions`);
           throw new Error(`AliExpress API not configured (status 503) - Missing environment variables. Check server logs for details.`);
         }
         
+        // Other errors
+        console.error(`[Importer:Fetch] ❌ HTTP API call failed for keyword "${keyword}"`);
+        console.error(`[Importer:Fetch] Status: ${response.status}, Error: ${errorText.slice(0, 500)}`);
         throw new Error(`AliExpress API error: ${response.status}`);
       }
       
@@ -364,7 +398,22 @@ export async function fetchProductsFromAliexpress(
     console.error(`     - /api/admin/aliexpress/search endpoint reachable?`);
     console.error(`     - ALIEXPRESS_APP_KEY/SECRET configured?`);
   }
-  console.log(`[Importer:Fetch] ===== STAGE 1 END =====\n`);
+  console.log(`[Importer:Fetch] ===== STAGE 1 END =====`);
+  console.log(`[Importer:Fetch] Total products fetched: ${allProducts.length}`);
+  
+  if (allProducts.length === 0) {
+    console.error(`[Importer:Fetch] ❌ CRITICAL: No products fetched!`);
+    console.error(`[Importer:Fetch] Troubleshooting:`);
+    console.error(`   1. Check API configuration (run: node test-import-simple.mjs)`);
+    console.error(`   2. Verify keywords are in English: ${keywords.join(', ')}`);
+    console.error(`   3. Check network connectivity to marketplace APIs`);
+    console.error(`   4. Review server logs for API errors`);
+    console.error(`   5. See: docs/troubleshooting/IMPORT_SYSTEM_GUIDE.md`);
+  } else {
+    console.log(`[Importer:Fetch] ✅ Successfully fetched ${allProducts.length} products`);
+  }
+  console.log('');
+  
   return allProducts;
 }
 
@@ -543,6 +592,19 @@ export async function fetchProductsFromConvertiser(
   
   console.log(`[Importer:Fetch:Convertiser] ===== RESULTS =====`);
   console.log(`[Importer:Fetch:Convertiser]   Output: ${allProducts.length} products`);
+  
+  if (allProducts.length === 0) {
+    console.error(`[Importer:Fetch:Convertiser] ❌ CRITICAL: No products fetched!`);
+    console.error(`[Importer:Fetch:Convertiser] Troubleshooting:`);
+    console.error(`   1. Check Convertiser API token (run: node test-import-simple.mjs)`);
+    console.error(`   2. Verify keywords are appropriate: ${keywords.join(', ')}`);
+    console.error(`   3. Check /api/admin/convertiser/search endpoint`);
+    console.error(`   4. Review server logs for API errors`);
+    console.error(`   5. See: docs/troubleshooting/IMPORT_SYSTEM_GUIDE.md`);
+  } else {
+    console.log(`[Importer:Fetch:Convertiser] ✅ Successfully fetched ${allProducts.length} products`);
+  }
+  
   console.log(`[Importer:Fetch:Convertiser] ===== STAGE 1 END =====\n`);
   
   return allProducts;
