@@ -147,10 +147,20 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`[Import Start] Job created: ${jobId}`);
+    console.log(`[Import Start] Starting processor immediately in background...`);
 
-    // Uruchom processor w tle (nie czekaj)
-    processImportJob(jobId, type, maxItemsPerSubcategory, importerType).catch((e) => {
-      console.error(`[Import Start] Background processor failed for job ${jobId}:`, e);
+    // Uruchom processor NATYCHMIAST w tle (nie czekaj na cron)
+    setImmediate(() => {
+      processImportJob(jobId, type, maxItemsPerSubcategory, importerType).catch((e) => {
+        console.error(`[Import Start] Background processor failed for job ${jobId}:`, e);
+        // Update job status to failed
+        jobRef.update({
+          status: 'failed',
+          error: e.message,
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }).catch(console.error);
+      });
     });
 
     return NextResponse.json({
@@ -262,14 +272,10 @@ export async function processImportJob(
           );
           
           if (aliexpressCategoryIds.length === 0) {
-            console.warn(`[Import Processor] No AliExpress category mapping for ${batch.categorySlug}/${batch.subcategorySlug}/${batch.subsubcategorySlug}`);
-            console.warn(`[Import Processor] Falling back to keyword search...`);
-            // Fallback to keyword search if no mapping
-            keywords = [
-              batch.categorySlug,
-              batch.subcategorySlug,
-              batch.subsubcategorySlug,
-            ].filter(Boolean);
+            // No specific mapping - fetch general hot products (no category filter)
+            // This will get popular products across all categories
+            console.log(`[Import Processor] No AliExpress mapping for ${batch.categorySlug}/${batch.subcategorySlug}/${batch.subsubcategorySlug} - using GENERAL hot products`);
+            keywords = []; // Empty array = fetch hot products without category filter
           } else {
             // Use category IDs as "keywords" (stageFetch will detect hot-products mode)
             keywords = aliexpressCategoryIds;
