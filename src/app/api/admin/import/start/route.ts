@@ -259,6 +259,13 @@ export async function processImportJob(
         throw importError;
       }
 
+    // Heartbeat: update job.updatedAt every 5s so UI sees live activity
+    const heartbeat = setInterval(async () => {
+      try {
+        await jobRef.update({ updatedAt: new Date().toISOString() });
+      } catch {}
+    }, 5000);
+
     for (let i = currentIndex; i < batches.length; i++) {
       // Check if paused or cancelled
       const currentJobSnap = await jobRef.get();
@@ -270,19 +277,32 @@ export async function processImportJob(
           'progress.current': i,
           updatedAt: new Date().toISOString(),
         });
+        clearInterval(heartbeat);
         return; // Exit gracefully
       }
       
       if (currentJobData?.status === 'failed') {
         console.log(`[Import Processor] Job ${jobId} cancelled at batch ${i}`);
+        clearInterval(heartbeat);
         return; // Exit - job was cancelled by user
       }
+
+      // Update progress at loop entry so UI shows movement
+      await jobRef.update({
+        'progress.current': i,
+        updatedAt: new Date().toISOString(),
+      });
 
       const batch = batches[i];
       console.log(`[Import Processor] [${i + 1}/${batches.length}] Processing: ${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`);
       console.log(`[Import Processor] Importer Type: ${importerType}`);
 
       try {
+        // Also update progress before running pipeline for visibility
+        await jobRef.update({
+          'progress.current': i,
+          updatedAt: new Date().toISOString(),
+        });
         // NEW: Prepare keywords or category IDs based on importer type
         let keywords: string[] = [];
         let aliexpressCategoryIds: string[] = [];
@@ -428,6 +448,7 @@ export async function processImportJob(
       updatedAt: new Date().toISOString(),
     });
 
+    clearInterval(heartbeat);
     console.log(`[Import Processor] Job ${jobId} completed successfully`);
   } catch (error: any) {
     console.error(`[Import Processor] Job ${jobId} failed:`, error);
