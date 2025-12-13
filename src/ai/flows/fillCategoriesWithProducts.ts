@@ -119,7 +119,9 @@ export async function fillCategoriesWithProducts() {
     // Pobierz preferencję waluty z Firestore config
     let preferredCurrency = 'USD';
     try {
-      const { adminDb } = await import('@/lib/firebase-admin');
+      const timeoutAdmin = new Promise((_, reject) => setTimeout(() => reject(new Error('firebase-admin import timeout (15s)')), 15000));
+      const adminMod = await Promise.race([import('@/lib/firebase-admin'), timeoutAdmin]) as any;
+      const { adminDb } = adminMod;
       const currencyDoc = await adminDb.collection('config').doc('currencyPreference').get();
       if (currencyDoc.exists) {
         preferredCurrency = currencyDoc.data()?.currency || 'USD';

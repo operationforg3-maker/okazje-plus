@@ -625,7 +625,9 @@ export async function fillSubSubcategoryProducts(params: {
     // Track created/updated IDs in job if provided
     if (jobId && (createdIds.length > 0 || updatedIds.length > 0)) {
       try {
-        const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+        const timeoutAdmin = new Promise((_, reject) => setTimeout(() => reject(new Error('firebase-admin import timeout (15s)')), 15000));
+        const adminMod = await Promise.race([import('@/lib/firebase-admin'), timeoutAdmin]) as any;
+        const { adminDb, FieldValue } = adminMod;
         const jobRef = adminDb.collection('import_jobs').doc(jobId);
         await jobRef.update({
           itemsCreated: FieldValue.arrayUnion(...createdIds),

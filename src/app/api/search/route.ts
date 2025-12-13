@@ -45,7 +45,9 @@ export async function GET(request: Request) {
       // indexed range queries). If they return nothing (because the query is a
       // substring or starts later in the title), perform a broader in-memory
       // filter over a larger set (recommended/hot) to improve recall.
-      const { searchProducts, searchDeals, getRecommendedProducts, getHotDeals } = await import('@/lib/data');
+      const timeoutData = new Promise((_, reject) => setTimeout(() => reject(new Error('lib/data import timeout (10s)')), 10000));
+      const dataMod = await Promise.race([import('@/lib/data'), timeoutData]) as any;
+      const { searchProducts, searchDeals, getRecommendedProducts, getHotDeals } = dataMod;
 
       let products: any[] = [];
       let deals: any[] = [];

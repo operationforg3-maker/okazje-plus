@@ -34,7 +34,9 @@ export async function GET(request: Request) {
       // Fallback to Firestore-based autocomplete implemented here. Use a broader
       // candidate set (recommended/hot lists) and filter in-memory to support
       // substring matches — this improves recall when Typesense isn't present.
-      const { getRecommendedProducts, getHotDeals } = await import('@/lib/data');
+      const timeoutData = new Promise((_, reject) => setTimeout(() => reject(new Error('lib/data import timeout (10s)')), 10000));
+      const dataMod = await Promise.race([import('@/lib/data'), timeoutData]) as any;
+      const { getRecommendedProducts, getHotDeals } = dataMod;
       const normalizedQuery = q.toLowerCase().trim();
 
       // Fetch larger candidate pools and then filter locally
