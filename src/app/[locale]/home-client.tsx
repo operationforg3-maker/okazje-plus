@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import DealCard from '@/components/deal-card';
 import ProductCard from '@/components/product-card';
+import CategoryGrid from '@/components/home/category-grid';
+import { RealTimeStats, ForumStats } from '@/components/home/real-time-stats';
 import {
   Search,
   Flame,
@@ -43,7 +45,6 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
   const router = useRouter();
   const t = useTranslations('home');
   const [searchQuery, setSearchQuery] = useState('');
-  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,73 +105,36 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               </div>
             </form>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-              {[
-                { icon: Flame, label: t('stats.hotDeals'), value: initialHotDeals.length, color: 'text-orange-500' },
-                { icon: ShoppingBag, label: t('stats.products'), value: initialTopProducts.length, color: 'text-blue-500' },
-                { icon: Users, label: t('stats.community'), value: '1000+', color: 'text-green-500' },
-                { icon: Trophy, label: t('stats.savings'), value: '100k+', color: 'text-purple-500' },
-              ].map((stat, idx) => (
-                <Card key={idx} className="border-2 hover:border-primary/50 transition-all hover:shadow-lg">
-                  <CardContent className="p-4 text-center">
-                    <stat.icon className={`h-6 w-6 mx-auto mb-2 ${stat.color}`} />
-                    <div className="text-2xl font-bold">{stat.value}</div>
-                    <div className="text-xs text-muted-foreground">{stat.label}</div>
-                  </CardContent>
-                </Card>
-              ))}
+            {/* Quick Stats - Real time from database */}
+            <div className="max-w-3xl mx-auto">
+              <RealTimeStats />
             </div>
           </div>
         </div>
       </section>
 
-      {/* CATEGORIES SHOWCASE */}
-      <section className="py-12 bg-card/50">
+      {/* CATEGORIES SHOWCASE - Mega Menu with Images */}
+      <section className="py-16 bg-gradient-to-b from-background via-primary/5 to-background">
         <div className="page-container">
-          <div className="text-center mb-8">
-            <h2 className="font-headline text-3xl md:text-4xl font-bold mb-2">
+          <div className="text-center mb-12">
+            <h2 className="font-headline text-4xl md:text-5xl font-bold mb-4">
               {t('categories.title')}
             </h2>
-            <p className="text-muted-foreground">{t('categories.subtitle')}</p>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{t('categories.subtitle')}</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            {categories.slice(0, 8).map((category) => (
-              <Link
-                key={category.id}
-                href={`/products?category=${category.slug || category.id}`}
-                className="group"
-                onMouseEnter={() => setHoveredCategory(category.id)}
-                onMouseLeave={() => setHoveredCategory(null)}
-              >
-                <Card className="h-full border-2 hover:border-primary transition-all hover:shadow-lg hover:-translate-y-1">
-                  <CardContent className="p-6 text-center space-y-2">
-                    <div className="text-4xl mb-2 transition-transform group-hover:scale-110">
-                      {category.icon || '📦'}
-                    </div>
-                    <div className="font-semibold text-sm leading-tight">
-                      {category.name}
-                    </div>
-                    {hoveredCategory === category.id && category.subcategories && (
-                      <div className="text-xs text-muted-foreground">
-                        {category.subcategories.length} {t('categories.subcategories')}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-
-          <div className="text-center mt-8">
-            <Button variant="outline" size="lg" asChild>
-              <Link href="/products">
-                {t('categories.viewAll')}
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+          {categories.length > 0 ? (
+            <div className="space-y-8">
+              <CategoryGrid categories={categories} />
+            </div>
+          ) : (
+            <Card className="p-12 text-center">
+              <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">
+                {t('categories.empty') || 'Kategorie wkrótce będą dostępne'}
+              </p>
+            </Card>
+          )}
         </div>
       </section>
 
@@ -340,9 +304,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       {/* FORUM TEASER */}
       <section className="py-16 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent">
         <div className="page-container">
-          <div className="max-w-4xl mx-auto text-center space-y-6">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
             <MessageSquare className="h-16 w-16 mx-auto text-primary" />
-            <h2 className="font-headline text-3xl md:text-4xl font-bold">
+            <h2 className="font-headline text-4xl md:text-5xl font-bold">
               {t('forum.title')}
             </h2>
             <p className="text-xl text-muted-foreground">
@@ -364,18 +328,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               </Button>
             </div>
 
-            {/* Forum stats */}
-            <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto pt-8">
-              {[
-                { label: 'Aktywnych wątków', value: '500+' },
-                { label: 'Użytkowników', value: '1000+' },
-                { label: 'Odpowiedzi dziennie', value: '200+' },
-              ].map((stat, idx) => (
-                <div key={idx} className="text-center">
-                  <div className="text-3xl font-bold text-primary">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground">{stat.label}</div>
-                </div>
-              ))}
+            {/* Forum stats - Real time from database */}
+            <div className="pt-4">
+              <ForumStats />
             </div>
           </div>
         </div>
