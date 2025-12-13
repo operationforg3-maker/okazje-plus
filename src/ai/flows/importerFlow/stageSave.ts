@@ -179,7 +179,7 @@ export async function saveProductsToFirestore(
         
         const newId = await createProduct(productData as any);
         
-        console.log(`  ✓ Created: ${newId} (status: draft)`);
+        console.log(`  ✓ Created: ${newId} (status: approved, title: ${productData.title.pl.slice(0, 40)}...)`);
         created.push(newId);
       }
       
@@ -213,7 +213,11 @@ export async function saveProductsToFirestore(
       
     } catch (error: any) {
       errors++;
-      console.error(`[Importer:Save] Failed to save product ${product.originalId}:`, error.message);
+      console.error(`[Importer:Save] [${i + 1}/${products.length}] ❌ FAILED to save product ${product.originalId}:`);
+      console.error(`  Error message: ${error.message}`);
+      console.error(`  Error code: ${error.code}`);
+      if (error.stack) console.error(`  Stack: ${error.stack.split('\n').slice(0, 3).join('\n')}`);
+      skipped.push(product.originalId);
     }
   }
   
