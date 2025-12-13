@@ -91,7 +91,8 @@ export default function DealCard({ deal }: DealCardProps) {
   const product = null as Product | null; // placeholder, typ jawnie Product | null
   const params = useParams();
   const [isMounted, setIsMounted] = useState(false);
-  const locale = isMounted ? ((params?.locale as string) || 'pl') : 'pl';
+  const localeFromParams = (params?.locale as string) || 'pl';
+  const [locale, setLocale] = useState('pl');
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { addToComparison } = useComparison();
@@ -106,10 +107,11 @@ export default function DealCard({ deal }: DealCardProps) {
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   
-  // Hydration safety
+  // Hydration safety - sync locale on mount
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    setLocale(localeFromParams);
+  }, [localeFromParams]);
   
   const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
@@ -121,9 +123,9 @@ export default function DealCard({ deal }: DealCardProps) {
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   
-  // Get localized deal title and description
-  const dealTitle = getLocalizedField(deal, 'title', locale as SupportedLanguage);
-  const dealDescription = getLocalizedField(deal, 'description', locale as SupportedLanguage);
+  // Get localized deal title and description - use safe defaults to prevent hydration mismatch
+  const dealTitle = isMounted ? getLocalizedField(deal, 'title', locale as SupportedLanguage) : (deal.title && typeof deal.title === 'object' ? 'Okazja' : deal.title || 'Okazja');
+  const dealDescription = isMounted ? getLocalizedField(deal, 'description', locale as SupportedLanguage) : (deal.description && typeof deal.description === 'object' ? '' : deal.description || '');
   
   const couponCode = safeText(deal.couponCode);
   const deliveryTime = safeText(deal.importMetadata?.deliveryTime);
