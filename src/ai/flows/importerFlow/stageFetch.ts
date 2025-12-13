@@ -136,10 +136,20 @@ export async function fetchHotProductsByCategory(
 }
 
 /**
- * Pobiera produkty z AliExpress API dla danego kategoria
- * Zwraca surowe dane z AliExpress
+ * Validate that a product has all essential fields
+ * Returns validation result with reason if invalid
  */
-export async function fetchProductsFromAliexpress(
+function validateProduct(product: any, source: string = 'unknown'): { valid: boolean; reason?: string } {
+  if (!product.id) return { valid: false, reason: 'Missing ID' };
+  if (!product.title || product.title.length < 3) return { valid: false, reason: 'Missing/short title' };
+  if (!product.price || product.price <= 0 || isNaN(product.price)) return { valid: false, reason: `Invalid price: ${product.price}` };
+  if (!product.image || !product.image.startsWith('http')) return { valid: false, reason: 'Missing/invalid image URL' };
+  if (!product.link || !product.link.startsWith('http')) return { valid: false, reason: 'Missing/invalid link' };
+  return { valid: true };
+}
+
+/**
+ * Fetch products from AliExpress API
   keywords: string[], // English keywords: ['Electronics', 'Smartphones', etc]
   config: ImportStageConfig,
   siteUrl: string = resolveSiteUrl()
@@ -183,7 +193,7 @@ export async function fetchProductsFromAliexpress(
           
           seenIds.add(productId);
           
-          allProducts.push({
+          const product: AliExpressProduct = {
             id: productId,
             title: p.product_title || 'Untitled',
             image: p.product_main_image_url || p.product_image || '',
@@ -198,7 +208,16 @@ export async function fetchProductsFromAliexpress(
             description: p.product_description || '',
             images: p.product_images || (p.product_main_image_url ? [p.product_main_image_url] : []),
             ...p
-          });
+          };
+          
+          // Validate product
+          const validation = validateProduct(product, 'keyword-search');
+          if (!validation.valid) {
+            console.log(`[Importer:Fetch] ⚠️ Skipping ${productId}: ${validation.reason}`);
+            continue;
+          }
+          
+          allProducts.push(product);
           
           await sleep(config.delayBetweenItems || 50);
         }
