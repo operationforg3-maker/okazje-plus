@@ -81,6 +81,14 @@ export async function saveProductsToFirestore(
         continue;
       }
       
+      // Validate image before saving
+      if (!product.image || !product.image.startsWith('http')) {
+        console.error(`  ❌ CRITICAL: Invalid image for ${product.originalId}: ${product.image}`);
+        errors++;
+        skipped.push(product.originalId);
+        continue;
+      }
+      
       const smartPrice: SmartPrice = {
         amount: finalPrice,
         currency: productCurrency,

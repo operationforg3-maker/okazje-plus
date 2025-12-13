@@ -79,7 +79,11 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   // ========================================
   
   // AI-curated clean title (no spam keywords like "HOT SALE 2025!!!")
-  const displayTitle = getText(product.title) || product.name || 'Produkt';
+  // Fallback chain: title (LocalizedText) -> title (string if wrong format) -> name -> 'Produkt'
+  const titleText = typeof product.title === 'string' 
+    ? product.title 
+    : getText(product.title);
+  const displayTitle = titleText || product.name || 'Produkt';
   
   // Smart Pricing with total landed cost
   const itemPrice = getPriceAmount(product.price);

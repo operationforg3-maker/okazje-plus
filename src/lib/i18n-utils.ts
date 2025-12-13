@@ -19,31 +19,46 @@ export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es';
  * @returns Localized string
  */
 export function getLocalizedText(
-  text: LocalizedText | string | undefined,
+  text: LocalizedText | string | undefined | any,
   lang: SupportedLanguage = 'pl'
 ): string {
-  // Handle legacy string format
-  if (typeof text === 'string') {
-    return text;
-  }
-  
   // Handle undefined/null
   if (!text) {
     return '';
   }
   
+  // Handle legacy string format
+  if (typeof text === 'string') {
+    return text;
+  }
+  
+  // Handle wrong types (objects that are not LocalizedText)
+  if (typeof text !== 'object') {
+    return String(text || '');
+  }
+  
   // Try requested language
-  if (text[lang]) {
-    return text[lang]!;
+  if (typeof text[lang] === 'string' && text[lang]) {
+    return text[lang];
   }
   
   // Fallback to English
-  if (text.en) {
+  if (typeof text.en === 'string' && text.en) {
     return text.en;
   }
   
   // Final fallback to Polish
-  return text.pl || '';
+  if (typeof text.pl === 'string' && text.pl) {
+    return text.pl;
+  }
+  
+  // Last resort: if it's an object, try JSON.stringify of first value
+  const values = Object.values(text).filter((v) => typeof v === 'string');
+  if (values.length > 0) {
+    return values[0] as string;
+  }
+  
+  return '';
 }
 
 /**
