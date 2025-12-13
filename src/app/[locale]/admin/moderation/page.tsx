@@ -526,7 +526,13 @@ function ModerationPage() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>{product.category}</span>
                           <span>•</span>
-                          <span className="font-semibold">{product.price.toLocaleString('pl-PL')} zł</span>
+                          <span className="font-semibold">
+                            {Number.isFinite(product.price) 
+                              ? `${parseFloat(product.price).toFixed(2)} zł`
+                              : product.price?.amount 
+                              ? `${product.price.amount.toFixed(2)} zł` 
+                              : '—'}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
