@@ -8,6 +8,7 @@
 import { EnrichedProduct, ImportStageConfig } from './types';
 import { translateText } from '@/lib/translation-service';
 import type { TranslationInput } from '@/lib/translation-service';
+import { convertToPLN } from '@/lib/currency-exchange';
 
 export interface TranslateConfig extends ImportStageConfig {
   targetLanguage: 'pl' | 'de' | 'fr';
@@ -42,12 +43,36 @@ export async function translateProducts(
   let titles_translated = 0;
   let descriptions_translated = 0;
   let low_confidence = 0;
+  let prices_converted = 0;
   
   for (let i = 0; i < products.length; i++) {
     const product = products[i];
     
     try {
-      console.log(`[Importer:Translate] [${i + 1}/${products.length}] AI translating: ${product.titleNormalizedEN.slice(0, 60)}...`);
+      console.log(`[Importer:Translate] [${i + 1}/${products.length}] Processing: ${product.titleNormalizedEN.slice(0, 60)}...`);
+      
+      // CURRENCY CONVERSION - Convert price to PLN if needed
+      if (product.currency !== 'PLN' && product.price > 0) {
+        try {
+          const pricePLN = await convertToPLN(product.price, product.currency);
+          product.pricePLN = pricePLN;
+          
+          if (product.originalPrice && product.originalPrice > 0) {
+            const originalPricePLN = await convertToPLN(product.originalPrice, product.currency);
+            // Update originalPrice field to PLN
+            product.originalPrice = originalPricePLN;
+          }
+          
+          prices_converted++;
+          console.log(`  💱 Converted: ${product.price} ${product.currency} → ${pricePLN} PLN`);
+        } catch (e: any) {
+          console.error(`  ✗ Currency conversion failed:`, e.message);
+          // Fallback: keep original price
+          product.pricePLN = product.price;
+        }
+      } else if (product.currency === 'PLN') {
+        product.pricePLN = product.price;
+      }
       
       if (finalConfig.targetLanguage === 'pl') {
         // AI Translation with category context using enhanced translation service
@@ -127,6 +152,7 @@ export async function translateProducts(
   console.log(`[Importer:Translate] ===== STAGE 4 END =====`);
   console.log(`[Importer:Translate] Results:`);
   console.log(`  - Processed: ${processed}/${products.length}`);
+  console.log(`  - Prices converted to PLN: ${prices_converted}`);
   console.log(`  - Titles translated: ${titles_translated}`);
   console.log(`  - Descriptions translated: ${descriptions_translated}`);
   console.log(`  - Low confidence items: ${low_confidence}`);
