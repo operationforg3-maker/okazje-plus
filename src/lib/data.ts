@@ -1673,6 +1673,64 @@ export async function getAdminDashboardStats() {
   const productsGrowth = await calculateGrowth('products', 30);
   const usersGrowth = await calculateGrowth('users', 30);
 
+  // Categories statistics
+  let categoriesStats = { total: 0, main: 0, sub: 0, subSub: 0 };
+  try {
+    const categoriesQuery = query(collection(db, 'categories'));
+    const categoriesSnapshot = await getDocs(categoriesQuery);
+    const categories = categoriesSnapshot.docs.map(doc => doc.data());
+    
+    categoriesStats.main = categories.length;
+    categoriesStats.sub = categories.reduce((sum: number, cat: any) => 
+      sum + (cat.subcategories?.length || 0), 0
+    );
+    categoriesStats.subSub = categories.reduce((sum: number, cat: any) => 
+      sum + (cat.subcategories || []).reduce((subSum: number, sub: any) => 
+        subSum + (sub.subsubcategories?.length || 0), 0
+      ), 0
+    );
+    categoriesStats.total = categoriesStats.main + categoriesStats.sub + categoriesStats.subSub;
+  } catch (error) {
+    console.warn('Categories stats query failed:', error);
+  }
+
+  // Import jobs statistics
+  let importsStats = { running: 0, queued: 0, completed24h: 0, failed24h: 0 };
+  try {
+    const runningQuery = query(
+      collection(db, 'import_jobs'),
+      where('status', '==', 'running')
+    );
+    const queuedQuery = query(
+      collection(db, 'import_jobs'),
+      where('status', '==', 'queued')
+    );
+    const completed24hQuery = query(
+      collection(db, 'import_jobs'),
+      where('status', '==', 'completed'),
+      where('completedAt', '>=', last24Hours.toISOString())
+    );
+    const failed24hQuery = query(
+      collection(db, 'import_jobs'),
+      where('status', '==', 'failed'),
+      where('completedAt', '>=', last24Hours.toISOString())
+    );
+
+    const [runningCount, queuedCount, completed24hCount, failed24hCount] = await Promise.all([
+      getCountFromServer(runningQuery),
+      getCountFromServer(queuedQuery),
+      getCountFromServer(completed24hQuery),
+      getCountFromServer(failed24hQuery)
+    ]);
+
+    importsStats.running = runningCount.data().count;
+    importsStats.queued = queuedCount.data().count;
+    importsStats.completed24h = completed24hCount.data().count;
+    importsStats.failed24h = failed24hCount.data().count;
+  } catch (error) {
+    console.warn('Import jobs stats query failed:', error);
+  }
+
   const stats = {
     totals: counts,
     pending: {
@@ -1706,7 +1764,9 @@ export async function getAdminDashboardStats() {
       deals: dealsGrowth,
       products: productsGrowth,
       users: usersGrowth
-    }
+    },
+    categories: categoriesStats,
+    imports: importsStats
   };
 
   // Cache stats for 15 minutes (900 seconds)

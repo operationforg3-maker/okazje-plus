@@ -248,6 +248,18 @@ interface DashboardStats {
     products: number;
     users: number;
   };
+  categories?: {
+    total: number;
+    main: number;
+    sub: number;
+    subSub: number;
+  };
+  imports?: {
+    running: number;
+    queued: number;
+    completed24h: number;
+    failed24h: number;
+  };
 }
 
 function AdminPage() {
@@ -348,6 +360,12 @@ function AdminPage() {
                   <Badge variant="secondary" className="ml-1">!</Badge>
                 )}
               </p>
+              {dashboardStats?.growth?.deals !== undefined && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +{dashboardStats.growth.deals} (24h)
+                </p>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -366,6 +384,12 @@ function AdminPage() {
                   <Badge variant="secondary" className="ml-1">!</Badge>
                 )}
               </p>
+              {dashboardStats?.growth?.products !== undefined && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +{dashboardStats.growth.products} (24h)
+                </p>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -381,6 +405,12 @@ function AdminPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 Aktywni użytkownicy
               </p>
+              {dashboardStats?.growth?.users !== undefined && (
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  +{dashboardStats.growth.users} (24h)
+                </p>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -399,6 +429,92 @@ function AdminPage() {
             </CardContent>
           </Card>
         </Link>
+      </div>
+
+      {/* System Status & Categories */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Categories Card */}
+        <Card className="border-l-4 border-l-cyan-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Kategorie</CardTitle>
+            <Package className="h-4 w-4 text-cyan-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{dashboardStats?.categories?.total || 0}</div>
+            <div className="mt-3 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Główne:</span>
+                <span className="font-medium">{dashboardStats?.categories?.main || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Podkategorie:</span>
+                <span className="font-medium">{dashboardStats?.categories?.sub || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Sub-sub:</span>
+                <span className="font-medium">{dashboardStats?.categories?.subSub || 0}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Imports Status Card */}
+        <Card className="border-l-4 border-l-indigo-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Importy</CardTitle>
+            <Activity className="h-4 w-4 text-indigo-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {(dashboardStats?.imports?.running || 0) + (dashboardStats?.imports?.queued || 0)}
+            </div>
+            <div className="mt-3 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Aktywne:</span>
+                <span className="font-medium text-blue-600">{dashboardStats?.imports?.running || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">W kolejce:</span>
+                <span className="font-medium text-amber-600">{dashboardStats?.imports?.queued || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Ukończone (24h):</span>
+                <span className="font-medium text-green-600">{dashboardStats?.imports?.completed24h || 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Błędy (24h):</span>
+                <span className="font-medium text-red-600">{dashboardStats?.imports?.failed24h || 0}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Average Temperature Card */}
+        <Card className="border-l-4 border-l-rose-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Średnia temperatura</CardTitle>
+            <Flame className="h-4 w-4 text-rose-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {dashboardStats?.avgTemperature?.toFixed(0) || '—'}°
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Aktywność społeczności
+            </p>
+            <div className="mt-2 flex items-center gap-2">
+              {(dashboardStats?.avgTemperature ?? 0) > 50 && (
+                <Badge variant="default" className="bg-orange-500">Gorąco 🔥</Badge>
+              )}
+              {(dashboardStats?.avgTemperature ?? 0) <= 50 && (dashboardStats?.avgTemperature ?? 0) > 20 && (
+                <Badge variant="secondary">Normalnie</Badge>
+              )}
+              {(dashboardStats?.avgTemperature ?? 0) <= 20 && (
+                <Badge variant="outline">Zimno ❄️</Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Main Stats Cards */}
