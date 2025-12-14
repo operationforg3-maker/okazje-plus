@@ -92,9 +92,9 @@ export async function enrichProducts(
         finalImage = (product as any).product_main_image_url || '';
       }
       if (!finalImage || !finalImage.startsWith('http')) {
-        // Last resort: create placeholder (will be skipped in save, but better logging)
-        console.warn(`[Importer:Enrich] ⚠️  WARNING: No valid image URL for product ${product.id}: "${product.image}". Using placeholder.`);
-        finalImage = `https://via.placeholder.com/400?text=${encodeURIComponent(product.title.slice(0, 40))}`;
+        // Use AliExpress noimage placeholder instead of via.placeholder
+        console.warn(`[Importer:Enrich] ⚠️  WARNING: No valid image URL for product ${product.id}: "${product.image}". Using AliExpress noimage.`);
+        finalImage = 'https://ae01.alicdn.com/kf/HTB1VhRlaMFY.1VjSZFnq6AFHXXa0.png';
       }
       
       const enrichedProduct: EnrichedProduct = {
