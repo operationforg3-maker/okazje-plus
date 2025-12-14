@@ -673,7 +673,7 @@ async function processUIImportJob(uiJob: any): Promise<void> {
           dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
           enrich: { batchSize: 5, delayBetweenItems: 300, delayBetweenBatches: 2000 },
           translate: { batchSize: 10, delayBetweenItems: 50, delayBetweenBatches: 300 },
-          save: { batchSize: 5, skipExisting: true },
+          save: { batchSize: 5, skipExisting: false },
         });
 
         const batchCreated = pipelineResult.saved.created.length;
