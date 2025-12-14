@@ -1,4 +1,5 @@
 // W pliku: okazje-plus/src/index.ts
+// Updated: 2025-12-14 18:45 - Sync stageFetch.ts with debug logging
 import {initializeApp} from "firebase-admin/app";
 import {
   getFirestore,

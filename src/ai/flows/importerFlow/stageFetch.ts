@@ -77,7 +77,10 @@ export async function fetchHotProductsByCategory(
         
         // Extract other fields
         const title = p.product_title || p.title || '';
-        const image = p.product_main_image_url || p.image_url || '';
+        // Extract image from image_urls array (per AliExpress API spec) or fallback to legacy field names
+        const image = (Array.isArray(p.image_urls) && p.image_urls.length > 0 && p.image_urls[0]) 
+          ? p.image_urls[0] 
+          : (p.product_main_image_url || p.image_url || '');
         const link = p.promotion_link || p.product_detail_url || '';
         
         // Validate essential fields
@@ -107,7 +110,7 @@ export async function fetchHotProductsByCategory(
           link,
           currency: p.target_sale_price_currency || 'PLN',
           description: p.product_description || title,
-          images: Array.isArray(p.product_small_image_urls) ? p.product_small_image_urls : [image],
+          images: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls : (Array.isArray(p.product_small_image_urls) ? p.product_small_image_urls : [image]),
           // Keep raw data for debugging
           _raw: p
         };
@@ -240,10 +243,15 @@ export async function fetchProductsFromAliexpress(
           
           seenIds.add(productId);
           
+          // Extract image from image_urls array (per AliExpress API spec)
+          const mainImage = Array.isArray(p.image_urls) && p.image_urls.length > 0 && p.image_urls[0] 
+            ? p.image_urls[0] 
+            : (p.product_main_image_url || p.product_image || '');
+          
           const product: AliExpressProduct = {
             id: productId,
             title: p.product_title || 'Untitled',
-            image: p.product_main_image_url || p.product_image || '',
+            image: mainImage,
             price: parseFloat(p.sale_price || p.price || '0'),
             originalPrice: parseFloat(p.original_price || p.list_price || '0') || undefined,
             discount: p.discount || undefined,
@@ -253,7 +261,7 @@ export async function fetchProductsFromAliexpress(
             link: p.product_detail_url || '#',
             currency: 'USD',
             description: p.product_description || '',
-            images: p.product_images || (p.product_main_image_url ? [p.product_main_image_url] : []),
+            images: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls : (p.product_images || (mainImage ? [mainImage] : [])),
             ...p
           };
           
