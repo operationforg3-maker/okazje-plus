@@ -65,7 +65,14 @@ const navStructure: (NavItem | NavGroup)[] = [
     title: 'Import & Export',
     icon: Upload,
     items: [
-      { title: 'Kombajn', href: '/admin/harvester', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
+      { title: 'Konsola Import/Export', href: '/admin/import-export', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
+    ],
+  },
+  {
+    title: 'Legacy (Importy)',
+    icon: Download,
+    items: [
+      { title: 'Kombajn', href: '/admin/harvester', icon: Combine },
       { title: 'Auto-Import Kombajn', href: '/admin/auto-import', icon: Sparkles },
       { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
       { title: 'AliExpress', href: '/admin/aliexpress-import', icon: Search },
