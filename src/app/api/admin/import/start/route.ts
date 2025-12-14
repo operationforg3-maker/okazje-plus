@@ -41,6 +41,8 @@ function getImportKeywordsFromStructure(categorySlug: string, subcategorySlug: s
  */
 export async function POST(req: NextRequest) {
   try {
+    console.log('[Import Start] POST request received');
+    
     // Auth check
     const authHeader = req.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -54,7 +56,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    const { type = 'products', maxItemsPerSubcategory = 10, importerType = 'keyword-search' } = await req.json();
+    const bodyData = await req.json();
+    console.log('[Import Start] Request body parsed:', Object.keys(bodyData));
+    
+    const { type = 'products', maxItemsPerSubcategory = 10, importerType = 'keyword-search' } = bodyData;
+    console.log(`[Import Start] Params: type=${type}, importerType=${importerType}, maxItems=${maxItemsPerSubcategory}`);
 
     if (!['products', 'deals'].includes(type)) {
       return NextResponse.json({ error: 'Invalid type. Use "products" or "deals"' }, { status: 400 });
