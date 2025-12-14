@@ -50,7 +50,8 @@ export async function fetchHotProductsByCategory(
       }
       
       // Normalize to our schema - products from getHotProducts are already parsed
-      for (const p of products) {
+      for (let i = 0; i < products.length; i++) {
+        const p = products[i];
         const productId = String(p.product_id || p.item_id || '');
         
         if (!productId || productId === 'undefined' || seenIds.has(productId)) {
@@ -82,6 +83,18 @@ export async function fetchHotProductsByCategory(
           ? p.image_urls[0] 
           : (p.product_main_image_url || p.image_url || '');
         const link = p.promotion_link || p.product_detail_url || '';
+        
+        // DEBUG: Log image extraction for debugging
+        if (i < 3) {
+          console.log(`[Importer:Fetch:HotProducts] 🖼️  Image data for ${productId}:`, {
+            hasImageUrls: Array.isArray(p.image_urls),
+            imageUrlsLength: Array.isArray(p.image_urls) ? p.image_urls.length : 0,
+            firstImageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0]?.substring(0, 80) : 'N/A',
+            product_main_image_url: p.product_main_image_url?.substring(0, 80),
+            image_url: p.image_url?.substring(0, 80),
+            finalImage: image?.substring(0, 80)
+          });
+        }
         
         // Validate essential fields
         if (!title || !link || !image) {

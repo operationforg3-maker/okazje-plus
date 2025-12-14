@@ -93,8 +93,9 @@ export async function enrichProducts(
       }
       if (!finalImage || !finalImage.startsWith('http')) {
         // Use AliExpress noimage placeholder instead of via.placeholder
-        console.warn(`[Importer:Enrich] ⚠️  WARNING: No valid image URL for product ${product.id}: "${product.image}". Using AliExpress noimage.`);
-        finalImage = 'https://ae01.alicdn.com/kf/HTB1VhRlaMFY.1VjSZFnq6AFHXXa0.png';
+        console.warn(`[Importer:Enrich] ⚠️  WARNING: No valid image URL for product ${product.id}: "${product.image}". Will use fallback in save stage.`);
+        // DON'T set fallback here - let stageSave handle it with real AliExpress images if available
+        finalImage = product.image || ''; // Keep original even if invalid
       }
       
       const enrichedProduct: EnrichedProduct = {

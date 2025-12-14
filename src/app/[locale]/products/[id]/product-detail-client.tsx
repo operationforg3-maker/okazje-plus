@@ -96,8 +96,8 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
     ? formatPrice((product as any).originalPrice - currentPrice, 'PLN')
     : null;
 
-  const avgRating = product.ratingCard.average;
-  const ratingCount = product.ratingCard.count;
+  const avgRating = product.ratingCard?.average ?? 0;
+  const ratingCount = product.ratingCard?.count ?? 0;
 
   // Galeria - użyj product.gallery jeśli istnieje, fallback do głównego obrazka
   const images = product.gallery && product.gallery.length > 0 
@@ -323,7 +323,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               </span>
               
               {/* External rating (AliExpress) */}
-              {hasExternalRating && externalRating && (
+              {hasExternalRating && externalRating && externalRating.average != null && (
                 <>
                   <Separator orientation="vertical" className="h-6 md:h-8" />
                   <TooltipProvider>
@@ -331,7 +331,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                       <TooltipTrigger>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <ExternalLink className="h-3 w-3" />
-                          {externalRating.average.toFixed(1)}/5
+                          {(externalRating.average ?? 0).toFixed(1)}/5
                           {externalRating.count && ` (${externalRating.count})`}
                         </div>
                       </TooltipTrigger>

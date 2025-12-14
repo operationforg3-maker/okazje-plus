@@ -69,12 +69,12 @@ export default function AIExpertSummary({ product, className }: AIExpertSummaryP
   }
 
   // Fallback: extract from rating/orders
-  const rating = (product as any).rating || 0;
-  const ordersCount = (product as any).ordersCount || 0;
-  const merchantRating = (product as any).merchantRating || 0;
+  const rating = (product as any).rating ?? 0;
+  const ordersCount = (product as any).ordersCount ?? 0;
+  const merchantRating = (product as any).merchantRating ?? 0;
 
   if (rating >= 4.5 && ordersCount > 1000) {
-    pros.push(`Bardzo wysoka ocena (${rating.toFixed(1)}★)`);
+    pros.push(`Bardzo wysoka ocena (${(rating ?? 0).toFixed(1)}★)`);
     pros.push(`Ponad ${ordersCount.toLocaleString()} zamówień`);
   }
   if (merchantRating >= 95) {
@@ -82,7 +82,7 @@ export default function AIExpertSummary({ product, className }: AIExpertSummaryP
   }
 
   if (rating < 4.0 && rating > 0) {
-    cons.push(`Ocena poniżej 4.0 (${rating.toFixed(1)}★)`);
+    cons.push(`Ocena poniżej 4.0 (${(rating ?? 0).toFixed(1)}★)`);
   }
   if (ordersCount < 100 && ordersCount > 0) {
     cons.push('Nowy produkt - mało recenzji');
