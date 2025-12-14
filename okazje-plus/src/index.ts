@@ -2096,7 +2096,82 @@ export const activatePreRegistration = onCall(
   }
 );
 
-// Eksporty wymagane przez Firebase Functions deploy
-exports.trackShareStats = trackShareStats;
-exports.checkSavedSearches = checkSavedSearches;
-exports.sendWeeklyDigest = sendWeeklyDigest;
+// ============================================
+// Test: Create Import Job directly in Firestore (debug only)
+// ============================================
+export const testCreateImportJob = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 120,
+    memory: "512MiB",
+  },
+  async (req, res) => {
+    try {
+      logger.info("[testCreateImportJob] Creating test job...");
+
+      const jobRef = db.collection("import_jobs").doc();
+      const jobId = jobRef.id;
+      const now = new Date().toISOString();
+
+      // Stwórz batch dla 1 subkategorii tylko
+      const batches = [
+        {
+          categoryId: "elektronika",
+          categoryName: "Elektronika",
+          categorySlug: "elektronika",
+          subcategoryId: "smartfony-telefony",
+          subcategoryName: "Smartfony i telefony",
+          subcategorySlug: "smartfony-telefony",
+          subsubcategoryId: "smartfony",
+          subsubcategoryName: "Smartfony",
+          subsubcategorySlug: "smartfony",
+        },
+      ];
+
+      const jobData = {
+        id: jobId,
+        type: "products",
+        importerType: "keyword-search",
+        sources: ["keyword-search"],
+        status: "queued",
+        progress: {
+          total: batches.length,
+          completed: 0,
+          failed: 0,
+          current: 0,
+        },
+        batches,
+        maxItemsPerSubcategory: 3,
+        createdAt: now,
+        updatedAt: now,
+        startedAt: now,
+        completedAt: null,
+        logs: [
+          {
+            timestamp: now,
+            message: "Job created by testCreateImportJob function",
+          },
+        ],
+        itemsCreated: [],
+        itemsUpdated: [],
+      };
+
+      logger.info(`[testCreateImportJob] Setting job data to Firestore: ${jobId}`);
+      await jobRef.set(jobData);
+
+      logger.info(
+        `[testCreateImportJob] Job created successfully: ${jobId}`
+      );
+
+      res.json({
+        success: true,
+        jobId,
+        message: `Test job created: ${jobId}. Processing will start in next cron cycle.`,
+      });
+    } catch (error: any) {
+      logger.error("[testCreateImportJob] Failed", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
