@@ -45,6 +45,13 @@ env:
     value: '{"apiKey":"AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4","authDomain":"okazje-plus.firebaseapp.com","projectId":"okazje-plus","storageBucket":"okazje-plus.firebasestorage.app","messagingSenderId":"298894101105","appId":"1:298894101105:web:20a99f74b145cdf3ee29d0"}'
     availability:
       - RUNTIME
+
+  # Firebase Admin Service Account (JSON) provided via Secret Manager
+  # Code reads this from env var FIREBASE_SERVICE_ACCOUNT_JSON and initializes admin SDK with cert()
+  - variable: FIREBASE_SERVICE_ACCOUNT_JSON
+    secret: FIREBASE_SERVICE_ACCOUNT_JSON
+    availability:
+      - RUNTIME
   
   # Vertex AI configuration (uses Firebase project ADC automatically)
   - variable: VERTEX_AI_LOCATION

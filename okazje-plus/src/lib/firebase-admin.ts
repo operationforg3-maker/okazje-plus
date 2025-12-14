@@ -4,6 +4,20 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 function loadServiceAccount() {
+  // Prefer runtime-provided JSON from environment (App Hosting Secret)
+  const envJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (envJson) {
+    try {
+      const parsed = JSON.parse(envJson);
+      if (parsed && parsed.project_id) {
+        return parsed;
+      }
+      console.warn('[firebase-admin] FIREBASE_SERVICE_ACCOUNT_JSON is present but missing project_id');
+    } catch (e: any) {
+      console.warn('[firebase-admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON, falling back:', e);
+    }
+  }
+
   const serviceAccountPath = path.join(process.cwd(), 'serviceAccountKey.json');
   if (fs.existsSync(serviceAccountPath)) {
     try {
