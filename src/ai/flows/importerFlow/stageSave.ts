@@ -48,12 +48,16 @@ export async function saveProductsToFirestore(
     
     try {
       console.log(`[Importer:Save] [${i + 1}/${products.length}] Processing: ${product.titleNormalizedEN.slice(0, 60)}...`);
+      console.log(`  ↳ IDs: originalId=${product.originalId}, affiliateUrl=${product.link?.slice(0, 100)}`);
+      console.log(`  ↳ Prices: pricePLN=${product.pricePLN}, priceUSD=${product.priceUSD}, original=${product.price}, currency=${product.currency}`);
+      console.log(`  ↳ Image: ${product.image?.slice(0, 120)}`);
       
       // Check if product exists
       const existingId = await findExistingProduct({
         originalId: product.originalId,
         affiliateUrl: product.link,
       });
+      console.log(`  ↳ Existence check result: ${existingId ? `FOUND ${existingId}` : 'NOT FOUND'}`);
       
       // Build LocalizedText for title
       const titleLocalized: LocalizedText = {
@@ -76,6 +80,7 @@ export async function saveProductsToFirestore(
       if (!finalPrice || finalPrice <= 0 || isNaN(finalPrice)) {
         console.error(`  ❌ SKIP-PRICE: Invalid price for ${product.originalId}`);
         console.error(`     finalPrice: ${finalPrice}, pricePLN: ${product.pricePLN}, priceUSD: ${product.priceUSD}, original: ${product.price}`);
+        console.error(`     Context: currency=${productCurrency}`);
         skipped.push(product.originalId);
         continue;
       }
@@ -83,6 +88,7 @@ export async function saveProductsToFirestore(
       // Validate image before saving
       if (!product.image || !product.image.startsWith('http')) {
         console.error(`  ❌ SKIP-IMAGE: Invalid image for ${product.originalId}: ${product.image}`);
+        console.error(`     Hint: image must be absolute http(s) URL`);
         skipped.push(product.originalId);
         continue;
       }
@@ -110,6 +116,7 @@ export async function saveProductsToFirestore(
         }
         
         // Update existing
+        console.log(`  → Updating existing product ${existingId}`);
         await updateProduct(existingId, {
           name: product.titlePL || product.titleNormalizedEN, // Legacy
           title: titleLocalized,
@@ -142,6 +149,7 @@ export async function saveProductsToFirestore(
         
       } else {
         // Create new
+        console.log(`  → Creating new product`);
         const productData = {
           name: product.titlePL || product.titleNormalizedEN,
           title: titleLocalized,
@@ -176,7 +184,7 @@ export async function saveProductsToFirestore(
             count: 0,
           },
         };
-        
+        console.log(`  → Payload preview: title.pl='${productData.title.pl?.slice(0, 60)}', category='${productData.mainCategorySlug}/${productData.subCategorySlug}/${productData.subSubCategorySlug}', price=${productData.price.amount} ${productData.price.currency}`);
         const newId = await createProduct(productData as any);
         
         console.log(`  ✓ Created: ${newId} (status: approved, title: ${productData.title.pl.slice(0, 40)}...)`);
@@ -199,8 +207,10 @@ export async function saveProductsToFirestore(
               itemsUpdated: FieldValue.arrayUnion(id)
             });
           }
+          console.log(`  ↳ Job tracking updated for jobId=${finalConfig.jobId} (created=${created.length}, updated=${updated.length})`);
         } catch (e: any) {
           console.warn(`[Importer:Save] Failed to update job tracking:`, e.message);
+          if (e.code) console.warn(`  ↳ code=${e.code}`);
         }
       }
       
@@ -217,6 +227,17 @@ export async function saveProductsToFirestore(
       console.error(`  Error message: ${error.message}`);
       console.error(`  Error code: ${error.code}`);
       if (error.stack) console.error(`  Stack: ${error.stack.split('\n').slice(0, 3).join('\n')}`);
+      try {
+        console.error(`  ↳ Context snapshot:`, {
+          id: product.originalId,
+          titleEN: product.titleNormalizedEN?.slice(0, 80),
+          pricePLN: product.pricePLN,
+          priceUSD: product.priceUSD,
+          image: product.image?.slice(0, 100),
+          link: product.link?.slice(0, 120),
+          category: `${product.categorySlugEN}/${product.subcategorySlugEN}/${product.subsubcategorySlugEN}`,
+        });
+      } catch {}
       skipped.push(product.originalId);
     }
   }
