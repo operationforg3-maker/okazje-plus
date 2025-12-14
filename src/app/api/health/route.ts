@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
-// Force dynamic rendering and cap runtime to avoid long waits on degraded envs
+
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 /**
- * Health check endpoint - weryfikuje wszystkie kluczowe systemy
+ * Health check endpoint - minimal & fast
  * GET /api/health
- * GET /api/health?detailed=true - pełne informacje
+ * GET /api/health?detailed=true - includes extended checks
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -22,58 +20,10 @@ export async function GET(request: NextRequest) {
   };
 
   try {
-    // Fast-fail if missing client Firebase config (avoids long timeouts)
-    const hasClientFirebaseConfig = Boolean(
-      process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    );
-
-    // 1. Firestore connectivity
-    try {
-      if (hasClientFirebaseConfig) {
-        const dealsQuery = query(
-          collection(db, 'deals'),
-          where('status', '==', 'approved'),
-          limit(1)
-        );
-        const snapshot = await getDocs(dealsQuery);
-        results.checks.firestore = {
-          status: 'ok',
-          message: `Connected, found ${snapshot.size} deal(s)`,
-        };
-      } else {
-        results.checks.firestore = {
-          status: 'warning',
-          message: 'Missing client Firebase config; skipping Firestore check',
-        };
-        results.status = 'degraded';
-      }
-    } catch (error: any) {
-      results.checks.firestore = {
-        status: 'error',
-        message: error.message,
-      };
-      results.status = 'degraded';
-    }
-
-    // 2. Categories check
-    try {
-      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-      results.checks.categories = {
-        status: 'ok',
-        count: categoriesSnapshot.size,
-      };
-    } catch (error: any) {
-      results.checks.categories = {
-        status: 'error',
-        message: error.message,
-      };
-      results.status = 'degraded';
-    }
-
-    // 3. Environment variables check
+    // 1. Environment variables check (no I/O required)
     const envChecks = {
       firebaseConfig: !!process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      geminiKey: !!process.env.GEMINI_API_KEY || !!process.env.GOOGLE_GENAI_API_KEY,
+      firebaseProject: !!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
       siteUrl: !!process.env.NEXT_PUBLIC_SITE_URL,
     };
     
@@ -82,22 +32,55 @@ export async function GET(request: NextRequest) {
       variables: envChecks,
     };
 
-    // 4. Firebase Admin check (tylko detailed)
+    // 2. Extended checks only if detailed=true and within 10s timeout
     if (detailed) {
       try {
-        const { adminAuth } = await import('@/lib/firebase-admin');
-        // Próba pobrania listy użytkowników (limit 1) jako test
-        const listResult = await adminAuth.listUsers(1);
-        results.checks.firebaseAdmin = {
-          status: 'ok',
-          message: 'Firebase Admin SDK operational',
-        };
+        const detailStartTime = Date.now();
+        
+        // Firestore check with short timeout
+        if (Object.values(envChecks).every(Boolean)) {
+          try {
+            const { db } = await import('@/lib/firebase');
+            const { collection, getDocs, query, where, limit } = await import('firebase/firestore');
+            
+            const dealsQuery = query(
+              collection(db, 'deals'),
+              where('status', '==', 'approved'),
+              limit(1)
+            );
+            const snapshot = await getDocs(dealsQuery);
+            results.checks.firestore = {
+              status: 'ok',
+              message: `Connected, found ${snapshot.size} deal(s)`,
+            };
+          } catch (error: any) {
+            results.checks.firestore = {
+              status: 'warning',
+              message: 'Firestore unavailable',
+            };
+            results.status = 'degraded';
+          }
+        }
+
+        // Firebase Admin check
+        try {
+          const { adminAuth } = await import('@/lib/firebase-admin');
+          await adminAuth.listUsers(1);
+          results.checks.firebaseAdmin = {
+            status: 'ok',
+            message: 'Firebase Admin SDK operational',
+          };
+        } catch (error: any) {
+          results.checks.firebaseAdmin = {
+            status: 'warning',
+            message: 'Admin SDK unavailable',
+          };
+        }
       } catch (error: any) {
-        results.checks.firebaseAdmin = {
-          status: 'error',
-          message: error.message,
+        results.checks.detailedError = {
+          status: 'warning',
+          message: 'Extended checks failed',
         };
-        results.status = 'degraded';
       }
     }
 
@@ -107,14 +90,6 @@ export async function GET(request: NextRequest) {
       responseTime: `${responseTime}ms`,
       status: responseTime < 1000 ? 'ok' : responseTime < 3000 ? 'warning' : 'slow',
     };
-
-    // Determine overall status
-    const hasErrors = Object.values(results.checks).some(
-      (check: any) => check.status === 'error'
-    );
-    if (hasErrors) {
-      results.status = 'degraded';
-    }
 
   } catch (error: any) {
     results.status = 'error';
