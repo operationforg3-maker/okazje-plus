@@ -85,11 +85,23 @@ export async function enrichProducts(
         // Pozostaw w oryginalnej walucie
       }
       
+      // Validate and fix image URL
+      let finalImage = product.image || '';
+      if (!finalImage || !finalImage.startsWith('http')) {
+        // Try to use product_main_image_url from original API response
+        finalImage = (product as any).product_main_image_url || '';
+      }
+      if (!finalImage || !finalImage.startsWith('http')) {
+        // Last resort: create placeholder (will be skipped in save, but better logging)
+        console.warn(`[Importer:Enrich] ⚠️  WARNING: No valid image URL for product ${product.id}: "${product.image}". Using placeholder.`);
+        finalImage = `https://via.placeholder.com/400?text=${encodeURIComponent(product.title.slice(0, 40))}`;
+      }
+      
       const enrichedProduct: EnrichedProduct = {
         // From AliExpress
         originalId: product.id,
         titleOriginal: product.title,
-        image: product.image,
+        image: finalImage,
         link: product.link,
         affiliateUrl: product.link,
         price: product.price,

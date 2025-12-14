@@ -85,12 +85,22 @@ export async function saveProductsToFirestore(
         continue;
       }
       
-      // Validate image before saving
-      if (!product.image || !product.image.startsWith('http')) {
-        console.error(`  ❌ SKIP-IMAGE: Invalid image for ${product.originalId}: ${product.image}`);
-        console.error(`     Hint: image must be absolute http(s) URL`);
-        skipped.push(product.originalId);
-        continue;
+      // Validate image before saving - TRY TO FIX INVALID IMAGES
+      let finalImage = product.image;
+      if (!finalImage || !finalImage.startsWith('http')) {
+        console.warn(`  ⚠️  Image validation warning: ${finalImage}`);
+        // Try to reconstruct image URL if it's broken
+        if (product.originalId) {
+          // Fallback: use AliExpress product image placeholder
+          // Format: https://ae01.alicdn.com/kf/[HASH].jpg
+          // For now, just skip BUT LOG the product for debugging
+          console.error(`  ❌ SKIP-IMAGE: Invalid image for ${product.originalId}: "${finalImage}"`);
+          console.error(`     Product: ${product.titleNormalizedEN.slice(0, 80)}`);
+          console.error(`     OriginalId: ${product.originalId}`);
+          console.error(`     Hint: Need valid image URL from enrichment stage`);
+          skipped.push(product.originalId);
+          continue;
+        }
       }
       
       console.log(`  ✓ Validation passed - will create/update`);

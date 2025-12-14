@@ -1,31 +1,21 @@
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import admin from 'firebase-admin';
 import { readFileSync } from 'fs';
 
 const serviceAccount = JSON.parse(readFileSync('./serviceAccountKey.json', 'utf8'));
-const app = initializeApp({ credential: cert(serviceAccount) });
-const db = getFirestore(app);
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+const db = admin.firestore();
 
-async function checkProducts() {
-  try {
-    const productsSnapshot = await db.collection('products').limit(10).get();
-    
-    console.log(`\n📦 Total products created: ${productsSnapshot.size}\n`);
-    
-    productsSnapshot.forEach((doc, idx) => {
-      const data = doc.data();
-      console.log(`${idx + 1}. ${data.name?.substring(0, 60)}`);
-      console.log(`   Category: ${data.mainCategorySlug}/${data.subCategorySlug}`);
-      console.log(`   Price: ${data.price?.amount} ${data.price?.currency}`);
-      console.log(`   Job: ${data.importJobId || 'N/A'}`);
-      console.log(`   Created: ${data.createdAt?.toDate?.()?.toISOString() || data.createdAt}\n`);
-    });
+// Count products
+const snap = await db.collection('products').limit(500).get();
+console.log(`\n📦 Total products in Firestore: ${snap.size}`);
 
-  } catch (error) {
-    console.error('Error:', error.message);
-  }
-
-  process.exit(0);
+if (snap.size > 0) {
+  console.log(`\n🎯 Sample products (first 5):`);
+  snap.docs.slice(0, 5).forEach((doc, i) => {
+    const p = doc.data();
+    console.log(`\n  ${i+1}. ${p.title?.slice(0, 60)}`);
+    console.log(`     Price: $${p.price} PLN ${p.pricePolishCurrency}`);
+    console.log(`     Rating: ${p.rating} ⭐ (${p.orders} orders)`);
+    console.log(`     Category: ${p.categoryName}/${p.subcategoryName}`);
+  });
 }
-
-checkProducts();
