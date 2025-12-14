@@ -222,6 +222,18 @@ export async function fetchProductsFromAliexpress(
         
         console.log(`[Importer:Fetch] Direct: Got ${products.length} products for "${keyword}"`);
         
+        // DEBUG: Log first product raw structure
+        if (products.length > 0) {
+          console.log(`[Importer:Fetch] 🔍 RAW PRODUCT SAMPLE (first product):`, JSON.stringify(products[0]).slice(0, 1000));
+          console.log(`[Importer:Fetch] 🔍 Image fields check:`, {
+            product_main_image_url: products[0].product_main_image_url,
+            product_image: products[0].product_image,
+            image_url: products[0].image_url,
+            item_main_image: products[0].item_main_image,
+            all_keys: Object.keys(products[0]),
+          });
+        }
+        
         for (const p of products) {
           const productId = String(p.product_id || p.id);
           if (!productId || seenIds.has(productId)) continue;
