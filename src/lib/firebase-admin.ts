@@ -15,6 +15,27 @@ if (!getApps().length) {
   const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
   const hasServiceAccountFile = existsSync(serviceAccountPath);
 
+  // 1) Prefer explicit JSON provided via env (App Hosting Secret)
+  if (!adminApp && process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      if (parsed?.project_id && parsed?.client_email && parsed?.private_key) {
+        console.log('[firebase-admin] Using FIREBASE_SERVICE_ACCOUNT_JSON from environment');
+        adminApp = initializeApp({
+          credential: cert({
+            projectId: parsed.project_id,
+            clientEmail: parsed.client_email,
+            privateKey: parsed.private_key,
+          }),
+        });
+      } else {
+        console.warn('[firebase-admin] FIREBASE_SERVICE_ACCOUNT_JSON missing required fields');
+      }
+    } catch (e) {
+      console.warn('[firebase-admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON, falling back:', e);
+    }
+  }
+
   // Jeśli mamy jawne GOOGLE_APPLICATION_CREDENTIALS wskazujące na plik json użyj go w pierwszej kolejności
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS && existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
     try {
