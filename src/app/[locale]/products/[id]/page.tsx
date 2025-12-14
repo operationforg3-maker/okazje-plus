@@ -23,7 +23,16 @@ async function getProductData(id: string) {
     return null;
   }
   
-  const product = { id: docSnap.id, ...docSnap.data() } as Product;
+  const productData = docSnap.data();
+  const product = {
+    id: docSnap.id,
+    ...productData,
+    // Ensure required fields have defaults
+    ratingCard: productData.ratingCard || { average: 0, count: 0 },
+    price: productData.price ?? 0,
+    originalPrice: productData.originalPrice ?? undefined,
+    discountPercent: productData.discountPercent ?? undefined,
+  } as Product;
   
   // Fetch related products from same subcategory
   const relatedQuery = query(
@@ -56,7 +65,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   
   const { product } = data;
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price);
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price ?? 0);
   const originalPrice = product.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice)
     : null;
@@ -64,7 +73,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   // SEO title i description z AI lub fallback
   const metaTitle = product.metaTitle || product.seo?.metaTitle || `${product.name} - ${price} | Okazje Plus`;
-  const metaDescription = product.metaDescription || product.seo?.metaDescription || product.description || `Kup ${product.name} w najlepszej cenie ${price}. ${product.ratingCard.count} ocen, średnia ${product.ratingCard.average.toFixed(1)}/5.0`;
+  const ratingText = product.ratingCard?.count > 0 
+    ? `${product.ratingCard.count} ocen, średnia ${product.ratingCard.average.toFixed(1)}/5.0` 
+    : 'Brak ocen';
+  const metaDescription = product.metaDescription || product.seo?.metaDescription || product.description || `Kup ${product.name} w najlepszej cenie ${price}. ${ratingText}`;
   
   // Keywords z AI enrichment + SEO
   const keywords = [
