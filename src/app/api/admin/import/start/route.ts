@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
     const jobId = jobRef.id;
 
     const now = new Date().toISOString();
-    await jobRef.set({
+    const jobData = {
       id: jobId,
       type,
       importerType, // NEW: store which importer is used
@@ -144,9 +144,28 @@ export async function POST(req: NextRequest) {
       logs: [],
       itemsCreated: [], // Track IDs for rollback
       itemsUpdated: [], // Track IDs for rollback
-    });
+    };
 
-    console.log(`[Import Start] Job created: ${jobId}`);
+    console.log(`[Import Start] DEBUG: About to create job ${jobId} in firestore...`);
+    console.log(`[Import Start] DEBUG: jobRef path = ${jobRef.path}, jobRef.id = ${jobRef.id}`);
+    console.log(`[Import Start] DEBUG: jobData keys = ${Object.keys(jobData).join(', ')}`);
+    
+    try {
+      await jobRef.set(jobData);
+      console.log(`[Import Start] ✅ Job SUCCESSFULLY created: ${jobId}`);
+      
+      // Verify write
+      const verifyDoc = await jobRef.get();
+      if (verifyDoc.exists) {
+        console.log(`[Import Start] ✅ VERIFIED: Job exists in Firestore, status=${verifyDoc.data()?.status}`);
+      } else {
+        console.error(`[Import Start] ❌ ERROR: Job written but CANNOT be read back!`);
+      }
+    } catch (writeError: any) {
+      console.error(`[Import Start] ❌ FIRESTORE WRITE ERROR: ${writeError.message}`, writeError);
+      throw writeError;
+    }
+
     console.log(`[Import Start] Starting processor immediately in background...`);
 
     // Uruchom processor NATYCHMIAST w tle (nie czekaj na cron)
