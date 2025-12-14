@@ -299,6 +299,9 @@ export interface Product {
   mainCategorySlug: string; // NOWE pole
   subCategorySlug: string;  // NOWE pole
   subSubCategorySlug?: string; // NOWE pole dla poziomu 3
+  categoryName?: string; // Polish category name (derived from slug or set at import)
+  subcategoryName?: string; // Polish subcategory name (derived from slug or set at import)
+  subsubcategoryName?: string; // Polish sub-subcategory name (derived from slug or set at import)
   status: 'draft' | 'approved' | 'rejected' | 'ready_for_review'; // Status moderacji
   category?: string; // Stara wersja dla kompatybilności
   gallery?: ProductImageEntry[]; // Pełna galeria

@@ -49,6 +49,9 @@ export interface PipelineConfig extends Partial<ImportJobConfig> {
   categorySlugEN: string;
   subcategorySlugEN: string;
   subsubcategorySlugEN?: string;
+  categoryNamePL?: string; // NEW: Polish category name for saving to Firestore
+  subcategoryNamePL?: string; // NEW: Polish subcategory name for saving to Firestore
+  subsubcategoryNamePL?: string; // NEW: Polish sub-subcategory name for saving to Firestore
   translateToPolish?: boolean;
   currencyRate?: number;
   importerType?: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'; // NEW: wybór metody importu
@@ -235,6 +238,9 @@ export async function runProductImportPipeline(
         maxRetries: 0,
         skipExisting: config.save?.skipExisting ?? false,
         jobId,
+        categoryNamePL: config.categoryNamePL,
+        subcategoryNamePL: config.subcategoryNamePL,
+        subsubcategoryNamePL: config.subsubcategoryNamePL,
       }
     );
     

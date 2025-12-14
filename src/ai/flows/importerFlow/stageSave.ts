@@ -13,6 +13,9 @@ import { LocalizedText, SmartPrice } from '@/lib/types';
 export interface SaveConfig extends ImportStageConfig {
   skipExisting: boolean;
   jobId?: string; // For tracking in import_jobs
+  categoryNamePL?: string; // Polish category name for Firestore
+  subcategoryNamePL?: string; // Polish subcategory name for Firestore
+  subsubcategoryNamePL?: string; // Polish sub-subcategory name for Firestore
 }
 
 const DEFAULT_CONFIG: SaveConfig = {
@@ -131,6 +134,9 @@ export async function saveProductsToFirestore(
           mainCategorySlug: product.categorySlugEN,
           subCategorySlug: product.subcategorySlugEN,
           subSubCategorySlug: product.subsubcategorySlugEN,
+          categoryName: finalConfig.categoryNamePL,
+          subcategoryName: finalConfig.subcategoryNamePL,
+          subsubcategoryName: finalConfig.subsubcategoryNamePL,
           originalPrice: product.originalPrice, // Legacy
           discountPercent: product.discount, // Legacy
           currency: 'PLN', // Legacy
@@ -166,6 +172,9 @@ export async function saveProductsToFirestore(
           mainCategorySlug: product.categorySlugEN,
           subCategorySlug: product.subcategorySlugEN,
           subSubCategorySlug: product.subsubcategorySlugEN,
+          categoryName: finalConfig.categoryNamePL,
+          subcategoryName: finalConfig.subcategoryNamePL,
+          subsubcategoryName: finalConfig.subsubcategoryNamePL,
           originalPrice: product.originalPrice,
           discountPercent: product.discount,
           currency: 'PLN',

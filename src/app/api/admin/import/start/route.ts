@@ -405,6 +405,9 @@ export async function processImportJob(
           categorySlugEN: batch.categorySlug,
           subcategorySlugEN: batch.subcategorySlug,
           subsubcategorySlugEN: batch.subsubcategorySlug,
+          categoryNamePL: batch.categoryName, // NEW: Pass Polish category names
+          subcategoryNamePL: batch.subcategoryName,
+          subsubcategoryNamePL: batch.subsubcategoryName,
           translateToPolish: true,
           currencyRate,
           importerType, // NEW: pass importer type
