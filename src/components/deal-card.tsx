@@ -233,18 +233,15 @@ export default function DealCard({ deal }: DealCardProps) {
         throw new Error(data.message || 'Błąd podczas głosowania');
       }
 
-  // Aktualizuj do rzeczywistych wartości z serwera
       setTemperature(data.temperature);
       setVoteCount(data.voteCount);
       setUserVote(data.userVote);
       
-  // Analytics (GA + Firestore)
-  trackVote('deal', deal.id, action);
-  void trackFirestoreVote('deal', deal.id, user.uid, action);
+      trackVote('deal', deal.id, action);
+      void trackFirestoreVote('deal', deal.id, user.uid, action);
       
       toast.success("Dziękujemy za oddanie głosu!");
     } catch (error: any) {
-      // Rollback optimistic update
       setTemperature(oldTemperature);
       setVoteCount(oldVoteCount);
       setUserVote(oldUserVote);
@@ -388,7 +385,7 @@ export default function DealCard({ deal }: DealCardProps) {
           )}
           {isPolishMarket && (
             <Badge className="bg-green-500 text-white shadow-lg">
-              🇵🇱 PL Market
+              PL Market
             </Badge>
           )}
           {hasVariants && (
@@ -402,7 +399,6 @@ export default function DealCard({ deal }: DealCardProps) {
               Darmowa dostawa
             </Badge>
           )}
-          {/* Usunięto badge kuponów z live API - dane powinny być w Firestore */}
           {deal.importMetadata?.hotProduct && (
             <Badge className="badge-hot badge-trust animate-pulse">
               <Zap className="mr-1 h-3 w-3" />
@@ -435,7 +431,6 @@ export default function DealCard({ deal }: DealCardProps) {
           )}
         </div>
         
-        {/* Admin Edit Button - prawy dolny róg obrazka */}
         <div className="absolute right-2 bottom-2">
           <AdminEditButton
             onClick={() => setEditDialogOpen(true)}

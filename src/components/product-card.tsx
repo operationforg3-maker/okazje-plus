@@ -1,21 +1,6 @@
 // @ts-nocheck
 "use client";
 
-/**
- * ========================================
- * TRUST-FIRST PRODUCT CARD (M4 Redesign)
- * ========================================
- * 
- * Key Features:
- * ✅ Total Landed Cost Display (item + shipping) — biggest trust signal
- * ✅ AI-Generated Clean Titles (no AliExpress spam keywords)
- * ✅ Dynamic Trust Badges (Free Shipping, Price Guarantee, Fast Delivery, Verified Merchant)
- * ✅ Smart Cart Integration (Add to Bundle button)
- * ✅ Multi-Language Support (getText with auto-fallback pl→en→de)
- * ✅ Enhanced Trust Signals (ratings, merchant score, order count)
- * ✅ Optimized for Conversion (CTA hierarchy, visual trust indicators)
- */
-
 import { ProductGallery } from './product-gallery';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -82,12 +67,6 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
     setLocale(localeFromParams);
   }, [localeFromParams]);
 
-  // ========================================
-  // 💡 M4 SMART DATA EXTRACTION
-  // ========================================
-  
-  // AI-curated clean title (no spam keywords like "HOT SALE 2025!!!")
-  // Fallback chain: title (LocalizedText) -> title (string if wrong format) -> name -> 'Produkt'
   const titleText = typeof product.title === 'string' 
     ? product.title 
     : getText(product.title);
@@ -122,11 +101,6 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   const hasFastShipping = (product as any).shippingMethod === 'express' || ((product as any).estimatedDeliveryDays && (product as any).estimatedDeliveryDays <= 7);
   const inCart = isInCart(product.id);
 
-  // ========================================
-  // 🚀 ENHANCED METADATA FROM AUTO-IMPORT
-  // ========================================
-  
-  // Extract advanced metadata from product
   const metadata = product.metadata || {};
   const variants = (metadata as any).variants || [];
   const specifications = (metadata as any).specifications || [];
@@ -138,7 +112,6 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   const stats = (metadata as any).stats || {};
   const source = metadata.source || 'manual';
   
-  // Smart badges from tags
   const isHotDeal = tags.includes('hot_deal');
   const isBestsellerTag = tags.includes('bestseller');
   const isNewArrival = tags.includes('new_arrival');

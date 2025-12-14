@@ -8,7 +8,7 @@ import { Category, Subcategory, SubSubcategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ChevronDown, ChevronRight, Layers } from 'lucide-react';
+import { ChevronDown, ChevronRight, Layers, Folder, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
 import { useTranslations } from 'next-intl';
@@ -123,12 +123,20 @@ export default function CategoryNav({
                 >
                   {onCategorySelect ? (
                     <button type="button">
-                      <span className="mr-2">{category.icon || '📁'}</span>
+                      {category.icon ? (
+                        <span className="mr-2">{category.icon}</span>
+                      ) : (
+                        <Folder className="mr-2 h-4 w-4 text-primary" />
+                      )}
                       <span className="truncate">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
                     </button>
                   ) : (
                     <Link href={`${basePath}?category=${category.slug || category.id}`}>
-                      <span className="mr-2">{category.icon || '📁'}</span>
+                      {category.icon ? (
+                        <span className="mr-2">{category.icon}</span>
+                      ) : (
+                        <Folder className="mr-2 h-4 w-4 text-primary" />
+                      )}
                       <span className="truncate">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
                     </Link>
                   )}
@@ -173,12 +181,20 @@ export default function CategoryNav({
                           >
                             {onSubcategorySelect ? (
                               <button type="button">
-                                <span className="mr-2 text-xs">{subcategory.icon || '📄'}</span>
+                                {subcategory.icon ? (
+                                  <span className="mr-2 text-xs">{subcategory.icon}</span>
+                                ) : (
+                                  <FileText className="mr-2 h-3 w-3 text-primary/70" />
+                                )}
                                 <span className="truncate">{getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}</span>
                               </button>
                             ) : (
                               <Link href={`${basePath}?category=${category.slug || category.id}&sub=${subcategory.slug}`}>
-                                <span className="mr-2 text-xs">{subcategory.icon || '📄'}</span>
+                                {subcategory.icon ? (
+                                  <span className="mr-2 text-xs">{subcategory.icon}</span>
+                                ) : (
+                                  <FileText className="mr-2 h-3 w-3 text-primary/70" />
+                                )}
                                 <span className="truncate">{getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}</span>
                               </Link>
                             )}

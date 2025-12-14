@@ -47,7 +47,7 @@ export function ExpiredDealBadge({
           </TooltipTrigger>
           <TooltipContent>
             <div className="text-xs space-y-1">
-              <p>❌ {reason}</p>
+              <p>{reason}</p>
               {checkedAt && (
                 <p className="text-muted-foreground">
                   Sprawdzono: {new Date(checkedAt).toLocaleString('pl-PL')}

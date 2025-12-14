@@ -251,14 +251,90 @@
   }
 }
 
-/* Prosta animacja pojawiania się (używana w MegaMenu) */
+/* ═══════════════════════════════════════════════════════════════════════════
+ * UNIFIED ANIMATIONS & TRANSITIONS
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Standard animation durations:
+ * - Micro-interactions (hover, focus): 150ms
+ * - UI state changes (open/close): 200ms
+ * - Page transitions, modals: 300ms
+ * 
+ * Easing functions:
+ * - ease-out: smooth deceleration (default for most animations)
+ * - ease-in-out: balanced acceleration/deceleration (for reversible animations)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Fade in animation */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade {
-  animation: fade-in 180ms ease-out;
+  animation: fade-in 200ms ease-out;
+}
+
+/* Slide animations */
+@keyframes slide-in-from-bottom {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-from-top {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-bottom {
+  animation: slide-in-from-bottom 200ms ease-out;
+}
+
+.animate-slide-top {
+  animation: slide-in-from-top 200ms ease-out;
+}
+
+/* Scale animations for cards/modals */
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-in {
+  animation: scale-in 200ms ease-out;
+}
+
+/* Pulse animation for hot deals/badges */
+@keyframes pulse-glow {
+  0%, 100% { 
+    opacity: 1; 
+    box-shadow: 0 0 0 0 currentColor; 
+  }
+  50% { 
+    opacity: 0.8; 
+    box-shadow: 0 0 12px 4px currentColor; 
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Standard transition classes */
+.transition-standard {
+  transition: all 150ms ease-out;
+}
+
+.transition-colors-standard {
+  transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.transition-transform-standard {
+  transition: transform 150ms ease-out;
+}
+
+.transition-modal {
+  transition: all 300ms ease-in-out;
 }
 
 /* Custom scrollbar styles */
@@ -282,6 +358,14 @@
   
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     @apply bg-transparent;
+  }
+
+  /* Background grid pattern for hero section */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 
   /* SpecCardGrid explicit utility classes */

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Category } from '@/lib/types';
-import { ChevronRight, Grid3x3 } from 'lucide-react';
+import { ChevronRight, Grid3x3, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CategoryGridProps {
@@ -52,7 +52,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               key={category.id}
               href={`/products?category=${category.slug || category.id}`}
               className="group"
-              onMouseEnter={() => setHoveredId(category.id)}
+              onMouseEnter={() => setHoveredId(category.id || null)}
               onMouseLeave={() => setHoveredId(null)}
             >
               <div
@@ -77,8 +77,12 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                 <div className="relative h-full flex flex-col justify-between p-6">
                   {/* Top Section - Icon & Count */}
                   <div>
-                    <div className={cn('text-5xl mb-4 transition-transform duration-300 group-hover:scale-125')}>
-                      {category.icon || '📦'}
+                    <div className={cn('mb-4 transition-transform duration-200 group-hover:scale-110')}>
+                      {category.icon ? (
+                        <span className="text-5xl">{category.icon}</span>
+                      ) : (
+                        <Package className="h-12 w-12 text-primary" />
+                      )}
                     </div>
                     <div className={cn('text-4xl font-headline font-bold leading-tight transition-colors duration-300', hoveredId === category.id ? style.accent : 'text-foreground')}>
                       {category.name}
@@ -122,7 +126,11 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                   className="p-4 rounded-lg border border-border hover:border-primary hover:bg-primary/5 transition-all group"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="text-2xl">{category.icon || '📦'}</span>
+                    {category.icon ? (
+                      <span className="text-2xl">{category.icon}</span>
+                    ) : (
+                      <Package className="h-6 w-6 text-primary" />
+                    )}
                     <div className="flex-1">
                       <div className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors">
                         {category.name}

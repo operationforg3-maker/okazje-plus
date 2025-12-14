@@ -72,7 +72,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       }
       
       trackVote('deal', dealId, direction);
-      toast.success(`Głos ${direction === 'up' ? '👍' : '👎'} został zapisany`);
+      toast.success(`Głos ${direction === 'up' ? 'za' : 'przeciw'} został zapisany`);
       
     } catch (error) {
       console.error("Błąd podczas głosowania:", error);

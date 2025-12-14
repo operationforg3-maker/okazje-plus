@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Bell, BellOff, Check, X } from 'lucide-react';
+import { Bell, BellOff, Check, X, DollarSign, Sparkles, MessageCircle, Clock, Trophy, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   isNotificationSupported,
@@ -32,39 +32,43 @@ const NOTIFICATION_TOPICS: NotificationTopic[] = [
     id: 'price-drops',
     name: 'Spadki cen',
     description: 'Powiadomienia o spadkach cen ulubionych produktów',
-    icon: '💰',
+    icon: 'DollarSign',
   },
   {
     id: 'new-deals',
     name: 'Nowe okazje',
     description: 'Nowe okazje w Twoich ulubionych kategoriach',
-    icon: '✨',
+    icon: 'Sparkles',
   },
   {
     id: 'comment-replies',
     name: 'Odpowiedzi',
     description: 'Odpowiedzi na Twoje komentarze',
-    icon: '💬',
+    icon: 'MessageCircle',
   },
   {
     id: 'deal-expiring',
     name: 'Wygasające okazje',
     description: 'Przypomnienia o wygasających okazjach',
-    icon: '⏰',
+    icon: 'Clock',
   },
   {
     id: 'achievements',
     name: 'Osiągnięcia',
     description: 'Odznaki, poziomy i nagrody',
-    icon: '🏆',
+    icon: 'Trophy',
   },
   {
     id: 'weekly-digest',
     name: 'Tygodniowe podsumowanie',
     description: 'Najlepsze okazje tygodnia',
-    icon: '📧',
+    icon: 'Mail',
   },
 ];
+
+const ICON_MAP = {
+  DollarSign, Sparkles, MessageCircle, Clock, Trophy, Mail
+};
 
 export function NotificationSettingsCard() {
   const [isSupported, setIsSupported] = useState(false);
@@ -93,7 +97,7 @@ export function NotificationSettingsCard() {
         
         // Show test notification
         await showNotification({
-          title: '🎉 Powiadomienia aktywne!',
+          title: 'Powiadomienia aktywne!',
           body: 'Będziesz otrzymywać powiadomienia o najlepszych okazjach',
           icon: '/icon_okazjeplus.png',
         });
@@ -207,29 +211,32 @@ export function NotificationSettingsCard() {
             </div>
 
             <div className="space-y-3">
-              {NOTIFICATION_TOPICS.map((topic) => (
-                <div
-                  key={topic.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-start gap-3 flex-1">
-                    <span className="text-2xl">{topic.icon}</span>
-                    <div>
-                      <Label htmlFor={`topic-${topic.id}`} className="font-medium cursor-pointer">
-                        {topic.name}
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {topic.description}
-                      </p>
+              {NOTIFICATION_TOPICS.map((topic) => {
+                const IconComponent = ICON_MAP[topic.icon as keyof typeof ICON_MAP];
+                return (
+                  <div
+                    key={topic.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors duration-150"
+                  >
+                    <div className="flex items-start gap-3 flex-1">
+                      {IconComponent && <IconComponent className="h-5 w-5 text-primary mt-0.5" />}
+                      <div>
+                        <Label htmlFor={`topic-${topic.id}`} className="font-medium cursor-pointer">
+                          {topic.name}
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {topic.description}
+                        </p>
+                      </div>
                     </div>
+                    <Switch
+                      id={`topic-${topic.id}`}
+                      checked={subscribedTopics.includes(topic.id)}
+                      onCheckedChange={(checked) => handleToggleTopic(topic.id, checked)}
+                    />
                   </div>
-                  <Switch
-                    id={`topic-${topic.id}`}
-                    checked={subscribedTopics.includes(topic.id)}
-                    onCheckedChange={(checked) => handleToggleTopic(topic.id, checked)}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

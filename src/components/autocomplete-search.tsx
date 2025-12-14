@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getAutocompleteSuggestions, Suggestion } from '@/lib/search';
 import { Input } from '@/components/ui/input';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, Flame, ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { trackSearch } from '@/lib/analytics';
@@ -101,10 +101,14 @@ export function AutocompleteSearch({ className }: { className?: string }) {
               key={s.type + s.id + i}
               role="option"
               onClick={() => handlePick(s)}
-              className="w-full text-left rounded-md px-3 py-2 hover:bg-muted focus:bg-muted outline-none flex flex-col"
+              className="w-full text-left rounded-md px-3 py-2 hover:bg-muted focus:bg-muted outline-none flex flex-col transition-colors duration-150"
             >
               <span className="font-medium text-sm flex items-center gap-2">
-                {s.type === 'deal' ? '🔥 Okazja' : '🛍️ Produkt'}
+                {s.type === 'deal' ? (
+                  <><Flame className="h-4 w-4 text-orange-500" /> Okazja</>
+                ) : (
+                  <><ShoppingBag className="h-4 w-4 text-primary" /> Produkt</>
+                )}
                 {s.label}
               </span>
               {s.subLabel && (
