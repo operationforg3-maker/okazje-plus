@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, limit, doc, getDoc, orderBy } from 'firebase/firestore';
+import { adminAuth } from '@/lib/firebase-admin';
 
 /**
  * Voting system health check
@@ -109,7 +110,6 @@ export async function GET(request: NextRequest) {
 
     // 4. Test Firebase Admin (potrzebny do weryfikacji tokenów)
     try {
-      const { adminAuth } = await import('@/lib/firebase-admin');
       results.checks.firebaseAdmin = {
         status: 'ok',
         message: 'Firebase Admin SDK loaded (required for token verification)',

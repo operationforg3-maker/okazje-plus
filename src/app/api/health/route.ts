@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
+import { adminAuth } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -40,9 +43,6 @@ export async function GET(request: NextRequest) {
         // Firestore check with short timeout
         if (Object.values(envChecks).every(Boolean)) {
           try {
-            const { db } = await import('@/lib/firebase');
-            const { collection, getDocs, query, where, limit } = await import('firebase/firestore');
-            
             const dealsQuery = query(
               collection(db, 'deals'),
               where('status', '==', 'approved'),
@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
 
         // Firebase Admin check
         try {
-          const { adminAuth } = await import('@/lib/firebase-admin');
           await adminAuth.listUsers(1);
           results.checks.firebaseAdmin = {
             status: 'ok',

@@ -9,6 +9,7 @@ import { getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/d
 import { generateText, parseJsonFromResponse } from '@/lib/vertex';
 import { JobQueue } from '@/lib/ingestion/queue';
 import { getServerAuthSession } from '@/lib/auth-server';
+import { adminDb } from '@/lib/firebase-admin';
 
 const jobQueue = new JobQueue();
 
@@ -232,7 +233,6 @@ Respond ONLY with a JSON object. Example:
           
           // Pobierz preferencję waluty
           try {
-            const { adminDb } = await import('@/lib/firebase-admin');
             const currencyDoc = await adminDb.collection('config').doc('currencyPreference').get();
             if (currencyDoc.exists) {
               preferredCurrency = currencyDoc.data()?.currency || 'USD';

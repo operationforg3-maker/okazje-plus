@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/auth-helpers';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function POST(req: NextRequest) {
   console.log('[Diagnostics] ===== Import System Diagnostics =====');
@@ -66,7 +67,6 @@ export async function POST(req: NextRequest) {
     // Check 4: Firestore Admin
     console.log('[Diagnostics] Testing Firestore admin...');
     try {
-      const { adminDb } = await import('@/lib/firebase-admin');
       if (adminDb) {
         diagnostics.checks.firestore = { status: 'OK', message: 'Firestore admin initialized' };
       } else {

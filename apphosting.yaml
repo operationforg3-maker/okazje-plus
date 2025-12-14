@@ -40,6 +40,12 @@ env:
       - BUILD
       - RUNTIME
   
+  # Firebase Admin SDK configuration (server-side, Runtime)
+  - variable: FIREBASE_WEBAPP_CONFIG
+    value: '{"apiKey":"AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4","authDomain":"okazje-plus.firebaseapp.com","projectId":"okazje-plus","storageBucket":"okazje-plus.firebasestorage.app","messagingSenderId":"298894101105","appId":"1:298894101105:web:20a99f74b145cdf3ee29d0"}'
+    availability:
+      - RUNTIME
+  
   # Vertex AI configuration (uses Firebase project ADC automatically)
   - variable: VERTEX_AI_LOCATION
     value: europe-west1
