@@ -147,7 +147,6 @@ export function normalizeAliExpressProduct(
       deliveryTime: apiResponse.delivery_time,
       shippingMethod: apiResponse.shipping_method,
       originalUrl: apiResponse.product_link,
-      sku: apiResponse.sku,
     },
     createdAt: new Date().toISOString(),
   };
@@ -209,8 +208,6 @@ export function normalizeConvertiserProduct(
     discountPercent,
     stockStatus: apiResponse.stock_status || "unknown",
     metadata: {
-      source: "convertiser",
-      importedAt: new Date().toISOString(),
       originalUrl: apiResponse.url,
       promotionId: apiResponse.promotion_id,
       commissionRate: apiResponse.commission_rate,

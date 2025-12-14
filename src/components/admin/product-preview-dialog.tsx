@@ -45,7 +45,11 @@ export function ProductPreviewDialog({
   const images = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
   
   const priceInPLN = Number.isFinite(product.price) ? (product.price * 4).toFixed(2) : '—'; // Approx conversion
-  const originalPriceInPLN = Number.isFinite(product.originalPrice) ? (product.originalPrice * 4).toFixed(2) : null;
+  const originalPriceValue = product.originalPrice;
+  const originalPriceInPLN =
+    originalPriceValue !== undefined && Number.isFinite(originalPriceValue)
+      ? (originalPriceValue * 4).toFixed(2)
+      : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -76,22 +76,22 @@
                 - generic [ref=e72]:
                   - img [ref=e74]
                   - generic [ref=e76]:
-                    - generic [ref=e77]: "0"
+                    - generic [ref=e77]: ...
                     - generic [ref=e78]: Gorących okazji
                 - generic [ref=e80]:
                   - img [ref=e82]
                   - generic [ref=e85]:
-                    - generic [ref=e86]: "1"
+                    - generic [ref=e86]: ...
                     - generic [ref=e87]: Produktów
                 - generic [ref=e89]:
                   - img [ref=e91]
                   - generic [ref=e96]:
-                    - generic [ref=e97]: "59"
+                    - generic [ref=e97]: ...
                     - generic [ref=e98]: Użytkowników
                 - generic [ref=e100]:
                   - img [ref=e102]
                   - generic [ref=e108]:
-                    - generic [ref=e109]: 0k+
+                    - generic [ref=e109]: ...
                     - generic [ref=e110]: Oszczędności
             - generic [ref=e112]:
               - generic [ref=e113]:
@@ -188,15 +188,15 @@
               - generic [ref=e233]:
                 - generic [ref=e234]:
                   - img [ref=e235]
-                  - generic [ref=e238]: "0"
+                  - generic [ref=e238]: ...
                   - generic [ref=e239]: Aktywnych wątków
                 - generic [ref=e240]:
                   - img [ref=e241]
-                  - generic [ref=e246]: "0"
+                  - generic [ref=e246]: ...
                   - generic [ref=e247]: Użytkowników
                 - generic [ref=e248]:
                   - img [ref=e249]
-                  - generic [ref=e252]: "0"
+                  - generic [ref=e252]: ...
                   - generic [ref=e253]: Odpowiedzi dziennie
             - generic [ref=e257]:
               - generic [ref=e258]:
@@ -304,9 +304,9 @@
           - generic [ref=e364]:
             - paragraph [ref=e365]: © 2025 Okazje+. Wszelkie prawa zastrzeżone.
             - paragraph [ref=e366]:
-              - text: "Wersja: v0.1.826 (commit"
-              - generic "9d4850bd23f40d9018bcebd116e41f16ebc84815" [ref=e367]: "#9d4850b"
-              - text: ") · Zbudowano: 13.12.2025, 23:21:04 · Runtime: 0 min 0 s"
+              - text: "Wersja: v0.1.858 (commit"
+              - generic "851a09172b69f737792d388197034c36f6246e00" [ref=e367]: "#851a091"
+              - text: ") · Zbudowano: 14.12.2025, 22:21:13 · Runtime: 0 min 0 s"
     - generic [ref=e368]:
       - button "Porównaj (0)" [disabled]:
         - img

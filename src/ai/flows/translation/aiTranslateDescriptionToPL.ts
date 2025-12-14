@@ -36,7 +36,7 @@ export async function aiTranslateDescriptionToPL(input: TranslateDescriptionRequ
       },
     });
 
-    const descriptionPL = response.text()?.trim() || descriptionEN;
+    const descriptionPL = response.text?.trim() || descriptionEN;
     const confidence = assessDescriptionConfidence(descriptionEN, descriptionPL);
 
     return {

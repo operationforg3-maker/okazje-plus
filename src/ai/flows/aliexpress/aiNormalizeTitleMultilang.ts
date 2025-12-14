@@ -1,9 +1,8 @@
 "use server";
 
-import { defineFlow } from 'genkit';
 import { gemini15Flash } from '@genkit-ai/vertexai';
-import { generate } from '@genkit-ai/ai';
 import { z } from 'zod';
+import { ai } from '@/ai/genkit';
 
 const ProductInputSchema = z.object({
   rawTitle: z.string(),
@@ -12,13 +11,13 @@ const ProductInputSchema = z.object({
 
 const OutputSchema = z.object({ pl: z.string(), en: z.string(), de: z.string() });
 
-export const aiNormalizeTitleMultilang = defineFlow(
+export const aiNormalizeTitleMultilang = ai.defineFlow(
   {
     name: 'aliexpress-normalizeTitleMultilang',
     inputSchema: ProductInputSchema,
     outputSchema: OutputSchema,
   },
-  async (input) => {
+  async (input: z.infer<typeof ProductInputSchema>) => {
     const prompt = `
 Act as an e-commerce expert for the multi-language store "OkazjePlus".
 Transform a spammy AliExpress product title into professional, short titles for PL, EN, and DE.
@@ -36,8 +35,8 @@ Return JSON like:
 {"pl":"...", "en":"...", "de":"..."}
     `;
 
-    const llmResponse = await generate({ model: gemini15Flash, prompt, config: { temperature: 0.3 } });
-    const text = llmResponse.text().trim();
+    const llmResponse = await ai.generate({ model: gemini15Flash, prompt, config: { temperature: 0.3 } });
+    const text = (llmResponse.text ?? '').trim();
     try {
       const parsed = JSON.parse(text);
       return { pl: String(parsed.pl || ''), en: String(parsed.en || ''), de: String(parsed.de || '') };

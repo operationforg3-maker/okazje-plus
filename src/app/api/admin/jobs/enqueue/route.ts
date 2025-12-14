@@ -15,6 +15,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { DocumentData, Query } from 'firebase-admin/firestore';
 import { checkAdminAuth } from '@/lib/auth-helpers';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
@@ -140,7 +141,7 @@ export async function GET(req: NextRequest) {
     const status = req.nextUrl.searchParams.get('status') as string | null;
 
     // Build query
-    let query: any = adminDb.collection('jobs');
+    let query: Query<DocumentData> = adminDb.collection('jobs');
     
     if (status) {
       query = query.where('status', '==', status);

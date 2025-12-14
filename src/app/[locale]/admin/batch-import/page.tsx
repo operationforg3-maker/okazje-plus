@@ -145,7 +145,7 @@ function BatchImportPage() {
   
   // Import settings
   const [maxItemsPerSubcategory, setMaxItemsPerSubcategory] = useState(50);
-  const [currencyRate] = useState(4.0); // Default rate - conversion on server-side
+  const [currencyRate, setCurrencyRate] = useState(4.0); // Default rate - conversion on server-side
   
   // Job state
   const [jobId, setJobId] = useState<string | null>(null);
@@ -167,7 +167,7 @@ function BatchImportPage() {
             sub.subcategories?.forEach(subsub => {
               items.push({
                 id: `${cat.id}-${sub.slug}-${subsub.slug || ''}`,
-                categorySlug: cat.id,
+                categorySlug: cat.id || '',
                 subcategorySlug: sub.slug || '',
                 subsubcategorySlug: subsub.slug || '',
                 categoryName: cat.name,
@@ -565,7 +565,7 @@ function BatchImportPage() {
                   <Checkbox
                     checked={selectedCount === items.length && items.length > 0}
                     onCheckedChange={(checked) =>
-                      toggleCategory(category.id, checked as boolean)
+                      toggleCategory(category.id || '', checked as boolean)
                     }
                     disabled={importing}
                   />
@@ -655,4 +655,4 @@ function BatchImportPage() {
   );
 }
 
-export default withAuth(BatchImportPage, { requireAdmin: true });
+export default withAuth(BatchImportPage, { requiredRole: 'admin' });

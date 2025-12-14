@@ -45,7 +45,7 @@ export async function aiTranslateTitleToPL(input: TranslateTitleRequest): Promis
     });
 
     // Parse response
-    const generatedText = response.text() || '';
+    const generatedText = response.text || '';
     
     // Extract Polish title (usually in quotes or first line)
     const titlePL = extractPolishTitle(generatedText);

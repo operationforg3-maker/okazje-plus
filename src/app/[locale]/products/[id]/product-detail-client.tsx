@@ -142,6 +142,8 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
     }, 50);
   };
 
+  const isProductInCart = isInCart(product.id);
+
   return (
     <div className="page-container py-4 md:py-8 lg:py-12">
       {/* Breadcrumbs */}
@@ -470,14 +472,14 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               {/* Action strip: wspólny koszyk, porównanie, ulubione, opinie */}
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <Button
-                  variant={isInCart ? 'secondary' : 'outline'}
+                  variant={isProductInCart ? 'secondary' : 'outline'}
                   size="sm"
                   onClick={handleAddToSharedCart}
                   disabled={isAddingToCart}
                   className="justify-center"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
-                  {isInCart ? 'Wspólny koszyk' : isAddingToCart ? 'Dodawanie...' : 'Dodaj do koszyka'}
+                  {isProductInCart ? 'Wspólny koszyk' : isAddingToCart ? 'Dodawanie...' : 'Dodaj do koszyka'}
                 </Button>
                 <Button
                   variant="outline"

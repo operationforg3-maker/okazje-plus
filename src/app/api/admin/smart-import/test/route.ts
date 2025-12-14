@@ -12,6 +12,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { optimizer } from '@/integrations/smart-importer-optimizer';
 import { logger } from '@/lib/logging';
 
+// TODO: Replace with real test suite implementations
+async function runSmartImportTests() {
+  logger.warn('runSmartImportTests stub executed');
+}
+
+async function runBatchPerformanceTest() {
+  logger.warn('runBatchPerformanceTest stub executed');
+}
+
+async function testCategoryMapping() {
+  logger.warn('testCategoryMapping stub executed');
+}
+
 /**
  * POST /api/admin/smart-import/test
  * Run comprehensive test suite

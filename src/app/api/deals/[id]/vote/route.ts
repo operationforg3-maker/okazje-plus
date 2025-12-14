@@ -112,12 +112,16 @@ export async function POST(
       }
 
       const dealData = dealDoc.data();
+      if (!dealData) {
+        throw new Error('Deal data missing');
+      }
+
       const currentTemperature = dealData.temperature || 0;
       const currentVoteCount = dealData.voteCount || 0;
 
       // Pobierz obecny głos użytkownika (jeśli istnieje)
       const voteDoc = await transaction.get(voteRef);
-      const existingVote = voteDoc.exists() ? voteDoc.data()?.vote as number : null;
+      const existingVote = voteDoc.exists ? (voteDoc.data()?.vote as number) : null;
 
       let temperatureChange = 0;
       let voteCountChange = 0;

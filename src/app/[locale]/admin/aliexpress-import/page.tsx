@@ -708,7 +708,9 @@ function AliExpressImportPage() {
                                 <SelectValue placeholder={copy.choose} />
                               </SelectTrigger>
                               <SelectContent>
-                                {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                {categories.map(c => (
+                                  <SelectItem key={c.id ?? c.name} value={c.id ?? ''}>{c.name}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>

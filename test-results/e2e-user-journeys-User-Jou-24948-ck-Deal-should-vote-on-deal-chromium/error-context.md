@@ -304,9 +304,9 @@
           - generic [ref=e364]:
             - paragraph [ref=e365]: © 2025 Okazje+. Wszelkie prawa zastrzeżone.
             - paragraph [ref=e366]:
-              - text: "Wersja: v0.1.826 (commit"
-              - generic "9d4850bd23f40d9018bcebd116e41f16ebc84815" [ref=e367]: "#9d4850b"
-              - text: ") · Zbudowano: 13.12.2025, 23:21:04 · Runtime: 0 min 0 s"
+              - text: "Wersja: v0.1.858 (commit"
+              - generic "851a09172b69f737792d388197034c36f6246e00" [ref=e367]: "#851a091"
+              - text: ") · Zbudowano: 14.12.2025, 22:21:13 · Runtime: 0 min 0 s"
     - generic [ref=e368]:
       - button "Porównaj (0)" [disabled]:
         - img

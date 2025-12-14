@@ -230,7 +230,9 @@ export default function CsvImporter() {
                                     <SelectValue placeholder={loadingCategories ? 'Ładuję...' : 'Wybierz...'} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {categoriesData.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                                    {categoriesData.map(cat => (
+                                      <SelectItem key={cat.id ?? cat.name} value={cat.id ?? ''}>{cat.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </TableCell>

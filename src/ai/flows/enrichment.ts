@@ -6,35 +6,97 @@
  * - Safety & moderation
  */
 
-import { defineFlow, run } from "genkit";
-import { generate } from "@genkit-ai/ai";
 import { gemini15Flash } from "@genkit-ai/vertexai";
-import logger from "../logger";
-import { parseJsonFromResponse, moderateText } from "./vertex";
+import { ai } from "../genkit";
+import { logger } from "@/lib/logging";
+import { parseJsonFromResponse, moderateText } from "@/lib/vertex";
+import { z } from "zod";
+
+type ProductDescriptionInput = {
+  productTitle: string;
+  productCategory: string;
+  targetLocale: string;
+};
+
+type TranslateContentInput = {
+  text: string;
+  sourceLocale: string;
+  targetLocales: string[];
+};
+
+type ProductTagsInput = {
+  title: string;
+  description: string;
+  category: string;
+};
+
+type BatchEnrichInput = {
+  products: Array<{
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+  }>;
+  targetLocales: string[];
+};
+
+const ProductDescriptionSchema = z.object({
+  productTitle: z.string(),
+  productCategory: z.string(),
+  targetLocale: z.string(),
+});
+
+const ProductDescriptionOutputSchema = z.object({
+  seoTitle: z.string(),
+  seoDescription: z.string(),
+  features: z.array(z.string()),
+});
+
+const TranslateContentSchema = z.object({
+  text: z.string(),
+  sourceLocale: z.string(),
+  targetLocales: z.array(z.string()),
+});
+
+const TranslateContentOutputSchema = z.object({
+  translations: z.record(z.string()),
+});
+
+const ProductTagsSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  category: z.string(),
+});
+
+const ProductTagsOutputSchema = z.object({
+  tags: z.array(z.string()),
+  keywords: z.array(z.string()),
+});
+
+const BatchEnrichSchema = z.object({
+  products: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      description: z.string(),
+      category: z.string(),
+    })
+  ),
+  targetLocales: z.array(z.string()),
+});
+
+const BatchEnrichOutputSchema = z.object({
+  enrichedProducts: z.array(z.record(z.any())),
+});
 
 // ===== Flow: Generate Product Description =====
-export const generateProductDescription = defineFlow(
+export const generateProductDescription = ai.defineFlow(
   {
     name: "generateProductDescription",
-    inputSchema: {
-      type: "object" as const,
-      properties: {
-        productTitle: { type: "string", description: "Original product title" },
-        productCategory: { type: "string", description: "Product category" },
-        targetLocale: { type: "string", description: "Target language (pl, en, de)" },
-      },
-      required: ["productTitle", "productCategory", "targetLocale"],
-    },
-    outputSchema: {
-      type: "object" as const,
-      properties: {
-        seoTitle: { type: "string" },
-        seoDescription: { type: "string" },
-        features: { type: "array" as const, items: { type: "string" } },
-      },
-    },
+    inputSchema: ProductDescriptionSchema,
+    outputSchema: ProductDescriptionOutputSchema,
   },
-  async (input) => {
+  async (input: ProductDescriptionInput) => {
     try {
       const prompt = `You are an e-commerce SEO specialist.
 Product: ${input.productTitle}
@@ -48,15 +110,13 @@ Generate for locale "${input.targetLocale}":
 
 Return as JSON: { "seoTitle": "...", "seoDescription": "...", "features": ["...", "..."] }`;
 
-      const response = await run("genkit-ai/call", async () =>
-        generate({
-          model: gemini15Flash,
-          prompt,
-          config: { temperature: 0.5, maxOutputTokens: 300 },
-        })
-      );
+      const response = await ai.generate({
+        model: gemini15Flash,
+        prompt,
+        config: { temperature: 0.5, maxOutputTokens: 300 },
+      });
 
-      const text = response.text();
+      const text = response.text ?? "";
       const parsed = parseJsonFromResponse(text);
 
       // Moderate output
@@ -81,33 +141,13 @@ Return as JSON: { "seoTitle": "...", "seoDescription": "...", "features": ["..."
 );
 
 // ===== Flow: Translate Content =====
-export const translateContent = defineFlow(
+export const translateContent = ai.defineFlow(
   {
     name: "translateContent",
-    inputSchema: {
-      type: "object" as const,
-      properties: {
-        text: { type: "string", description: "Text to translate" },
-        sourceLocale: { type: "string", description: "Source language" },
-        targetLocales: {
-          type: "array" as const,
-          items: { type: "string" },
-          description: "Target languages",
-        },
-      },
-      required: ["text", "sourceLocale", "targetLocales"],
-    },
-    outputSchema: {
-      type: "object" as const,
-      properties: {
-        translations: {
-          type: "object" as const,
-          additionalProperties: { type: "string" },
-        },
-      },
-    },
+    inputSchema: TranslateContentSchema,
+    outputSchema: TranslateContentOutputSchema,
   },
-  async (input) => {
+  async (input: TranslateContentInput) => {
     try {
       const translations: Record<string, string> = {};
 
@@ -122,15 +162,13 @@ Maintain SEO quality and readability. Return ONLY the translated text, no explan
 
 Text: ${input.text}`;
 
-        const response = await run("genkit-ai/call", async () =>
-          generate({
-            model: gemini15Flash,
-            prompt,
-            config: { temperature: 0.3, maxOutputTokens: 500 },
-          })
-        );
+        const response = await ai.generate({
+          model: gemini15Flash,
+          prompt,
+          config: { temperature: 0.3, maxOutputTokens: 500 },
+        });
 
-        translations[targetLocale] = response.text().trim();
+        translations[targetLocale] = (response.text ?? "").trim();
       }
 
       return { translations };
@@ -142,33 +180,13 @@ Text: ${input.text}`;
 );
 
 // ===== Flow: Extract Product Tags/Keywords =====
-export const extractProductTags = defineFlow(
+export const extractProductTags = ai.defineFlow(
   {
     name: "extractProductTags",
-    inputSchema: {
-      type: "object" as const,
-      properties: {
-        title: { type: "string" },
-        description: { type: "string" },
-        category: { type: "string" },
-      },
-      required: ["title", "description", "category"],
-    },
-    outputSchema: {
-      type: "object" as const,
-      properties: {
-        tags: {
-          type: "array" as const,
-          items: { type: "string" },
-        },
-        keywords: {
-          type: "array" as const,
-          items: { type: "string" },
-        },
-      },
-    },
+    inputSchema: ProductTagsSchema,
+    outputSchema: ProductTagsOutputSchema,
   },
-  async (input) => {
+  async (input: ProductTagsInput) => {
     try {
       const prompt = `Analyze this product and extract tags and keywords for search indexing.
 Title: ${input.title}
@@ -179,15 +197,13 @@ Return JSON: { "tags": ["tag1", "tag2", ...], "keywords": ["kw1", "kw2", ...] }
 Tags: searchable categories/attributes (max 10)
 Keywords: SEO-focused terms (max 10)`;
 
-      const response = await run("genkit-ai/call", async () =>
-        generate({
-          model: gemini15Flash,
-          prompt,
-          config: { temperature: 0.4, maxOutputTokens: 300 },
-        })
-      );
+      const response = await ai.generate({
+        model: gemini15Flash,
+        prompt,
+        config: { temperature: 0.4, maxOutputTokens: 300 },
+      });
 
-      const text = response.text();
+      const text = response.text ?? "";
       const parsed = parseJsonFromResponse(text);
 
       return {
@@ -202,42 +218,13 @@ Keywords: SEO-focused terms (max 10)`;
 );
 
 // ===== Flow: Batch Enrichment =====
-export const batchEnrichProducts = defineFlow(
+export const batchEnrichProducts = ai.defineFlow(
   {
     name: "batchEnrichProducts",
-    inputSchema: {
-      type: "object" as const,
-      properties: {
-        products: {
-          type: "array" as const,
-          items: {
-            type: "object" as const,
-            properties: {
-              id: { type: "string" },
-              title: { type: "string" },
-              description: { type: "string" },
-              category: { type: "string" },
-            },
-          },
-        },
-        targetLocales: {
-          type: "array" as const,
-          items: { type: "string" },
-        },
-      },
-      required: ["products", "targetLocales"],
-    },
-    outputSchema: {
-      type: "object" as const,
-      properties: {
-        enrichedProducts: {
-          type: "array" as const,
-          items: { type: "object" },
-        },
-      },
-    },
+    inputSchema: BatchEnrichSchema,
+    outputSchema: BatchEnrichOutputSchema,
   },
-  async (input) => {
+  async (input: BatchEnrichInput) => {
     try {
       const enrichedProducts = [];
 
@@ -245,33 +232,27 @@ export const batchEnrichProducts = defineFlow(
         logger.info("Enriching product", { productId: product.id });
 
         // Generate description for primary locale
-        const descResult = await run("generateProductDescription", () =>
-          generateProductDescription({
-            productTitle: product.title,
-            productCategory: product.category,
-            targetLocale: input.targetLocales[0] || "en",
-          })
-        );
+        const descResult = await generateProductDescription({
+          productTitle: product.title,
+          productCategory: product.category,
+          targetLocale: input.targetLocales[0] || "en",
+        });
 
         // Extract tags
-        const tagsResult = await run("extractProductTags", () =>
-          extractProductTags({
-            title: product.title,
-            description: product.description,
-            category: product.category,
-          })
-        );
+        const tagsResult = await extractProductTags({
+          title: product.title,
+          description: product.description,
+          category: product.category,
+        });
 
         // Translate (if multiple locales)
         let translations: Record<string, string> = {};
         if (input.targetLocales.length > 1) {
-          const transResult = await run("translateContent", () =>
-            translateContent({
-              text: descResult.seoDescription,
-              sourceLocale: input.targetLocales[0] || "en",
-              targetLocales: input.targetLocales.slice(1),
-            })
-          );
+          const transResult = await translateContent({
+            text: descResult.seoDescription,
+            sourceLocale: input.targetLocales[0] || "en",
+            targetLocales: input.targetLocales.slice(1),
+          });
           translations = transResult.translations;
         }
 

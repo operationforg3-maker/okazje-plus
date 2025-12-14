@@ -95,7 +95,7 @@ export function CategoryBuilder({ onCategoriesCreated, onConsoleLog, user: userP
             searchKeywords: (subsub as any).searchKeywords,
             exampleProducts: (subsub as any).exampleProducts,
             translations: (subsub as any).descriptionEn
-              ? { en: { description: (subsub as any).descriptionEn } }
+              ? { en: { name: subsub.name, description: (subsub as any).descriptionEn } }
               : undefined,
           })),
         })),

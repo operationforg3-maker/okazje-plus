@@ -169,7 +169,7 @@ function BulkImportPage() {
           // Has sub-subcategories (level 3)
           sub.subcategories.forEach(subSub => {
             configs.push({
-              mainSlug: cat.id,
+              mainSlug: cat.id || '',
               mainName: cat.name,
               subSlug: sub.slug || '',
               subName: sub.name,
@@ -183,7 +183,7 @@ function BulkImportPage() {
         } else {
           // Only level 2 (sub-category without sub-sub)
           configs.push({
-            mainSlug: cat.id,
+            mainSlug: cat.id || '',
             mainName: cat.name,
             subSlug: sub.slug || '',
             subName: sub.name,

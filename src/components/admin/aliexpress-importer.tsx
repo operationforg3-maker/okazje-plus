@@ -603,8 +603,8 @@ export default function AliExpressImporter() {
                       <div className="flex gap-2 mt-2">
                         <Select onValueChange={(value) => {
                           const cat = categoriesData.find(c => c.id === value);
-                          if (cat && cat.subcategories.length > 0) {
-                            applyCategoriesToSelected(value, cat.subcategories[0].slug);
+                          if (cat?.subcategories?.length) {
+                            applyCategoriesToSelected(value, cat.subcategories[0]?.slug || '');
                           }
                         }}>
                           <SelectTrigger className="w-[200px]">
@@ -612,7 +612,7 @@ export default function AliExpressImporter() {
                           </SelectTrigger>
                           <SelectContent>
                             {categoriesData.map(cat => (
-                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                              <SelectItem key={cat.id ?? cat.name} value={cat.id ?? ''}>{cat.name}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -701,7 +701,7 @@ export default function AliExpressImporter() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     {categoriesData.map(cat => (
-                                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                      <SelectItem key={cat.id ?? cat.name} value={cat.id ?? ''}>{cat.name}</SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>

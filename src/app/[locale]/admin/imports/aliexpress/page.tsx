@@ -454,7 +454,7 @@ function AliExpressImportWizard() {
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
+                        <SelectItem key={cat.id ?? cat.name} value={cat.id ?? ''}>
                           {cat.icon} {cat.name}
                         </SelectItem>
                       ))}

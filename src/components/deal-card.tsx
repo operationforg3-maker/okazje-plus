@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video } from "lucide-react";
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -447,7 +447,7 @@ export default function DealCard({ deal }: DealCardProps) {
         onOpenChange={setEditDialogOpen}
       />
       
-      <div className="flex-grow space-y-3 p-4">
+      <div className="flex-grow space-y-3 p-4 sm:p-5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             {categoryLabel && (
@@ -521,13 +521,14 @@ export default function DealCard({ deal }: DealCardProps) {
 
         {/* Commission Info (for admins) */}
         {commission && user?.role === 'admin' && (
-          <Badge variant="secondary" className="text-xs w-fit">
-            💰 Prowizja: {commission}%
+          <Badge variant="secondary" className="text-xs w-fit gap-1">
+            <DollarSign className="h-3 w-3" />
+            Prowizja: {commission}%
           </Badge>
         )}
 
         {/* Szczegóły dostawy i dodatkowe info */}
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
           {/* Enhanced deal tags */}
           {deal.metadata?.dealTags && deal.metadata.dealTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -599,8 +600,9 @@ export default function DealCard({ deal }: DealCardProps) {
           
           {/* Video indicator */}
           {deal.metadata?.videoUrl && (
-            <Badge variant="outline" className="text-xs">
-              📹 Wideo
+            <Badge variant="outline" className="text-xs gap-1">
+              <Video className="h-3 w-3" />
+              Wideo
             </Badge>
           )}
           
