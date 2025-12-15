@@ -510,7 +510,10 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           </div>
 
           {/* Action Buttons Row */}
-          <div className="flex items-center gap-2 mt-auto pt-2">
+          <div className={cn(
+            "flex items-center gap-2 mt-auto",
+            viewMode === 'list' ? "pt-4" : "pt-2"
+          )}>
             
             {/* Add to Cart Button (Primary CTA) */}
             <Button
@@ -551,7 +554,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                 e.stopPropagation();
                 addToComparison({ ...product, type: 'product' });
               }}
-              className="px-3"
+              className="px-3 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <Scale className="w-4 h-4 mr-2" />
               Porównaj
@@ -571,7 +574,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                     }}
                     disabled={isLoading}
                     className={cn(
-                      "px-3 btn-icon-hover",
+                      "px-3 btn-icon-hover border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
                       isFavorited && "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
                     )}
                   >
