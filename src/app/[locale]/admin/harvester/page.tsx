@@ -4,38 +4,22 @@ import { useAuth } from '@/lib/auth';
 
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CategoryBuilder } from '@/components/admin/category-builder';
 import { ProductImporter } from '@/components/admin/product-importer';
 import { AIEnhancer } from '@/components/admin/ai-enhancer';
 import { ImportConsole, ConsoleLine } from '@/components/admin/import-console';
 import { withAuth } from '@/components/auth/withAuth';
-import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2, TrendingUp, Activity, AlertCircle } from 'lucide-react';
+import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { JobsMonitor } from '@/components/admin/jobs-monitor';
 import { ScheduleManager } from '@/components/admin/schedule-manager';
 import { LinkVerifier } from '@/components/admin/link-verifier';
 import { FirebaseIndexManager } from '@/components/admin/firebase-index-manager';
 import { DatabaseCleaner } from '@/components/admin/database-cleaner';
-import { useEffect as useEffectHook } from 'react';
-
-interface DashboardStats {
-  productsCount: number;
-  dealsCount: number;
-  jobsRunning: number;
-  lastImportTime?: string;
-  totalImports: number;
-}
 
 function HarvesterPage() {
   const { user, getIdToken } = useAuth();
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLine[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({
-    productsCount: 0,
-    dealsCount: 0,
-    jobsRunning: 0,
-    totalImports: 0,
-  });
 
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
     const timestamp = new Date().toLocaleTimeString('pl-PL', {
@@ -58,35 +42,6 @@ function HarvesterPage() {
     setConsoleLogs([]);
   };
 
-  // Fetch dashboard stats
-  useEffectHook(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await fetch('/api/admin/import/dashboard/summary', {
-          headers: {
-            'Authorization': `Bearer ${await getIdToken()}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setStats({
-            productsCount: data.products?.approved || 0,
-            dealsCount: data.products?.draft || 0,
-            jobsRunning: data.recentJobs?.filter((j: any) => j.status === 'running').length || 0,
-            totalImports: data.recentJobs?.length || 0,
-            lastImportTime: data.recentJobs?.[0]?.createdAt,
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch stats:', err);
-      }
-    };
-
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Refresh every 30s
-    return () => clearInterval(interval);
-  }, [getIdToken]);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -100,134 +55,42 @@ function HarvesterPage() {
         </p>
       </div>
 
-      {/* Dashboard Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">Produkty (Zatwierdzone)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.productsCount.toLocaleString()}</div>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Opublikowane</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">Okazje (Robocze)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{stats.dealsCount.toLocaleString()}</div>
-            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">Do przeglądu</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100 flex items-center gap-1">
-              <Activity className="h-4 w-4" />
-              Zadania
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.jobsRunning}</div>
-            <p className="text-xs text-green-700 dark:text-green-300 mt-1">W trakcie {stats.totalImports > 0 && `(${stats.totalImports} razem)`}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100 flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" />
-              Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              {stats.jobsRunning > 0 ? '🟢' : '⚪'}
-            </div>
-            <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
-              {stats.jobsRunning > 0 ? 'Aktywne' : 'Gotowy'}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Tools Shortcuts */}
-      <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200 dark:border-amber-800">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            ⭐ Najczęściej Używane Narzędzia (Top 3)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-amber-100 dark:border-amber-800 hover:shadow-md transition-shadow cursor-pointer"
-                 onClick={() => { (document.querySelector('[value="jobs"]') as HTMLElement)?.click?.(); }}>
-              <div className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 mb-1">📋 TASKS</div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">Zadania (v2.1)</div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Monitor i tworzenie jobów</p>
-              <div className="text-xs text-gray-500 mt-2 font-mono">Auto-refresh co 5s</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-amber-100 dark:border-amber-800 hover:shadow-md transition-shadow cursor-pointer"
-                 onClick={() => { (document.querySelector('[value="import"]') as HTMLElement)?.click?.(); }}>
-              <div className="font-mono text-xs font-bold text-orange-600 dark:text-orange-400 mb-1">📦 IMPORT</div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">Import Produktów (v1.8)</div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Importuj z wielu źródeł</p>
-              <div className="text-xs text-gray-500 mt-2 font-mono">5 źródeł</div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-amber-100 dark:border-amber-800 hover:shadow-md transition-shadow cursor-pointer"
-                 onClick={() => { (document.querySelector('[value="enhance"]') as HTMLElement)?.click?.(); }}>
-              <div className="font-mono text-xs font-bold text-purple-600 dark:text-purple-400 mb-1">✨ ENHANCE</div>
-              <div className="text-sm font-semibold text-gray-900 dark:text-white">Ulepszanie AI (v1.5)</div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">AI opisy i kategoryzacja</p>
-              <div className="text-xs text-gray-500 mt-2 font-mono">3 agenty</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="col-span-2 space-y-6">
-          <Tabs defaultValue="jobs" className="space-y-4">
+          <Tabs defaultValue="categories" className="space-y-4">
             <TabsList className="grid w-full grid-cols-8">
-              {/* Most Frequently Used - JOBS (moved first) */}
-              <TabsTrigger value="jobs" data-tab="jobs" className="gap-1 px-1 text-xs" title="Zadania importu (v2.1)">
-                <Clock className="h-4 w-4" />
-                <span>Zadania</span>
-              </TabsTrigger>
-              {/* Most Frequently Used - IMPORT (second) */}
-              <TabsTrigger value="import" data-tab="import" className="gap-1 px-1 text-xs" title="Import produktów (v1.8)">
-                <Package className="h-4 w-4" />
-                <span>Import</span>
-              </TabsTrigger>
-              {/* Most Frequently Used - ENHANCE (third) */}
-              <TabsTrigger value="enhance" data-tab="enhance" className="gap-1 px-1 text-xs" title="Ulepszanie AI (v1.5)">
-                <Sparkles className="h-4 w-4" />
-                <span>Ulepszanie</span>
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="gap-1 px-1 text-xs" title="Konstruktor kategorii (v2.0)">
+              <TabsTrigger value="categories" className="gap-1 px-1 text-xs">
                 <ListTree className="h-4 w-4" />
                 <span>Kategorie</span>
               </TabsTrigger>
-              <TabsTrigger value="schedule" className="gap-1 px-1 text-xs" title="Harmonogramy (v1.2)">
-                <Clock className="h-4 w-4" />
-                <span>Plan</span>
+              <TabsTrigger value="import" className="gap-1 px-1 text-xs">
+                <Package className="h-4 w-4" />
+                <span>Import</span>
               </TabsTrigger>
-              <TabsTrigger value="links" className="gap-1 px-1 text-xs" title="Weryfikator linków (v1.3)">
+              <TabsTrigger value="enhance" className="gap-1 px-1 text-xs">
+                <Sparkles className="h-4 w-4" />
+                <span>Ulepszanie</span>
+              </TabsTrigger>
+              <TabsTrigger value="jobs" className="gap-1 px-1 text-xs">
+                <Clock className="h-4 w-4" />
+                <span>Zadania</span>
+              </TabsTrigger>
+              <TabsTrigger value="schedule" className="gap-1 px-1 text-xs">
+                <Clock className="h-4 w-4" />
+                <span>Harmonogramy</span>
+              </TabsTrigger>
+              <TabsTrigger value="links" className="gap-1 px-1 text-xs">
                 <Shield className="h-4 w-4" />
                 <span>Linki</span>
               </TabsTrigger>
-              <TabsTrigger value="indexes" className="gap-1 px-1 text-xs" title="Manager indeksów (v1.1)">
+              <TabsTrigger value="indexes" className="gap-1 px-1 text-xs">
                 <Database className="h-4 w-4" />
-                <span>Index</span>
+                <span>Indexes</span>
               </TabsTrigger>
-              <TabsTrigger value="cleanup" className="gap-1 px-1 text-xs" title="Czyszczenie bazy (v1.0)">
+              <TabsTrigger value="cleanup" className="gap-1 px-1 text-xs">
                 <Trash2 className="h-4 w-4" />
-                <span>Czysty</span>
+                <span>Czyszczenie</span>
               </TabsTrigger>
             </TabsList>
 
