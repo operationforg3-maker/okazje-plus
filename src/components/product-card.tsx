@@ -209,7 +209,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           onClick={handleDetailClick} 
           className={cn(
             "relative block",
-            viewMode === 'list' ? "w-64 flex-shrink-0" : "w-full"
+            viewMode === 'list' ? "w-48 flex-shrink-0" : "w-full"
           )}
         >
           <ProductGallery images={galleryImages} />
@@ -272,15 +272,21 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
         {/* Content Area */}
         <div className={cn(
-          "flex flex-col flex-1 space-y-4",
-          viewMode === 'list' ? "py-2" : "p-5"
+          "flex flex-1",
+          viewMode === 'list' ? "flex-row gap-6 py-2" : "flex-col space-y-4 p-5"
         )}>
+          
+          {/* Left Column: Info */}
+          <div className={cn(
+            "flex flex-col",
+            viewMode === 'list' ? "flex-1 space-y-3" : "space-y-4"
+          )}>
           
           {/* Title (AI-Curated Clean Title) */}
           <Link href={productUrl} onClick={handleDetailClick}>
             <h3 className={cn(
               "text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-primary dark:hover:text-primary transition-colors leading-snug",
-              viewMode === 'list' ? "line-clamp-3" : "line-clamp-2"
+              viewMode === 'list' ? "line-clamp-2 text-lg" : "line-clamp-2"
             )}>
               {product.title?.pl || product.title?.en || product.title?.de || product.name || 'Produkt'}
             </h3>
@@ -413,9 +419,11 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             </Badge>
           )}
 
-          {/* Feature badges to highlight available actions */}
-          <div className="flex flex-wrap gap-2 text-[11px]">
-            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
+          {viewMode !== 'list' && (
+            <>
+              {/* Feature badges to highlight available actions */}
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
               <Scale className="w-3 h-3" />
               Porównaj
             </Badge>
@@ -427,11 +435,21 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               <Heart className="w-3 h-3" />
               Ulubione
             </Badge>
-            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
-              <MessageSquare className="w-3 h-3" />
-              Opinie
-            </Badge>
+                <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
+                  <MessageSquare className="w-3 h-3" />
+                  Opinie
+                </Badge>
+              </div>
+            </>
+          )}
+          
           </div>
+          
+          {/* Right Column: Price & Actions */}
+          <div className={cn(
+            "flex flex-col",
+            viewMode === 'list' ? "w-96 flex-shrink-0 space-y-3 justify-between" : "space-y-4"
+          )}>
 
           {/* ========================================
               💎 TOTAL LANDED COST (Trust-First Hero)
@@ -511,8 +529,8 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
           {/* Action Buttons Row */}
           <div className={cn(
-            "flex items-center gap-2 mt-auto",
-            viewMode === 'list' ? "pt-4" : "pt-2"
+            "flex items-center gap-2",
+            viewMode === 'list' ? "mt-auto" : "mt-auto pt-2"
           )}>
             
             {/* Add to Cart Button (Primary CTA) */}
@@ -545,20 +563,22 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               )}
             </Button>
 
-            {/* Compare Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                addToComparison({ ...product, type: 'product' });
-              }}
-              className="px-3 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800/50"
-            >
-              <Scale className="w-4 h-4 mr-2" />
-              Porównaj
-            </Button>
+            {viewMode !== 'list' && (
+              /* Compare Button */
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addToComparison({ ...product, type: 'product' });
+                }}
+                className="px-3 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800/50"
+              >
+                <Scale className="w-4 h-4 mr-2" />
+                Porównaj
+              </Button>
+            )}
 
             {/* Favorite Button */}
             <TooltipProvider>
@@ -592,50 +612,57 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               </Tooltip>
             </TooltipProvider>
 
-            {/* Share Button */}
-            <ShareButton
-              type="product"
-              itemId={product.id}
-              url={`${typeof window !== 'undefined' ? window.location.origin : ''}${productUrl}`}
-              title={displayTitle}
-              onShared={handleShare}
-            />
+            {viewMode !== 'list' && (
+              <ShareButton
+                type="product"
+                itemId={product.id}
+                url={`${typeof window !== 'undefined' ? window.location.origin : ''}${productUrl}`}
+                title={displayTitle}
+                onShared={handleShare}
+              />
+            )}
           </div>
-
-          {/* Comments Count */}
-          {commentsCount > 0 && (
-            <Link 
-              href={`${productUrl}#comments`}
-              onClick={handleDetailClick}
-              className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>{commentsCount} {commentsCount === 1 ? 'komentarz' : 'komentarzy'}</span>
-            </Link>
-          )}
-
-          {/* Merchant Trust Badge (Bottom) */}
-          {merchantRating > 0 && (
-            <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-1">
-                <ShieldCheck className={cn(
-                  "w-4 h-4",
-                  isVerifiedMerchant ? "text-green-500" : "text-gray-400"
-                )} />
-                <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Sprzedawca: {Number.isFinite(merchantRating) ? merchantRating.toFixed(0) : '—'}%
-                </span>
-              </div>
-              {isBestseller && (
-                <>
-                  <span className="text-gray-300 dark:text-gray-600">•</span>
-                  <Badge variant="secondary" className="text-xs">
-                    <TrendingDown className="w-3 h-3 mr-1" />
-                    Bestseller
-                  </Badge>
-                </>
+          
+          </div>
+          
+          {viewMode !== 'list' && (
+            <>
+              {/* Comments Count */}
+              {commentsCount > 0 && (
+                <Link 
+                  href={`${productUrl}#comments`}
+                  onClick={handleDetailClick}
+                  className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>{commentsCount} {commentsCount === 1 ? 'komentarz' : 'komentarzy'}</span>
+                </Link>
               )}
-            </div>
+
+              {/* Merchant Trust Badge (Bottom) */}
+              {merchantRating > 0 && (
+                <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-1">
+                    <ShieldCheck className={cn(
+                      "w-4 h-4",
+                      isVerifiedMerchant ? "text-green-500" : "text-gray-400"
+                    )} />
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                      Sprzedawca: {Number.isFinite(merchantRating) ? merchantRating.toFixed(0) : '—'}%
+                    </span>
+                  </div>
+                  {isBestseller && (
+                    <>
+                      <span className="text-gray-300 dark:text-gray-600">•</span>
+                      <Badge variant="secondary" className="text-xs">
+                        <TrendingDown className="w-3 h-3 mr-1" />
+                        Bestseller
+                      </Badge>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
         </div>
