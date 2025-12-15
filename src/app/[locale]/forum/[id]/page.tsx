@@ -217,9 +217,9 @@ export default function ThreadPage() {
             {thread.authorDisplayName || 'Użytkownik'} • {new Date(thread.createdAt).toLocaleString('pl-PL')}
           </p>
         </div>
-        <Link href="/forum">
-          <Button variant="outline">Wróć do forum</Button>
-        </Link>
+        <Button variant="outline" asChild>
+          <Link href="/forum">Wróć do forum</Link>
+        </Button>
       </div>
 
       {/* Posty */}

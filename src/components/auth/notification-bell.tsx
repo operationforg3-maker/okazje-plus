@@ -201,11 +201,11 @@ export function NotificationBell() {
             </ScrollArea>
             <Separator />
             <div className="p-2">
-              <Link href="/profile?tab=notifications">
-                <Button variant="ghost" className="w-full text-sm" size="sm">
+              <Button asChild variant="ghost" className="w-full text-sm" size="sm">
+                <Link href="/profile?tab=notifications">
                   Zobacz wszystkie powiadomienia
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </>
         ) : (
