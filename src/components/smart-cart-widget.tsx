@@ -61,37 +61,52 @@ export function SmartCartWidget() {
 
   // Generate share link when dialog opens
   useEffect(() => {
-    if (isShareDialogOpen && !shareUrl && !isSharing) {
-      const generateShareLink = async () => {
-        setIsSharing(true);
-        setCopied(false);
+    // Guard: only run in browser with valid state
+    if (typeof window === 'undefined') return;
+    if (!isShareDialogOpen || shareUrl || isSharing) return;
+    
+    let cancelled = false;
+    
+    const generateShareLink = async () => {
+      if (cancelled) return;
+      
+      setIsSharing(true);
+      setCopied(false);
+      
+      try {
+        const result = await shareCart();
+        if (cancelled) return;
         
-        try {
-          const result = await shareCart();
-          if (result) {
-            setShareUrl(result.shareUrl);
-            toast.success('Lista została udostępniona!', {
-              description: 'Link został wygenerowany i jest gotowy do skopiowania.',
-            });
-          } else {
-            toast.error('Nie udało się udostępnić listy', {
-              description: 'Spróbuj ponownie lub skontaktuj się z pomocą techniczną.',
-            });
-            setIsShareDialogOpen(false);
-          }
-        } catch (error) {
-          console.error('Failed to share cart', error);
-          toast.error('Wystąpił błąd podczas udostępniania', {
-            description: 'Sprawdź połączenie internetowe i spróbuj ponownie.',
+        if (result) {
+          setShareUrl(result.shareUrl);
+          toast.success('Lista została udostępniona!', {
+            description: 'Link został wygenerowany i jest gotowy do skopiowania.',
+          });
+        } else {
+          toast.error('Nie udało się udostępnić listy', {
+            description: 'Spróbuj ponownie lub skontaktuj się z pomocą techniczną.',
           });
           setIsShareDialogOpen(false);
-        } finally {
+        }
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to share cart', error);
+        toast.error('Wystąpił błąd podczas udostępniania', {
+          description: 'Sprawdź połączenie internetowe i spróbuj ponownie.',
+        });
+        setIsShareDialogOpen(false);
+      } finally {
+        if (!cancelled) {
           setIsSharing(false);
         }
-      };
-      
-      generateShareLink();
-    }
+      }
+    };
+    
+    generateShareLink();
+    
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isShareDialogOpen, shareUrl, isSharing]);
   
