@@ -523,20 +523,20 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: 'Trwałość', value: product.ratingCard.durability },
-                { label: 'Łatwość użycia', value: product.ratingCard.easeOfUse },
-                { label: 'Stosunek jakości do ceny', value: product.ratingCard.valueForMoney },
-                { label: 'Wszechstronność', value: product.ratingCard.versatility },
+                { label: 'Trwałość', value: product.ratingCard.durability ?? 0 },
+                { label: 'Łatwość użycia', value: product.ratingCard.easeOfUse ?? 0 },
+                { label: 'Stosunek jakości do ceny', value: product.ratingCard.valueForMoney ?? 0 },
+                { label: 'Wszechstronność', value: product.ratingCard.versatility ?? 0 },
               ].map(({ label, value }) => (
                 <div key={label} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">{label}</span>
-                    <span className="font-semibold">{value.toFixed(1)}/5.0</span>
+                    <span className="font-semibold">{(value ?? 0).toFixed(1)}/5.0</span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full bg-gradient-to-r from-amber-400 to-yellow-500 transition-all"
-                      style={{ width: `${(value / 5) * 100}%` }}
+                      style={{ width: `${((value ?? 0) / 5) * 100}%` }}
                     />
                   </div>
                 </div>
