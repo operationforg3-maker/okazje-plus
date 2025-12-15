@@ -924,6 +924,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
         itemType="product"
         category={product.mainCategorySlug}
         subcategory={product.subCategorySlug}
+        subsubcategory={product.subSubCategorySlug}
         priceRange={currentPrice ? [currentPrice * 0.7, currentPrice * 1.3] : undefined}
         excludeItemId={product.id}
         maxItems={8}

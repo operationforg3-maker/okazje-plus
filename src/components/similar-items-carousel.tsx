@@ -17,6 +17,7 @@ interface SimilarItemsCarouselProps {
   category?: string;
   subcategory?: string;
   tags?: string[];
+  subsubcategory?: string;
   priceRange?: [number, number];
   excludeItemId?: string;
   maxItems?: number;
@@ -39,7 +40,7 @@ export function SimilarItemsCarousel({
   useEffect(() => {
     fetchSimilarItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemId, category, subcategory]);
+  }, [itemId, category, subcategory, subsubcategory]);
 
   const fetchSimilarItems = async () => {
     setLoading(true);
@@ -52,8 +53,17 @@ export function SimilarItemsCarousel({
         limit(maxItems * 2) // Fetch more to filter later
       );
 
-      // Filter by category if provided
-      if (subcategory) {
+      // Filter by category if provided (prefer deepest level)
+      if (subsubcategory && subcategory) {
+        q = query(
+          collection(db, collectionName),
+          where('status', '==', 'approved'),
+          where('subCategorySlug', '==', subcategory),
+          where('subSubCategorySlug', '==', subsubcategory),
+          orderBy('temperature', 'desc'),
+          limit(maxItems * 2)
+        );
+      } else if (subcategory) {
         q = query(
           collection(db, collectionName),
           where('status', '==', 'approved'),

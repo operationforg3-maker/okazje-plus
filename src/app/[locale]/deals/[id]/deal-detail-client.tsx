@@ -839,6 +839,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
         itemType="deal"
         category={deal.mainCategorySlug}
         subcategory={deal.subCategorySlug}
+        subsubcategory={deal.subSubCategorySlug}
         tags={deal.tags}
         priceRange={deal.price ? [deal.price * 0.7, deal.price * 1.3] : undefined}
         excludeItemId={deal.id}
