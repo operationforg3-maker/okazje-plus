@@ -23,6 +23,13 @@ const DEFAULT_CONFIG: TranslateConfig = {
   targetLanguage: 'pl',
 };
 
+// Simple in-memory cache for translations within same import session
+const translationCache = new Map<string, string>();
+
+function getCacheKey(text: string, from: string, to: string, context: string): string {
+  return `${from}:${to}:${context}:${text.substring(0, 100)}`;
+}
+
 export async function translateProducts(
   products: EnrichedProduct[],
   config: Partial<TranslateConfig> = {}
@@ -36,6 +43,7 @@ export async function translateProducts(
     return [];
   }
   console.log(`[Importer:Translate] Target language: ${finalConfig.targetLanguage}`);
+  console.log(`[Importer:Translate] Translation cache size: ${translationCache.size}`);
   
   const translated: EnrichedProduct[] = [];
   let processed = 0;
@@ -86,22 +94,32 @@ export async function translateProducts(
       if (finalConfig.targetLanguage === 'pl') {
         // AI Translation with category context using enhanced translation service
         try {
-          const titleInput: TranslationInput = {
-            text: product.titleNormalizedEN,
-            from: 'en',
-            to: 'pl',
-            context: 'product_title',
-            category: product.categorySlugEN,
-            subcategory: product.subcategorySlugEN,
-          };
+          // Check cache first
+          const cacheKey = getCacheKey(product.titleNormalizedEN, 'en', 'pl', 'product_title');
+          const cached = translationCache.get(cacheKey);
           
-          const titleResult = await translateText(titleInput);
-          
-          product.titlePL = titleResult.translatedText;
-          titles_translated++;
-          
-          if (titleResult.confidence < 70) {
-            low_confidence++;
+          if (cached) {
+            product.titlePL = cached;
+            console.log(`  ✓ Title (cached)`);
+          } else {
+            const titleInput: TranslationInput = {
+              text: product.titleNormalizedEN,
+              from: 'en',
+              to: 'pl',
+              context: 'product_title',
+              category: product.categorySlugEN,
+              subcategory: product.subcategorySlugEN,
+            };
+            
+            const titleResult = await translateText(titleInput);
+            
+            product.titlePL = titleResult.translatedText;
+            translationCache.set(cacheKey, titleResult.translatedText);
+            titles_translated++;
+            
+            if (titleResult.confidence < 70) {
+              low_confidence++;
+            }
           }
         } catch (e: any) {
           console.error(`  ✗ Title translation failed:`, e.message);
@@ -112,22 +130,32 @@ export async function translateProducts(
         // Translate description if available
         if (product.descriptionEN && product.descriptionEN.length > 0) {
           try {
-            const descInput: TranslationInput = {
-              text: product.descriptionEN,
-              from: 'en',
-              to: 'pl',
-              context: 'product_description',
-              category: product.categorySlugEN,
-              subcategory: product.subcategorySlugEN,
-            };
+            // Check cache first
+            const descCacheKey = getCacheKey(product.descriptionEN, 'en', 'pl', 'product_description');
+            const cachedDesc = translationCache.get(descCacheKey);
             
-            const descResult = await translateText(descInput);
-            
-            product.descriptionPL = descResult.translatedText;
-            descriptions_translated++;
-            
-            if (descResult.confidence < 70) {
-              low_confidence++;
+            if (cachedDesc) {
+              product.descriptionPL = cachedDesc;
+              console.log(`  ✓ Description (cached)`);
+            } else {
+              const descInput: TranslationInput = {
+                text: product.descriptionEN,
+                from: 'en',
+                to: 'pl',
+                context: 'product_description',
+                category: product.categorySlugEN,
+                subcategory: product.subcategorySlugEN,
+              };
+              
+              const descResult = await translateText(descInput);
+              
+              product.descriptionPL = descResult.translatedText;
+              translationCache.set(descCacheKey, descResult.translatedText);
+              descriptions_translated++;
+              
+              if (descResult.confidence < 70) {
+                low_confidence++;
+              }
             }
           } catch (e: any) {
             console.error(`  ✗ Description translation failed:`, e.message);

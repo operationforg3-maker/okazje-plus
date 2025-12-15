@@ -16,9 +16,9 @@ export interface EnrichConfig extends ImportStageConfig {
 
 const DEFAULT_CONFIG: EnrichConfig = {
   name: 'enrich',
-  batchSize: 5,
-  delayBetweenItems: 300, // 300ms between AI calls
-  delayBetweenBatches: 2000, // 2s between batches
+  batchSize: 20, // Większe batche bo tylko konwersja walut
+  delayBetweenItems: 50, // 50ms (wcześniej 300ms) - nie używamy AI tutaj
+  delayBetweenBatches: 200, // 200ms (wcześniej 2s)
   maxRetries: 2,
   currencyTarget: 'USD',
   exchangeRateUsdToPln: 4.0,
