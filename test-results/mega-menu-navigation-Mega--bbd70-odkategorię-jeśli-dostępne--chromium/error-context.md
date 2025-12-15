@@ -2,22 +2,1492 @@
 
 ```yaml
 - generic [active] [ref=e1]:
-  - generic [ref=e3]:
-    - heading "Coś poszło nie tak" [level=1] [ref=e4]
-    - paragraph [ref=e5]: Wystąpił błąd aplikacji. Spróbuj odświeżyć stronę albo wrócić później. Jeśli problem się powtarza – zgłoś go administratorowi.
-    - button "Spróbuj ponownie" [ref=e6]
-  - alert [ref=e7]
-  - generic [ref=e12] [cursor=pointer]:
-    - button "Open Next.js Dev Tools" [ref=e13]:
-      - img [ref=e14]
-    - generic [ref=e17]:
-      - button "Open issues overlay" [ref=e18]:
-        - generic [ref=e19]:
-          - generic [ref=e20]: "3"
-          - generic [ref=e21]: "4"
-        - generic [ref=e22]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - banner [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e6]:
+            - link "Okazje+" [ref=e7] [cursor=pointer]:
+              - /url: /en
+              - img "Okazje+" [ref=e9]
+            - navigation "Main" [ref=e10]:
+              - list [ref=e12]:
+                - listitem [ref=e13]:
+                  - link "Okazje" [ref=e14] [cursor=pointer]:
+                    - /url: /en/deals
+                    - generic [ref=e15]: Okazje
+                - listitem [ref=e16]:
+                  - link "Produkty" [ref=e17] [cursor=pointer]:
+                    - /url: /en/products
+                    - generic [ref=e18]: Produkty
+                - listitem [ref=e19]:
+                  - link "Forum" [ref=e20] [cursor=pointer]:
+                    - /url: /en/forum
+                    - generic [ref=e21]: Forum
+            - generic [ref=e22]:
+              - generic [ref=e26]:
+                - img [ref=e27]
+                - textbox "Szukaj produktów lub okazji..." [ref=e30]
+              - button "Wybierz język" [ref=e31]:
+                - img
+                - generic [ref=e32]: Wybierz język
+              - button "Wybierz walutę" [ref=e33]:
+                - img
+                - generic [ref=e34]: Wybierz walutę
+              - 'button "Theme: System" [ref=e35]':
+                - img
+              - link "Dodaj okazję" [ref=e36] [cursor=pointer]:
+                - /url: /en/add-deal
+                - button "Dodaj okazję" [ref=e37]
+              - link [ref=e38] [cursor=pointer]:
+                - /url: /en/cart
+                - button [ref=e39]:
+                  - img
+              - link "Zaloguj się" [ref=e40] [cursor=pointer]:
+                - /url: /en/login
+                - button "Zaloguj się" [ref=e41]
+          - generic [ref=e42]:
+            - generic [ref=e43]: Sezonowe hity
+            - link "Najgorętsze" [ref=e44] [cursor=pointer]:
+              - /url: /en/deals?sort=hot
+            - link "Najnowsze" [ref=e45] [cursor=pointer]:
+              - /url: /en/deals?sort=new
+            - link "Trendy" [ref=e46] [cursor=pointer]:
+              - /url: /en/products?sort=trending
+            - link "Forum" [ref=e47] [cursor=pointer]:
+              - /url: /en/forum
+      - main [ref=e48]:
+        - main [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e56]:
+              - generic [ref=e57]:
+                - generic [ref=e58]:
+                  - img [ref=e59]
+                  - text: Hottest deals in Poland
+                - heading "Discover the best deals" [level=1] [ref=e61]:
+                  - text: Discover the best
+                  - text: deals
+                - paragraph [ref=e62]: A community sharing the best finds, promotions and products. Save smart! 💰
+              - generic [ref=e64]:
+                - img [ref=e65]
+                - textbox "What are you looking for? (e.g. iPhone, sports shoes, appliances...)" [ref=e68]
+                - button "Search" [ref=e69]:
+                  - text: Search
+                  - img
+              - generic [ref=e71]:
+                - generic [ref=e73]:
+                  - img [ref=e75]
+                  - generic [ref=e77]:
+                    - generic [ref=e78]: ...
+                    - generic [ref=e79]: Gorących okazji
+                - generic [ref=e81]:
+                  - img [ref=e83]
+                  - generic [ref=e86]:
+                    - generic [ref=e87]: ...
+                    - generic [ref=e88]: Produktów
+                - generic [ref=e90]:
+                  - img [ref=e92]
+                  - generic [ref=e97]:
+                    - generic [ref=e98]: ...
+                    - generic [ref=e99]: Użytkowników
+                - generic [ref=e101]:
+                  - img [ref=e103]
+                  - generic [ref=e109]:
+                    - generic [ref=e110]: ...
+                    - generic [ref=e111]: Oszczędności
+            - generic [ref=e113]:
+              - generic [ref=e114]:
+                - heading "Browse categories" [level=2] [ref=e115]
+                - paragraph [ref=e116]: Find what you're looking for
+              - generic [ref=e118]:
+                - generic [ref=e119]:
+                  - link "Elektronika 📱 Elektronika 8 podkategorii" [ref=e120] [cursor=pointer]:
+                    - /url: /products?category=electronics
+                    - generic [ref=e121]:
+                      - img "Elektronika" [ref=e123]
+                      - generic [ref=e124]:
+                        - generic [ref=e125]:
+                          - generic [ref=e126]: 📱
+                          - generic [ref=e127]: Elektronika
+                        - generic [ref=e128]:
+                          - generic [ref=e129]: 8 podkategorii
+                          - img [ref=e130]
+                  - link "Dom i ogród 🏠 Dom i ogród 6 podkategorii" [ref=e132] [cursor=pointer]:
+                    - /url: /products?category=home-and-garden
+                    - generic [ref=e133]:
+                      - img "Dom i ogród" [ref=e135]
+                      - generic [ref=e136]:
+                        - generic [ref=e137]:
+                          - generic [ref=e138]: 🏠
+                          - generic [ref=e139]: Dom i ogród
+                        - generic [ref=e140]:
+                          - generic [ref=e141]: 6 podkategorii
+                          - img [ref=e142]
+                  - link "Moda i uroda 👗 Moda i uroda 6 podkategorii" [ref=e144] [cursor=pointer]:
+                    - /url: /products?category=fashion-and-beauty
+                    - generic [ref=e145]:
+                      - img "Moda i uroda" [ref=e147]
+                      - generic [ref=e148]:
+                        - generic [ref=e149]:
+                          - generic [ref=e150]: 👗
+                          - generic [ref=e151]: Moda i uroda
+                        - generic [ref=e152]:
+                          - generic [ref=e153]: 6 podkategorii
+                          - img [ref=e154]
+                  - link "Sport i rekreacja ⚽ Sport i rekreacja 5 podkategorii" [ref=e156] [cursor=pointer]:
+                    - /url: /products?category=sports-and-recreation
+                    - generic [ref=e157]:
+                      - img "Sport i rekreacja" [ref=e159]
+                      - generic [ref=e160]:
+                        - generic [ref=e161]:
+                          - generic [ref=e162]: ⚽
+                          - generic [ref=e163]: Sport i rekreacja
+                        - generic [ref=e164]:
+                          - generic [ref=e165]: 5 podkategorii
+                          - img [ref=e166]
+                  - link "Zdrowie i uroda 💊 Zdrowie i uroda 3 podkategorii" [ref=e168] [cursor=pointer]:
+                    - /url: /products?category=health-and-beauty
+                    - generic [ref=e169]:
+                      - img "Zdrowie i uroda" [ref=e171]
+                      - generic [ref=e172]:
+                        - generic [ref=e173]:
+                          - generic [ref=e174]: 💊
+                          - generic [ref=e175]: Zdrowie i uroda
+                        - generic [ref=e176]:
+                          - generic [ref=e177]: 3 podkategorii
+                          - img [ref=e178]
+                  - link "Dziecko i zabawki 🧸 Dziecko i zabawki 4 podkategorii" [ref=e180] [cursor=pointer]:
+                    - /url: /products?category=kids-and-toys
+                    - generic [ref=e181]:
+                      - img "Dziecko i zabawki" [ref=e183]
+                      - generic [ref=e184]:
+                        - generic [ref=e185]:
+                          - generic [ref=e186]: 🧸
+                          - generic [ref=e187]: Dziecko i zabawki
+                        - generic [ref=e188]:
+                          - generic [ref=e189]: 4 podkategorii
+                          - img [ref=e190]
+                  - link "Książki i media 📚 Książki i media 3 podkategorii" [ref=e192] [cursor=pointer]:
+                    - /url: /products?category=books-and-media
+                    - generic [ref=e193]:
+                      - img "Książki i media" [ref=e195]
+                      - generic [ref=e196]:
+                        - generic [ref=e197]:
+                          - generic [ref=e198]: 📚
+                          - generic [ref=e199]: Książki i media
+                        - generic [ref=e200]:
+                          - generic [ref=e201]: 3 podkategorii
+                          - img [ref=e202]
+                  - link "Motoryzacja 🚗 Motoryzacja 3 podkategorii" [ref=e204] [cursor=pointer]:
+                    - /url: /products?category=automotive
+                    - generic [ref=e205]:
+                      - img "Motoryzacja" [ref=e207]
+                      - generic [ref=e208]:
+                        - generic [ref=e209]:
+                          - generic [ref=e210]: 🚗
+                          - generic [ref=e211]: Motoryzacja
+                        - generic [ref=e212]:
+                          - generic [ref=e213]: 3 podkategorii
+                          - img [ref=e214]
+                  - link "Usługi i subskrypcje 🎫 Usługi i subskrypcje 4 podkategorii" [ref=e216] [cursor=pointer]:
+                    - /url: /products?category=services-and-subscriptions
+                    - generic [ref=e217]:
+                      - img "Usługi i subskrypcje" [ref=e219]
+                      - generic [ref=e220]:
+                        - generic [ref=e221]:
+                          - generic [ref=e222]: 🎫
+                          - generic [ref=e223]: Usługi i subskrypcje
+                        - generic [ref=e224]:
+                          - generic [ref=e225]: 4 podkategorii
+                          - img [ref=e226]
+                  - link "Zwierzęta 🐾 Zwierzęta 4 podkategorii" [ref=e228] [cursor=pointer]:
+                    - /url: /products?category=pets
+                    - generic [ref=e229]:
+                      - img "Zwierzęta" [ref=e231]
+                      - generic [ref=e232]:
+                        - generic [ref=e233]:
+                          - generic [ref=e234]: 🐾
+                          - generic [ref=e235]: Zwierzęta
+                        - generic [ref=e236]:
+                          - generic [ref=e237]: 4 podkategorii
+                          - img [ref=e238]
+                  - link "Biuro i szkoła 📝 Biuro i szkoła 4 podkategorii" [ref=e240] [cursor=pointer]:
+                    - /url: /products?category=office-and-school
+                    - generic [ref=e241]:
+                      - img "Biuro i szkoła" [ref=e243]
+                      - generic [ref=e244]:
+                        - generic [ref=e245]:
+                          - generic [ref=e246]: 📝
+                          - generic [ref=e247]: Biuro i szkoła
+                        - generic [ref=e248]:
+                          - generic [ref=e249]: 4 podkategorii
+                          - img [ref=e250]
+                  - link "Smart Home 🏡 Smart Home 5 podkategorii" [ref=e252] [cursor=pointer]:
+                    - /url: /products?category=smart-home
+                    - generic [ref=e253]:
+                      - img "Smart Home" [ref=e255]
+                      - generic [ref=e256]:
+                        - generic [ref=e257]:
+                          - generic [ref=e258]: 🏡
+                          - generic [ref=e259]: Smart Home
+                        - generic [ref=e260]:
+                          - generic [ref=e261]: 5 podkategorii
+                          - img [ref=e262]
+                - button "Wszystkie kategorie (15)" [ref=e265]:
+                  - generic [ref=e266]:
+                    - img [ref=e267]
+                    - text: Wszystkie kategorie (15)
+                  - img [ref=e269]
+            - generic [ref=e272]:
+              - generic [ref=e273]:
+                - generic [ref=e274]:
+                  - generic [ref=e275]:
+                    - img [ref=e276]
+                    - heading "Hottest deals" [level=2] [ref=e278]
+                  - paragraph [ref=e279]: Verified by the community
+                - link "View all" [ref=e280] [cursor=pointer]:
+                  - /url: /deals
+                  - text: View all
+                  - img
+              - generic [ref=e281]:
+                - link "🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 68% taniej Nowa oferta jewelry-and-watches 41 min temu 🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 68% taniej Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 68% taniej. Sprawdzona jakość w atrakcyjnej cenie. 51,99 zł 163,84 zł -68% Oszczędzasz 111,85 zł Temperatura 101 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e282] [cursor=pointer]:
+                  - /url: /en/deals/wkkMnma7DWi8apdLlr3W
+                  - generic [ref=e283]:
+                    - img "🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 68% taniej" [ref=e284]
+                    - button [ref=e285]:
+                      - img
+                    - generic [ref=e287]:
+                      - img [ref=e288]
+                      - text: Nowa oferta
+                  - generic [ref=e290]:
+                    - generic [ref=e291]:
+                      - generic [ref=e293]:
+                        - img [ref=e294]
+                        - text: jewelry-and-watches
+                      - generic [ref=e297]:
+                        - img [ref=e298]
+                        - generic [ref=e301]: 41 min temu
+                    - heading "🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 68% taniej" [level=3] [ref=e302]
+                    - paragraph [ref=e303]: Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 68% taniej. Sprawdzona jakość w atrakcyjnej cenie.
+                    - generic [ref=e304]:
+                      - generic [ref=e305]: 51,99 zł
+                      - generic [ref=e306]: 163,84 zł
+                      - generic [ref=e307]: "-68%"
+                      - generic [ref=e308]: Oszczędzasz 111,85 zł
+                    - generic [ref=e310]:
+                      - generic [ref=e311]:
+                        - img [ref=e312]
+                        - text: Temperatura
+                      - generic [ref=e314]: 101 pkt
+                    - generic [ref=e317]:
+                      - generic [ref=e318]: Dodane przez system
+                      - generic [ref=e319]:
+                        - generic "Głosy" [ref=e320]:
+                          - img [ref=e321]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e323]:
+                          - img [ref=e324]
+                          - text: "0"
+                    - generic [ref=e326]:
+                      - generic [ref=e327]:
+                        - img [ref=e328]
+                        - text: Porównaj
+                      - generic [ref=e332]:
+                        - img [ref=e333]
+                        - text: Ulubione
+                      - generic [ref=e335]:
+                        - img [ref=e336]
+                        - text: Komentarze
+                      - generic [ref=e338]:
+                        - img [ref=e339]
+                        - text: Głosowanie
+                  - generic [ref=e341]:
+                    - generic [ref=e342]:
+                      - button "Głos w górę" [ref=e343]:
+                        - img
+                      - button "Głos w dół" [ref=e344]:
+                        - img
+                    - generic [ref=e345]:
+                      - button "Udostępnij" [ref=e346]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e347]:
+                        - img
+                      - button "Przejdź" [ref=e348]:
+                        - text: Przejdź
+                        - img
+                - link "🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 70% taniej Nowa oferta jewelry-and-watches 41 min temu 🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 70% taniej Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 70% taniej. Sprawdzona jakość w atrakcyjnej cenie. 50,59 zł 168,63 zł -70% Oszczędzasz 118,04 zł Temperatura 101 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e349] [cursor=pointer]:
+                  - /url: /en/deals/uJPLaTrzqWI4k8jW3O5j
+                  - generic [ref=e350]:
+                    - img "🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 70% taniej" [ref=e351]
+                    - button [ref=e352]:
+                      - img
+                    - generic [ref=e354]:
+                      - img [ref=e355]
+                      - text: Nowa oferta
+                  - generic [ref=e357]:
+                    - generic [ref=e358]:
+                      - generic [ref=e360]:
+                        - img [ref=e361]
+                        - text: jewelry-and-watches
+                      - generic [ref=e364]:
+                        - img [ref=e365]
+                        - generic [ref=e368]: 41 min temu
+                    - heading "🔥 Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 70% taniej" [level=3] [ref=e369]
+                    - paragraph [ref=e370]: Iced Out Luxury Popular set Watch+Bracelet+Necklace With Gift Box Cuban Chain Cross Pendent Jewelry HipHop Style For Men Women - 70% taniej. Sprawdzona jakość w atrakcyjnej cenie.
+                    - generic [ref=e371]:
+                      - generic [ref=e372]: 50,59 zł
+                      - generic [ref=e373]: 168,63 zł
+                      - generic [ref=e374]: "-70%"
+                      - generic [ref=e375]: Oszczędzasz 118,04 zł
+                    - generic [ref=e377]:
+                      - generic [ref=e378]:
+                        - img [ref=e379]
+                        - text: Temperatura
+                      - generic [ref=e381]: 101 pkt
+                    - generic [ref=e384]:
+                      - generic [ref=e385]: Dodane przez system
+                      - generic [ref=e386]:
+                        - generic "Głosy" [ref=e387]:
+                          - img [ref=e388]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e390]:
+                          - img [ref=e391]
+                          - text: "0"
+                    - generic [ref=e393]:
+                      - generic [ref=e394]:
+                        - img [ref=e395]
+                        - text: Porównaj
+                      - generic [ref=e399]:
+                        - img [ref=e400]
+                        - text: Ulubione
+                      - generic [ref=e402]:
+                        - img [ref=e403]
+                        - text: Komentarze
+                      - generic [ref=e405]:
+                        - img [ref=e406]
+                        - text: Głosowanie
+                  - generic [ref=e408]:
+                    - generic [ref=e409]:
+                      - button "Głos w górę" [ref=e410]:
+                        - img
+                      - button "Głos w dół" [ref=e411]:
+                        - img
+                    - generic [ref=e412]:
+                      - button "Udostępnij" [ref=e413]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e414]:
+                        - img
+                      - button "Przejdź" [ref=e415]:
+                        - text: Przejdź
+                        - img
+                - link "🔥 Popular Dragon 2024 Cycling Jersey Set Summer Tiger Japan Clothing Men's Road Bike Shirt Suit bib Shorts MTB Ropa Ciclismo - 52% taniej Nowa oferta bikes 33 min temu 🔥 Popular Dragon 2024 Cycling Jersey Set Summer Tiger Japan Clothing Men's Road Bike Shirt Suit bib Shorts MTB Ropa Ciclismo - 52% taniej Popular Dragon 2024 Cycling Jersey Set Summer Tiger Japan Clothing Men's Road Bike Shirt Suit bib Shorts MTB Ropa Ciclismo - 52% taniej. Wygoda i styl w jednym. 49,19 zł 102,48 zł -52% Oszczędzasz 53,29 zł Temperatura 101 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e416] [cursor=pointer]:
+                  - /url: /en/deals/tiIJI4oRctRmCt7A8PlN
+                  - generic [ref=e417]:
+                    - img "🔥 Popular Dragon 2024 Cycling Jersey Set Summer Tiger Japan Clothing Men's Road Bike Shirt Suit bib Shorts MTB Ropa Ciclismo - 52% taniej" [ref=e418]
+                    - button [ref=e419]:
+                      - img
+                    - generic [ref=e421]:
+                      - img [ref=e422]
+                      - text: Nowa oferta
+                  - generic [ref=e424]:
+                    - generic [ref=e425]:
+                      - generic [ref=e427]:
+                        - img [ref=e428]
+                        - text: bikes
+                      - generic [ref=e431]:
+                        - img [ref=e432]
+                        - generic [ref=e435]: 33 min temu
+                    - heading "🔥 Popular Dragon 2024 Cycling Jersey Set Summer Tiger Japan Clothing Men's Road Bike Shirt Suit bib Shorts MTB Ropa Ciclismo - 52% taniej" [level=3] [ref=e436]
+                    - paragraph [ref=e437]: Popular Dragon 2024 Cycling Jersey Set Summer Tiger Japan Clothing Men's Road Bike Shirt Suit bib Shorts MTB Ropa Ciclismo - 52% taniej. Wygoda i styl w jednym.
+                    - generic [ref=e438]:
+                      - generic [ref=e439]: 49,19 zł
+                      - generic [ref=e440]: 102,48 zł
+                      - generic [ref=e441]: "-52%"
+                      - generic [ref=e442]: Oszczędzasz 53,29 zł
+                    - generic [ref=e444]:
+                      - generic [ref=e445]:
+                        - img [ref=e446]
+                        - text: Temperatura
+                      - generic [ref=e448]: 101 pkt
+                    - generic [ref=e451]:
+                      - generic [ref=e452]: Dodane przez system
+                      - generic [ref=e453]:
+                        - generic "Głosy" [ref=e454]:
+                          - img [ref=e455]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e457]:
+                          - img [ref=e458]
+                          - text: "0"
+                    - generic [ref=e460]:
+                      - generic [ref=e461]:
+                        - img [ref=e462]
+                        - text: Porównaj
+                      - generic [ref=e466]:
+                        - img [ref=e467]
+                        - text: Ulubione
+                      - generic [ref=e469]:
+                        - img [ref=e470]
+                        - text: Komentarze
+                      - generic [ref=e472]:
+                        - img [ref=e473]
+                        - text: Głosowanie
+                  - generic [ref=e475]:
+                    - generic [ref=e476]:
+                      - button "Głos w górę" [ref=e477]:
+                        - img
+                      - button "Głos w dół" [ref=e478]:
+                        - img
+                    - generic [ref=e479]:
+                      - button "Udostępnij" [ref=e480]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e481]:
+                        - img
+                      - button "Przejdź" [ref=e482]:
+                        - text: Przejdź
+                        - img
+                - link "🔥 SCVCN Hot Cycling Photochromic Sunglasses Men Women Outdoor Sports Road MTB Driving Glasses Popular Bicycle UV400 Bike Eyewear - 58% taniej Nowa oferta bikes 33 min temu 🔥 SCVCN Hot Cycling Photochromic Sunglasses Men Women Outdoor Sports Road MTB Driving Glasses Popular Bicycle UV400 Bike Eyewear - 58% taniej SCVCN Hot Cycling Photochromic Sunglasses Men Women Outdoor Sports Road MTB Driving Glasses Popular Bicycle UV400 Bike Eyewear - 58% taniej. Sprawdzona jakość w atrakcyjnej cenie. 13,69 zł 32,60 zł -58% Oszczędzasz 18,91 zł Temperatura 101 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e483] [cursor=pointer]:
+                  - /url: /en/deals/obYwl6hzaJeDNsVqNdkD
+                  - generic [ref=e484]:
+                    - img "🔥 SCVCN Hot Cycling Photochromic Sunglasses Men Women Outdoor Sports Road MTB Driving Glasses Popular Bicycle UV400 Bike Eyewear - 58% taniej" [ref=e485]
+                    - button [ref=e486]:
+                      - img
+                    - generic [ref=e488]:
+                      - img [ref=e489]
+                      - text: Nowa oferta
+                  - generic [ref=e491]:
+                    - generic [ref=e492]:
+                      - generic [ref=e494]:
+                        - img [ref=e495]
+                        - text: bikes
+                      - generic [ref=e498]:
+                        - img [ref=e499]
+                        - generic [ref=e502]: 33 min temu
+                    - heading "🔥 SCVCN Hot Cycling Photochromic Sunglasses Men Women Outdoor Sports Road MTB Driving Glasses Popular Bicycle UV400 Bike Eyewear - 58% taniej" [level=3] [ref=e503]
+                    - paragraph [ref=e504]: SCVCN Hot Cycling Photochromic Sunglasses Men Women Outdoor Sports Road MTB Driving Glasses Popular Bicycle UV400 Bike Eyewear - 58% taniej. Sprawdzona jakość w atrakcyjnej cenie.
+                    - generic [ref=e505]:
+                      - generic [ref=e506]: 13,69 zł
+                      - generic [ref=e507]: 32,60 zł
+                      - generic [ref=e508]: "-58%"
+                      - generic [ref=e509]: Oszczędzasz 18,91 zł
+                    - generic [ref=e511]:
+                      - generic [ref=e512]:
+                        - img [ref=e513]
+                        - text: Temperatura
+                      - generic [ref=e515]: 101 pkt
+                    - generic [ref=e518]:
+                      - generic [ref=e519]: Dodane przez system
+                      - generic [ref=e520]:
+                        - generic "Głosy" [ref=e521]:
+                          - img [ref=e522]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e524]:
+                          - img [ref=e525]
+                          - text: "0"
+                    - generic [ref=e527]:
+                      - generic [ref=e528]:
+                        - img [ref=e529]
+                        - text: Porównaj
+                      - generic [ref=e533]:
+                        - img [ref=e534]
+                        - text: Ulubione
+                      - generic [ref=e536]:
+                        - img [ref=e537]
+                        - text: Komentarze
+                      - generic [ref=e539]:
+                        - img [ref=e540]
+                        - text: Głosowanie
+                  - generic [ref=e542]:
+                    - generic [ref=e543]:
+                      - button "Głos w górę" [ref=e544]:
+                        - img
+                      - button "Głos w dół" [ref=e545]:
+                        - img
+                    - generic [ref=e546]:
+                      - button "Udostępnij" [ref=e547]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e548]:
+                        - img
+                      - button "Przejdź" [ref=e549]:
+                        - text: Przejdź
+                        - img
+                - link "🔥 Popular Classic Band N-nirvanaS-A Print Drawstring Bags Party Gift Bags, Drawstring Backpacks Sports Gym Travel Leisure Use - 50% taniej Nowa oferta bags-and-backpacks 42 min temu 🔥 Popular Classic Band N-nirvanaS-A Print Drawstring Bags Party Gift Bags, Drawstring Backpacks Sports Gym Travel Leisure Use - 50% taniej Popular Classic Band N-nirvanaS-A Print Drawstring Bags Party Gift Bags, Drawstring Backpacks Sports Gym Travel Leisure Use - 50% taniej. Sprawdzona jakość w atrakcyjnej cenie. 30,29 zł 60,49 zł -50% Oszczędzasz 30,20 zł Temperatura 100 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e550] [cursor=pointer]:
+                  - /url: /en/deals/pkylPjuUIs3Tekp2cyVa
+                  - generic [ref=e551]:
+                    - img "🔥 Popular Classic Band N-nirvanaS-A Print Drawstring Bags Party Gift Bags, Drawstring Backpacks Sports Gym Travel Leisure Use - 50% taniej" [ref=e552]
+                    - button [ref=e553]:
+                      - img
+                    - generic [ref=e555]:
+                      - img [ref=e556]
+                      - text: Nowa oferta
+                  - generic [ref=e558]:
+                    - generic [ref=e559]:
+                      - generic [ref=e561]:
+                        - img [ref=e562]
+                        - text: bags-and-backpacks
+                      - generic [ref=e565]:
+                        - img [ref=e566]
+                        - generic [ref=e569]: 42 min temu
+                    - heading "🔥 Popular Classic Band N-nirvanaS-A Print Drawstring Bags Party Gift Bags, Drawstring Backpacks Sports Gym Travel Leisure Use - 50% taniej" [level=3] [ref=e570]
+                    - paragraph [ref=e571]: Popular Classic Band N-nirvanaS-A Print Drawstring Bags Party Gift Bags, Drawstring Backpacks Sports Gym Travel Leisure Use - 50% taniej. Sprawdzona jakość w atrakcyjnej cenie.
+                    - generic [ref=e572]:
+                      - generic [ref=e573]: 30,29 zł
+                      - generic [ref=e574]: 60,49 zł
+                      - generic [ref=e575]: "-50%"
+                      - generic [ref=e576]: Oszczędzasz 30,20 zł
+                    - generic [ref=e578]:
+                      - generic [ref=e579]:
+                        - img [ref=e580]
+                        - text: Temperatura
+                      - generic [ref=e582]: 100 pkt
+                    - generic [ref=e585]:
+                      - generic [ref=e586]: Dodane przez system
+                      - generic [ref=e587]:
+                        - generic "Głosy" [ref=e588]:
+                          - img [ref=e589]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e591]:
+                          - img [ref=e592]
+                          - text: "0"
+                    - generic [ref=e594]:
+                      - generic [ref=e595]:
+                        - img [ref=e596]
+                        - text: Porównaj
+                      - generic [ref=e600]:
+                        - img [ref=e601]
+                        - text: Ulubione
+                      - generic [ref=e603]:
+                        - img [ref=e604]
+                        - text: Komentarze
+                      - generic [ref=e606]:
+                        - img [ref=e607]
+                        - text: Głosowanie
+                  - generic [ref=e609]:
+                    - generic [ref=e610]:
+                      - button "Głos w górę" [ref=e611]:
+                        - img
+                      - button "Głos w dół" [ref=e612]:
+                        - img
+                    - generic [ref=e613]:
+                      - button "Udostępnij" [ref=e614]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e615]:
+                        - img
+                      - button "Przejdź" [ref=e616]:
+                        - text: Przejdź
+                        - img
+                - link "🔥 Popular For BUCKLOS MTB Bike Bicycle Pedal Ultralight Nylon Widen Flatm Road Mountain Non-Slip Flat Pedals - 65% taniej Nowa oferta bikes 33 min temu 🔥 Popular For BUCKLOS MTB Bike Bicycle Pedal Ultralight Nylon Widen Flatm Road Mountain Non-Slip Flat Pedals - 65% taniej Popular For BUCKLOS MTB Bike Bicycle Pedal Ultralight Nylon Widen Flatm Road Mountain Non-Slip Flat Pedals - 65% taniej. Sprawdzona jakość w atrakcyjnej cenie. 94,79 zł 270,83 zł -65% Oszczędzasz 176,04 zł Temperatura 100 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e617] [cursor=pointer]:
+                  - /url: /en/deals/pJycrBsRrdzc50BidSNR
+                  - generic [ref=e618]:
+                    - img "🔥 Popular For BUCKLOS MTB Bike Bicycle Pedal Ultralight Nylon Widen Flatm Road Mountain Non-Slip Flat Pedals - 65% taniej" [ref=e619]
+                    - button [ref=e620]:
+                      - img
+                    - generic [ref=e622]:
+                      - img [ref=e623]
+                      - text: Nowa oferta
+                  - generic [ref=e625]:
+                    - generic [ref=e626]:
+                      - generic [ref=e628]:
+                        - img [ref=e629]
+                        - text: bikes
+                      - generic [ref=e632]:
+                        - img [ref=e633]
+                        - generic [ref=e636]: 33 min temu
+                    - heading "🔥 Popular For BUCKLOS MTB Bike Bicycle Pedal Ultralight Nylon Widen Flatm Road Mountain Non-Slip Flat Pedals - 65% taniej" [level=3] [ref=e637]
+                    - paragraph [ref=e638]: Popular For BUCKLOS MTB Bike Bicycle Pedal Ultralight Nylon Widen Flatm Road Mountain Non-Slip Flat Pedals - 65% taniej. Sprawdzona jakość w atrakcyjnej cenie.
+                    - generic [ref=e639]:
+                      - generic [ref=e640]: 94,79 zł
+                      - generic [ref=e641]: 270,83 zł
+                      - generic [ref=e642]: "-65%"
+                      - generic [ref=e643]: Oszczędzasz 176,04 zł
+                    - generic [ref=e645]:
+                      - generic [ref=e646]:
+                        - img [ref=e647]
+                        - text: Temperatura
+                      - generic [ref=e649]: 100 pkt
+                    - generic [ref=e652]:
+                      - generic [ref=e653]: Dodane przez system
+                      - generic [ref=e654]:
+                        - generic "Głosy" [ref=e655]:
+                          - img [ref=e656]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e658]:
+                          - img [ref=e659]
+                          - text: "0"
+                    - generic [ref=e661]:
+                      - generic [ref=e662]:
+                        - img [ref=e663]
+                        - text: Porównaj
+                      - generic [ref=e667]:
+                        - img [ref=e668]
+                        - text: Ulubione
+                      - generic [ref=e670]:
+                        - img [ref=e671]
+                        - text: Komentarze
+                      - generic [ref=e673]:
+                        - img [ref=e674]
+                        - text: Głosowanie
+                  - generic [ref=e676]:
+                    - generic [ref=e677]:
+                      - button "Głos w górę" [ref=e678]:
+                        - img
+                      - button "Głos w dół" [ref=e679]:
+                        - img
+                    - generic [ref=e680]:
+                      - button "Udostępnij" [ref=e681]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e682]:
+                        - img
+                      - button "Przejdź" [ref=e683]:
+                        - text: Przejdź
+                        - img
+                - link "🔥 2025 Popular for Universal Electric Bike Throttle for 36V Twist Throttle with LCD Display Handle Throttle Scooter E-Bike Parts - 50% taniej Nowa oferta bikes 32 min temu 🔥 2025 Popular for Universal Electric Bike Throttle for 36V Twist Throttle with LCD Display Handle Throttle Scooter E-Bike Parts - 50% taniej 2025 Popular for Universal Electric Bike Throttle for 36V Twist Throttle with LCD Display Handle Throttle Scooter E-Bike Parts - 50% taniej. Sprawdzona jakość w atrakcyjnej cenie. 53,59 zł 107,10 zł -50% Oszczędzasz 53,51 zł Temperatura 100 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e684] [cursor=pointer]:
+                  - /url: /en/deals/lNcSFTl19HMIlDStMhl1
+                  - generic [ref=e685]:
+                    - img "🔥 2025 Popular for Universal Electric Bike Throttle for 36V Twist Throttle with LCD Display Handle Throttle Scooter E-Bike Parts - 50% taniej" [ref=e686]
+                    - button [ref=e687]:
+                      - img
+                    - generic [ref=e689]:
+                      - img [ref=e690]
+                      - text: Nowa oferta
+                  - generic [ref=e692]:
+                    - generic [ref=e693]:
+                      - generic [ref=e695]:
+                        - img [ref=e696]
+                        - text: bikes
+                      - generic [ref=e699]:
+                        - img [ref=e700]
+                        - generic [ref=e703]: 32 min temu
+                    - heading "🔥 2025 Popular for Universal Electric Bike Throttle for 36V Twist Throttle with LCD Display Handle Throttle Scooter E-Bike Parts - 50% taniej" [level=3] [ref=e704]
+                    - paragraph [ref=e705]: 2025 Popular for Universal Electric Bike Throttle for 36V Twist Throttle with LCD Display Handle Throttle Scooter E-Bike Parts - 50% taniej. Sprawdzona jakość w atrakcyjnej cenie.
+                    - generic [ref=e706]:
+                      - generic [ref=e707]: 53,59 zł
+                      - generic [ref=e708]: 107,10 zł
+                      - generic [ref=e709]: "-50%"
+                      - generic [ref=e710]: Oszczędzasz 53,51 zł
+                    - generic [ref=e712]:
+                      - generic [ref=e713]:
+                        - img [ref=e714]
+                        - text: Temperatura
+                      - generic [ref=e716]: 100 pkt
+                    - generic [ref=e719]:
+                      - generic [ref=e720]: Dodane przez system
+                      - generic [ref=e721]:
+                        - generic "Głosy" [ref=e722]:
+                          - img [ref=e723]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e725]:
+                          - img [ref=e726]
+                          - text: "0"
+                    - generic [ref=e728]:
+                      - generic [ref=e729]:
+                        - img [ref=e730]
+                        - text: Porównaj
+                      - generic [ref=e734]:
+                        - img [ref=e735]
+                        - text: Ulubione
+                      - generic [ref=e737]:
+                        - img [ref=e738]
+                        - text: Komentarze
+                      - generic [ref=e740]:
+                        - img [ref=e741]
+                        - text: Głosowanie
+                  - generic [ref=e743]:
+                    - generic [ref=e744]:
+                      - button "Głos w górę" [ref=e745]:
+                        - img
+                      - button "Głos w dół" [ref=e746]:
+                        - img
+                    - generic [ref=e747]:
+                      - button "Udostępnij" [ref=e748]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e749]:
+                        - img
+                      - button "Przejdź" [ref=e750]:
+                        - text: Przejdź
+                        - img
+                - link "🔥 Anime attack on titan hollow Quartz Pocket Watch Popular Men's Necklace Pendant Women's Children's Jewelry Pendant Souvenir - 50% taniej Nowa oferta jewelry-and-watches 41 min temu 🔥 Anime attack on titan hollow Quartz Pocket Watch Popular Men's Necklace Pendant Women's Children's Jewelry Pendant Souvenir - 50% taniej Anime attack on titan hollow Quartz Pocket Watch Popular Men's Necklace Pendant Women's Children's Jewelry Pendant Souvenir - 50% taniej. Sprawdzona jakość w atrakcyjnej cenie. 16,39 zł 32,75 zł -50% Oszczędzasz 16,36 zł Temperatura 100 pkt Dodane przez system 0 0 Porównaj Ulubione Komentarze Głosowanie Głos w górę Głos w dół Udostępnij Dodaj do porównania Przejdź" [ref=e751] [cursor=pointer]:
+                  - /url: /en/deals/dRhHUtbw9SGPTlpKEv7u
+                  - generic [ref=e752]:
+                    - img "🔥 Anime attack on titan hollow Quartz Pocket Watch Popular Men's Necklace Pendant Women's Children's Jewelry Pendant Souvenir - 50% taniej" [ref=e753]
+                    - button [ref=e754]:
+                      - img
+                    - generic [ref=e756]:
+                      - img [ref=e757]
+                      - text: Nowa oferta
+                  - generic [ref=e759]:
+                    - generic [ref=e760]:
+                      - generic [ref=e762]:
+                        - img [ref=e763]
+                        - text: jewelry-and-watches
+                      - generic [ref=e766]:
+                        - img [ref=e767]
+                        - generic [ref=e770]: 41 min temu
+                    - heading "🔥 Anime attack on titan hollow Quartz Pocket Watch Popular Men's Necklace Pendant Women's Children's Jewelry Pendant Souvenir - 50% taniej" [level=3] [ref=e771]
+                    - paragraph [ref=e772]: Anime attack on titan hollow Quartz Pocket Watch Popular Men's Necklace Pendant Women's Children's Jewelry Pendant Souvenir - 50% taniej. Sprawdzona jakość w atrakcyjnej cenie.
+                    - generic [ref=e773]:
+                      - generic [ref=e774]: 16,39 zł
+                      - generic [ref=e775]: 32,75 zł
+                      - generic [ref=e776]: "-50%"
+                      - generic [ref=e777]: Oszczędzasz 16,36 zł
+                    - generic [ref=e779]:
+                      - generic [ref=e780]:
+                        - img [ref=e781]
+                        - text: Temperatura
+                      - generic [ref=e783]: 100 pkt
+                    - generic [ref=e786]:
+                      - generic [ref=e787]: Dodane przez system
+                      - generic [ref=e788]:
+                        - generic "Głosy" [ref=e789]:
+                          - img [ref=e790]
+                          - text: "0"
+                        - generic "Komentarze" [ref=e792]:
+                          - img [ref=e793]
+                          - text: "0"
+                    - generic [ref=e795]:
+                      - generic [ref=e796]:
+                        - img [ref=e797]
+                        - text: Porównaj
+                      - generic [ref=e801]:
+                        - img [ref=e802]
+                        - text: Ulubione
+                      - generic [ref=e804]:
+                        - img [ref=e805]
+                        - text: Komentarze
+                      - generic [ref=e807]:
+                        - img [ref=e808]
+                        - text: Głosowanie
+                  - generic [ref=e810]:
+                    - generic [ref=e811]:
+                      - button "Głos w górę" [ref=e812]:
+                        - img
+                      - button "Głos w dół" [ref=e813]:
+                        - img
+                    - generic [ref=e814]:
+                      - button "Udostępnij" [ref=e815]:
+                        - img
+                        - text: Udostępnij
+                      - button "Dodaj do porównania" [ref=e816]:
+                        - img
+                      - button "Przejdź" [ref=e817]:
+                        - text: Przejdź
+                        - img
+            - generic [ref=e819]:
+              - generic [ref=e820]:
+                - generic [ref=e821]:
+                  - generic [ref=e822]:
+                    - img [ref=e823]
+                    - heading "Top rated products" [level=2] [ref=e825]
+                  - paragraph [ref=e826]: Quality verified by our community
+                - link "Browse catalog" [ref=e827] [cursor=pointer]:
+                  - /url: /products
+                  - text: Browse catalog
+                  - img
+              - generic [ref=e828]:
+                - generic [ref=e829]:
+                  - link "Zdjęcie produktu 1/6 Miniaturka 1 Miniaturka 2 Miniaturka 3 Miniaturka 4 Miniaturka 5 Miniaturka 6 Darmowa dostawa -1%" [ref=e830] [cursor=pointer]:
+                    - /url: /en/products/1M0F8piRpdKkEGHzmnpP
+                    - generic [ref=e831]:
+                      - generic [ref=e832]:
+                        - img "Zdjęcie produktu" [ref=e833]
+                        - button [ref=e834]:
+                          - img
+                        - button [ref=e835]:
+                          - img
+                        - generic [ref=e836]: 1/6
+                      - generic [ref=e837]:
+                        - button "Miniaturka 1" [ref=e838]:
+                          - img "Miniaturka 1" [ref=e839]
+                        - button "Miniaturka 2" [ref=e840]:
+                          - img "Miniaturka 2" [ref=e841]
+                        - button "Miniaturka 3" [ref=e842]:
+                          - img "Miniaturka 3" [ref=e843]
+                        - button "Miniaturka 4" [ref=e844]:
+                          - img "Miniaturka 4" [ref=e845]
+                        - button "Miniaturka 5" [ref=e846]:
+                          - img "Miniaturka 5" [ref=e847]
+                        - button "Miniaturka 6" [ref=e848]:
+                          - img "Miniaturka 6" [ref=e849]
+                    - generic [ref=e851]:
+                      - img [ref=e852]
+                      - text: Darmowa dostawa
+                    - generic [ref=e858]:
+                      - img [ref=e859]
+                      - text: "-1%"
+                  - generic [ref=e862]:
+                    - link "Xiaomi GPS Tracker Strong Magnetic Car Anti-Lost Device Pet Kids Bag racking For IOS Android Smart Finder Locator Accessories" [ref=e863] [cursor=pointer]:
+                      - /url: /en/products/1M0F8piRpdKkEGHzmnpP
+                      - heading "Xiaomi GPS Tracker Strong Magnetic Car Anti-Lost Device Pet Kids Bag racking For IOS Android Smart Finder Locator Accessories" [level=3] [ref=e864]
+                    - generic [ref=e865]:
+                      - generic [ref=e866]:
+                        - img [ref=e867]
+                        - text: Porównaj
+                      - generic [ref=e871]:
+                        - img [ref=e872]
+                        - text: Wspólny koszyk
+                      - generic [ref=e876]:
+                        - img [ref=e877]
+                        - text: Ulubione
+                      - generic [ref=e879]:
+                        - img [ref=e880]
+                        - text: Opinie
+                    - generic [ref=e882]:
+                      - generic [ref=e885]:
+                        - img [ref=e886]
+                        - text: "-1%"
+                      - generic [ref=e889]:
+                        - generic [ref=e890]: 112,76 zł
+                        - generic [ref=e891]: z dostawą
+                      - generic [ref=e892]:
+                        - img [ref=e893]
+                        - generic [ref=e895]: Dostawa gratis!
+                    - generic [ref=e896]:
+                      - button "Do wspólnego koszyka" [ref=e897]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e898]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e899]:
+                        - img
+                      - button "Udostępnij" [ref=e900]:
+                        - img
+                        - text: Udostępnij
+                - generic [ref=e901]:
+                  - link "Zdjęcie produktu 1/6 Miniaturka 1 Miniaturka 2 Miniaturka 3 Miniaturka 4 Miniaturka 5 Miniaturka 6 Darmowa dostawa 0" [ref=e902] [cursor=pointer]:
+                    - /url: /en/products/1RWHulgictvu8lKAAIAS
+                    - generic [ref=e903]:
+                      - generic [ref=e904]:
+                        - img "Zdjęcie produktu" [ref=e905]
+                        - button [ref=e906]:
+                          - img
+                        - button [ref=e907]:
+                          - img
+                        - generic [ref=e908]: 1/6
+                      - generic [ref=e909]:
+                        - button "Miniaturka 1" [ref=e910]:
+                          - img "Miniaturka 1" [ref=e911]
+                        - button "Miniaturka 2" [ref=e912]:
+                          - img "Miniaturka 2" [ref=e913]
+                        - button "Miniaturka 3" [ref=e914]:
+                          - img "Miniaturka 3" [ref=e915]
+                        - button "Miniaturka 4" [ref=e916]:
+                          - img "Miniaturka 4" [ref=e917]
+                        - button "Miniaturka 5" [ref=e918]:
+                          - img "Miniaturka 5" [ref=e919]
+                        - button "Miniaturka 6" [ref=e920]:
+                          - img "Miniaturka 6" [ref=e921]
+                    - generic [ref=e923]:
+                      - img [ref=e924]
+                      - text: Darmowa dostawa
+                    - text: "0"
+                  - generic [ref=e929]:
+                    - link "classic movies The Lightning Thief Phone Case For Xiaomi POCO M7 M6 M5 X7 X6 X5 F7 F6 F5 Soft Black Pro 5G Phone Cover" [ref=e930] [cursor=pointer]:
+                      - /url: /en/products/1RWHulgictvu8lKAAIAS
+                      - heading "classic movies The Lightning Thief Phone Case For Xiaomi POCO M7 M6 M5 X7 X6 X5 F7 F6 F5 Soft Black Pro 5G Phone Cover" [level=3] [ref=e931]
+                    - generic [ref=e932]:
+                      - generic [ref=e933]:
+                        - img [ref=e934]
+                        - text: Porównaj
+                      - generic [ref=e938]:
+                        - img [ref=e939]
+                        - text: Wspólny koszyk
+                      - generic [ref=e943]:
+                        - img [ref=e944]
+                        - text: Ulubione
+                      - generic [ref=e946]:
+                        - img [ref=e947]
+                        - text: Opinie
+                    - generic [ref=e949]:
+                      - generic [ref=e950]:
+                        - generic [ref=e951]: 46,44 zł
+                        - generic [ref=e952]: z dostawą
+                      - generic [ref=e953]:
+                        - img [ref=e954]
+                        - generic [ref=e956]: Dostawa gratis!
+                    - generic [ref=e957]:
+                      - button "Do wspólnego koszyka" [ref=e958]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e959]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e960]:
+                        - img
+                      - button "Udostępnij" [ref=e961]:
+                        - img
+                        - text: Udostępnij
+                - generic [ref=e962]:
+                  - link "Zdjęcie produktu 1/6 Miniaturka 1 Miniaturka 2 Miniaturka 3 Miniaturka 4 Miniaturka 5 Miniaturka 6 Darmowa dostawa 0" [ref=e963] [cursor=pointer]:
+                    - /url: /en/products/1cInov0CgeEvvRhDfJzq
+                    - generic [ref=e964]:
+                      - generic [ref=e965]:
+                        - img "Zdjęcie produktu" [ref=e966]
+                        - button [ref=e967]:
+                          - img
+                        - button [ref=e968]:
+                          - img
+                        - generic [ref=e969]: 1/6
+                      - generic [ref=e970]:
+                        - button "Miniaturka 1" [ref=e971]:
+                          - img "Miniaturka 1" [ref=e972]
+                        - button "Miniaturka 2" [ref=e973]:
+                          - img "Miniaturka 2" [ref=e974]
+                        - button "Miniaturka 3" [ref=e975]:
+                          - img "Miniaturka 3" [ref=e976]
+                        - button "Miniaturka 4" [ref=e977]:
+                          - img "Miniaturka 4" [ref=e978]
+                        - button "Miniaturka 5" [ref=e979]:
+                          - img "Miniaturka 5" [ref=e980]
+                        - button "Miniaturka 6" [ref=e981]:
+                          - img "Miniaturka 6" [ref=e982]
+                    - generic [ref=e984]:
+                      - img [ref=e985]
+                      - text: Darmowa dostawa
+                    - text: "0"
+                  - generic [ref=e990]:
+                    - link "Banksy Graffiti Art Phone Case For Redmi Note 14 13 12 11 Pro Plus S 5G 14C A3 Soft Black Phone Cover" [ref=e991] [cursor=pointer]:
+                      - /url: /en/products/1cInov0CgeEvvRhDfJzq
+                      - heading "Banksy Graffiti Art Phone Case For Redmi Note 14 13 12 11 Pro Plus S 5G 14C A3 Soft Black Phone Cover" [level=3] [ref=e992]
+                    - generic [ref=e993]:
+                      - generic [ref=e994]:
+                        - img [ref=e995]
+                        - text: Porównaj
+                      - generic [ref=e999]:
+                        - img [ref=e1000]
+                        - text: Wspólny koszyk
+                      - generic [ref=e1004]:
+                        - img [ref=e1005]
+                        - text: Ulubione
+                      - generic [ref=e1007]:
+                        - img [ref=e1008]
+                        - text: Opinie
+                    - generic [ref=e1010]:
+                      - generic [ref=e1011]:
+                        - generic [ref=e1012]: 43,56 zł
+                        - generic [ref=e1013]: z dostawą
+                      - generic [ref=e1014]:
+                        - img [ref=e1015]
+                        - generic [ref=e1017]: Dostawa gratis!
+                    - generic [ref=e1018]:
+                      - button "Do wspólnego koszyka" [ref=e1019]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e1020]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e1021]:
+                        - img
+                      - button "Udostępnij" [ref=e1022]:
+                        - img
+                        - text: Udostępnij
+                - generic [ref=e1023]:
+                  - link "Zdjęcie produktu 1/6 Miniaturka 1 Miniaturka 2 Miniaturka 3 Miniaturka 4 Miniaturka 5 Miniaturka 6 Darmowa dostawa 0" [ref=e1024] [cursor=pointer]:
+                    - /url: /en/products/1dV6XCfTq9lN4hzI0upy
+                    - generic [ref=e1025]:
+                      - generic [ref=e1026]:
+                        - img "Zdjęcie produktu" [ref=e1027]
+                        - button [ref=e1028]:
+                          - img
+                        - button [ref=e1029]:
+                          - img
+                        - generic [ref=e1030]: 1/6
+                      - generic [ref=e1031]:
+                        - button "Miniaturka 1" [ref=e1032]:
+                          - img "Miniaturka 1" [ref=e1033]
+                        - button "Miniaturka 2" [ref=e1034]:
+                          - img "Miniaturka 2" [ref=e1035]
+                        - button "Miniaturka 3" [ref=e1036]:
+                          - img "Miniaturka 3" [ref=e1037]
+                        - button "Miniaturka 4" [ref=e1038]:
+                          - img "Miniaturka 4" [ref=e1039]
+                        - button "Miniaturka 5" [ref=e1040]:
+                          - img "Miniaturka 5" [ref=e1041]
+                        - button "Miniaturka 6" [ref=e1042]:
+                          - img "Miniaturka 6" [ref=e1043]
+                    - generic [ref=e1045]:
+                      - img [ref=e1046]
+                      - text: Darmowa dostawa
+                    - text: "0"
+                  - generic [ref=e1051]:
+                    - link "(95B.1 /95B.2) Center Console Gear Shift Panel Interior Decorative Accessories" [ref=e1052] [cursor=pointer]:
+                      - /url: /en/products/1dV6XCfTq9lN4hzI0upy
+                      - heading "(95B.1 /95B.2) Center Console Gear Shift Panel Interior Decorative Accessories" [level=3] [ref=e1053]
+                    - generic [ref=e1054]:
+                      - generic [ref=e1055]:
+                        - img [ref=e1056]
+                        - text: Porównaj
+                      - generic [ref=e1060]:
+                        - img [ref=e1061]
+                        - text: Wspólny koszyk
+                      - generic [ref=e1065]:
+                        - img [ref=e1066]
+                        - text: Ulubione
+                      - generic [ref=e1068]:
+                        - img [ref=e1069]
+                        - text: Opinie
+                    - generic [ref=e1071]:
+                      - generic [ref=e1072]:
+                        - generic [ref=e1073]: 22 059,16 zł
+                        - generic [ref=e1074]: z dostawą
+                      - generic [ref=e1075]:
+                        - img [ref=e1076]
+                        - generic [ref=e1078]: Dostawa gratis!
+                    - generic [ref=e1079]:
+                      - button "Do wspólnego koszyka" [ref=e1080]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e1081]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e1082]:
+                        - img
+                      - button "Udostępnij" [ref=e1083]:
+                        - img
+                        - text: Udostępnij
+                - generic [ref=e1084]:
+                  - link "Zdjęcie produktu 1/6 Miniaturka 1 Miniaturka 2 Miniaturka 3 Miniaturka 4 Miniaturka 5 Miniaturka 6 Darmowa dostawa 0" [ref=e1085] [cursor=pointer]:
+                    - /url: /en/products/1fA997E2mmQ7F03G0kBX
+                    - generic [ref=e1086]:
+                      - generic [ref=e1087]:
+                        - img "Zdjęcie produktu" [ref=e1088]
+                        - button [ref=e1089]:
+                          - img
+                        - button [ref=e1090]:
+                          - img
+                        - generic [ref=e1091]: 1/6
+                      - generic [ref=e1092]:
+                        - button "Miniaturka 1" [ref=e1093]:
+                          - img "Miniaturka 1" [ref=e1094]
+                        - button "Miniaturka 2" [ref=e1095]:
+                          - img "Miniaturka 2" [ref=e1096]
+                        - button "Miniaturka 3" [ref=e1097]:
+                          - img "Miniaturka 3" [ref=e1098]
+                        - button "Miniaturka 4" [ref=e1099]:
+                          - img "Miniaturka 4" [ref=e1100]
+                        - button "Miniaturka 5" [ref=e1101]:
+                          - img "Miniaturka 5" [ref=e1102]
+                        - button "Miniaturka 6" [ref=e1103]:
+                          - img "Miniaturka 6" [ref=e1104]
+                    - generic [ref=e1106]:
+                      - img [ref=e1107]
+                      - text: Darmowa dostawa
+                    - text: "0"
+                  - generic [ref=e1112]:
+                    - link "China Tesla car EV Cable Hanger Charge Holder united car Charger Holder" [ref=e1113] [cursor=pointer]:
+                      - /url: /en/products/1fA997E2mmQ7F03G0kBX
+                      - heading "China Tesla car EV Cable Hanger Charge Holder united car Charger Holder" [level=3] [ref=e1114]
+                    - generic [ref=e1115]:
+                      - generic [ref=e1116]:
+                        - img [ref=e1117]
+                        - text: Porównaj
+                      - generic [ref=e1121]:
+                        - img [ref=e1122]
+                        - text: Wspólny koszyk
+                      - generic [ref=e1126]:
+                        - img [ref=e1127]
+                        - text: Ulubione
+                      - generic [ref=e1129]:
+                        - img [ref=e1130]
+                        - text: Opinie
+                    - generic [ref=e1132]:
+                      - generic [ref=e1133]:
+                        - generic [ref=e1134]: 237,56 zł
+                        - generic [ref=e1135]: z dostawą
+                      - generic [ref=e1136]:
+                        - img [ref=e1137]
+                        - generic [ref=e1139]: Dostawa gratis!
+                    - generic [ref=e1140]:
+                      - button "Do wspólnego koszyka" [ref=e1141]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e1142]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e1143]:
+                        - img
+                      - button "Udostępnij" [ref=e1144]:
+                        - img
+                        - text: Udostępnij
+                - generic [ref=e1145]:
+                  - link "Zdjęcie produktu 1/6 Miniaturka 1 Miniaturka 2 Miniaturka 3 Miniaturka 4 Miniaturka 5 Miniaturka 6 Darmowa dostawa 0" [ref=e1146] [cursor=pointer]:
+                    - /url: /en/products/1q9ah8jheuBdZFj76dji
+                    - generic [ref=e1147]:
+                      - generic [ref=e1148]:
+                        - img "Zdjęcie produktu" [ref=e1149]
+                        - button [ref=e1150]:
+                          - img
+                        - button [ref=e1151]:
+                          - img
+                        - generic [ref=e1152]: 1/6
+                      - generic [ref=e1153]:
+                        - button "Miniaturka 1" [ref=e1154]:
+                          - img "Miniaturka 1" [ref=e1155]
+                        - button "Miniaturka 2" [ref=e1156]:
+                          - img "Miniaturka 2" [ref=e1157]
+                        - button "Miniaturka 3" [ref=e1158]:
+                          - img "Miniaturka 3" [ref=e1159]
+                        - button "Miniaturka 4" [ref=e1160]:
+                          - img "Miniaturka 4" [ref=e1161]
+                        - button "Miniaturka 5" [ref=e1162]:
+                          - img "Miniaturka 5" [ref=e1163]
+                        - button "Miniaturka 6" [ref=e1164]:
+                          - img "Miniaturka 6" [ref=e1165]
+                    - generic [ref=e1167]:
+                      - img [ref=e1168]
+                      - text: Darmowa dostawa
+                    - text: "0"
+                  - generic [ref=e1173]:
+                    - link "CS-S06 Qr Code Pos Pay Wireless Phone Charger Rental Power Banks Station Share Power Bank" [ref=e1174] [cursor=pointer]:
+                      - /url: /en/products/1q9ah8jheuBdZFj76dji
+                      - heading "CS-S06 Qr Code Pos Pay Wireless Phone Charger Rental Power Banks Station Share Power Bank" [level=3] [ref=e1175]
+                    - generic [ref=e1176]:
+                      - generic [ref=e1177]:
+                        - img [ref=e1178]
+                        - text: Porównaj
+                      - generic [ref=e1182]:
+                        - img [ref=e1183]
+                        - text: Wspólny koszyk
+                      - generic [ref=e1187]:
+                        - img [ref=e1188]
+                        - text: Ulubione
+                      - generic [ref=e1190]:
+                        - img [ref=e1191]
+                        - text: Opinie
+                    - generic [ref=e1193]:
+                      - generic [ref=e1194]:
+                        - generic [ref=e1195]: 8363,96 zł
+                        - generic [ref=e1196]: z dostawą
+                      - generic [ref=e1197]:
+                        - img [ref=e1198]
+                        - generic [ref=e1200]: Dostawa gratis!
+                    - generic [ref=e1201]:
+                      - button "Do wspólnego koszyka" [ref=e1202]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e1203]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e1204]:
+                        - img
+                      - button "Udostępnij" [ref=e1205]:
+                        - img
+                        - text: Udostępnij
+                - generic [ref=e1206]:
+                  - link "Zdjęcie produktu 1/6 Miniaturka 1 Miniaturka 2 Miniaturka 3 Miniaturka 4 Miniaturka 5 Miniaturka 6 Darmowa dostawa 0" [ref=e1207] [cursor=pointer]:
+                    - /url: /en/products/1qbXJ8tW4LHDR3PzrVrP
+                    - generic [ref=e1208]:
+                      - generic [ref=e1209]:
+                        - img "Zdjęcie produktu" [ref=e1210]
+                        - button [ref=e1211]:
+                          - img
+                        - button [ref=e1212]:
+                          - img
+                        - generic [ref=e1213]: 1/6
+                      - generic [ref=e1214]:
+                        - button "Miniaturka 1" [ref=e1215]:
+                          - img "Miniaturka 1" [ref=e1216]
+                        - button "Miniaturka 2" [ref=e1217]:
+                          - img "Miniaturka 2" [ref=e1218]
+                        - button "Miniaturka 3" [ref=e1219]:
+                          - img "Miniaturka 3" [ref=e1220]
+                        - button "Miniaturka 4" [ref=e1221]:
+                          - img "Miniaturka 4" [ref=e1222]
+                        - button "Miniaturka 5" [ref=e1223]:
+                          - img "Miniaturka 5" [ref=e1224]
+                        - button "Miniaturka 6" [ref=e1225]:
+                          - img "Miniaturka 6" [ref=e1226]
+                    - generic [ref=e1228]:
+                      - img [ref=e1229]
+                      - text: Darmowa dostawa
+                    - text: "0"
+                  - generic [ref=e1234]:
+                    - link "Modern Yellow Flowers Flower Market Wall Art Prints Canvas Painting Poster Picture For Living Room Bedroom Home Decor" [ref=e1235] [cursor=pointer]:
+                      - /url: /en/products/1qbXJ8tW4LHDR3PzrVrP
+                      - heading "Modern Yellow Flowers Flower Market Wall Art Prints Canvas Painting Poster Picture For Living Room Bedroom Home Decor" [level=3] [ref=e1236]
+                    - generic [ref=e1237]:
+                      - generic [ref=e1238]:
+                        - img [ref=e1239]
+                        - text: Porównaj
+                      - generic [ref=e1243]:
+                        - img [ref=e1244]
+                        - text: Wspólny koszyk
+                      - generic [ref=e1248]:
+                        - img [ref=e1249]
+                        - text: Ulubione
+                      - generic [ref=e1251]:
+                        - img [ref=e1252]
+                        - text: Opinie
+                    - generic [ref=e1254]:
+                      - generic [ref=e1255]:
+                        - generic [ref=e1256]: 31,96 zł
+                        - generic [ref=e1257]: z dostawą
+                      - generic [ref=e1258]:
+                        - img [ref=e1259]
+                        - generic [ref=e1261]: Dostawa gratis!
+                    - generic [ref=e1262]:
+                      - button "Do wspólnego koszyka" [ref=e1263]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e1264]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e1265]:
+                        - img
+                      - button "Udostępnij" [ref=e1266]:
+                        - img
+                        - text: Udostępnij
+                - generic [ref=e1267]:
+                  - link "Zdjęcie produktu Darmowa dostawa -1%" [ref=e1268] [cursor=pointer]:
+                    - /url: /en/products/1sCTqSLkgVLSWpswho4q
+                    - img "Zdjęcie produktu" [ref=e1271]
+                    - generic [ref=e1273]:
+                      - img [ref=e1274]
+                      - text: Darmowa dostawa
+                    - generic [ref=e1280]:
+                      - img [ref=e1281]
+                      - text: "-1%"
+                  - generic [ref=e1284]:
+                    - link "Video Game Morta X Kombat Cosplay Jade Costume Custom Made" [ref=e1285] [cursor=pointer]:
+                      - /url: /en/products/1sCTqSLkgVLSWpswho4q
+                      - heading "Video Game Morta X Kombat Cosplay Jade Costume Custom Made" [level=3] [ref=e1286]
+                    - generic [ref=e1287]:
+                      - generic [ref=e1288]:
+                        - img [ref=e1289]
+                        - text: Porównaj
+                      - generic [ref=e1293]:
+                        - img [ref=e1294]
+                        - text: Wspólny koszyk
+                      - generic [ref=e1298]:
+                        - img [ref=e1299]
+                        - text: Ulubione
+                      - generic [ref=e1301]:
+                        - img [ref=e1302]
+                        - text: Opinie
+                    - generic [ref=e1304]:
+                      - generic [ref=e1307]:
+                        - img [ref=e1308]
+                        - text: "-1%"
+                      - generic [ref=e1311]:
+                        - generic [ref=e1312]: 934,36 zł
+                        - generic [ref=e1313]: z dostawą
+                      - generic [ref=e1314]:
+                        - img [ref=e1315]
+                        - generic [ref=e1317]: Dostawa gratis!
+                    - generic [ref=e1318]:
+                      - button "Do wspólnego koszyka" [ref=e1319]:
+                        - img
+                        - text: Do wspólnego koszyka
+                      - button "Porównaj" [ref=e1320]:
+                        - img
+                        - text: Porównaj
+                      - button [ref=e1321]:
+                        - img
+                      - button "Udostępnij" [ref=e1322]:
+                        - img
+                        - text: Udostępnij
+            - generic [ref=e1325]:
+              - generic [ref=e1326]:
+                - generic [ref=e1327]:
+                  - img [ref=e1328]
+                  - text: Join the community
+                - heading "Why register?" [level=2] [ref=e1332]
+                - paragraph [ref=e1333]: Unlock full features and gain exclusive benefits
+              - generic [ref=e1334]:
+                - generic [ref=e1335]:
+                  - generic [ref=e1336]:
+                    - img [ref=e1338]
+                    - generic [ref=e1341]: Deal notifications
+                  - generic [ref=e1343]: Receive alerts about the best promotions in your favorite categories
+                - generic [ref=e1344]:
+                  - generic [ref=e1345]:
+                    - img [ref=e1347]
+                    - generic [ref=e1349]: Favorites and lists
+                  - generic [ref=e1351]: Save interesting products and track price changes
+                - generic [ref=e1352]:
+                  - generic [ref=e1353]:
+                    - img [ref=e1355]
+                    - generic [ref=e1357]: Exclusive deals
+                  - generic [ref=e1359]: Access to special promotions only for members
+                - generic [ref=e1360]:
+                  - generic [ref=e1361]:
+                    - img [ref=e1363]
+                    - generic [ref=e1368]: Community
+                  - generic [ref=e1370]: Share finds, comment and rate deals
+                - generic [ref=e1371]:
+                  - generic [ref=e1372]:
+                    - img [ref=e1374]
+                    - generic [ref=e1380]: Points system
+                  - generic [ref=e1382]: Earn points for activity and receive rewards
+                - generic [ref=e1383]:
+                  - generic [ref=e1384]:
+                    - img [ref=e1386]
+                    - generic [ref=e1389]: Verified offers
+                  - generic [ref=e1391]: Priority access to moderator-verified deals
+              - generic [ref=e1392]:
+                - link "Join for free" [ref=e1393] [cursor=pointer]:
+                  - /url: /login
+                  - img
+                  - text: Join for free
+                - paragraph [ref=e1394]: Registration takes less than a minute. No obligations.
+            - generic [ref=e1397]:
+              - img [ref=e1398]
+              - heading "Join the forum discussion" [level=2] [ref=e1400]
+              - paragraph [ref=e1401]: The community shares knowledge, advice and the best finds. Ask a question, help others or just read interesting threads!
+              - generic [ref=e1402]:
+                - link "Browse forum" [ref=e1403] [cursor=pointer]:
+                  - /url: /forum
+                  - text: Browse forum
+                  - img
+                - link "Create thread" [ref=e1404] [cursor=pointer]:
+                  - /url: /forum/new
+                  - text: Create thread
+                  - img
+              - generic [ref=e1406]:
+                - generic [ref=e1407]:
+                  - img [ref=e1408]
+                  - generic [ref=e1411]: ...
+                  - generic [ref=e1412]: Aktywnych wątków
+                - generic [ref=e1413]:
+                  - img [ref=e1414]
+                  - generic [ref=e1419]: ...
+                  - generic [ref=e1420]: Użytkowników
+                - generic [ref=e1421]:
+                  - img [ref=e1422]
+                  - generic [ref=e1425]: ...
+                  - generic [ref=e1426]: Odpowiedzi dziennie
+            - generic [ref=e1430]:
+              - generic [ref=e1431]:
+                - generic [ref=e1432]:
+                  - img [ref=e1433]
+                  - text: Our mission
+                - heading "We help you save smart and effectively" [level=2] [ref=e1437]:
+                  - text: We help you save
+                  - text: smart and effectively
+                - generic [ref=e1438]:
+                  - paragraph [ref=e1439]:
+                    - strong [ref=e1440]: Okazje Plus
+                    - text: to polska platforma stworzona przez i dla społeczności łowców okazji. Naszym celem jest pomóc Ci znaleźć najlepsze promocje, produkty i oferty specjalne w jednym miejscu.
+                  - paragraph [ref=e1441]:
+                    - text: Wierzymy, że mądre zakupy to nie tylko oszczędności finansowe, ale także czas zaoszczędzony na przeglądaniu dziesiątek sklepów. Dzięki aktywnej społeczności i zaawansowanej sztucznej inteligencji, dostarczamy Ci tylko
+                    - strong [ref=e1442]: sprawdzone i wartościowe okazje
+                    - text: .
+                - generic [ref=e1443]:
+                  - generic [ref=e1444]:
+                    - img [ref=e1445]
+                    - generic [ref=e1447]: 100% darmowa platforma
+                  - generic [ref=e1448]:
+                    - img [ref=e1449]
+                    - generic [ref=e1451]: Sprawdzone przez społeczność
+                  - generic [ref=e1452]:
+                    - img [ref=e1453]
+                    - generic [ref=e1455]: AI wspierające jakość
+              - generic [ref=e1459]:
+                - generic [ref=e1460]:
+                  - img [ref=e1462]
+                  - generic [ref=e1464]:
+                    - generic [ref=e1465]: Sprawdzone AI
+                    - generic [ref=e1466]: Algorytmy weryfikują jakość ofert
+                - generic [ref=e1467]:
+                  - img [ref=e1469]
+                  - generic [ref=e1474]:
+                    - generic [ref=e1475]: Społeczność
+                    - generic [ref=e1476]: Tysiące użytkowników dzieli się znaleziskami
+                - generic [ref=e1477]:
+                  - img [ref=e1479]
+                  - generic [ref=e1482]:
+                    - generic [ref=e1483]: Moderacja
+                    - generic [ref=e1484]: Każda okazja przechodzi weryfikację
+                - generic [ref=e1485]:
+                  - img [ref=e1487]
+                  - generic [ref=e1489]:
+                    - generic [ref=e1490]: Real-time
+                    - generic [ref=e1491]: Natychmiastowe powiadomienia o nowych okazjach
+            - generic [ref=e1494]:
+              - heading "Gotowy na najlepsze okazje?" [level=2] [ref=e1495]
+              - paragraph [ref=e1496]: Dołącz do tysięcy użytkowników, którzy już oszczędzają z Okazje Plus
+              - generic [ref=e1497]:
+                - link "Przeglądaj okazje" [ref=e1498] [cursor=pointer]:
+                  - /url: /deals
+                  - img
+                  - text: Przeglądaj okazje
+                - link "Katalog produktów" [ref=e1499] [cursor=pointer]:
+                  - /url: /products
+                  - img
+                  - text: Katalog produktów
+      - contentinfo [ref=e1500]:
+        - generic [ref=e1501]:
+          - generic [ref=e1502]:
+            - generic [ref=e1503]:
+              - link "Okazje+" [ref=e1504] [cursor=pointer]:
+                - /url: /
+                - img "Okazje+" [ref=e1505]
+              - paragraph [ref=e1506]: Zaufana społeczność wyszukująca najlepsze okazje. Nowy wygląd, ta sama solidna baza ofert.
+              - generic [ref=e1507]:
+                - img [ref=e1508]
+                - text: Świeże promocje dodawane codziennie
+            - generic [ref=e1511]:
+              - heading "Nawigacja" [level=3] [ref=e1512]
+              - generic [ref=e1513]:
+                - link "Okazje" [ref=e1514] [cursor=pointer]:
+                  - /url: /deals
+                - link "Produkty" [ref=e1515] [cursor=pointer]:
+                  - /url: /products
+                - link "Forum" [ref=e1516] [cursor=pointer]:
+                  - /url: /forum
+                - link "Dodaj okazję" [ref=e1517] [cursor=pointer]:
+                  - /url: /add-deal
+            - generic [ref=e1518]:
+              - heading "Informacje" [level=3] [ref=e1519]
+              - generic [ref=e1520]:
+                - link "O nas" [ref=e1521] [cursor=pointer]:
+                  - /url: /#o-projekcie
+                - link "Kontakt" [ref=e1522] [cursor=pointer]:
+                  - /url: mailto:business@okazjeplus.pl
+                - link "Polityka prywatności" [ref=e1523] [cursor=pointer]:
+                  - /url: /polityka-prywatnosci
+                - link "Regulamin" [ref=e1524] [cursor=pointer]:
+                  - /url: /regulamin
+            - generic [ref=e1525]:
+              - heading "Social" [level=3] [ref=e1526]
+              - generic [ref=e1527]:
+                - link "Facebook" [ref=e1528] [cursor=pointer]:
+                  - /url: https://www.facebook.com/people/Okazje-Plus/61583646609859
+                  - img [ref=e1529]
+                  - generic [ref=e1531]: Facebook
+                - link "Instagram" [ref=e1532] [cursor=pointer]:
+                  - /url: https://www.instagram.com/okazje_plus/
+                  - img [ref=e1533]
+                  - generic [ref=e1536]: Instagram
+          - generic [ref=e1537]:
+            - paragraph [ref=e1538]: © 2025 Okazje+. Wszelkie prawa zastrzeżone.
+            - paragraph [ref=e1539]:
+              - text: "Wersja: v0.1.881 (commit"
+              - generic "14ba86496ad586ccf8fc77e2a7608827233a888c" [ref=e1540]: "#14ba864"
+              - text: ") · Zbudowano: 15.12.2025, 15:58:35 · Runtime: 0 min 0 s"
+    - generic [ref=e1541]:
+      - button "Porównaj (0)" [disabled]:
+        - img
+        - text: Porównaj (0)
+    - region "Notifications alt+T"
+  - alert [ref=e1542]
+  - generic [ref=e1547] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e1548]:
+      - img [ref=e1549]
+    - generic [ref=e1552]:
+      - button "Open issues overlay" [ref=e1553]:
+        - generic [ref=e1554]:
+          - generic [ref=e1555]: "3"
+          - generic [ref=e1556]: "4"
+        - generic [ref=e1557]:
           - text: Issue
-          - generic [ref=e23]: s
-      - button "Collapse issues badge" [ref=e24]:
-        - img [ref=e25]
+          - generic [ref=e1558]: s
+      - button "Collapse issues badge" [ref=e1559]:
+        - img [ref=e1560]
 ```

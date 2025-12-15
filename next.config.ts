@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Allow dev assets fetched from 127.0.0.1
+  allowedDevOrigins: ['127.0.0.1'],
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? pkg.version,
     NEXT_PUBLIC_GIT_SHA: computedGitSha ?? '',
@@ -52,6 +54,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'picsum.photos',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ae-pic-a1.aliexpress-media.com',
         port: '',
         pathname: '/**',
       },
