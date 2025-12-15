@@ -92,7 +92,8 @@ export function SmartCartWidget() {
       
       generateShareLink();
     }
-  }, [isShareDialogOpen, shareUrl, isSharing, shareCart]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isShareDialogOpen, shareUrl, isSharing]);
   
   // Reset state when dialog closes
   useEffect(() => {
