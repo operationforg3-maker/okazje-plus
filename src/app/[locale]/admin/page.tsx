@@ -188,7 +188,7 @@ function AiConsole() {
             <span className="text-2xl">✨</span>
             Wynik operacji:
           </h3>
-          <pre className="whitespace-pre-wrap text-sm bg-white dark:bg-gray-900 p-4 rounded-lg border font-mono">
+          <pre className="whitespace-pre-wrap text-sm bg-surface p-4 rounded-lg border font-mono">
             {result}
           </pre>
         </div>

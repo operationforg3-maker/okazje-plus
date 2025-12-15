@@ -159,7 +159,7 @@ export default function AIExpertSummary({ product, className }: AIExpertSummaryP
         {/* AI-Generated Description */}
         {seoDescription && (
           <div className="prose prose-sm dark:prose-invert max-w-none">
-            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            <p className="text-sm leading-relaxed text-secondary">
               {seoDescription}
             </p>
           </div>
@@ -178,7 +178,7 @@ export default function AIExpertSummary({ product, className }: AIExpertSummaryP
                 </div>
                 <ul className="space-y-1.5">
                   {pros.slice(0, 5).map((pro, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
+                    <li key={idx} className="flex items-start gap-2 text-xs text-secondary">
                       <CheckCircle2 className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
                       <span>{pro}</span>
                     </li>
@@ -196,7 +196,7 @@ export default function AIExpertSummary({ product, className }: AIExpertSummaryP
                 </div>
                 <ul className="space-y-1.5">
                   {cons.slice(0, 5).map((con, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
+                    <li key={idx} className="flex items-start gap-2 text-xs text-secondary">
                       <AlertTriangle className="w-3.5 h-3.5 text-orange-500 mt-0.5 flex-shrink-0" />
                       <span>{con}</span>
                     </li>
@@ -208,7 +208,7 @@ export default function AIExpertSummary({ product, className }: AIExpertSummaryP
         )}
 
         {/* Trust Signals */}
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-subtle">
           {rating >= 4.5 && (
             <Badge variant="secondary" className="text-xs">
               <Star className="w-3 h-3 mr-1 fill-yellow-400 text-yellow-400" />

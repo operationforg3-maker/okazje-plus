@@ -85,9 +85,9 @@ export function NotificationBell() {
       case 'deal_rejected':
         return 'bg-red-100 dark:bg-red-900/20';
       case 'system':
-        return 'bg-gray-100 dark:bg-gray-900/20';
+        return 'bg-surface-hover';
       default:
-        return 'bg-gray-100 dark:bg-gray-900/20';
+        return 'bg-surface-hover';
     }
   };
 

@@ -38,6 +38,7 @@ interface CartContextValue {
   updateNotes: (productId: string, notes: string) => void;
   clearCart: () => void;
   isInCart: (productId: string) => boolean;
+  shareCart: () => Promise<{ shareUrl: string; shareId: string } | null>;
   finalizeCart: () => Promise<{ links: Array<{ product: Product; affiliateLink: string }> }>;
   isLoading: boolean;
 }
@@ -244,6 +245,45 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   }, 0);
 
   /**
+   * Share cart - Generate shareable link
+   */
+  const shareCart = async (): Promise<{ shareUrl: string; shareId: string } | null> => {
+    logger.info('Sharing cart', { itemCount: items.length });
+    
+    try {
+      const response = await fetch('/api/cart/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items,
+          userId: user?.uid || null,
+          userName: user?.displayName || 'Gość',
+          userEmail: user?.email || null,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to share cart');
+      }
+      
+      const data = await response.json();
+      
+      logger.info('Cart shared', {
+        shareId: data.shareId,
+        shareUrl: data.shareUrl,
+      });
+      
+      return {
+        shareUrl: data.shareUrl,
+        shareId: data.shareId,
+      };
+    } catch (error) {
+      logger.error('Failed to share cart', { error });
+      return null;
+    }
+  };
+
+  /**
    * Finalize cart - Generate deep affiliate links for all products
    * 
    * This is the "Smart Cart" magic: when user is ready to purchase,
@@ -301,6 +341,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     updateNotes,
     clearCart,
     isInCart,
+    shareCart,
     finalizeCart,
     isLoading,
   };

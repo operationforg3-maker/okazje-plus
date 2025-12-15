@@ -323,7 +323,7 @@ function AIToolsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="whitespace-pre-wrap text-sm bg-white dark:bg-gray-900 p-4 rounded-lg border font-mono max-h-96 overflow-y-auto">
+            <pre className="whitespace-pre-wrap text-sm bg-surface p-4 rounded-lg border font-mono max-h-96 overflow-y-auto">
               {result}
             </pre>
           </CardContent>

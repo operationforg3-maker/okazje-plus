@@ -18,9 +18,19 @@ import { getPriceAmount, getTotalPrice, formatPrice, isFreeShipping } from '@/li
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, Minus, ShoppingCart, ExternalLink } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, ExternalLink, Share2, Copy, Check, Mail } from 'lucide-react';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 
 export function SmartCartWidget() {
   const { items, itemCount, totalAmount, totalWithShipping, removeItem, updateQuantity, clearCart, finalizeCart } = useSmartCart();

@@ -54,7 +54,7 @@ export function CashbackWarningModal() {
         {/* Close button */}
         <button
           onClick={handleDismiss}
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+          className="absolute right-4 top-4 text-tertiary hover:text-secondary"
           aria-label="Zamknij"
         >
           <X className="h-5 w-5" />

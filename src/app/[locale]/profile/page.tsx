@@ -694,7 +694,7 @@ function ProfilePage() {
                             ? 'bg-green-100 dark:bg-green-900/20'
                             : notification.type === 'deal_rejected'
                             ? 'bg-red-100 dark:bg-red-900/20'
-                            : 'bg-gray-100 dark:bg-gray-900/20'
+                            : 'bg-surface-hover'
                         }`}>
                           {notification.type === 'comment_reply' && (
                             <MessageSquare className="h-5 w-5 text-blue-600" />
