@@ -116,23 +116,27 @@ export function Navbar() {
             <LanguageSwitcherMenu />
             <CurrencySwitcher />
             <ThemeToggle />
-            <Link href={`${prefix}/add-deal`} className="hidden lg:inline-flex">
-              <Button className="rounded-full bg-primary px-4 shadow-lg shadow-primary/20">Dodaj okazję</Button>
-            </Link>
-            <Link href={`${prefix}/cart`} className="relative">
-              <Button variant="ghost" size="icon" className="relative rounded-full">
+            <Button asChild className="hidden lg:inline-flex rounded-full bg-primary px-4 shadow-lg shadow-primary/20">
+              <Link href={`${prefix}/add-deal`}>
+                Dodaj okazję
+              </Link>
+            </Button>
+            <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
+              <Link href={`${prefix}/cart`}>
                 <ShoppingBag className="h-5 w-5" />
                 <MiniCartBadge />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             {!isMounted || loading ? (
               <Skeleton className="h-9 w-9 rounded-full" />
             ) : user ? (
               <UserNav />
             ) : (
-              <Link href={`${prefix}/login`}>
-                <Button variant="outline" className="rounded-full">Zaloguj się</Button>
-              </Link>
+              <Button variant="outline" className="rounded-full" asChild>
+                <Link href={`${prefix}/login`}>
+                  Zaloguj się
+                </Link>
+              </Button>
             )}
           </div>
         </div>
