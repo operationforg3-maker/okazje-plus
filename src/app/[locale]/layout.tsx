@@ -69,6 +69,23 @@ export default async function RootLayout({
   return (
     <html lang={effectiveLocale} suppressHydrationWarning>
       <head>
+                {/* Instant theme init to avoid flash */}
+                <script
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                      (function(){
+                        try {
+                          const storageKey = 'okp_theme';
+                          const theme = localStorage.getItem(storageKey) || 'system';
+                          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                          const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+                          document.documentElement.classList.toggle('dark', isDark);
+                          document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+                        } catch(e) {}
+                      })();
+                    `,
+                  }}
+                />
         <meta name="convertiser-verification" content="3bc0a4fd6e7289720f9c2784de4b87f345bcca47" />
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-4M4NQB0PQD"></script>

@@ -26,6 +26,7 @@ import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { MiniCartBadge } from '@/components/smart-cart-widget';
 import { LanguageSwitcherMenu } from '@/components/locale-currency-switcher';
 import { CurrencySwitcher } from '@/components/currency-switcher';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -114,6 +115,7 @@ export function Navbar() {
             </div>
             <LanguageSwitcherMenu />
             <CurrencySwitcher />
+            <ThemeToggle />
             <Link href={`${prefix}/add-deal`} className="hidden lg:inline-flex">
               <Button className="rounded-full bg-primary px-4 shadow-lg shadow-primary/20">Dodaj okazję</Button>
             </Link>

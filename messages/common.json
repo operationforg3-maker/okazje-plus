@@ -1,0 +1,8 @@
+{
+  "theme": {
+    "light": "Motyw: Jasny",
+    "dark": "Motyw: Ciemny",
+    "system": "Motyw: Systemowy",
+    "hint": "kliknij, aby zmienić"
+  }
+}

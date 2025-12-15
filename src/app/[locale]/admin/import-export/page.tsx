@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth';
 import { JobsMonitor } from '@/components/admin/jobs-monitor';
 import Link from 'next/link';
-import { AlertTriangle, Database, Layers, ShieldAlert, Sparkles, Trash2, Upload, Wrench } from 'lucide-react';
+import { AlertTriangle, Database, Layers, ShieldAlert, Sparkles, Trash2, Upload, Wrench, Flame } from 'lucide-react';
 import { useEffect } from 'react';
 
 export default function AdminImportExportPage() {
@@ -33,6 +33,7 @@ export default function AdminImportExportPage() {
   const [fullImportType, setFullImportType] = useState<'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'>('hot-products');
   const [fullImportMax, setFullImportMax] = useState(10);
   const [loadingFullImport, setLoadingFullImport] = useState(false);
+  const [loadingDealsImport, setLoadingDealsImport] = useState(false);
 
   useEffect(() => {
     // Load dashboard summary and categories tree
@@ -86,6 +87,25 @@ export default function AdminImportExportPage() {
       toast.error(e.message || 'Full import failed');
     } finally {
       setLoadingFullImport(false);
+    }
+  };
+
+  const runDealsImport = async () => {
+    try {
+      setLoadingDealsImport(true);
+      const token = await getIdToken();
+      const res = await fetch('/api/admin/import/start', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'deals', importerType: 'keyword-search', maxItemsPerSubcategory: 10 })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Deals import failed');
+      toast.success(`Deale: job uruchomiony: ${data.jobId}`);
+    } catch (e:any) {
+      toast.error(e.message || 'Deals import failed');
+    } finally {
+      setLoadingDealsImport(false);
     }
   };
 
@@ -298,16 +318,18 @@ export default function AdminImportExportPage() {
             <Button variant="outline" size="sm" className="w-full">Otwórz Narzędzie</Button>
           </CardContent>
         </Card>
-        <Card className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => { document.querySelector('[data-tool="enhance"]')?.scrollIntoView({behavior:'smooth'}); }}>
+        <Card className="hover:shadow-sm transition-shadow">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              ✨ Ubogacanie
-              <Badge variant="outline" className="ml-auto text-xs">v1.5</Badge>
+              <Flame className="h-4 w-4" /> Deale (AliExpress)
+              <Badge variant="outline" className="ml-auto text-xs">v1.0</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">Dodaj opisy, cechy, obrazki do istniejących produktów — ostatni krok</p>
-            <Button variant="outline" size="sm" className="w-full">Otwórz Narzędzie</Button>
+            <p className="text-sm text-muted-foreground">Agreguj najlepsze promocje i zapisz jako deale (status: draft) z kompletami slugów kategorii.</p>
+            <Button onClick={runDealsImport} disabled={loadingDealsImport} size="sm" className="w-full">
+              {loadingDealsImport ? 'Uruchamianie…' : 'Pobierz Deale (AliExpress)'}
+            </Button>
           </CardContent>
         </Card>
       </div>

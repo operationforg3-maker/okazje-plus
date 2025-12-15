@@ -248,6 +248,15 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "ratingCard.count", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
         { "fieldPath": "ratingCard.average", "order": "DESCENDING" },
         { "fieldPath": "ratingCard.count", "order": "DESCENDING" }
