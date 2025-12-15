@@ -218,42 +218,41 @@ export default function AdminImportExportPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          🔄 Import & Export
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Kompletna konsola do zarządzania importami, eksportami i zadaniami w tle
-        </p>
+        <h1 className="font-headline text-2xl font-bold tracking-tight">Import & Export — Konsola</h1>
+        <p className="text-sm text-muted-foreground mt-1">Zarządzanie importami, eksportami i zadaniami w tle</p>
       </div>
 
       {/* Dashboard Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">Produkty — Approved</CardTitle>
+            <CardTitle className="text-sm">Produkty — Approved</CardTitle>
+            <CardDescription>Opublikowane w serwisie</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{summary.products?.approved ?? '—'}</div>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Opublikowane w serwisie</p>
+            <div className="text-2xl font-bold">{summary.products?.approved ?? '—'}</div>
             <Sparkline values={(summary.recentJobs||[]).map((j:any)=> j.logs?.reduce((acc:number,l:any)=>acc + (l?.stages?.saved||0),0) || 0)} />
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">Produkty — Draft</CardTitle>
+            <CardTitle className="text-sm">Produkty — Draft</CardTitle>
+            <CardDescription>Oczekujące na obróbkę</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{summary.products?.draft ?? '—'}</div>
-            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">Oczekujące na obróbkę</p>
+            <div className="text-2xl font-bold">{summary.products?.draft ?? '—'}</div>
             <Sparkline values={(summary.recentJobs||[]).map((j:any)=> (j.itemsCreated?.length||0))} />
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">Ostatnie Joby (v2.1)</CardTitle>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm">Ostatnie joby</CardTitle>
+              <Badge variant="outline" className="ml-auto">Live</Badge>
+            </div>
             <CardDescription className="flex items-center gap-2 text-xs mt-1">
               5 najnowszych
-              <select className="ml-auto border rounded px-2 py-1 h-7 text-xs" value={jobsFilter} onChange={e=>setJobsFilter(e.target.value as any)}>
+              <select className="ml-auto border rounded px-2 py-1 h-8 text-xs" value={jobsFilter} onChange={e=>setJobsFilter(e.target.value as any)}>
                 <option value="all">Wszystkie</option>
                 <option value="running">Running</option>
                 <option value="queued">Queued</option>
@@ -265,7 +264,7 @@ export default function AdminImportExportPage() {
           <CardContent className="text-xs space-y-1">
             {(summary.recentJobs || []).filter((j:any)=> jobsFilter==='all' ? true : j.status===jobsFilter).map((j: any) => (
               <div key={j.id} className="flex items-center justify-between">
-                <span className="truncate max-w-[60%] font-mono text-purple-700 dark:text-purple-300">{j.id?.slice(0, 8)}...</span>
+                <span className="truncate max-w-[60%] font-mono">{j.id?.slice(0, 8)}...</span>
                 <Badge variant={j.status === 'completed' ? 'default' : (j.status === 'running' ? 'secondary' : 'outline')} className="text-xs">{j.status}</Badge>
               </div>
             ))}
@@ -275,11 +274,11 @@ export default function AdminImportExportPage() {
 
       {/* Top Tools Shortcuts */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-blue-300 dark:border-blue-700" onClick={() => { document.querySelector('[data-tool="fetch-save"]')?.scrollIntoView({behavior:'smooth'}); }}>
+        <Card className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => { document.querySelector('[data-tool="fetch-save"]')?.scrollIntoView({behavior:'smooth'}); }}>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               ⚡ Fetch & Save
-              <Badge className="ml-auto text-xs">v1.8</Badge>
+              <Badge variant="outline" className="ml-auto text-xs">v1.8</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -287,12 +286,11 @@ export default function AdminImportExportPage() {
             <Button variant="outline" size="sm" className="w-full">Otwórz Narzędzie</Button>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-amber-300 dark:border-amber-700" onClick={() => { document.querySelector('[data-tool="full-import"]')?.scrollIntoView({behavior:'smooth'}); }}>
+        <Card className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => { document.querySelector('[data-tool="full-import"]')?.scrollIntoView({behavior:'smooth'}); }}>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               🔄 Pełny Import
-              <Badge className="ml-auto text-xs">v1.9</Badge>
+              <Badge variant="outline" className="ml-auto text-xs">v1.9</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -300,12 +298,11 @@ export default function AdminImportExportPage() {
             <Button variant="outline" size="sm" className="w-full">Otwórz Narzędzie</Button>
           </CardContent>
         </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-green-300 dark:border-green-700" onClick={() => { document.querySelector('[data-tool="enhance"]')?.scrollIntoView({behavior:'smooth'}); }}>
+        <Card className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => { document.querySelector('[data-tool="enhance"]')?.scrollIntoView({behavior:'smooth'}); }}>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               ✨ Ubogacanie
-              <Badge className="ml-auto text-xs">v1.5</Badge>
+              <Badge variant="outline" className="ml-auto text-xs">v1.5</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -315,14 +312,11 @@ export default function AdminImportExportPage() {
         </Card>
       </div>
 
-      {/* Jobs Monitor - TOP PRIORITY (moved here) */}
-      <Card className="border-2 border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20">
+      {/* Jobs Monitor */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            📋 Monitor Zadań Importu (v2.1) 
-            <Badge variant="outline" className="ml-auto">Top Priority</Badge>
-          </CardTitle>
-          <CardDescription>Real-time tracking zadań z auto-refresh co 5 sekund</CardDescription>
+          <CardTitle className="flex items-center gap-2">📋 Monitor Zadań Importu</CardTitle>
+          <CardDescription>Podgląd statusu i szybkie akcje</CardDescription>
         </CardHeader>
         <CardContent>
           <JobsMonitor />
