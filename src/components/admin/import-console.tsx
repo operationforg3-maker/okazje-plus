@@ -59,59 +59,76 @@ export function ImportConsole({ lines, onClear }: ImportConsoleProps) {
     URL.revokeObjectURL(url);
   };
 
+  // Calculate stats
+  const successCount = lines.filter(l => l.type === 'success').length;
+  const errorCount = lines.filter(l => l.type === 'error').length;
+  const warningCount = lines.filter(l => l.type === 'warning').length;
+  const infoCount = lines.filter(l => l.type === 'info').length;
+
   return (
-    <Card className="card-base">
-      <CardHeader>
+    <Card className="card-base h-full flex flex-col">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Konsola importu</CardTitle>
-            <CardDescription>Śledzenie procesu importu w czasie rzeczywistym</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              🖥️ Konsola Importu (v2.0)
+              <span className="text-xs font-mono bg-muted px-2 py-1 rounded text-muted-foreground">
+                {lines.length} linii
+              </span>
+            </CardTitle>
+            <CardDescription className="text-xs mt-1">
+              Live tracking • {successCount > 0 && `✅ ${successCount}`} {errorCount > 0 && `❌ ${errorCount}`} {warningCount > 0 && `⚠️ ${warningCount}`}
+            </CardDescription>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <Button
               size="sm"
               variant="outline"
               onClick={handleCopy}
-              className="gap-1"
+              title="Kopiuj wszystko do schowka"
+              className="h-8 px-2"
             >
-              <Copy className="h-4 w-4" />
-              Kopiuj
+              <Copy className="h-3 w-3" />
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={handleDownload}
-              className="gap-1"
+              title="Pobierz log jako plik"
+              className="h-8 px-2"
             >
-              <Download className="h-4 w-4" />
-              Pobierz
+              <Download className="h-3 w-3" />
             </Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={onClear}
-              className="gap-1"
+              title="Wyczyść konsolę"
+              className="h-8 px-2"
             >
-              <Trash2 className="h-4 w-4" />
-              Wyczyść
+              <Trash2 className="h-3 w-3" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 overflow-hidden p-0">
         <div
           ref={scrollRef}
-          className="font-mono text-xs bg-black/90 dark:bg-black text-green-400 p-4 rounded-lg overflow-y-auto max-h-96 space-y-0.5"
+          className="font-mono text-xs bg-black/95 dark:bg-black text-green-400 p-3 rounded-lg overflow-y-auto h-full space-y-0 border-t border-green-900/30"
         >
           {lines.length === 0 ? (
-            <div className="text-gray-500">Czekanie na komunikaty...</div>
+            <div className="text-gray-500 text-center py-8">
+              <div className="text-lg mb-2">⏳</div>
+              <div>Czekanie na komunikaty...</div>
+              <div className="text-xs text-gray-600 mt-2">Logi będą tutaj wyświetlane na bieżąco</div>
+            </div>
           ) : (
             lines.map(line => (
-              <div key={line.id} className="flex items-start gap-3 hover:bg-white/5 px-2 py-0.5 rounded transition-colors">
-                <Badge variant="secondary" className={`${typeBadges[line.type]} flex-shrink-0 text-xs`}>
+              <div key={line.id} className="flex items-start gap-2 hover:bg-white/5 px-2 py-0.5 rounded transition-colors group">
+                <Badge variant="secondary" className={`${typeBadges[line.type]} flex-shrink-0 text-xs h-5`}>
                   {line.type.toUpperCase()}
                 </Badge>
-                <span className="text-gray-400 text-xs flex-shrink-0 min-w-24">{line.timestamp}</span>
+                <span className="text-gray-400 text-xs flex-shrink-0 min-w-20 font-mono group-hover:text-gray-300">{line.timestamp}</span>
                 <span className={`flex-grow break-words ${typeColors[line.type]}`}>
                   {line.message}
                 </span>

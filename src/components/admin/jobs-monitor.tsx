@@ -354,9 +354,14 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
       {/* Create New Job */}
       <Card>
         <CardHeader>
-          <CardTitle>Utwórz nowy job importu</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            ➕ Utwórz nowy job importu
+            <span className="text-xs font-mono bg-green-100 dark:bg-green-950 text-green-800 dark:text-green-100 px-2 py-1 rounded">
+              v2.1
+            </span>
+          </CardTitle>
           <CardDescription>
-            Jobs działają w tle - nie trzeba czekać na zakończenie
+            Zadania działają w tle - nie trzeba czekać na zakończenie
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -503,51 +508,53 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Twoje joby importu</CardTitle>
-              <CardDescription>Ostatnie 20 jobów</CardDescription>
+              <CardTitle>📋 Historia Zadań (v2.1)</CardTitle>
+              <CardDescription>Live data - Ostatnie 20 zadań (auto-refresh co 5s)</CardDescription>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchJobs}
-              disabled={loading}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
-            {jobs.some(j => ['running', 'queued', 'paused'].includes(j.status)) && (
+            <div className="flex gap-2">
               <Button 
-                variant="destructive" 
+                variant="outline" 
                 size="sm" 
-                onClick={killAllJobs}
-                disabled={killingAll}
-                className="gap-1"
+                onClick={fetchJobs}
+                disabled={loading}
               >
-                {killingAll ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Zatrzymywanie...
-                  </>
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <Zap className="h-4 w-4" />
-                    Kill All
-                  </>
+                  <RefreshCw className="h-4 w-4" />
                 )}
               </Button>
-            )}
+              {jobs.some(j => ['running', 'queued', 'paused'].includes(j.status)) && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={killAllJobs}
+                  disabled={killingAll}
+                  className="gap-1"
+                >
+                  {killingAll ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Zatrzymywanie...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      Kill All
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {jobs.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              Brak jobów. Utwórz pierwszy powyżej.
+              Brak zadań. Utwórz pierwszy powyżej.
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {jobs.map((job) => {
                 const progress = job.progress ?? {
                   currentSource: '-',
@@ -563,80 +570,93 @@ export function JobsMonitor({ onConsoleLog }: JobsMonitorProps) {
                   : 0;
 
                 const errorsCount = progress.errors?.length ?? 0;
+                const createdTime = new Date(job.createdAt);
+                const isToday = createdTime.toDateString() === new Date().toDateString();
+                const timeStr = isToday 
+                  ? createdTime.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+                  : createdTime.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
                 return (
                   <div
                     key={job.id}
-                    className="border rounded-lg p-4 space-y-3"
+                    className={`border rounded-lg p-3 space-y-2 transition-all ${
+                      job.status === 'running' 
+                        ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700' 
+                        : job.status === 'completed'
+                        ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800'
+                        : job.status === 'failed'
+                        ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'
+                        : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+                    }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(job.status)}
-                          <span className="text-xs text-muted-foreground">
-                            ID: {job.id.slice(0, 8)}...
-                          </span>
-                        </div>
-                        <div className="text-sm">
-                          <strong>Źródła:</strong> {job.sources?.join(', ') || 'brak danych'}
-                        </div>
-                        <div className="text-xs text-muted-foreground" suppressHydrationWarning>
-                          Utworzony: {new Date(job.createdAt).toLocaleString('pl-PL')}
-                        </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-1">
+                        {getStatusBadge(job.status)}
+                        <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                          {job.id.slice(0, 8)}...
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {timeStr}
+                        </span>
                       </div>
 
                       {(job.status === 'running' || job.status === 'pending' || job.status === 'queued' || job.status === 'paused') && (
                         <Button
-                          variant="destructive"
+                          variant="ghost"
                           size="sm"
                           onClick={() => cancelJob(job.id)}
+                          className="h-7 px-2"
                         >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Anuluj
+                          <XCircle className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
 
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">
+                        📦 {job.sources?.join(', ') || 'brak danych'}
+                      </span>
+                      {job.status === 'running' && (
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                          {progressPercent}%
+                        </span>
+                      )}
+                    </div>
+
                     {job.status === 'running' && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {progress.currentSource} → {progress.currentCategory}
+                      <>
+                        <Progress value={progressPercent} className="h-1.5" />
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>
+                            <strong>{progress.currentSource}</strong> → {progress.currentCategory}
                           </span>
-                          <span className="font-medium">
-                            {progressPercent}%
+                          <span>
+                            📊 {progress.importedProducts} produktów | 📂 {progress.processedCategories}/{progress.totalCategories}
                           </span>
                         </div>
-                        <Progress value={progressPercent} />
-                        <div className="text-xs text-muted-foreground">
-                          Produktów: {progress.importedProducts} | 
-                          Kategorie: {progress.processedCategories}/{progress.totalCategories}
-                        </div>
-                      </div>
+                      </>
                     )}
 
                     {job.status === 'completed' && job.results && (
-                      <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded p-3 text-sm">
-                        <div className="font-medium text-green-900 dark:text-green-100 mb-1">
-                          ✅ Import zakończony
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="bg-white dark:bg-gray-800 rounded px-2 py-1">
+                          <div className="font-semibold text-green-700 dark:text-green-400">{job.results.totalProducts}</div>
+                          <div className="text-muted-foreground">Produktów</div>
                         </div>
-                        <div className="text-green-800 dark:text-green-200 space-y-0.5">
-                          <div>Produktów: {job.results.totalProducts}</div>
-                          <div>Wariantów: {job.results.totalVariants}</div>
-                          <div>Czas: {Math.round(job.results.duration)}s</div>
+                        <div className="bg-white dark:bg-gray-800 rounded px-2 py-1">
+                          <div className="font-semibold text-green-700 dark:text-green-400">{job.results.totalVariants}</div>
+                          <div className="text-muted-foreground">Wariantów</div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded px-2 py-1">
+                          <div className="font-semibold text-green-700 dark:text-green-400">{Math.round(job.results.duration)}s</div>
+                          <div className="text-muted-foreground">Czas</div>
                         </div>
                       </div>
                     )}
 
                     {job.status === 'failed' && (
-                      <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded p-3 text-sm">
-                        <div className="font-medium text-red-900 dark:text-red-100 mb-1">
-                          <AlertCircle className="inline h-4 w-4 mr-1" />
-                          Import nie powiódł się
-                        </div>
-                        <div className="text-red-800 dark:text-red-200">
-                          Błędów: {errorsCount}
-                        </div>
+                      <div className="text-xs text-red-700 dark:text-red-300">
+                        ⚠️ Błędów: {errorsCount}
                       </div>
                     )}
                   </div>
