@@ -106,39 +106,36 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     loadCart();
   }, [loadCart]);
 
-  /**
-   * Save cart to localStorage (and Firestore if logged in)
-   */
-  const saveCart = useCallback(async () => {
-    try {
-      // Save to localStorage (always, for guests and backup)
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-      
-      if (user) {
-        // Save to Firestore for logged-in users
-        try {
-          await setDoc(doc(db, 'user_carts', user.uid), {
-            items,
-            updatedAt: new Date().toISOString(),
-          });
-          logger.info(`Saved ${items.length} items to Firestore cart`);
-        } catch (firestoreError) {
-          logger.warn('Failed to save to Firestore, localStorage backup exists', { error: firestoreError });
-        }
-      }
-    } catch (error) {
-      logger.error('Failed to save cart', { error });
-    }
-    // Use user?.uid instead of user object to prevent infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, user?.uid]);
-
   // Save cart to storage whenever it changes
   useEffect(() => {
-    if (!isLoading) {
-      saveCart();
-    }
-  }, [items, isLoading, saveCart]);
+    if (isLoading) return; // Don't save during initial load
+    
+    const saveCart = async () => {
+      try {
+        // Save to localStorage (always, for guests and backup)
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+        
+        if (user) {
+          // Save to Firestore for logged-in users
+          try {
+            await setDoc(doc(db, 'user_carts', user.uid), {
+              items,
+              updatedAt: new Date().toISOString(),
+            });
+            logger.info(`Saved ${items.length} items to Firestore cart`);
+          } catch (firestoreError) {
+            logger.warn('Failed to save to Firestore, localStorage backup exists', { error: firestoreError });
+          }
+        }
+      } catch (error) {
+        logger.error('Failed to save cart', { error });
+      }
+    };
+    
+    saveCart();
+    // Only run when items or user ID changes, not on user object reference change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, user?.uid, isLoading]);
 
   /**
    * Add item to cart
