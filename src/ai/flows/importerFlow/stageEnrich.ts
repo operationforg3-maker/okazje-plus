@@ -85,24 +85,12 @@ export async function enrichProducts(
         // Pozostaw w oryginalnej walucie
       }
       
-      // Validate and fix image URL
-      let finalImage = product.image || '';
-      if (!finalImage || !finalImage.startsWith('http')) {
-        // Try to use product_main_image_url from original API response
-        finalImage = (product as any).product_main_image_url || '';
-      }
-      if (!finalImage || !finalImage.startsWith('http')) {
-        // Use AliExpress noimage placeholder instead of via.placeholder
-        console.warn(`[Importer:Enrich] ⚠️  WARNING: No valid image URL for product ${product.id}: "${product.image}". Will use fallback in save stage.`);
-        // DON'T set fallback here - let stageSave handle it with real AliExpress images if available
-        finalImage = product.image || ''; // Keep original even if invalid
-      }
-      
+      // Pass through image (validation happens in stageSave)
       const enrichedProduct: EnrichedProduct = {
         // From AliExpress
         originalId: product.id,
         titleOriginal: product.title,
-        image: finalImage,
+        image: product.image,
         images: (product as any).images, // Pass through gallery images from stageFetch
         link: product.link,
         affiliateUrl: product.link,

@@ -88,55 +88,21 @@ export async function saveProductsToFirestore(
         continue;
       }
       
-      // Validate image before saving - FETCH REAL IMAGES FROM ALIEXPRESS
-      // If primary image is invalid, try to fetch from product page
+      // Validate image - use from images array if available, fallback to product.image
       let finalImage = product.image;
       
+      // If no valid image, try to use first image from gallery
+      if ((!finalImage || !finalImage.startsWith('http')) && product.images && product.images.length > 0) {
+        finalImage = product.images[0];
+        console.log(`[Importer:Save] ℹ️  Using first image from gallery: ${finalImage.substring(0, 80)}...`);
+      }
+      
+      // Skip product if still no valid image
       if (!finalImage || !finalImage.startsWith('http')) {
-        // Try to extract from AliExpress product URL
-        console.warn(`[Importer:Save] ⚠️  Invalid image URL: "${finalImage}" - attempting to extract from AliExpress...`);
-        
-        try {
-          // Fetch AliExpress product page to extract image
-          const productUrl = product.link || product.affiliateUrl;
-          if (productUrl && productUrl.includes('aliexpress')) {
-            console.log(`[Importer:Save]    Fetching product page for images: ${productUrl.substring(0, 100)}...`);
-            try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 5000);
-              
-              const response = await fetch(productUrl, { 
-                signal: controller.signal,
-                headers: { 'User-Agent': 'Mozilla/5.0' }
-              });
-              clearTimeout(timeoutId);
-              
-              if (response.ok) {
-                const html = await response.text();
-                // Look for image URLs in product HTML
-                const imageMatch = html.match(/https:\/\/[^\s"]*\.jpg/i) || 
-                                  html.match(/https:\/\/ae[^\/]*\/[^\s"]*.jpg/i);
-                
-                if (imageMatch) {
-                  finalImage = imageMatch[0];
-                  console.log(`[Importer:Save] ✅ Extracted image from product page`);
-                }
-              }
-            } catch (fetchErr) {
-              console.warn(`[Importer:Save] Could not fetch from product page: ${(fetchErr as any).message}`);
-            }
-          }
-        } catch (e) {
-          console.warn(`[Importer:Save] Could not process image extraction: ${(e as any).message}`);
-        }
-        
-        // Last resort: use AliExpress CDN image if available from other sources
-        if (!finalImage || !finalImage.startsWith('http')) {
-          // Try common AliExpress image URL pattern
-          const productId = product.originalId;
-          finalImage = `https://ae01.alicdn.com/kf/H${productId.substring(0, 16)}.jpg`;
-          console.warn(`[Importer:Save] 📌 Using generated AliExpress URL pattern as fallback`);
-        }
+        console.error(`[Importer:Save] ❌ SKIP: No valid image for ${product.originalId} - "${finalImage}"`);
+        console.error(`     Product images array:`, product.images);
+        skipped.push(product.originalId);
+        continue;
       }
       
       console.log(`[Importer:Save] ✓ Final image: ${finalImage.slice(0, 80)}...`);
