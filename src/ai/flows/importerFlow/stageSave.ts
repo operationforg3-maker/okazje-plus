@@ -106,18 +106,24 @@ export async function saveProductsToFirestore(
       }
       
       console.log(`[Importer:Save] ✓ Final image: ${finalImage.slice(0, 80)}...`);
+      
+      // Extract shipping info from enhanced data
+      const rawProduct = (product as any)._rawProduct || {};
+      const shippingCost = rawProduct.freeShipping ? 0 : (rawProduct.shippingCost || 0);
+      const isFreeShipping = rawProduct.freeShipping || shippingCost === 0;
+      
       const smartPrice: SmartPrice = {
         amount: finalPrice,
         currency: productCurrency,
-        shippingCost: 0, // TODO: Calculate based on AliExpress shipping info
-        totalPrice: finalPrice,
+        shippingCost: shippingCost,
+        totalPrice: finalPrice + shippingCost, // FIXED: Total = amount + shipping
         originalPrice: product.originalPrice,
         discountPercent: product.discount,
-        freeShipping: false, // TODO: Extract from product data
+        freeShipping: isFreeShipping,
         lastUpdated: new Date().toISOString(),
       };
       
-      console.log(`  💰 Price: ${finalPrice} ${productCurrency}${smartPrice.originalPrice ? ` (was ${smartPrice.originalPrice})` : ''}`);
+      console.log(`  💰 Price: ${finalPrice} ${productCurrency}${smartPrice.originalPrice ? ` (was ${smartPrice.originalPrice})` : ''} | Shipping: ${shippingCost > 0 ? `${shippingCost} ${productCurrency}` : 'FREE'} | Total: ${smartPrice.totalPrice} ${productCurrency}`);
       
       if (existingId) {
         if (finalConfig.skipExisting) {
