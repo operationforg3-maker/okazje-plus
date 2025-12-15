@@ -97,7 +97,9 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+    // Use user?.uid instead of user object to prevent infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   // Load cart from storage on mount/user change
   useEffect(() => {
@@ -127,7 +129,9 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       logger.error('Failed to save cart', { error });
     }
-  }, [items, user]);
+    // Use user?.uid instead of user object to prevent infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, user?.uid]);
 
   // Save cart to storage whenever it changes
   useEffect(() => {
