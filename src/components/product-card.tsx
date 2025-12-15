@@ -43,9 +43,10 @@ import { useComparison } from '@/components/deal-comparison-tool';
 interface ProductCardProps {
   product: Product;
   showFullDetails?: boolean;
+  viewMode?: 'list' | 'grid';
 }
 
-export default function ProductCard({ product, showFullDetails = false }: ProductCardProps) {
+export default function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: ProductCardProps) {
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [isMounted, setIsMounted] = useState(false);
@@ -185,7 +186,10 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
   
   return (
     <>
-      <div className="card-interactive group relative flex flex-col overflow-hidden">
+      <div className={cn(
+        "card-interactive group relative overflow-hidden bg-card border border-border hover:border-primary/40 dark:hover:border-primary/60 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300",
+        viewMode === 'list' ? "flex flex-row gap-6 p-6" : "flex flex-col"
+      )}>
         
         {/* Admin Edit Button (Top-right overlay) */}
         {user?.role === 'admin' && (
@@ -200,7 +204,14 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
         )}
 
         {/* Product Gallery */}
-        <Link href={productUrl} onClick={handleDetailClick} className="relative block">
+        <Link 
+          href={productUrl} 
+          onClick={handleDetailClick} 
+          className={cn(
+            "relative block",
+            viewMode === 'list' ? "w-64 flex-shrink-0" : "w-full"
+          )}
+        >
           <ProductGallery images={galleryImages} />
           
           {/* Trust Badges Overlay (Top-left) */}
@@ -260,11 +271,17 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
         </Link>
 
         {/* Content Area */}
-        <div className="flex flex-col flex-1 p-4 space-y-3">
+        <div className={cn(
+          "flex flex-col flex-1 space-y-3",
+          viewMode === 'list' ? "py-2" : "p-4"
+        )}>
           
           {/* Title (AI-Curated Clean Title) */}
           <Link href={productUrl} onClick={handleDetailClick}>
-            <h3 className="line-clamp-2 text-sm font-medium">
+            <h3 className={cn(
+              "text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-primary dark:hover:text-primary transition-colors",
+              viewMode === 'list' ? "line-clamp-3" : "line-clamp-2"
+            )}>
               {product.title?.pl || product.title?.en || product.title?.de || product.name || 'Produkt'}
             </h3>
           </Link>
@@ -397,20 +414,20 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
           )}
 
           {/* Feature badges to highlight available actions */}
-          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-            <Badge variant="outline" className="gap-1">
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
               <Scale className="w-3 h-3" />
               Porównaj
             </Badge>
-            <Badge variant="outline" className="gap-1">
+            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
               <ShoppingCart className="w-3 h-3" />
               Wspólny koszyk
             </Badge>
-            <Badge variant="outline" className="gap-1">
+            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
               <Heart className="w-3 h-3" />
               Ulubione
             </Badge>
-            <Badge variant="outline" className="gap-1">
+            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
               <MessageSquare className="w-3 h-3" />
               Opinie
             </Badge>
@@ -419,9 +436,9 @@ export default function ProductCard({ product, showFullDetails = false }: Produc
           {/* ========================================
               💎 TOTAL LANDED COST (Trust-First Hero)
               ======================================== */}
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20 rounded-lg p-4 border border-primary/20">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/20 dark:to-primary/30 rounded-lg p-5 border border-primary/20 dark:border-primary/30">
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground mb-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground dark:text-gray-300 mb-3">
               <div className="flex items-center gap-2">
                 {hasDiscount && (
                   <Badge className="badge-hot badge-trust px-2 py-1">

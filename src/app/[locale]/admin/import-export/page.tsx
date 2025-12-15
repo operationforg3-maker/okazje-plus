@@ -34,6 +34,8 @@ export default function AdminImportExportPage() {
   const [fullImportMax, setFullImportMax] = useState(10);
   const [loadingFullImport, setLoadingFullImport] = useState(false);
   const [loadingDealsImport, setLoadingDealsImport] = useState(false);
+  const [loadingAITranslate, setLoadingAITranslate] = useState(false);
+  const [loadingAIEnrich, setLoadingAIEnrich] = useState(false);
 
   useEffect(() => {
     // Load dashboard summary and categories tree
@@ -148,6 +150,56 @@ export default function AdminImportExportPage() {
       toast.success(`Wzbogacono szkice: ${data.updated}`);
     } catch (e:any) {
       toast.error(e.message || 'Enrich failed');
+    }
+  };
+
+  const runAITranslate = async () => {
+    if (!confirm('AI tłumaczenie dla WSZYSTKICH produktów (filtrowane)? Może potrwać kilka minut.')) return;
+    try {
+      setLoadingAITranslate(true);
+      const token = await getIdToken();
+      const res = await fetch('/api/admin/products/ai-translate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          limit: 50,
+          mainCategorySlug: selectedCat || undefined,
+          subCategorySlug: selectedSub || undefined,
+          subSubCategorySlug: selectedSubSub || undefined,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'AI Translate failed');
+      toast.success(data.message || `AI tłumaczenie: ${data.updated} produktów`);
+    } catch (e:any) {
+      toast.error(e.message || 'AI Translate failed');
+    } finally {
+      setLoadingAITranslate(false);
+    }
+  };
+
+  const runAIEnrich = async () => {
+    if (!confirm('AI ubogacanie SEO dla WSZYSTKICH produktów (filtrowane)? Może potrwać kilka minut.')) return;
+    try {
+      setLoadingAIEnrich(true);
+      const token = await getIdToken();
+      const res = await fetch('/api/admin/products/ai-enrich', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          limit: 50,
+          mainCategorySlug: selectedCat || undefined,
+          subCategorySlug: selectedSub || undefined,
+          subSubCategorySlug: selectedSubSub || undefined,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'AI Enrich failed');
+      toast.success(data.message || `AI ubogacanie: ${data.updated} produktów`);
+    } catch (e:any) {
+      toast.error(e.message || 'AI Enrich failed');
+    } finally {
+      setLoadingAIEnrich(false);
     }
   };
 
@@ -482,12 +534,22 @@ export default function AdminImportExportPage() {
         </Card>
         <Card data-tool="enhance">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Wrench className="h-4 w-4"/> Tłumaczenie & Ubogacanie</CardTitle>
-            <CardDescription>Operacje na zapisanych szkicach</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4"/> AI: Tłumaczenie & SEO</CardTitle>
+            <CardDescription>AI-powered optymalizacja WSZYSTKICH produktów</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>Wkrótce: osobne akcje per etap z batchingiem.</p>
-            <p>Monitoruj postęp: <Link href="/admin/imports" className="text-primary underline">Import Monitor</Link>.</p>
+          <CardContent className="space-y-3">
+            <div className="text-sm text-muted-foreground mb-2">
+              <p className="font-semibold">Gemini 2.0 Flash — mega SEO dla całej bazy</p>
+              <p>Używa filtrów kategorii z lewej; przetwarza max 50 produktów/uruchomienie</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button onClick={runAITranslate} disabled={loadingAITranslate} variant="secondary" className="w-full">
+                {loadingAITranslate ? 'AI tłumaczenie…' : '🌐 AI Tłumaczenie (PL)'}
+              </Button>
+              <Button onClick={runAIEnrich} disabled={loadingAIEnrich} variant="secondary" className="w-full">
+                {loadingAIEnrich ? 'AI SEO…' : '🚀 AI Ubogacanie SEO'}
+              </Button>
+            </div>
           </CardContent>
         </Card>
         <Card>

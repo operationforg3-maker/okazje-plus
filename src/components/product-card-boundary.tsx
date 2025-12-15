@@ -9,6 +9,7 @@ import { sanitizeProductRecord } from '@/lib/sanitizers';
 
 interface ProductCardBoundaryProps {
   product: Product;
+  viewMode?: 'list' | 'grid';
 }
 
 interface ProductCardBoundaryState {

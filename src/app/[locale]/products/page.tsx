@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List } from 'lucide-react';
 import { Category, Product, Deal } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -42,7 +42,7 @@ function ProductsPageContent() {
   const [dealOfTheDay, setDealOfTheDay] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [insightsOpen, setInsightsOpen] = useState(false);
 
   // Wczytaj kategorie i ustaw z URL
@@ -96,9 +96,9 @@ function ProductsPageContent() {
 
   useEffect(() => {
     try {
-      const savedDensity = localStorage.getItem('products_density');
-      if (savedDensity === 'compact' || savedDensity === 'comfortable') {
-        setCardDensity(savedDensity);
+      const savedView = localStorage.getItem('products_view_mode');
+      if (savedView === 'list' || savedView === 'grid') {
+        setViewMode(savedView);
       }
     } catch {}
   }, []);
@@ -144,8 +144,8 @@ function ProductsPageContent() {
   }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
 
   useEffect(() => {
-    try { localStorage.setItem('products_density', cardDensity); } catch {}
-  }, [cardDensity]);
+    try { localStorage.setItem('products_view_mode', viewMode); } catch {}
+  }, [viewMode]);
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products;
@@ -174,11 +174,11 @@ function ProductsPageContent() {
     currency: 'PLN',
   });
 
-  const gridWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+  const gridWrapperClass = viewMode === 'grid'
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
+    : 'space-y-4';
 
-  const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
+  const cardWrapperClass = '';
 
   // Sidebar Content (reusable for desktop and mobile)
   // Refs dla auto-scroll do wybranej kategorii
@@ -478,20 +478,20 @@ function ProductsPageContent() {
                     </Button>
                     <div className="flex items-center gap-1 border rounded-lg p-1">
                       <Button
-                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
+                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
                         size="sm"
                         className="h-8 px-3"
-                        onClick={() => setCardDensity('comfortable')}
+                        onClick={() => setViewMode('grid')}
                       >
-                        Standard
+                        <LayoutGrid className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
+                        variant={viewMode === 'list' ? 'default' : 'ghost'}
                         size="sm"
                         className="h-8 px-3"
-                        onClick={() => setCardDensity('compact')}
+                        onClick={() => setViewMode('list')}
                       >
-                        Kompakt
+                        <List className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -501,10 +501,7 @@ function ProductsPageContent() {
                     {[...Array(6)].map((_, i) => (
                       <div
                         key={i}
-                        className={cn(
-                          "bg-muted animate-pulse rounded-lg",
-                          cardDensity === 'compact' ? 'h-64' : 'h-72'
-                        )}
+                        className="bg-muted animate-pulse rounded-lg h-80"
                       />
                     ))}
                   </div>
@@ -512,9 +509,7 @@ function ProductsPageContent() {
                   <>
                     <div className={gridWrapperClass}>
                       {displayedProducts.map((product) => (
-                        <div key={product.id} className={cardWrapperClass}>
-                          <ProductCardBoundary product={product} />
-                        </div>
+                        <ProductCardBoundary key={product.id} product={product} viewMode={viewMode} />
                       ))}
                     </div>
                     
