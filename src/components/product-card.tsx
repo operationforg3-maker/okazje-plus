@@ -187,7 +187,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   return (
     <>
       <div className={cn(
-        "card-interactive group relative overflow-hidden bg-card border border-border hover:border-primary/40 dark:hover:border-primary/60 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300",
+        "card-interactive group relative overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-primary/50 dark:hover:border-primary rounded-xl shadow-md hover:shadow-xl dark:shadow-gray-950/50 transition-all duration-300",
         viewMode === 'list' ? "flex flex-row gap-6 p-6" : "flex flex-col"
       )}>
         
@@ -198,7 +198,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               onClick={() => setEditDialogOpen(true)}
               variant="ghost"
               size="sm"
-              className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
+              className="bg-white/95 dark:bg-gray-800 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
             />
           </div>
         )}
@@ -415,19 +415,19 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
           {/* Feature badges to highlight available actions */}
           <div className="flex flex-wrap gap-2 text-[11px]">
-            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
+            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
               <Scale className="w-3 h-3" />
               Porównaj
             </Badge>
-            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
+            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
               <ShoppingCart className="w-3 h-3" />
               Wspólny koszyk
             </Badge>
-            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
+            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
               <Heart className="w-3 h-3" />
               Ulubione
             </Badge>
-            <Badge variant="outline" className="gap-1 border-gray-200 dark:border-gray-700">
+            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
               <MessageSquare className="w-3 h-3" />
               Opinie
             </Badge>
@@ -436,7 +436,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           {/* ========================================
               💎 TOTAL LANDED COST (Trust-First Hero)
               ======================================== */}
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/20 dark:to-primary/30 rounded-lg p-5 border border-primary/20 dark:border-primary/30">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/30 dark:to-primary/40 dark:bg-gray-800/50 rounded-lg p-5 border-2 border-primary/20 dark:border-primary/60">
 
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground dark:text-gray-300 mb-3">
               <div className="flex items-center gap-2">
@@ -478,7 +478,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
             {/* Price Breakdown (Item + Shipping) */}
             {!hasFreeShipping && shippingCost > 0 && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+              <div className="text-xs text-gray-500 dark:text-gray-300 space-y-0.5">
                 <div className="flex justify-between">
                   <span>Produkt:</span>
                   <span className="font-medium">{formatPrice(itemPrice, currency)}</span>
@@ -554,7 +554,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                 e.stopPropagation();
                 addToComparison({ ...product, type: 'product' });
               }}
-              className="px-3 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="px-3 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800/50"
             >
               <Scale className="w-4 h-4 mr-2" />
               Porównaj
@@ -574,8 +574,8 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                     }}
                     disabled={isLoading}
                     className={cn(
-                      "px-3 btn-icon-hover border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
-                      isFavorited && "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"
+                      "px-3 btn-icon-hover border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800/50",
+                      isFavorited && "bg-red-50 dark:bg-red-900/50 border-red-300 dark:border-red-500"
                     )}
                   >
                     <Heart 
