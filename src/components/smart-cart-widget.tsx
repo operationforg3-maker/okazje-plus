@@ -33,10 +33,14 @@ import {
 import { Input } from '@/components/ui/input';
 
 export function SmartCartWidget() {
-  const { items, itemCount, totalAmount, totalWithShipping, removeItem, updateQuantity, clearCart, finalizeCart } = useSmartCart();
+  const { items, itemCount, totalAmount, totalWithShipping, removeItem, updateQuantity, clearCart, finalizeCart, shareCart } = useSmartCart();
   const { getText } = useContentLanguage();
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [generatedLinks, setGeneratedLinks] = useState<Array<{ product: any; affiliateLink: string }>>([]);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleFinalize = async () => {
     setIsFinalizing(true);
@@ -52,6 +56,67 @@ export function SmartCartWidget() {
       console.error('Failed to finalize cart', error);
     } finally {
       setIsFinalizing(false);
+    }
+  };
+
+  // Generate share link when dialog opens
+  useEffect(() => {
+    if (isShareDialogOpen && !shareUrl && !isSharing) {
+      const generateShareLink = async () => {
+        setIsSharing(true);
+        setCopied(false);
+        
+        try {
+          const result = await shareCart();
+          if (result) {
+            setShareUrl(result.shareUrl);
+            toast.success('Lista została udostępniona!', {
+              description: 'Link został wygenerowany i jest gotowy do skopiowania.',
+            });
+          } else {
+            toast.error('Nie udało się udostępnić listy', {
+              description: 'Spróbuj ponownie lub skontaktuj się z pomocą techniczną.',
+            });
+            setIsShareDialogOpen(false);
+          }
+        } catch (error) {
+          console.error('Failed to share cart', error);
+          toast.error('Wystąpił błąd podczas udostępniania', {
+            description: 'Sprawdź połączenie internetowe i spróbuj ponownie.',
+          });
+          setIsShareDialogOpen(false);
+        } finally {
+          setIsSharing(false);
+        }
+      };
+      
+      generateShareLink();
+    }
+  }, [isShareDialogOpen, shareUrl, isSharing, shareCart]);
+  
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!isShareDialogOpen) {
+      setShareUrl(null);
+      setCopied(false);
+    }
+  }, [isShareDialogOpen]);
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success('Link skopiowany!', {
+        description: 'Link do listy został skopiowany do schowka.',
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy link', error);
+      toast.error('Nie udało się skopiować linku', {
+        description: 'Spróbuj skopiować link ręcznie.',
+      });
     }
   };
 
@@ -186,21 +251,92 @@ export function SmartCartWidget() {
           </div>
         </div>
 
-        <Button
-          className="w-full mt-6"
-          size="lg"
-          onClick={handleFinalize}
-          disabled={isFinalizing}
-        >
-          {isFinalizing ? (
-            'Generuję linki...'
-          ) : (
-            <>
-              <ExternalLink className="mr-2 h-5 w-5" />
-              Przejdź do zakupów ({itemCount})
-            </>
-          )}
-        </Button>
+        <div className="space-y-3 mt-6">
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={handleFinalize}
+            disabled={isFinalizing}
+          >
+            {isFinalizing ? (
+              'Generuję linki...'
+            ) : (
+              <>
+                <ExternalLink className="mr-2 h-5 w-5" />
+                Przejdź do zakupów ({itemCount})
+              </>
+            )}
+          </Button>
+
+          <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                <Share2 className="mr-2 h-5 w-5" />
+                Udostępnij listę
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Udostępnij swoją listę zakupową</DialogTitle>
+                <DialogDescription>
+                  Skopiuj link i prześlij znajomym. Lista będzie dostępna przez 30 dni.
+                </DialogDescription>
+              </DialogHeader>
+              {shareUrl ? (
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      readOnly
+                      value={shareUrl}
+                      className="flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCopyLink}
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => {
+                        window.open(shareUrl, '_blank');
+                      }}
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Otwórz udostępnioną listę
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        window.location.href = `mailto:?subject=Sprawdź moją listę zakupową&body=Cześć! Sprawdź moją listę zakupową: ${encodeURIComponent(shareUrl)}`;
+                      }}
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      Wyślij przez email
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Generowanie linku...
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <p className="text-xs text-muted-foreground text-center mt-3">
           Klikając przejdziesz do AliExpress, gdzie sfinalizujesz zakupy z najlepszymi cenami
