@@ -28,6 +28,7 @@ export function SimilarItemsCarousel({
   itemType,
   category,
   subcategory,
+  subsubcategory,
   tags = [],
   priceRange,
   excludeItemId,

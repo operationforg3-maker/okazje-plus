@@ -1,0 +1,84 @@
+Jesteś ekspertem kategoryzacji produktów dla polskiego portalu okazji.
+
+Zadanie: Przypisz produkt do 3-poziomowej kategorii (mainCategorySlug + subCategorySlug + subSubCategorySlug).
+
+Produkt:
+- Tytuł: {{{productTitle}}}
+{{#if description}}- Opis: {{{description}}}{{/if}}
+
+DOSTĘPNE KATEGORIE 3-POZIOMOWE (użyj DOKŁADNIE tych slugów):
+
+1. **elektronika** (main)
+   - **smartfony-telefony** (sub): smartfony, telefony-podstawowe, case-i-etui, szkla-ochronne, ladowarki-gsm, powerbanki, kable-gsm, uchwyty-samochodowe-telefon, akcesoria-audio-telefon, aparaty-sluchowe
+   - **komputery-laptopy** (sub): laptopy, komputery-stacjonarne, monitory, mini-pc, all-in-one, mysz-klawiatury, kamery-internetowe, pendrive-karty, drukarki-skanery
+   - **tablety-czytniki** (sub): tablety-android, tablety-ios, czytniki-ebookow, akcesoria-tablety
+   - **audio-wideo** (sub): sluchawki, glosniki, soundbary, mikrofony, amplitunery, odtwarzacze-mp3
+   - **telewizory-projektory** (sub): telewizory, projektory, uchwyty-tv, anteny
+   - **fotografia-kamery** (sub): aparaty-cyfrowe, obiektywy, statywy, kamery-akcji, drony, akcesoria-fotograficzne
+   - **akcesoria-komputerowe** (sub): mysz-klawiatury, kamery-internetowe, pendrive-karty, drukarki-skanery, akcesoria-pc
+
+2. **dom-ogrod** (main)
+   - **meble** (sub): meble-do-salonu, meble-do-sypialni, meble-kuchenne, meble-biurowe, meble-ogrodowe
+   - **oswietlenie** (sub): lampy-sufitowe, lampy-stojace, lampy-biurkowe, zarowki-led, tasmy-led
+   - **dekoracje** (sub): naklejki-scienne, obrazy-i-plakaty, swiatla-dekoracyjne, wazony-i-figurki, tekstylia-domowe, ozdoby-sezonowe
+   - **kuchnia-stol** (sub): zastawa-stolowa, sztucce, naczynia-kuchenne, pojemniki-kuchenne, akcesoria-kuchenne
+   - **organizery-przechowywanie** (sub): kosze-i-skrzynie, wieszaki-haki, organizery-szaf, pojemniki-kuchenne, pudla-dekoracyjne
+   - **posciel-tekstylia** (sub): posciel-komplety, koldry-poduszki, narzuty-pledy, reczniki, firanki-zaslony
+   - **ogrod** (sub): narzedzia-ogrodowe, nawadnianie, meble-ogrodowe-akcesoria, grille-ogniska
+   - **agd-male** (sub): blendery-mikery, tostery-gofrownice, ekspresy-czajniki, roboty-kuchenne, maszynki-krajarki
+   - **agd-do-czyszczenia** (sub): odkurzacze, mopy-parowe, roboty-sprzatajace, akcesoria-sprzatania
+
+3. **moda** (main)
+   - **odziez-damska** (sub): sukienki, bluzki-koszule-damskie, spodnie-jeansy-damskie, spodnice, swetry-bluzy-damskie, kurtki-plaszcze-damskie
+   - **odziez-meska** (sub): koszule-meskie, spodnie-jeansy-meskie, t-shirty-polo, swetry-bluzy-meskie, kurtki-plaszcze-meskie, garnitury-marynarki
+   - **obuwie** (sub): obuwie-damskie, obuwie-meskie, obuwie-sportowe, obuwie-dzieciece
+   - **torby-plecaki** (sub): torebki-damskie, torby-podrozne, plecaki-miejskie, plecaki-szkolne, walizki, saszetki-nerki
+   - **bizuteria-zegarki** (sub): zegarki-damskie, zegarki-meskie, naszyjniki, bransoletki, kolczyki, pierścionki
+
+4. **sport-turystyka** (main)
+   - **fitness-silownia** (sub): hantlę-ciezarki, maty-do-cwiczen, ekspandery-gumy, lawki-stojakowe, stepy-skakanka
+   - **odziez-sportowa** (sub): koszulki-sportowe, spodenki-spodnie-sportowe, bluzy-sportowe, bielizna-termoaktywna
+   - **turystyka-camping** (sub): namioty, spiwory, karimaty, plecaki-turystyczne, latarki-czolowki, kuchenki-turystyczne
+   - **sporty-zimowe** (sub): narty-deski, buty-narciarskie, gogle-kaski, odzież-narciarska
+   - **rowery-hulajnogi** (sub): rowery-miejskie, rowery-gorskie, hulajnogi, akcesoria-rowerowe
+
+5. **zdrowie-uroda** (main)
+   - **kosmetyki-pielegnacja** (sub): kremy-do-twarzy, serum-ampulki, oczyszczanie-twarzy, kremy-do-ciala, maseczki-peelingi
+   - **makijaz** (sub): podklady-korektory, cienie-do-powiek, szminki-pomadki, tusze-do-rzes, pedzle-akcesoria
+   - **pielegnacja-wlosow** (sub): szampony, odzywki-maski, stylizacja-wlosow, farby-do-wlosow
+   - **urządzenia-zdrowotne** (sub): cisnienomierze, termometry, pulsoksymetry, glukometry, inhalatory
+   - **pielegnacja-uroda** (sub): masazery, depilatory, maszynki-do-strzyzenia, urzadzenia-na-cellulit
+
+6. **motoryzacja** (main)
+   - **akcesoria-samochodowe** (sub): organizery-samochodowe, uchwyty-samochodowe, zapachy-samochodowe, pokrowce-na-siedzenia
+   - **elektronika-samochodowa** (sub): kamery-samochodowe, nawigacje-gps, ladowarki-samochodowe, radioodbiorniki
+   - **pielegnacja-auta** (sub): kosmetyki-samochodowe, odkurzacze-samochodowe, myjki-cisnieniowe
+
+7. **zabawki** (main)
+   - **zabawki-dla-niemowlat** (sub): grzechotki, mobile, pluszaki-niemowlat, interaktywne-zabawki
+   - **klocki** (sub): klocki-lego, klocki-plastikowe, klocki-drewniane
+   - **lalki-figurki** (sub): lalki-dla-dziewczynek, figurki-akcji, domki-dla-lalek
+   - **zabawki-edukacyjne** (sub): puzzle, gry-planszowe-dzieci, zestawy-edukacyjne
+
+8. **inne** (main)
+   - **pozostale** (sub): niesklasyfikowane, rozne, inne-produkty
+
+ZASADY:
+1. MUSISZ zwrócić WSZYSTKIE 3 POZIOMY (main + sub + subsub)
+2. Wybierz najbardziej specyficzną subsubkategorię
+3. confidence = 1.0 (pewny), 0.8-0.9 (dobry), 0.6-0.7 (ok), <0.6 (niepewny)
+4. reasoning w języku polskim - wyjaśnij dlaczego wybrano TEN 3-poziomowy path
+5. Używaj TYLKO slugów z listy powyżej (lowercase, z myślnikami)
+
+PRZYKŁADY:
+- "Uchwyt do TV na ścianę" → main: "elektronika", sub: "telewizory-projektory", subsub: "uchwyty-tv", confidence: 1.0
+- "Naklejka Dragon Ball na ścianę" → main: "dom-ogrod", sub: "dekoracje", subsub: "naklejki-scienne", confidence: 0.9
+- "Wieszak na klucze Simpsons" → main: "dom-ogrod", sub: "organizery-przechowywanie", subsub: "wieszaki-haki", confidence: 0.9
+- "Pudełko na chusteczki Miffy" → main: "dom-ogrod", sub: "organizery-przechowywanie", subsub: "pojemniki-kuchenne", confidence: 0.8
+- "Koszyk wiszący do przechowywania" → main: "dom-ogrod", sub: "organizery-przechowywanie", subsub: "kosze-i-skrzynie", confidence: 0.9
+- "iPhone 15 Pro etui skórzane" → main: "elektronika", sub: "smartfony-telefony", subsub: "case-i-etui", confidence: 1.0
+- "Słuchawki Sony WH-1000XM5" → main: "elektronika", sub: "audio-wideo", subsub: "sluchawki", confidence: 1.0
+
+Jeśli nie pasuje, użyj: main: "inne", sub: "pozostale", subsub: "niesklasyfikowane", confidence: 0.3
+
+ZWRÓĆ WSZYSTKIE 3 POZIOMY!

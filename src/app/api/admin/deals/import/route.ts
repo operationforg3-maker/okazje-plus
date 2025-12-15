@@ -116,9 +116,8 @@ export async function POST(request: NextRequest) {
           console.log(`[Deals Import] AI kategoryzacja dla: ${deal.title}`);
           
           const categoryResult = await aiSuggestCategory({
-            title: deal.title,
+            productTitle: deal.title,
             description: deal.description,
-            price: deal.price,
           });
           
           mainCategorySlug = categoryResult.mainCategorySlug;

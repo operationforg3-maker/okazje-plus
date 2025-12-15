@@ -138,8 +138,8 @@ export async function POST(req: NextRequest) {
     
     for (const deal of translatedDeals) {
       try {
-        // AI category suggestion
-        let mainCategorySlug = 'inne';
+        // AI category suggestion (returns English slugs - keep as-is)
+        let mainCategorySlug = 'other';
         let subCategorySlug = undefined;
         let subSubCategorySlug = undefined;
         
