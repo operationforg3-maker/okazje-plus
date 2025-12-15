@@ -187,7 +187,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   return (
     <>
       <div className={cn(
-        "card-interactive group relative overflow-hidden bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 hover:border-primary/50 dark:hover:border-primary rounded-xl shadow-md hover:shadow-xl dark:shadow-gray-950/50 transition-all duration-300",
+        "card-interactive group relative overflow-hidden bg-surface border-2 border-default hover:border-primary/50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300",
         viewMode === 'list' ? "flex flex-row gap-6 p-6" : "flex flex-col"
       )}>
         
@@ -198,7 +198,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               onClick={() => setEditDialogOpen(true)}
               variant="ghost"
               size="sm"
-              className="bg-white/95 dark:bg-gray-800 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600"
+              className="bg-surface/95 backdrop-blur-sm hover:bg-surface-hover border border-default"
             />
           </div>
         )}
@@ -285,7 +285,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           {/* Title (AI-Curated Clean Title) */}
           <Link href={productUrl} onClick={handleDetailClick}>
             <h3 className={cn(
-              "text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-primary dark:hover:text-primary transition-colors leading-snug",
+              "text-base font-semibold text-primary hover:text-primary transition-colors leading-snug",
               viewMode === 'list' ? "line-clamp-2 text-lg" : "line-clamp-2"
             )}>
               {product.title?.pl || product.title?.en || product.title?.de || product.name || 'Produkt'}
@@ -332,21 +332,21 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-1.5">
                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+                <span className="text-base font-bold text-primary">
                   {Number.isFinite(productRating) ? productRating.toFixed(1) : '—'}
                 </span>
               </div>
               
               {ratingCount > 0 && (
-                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <span className="text-sm text-secondary font-medium">
                   ({ratingCount.toLocaleString()} ocen)
                 </span>
               )}
 
               {ordersCount > 0 && (
                 <>
-                  <span className="text-gray-400 dark:text-gray-600">•</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                  <span className="text-tertiary">•</span>
+                  <span className="text-sm text-secondary font-medium">
                     {ordersCount.toLocaleString()} zamówień
                   </span>
                 </>
@@ -354,8 +354,8 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
               {commentsCount > 0 && (
                 <>
-                  <span className="text-gray-400 dark:text-gray-600">•</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5 font-medium">
+                  <span className="text-tertiary">•</span>
+                  <span className="text-sm text-secondary flex items-center gap-1.5 font-medium">
                     <MessageSquare className="w-4 h-4" />
                     {commentsCount} opinii
                   </span>
@@ -423,19 +423,19 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             <>
               {/* Feature badges to highlight available actions */}
               <div className="flex flex-wrap gap-2 text-[11px]">
-                <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
+                <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
               <Scale className="w-3 h-3" />
               Porównaj
             </Badge>
-            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
+            <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
               <ShoppingCart className="w-3 h-3" />
               Wspólny koszyk
             </Badge>
-            <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
+            <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
               <Heart className="w-3 h-3" />
               Ulubione
             </Badge>
-                <Badge variant="outline" className="gap-1 border-gray-300 dark:border-gray-600 dark:bg-gray-800/50 dark:text-gray-200">
+                <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
                   <MessageSquare className="w-3 h-3" />
                   Opinie
                 </Badge>
@@ -454,9 +454,9 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           {/* ========================================
               💎 TOTAL LANDED COST (Trust-First Hero)
               ======================================== */}
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/30 dark:to-primary/40 dark:bg-gray-800/50 rounded-lg p-5 border-2 border-primary/20 dark:border-primary/60">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-5 border-2 border-primary/30 shadow-sm">
 
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground dark:text-gray-300 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-secondary mb-4">
               <div className="flex items-center gap-2.5">
                 {hasDiscount && (
                   <Badge className="badge-hot badge-trust px-3 py-1.5 text-sm font-bold">
@@ -486,17 +486,17 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             
             {/* Main Price - BIG & BOLD */}
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-4xl font-black text-gray-900 dark:text-white">
+              <span className="text-4xl font-black text-primary">
                 {formatPrice(totalPrice, currency)}
               </span>
-              <span className="text-base text-gray-600 dark:text-gray-400 font-semibold">
+              <span className="text-base text-secondary font-semibold">
                 z dostawą
               </span>
             </div>
 
             {/* Price Breakdown (Item + Shipping) */}
             {!hasFreeShipping && shippingCost > 0 && (
-              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1 mt-2">
+              <div className="text-sm text-secondary space-y-1 mt-2">
                 <div className="flex justify-between">
                   <span className="font-medium">Produkt:</span>
                   <span className="font-semibold">{formatPrice(itemPrice, currency)}</span>
@@ -573,7 +573,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                   e.stopPropagation();
                   addToComparison({ ...product, type: 'product' });
                 }}
-                className="px-3 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800/50"
+                className="px-3 border-2 border-strong hover:bg-surface-hover bg-surface"
               >
                 <Scale className="w-4 h-4 mr-2" />
                 Porównaj
@@ -594,7 +594,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                     }}
                     disabled={isLoading}
                     className={cn(
-                      "px-3 btn-icon-hover border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-800/50",
+                      "px-3 btn-icon-hover border-2 border-strong hover:bg-surface-hover bg-surface",
                       isFavorited && "bg-red-50 dark:bg-red-900/50 border-red-300 dark:border-red-500"
                     )}
                   >
@@ -632,7 +632,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                 <Link 
                   href={`${productUrl}#comments`}
                   onClick={handleDetailClick}
-                  className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                  className="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>{commentsCount} {commentsCount === 1 ? 'komentarz' : 'komentarzy'}</span>
@@ -641,19 +641,19 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
               {/* Merchant Trust Badge (Bottom) */}
               {merchantRating > 0 && (
-                <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex items-center gap-2 pt-2 border-t border-subtle">
                   <div className="flex items-center gap-1">
                     <ShieldCheck className={cn(
                       "w-4 h-4",
                       isVerifiedMerchant ? "text-green-500" : "text-gray-400"
                     )} />
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-secondary">
                       Sprzedawca: {Number.isFinite(merchantRating) ? merchantRating.toFixed(0) : '—'}%
                     </span>
                   </div>
                   {isBestseller && (
                     <>
-                      <span className="text-gray-300 dark:text-gray-600">•</span>
+                      <span className="text-tertiary">•</span>
                       <Badge variant="secondary" className="text-xs">
                         <TrendingDown className="w-3 h-3 mr-1" />
                         Bestseller

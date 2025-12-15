@@ -124,6 +124,37 @@
   .border-border\/40 { border-color: hsl(var(--border) / 0.4); }
   .border-border\/50 { border-color: hsl(var(--border) / 0.5); }
   .border-border\/60 { border-color: hsl(var(--border) / 0.6); }
+  
+  /* ============ SEMANTIC UTILITIES ============
+     Auto-adjusting colors for light/dark mode
+     =========================================== */
+  
+  /* Backgrounds */
+  .bg-base { background-color: hsl(var(--bg-base)); }
+  .bg-subtle { background-color: hsl(var(--bg-subtle)); }
+  .bg-muted { background-color: hsl(var(--bg-muted)); }
+  
+  /* Surfaces */
+  .bg-surface { background-color: hsl(var(--surface-default)); }
+  .bg-surface-hover { background-color: hsl(var(--surface-hover)); }
+  .bg-surface-active { background-color: hsl(var(--surface-active)); }
+  .bg-surface-elevated { background-color: hsl(var(--surface-elevated)); }
+  
+  /* Text */
+  .text-primary { color: hsl(var(--text-primary)); }
+  .text-secondary { color: hsl(var(--text-secondary)); }
+  .text-tertiary { color: hsl(var(--text-tertiary)); }
+  .text-disabled { color: hsl(var(--text-disabled)); }
+  
+  /* Borders */
+  .border-subtle { border-color: hsl(var(--border-subtle)); }
+  .border-default { border-color: hsl(var(--border-default)); }
+  .border-strong { border-color: hsl(var(--border-strong)); }
+  
+  /* Hover states */
+  .hover\:bg-surface-hover:hover { background-color: hsl(var(--surface-hover)); }
+  .hover\:bg-surface-active:hover { background-color: hsl(var(--surface-active)); }
+  .hover\:border-strong:hover { border-color: hsl(var(--border-strong)); }
 }
 
 @layer base {
@@ -177,6 +208,33 @@
        ============================================= */
     --page-padding-x: 1rem;      /* 16px mobile */
     --page-max-width: 1400px;    /* max-w-screen-2xl */
+    
+    /* ============ SEMANTIC COLOR SYSTEM ============
+       Unified backgrounds, surfaces, text, borders
+       Eliminates hardcoded gray-X colors for consistency
+       =============================================== */
+    
+    /* Background Levels */
+    --bg-base: 0 0% 100%;           /* Tło strony - white */
+    --bg-subtle: 210 20% 98%;       /* Subtelne tło - very light gray */
+    --bg-muted: 210 15% 96%;        /* Wyciszone tło - light gray */
+    
+    /* Surface Levels (Cards, Panels) */
+    --surface-default: 0 0% 100%;   /* Karty - white */
+    --surface-hover: 210 20% 98%;   /* Hover state */
+    --surface-active: 210 15% 96%;  /* Active/pressed */
+    --surface-elevated: 0 0% 100%;  /* Elevated (modals, dropdowns) */
+    
+    /* Text Levels */
+    --text-primary: 0 0% 9%;        /* Główny tekst - near black */
+    --text-secondary: 0 0% 40%;     /* Drugorzędny tekst */
+    --text-tertiary: 0 0% 60%;      /* Wyciszony tekst */
+    --text-disabled: 0 0% 75%;      /* Nieaktywny tekst */
+    
+    /* Border Levels */
+    --border-subtle: 210 20% 92%;   /* Subtelne obramowanie */
+    --border-default: 210 20% 85%;  /* Standardowe obramowanie */
+    --border-strong: 210 20% 70%;   /* Mocne obramowanie */
   }
   
   @media (min-width: 640px) {
@@ -230,6 +288,32 @@
     --border: 12.2 6.5% 15.1%; /* Ciemnoszary - obramowania */
     --input: 12.2 6.5% 15.1%; /* Ciemnoszary - pola wejścia */
     --ring: 142.1 70.6% 45.3%; /* Jaśniejszy teal - focus ring */
+    
+    /* ============ SEMANTIC COLOR SYSTEM - DARK MODE ============
+       High contrast colors for dark theme accessibility
+       =========================================================== */
+    
+    /* Background Levels */
+    --bg-base: 0 0% 8%;             /* Tło strony - very dark gray */
+    --bg-subtle: 0 0% 10%;          /* Subtelne tło */
+    --bg-muted: 0 0% 12%;           /* Wyciszone tło */
+    
+    /* Surface Levels (Cards, Panels) */
+    --surface-default: 0 0% 10%;    /* Karty - dark gray */
+    --surface-hover: 0 0% 13%;      /* Hover state */
+    --surface-active: 0 0% 15%;     /* Active/pressed */
+    --surface-elevated: 0 0% 12%;   /* Elevated (modals, dropdowns) */
+    
+    /* Text Levels */
+    --text-primary: 0 0% 98%;       /* Główny tekst - near white */
+    --text-secondary: 0 0% 75%;     /* Drugorzędny tekst */
+    --text-tertiary: 0 0% 60%;      /* Wyciszony tekst */
+    --text-disabled: 0 0% 40%;      /* Nieaktywny tekst */
+    
+    /* Border Levels */
+    --border-subtle: 0 0% 18%;      /* Subtelne obramowanie */
+    --border-default: 0 0% 25%;     /* Standardowe obramowanie */
+    --border-strong: 0 0% 35%;      /* Mocne obramowanie */
   }
 }
 
