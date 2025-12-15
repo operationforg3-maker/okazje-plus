@@ -42,6 +42,8 @@ function ProductsPageContent() {
   const [dealOfTheDay, setDealOfTheDay] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const [insightsOpen, setInsightsOpen] = useState(false);
 
   // Wczytaj kategorie i ustaw z URL
   useEffect(() => {
@@ -92,6 +94,15 @@ function ProductsPageContent() {
     fetchData();
   }, [mainCategoryParam, subCategoryParam]);
 
+  useEffect(() => {
+    try {
+      const savedDensity = localStorage.getItem('products_density');
+      if (savedDensity === 'compact' || savedDensity === 'comfortable') {
+        setCardDensity(savedDensity);
+      }
+    } catch {}
+  }, []);
+
   // Pobierz produkty przy zmianie kategorii / subkategorii / wyszukiwaniu
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +143,10 @@ function ProductsPageContent() {
     return () => { cancelled = true; clearTimeout(t); };
   }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
 
+  useEffect(() => {
+    try { localStorage.setItem('products_density', cardDensity); } catch {}
+  }, [cardDensity]);
+
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products;
     const needle = searchTerm.toLowerCase();
@@ -158,6 +173,12 @@ function ProductsPageContent() {
     style: 'currency',
     currency: 'PLN',
   });
+
+  const gridWrapperClass = cardDensity === 'compact'
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+
+  const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
 
   // Sidebar Content (reusable for desktop and mobile)
   // Refs dla auto-scroll do wybranej kategorii
@@ -422,7 +443,7 @@ function ProductsPageContent() {
             </div>
 
             {/* Center Content - Subcategories & Products */}
-            <div className="col-span-1 lg:col-span-6">
+            <div className="col-span-1 lg:col-span-9">
               {/* Search Bar */}
               <div className="mb-4 lg:mb-6">
                 <div className="relative">
@@ -440,22 +461,60 @@ function ProductsPageContent() {
 
               {/* Products Grid */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-headline text-base font-semibold">
                     Produkty ({filteredProducts.length})
                   </h3>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="xl:hidden"
+                      onClick={() => setInsightsOpen(true)}
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Panel rekomendacji
+                    </Button>
+                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                      <Button
+                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setCardDensity('comfortable')}
+                      >
+                        Standard
+                      </Button>
+                      <Button
+                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setCardDensity('compact')}
+                      >
+                        Kompakt
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 {isLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className={gridWrapperClass}>
                     {[...Array(6)].map((_, i) => (
-                      <div key={i} className="h-64 bg-muted animate-pulse rounded-lg" />
+                      <div
+                        key={i}
+                        className={cn(
+                          "bg-muted animate-pulse rounded-lg",
+                          cardDensity === 'compact' ? 'h-64' : 'h-72'
+                        )}
+                      />
                     ))}
                   </div>
                 ) : filteredProducts.length > 0 ? (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className={gridWrapperClass}>
                       {displayedProducts.map((product) => (
-                        <ProductCardBoundary key={product.id} product={product} />
+                        <div key={product.id} className={cardWrapperClass}>
+                          <ProductCardBoundary product={product} />
+                        </div>
                       ))}
                     </div>
                     
@@ -486,9 +545,24 @@ function ProductsPageContent() {
               </div>
             </div>
 
-            {/* Right Sidebar - Deal of the Day & Promo (Hidden on mobile/tablet) */}
-            <div className="hidden xl:block xl:col-span-3 space-y-6">
-              {/* Deal of the Day */}
+          </div>
+        </div>
+      </div>
+
+      {(dealOfTheDay || selectedCategory?.promo) && (
+        <Sheet open={insightsOpen} onOpenChange={setInsightsOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="hidden xl:inline-flex fixed right-3 top-1/2 -translate-y-1/2 rounded-l-full shadow-lg"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Panel rekomendacji
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[340px] sm:w-[420px] overflow-y-auto">
+            <div className="space-y-6">
               {dealOfTheDay && (
                 <Card className="overflow-hidden border-2 border-primary/20">
                   <CardContent className="p-0">
@@ -531,7 +605,6 @@ function ProductsPageContent() {
                 </Card>
               )}
 
-              {/* Promoted Category */}
               {selectedCategory?.promo && (
                 <Card className="overflow-hidden">
                   <CardContent className="p-0">
@@ -572,7 +645,6 @@ function ProductsPageContent() {
                 </Card>
               )}
 
-              {/* Quick Stats */}
               <Card>
                 <CardContent className="p-4">
                   <div className="space-y-3">
@@ -592,9 +664,9 @@ function ProductsPageContent() {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </div>
-      </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

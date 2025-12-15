@@ -61,6 +61,7 @@ export default function DealsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [sortBy, setSortBy] = useState<SortOption>('hottest');
   const [typeFilter, setTypeFilter] = useState<DealTypeFilter>('all');
   const [minPrice, setMinPrice] = useState<number>(0);
@@ -73,6 +74,7 @@ export default function DealsPage() {
     verified: false,
   });
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [insightsOpen, setInsightsOpen] = useState(false);
 
   // Helper: unify postedAt to timestamp (ms)
   const toTimestamp = (value: any): number => {
@@ -97,6 +99,10 @@ export default function DealsPage() {
       const savedView = localStorage.getItem('deals_view_mode');
       if (savedView === 'list' || savedView === 'grid') {
         setViewMode(savedView);
+      }
+      const savedDensity = localStorage.getItem('deals_density');
+      if (savedDensity === 'compact' || savedDensity === 'comfortable') {
+        setCardDensity(savedDensity);
       }
     } catch {}
   }, []);
@@ -216,6 +222,10 @@ export default function DealsPage() {
   useEffect(() => {
     try { localStorage.setItem('deals_view_mode', viewMode); } catch {}
   }, [viewMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem('deals_density', cardDensity); } catch {}
+  }, [cardDensity]);
 
   // Persistuj kategorię
   useEffect(() => {
@@ -400,6 +410,13 @@ export default function DealsPage() {
     style: 'currency',
     currency: 'PLN',
   });
+
+  const gridWrapperClass = cardDensity === 'compact'
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+
+  const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
+  const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
 
   // Funkcja zapisywania filtrów
   const saveCurrentFilter = async () => {
@@ -733,7 +750,7 @@ export default function DealsPage() {
             </div>
 
             {/* Center Content - Subcategories & Deals */}
-            <div className="col-span-1 lg:col-span-6">
+            <div className="col-span-1 lg:col-span-9">
               {/* Search Bar */}
               <div className="mb-4 lg:mb-6">
                 <div className="relative">
@@ -785,224 +802,269 @@ export default function DealsPage() {
               )}
 
               {/* Filtry i sortowanie */}
-              <div className="mb-4 space-y-3">
-                {/* Sortowanie */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder="Sortuj według" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="hottest">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="h-4 w-4" />
-                          Najgorętsze
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="newest">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          Najnowsze
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="price_asc">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          Cena: rosnąco
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="price_desc">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          Cena: malejąco
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="discount">
-                        <div className="flex items-center gap-2">
-                          <Tag className="h-4 w-4" />
-                          Największa zniżka
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Zakres ceny */}
-                  <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">Cena:</span>
-                    <Input
-                      type="number"
-                      placeholder="Min"
-                      value={priceRange[0]}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0;
-                        setPriceRange([val, priceRange[1]]);
-                      }}
-                      className="h-8 w-20 text-xs"
-                    />
-                    <span className="text-muted-foreground">-</span>
-                    <Input
-                      type="number"
-                      placeholder="Max"
-                      value={priceRange[1]}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value) || 10000;
-                        setPriceRange([priceRange[0], val]);
-                      }}
-                      className="h-8 w-20 text-xs"
-                    />
-                    <span className="text-sm">zł</span>
+              <Card className="mb-4 shadow-sm border-dashed">
+                <CardContent className="space-y-3 pt-4">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <p className="text-sm font-semibold">Filtry i sortowanie</p>
+                    <span className="text-xs text-muted-foreground">Szybki dostęp do ceny, typu i darmowej dostawy</span>
                   </div>
-                </div>
 
-                {/* Quick filters - chipy */}
-                <div className="flex flex-wrap gap-2">
-                  <Badge
-                    variant={quickFilters.freeShipping ? 'default' : 'outline'}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
-                  >
-                    <Truck className="h-3 w-3 mr-1" />
-                    {t('filters.quickFilters.freeShipping')}
-                  </Badge>
-                  {FEATURES.DEALS_TYPE_FILTER && (
-                    <Badge
-                      variant={typeFilter === 'coupon' ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setTypeFilter(prev => prev === 'coupon' ? 'all' as DealTypeFilter : 'coupon')}
-                    >
-                      🎟️ {t('filters.quickFilters.couponOnly')}
-                    </Badge>
-                  )}
-                  {FEATURES.DEALS_TYPE_FILTER && (
-                    <Badge
-                      variant={typeFilter === 'freebie' ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setTypeFilter(prev => prev === 'freebie' ? 'all' as DealTypeFilter : 'freebie')}
-                    >
-                      🆓 {t('filters.quickFilters.freebies')}
-                    </Badge>
-                  )}
-                  <Badge
-                    variant={quickFilters.bigDiscount ? 'default' : 'outline'}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => setQuickFilters(prev => ({ ...prev, bigDiscount: !prev.bigDiscount }))}
-                  >
-                    <Tag className="h-3 w-3 mr-1" />
-                    {t('filters.quickFilters.bigDiscount')}
-                  </Badge>
-                  <Badge
-                    variant={quickFilters.today ? 'default' : 'outline'}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => setQuickFilters(prev => ({ ...prev, today: !prev.today }))}
-                  >
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {t('filters.quickFilters.todayOnly')}
-                  </Badge>
-                  <Badge
-                    variant={quickFilters.verified ? 'default' : 'outline'}
-                    className="cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => setQuickFilters(prev => ({ ...prev, verified: !prev.verified }))}
-                  >
-                    <Star className="h-3 w-3 mr-1" />
-                    {t('filters.quickFilters.verifiedStores')}
-                  </Badge>
-                </div>
+                  {/* Sortowanie */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                      <SelectTrigger className="w-full sm:w-[200px]">
+                        <SelectValue placeholder="Sortuj według" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hottest">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4" />
+                            Najgorętsze
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="newest">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Najnowsze
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="price_asc">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Cena: rosnąco
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="price_desc">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Cena: malejąco
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="discount">
+                          <div className="flex items-center gap-2">
+                            <Tag className="h-4 w-4" />
+                            Największa zniżka
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
 
-                {/* Zapisane filtry */}
-                {user && savedFilters.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-2 border-t">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Bookmark className="h-3 w-3" />
-                      {t('filters.savedLabel')}
-                    </span>
-                    {savedFilters.map((filter) => (
+                    {/* Zakres ceny */}
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg bg-muted/40">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Cena:</span>
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={priceRange[0]}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setPriceRange([val, priceRange[1]]);
+                        }}
+                        className="h-8 w-20 text-xs"
+                      />
+                      <span className="text-muted-foreground">-</span>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={priceRange[1]}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 10000;
+                          setPriceRange([priceRange[0], val]);
+                        }}
+                        className="h-8 w-20 text-xs"
+                      />
+                      <span className="text-sm">zł</span>
+                    </div>
+                  </div>
+
+                  {/* Quick filters - chipy */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge
+                      variant={quickFilters.freeShipping ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
+                    >
+                      <Truck className="h-3 w-3 mr-1" />
+                      {t('filters.quickFilters.freeShipping')}
+                    </Badge>
+                    {FEATURES.DEALS_TYPE_FILTER && (
                       <Badge
-                        key={filter.name}
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-secondary/80 transition-colors group"
+                        variant={typeFilter === 'coupon' ? 'default' : 'outline'}
+                        className="cursor-pointer hover:bg-primary/10 transition-colors"
+                        onClick={() => setTypeFilter(prev => prev === 'coupon' ? 'all' as DealTypeFilter : 'coupon')}
                       >
-                        <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteSavedFilter(filter.name);
-                          }}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          ×
-                        </button>
+                        🎟️ {t('filters.quickFilters.couponOnly')}
                       </Badge>
-                    ))}
+                    )}
+                    {FEATURES.DEALS_TYPE_FILTER && (
+                      <Badge
+                        variant={typeFilter === 'freebie' ? 'default' : 'outline'}
+                        className="cursor-pointer hover:bg-primary/10 transition-colors"
+                        onClick={() => setTypeFilter(prev => prev === 'freebie' ? 'all' as DealTypeFilter : 'freebie')}
+                      >
+                        🆓 {t('filters.quickFilters.freebies')}
+                      </Badge>
+                    )}
+                    <Badge
+                      variant={quickFilters.bigDiscount ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setQuickFilters(prev => ({ ...prev, bigDiscount: !prev.bigDiscount }))}
+                    >
+                      <Tag className="h-3 w-3 mr-1" />
+                      {t('filters.quickFilters.bigDiscount')}
+                    </Badge>
+                    <Badge
+                      variant={quickFilters.today ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setQuickFilters(prev => ({ ...prev, today: !prev.today }))}
+                    >
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {t('filters.quickFilters.todayOnly')}
+                    </Badge>
+                    <Badge
+                      variant={quickFilters.verified ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setQuickFilters(prev => ({ ...prev, verified: !prev.verified }))}
+                    >
+                      <Star className="h-3 w-3 mr-1" />
+                      {t('filters.quickFilters.verifiedStores')}
+                    </Badge>
                   </div>
-                )}
 
-                {/* Przycisk zapisywania filtra */}
-                {user && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={saveCurrentFilter}
-                    className="w-full sm:w-auto"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Zapisz obecne filtry
-                  </Button>
-                )}
-              </div>
+                  {/* Zapisane filtry */}
+                  {user && savedFilters.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Bookmark className="h-3 w-3" />
+                        {t('filters.savedLabel')}
+                      </span>
+                      {savedFilters.map((filter) => (
+                        <Badge
+                          key={filter.name}
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-secondary/80 transition-colors group"
+                        >
+                          <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSavedFilter(filter.name);
+                            }}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Przycisk zapisywania filtra */}
+                  {user && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={saveCurrentFilter}
+                      className="w-full sm:w-auto"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Zapisz obecne filtry
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Deals List */}
               <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-headline text-base font-semibold">
                     🔥 Okazje ({filteredAndSortedDeals.length})
                   </h3>
-                  
-                  {/* View Mode Toggle */}
-                  <div className="flex items-center gap-1 border rounded-lg p-1">
+
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      variant="outline"
                       size="sm"
-                      onClick={() => setViewMode('list')}
-                      className="h-8 px-3"
+                      className="xl:hidden"
+                      onClick={() => setInsightsOpen(true)}
                     >
-                      <List className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Lista</span>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Panel rekomendacji
                     </Button>
-                    <Button
-                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('grid')}
-                      className="h-8 px-3"
-                    >
-                      <LayoutGrid className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Kafelki</span>
-                    </Button>
+
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                      <Button
+                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('list')}
+                        className="h-8 px-3"
+                      >
+                        <List className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Lista</span>
+                      </Button>
+                      <Button
+                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('grid')}
+                        className="h-8 px-3"
+                      >
+                        <LayoutGrid className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Kafelki</span>
+                      </Button>
+                    </div>
+
+                    {/* Density Toggle */}
+                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                      <Button
+                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setCardDensity('comfortable')}
+                      >
+                        Standard
+                      </Button>
+                      <Button
+                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setCardDensity('compact')}
+                      >
+                        Kompakt
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 {isLoading ? (
                   <div className={cn(
-                    viewMode === 'list' ? "space-y-4" : "grid grid-cols-1 sm:grid-cols-2 gap-4"
+                    viewMode === 'list' ? listWrapperClass : gridWrapperClass
                   )}>
                     {[...Array(5)].map((_, i) => (
                       <div key={i} className={cn(
                         "bg-muted animate-pulse rounded-lg",
-                        viewMode === 'list' ? "h-48" : "h-96"
+                        viewMode === 'list'
+                          ? 'h-48'
+                          : cardDensity === 'compact' ? 'h-80' : 'h-96'
                       )} />
                     ))}
                   </div>
                 ) : filteredAndSortedDeals.length > 0 ? (
                   <>
                     {viewMode === 'list' ? (
-                      <div className="space-y-4">
+                      <div className={listWrapperClass}>
                         {displayedDeals.map((deal) => (
-                          <DealListCard key={deal.id} deal={deal} />
+                          <div key={deal.id} className={cardWrapperClass}>
+                            <DealListCard deal={deal} />
+                          </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className={gridWrapperClass}>
                         {displayedDeals.map((deal) => (
-                          <DealCard key={deal.id} deal={deal} />
+                          <div key={deal.id} className={cardWrapperClass}>
+                            <DealCard deal={deal} />
+                          </div>
                         ))}
                       </div>
                     )}
@@ -1034,9 +1096,24 @@ export default function DealsPage() {
               </div>
             </div>
 
-            {/* Right Sidebar - Product of the Day & Promo (Hidden on mobile/tablet) */}
-            <div className="hidden xl:block xl:col-span-3 space-y-6">
-              {/* Product of the Day */}
+          </div>
+        </div>
+      </div>
+
+      {(productOfTheDay || selectedCategory?.promo) && (
+        <Sheet open={insightsOpen} onOpenChange={setInsightsOpen}>
+          <SheetTrigger asChild>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="hidden xl:inline-flex fixed right-3 top-1/2 -translate-y-1/2 rounded-l-full shadow-lg"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Panel rekomendacji
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[340px] sm:w-[420px] overflow-y-auto">
+            <div className="space-y-6">
               {productOfTheDay && (
                 <Card className="overflow-hidden border-2 border-primary/20">
                   <CardContent className="p-0">
@@ -1080,7 +1157,6 @@ export default function DealsPage() {
                 </Card>
               )}
 
-              {/* Promoted Category */}
               {selectedCategory?.promo && (
                 <Card className="overflow-hidden">
                   <CardContent className="p-0">
@@ -1121,7 +1197,6 @@ export default function DealsPage() {
                 </Card>
               )}
 
-              {/* Quick Stats */}
               <Card>
                 <CardContent className="p-4">
                   <div className="space-y-3">
@@ -1141,9 +1216,9 @@ export default function DealsPage() {
                 </CardContent>
               </Card>
             </div>
-          </div>
-        </div>
-      </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

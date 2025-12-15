@@ -245,15 +245,38 @@ export async function processImportJob(
       }
     } catch (_) {}
 
-    // Importuj tylko dla produktów (deals będą później)
-    if (type !== 'products') {
-      console.log(`[Import Processor] Skipping type "${type}" - use new modular system manually`);
-      await jobRef.update({
-        status: 'completed',
-        'progress.completed': batches.length,
-        completedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+    // Obsługa DEALS w tym samym procesorze (bez AI Tools)
+    if (type === 'deals') {
+      console.log(`[Import Processor] Deals mode: uruchamiam agregację deali (globalnie)`);
+      try {
+        const { fillCategoriesWithDeals } = await import('@/ai/flows/fillCategoriesWithDeals');
+        const resultSummary = await fillCategoriesWithDeals();
+
+        const logEntry = {
+          timestamp: new Date().toISOString(),
+          batchIndex: 0,
+          subcategory: 'all',
+          status: 'success',
+          message: resultSummary,
+        } as any;
+
+        await jobRef.update({
+          status: 'completed',
+          'progress.completed': batches.length,
+          logs: FieldValue.arrayUnion(logEntry),
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        console.log(`[Import Processor] Deals aggregation finished`);
+      } catch (e: any) {
+        console.error('[Import Processor] Deals aggregation failed:', e?.message || e);
+        await jobRef.update({
+          status: 'failed',
+          error: e?.message || String(e),
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
       return;
     }
 
