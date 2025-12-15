@@ -72,6 +72,7 @@ export interface EnrichedProduct {
   originalId: string;
   titleOriginal: string;
   image: string;
+  images?: string[]; // Gallery images from AliExpress
   link: string; // AliExpress product URL
   affiliateUrl?: string; // Optional affiliate link
   price: number;

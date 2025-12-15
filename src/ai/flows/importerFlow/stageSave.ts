@@ -162,6 +162,24 @@ export async function saveProductsToFirestore(
         
         // Update existing
         console.log(`  → Updating existing product ${existingId}`);
+        
+        // Build gallery from images array
+        const gallery = product.images && product.images.length > 0
+          ? product.images.slice(0, 10).map((imgUrl, idx) => ({
+              id: `${product.originalId}_img_${idx}`,
+              type: 'url' as const,
+              src: imgUrl,
+              alt: product.titlePL || product.titleNormalizedEN,
+              isPrimary: idx === 0,
+              source: 'aliexpress' as const,
+              addedAt: new Date().toISOString(),
+            }))
+          : undefined;
+        
+        if (gallery) {
+          console.log(`  🖼️  Gallery: ${gallery.length} images`);
+        }
+        
         await updateProduct(existingId, {
           name: product.titlePL || product.titleNormalizedEN, // Legacy
           title: titleLocalized,
@@ -170,7 +188,8 @@ export async function saveProductsToFirestore(
           longDescription: product.descriptionPL || product.descriptionEN, // Legacy
           fullDescription: descriptionLocalized,
           price: smartPrice,
-          image: product.image,
+          image: finalImage,
+          ...(gallery && { gallery }),
           mainCategorySlug: product.categorySlugEN,
           subCategorySlug: product.subcategorySlugEN,
           subSubCategorySlug: product.subsubcategorySlugEN,
@@ -198,6 +217,30 @@ export async function saveProductsToFirestore(
       } else {
         // Create new
         console.log(`  → Creating new product`);
+        
+        // Build gallery from images array
+        const gallery = product.images && product.images.length > 0
+          ? product.images.slice(0, 10).map((imgUrl, idx) => ({
+              id: `${product.originalId}_img_${idx}`,
+              type: 'url' as const,
+              src: imgUrl,
+              alt: product.titlePL || product.titleNormalizedEN,
+              isPrimary: idx === 0,
+              source: 'aliexpress' as const,
+              addedAt: new Date().toISOString(),
+            }))
+          : [{
+              id: `${product.originalId}_img_0`,
+              type: 'url' as const,
+              src: finalImage,
+              alt: product.titlePL || product.titleNormalizedEN,
+              isPrimary: true,
+              source: 'aliexpress' as const,
+              addedAt: new Date().toISOString(),
+            }];
+        
+        console.log(`  🖼️  Gallery: ${gallery.length} images`);
+        
         const productData = {
           name: product.titlePL || product.titleNormalizedEN,
           title: titleLocalized,
@@ -206,7 +249,8 @@ export async function saveProductsToFirestore(
           longDescription: product.descriptionPL || product.descriptionEN,
           fullDescription: descriptionLocalized,
           price: smartPrice,
-          image: product.image,
+          image: finalImage,
+          gallery,
           imageHint: product.titleNormalizedEN,
           affiliateUrl: product.link,
           mainCategorySlug: product.categorySlugEN,

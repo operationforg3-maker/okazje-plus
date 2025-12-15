@@ -103,6 +103,7 @@ export async function enrichProducts(
         originalId: product.id,
         titleOriginal: product.title,
         image: finalImage,
+        images: (product as any).images, // Pass through gallery images from stageFetch
         link: product.link,
         affiliateUrl: product.link,
         price: product.price,
