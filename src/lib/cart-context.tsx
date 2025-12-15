@@ -12,7 +12,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Product, SmartPrice } from '@/lib/types';
 import { getPriceAmount, getTotalPrice } from '@/lib/i18n-utils';
@@ -64,47 +64,51 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  /**
-   * Load cart from localStorage (guests) or Firestore (logged-in users)
-   */
-  const loadCart = useCallback(async () => {
-    try {
-      if (user) {
-        // Load from Firestore for logged-in users
-        try {
-          const cartDoc = await getDoc(doc(db, 'user_carts', user.uid));
-          if (cartDoc.exists()) {
-            const cartData = cartDoc.data();
-            const firestoreItems = (cartData.items || []) as CartItem[];
-            setItems(firestoreItems);
-            logger.info(`Loaded ${firestoreItems.length} items from Firestore cart`);
-            return;
-          }
-        } catch (firestoreError) {
-          logger.warn('Failed to load from Firestore, falling back to localStorage', { error: firestoreError });
-        }
-      }
-      
-      // Load from localStorage (guests or fallback)
-      const stored = localStorage.getItem(CART_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as CartItem[];
-        setItems(parsed);
-        logger.info(`Loaded ${parsed.length} items from localStorage cart`);
-      }
-    } catch (error) {
-      logger.error('Failed to load cart', { error });
-    } finally {
-      setIsLoading(false);
-    }
-    // Use user?.uid instead of user object to prevent infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
+  const hasLoadedRef = useRef(false);
+  const prevUserIdRef = useRef<string | null | undefined>(undefined);
 
   // Load cart from storage on mount/user change
   useEffect(() => {
-    loadCart();
-  }, [loadCart]);
+    const currentUserId = user?.uid;
+    
+    // Only load if: 1. First mount OR 2. User ID changed
+    if (!hasLoadedRef.current || prevUserIdRef.current !== currentUserId) {
+      const loadCart = async () => {
+        try {
+          if (user) {
+            try {
+              const cartDoc = await getDoc(doc(db, 'user_carts', user.uid));
+              if (cartDoc.exists()) {
+                const cartData = cartDoc.data();
+                const firestoreItems = (cartData.items || []) as CartItem[];
+                setItems(firestoreItems);
+                logger.info(`Loaded ${firestoreItems.length} items from Firestore cart`);
+                return;
+              }
+            } catch (firestoreError) {
+              logger.warn('Failed to load from Firestore, falling back to localStorage', { error: firestoreError });
+            }
+          }
+          
+          const stored = localStorage.getItem(CART_STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored) as CartItem[];
+            setItems(parsed);
+            logger.info(`Loaded ${parsed.length} items from localStorage cart`);
+          }
+        } catch (error) {
+          logger.error('Failed to load cart', { error });
+        } finally {
+          setIsLoading(false);
+          hasLoadedRef.current = true;
+          prevUserIdRef.current = currentUserId;
+        }
+      };
+      
+      loadCart();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
 
   // Save cart to storage whenever it changes
   useEffect(() => {
