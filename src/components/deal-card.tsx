@@ -333,12 +333,12 @@ export default function DealCard({ deal }: DealCardProps) {
           alt={dealTitle || 'Okazja'}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-contain transition-transform duration-300 group-hover:scale-105"
+          className="object-contain transition-transform-base group-hover:scale-105"
         />
         <Button
           size="icon"
           variant="ghost"
-          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white transition-all z-10 btn-icon-hover"
+          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white transition-all-fast z-10 btn-icon-hover"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -352,7 +352,7 @@ export default function DealCard({ deal }: DealCardProps) {
             }`}
           />
         </Button>
-        <div className="absolute right-2 top-2 flex flex-col gap-1 z-10">
+        <div className="absolute right-2 top-2 flex flex-col space-sm z-10">
           {isHot && (
             <Badge className="badge-hot badge-trust">
               <Flame className="mr-1 h-3 w-3 md:h-4 md:w-4" />
@@ -360,19 +360,19 @@ export default function DealCard({ deal }: DealCardProps) {
             </Badge>
           )}
           {isHotDealTag && (
-            <Badge variant="destructive" className="shadow-lg">
+            <Badge variant="destructive" className="shadow-md">
               <Zap className="mr-1 h-3 w-3" />
               Hot Deal
             </Badge>
           )}
           {isBestsellerTag && (
-            <Badge className="bg-purple-500 text-white shadow-lg">
+            <Badge className="bg-purple-500 text-white shadow-md">
               <TrendingUp className="mr-1 h-3 w-3" />
               Bestseller
             </Badge>
           )}
           {isNewArrival && (
-            <Badge className="bg-blue-500 text-white shadow-lg">
+            <Badge className="bg-blue-500 text-white shadow-md">
               <Sparkles className="mr-1 h-3 w-3" />
               Nowość
             </Badge>
@@ -384,12 +384,12 @@ export default function DealCard({ deal }: DealCardProps) {
             </Badge>
           )}
           {isPolishMarket && (
-            <Badge className="bg-green-500 text-white shadow-lg">
+            <Badge className="bg-green-500 text-white shadow-md">
               PL Market
             </Badge>
           )}
           {hasVariants && (
-            <Badge variant="secondary" className="shadow-lg">
+            <Badge variant="secondary" className="shadow-md">
               {variants.length} wariantów
             </Badge>
           )}
@@ -406,25 +406,25 @@ export default function DealCard({ deal }: DealCardProps) {
             </Badge>
           )}
           {deal.importMetadata?.flashDeal && (
-            <Badge className="bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg">
+            <Badge className="bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md">
               <Zap className="mr-1 h-3 w-3" />
               Flash
             </Badge>
           )}
           {deal.importMetadata?.stockStatus === 'low_stock' && (
-            <Badge variant="outline" className="border-yellow-600 text-yellow-600 bg-white/90 shadow-lg">
+            <Badge variant="outline" className="border-yellow-600 text-yellow-600 bg-white/90 shadow-md">
               <AlertTriangle className="mr-1 h-3 w-3" />
               Niski stan
             </Badge>
           )}
           {deal.importMetadata?.stockStatus === 'out_of_stock' && (
-            <Badge variant="outline" className="border-red-600 text-red-600 bg-white/90 shadow-lg">
+            <Badge variant="outline" className="border-red-600 text-red-600 bg-white/90 shadow-md">
               <AlertTriangle className="mr-1 h-3 w-3" />
               Wyprzedane
             </Badge>
           )}
           {deal.importMetadata?.promotionId && (
-            <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+            <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md">
               <Tag className="mr-1 h-3 w-3" />
               Promocja
             </Badge>

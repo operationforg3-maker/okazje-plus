@@ -209,6 +209,48 @@
     --page-padding-x: 1rem;      /* 16px mobile */
     --page-max-width: 1400px;    /* max-w-screen-2xl */
     
+    /* ============ UNIFIED SIZING SYSTEM ============
+       Consistent spacing, shadows, radius across app
+       ============================================== */
+    
+    /* SPACING SCALE (4px base unit) */
+    --spacing-xs: 0.25rem;       /* 4px */
+    --spacing-sm: 0.5rem;        /* 8px */
+    --spacing-md: 1rem;          /* 16px */
+    --spacing-lg: 1.5rem;        /* 24px */
+    --spacing-xl: 2rem;          /* 32px */
+    --spacing-2xl: 3rem;         /* 48px */
+    
+    /* BORDER RADIUS SCALE */
+    --radius-xs: 0.25rem;        /* 4px - subtle elements */
+    --radius-sm: 0.5rem;         /* 8px - inputs, small cards */
+    --radius-md: 0.75rem;        /* 12px - standard cards */
+    --radius-lg: 1rem;           /* 16px - large cards, modals */
+    --radius-full: 9999px;       /* full - badges, avatars */
+    
+    /* SHADOW SCALE */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+    
+    /* TRANSITION TIMING */
+    --duration-fast: 150ms;      /* Micro interactions */
+    --duration-base: 200ms;      /* Standard transitions */
+    --duration-slow: 300ms;      /* Page transitions */
+    --easing-in: cubic-bezier(0.4, 0, 1, 1);
+    --easing-out: cubic-bezier(0, 0, 0.2, 1);
+    --easing-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* OPACITY SCALE */
+    --opacity-disabled: 0.5;     /* Disabled state */
+    --opacity-hover: 0.9;        /* Hover state */
+    --opacity-subtle: 0.05;      /* Very light overlay */
+    --opacity-light: 0.1;        /* Light overlay */
+    --opacity-medium: 0.2;       /* Medium overlay */
+  }
+    
     /* ============ SEMANTIC COLOR SYSTEM ============
        Unified backgrounds, surfaces, text, borders
        Eliminates hardcoded gray-X colors for consistency
@@ -315,7 +357,6 @@
     --border-default: 0 0% 25%;     /* Standardowe obramowanie */
     --border-strong: 0 0% 35%;      /* Mocne obramowanie */
   }
-}
 
 @layer base {
   * {
@@ -442,6 +483,132 @@
   
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     @apply bg-transparent;
+  }
+
+  /* ============ SEMANTIC SPACING UTILITIES ============
+     Consistent gap, padding, margin using design system tokens
+     ===================================================== */
+  
+  /* Gap/Flex spacing */
+  .space-xs { gap: var(--spacing-xs); }
+  .space-sm { gap: var(--spacing-sm); }
+  .space-md { gap: var(--spacing-md); }
+  .space-lg { gap: var(--spacing-lg); }
+  .space-xl { gap: var(--spacing-xl); }
+  
+  /* Padding - Compact density */
+  .px-compact { 
+    padding-left: var(--spacing-md); 
+    padding-right: var(--spacing-md); 
+  }
+  .py-compact { 
+    padding-top: var(--spacing-md); 
+    padding-bottom: var(--spacing-md); 
+  }
+  .p-compact {
+    padding: var(--spacing-md);
+  }
+  
+  /* Padding - Comfortable density (default) */
+  .px-comfortable { 
+    padding-left: var(--spacing-lg); 
+    padding-right: var(--spacing-lg); 
+  }
+  .py-comfortable { 
+    padding-top: var(--spacing-lg); 
+    padding-bottom: var(--spacing-lg); 
+  }
+  .p-comfortable {
+    padding: var(--spacing-lg);
+  }
+  
+  /* Card padding */
+  .p-card {
+    padding: var(--spacing-lg);
+  }
+  .px-card {
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+  .py-card {
+    padding-top: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
+  }
+  
+  /* ============ SEMANTIC BORDER RADIUS UTILITIES ============
+     Standardized radius for different component types
+     ======================================================== */
+  
+  .rounded-xs { border-radius: var(--radius-xs); }
+  .rounded-sm { border-radius: var(--radius-sm); }
+  .rounded-md { border-radius: var(--radius-md); }
+  .rounded-lg { border-radius: var(--radius-lg); }
+  .rounded-full { border-radius: var(--radius-full); }
+  
+  /* ============ SEMANTIC SHADOW UTILITIES ============
+     Elevation system using shadow tokens
+     ================================================= */
+  
+  .shadow-xs { box-shadow: var(--shadow-xs); }
+  .shadow-sm { box-shadow: var(--shadow-sm); }
+  .shadow-md { box-shadow: var(--shadow-md); }
+  .shadow-lg { box-shadow: var(--shadow-lg); }
+  .shadow-xl { box-shadow: var(--shadow-xl); }
+  .shadow-none { box-shadow: none; }
+  
+  /* Interactive shadow - elevates on hover */
+  .hover\:shadow-interact:hover {
+    box-shadow: var(--shadow-lg);
+    transition: box-shadow var(--duration-fast) var(--easing-out);
+  }
+  
+  /* ============ SEMANTIC TRANSITION UTILITIES ============
+     Standardized animation durations and easing
+     ===================================================== */
+  
+  /* Duration classes */
+  .duration-fast { transition-duration: var(--duration-fast); }
+  .duration-base { transition-duration: var(--duration-base); }
+  .duration-slow { transition-duration: var(--duration-slow); }
+  
+  /* Complete transition utilities */
+  .transition-fast { 
+    transition: all var(--duration-fast) var(--easing-in-out);
+  }
+  .transition-base { 
+    transition: all var(--duration-base) var(--easing-in-out);
+  }
+  .transition-slow { 
+    transition: all var(--duration-slow) var(--easing-in-out);
+  }
+  
+  /* Specific property transitions */
+  .transition-colors-fast {
+    transition: color var(--duration-fast) var(--easing-in-out),
+                background-color var(--duration-fast) var(--easing-in-out),
+                border-color var(--duration-fast) var(--easing-in-out);
+  }
+  
+  .transition-colors-base {
+    transition: color var(--duration-base) var(--easing-in-out),
+                background-color var(--duration-base) var(--easing-in-out),
+                border-color var(--duration-base) var(--easing-in-out);
+  }
+  
+  .transition-shadow-fast {
+    transition: box-shadow var(--duration-fast) var(--easing-out);
+  }
+  
+  .transition-shadow-base {
+    transition: box-shadow var(--duration-base) var(--easing-out);
+  }
+  
+  .transition-transform-fast {
+    transition: transform var(--duration-fast) var(--easing-in-out);
+  }
+  
+  .transition-transform-base {
+    transition: transform var(--duration-base) var(--easing-in-out);
   }
 
   /* Background grid pattern for hero section */

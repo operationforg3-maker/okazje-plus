@@ -187,8 +187,8 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   return (
     <>
       <div className={cn(
-        "card-interactive group relative overflow-hidden bg-surface border-2 border-default hover:border-primary/50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300",
-        viewMode === 'list' ? "flex flex-row gap-6 p-6" : "flex flex-col"
+        "card-interactive group relative overflow-hidden bg-surface border-2 border-default hover:border-primary/50 rounded-lg shadow-md hover:shadow-lg transition-all-base",
+        viewMode === 'list' ? "flex flex-row space-lg p-card" : "flex flex-col"
       )}>
         
         {/* Admin Edit Button (Top-right overlay) */}
@@ -215,7 +215,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           <ProductGallery images={galleryImages} />
           
           {/* Trust Badges Overlay (Top-left) */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
+          <div className="absolute top-3 left-3 flex flex-col space-sm z-10">
             {hasFreeShipping && (
               <Badge className="bg-emerald-500 text-white badge-trust">
                 <Truck className="w-3 h-3 mr-1" />
@@ -294,7 +294,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
           {/* Enhanced Tags Row */}
           {(isHotDeal || isBestsellerTag || isNewArrival || hasVariants || hasRealShipping) && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap space-sm">
               {isHotDeal && (
                 <Badge variant="destructive" className="text-xs font-semibold px-2.5 py-0.5">
                   <Flame className="w-3 h-3 mr-1" />
@@ -329,8 +329,8 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
           {/* Rating & Social Proof */}
           {productRating > 0 && (
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center space-md flex-wrap">
+              <div className="flex items-center space-sm">
                 <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                 <span className="text-base font-bold text-primary">
                   {Number.isFinite(productRating) ? productRating.toFixed(1) : '—'}
@@ -355,7 +355,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               {commentsCount > 0 && (
                 <>
                   <span className="text-tertiary">•</span>
-                  <span className="text-sm text-secondary flex items-center gap-1.5 font-medium">
+                  <span className="text-sm text-secondary flex items-center space-sm font-medium">
                     <MessageSquare className="w-4 h-4" />
                     {commentsCount} opinii
                   </span>
@@ -454,10 +454,10 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           {/* ========================================
               💎 TOTAL LANDED COST (Trust-First Hero)
               ======================================== */}
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-5 border-2 border-primary/30 shadow-sm">
+          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-md p-comfortable border-2 border-primary/30 shadow-sm">
 
-            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-secondary mb-4">
-              <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center justify-between space-md text-sm text-secondary mb-4">
+              <div className="flex items-center space-sm">
                 {hasDiscount && (
                   <Badge className="badge-hot badge-trust px-3 py-1.5 text-sm font-bold">
                     <TrendingDown className="w-4 h-4 mr-1" />
@@ -472,12 +472,12 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               </div>
 
               {shipsFromEU ? (
-                <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-sm">
+                <div className="flex items-center space-sm text-emerald-700 dark:text-emerald-400 font-bold text-sm">
                   <Truck className="w-4 h-4" />
                   Wysyłka z Europy
                 </div>
               ) : originBadgeLabel ? (
-                <div className="flex items-center gap-1.5 font-semibold text-sm">
+                <div className="flex items-center space-sm font-semibold text-sm">
                   <Package className="w-4 h-4" />
                   {originBadgeLabel}
                 </div>
@@ -485,7 +485,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             </div>
             
             {/* Main Price - BIG & BOLD */}
-            <div className="flex items-baseline gap-2 mb-2">
+            <div className="flex items-baseline space-sm mb-2">
               <span className="text-4xl font-black text-primary">
                 {formatPrice(totalPrice, currency)}
               </span>
@@ -510,7 +510,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
             {/* Free Shipping Callout */}
             {hasFreeShipping && (
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-base font-bold mt-2">
+              <div className="flex items-center space-sm text-emerald-600 dark:text-emerald-400 text-base font-bold mt-2">
                 <Check className="w-4 h-4" />
                 <span>Dostawa gratis!</span>
               </div>
@@ -518,7 +518,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
             {/* Price Guarantee Info */}
             {hasPriceGuarantee && typeof product.price === 'object' && product.price.lowestPrice30Days && (
-              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm mt-2.5 font-medium">
+              <div className="flex items-center space-sm text-blue-600 dark:text-blue-400 text-sm mt-2.5 font-medium">
                 <Info className="w-4 h-4" />
                 <span>
                   Najniższa cena z 30 dni: {formatPrice(product.price.lowestPrice30Days, currency)}
@@ -632,7 +632,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                 <Link 
                   href={`${productUrl}#comments`}
                   onClick={handleDetailClick}
-                  className="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors"
+                  className="flex items-center space-sm text-sm text-secondary hover:text-primary transition-colors-fast"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>{commentsCount} {commentsCount === 1 ? 'komentarz' : 'komentarzy'}</span>

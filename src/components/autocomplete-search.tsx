@@ -101,9 +101,9 @@ export function AutocompleteSearch({ className }: { className?: string }) {
               key={s.type + s.id + i}
               role="option"
               onClick={() => handlePick(s)}
-              className="w-full text-left rounded-md px-3 py-2 hover:bg-muted focus:bg-muted outline-none flex flex-col transition-colors duration-150"
+              className="w-full text-left rounded-sm px-3 py-2 hover:bg-muted focus:bg-muted outline-none flex flex-col transition-colors-fast"
             >
-              <span className="font-medium text-sm flex items-center gap-2">
+              <span className="font-medium text-sm flex items-center space-sm">
                 {s.type === 'deal' ? (
                   <><Flame className="h-4 w-4 text-orange-500" /> Okazja</>
                 ) : (
@@ -122,7 +122,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
         </div>
       )}
       {open && !loading && suggestions.length === 0 && query.trim().length >= 2 && (
-        <div className="absolute left-0 right-0 mt-1 rounded-lg border bg-popover shadow-lg z-50 p-3 text-sm text-muted-foreground">
+        <div className="absolute left-0 right-0 mt-1 rounded-md border bg-popover shadow-md z-50 p-3 text-sm text-muted-foreground">
           Brak sugestii
         </div>
       )}

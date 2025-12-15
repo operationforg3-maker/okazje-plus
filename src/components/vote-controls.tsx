@@ -83,7 +83,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center space-sm">
       <Button
         variant="ghost"
         size="icon"

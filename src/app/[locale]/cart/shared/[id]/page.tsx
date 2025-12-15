@@ -113,7 +113,7 @@ export default function SharedCartPage() {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
-            <div className="flex items-center gap-2 text-destructive mb-2">
+            <div className="flex items-center space-sm text-destructive mb-2">
               <AlertCircle className="h-6 w-6" />
               <CardTitle>Błąd</CardTitle>
             </div>
@@ -145,7 +145,7 @@ export default function SharedCartPage() {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <CardTitle className="text-2xl flex items-center gap-2">
+                <CardTitle className="text-2xl flex items-center space-sm">
                   <ShoppingCart className="h-6 w-6" />
                   Udostępniony koszyk
                 </CardTitle>
@@ -154,7 +154,7 @@ export default function SharedCartPage() {
                     <User className="h-4 w-4" />
                     Utworzył: <span className="font-medium">{cartData.metadata.createdByName}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center space-sm text-sm">
                     <Calendar className="h-4 w-4" />
                     {createdDate.toLocaleDateString('pl-PL', { 
                       year: 'numeric', 
@@ -162,7 +162,7 @@ export default function SharedCartPage() {
                       day: 'numeric' 
                     })}
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center space-sm text-sm">
                     <Eye className="h-4 w-4" />
                     Wyświetlenia: {cartData.views}
                   </div>
@@ -175,23 +175,23 @@ export default function SharedCartPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="bg-muted rounded-lg p-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 space-md">
+              <div className="bg-muted rounded-md p-compact">
                 <div className="text-2xl font-bold">{cartData.metadata.itemCount}</div>
                 <div className="text-xs text-muted-foreground">Produktów</div>
               </div>
-              <div className="bg-muted rounded-lg p-4">
+              <div className="bg-muted rounded-md p-compact">
                 <div className="text-2xl font-bold">{cartData.metadata.totalAmount.toFixed(2)} zł</div>
                 <div className="text-xs text-muted-foreground">Wartość produktów</div>
               </div>
-              <div className="bg-primary/10 rounded-lg p-4 col-span-2 md:col-span-1">
+              <div className="bg-primary/10 rounded-md p-compact col-span-2 md:col-span-1">
                 <div className="text-2xl font-bold text-primary">{cartData.metadata.totalWithShipping.toFixed(2)} zł</div>
                 <div className="text-xs text-muted-foreground">Z dostawą</div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row space-sm">
               <Button onClick={addAllToMyCart} className="flex-1">
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Dodaj wszystko do mojego koszyka
@@ -212,10 +212,10 @@ export default function SharedCartPage() {
           <h2 className="text-lg font-semibold">Produkty w koszyku</h2>
           {cartData.items.map((item, index) => (
             <Card key={index}>
-              <CardContent className="p-4">
-                <div className="flex gap-4">
+              <CardContent className="p-compact">
+                <div className="flex space-md">
                   {/* Image */}
-                  <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-muted">
+                  <div className="relative w-24 h-24 flex-shrink-0 rounded-md overflow-hidden bg-muted">
                     {item.productImage && (
                       <img
                         src={item.productImage}
@@ -228,7 +228,7 @@ export default function SharedCartPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium line-clamp-2 mb-2">{item.productName}</h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center space-md text-sm text-muted-foreground">
                       <span>Ilość: {item.quantity}</span>
                       <span className="font-semibold text-foreground">{item.productPrice.toFixed(2)} zł</span>
                     </div>
@@ -240,7 +240,7 @@ export default function SharedCartPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col space-sm">
                     <Button
                       variant="outline"
                       size="sm"

@@ -16,7 +16,7 @@ export function DealsList({ deals }: DealsListProps) {
 
   return (
     <div>
-      <div className="flex justify-end gap-2 mb-4">
+      <div className="flex justify-end space-sm mb-4">
         <Button variant={view === 'grid' ? 'secondary' : 'ghost'} size="icon" onClick={() => setView('grid')}>
           <Grid className="h-4 w-4" />
           <span className="sr-only">Grid View</span>
@@ -28,13 +28,13 @@ export function DealsList({ deals }: DealsListProps) {
       </div>
 
       {view === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 space-lg">
           {deals.map((deal) => (
             <DealCard key={deal.id} deal={deal} />
           ))}
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col space-md">
           {deals.map((deal) => (
             <DealListCard key={deal.id} deal={deal} />
           ))}

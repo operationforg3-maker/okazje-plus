@@ -139,7 +139,7 @@ export function NotificationSettingsCard() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center space-sm">
             <BellOff className="h-5 w-5" />
             Powiadomienia
           </CardTitle>
@@ -154,7 +154,7 @@ export function NotificationSettingsCard() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center space-sm">
           <Bell className="h-5 w-5" />
           Powiadomienia
         </CardTitle>
@@ -164,18 +164,18 @@ export function NotificationSettingsCard() {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Permission Status */}
-        <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div className="flex items-center justify-between p-card border rounded-md">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center space-sm">
               <p className="font-medium">Status powiadomień</p>
               {permission === 'granted' && (
-                <Badge variant="default" className="gap-1">
+                <Badge variant="default" className="space-sm">
                   <Check className="h-3 w-3" />
                   Aktywne
                 </Badge>
               )}
               {permission === 'denied' && (
-                <Badge variant="destructive" className="gap-1">
+                <Badge variant="destructive" className="space-sm">
                   <X className="h-3 w-3" />
                   Zablokowane
                 </Badge>
@@ -216,9 +216,9 @@ export function NotificationSettingsCard() {
                 return (
                   <div
                     key={topic.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors duration-150"
+                    className="flex items-center justify-between p-compact border rounded-md hover:bg-accent/50 transition-colors-fast"
                   >
-                    <div className="flex items-start gap-3 flex-1">
+                    <div className="flex items-start space-md flex-1">
                       {IconComponent && <IconComponent className="h-5 w-5 text-primary mt-0.5" />}
                       <div>
                         <Label htmlFor={`topic-${topic.id}`} className="font-medium cursor-pointer">
