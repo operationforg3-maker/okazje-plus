@@ -37,51 +37,61 @@ export async function POST(req: NextRequest) {
       try {
         const data = doc.data() || {};
         
-        // Skip if already has good PL translations
+        // Skip if already has good translations in all 3 languages
         const hasPL = data.title?.pl && data.fullDescription?.pl && data.fullDescription?.pl.length > 100;
-        if (hasPL && !body.force) {
+        const hasEN = data.title?.en && data.fullDescription?.en && data.fullDescription?.en.length > 100;
+        const hasDE = data.title?.de && data.fullDescription?.de && data.fullDescription?.de.length > 100;
+        if (hasPL && hasEN && hasDE && !body.force) {
           skippedCount++;
           continue;
         }
 
-        const enTitle = data.title?.en || data.name || '';
-        const enDesc = data.fullDescription?.en || data.description || '';
-        const enShortDesc = data.shortDescription?.en || enDesc.slice(0, 200);
+        const sourceTitle = data.title?.en || data.name || '';
+        const sourceDesc = data.fullDescription?.en || data.description || '';
+        const sourceShortDesc = data.shortDescription?.en || sourceDesc.slice(0, 200);
         const features = data.features || [];
 
-        if (!enTitle || !enDesc) {
+        if (!sourceTitle || !sourceDesc) {
           skippedCount++;
           continue;
         }
 
-        // AI Translation prompt
-        const prompt = `Jesteś ekspertem tłumaczeń e-commerce PL. Przetłumacz poniższy produkt z EN na PL z optymalizacją SEO.
+        // AI Translation prompt for PL, EN, DE
+        const prompt = `You are an expert e-commerce translator. Translate the following product to POLISH (PL), ENGLISH (EN), and GERMAN (DE) with SEO optimization.
 
-TYTUŁ EN: ${enTitle}
+SOURCE TITLE: ${sourceTitle}
 
-OPIS KRÓTKI EN: ${enShortDesc}
+SOURCE SHORT DESCRIPTION: ${sourceShortDesc}
 
-OPIS PEŁNY EN: ${enDesc}
+SOURCE FULL DESCRIPTION: ${sourceDesc}
 
-CECHY EN: ${features.join(', ')}
+SOURCE FEATURES: ${features.join(', ')}
 
-WYMAGANIA:
-1. Tytuł PL: profesjonalny, 50-70 znaków, z kluczowymi słowami (bez CAPS LOCK, bez emoji)
-2. Opis krótki PL: 2-3 zdania, korzyści dla użytkownika (120-180 znaków)
-3. Opis pełny PL: szczegółowy, 300-600 znaków, wzmianki o parametrach i zastosowaniu, naturalny język (nie clickbait)
-4. Cechy PL: tablica 5-8 cech w formie krótkich fraz (np. "Szybkie ładowanie 30W", "Wodoodporność IP68")
+REQUIREMENTS:
+1. Title (50-70 chars): professional, with keywords, no CAPS LOCK, no emoji
+2. Short description (120-180 chars): 2-3 sentences, user benefits
+3. Full description (300-600 chars): detailed, parameters and use cases, natural language (no clickbait)
+4. Features (5-8 items): short phrases like "Fast charging 30W", "Waterproof IP68"
 
-Zwróć JSON:
+Return JSON:
 {
   "titlePL": "...",
   "shortDescriptionPL": "...",
   "fullDescriptionPL": "...",
-  "featuresPL": ["cecha1", "cecha2", ...]
+  "featuresPL": ["cecha1", "cecha2", ...],
+  "titleEN": "...",
+  "shortDescriptionEN": "...",
+  "fullDescriptionEN": "...",
+  "featuresEN": ["feature1", "feature2", ...],
+  "titleDE": "...",
+  "shortDescriptionDE": "...",
+  "fullDescriptionDE": "...",
+  "featuresDE": ["merkmal1", "merkmal2", ...]
 }`;
 
         const response = await generateText(prompt, {
           temperature: 0.3,
-          maxTokens: 1500,
+          maxTokens: 2500,
         });
 
         const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -95,22 +105,26 @@ Zwróć JSON:
 
         const updates: any = {
           title: {
-            en: enTitle,
-            pl: translation.titlePL || enTitle,
+            pl: translation.titlePL || sourceTitle,
+            en: translation.titleEN || sourceTitle,
+            de: translation.titleDE || sourceTitle,
           },
           shortDescription: {
-            en: enShortDesc,
-            pl: translation.shortDescriptionPL || enShortDesc,
+            pl: translation.shortDescriptionPL || sourceShortDesc,
+            en: translation.shortDescriptionEN || sourceShortDesc,
+            de: translation.shortDescriptionDE || sourceShortDesc,
           },
           fullDescription: {
-            en: enDesc,
-            pl: translation.fullDescriptionPL || enDesc,
+            pl: translation.fullDescriptionPL || sourceDesc,
+            en: translation.fullDescriptionEN || sourceDesc,
+            de: translation.fullDescriptionDE || sourceDesc,
           },
           features: translation.featuresPL || features,
           'ai.translation': {
             translatedAt: new Date().toISOString(),
             model: 'gemini-2.0-flash',
-            version: 2,
+            version: 3,
+            languages: ['pl', 'en', 'de'],
           },
           updatedAt: new Date().toISOString(),
         };

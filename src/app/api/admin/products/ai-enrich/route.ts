@@ -37,11 +37,11 @@ export async function POST(req: NextRequest) {
       try {
         const data = doc.data() || {};
         
-        // Skip if already has strong SEO enrichment
-        const hasEnrichment = data.seo?.metaTitle && 
-                              data.seo?.metaDescription && 
-                              data.ai?.enrichment?.keywords?.length > 5 &&
-                              data.ai?.enrichment?.version >= 2;
+        // Skip if already has strong SEO enrichment in all 3 languages
+        const hasEnrichment = data.seo?.pl?.metaTitle && 
+                              data.seo?.en?.metaTitle && 
+                              data.seo?.de?.metaTitle && 
+                              data.ai?.enrichment?.version >= 3;
         
         if (hasEnrichment && !body.force) {
           skippedCount++;
@@ -62,42 +62,60 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // AI SEO enrichment prompt
-        const prompt = `Jesteś ekspertem SEO dla e-commerce w Polsce. Zoptymalizuj poniższy produkt pod SEO i konwersję.
+        // AI SEO enrichment prompt for PL, EN, DE
+        const prompt = `You are an SEO expert for e-commerce. Optimize the following product for SEO and conversion in POLISH (PL), ENGLISH (EN), and GERMAN (DE).
 
-PRODUKT:
-Tytuł: ${titlePL}
-Opis: ${descPL}
-Cechy: ${features.join(', ')}
-Kategoria: ${category}
+PRODUCT:
+Title: ${titlePL}
+Description: ${descPL}
+Features: ${features.join(', ')}
+Category: ${category}
 
-ZADANIE:
-1. SEO Meta Title (50-60 znaków): konkretny, z kluczowym słowem, bez clickbaitu
-2. SEO Meta Description (140-160 znaków): przekonująca, z CTA, z korzyścią
-3. SEO Keywords (tablica 10-15 słów kluczowych): long-tail, intent-based, naturalne
-4. Image Hint (20-40 znaków): alt text dla głównego obrazka, opisowy
-5. Benefits (tablica 3-5 korzyści): user-focused, konkretne wartości (nie ogólniki)
-6. Tags (tablica 5-8 tagów): kategorie, typy, cechy charakterystyczne
+TASK - Generate for EACH language (PL, EN, DE):
+1. SEO Meta Title (50-60 chars): specific, with main keyword, no clickbait
+2. SEO Meta Description (140-160 chars): compelling, with CTA, value proposition
+3. SEO Keywords (10-15 keywords): long-tail, intent-based, natural
+4. Image Hint (20-40 chars): descriptive alt text for main image
+5. Benefits (3-5 items): user-focused, concrete values (not generic)
+6. Tags (5-8 tags): categories, types, characteristics
 
-ZASADY:
-- Język polski, naturalny, profesjonalny
-- Bez CAPS LOCK, bez emoji, bez wykrzykników nadmiaru
-- Skoncentruj się na korzyściach i zastosowaniu (nie tylko na parametrach)
-- Keywords: mix ogólnych i long-tail (np. "słuchawki bluetooth", "słuchawki do biegania wodoodporne")
+RULES:
+- Natural, professional language for each locale
+- No CAPS LOCK, no emoji, no excessive exclamation marks
+- Focus on benefits and use cases (not just specs)
+- Keywords: mix general and long-tail (e.g., "bluetooth headphones", "waterproof running headphones")
 
-Zwróć JSON:
+Return JSON:
 {
-  "metaTitle": "...",
-  "metaDescription": "...",
-  "keywords": ["keyword1", "keyword2", ...],
-  "imageHint": "...",
-  "benefits": ["korzyść 1", "korzyść 2", ...],
-  "tags": ["tag1", "tag2", ...]
+  "pl": {
+    "metaTitle": "...",
+    "metaDescription": "...",
+    "keywords": ["keyword1", "keyword2", ...],
+    "imageHint": "...",
+    "benefits": ["korzyść 1", "korzyść 2", ...],
+    "tags": ["tag1", "tag2", ...]
+  },
+  "en": {
+    "metaTitle": "...",
+    "metaDescription": "...",
+    "keywords": ["keyword1", "keyword2", ...],
+    "imageHint": "...",
+    "benefits": ["benefit 1", "benefit 2", ...],
+    "tags": ["tag1", "tag2", ...]
+  },
+  "de": {
+    "metaTitle": "...",
+    "metaDescription": "...",
+    "keywords": ["keyword1", "keyword2", ...],
+    "imageHint": "...",
+    "benefits": ["vorteil 1", "vorteil 2", ...],
+    "tags": ["tag1", "tag2", ...]
+  }
 }`;
 
         const response = await generateText(prompt, {
           temperature: 0.4,
-          maxTokens: 1200,
+          maxTokens: 2500,
         });
 
         const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -111,20 +129,44 @@ Zwróć JSON:
 
         const updates: any = {
           seo: {
-            metaTitle: enrichment.metaTitle?.slice(0, 60) || titlePL.slice(0, 60),
-            metaDescription: enrichment.metaDescription?.slice(0, 160) || descPL.slice(0, 160),
-            keywords: enrichment.keywords || [],
-            aiVersion: 2,
+            pl: {
+              metaTitle: enrichment.pl?.metaTitle?.slice(0, 60) || titlePL.slice(0, 60),
+              metaDescription: enrichment.pl?.metaDescription?.slice(0, 160) || descPL.slice(0, 160),
+              keywords: enrichment.pl?.keywords || [],
+            },
+            en: {
+              metaTitle: enrichment.en?.metaTitle?.slice(0, 60) || titlePL.slice(0, 60),
+              metaDescription: enrichment.en?.metaDescription?.slice(0, 160) || descPL.slice(0, 160),
+              keywords: enrichment.en?.keywords || [],
+            },
+            de: {
+              metaTitle: enrichment.de?.metaTitle?.slice(0, 60) || titlePL.slice(0, 60),
+              metaDescription: enrichment.de?.metaDescription?.slice(0, 160) || descPL.slice(0, 160),
+              keywords: enrichment.de?.keywords || [],
+            },
+            aiVersion: 3,
             enrichedAt: new Date().toISOString(),
           },
-          imageHint: enrichment.imageHint || titlePL.slice(0, 40),
-          benefits: enrichment.benefits || [],
-          tags: enrichment.tags || [],
+          imageHint: {
+            pl: enrichment.pl?.imageHint || titlePL.slice(0, 40),
+            en: enrichment.en?.imageHint || titlePL.slice(0, 40),
+            de: enrichment.de?.imageHint || titlePL.slice(0, 40),
+          },
+          benefits: {
+            pl: enrichment.pl?.benefits || [],
+            en: enrichment.en?.benefits || [],
+            de: enrichment.de?.benefits || [],
+          },
+          tags: {
+            pl: enrichment.pl?.tags || [],
+            en: enrichment.en?.tags || [],
+            de: enrichment.de?.tags || [],
+          },
           'ai.enrichment': {
             enrichedAt: new Date().toISOString(),
             model: 'gemini-2.0-flash',
-            version: 2,
-            keywords: enrichment.keywords || [],
+            version: 3,
+            languages: ['pl', 'en', 'de'],
           },
           updatedAt: new Date().toISOString(),
         };
