@@ -272,14 +272,14 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
         {/* Content Area */}
         <div className={cn(
-          "flex flex-col flex-1 space-y-3",
-          viewMode === 'list' ? "py-2" : "p-4"
+          "flex flex-col flex-1 space-y-4",
+          viewMode === 'list' ? "py-2" : "p-5"
         )}>
           
           {/* Title (AI-Curated Clean Title) */}
           <Link href={productUrl} onClick={handleDetailClick}>
             <h3 className={cn(
-              "text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-primary dark:hover:text-primary transition-colors",
+              "text-base font-semibold text-gray-900 dark:text-gray-100 hover:text-primary dark:hover:text-primary transition-colors leading-snug",
               viewMode === 'list' ? "line-clamp-3" : "line-clamp-2"
             )}>
               {product.title?.pl || product.title?.en || product.title?.de || product.name || 'Produkt'}
@@ -288,32 +288,32 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
           {/* Enhanced Tags Row */}
           {(isHotDeal || isBestsellerTag || isNewArrival || hasVariants || hasRealShipping) && (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {isHotDeal && (
-                <Badge variant="destructive" className="text-xs">
+                <Badge variant="destructive" className="text-xs font-semibold px-2.5 py-0.5">
                   <Flame className="w-3 h-3 mr-1" />
                   Hot Deal
                 </Badge>
               )}
               {isBestsellerTag && (
-                <Badge variant="default" className="text-xs">
+                <Badge variant="default" className="text-xs font-semibold px-2.5 py-0.5">
                   <TrendingUp className="w-3 h-3 mr-1" />
                   Bestseller
                 </Badge>
               )}
               {isNewArrival && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-semibold px-2.5 py-0.5">
                   <Sparkles className="w-3 h-3 mr-1" />
                   Nowość
                 </Badge>
               )}
               {hasVariants && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5">
                   {variants.length} wariantów
                 </Badge>
               )}
               {hasRealShipping && shippingInfo.cost > 0 && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5">
                   <Truck className="w-3 h-3 mr-1" />
                   {shippingInfo.cost} PLN
                 </Badge>
@@ -323,34 +323,34 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
           {/* Rating & Social Proof */}
           {productRating > 0 && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <span className="text-base font-bold text-gray-900 dark:text-gray-100">
                   {Number.isFinite(productRating) ? productRating.toFixed(1) : '—'}
                 </span>
               </div>
               
               {ratingCount > 0 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                   ({ratingCount.toLocaleString()} ocen)
                 </span>
               )}
 
               {ordersCount > 0 && (
                 <>
-                  <span className="text-gray-300 dark:text-gray-600">•</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-gray-400 dark:text-gray-600">•</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                     {ordersCount.toLocaleString()} zamówień
                   </span>
                 </>
               )}
 
-              {commentsCount >= 0 && (
+              {commentsCount > 0 && (
                 <>
-                  <span className="text-gray-300 dark:text-gray-600">•</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3" />
+                  <span className="text-gray-400 dark:text-gray-600">•</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1.5 font-medium">
+                    <MessageSquare className="w-4 h-4" />
                     {commentsCount} opinii
                   </span>
                 </>
@@ -438,61 +438,61 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               ======================================== */}
           <div className="bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/30 dark:to-primary/40 dark:bg-gray-800/50 rounded-lg p-5 border-2 border-primary/20 dark:border-primary/60">
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground dark:text-gray-300 mb-3">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground dark:text-gray-300 mb-4">
+              <div className="flex items-center gap-2.5">
                 {hasDiscount && (
-                  <Badge className="badge-hot badge-trust px-2 py-1">
-                    <TrendingDown className="w-3 h-3 mr-1" />
+                  <Badge className="badge-hot badge-trust px-3 py-1.5 text-sm font-bold">
+                    <TrendingDown className="w-4 h-4 mr-1" />
                     -{discountPercent}%
                   </Badge>
                 )}
                 {originalAmount && (
-                  <span className="line-through">
+                  <span className="line-through text-base font-medium">
                     {formatPrice(originalAmount, currency)}
                   </span>
                 )}
               </div>
 
               {shipsFromEU ? (
-                <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
-                  <Truck className="w-3 h-3" />
+                <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-sm">
+                  <Truck className="w-4 h-4" />
                   Wysyłka z Europy
                 </div>
               ) : originBadgeLabel ? (
-                <div className="flex items-center gap-1 font-medium text-xs">
-                  <Package className="w-3 h-3" />
+                <div className="flex items-center gap-1.5 font-semibold text-sm">
+                  <Package className="w-4 h-4" />
                   {originBadgeLabel}
                 </div>
               ) : null}
             </div>
             
             {/* Main Price - BIG & BOLD */}
-            <div className="flex items-baseline gap-2 mb-1">
-              <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="text-4xl font-black text-gray-900 dark:text-white">
                 {formatPrice(totalPrice, currency)}
               </span>
-              <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+              <span className="text-base text-gray-600 dark:text-gray-400 font-semibold">
                 z dostawą
               </span>
             </div>
 
             {/* Price Breakdown (Item + Shipping) */}
             {!hasFreeShipping && shippingCost > 0 && (
-              <div className="text-xs text-gray-500 dark:text-gray-300 space-y-0.5">
+              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1 mt-2">
                 <div className="flex justify-between">
-                  <span>Produkt:</span>
-                  <span className="font-medium">{formatPrice(itemPrice, currency)}</span>
+                  <span className="font-medium">Produkt:</span>
+                  <span className="font-semibold">{formatPrice(itemPrice, currency)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Dostawa:</span>
-                  <span className="font-medium">{formatPrice(shippingCost, currency)}</span>
+                  <span className="font-medium">Dostawa:</span>
+                  <span className="font-semibold">{formatPrice(shippingCost, currency)}</span>
                 </div>
               </div>
             )}
 
             {/* Free Shipping Callout */}
             {hasFreeShipping && (
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-sm font-medium mt-1">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-base font-bold mt-2">
                 <Check className="w-4 h-4" />
                 <span>Dostawa gratis!</span>
               </div>
@@ -500,8 +500,8 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
             {/* Price Guarantee Info */}
             {hasPriceGuarantee && typeof product.price === 'object' && product.price.lowestPrice30Days && (
-              <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 text-xs mt-2">
-                <Info className="w-3 h-3" />
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm mt-2.5 font-medium">
+                <Info className="w-4 h-4" />
                 <span>
                   Najniższa cena z 30 dni: {formatPrice(product.price.lowestPrice30Days, currency)}
                 </span>
@@ -520,12 +520,12 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               onClick={handleAddToCart}
               disabled={isAddingToCart || inCart}
               className={cn(
-                "flex-1 font-medium transition-all",
+                "flex-1 font-semibold transition-all h-10 text-sm",
                 inCart 
                   ? "bg-green-500 hover:bg-green-600 text-white" 
                   : "bg-primary hover:bg-primary/90"
               )}
-              size="sm"
+              size="default"
             >
               {isAddingToCart ? (
                 <>
