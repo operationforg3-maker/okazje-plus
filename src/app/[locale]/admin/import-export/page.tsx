@@ -216,34 +216,44 @@ export default function AdminImportExportPage() {
 
   return (
     <div className="space-y-6">
-      {/* Podsumowanie */}
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          🔄 Import & Export
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Kompletna konsola do zarządzania importami, eksportami i zadaniami w tle
+        </p>
+      </div>
+
+      {/* Dashboard Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Produkty — Approved</CardTitle>
-            <CardDescription>Opublikowane w serwisie</CardDescription>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">Produkty — Approved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{summary.products?.approved ?? '—'}</div>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{summary.products?.approved ?? '—'}</div>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Opublikowane w serwisie</p>
             <Sparkline values={(summary.recentJobs||[]).map((j:any)=> j.logs?.reduce((acc:number,l:any)=>acc + (l?.stages?.saved||0),0) || 0)} />
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Produkty — Draft</CardTitle>
-            <CardDescription>Oczekujące na obróbkę</CardDescription>
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-orange-900 dark:text-orange-100">Produkty — Draft</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{summary.products?.draft ?? '—'}</div>
+            <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{summary.products?.draft ?? '—'}</div>
+            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">Oczekujące na obróbkę</p>
             <Sparkline values={(summary.recentJobs||[]).map((j:any)=> (j.itemsCreated?.length||0))} />
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Ostatnie joby</CardTitle>
-            <CardDescription className="flex items-center gap-2">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">Ostatnie Joby (v2.1)</CardTitle>
+            <CardDescription className="flex items-center gap-2 text-xs mt-1">
               5 najnowszych
-              <select className="ml-auto border rounded px-2 py-1 h-8" value={jobsFilter} onChange={e=>setJobsFilter(e.target.value as any)}>
+              <select className="ml-auto border rounded px-2 py-1 h-7 text-xs" value={jobsFilter} onChange={e=>setJobsFilter(e.target.value as any)}>
                 <option value="all">Wszystkie</option>
                 <option value="running">Running</option>
                 <option value="queued">Queued</option>
@@ -252,20 +262,74 @@ export default function AdminImportExportPage() {
               </select>
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm space-y-1">
+          <CardContent className="text-xs space-y-1">
             {(summary.recentJobs || []).filter((j:any)=> jobsFilter==='all' ? true : j.status===jobsFilter).map((j: any) => (
               <div key={j.id} className="flex items-center justify-between">
-                <span className="truncate max-w-[60%]">{j.id}</span>
-                <Badge variant={j.status === 'completed' ? 'default' : (j.status === 'running' ? 'secondary' : 'outline')}>{j.status}</Badge>
+                <span className="truncate max-w-[60%] font-mono text-purple-700 dark:text-purple-300">{j.id?.slice(0, 8)}...</span>
+                <Badge variant={j.status === 'completed' ? 'default' : (j.status === 'running' ? 'secondary' : 'outline')} className="text-xs">{j.status}</Badge>
               </div>
             ))}
           </CardContent>
         </Card>
       </div>
-      <div className="flex items-center justify-between">
-        <h1 className="font-headline text-2xl font-bold">Import & Export — Konsola</h1>
-        <Badge variant="secondary">Nowe</Badge>
+
+      {/* Top Tools Shortcuts */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-blue-300 dark:border-blue-700" onClick={() => { document.querySelector('[data-tool="fetch-save"]')?.scrollIntoView({behavior:'smooth'}); }}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              ⚡ Fetch & Save
+              <Badge className="ml-auto text-xs">v1.8</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-muted-foreground">Pobierz produkty z marketplaces i zapisz jako drafty — najczęściej używane narzędzie</p>
+            <Button variant="outline" size="sm" className="w-full">Otwórz Narzędzie</Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-amber-300 dark:border-amber-700" onClick={() => { document.querySelector('[data-tool="full-import"]')?.scrollIntoView({behavior:'smooth'}); }}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              🔄 Pełny Import
+              <Badge className="ml-auto text-xs">v1.9</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-muted-foreground">Kompletny cykl: pobierz, kategoryzuj, przetłumacz, ubogać — od zera do hero</p>
+            <Button variant="outline" size="sm" className="w-full">Otwórz Narzędzie</Button>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 border-green-300 dark:border-green-700" onClick={() => { document.querySelector('[data-tool="enhance"]')?.scrollIntoView({behavior:'smooth'}); }}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              ✨ Ubogacanie
+              <Badge className="ml-auto text-xs">v1.5</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-muted-foreground">Dodaj opisy, cechy, obrazki do istniejących produktów — ostatni krok</p>
+            <Button variant="outline" size="sm" className="w-full">Otwórz Narzędzie</Button>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Jobs Monitor - TOP PRIORITY (moved here) */}
+      <Card className="border-2 border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            📋 Monitor Zadań Importu (v2.1) 
+            <Badge variant="outline" className="ml-auto">Top Priority</Badge>
+          </CardTitle>
+          <CardDescription>Real-time tracking zadań z auto-refresh co 5 sekund</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <JobsMonitor />
+        </CardContent>
+      </Card>
+
+      <Separator />
 
       {/* Akcje krytyczne */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -312,7 +376,7 @@ export default function AdminImportExportPage() {
 
       {/* Import — etapy (MVP: linki / placeholdery) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card data-tool="full-import">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4"/> Pełny import (5 etapów)</CardTitle>
             <CardDescription>Uruchom nowy pipeline importu</CardDescription>
@@ -338,7 +402,7 @@ export default function AdminImportExportPage() {
             </Button>
           </CardContent>
         </Card>
-        <Card>
+        <Card data-tool="fetch-save">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Upload className="h-4 w-4"/> Fetch & Save (draft)</CardTitle>
             <CardDescription>Pierwszy etap: pobierz i zapisz szkice</CardDescription>
@@ -400,9 +464,9 @@ export default function AdminImportExportPage() {
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card data-tool="enhance">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Wrench className="h-4 w-4"/> Dedupe / Enrich / Translate</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Wrench className="h-4 w-4"/> Tłumaczenie & Ubogacanie</CardTitle>
             <CardDescription>Operacje na zapisanych szkicach</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
