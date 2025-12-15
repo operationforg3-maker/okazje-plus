@@ -125,7 +125,10 @@ export async function enrichProducts(
             ? Math.round((product.rating / 5) * 100 * (Math.min(product.orders, 1000) / 1000) * 100) / 100
             : 50,
         },
-      };
+        
+        // Pass through raw product data for stageSave (includes enhanced data from stageEnhance)
+        _rawProduct: product,
+      } as any;
       
       enriched.push(enrichedProduct);
       processed++;

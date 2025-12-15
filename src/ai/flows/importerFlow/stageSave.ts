@@ -207,6 +207,9 @@ export async function saveProductsToFirestore(
         
         console.log(`  🖼️  Gallery: ${gallery.length} images`);
         
+        // Extract enhanced data if available (from stageEnhance)
+        const rawProduct = (product as any)._rawProduct || {};
+        
         const productData = {
           name: product.titlePL || product.titleNormalizedEN,
           title: titleLocalized,
@@ -229,6 +232,14 @@ export async function saveProductsToFirestore(
           discountPercent: product.discount,
           currency: 'PLN',
           importJobId: finalConfig.jobId,
+          // NEW: Store enhanced data
+          descriptionHtml: rawProduct.descriptionHtml || undefined,
+          specifications: rawProduct.attributes || rawProduct.specifications || undefined,
+          variants: rawProduct.variants || undefined,
+          warehouse: rawProduct.warehouse || undefined,
+          deliveryTime: rawProduct.deliveryTime || undefined,
+          freeShipping: rawProduct.freeShipping || false,
+          videoUrl: rawProduct.videoUrl || undefined,
           metadata: {
             source: 'aliexpress' as const,
             originalId: product.originalId,
@@ -238,6 +249,8 @@ export async function saveProductsToFirestore(
               product.quality.descriptionQuality + 
               product.quality.priceReliability
             ) / 3),
+            enhanced: rawProduct._enhanced || false,
+            enhancedAt: rawProduct._enhancedAt || undefined,
           },
           status: 'approved' as const,
           ratingCard: {

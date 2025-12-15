@@ -16,6 +16,7 @@
  */
 
 import { fetchProductsFromAliexpress, fetchProductsFromConvertiser } from './stageFetch';
+import { enhanceProductDetails } from './stageEnhance';
 import { deduplicateProducts, sanitizeProducts } from './stageDedupe';
 import { enrichProducts } from './stageEnrich';
 import { translateProducts } from './stageTranslate';
@@ -141,12 +142,29 @@ export async function runProductImportPipeline(
       };
     }
     
+    // STAGE 1.5: ENHANCE (Pobierz szczegółowe dane produktów)
+    console.log(`[ProductImporter] Stage 1.5: ENHANCE - Fetching detailed product info`);
+    await logToJob(jobId, `Stage 1.5: Enhancing with detailed data...`);
+    
+    const enhanced = await enhanceProductDetails(fetched, {
+      name: 'enhance',
+      batchSize: 10,
+      delayBetweenItems: 300,
+      delayBetweenBatches: 1000,
+      maxRetries: 2,
+      siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002',
+      skipIfHasDescription: false, // Always fetch details
+    });
+    
+    console.log(`[ProductImporter] ✅ Enhanced: ${enhanced.length} products with detailed data`);
+    await logToJob(jobId, `Stage 1.5: Enhanced ${enhanced.length} products`);
+    
     // STAGE 2: DEDUPE
     console.log(`[ProductImporter] Stage 2: DEDUPLICATE & SANITIZE`);
     await logToJob(jobId, `Stage 2: Deduplicating...`);
     
     // Sanitize with relaxed rules
-    let deduplicated = sanitizeProducts(fetched);
+    let deduplicated = sanitizeProducts(enhanced);
     deduplicated = await deduplicateProducts(
       deduplicated,
       {

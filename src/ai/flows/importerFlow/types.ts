@@ -57,13 +57,24 @@ export interface AliExpressProduct {
   
   // Extra fields from API
   description?: string;
+  descriptionHtml?: string; // Full HTML description from /item endpoint
+  attributes?: any[]; // Technical specifications/attributes
+  specifications?: any[]; // Alias for attributes
+  variants?: any[]; // Product variants/SKUs
   images?: string[];
   categories?: string[];
+  warehouse?: string; // Shipping warehouse location
+  deliveryTime?: string; // Estimated delivery time
+  freeShipping?: boolean;
+  videoUrl?: string; // Product video if available
   shipping?: {
     cost: number;
     currency: string;
     estimatedDays: number;
   };
+  // Enhancement metadata
+  _enhanced?: boolean; // Flag if product was enhanced with /item data
+  _enhancedAt?: string; // Timestamp of enhancement
   [key: string]: any;
 }
 
