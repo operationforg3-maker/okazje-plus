@@ -227,6 +227,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /price_histories/{historyId} {
+      allow read: if true; // Public read for price history charts
+      allow write: if isAdmin();
+    }
+
     match /price_alerts/{alertId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
