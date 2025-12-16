@@ -35,7 +35,7 @@ interface SharedCartData {
   status: string;
 }
 
-export default function SharedCartPage() {
+function SharedCartPageContent() {
   const params = useParams();
   const shareId = params.id as string;
   const [cartData, setCartData] = useState<SharedCartData | null>(null);
@@ -260,4 +260,24 @@ export default function SharedCartPage() {
       </div>
     </div>
   );
+}
+export default function SharedCartPageWrapper() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Ładowanie...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <SharedCartPageContent />;
 }
