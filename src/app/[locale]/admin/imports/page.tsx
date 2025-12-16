@@ -344,9 +344,9 @@ export default function ImportsPage() {
             {!loadingRuns && runs.length === 0 && <p className="text-sm text-gray-500">{t("listCard.empty")}</p>}
             <div className="space-y-2 max-h-80 overflow-auto pr-1">
               {runs && runs.length > 0 ? (
-                runs.map((run) => (
+                runs.map((run, idx) => (
                   <button
-                    key={run?.id || Math.random()}
+                    key={run?.id ?? `run-${run?.startedAt ?? ''}-${run?.source ?? ''}-${idx}`}
                     onClick={() => run?.id && loadRunDetail(run.id)}
                     className={`w-full text-left border rounded-md px-3 py-2 hover:border-primary transition ${
                       selectedRun?.id === run?.id ? "border-primary bg-primary/5" : "border-gray-200"
