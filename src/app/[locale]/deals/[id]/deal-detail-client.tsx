@@ -107,11 +107,19 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
   const [voteCount, setVoteCount] = useState(deal.voteCount);
   const [userVote, setUserVote] = useState<1 | -1 | null>(null);
   const [isVoting, setIsVoting] = useState(false);
-  const [formattedPrice, setFormattedPrice] = useState<string | null>(null);
-  const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
-  const [formattedSavings, setFormattedSavings] = useState<string | null>(null);
-  const [formattedMinOrder, setFormattedMinOrder] = useState<string | null>(null);
-  const [discount, setDiscount] = useState<number | null>(null);
+  const [priceData, setPriceData] = useState<{
+    formattedPrice: string | null;
+    formattedOriginal: string | null;
+    formattedSavings: string | null;
+    formattedMinOrder: string | null;
+    discount: number | null;
+  }>({
+    formattedPrice: null,
+    formattedOriginal: null,
+    formattedSavings: null,
+    formattedMinOrder: null,
+    discount: null,
+  });
   const { addToComparison } = useComparison();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const [activeTab, setActiveTab] = useState<'discussion' | 'specifications'>('discussion');
@@ -119,26 +127,35 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
   // Format prices on client to fix Intl.NumberFormat hydration mismatch
   useEffect(() => {
     const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
-    setFormattedPrice(formatted);
+    
+    let formattedOrig: string | null = null;
+    let calculatedDiscount: number | null = null;
+    let savings: string | null = null;
+    let minOrder: string | null = null;
     
     if (typeof deal.originalPrice === 'number') {
-      const formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
-      setFormattedOriginal(formattedOrig);
+      formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
       
       if (deal.originalPrice > 0) {
-        setDiscount(Math.round(100 - (deal.price / deal.originalPrice) * 100));
+        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
       }
       
       if (deal.originalPrice > deal.price) {
-        const savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
-        setFormattedSavings(savings);
+        savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
       }
     }
     
     if (typeof deal.minOrderValue === 'number') {
-      const minOrder = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.minOrderValue);
-      setFormattedMinOrder(minOrder);
+      minOrder = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.minOrderValue);
     }
+    
+    setPriceData({
+      formattedPrice: formatted,
+      formattedOriginal: formattedOrig,
+      formattedSavings: savings,
+      formattedMinOrder: minOrder,
+      discount: calculatedDiscount,
+    });
   }, [deal.price, deal.originalPrice, deal.minOrderValue]);
 
   // Update countdown every minute
@@ -363,9 +380,9 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                     Nowość
                   </Badge>
                 )}
-                {discount && discount > 0 && (
+                {priceData.discount && priceData.discount > 0 && (
                   <Badge variant="destructive" className="shadow-lg text-lg font-bold">
-                    -{discount}%
+                    -{priceData.discount}%
                   </Badge>
                 )}
                 {deal.verified && (
@@ -537,9 +554,9 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                 Cashback {deal.cashback.percentage ? `${deal.cashback.percentage}%` : `${deal.cashback.amount} PLN`}
               </Badge>
             )}
-            {deal.minOrderValue && formattedMinOrder && (
+            {deal.minOrderValue && priceData.formattedMinOrder && (
               <Badge variant="outline">
-                Min. zamówienie: {formattedMinOrder}
+                Min. zamówienie: {priceData.formattedMinOrder}
               </Badge>
             )}
             {deal.limitPerUser && (
@@ -579,17 +596,17 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-2 border-primary/20">
             <CardContent className="p-6">
               <div className="flex items-end gap-3 mb-2 flex-wrap">
-                <div className="text-4xl md:text-5xl font-bold text-primary">{formattedPrice || 'N/A'}</div>
-                {formattedOriginal && (
-                  <div className="text-xl text-muted-foreground line-through mb-1">{formattedOriginal}</div>
+                <div className="text-4xl md:text-5xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</div>
+                {priceData.formattedOriginal && (
+                  <div className="text-xl text-muted-foreground line-through mb-1">{priceData.formattedOriginal}</div>
                 )}
-                {typeof discount === 'number' && discount > 0 && (
-                  <Badge variant="destructive" className="mb-1 text-lg">-{discount}%</Badge>
+                {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                  <Badge variant="destructive" className="mb-1 text-lg">-{priceData.discount}%</Badge>
                 )}
               </div>
-              {formattedSavings && (
+              {priceData.formattedSavings && (
                 <p className="text-green-600 font-semibold mb-4 text-lg">
-                  💰 Oszczędzasz {formattedSavings}
+                  💰 Oszczędzasz {priceData.formattedSavings}
                 </p>
               )}
               <div className="flex gap-2">
