@@ -68,6 +68,13 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Import/Export Console', href: '/admin/import-export', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
       { title: 'AliExpress Import', href: '/admin/aliexpress-import', icon: Search, badge: 'AI', badgeVariant: 'secondary' },
+      { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
+    ],
+  },
+  {
+    title: 'Legacy Tools (Archived)',
+    icon: Download,
+    items: [
       { title: 'Allegro Import', href: '/admin/allegro-import', icon: Search },
       { title: 'Amazon Import', href: '/admin/amazon-import', icon: Search },
       { title: 'Convertiser Import', href: '/admin/convertiser-import', icon: Zap },
@@ -76,15 +83,8 @@ const navStructure: (NavItem | NavGroup)[] = [
       { title: 'Batch Import', href: '/admin/batch-import', icon: Layers },
       { title: 'Kombajn', href: '/admin/harvester', icon: Combine },
       { title: 'Auto-Import Kombajn', href: '/admin/auto-import', icon: Sparkles },
-      { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
-    ],
-  },
-  {
-    title: 'Legacy (Archived)',
-    icon: Download,
-    items: [
-      // Archived imports moved to main Import & Export section
-      // This section kept for reference/rollback
+      { title: 'Smart Import', href: '/admin/smart-import', icon: Zap },
+      { title: 'Deals Import', href: '/admin/deals-import', icon: Flame },
     ],
   },
   {
