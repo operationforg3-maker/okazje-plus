@@ -107,9 +107,39 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
   const [voteCount, setVoteCount] = useState(deal.voteCount);
   const [userVote, setUserVote] = useState<1 | -1 | null>(null);
   const [isVoting, setIsVoting] = useState(false);
+  const [formattedPrice, setFormattedPrice] = useState<string | null>(null);
+  const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
+  const [formattedSavings, setFormattedSavings] = useState<string | null>(null);
+  const [formattedMinOrder, setFormattedMinOrder] = useState<string | null>(null);
+  const [discount, setDiscount] = useState<number | null>(null);
   const { addToComparison } = useComparison();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const [activeTab, setActiveTab] = useState<'discussion' | 'specifications'>('discussion');
+
+  // Format prices on client to fix Intl.NumberFormat hydration mismatch
+  useEffect(() => {
+    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
+    setFormattedPrice(formatted);
+    
+    if (typeof deal.originalPrice === 'number') {
+      const formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
+      setFormattedOriginal(formattedOrig);
+      
+      if (deal.originalPrice > 0) {
+        setDiscount(Math.round(100 - (deal.price / deal.originalPrice) * 100));
+      }
+      
+      if (deal.originalPrice > deal.price) {
+        const savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
+        setFormattedSavings(savings);
+      }
+    }
+    
+    if (typeof deal.minOrderValue === 'number') {
+      const minOrder = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.minOrderValue);
+      setFormattedMinOrder(minOrder);
+    }
+  }, [deal.price, deal.originalPrice, deal.minOrderValue]);
 
   // Update countdown every minute
   useEffect(() => {
@@ -122,17 +152,6 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
     
     return () => clearInterval(interval);
   }, [deal.expiryDate]);
-
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
-  const original = typeof deal.originalPrice === 'number' 
-    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) 
-    : null;
-  const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 
-    ? Math.round(100 - (deal.price / deal.originalPrice) * 100) 
-    : null;
-  const savings = typeof deal.originalPrice === 'number' && deal.originalPrice > deal.price 
-    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price)
-    : null;
 
   const isHot = temperature >= 300;
   const isNew = (() => {
@@ -518,9 +537,9 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                 Cashback {deal.cashback.percentage ? `${deal.cashback.percentage}%` : `${deal.cashback.amount} PLN`}
               </Badge>
             )}
-            {deal.minOrderValue && (
+            {deal.minOrderValue && formattedMinOrder && (
               <Badge variant="outline">
-                Min. zamówienie: {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.minOrderValue)}
+                Min. zamówienie: {formattedMinOrder}
               </Badge>
             )}
             {deal.limitPerUser && (
@@ -560,17 +579,17 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
           <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-2 border-primary/20">
             <CardContent className="p-6">
               <div className="flex items-end gap-3 mb-2 flex-wrap">
-                <div className="text-4xl md:text-5xl font-bold text-primary">{price}</div>
-                {original && (
-                  <div className="text-xl text-muted-foreground line-through mb-1">{original}</div>
+                <div className="text-4xl md:text-5xl font-bold text-primary">{formattedPrice || 'N/A'}</div>
+                {formattedOriginal && (
+                  <div className="text-xl text-muted-foreground line-through mb-1">{formattedOriginal}</div>
                 )}
                 {typeof discount === 'number' && discount > 0 && (
                   <Badge variant="destructive" className="mb-1 text-lg">-{discount}%</Badge>
                 )}
               </div>
-              {savings && (
+              {formattedSavings && (
                 <p className="text-green-600 font-semibold mb-4 text-lg">
-                  💰 Oszczędzasz {savings}
+                  💰 Oszczędzasz {formattedSavings}
                 </p>
               )}
               <div className="flex gap-2">
