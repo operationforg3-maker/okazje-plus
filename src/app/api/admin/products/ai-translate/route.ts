@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const limit = Math.min(Math.max(Number(body?.limit ?? 50), 1), 500);
-    const { mainCategorySlug, subCategorySlug, subSubCategorySlug, status, force, force } = body || {};
+    const { mainCategorySlug, subCategorySlug, subSubCategorySlug, status, force } = body || {};
 
     // Create job in Firestore
     const jobRef = adminDb.collection('import_jobs').doc();
