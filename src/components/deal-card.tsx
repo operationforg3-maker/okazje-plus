@@ -108,42 +108,62 @@ export default function DealCard({ deal }: DealCardProps) {
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   
   // Format prices using state to fix Intl.NumberFormat hydration mismatch
-  const [formattedPrice, setFormattedPrice] = useState<string | null>(null);
-  const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
-  const [formattedSavings, setFormattedSavings] = useState<string | null>(null);
-  const [formattedShippingCost, setFormattedShippingCost] = useState<string | null>(null);
-  const [discount, setDiscount] = useState<number | null>(null);
+  const [priceData, setPriceData] = useState<{
+    formattedPrice: string | null;
+    formattedOriginal: string | null;
+    formattedSavings: string | null;
+    formattedShippingCost: string | null;
+    discount: number | null;
+  }>({
+    formattedPrice: null,
+    formattedOriginal: null,
+    formattedSavings: null,
+    formattedShippingCost: null,
+    discount: null,
+  });
 
-  // Hydration safety - sync locale on mount and format prices
+  // Hydration safety - sync locale on mount
   useEffect(() => {
     setIsMounted(true);
     setLocale(localeFromParams);
+  }, [localeFromParams]);
+
+  // Format prices on client only (separate effect to avoid multiple setState calls)
+  useEffect(() => {
+    if (!isMounted) return;
     
-    // Format prices on client only (Intl.NumberFormat is browser-dependent)
     const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
     const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
-    setFormattedPrice(formatted);
+    
+    let formattedOrig: string | null = null;
+    let calculatedDiscount: number | null = null;
+    let savings: string | null = null;
+    let shipping: string | null = null;
     
     if (typeof deal.originalPrice === 'number') {
-      const formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
-      setFormattedOriginal(formattedOrig);
+      formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
       
       if (deal.originalPrice > 0) {
-        setDiscount(Math.round(100 - (deal.price / deal.originalPrice) * 100));
+        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
       }
       
       if (deal.originalPrice > deal.price) {
-        const savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
-        setFormattedSavings(savings);
+        savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
       }
     }
     
-    // Format shipping cost
     if (typeof deal.shippingCost === 'number' && deal.shippingCost > 0) {
-      const shipping = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.shippingCost);
-      setFormattedShippingCost(shipping);
+      shipping = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.shippingCost);
     }
-  }, [localeFromParams, deal.price, deal.originalPrice, deal.shippingCost]);
+    
+    setPriceData({
+      formattedPrice: formatted,
+      formattedOriginal: formattedOrig,
+      formattedSavings: savings,
+      formattedShippingCost: shipping,
+      discount: calculatedDiscount,
+    });
+  }, [isMounted, deal.price, deal.originalPrice, deal.shippingCost]);
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   
@@ -643,8 +663,8 @@ export default function DealCard({ deal }: DealCardProps) {
               Magazyn: {warehouseInfo}
             </span>
           )}
-          {formattedShippingCost && (
-            <span>Koszt wysyłki: {formattedShippingCost}</span>
+          {priceData.formattedShippingCost && (
+            <span>Koszt wysyłki: {priceData.formattedShippingCost}</span>
           )}
           {deal.cashback && (
             <span className="font-semibold text-green-600">
@@ -715,13 +735,13 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xl font-bold text-primary">{formattedPrice || 'N/A'}</span>
-          {formattedOriginal && <span className="text-sm text-muted-foreground line-through">{formattedOriginal}</span>}
-          {typeof discount === 'number' && discount > 0 && (
-            <Badge variant="destructive">-{discount}%</Badge>
+          <span className="text-xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
+          {priceData.formattedOriginal && <span className="text-sm text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
+          {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+            <Badge variant="destructive">-{priceData.discount}%</Badge>
           )}
-          {formattedSavings && (
-            <span className="ml-auto text-xs font-semibold text-green-600">Oszczędzasz {formattedSavings}</span>
+          {priceData.formattedSavings && (
+            <span className="ml-auto text-xs font-semibold text-green-600">Oszczędzasz {priceData.formattedSavings}</span>
           )}
         </div>
 
