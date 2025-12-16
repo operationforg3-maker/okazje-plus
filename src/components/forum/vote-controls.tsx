@@ -25,10 +25,12 @@ export function VoteControls({
   className,
 }: VoteControlsProps) {
   const { user } = useAuth();
-  const [upvotes, setUpvotes] = useState(initialUpvotes);
-  const [downvotes, setDownvotes] = useState(initialDownvotes);
-  const [userVote, setUserVote] = useState<"up" | "down" | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [voteState, setVoteState] = useState({
+    upvotes: initialUpvotes,
+    downvotes: initialDownvotes,
+    userVote: null as "up" | "down" | null,
+    loading: false,
+  });
 
   // Załaduj preferencje głosowania użytkownika
   useEffect(() => {
@@ -40,7 +42,7 @@ export function VoteControls({
         const voteSnap = await getDoc(voteRef);
         
         if (voteSnap.exists()) {
-          setUserVote(voteSnap.data().vote as "up" | "down");
+          setVoteState(prev => ({ ...prev, userVote: voteSnap.data().vote as "up" | "down" }));
         }
       } catch (error) {
         console.error("Error loading user vote:", error);
@@ -56,30 +58,29 @@ export function VoteControls({
       return;
     }
 
-    if (loading) return;
+    if (voteState.loading) return;
 
-    setLoading(true);
+    setVoteState(prev => ({ ...prev, loading: true }));
 
     try {
       const postRef = doc(db, "forum_posts", postId);
       const voteRef = doc(db, `forum_posts/${postId}/votes`, user.uid);
 
       // Jeśli użytkownik już głosował
-      if (userVote) {
+      if (voteState.userVote) {
         // Jeśli kliknął ten sam głos, usuń głos
-        if (userVote === voteType) {
+        if (voteState.userVote === voteType) {
           await deleteDoc(voteRef);
           
           // Zmniejsz licznik
           if (voteType === "up") {
             await updateDoc(postRef, { upvotes: increment(-1) });
-            setUpvotes((prev) => Math.max(0, prev - 1));
+            setVoteState(prev => ({ ...prev, upvotes: Math.max(0, prev.upvotes - 1), userVote: null }));
           } else {
             await updateDoc(postRef, { downvotes: increment(-1) });
-            setDownvotes((prev) => Math.max(0, prev - 1));
+            setVoteState(prev => ({ ...prev, downvotes: Math.max(0, prev.downvotes - 1), userVote: null }));
           }
 
-          setUserVote(null);
           toast.success("Głos usunięty");
         } else {
           // Jeśli kliknął inny głos, zamień głos
@@ -90,23 +91,20 @@ export function VoteControls({
           });
 
           // Zmniejsz stary licznik i zwiększ nowy
-          if (userVote === "up") {
+          if (voteState.userVote === "up") {
             await updateDoc(postRef, {
               upvotes: increment(-1),
               downvotes: increment(1),
             });
-            setUpvotes((prev) => Math.max(0, prev - 1));
-            setDownvotes((prev) => prev + 1);
+            setVoteState(prev => ({ ...prev, upvotes: Math.max(0, prev.upvotes - 1), downvotes: prev.downvotes + 1, userVote: voteType }));
           } else {
             await updateDoc(postRef, {
               upvotes: increment(1),
               downvotes: increment(-1),
             });
-            setUpvotes((prev) => prev + 1);
-            setDownvotes((prev) => Math.max(0, prev - 1));
+            setVoteState(prev => ({ ...prev, upvotes: prev.upvotes + 1, downvotes: Math.max(0, prev.downvotes - 1), userVote: voteType }));
           }
 
-          setUserVote(voteType);
           toast.success("Głos zmieniony");
         }
       } else {
@@ -120,40 +118,39 @@ export function VoteControls({
         // Zwiększ licznik
         if (voteType === "up") {
           await updateDoc(postRef, { upvotes: increment(1) });
-          setUpvotes((prev) => prev + 1);
+          setVoteState(prev => ({ ...prev, upvotes: prev.upvotes + 1, userVote: voteType }));
         } else {
           await updateDoc(postRef, { downvotes: increment(1) });
-          setDownvotes((prev) => prev + 1);
+          setVoteState(prev => ({ ...prev, downvotes: prev.downvotes + 1, userVote: voteType }));
         }
 
-        setUserVote(voteType);
         toast.success("Głos dodany");
       }
     } catch (error) {
       console.error("Error voting:", error);
       toast.error("Błąd podczas głosowania");
     } finally {
-      setLoading(false);
+      setVoteState(prev => ({ ...prev, loading: false }));
     }
   };
 
-  const score = upvotes - downvotes;
+  const score = voteState.upvotes - voteState.downvotes;
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {/* Upvote */}
       <Button
-        variant={userVote === "up" ? "default" : "outline"}
+        variant={voteState.userVote === "up" ? "default" : "outline"}
         size="sm"
         onClick={() => handleVote("up")}
-        disabled={loading}
+        disabled={voteState.loading}
         className={cn(
           "gap-1",
-          userVote === "up" && "bg-green-600 hover:bg-green-700 text-white"
+          voteState.userVote === "up" && "bg-green-600 hover:bg-green-700 text-white"
         )}
       >
         <ThumbsUp className="h-4 w-4" />
-        <span className="text-xs font-medium">{upvotes}</span>
+        <span className="text-xs font-medium">{voteState.upvotes}</span>
       </Button>
 
       {/* Score */}
@@ -168,17 +165,17 @@ export function VoteControls({
 
       {/* Downvote */}
       <Button
-        variant={userVote === "down" ? "default" : "outline"}
+        variant={voteState.userVote === "down" ? "default" : "outline"}
         size="sm"
         onClick={() => handleVote("down")}
-        disabled={loading}
+        disabled={voteState.loading}
         className={cn(
           "gap-1",
-          userVote === "down" && "bg-red-600 hover:bg-red-700 text-white"
+          voteState.userVote === "down" && "bg-red-600 hover:bg-red-700 text-white"
         )}
       >
         <ThumbsDown className="h-4 w-4" />
-        <span className="text-xs font-medium">{downvotes}</span>
+        <span className="text-xs font-medium">{voteState.downvotes}</span>
       </Button>
     </div>
   );

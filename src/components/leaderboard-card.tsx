@@ -10,27 +10,26 @@ import { getLeaderboard } from '@/lib/gamification';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function LeaderboardCard() {
-  const [weeklyLeaderboard, setWeeklyLeaderboard] = useState<LeaderboardType | null>(null);
-  const [monthlyLeaderboard, setMonthlyLeaderboard] = useState<LeaderboardType | null>(null);
-  const [allTimeLeaderboard, setAllTimeLeaderboard] = useState<LeaderboardType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [leaderboards, setLeaderboards] = useState({
+    weekly: null as LeaderboardType | null,
+    monthly: null as LeaderboardType | null,
+    allTime: null as LeaderboardType | null,
+    loading: true,
+  });
 
   useEffect(() => {
     const fetchLeaderboards = async () => {
-      setLoading(true);
+      setLeaderboards(prev => ({ ...prev, loading: true }));
       try {
         const [weekly, monthly, allTime] = await Promise.all([
           getLeaderboard('weekly'),
           getLeaderboard('monthly'),
           getLeaderboard('all_time'),
         ]);
-        setWeeklyLeaderboard(weekly);
-        setMonthlyLeaderboard(monthly);
-        setAllTimeLeaderboard(allTime);
+        setLeaderboards({ weekly, monthly, allTime, loading: false });
       } catch (error) {
         console.error('Error fetching leaderboards:', error);
-      } finally {
-        setLoading(false);
+        setLeaderboards(prev => ({ ...prev, loading: false }));
       }
     };
 
@@ -55,7 +54,7 @@ export function LeaderboardCard() {
     );
   };
 
-  if (loading) {
+  if (leaderboards.loading) {
     return (
       <Card>
         <CardHeader>
@@ -88,13 +87,13 @@ export function LeaderboardCard() {
             <TabsTrigger value="all_time">Zawsze</TabsTrigger>
           </TabsList>
           <TabsContent value="weekly" className="mt-4">
-            {renderLeaderboardContent(weeklyLeaderboard)}
+            {renderLeaderboardContent(leaderboards.weekly)}
           </TabsContent>
           <TabsContent value="monthly" className="mt-4">
-            {renderLeaderboardContent(monthlyLeaderboard)}
+            {renderLeaderboardContent(leaderboards.monthly)}
           </TabsContent>
           <TabsContent value="all_time" className="mt-4">
-            {renderLeaderboardContent(allTimeLeaderboard)}
+            {renderLeaderboardContent(leaderboards.allTime)}
           </TabsContent>
         </Tabs>
       </CardContent>

@@ -35,18 +35,26 @@ import { Input } from '@/components/ui/input';
 export function SmartCartWidget() {
   const { items, itemCount, totalAmount, totalWithShipping, removeItem, updateQuantity, clearCart, finalizeCart, shareCart } = useSmartCart();
   const { getText } = useContentLanguage();
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const [generatedLinks, setGeneratedLinks] = useState<Array<{ product: any; affiliateLink: string }>>([]);
-  const [isSharing, setIsSharing] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  
+  // Batch finalize state
+  const [finalizeState, setFinalizeState] = useState({
+    isFinalizing: false,
+    generatedLinks: [] as Array<{ product: any; affiliateLink: string }>,
+  });
+
+  // Batch share dialog state
+  const [shareDialogState, setShareDialogState] = useState({
+    isShareDialogOpen: false,
+    isSharing: false,
+    shareUrl: null as string | null,
+    copied: false,
+  });
 
   const handleFinalize = async () => {
-    setIsFinalizing(true);
+    setFinalizeState(prev => ({ ...prev, isFinalizing: true }));
     try {
       const result = await finalizeCart();
-      setGeneratedLinks(result.links);
+      setFinalizeState(prev => ({ ...prev, generatedLinks: result.links }));
       
       // Open links in new tabs
       result.links.forEach(({ affiliateLink }) => {
@@ -55,7 +63,7 @@ export function SmartCartWidget() {
     } catch (error) {
       console.error('Failed to finalize cart', error);
     } finally {
-      setIsFinalizing(false);
+      setFinalizeState(prev => ({ ...prev, isFinalizing: false }));
     }
   };
 
@@ -63,22 +71,21 @@ export function SmartCartWidget() {
   useEffect(() => {
     // Guard: only run in browser with valid state
     if (typeof window === 'undefined') return;
-    if (!isShareDialogOpen || shareUrl || isSharing) return;
+    if (!shareDialogState.isShareDialogOpen || shareDialogState.shareUrl || shareDialogState.isSharing) return;
     
     let cancelled = false;
     
     const generateShareLink = async () => {
       if (cancelled) return;
       
-      setIsSharing(true);
-      setCopied(false);
+      setShareDialogState(prev => ({ ...prev, isSharing: true, copied: false }));
       
       try {
         const result = await shareCart();
         if (cancelled) return;
         
         if (result) {
-          setShareUrl(result.shareUrl);
+          setShareDialogState(prev => ({ ...prev, shareUrl: result.shareUrl }));
           toast.success('Lista została udostępniona!', {
             description: 'Link został wygenerowany i jest gotowy do skopiowania.',
           });
@@ -86,7 +93,7 @@ export function SmartCartWidget() {
           toast.error('Nie udało się udostępnić listy', {
             description: 'Spróbuj ponownie lub skontaktuj się z pomocą techniczną.',
           });
-          setIsShareDialogOpen(false);
+          setShareDialogState(prev => ({ ...prev, isShareDialogOpen: false }));
         }
       } catch (error) {
         if (cancelled) return;
@@ -94,10 +101,10 @@ export function SmartCartWidget() {
         toast.error('Wystąpił błąd podczas udostępniania', {
           description: 'Sprawdź połączenie internetowe i spróbuj ponownie.',
         });
-        setIsShareDialogOpen(false);
+        setShareDialogState(prev => ({ ...prev, isShareDialogOpen: false }));
       } finally {
         if (!cancelled) {
-          setIsSharing(false);
+          setShareDialogState(prev => ({ ...prev, isSharing: false }));
         }
       }
     };
@@ -108,26 +115,25 @@ export function SmartCartWidget() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isShareDialogOpen, shareUrl, isSharing]);
+  }, [shareDialogState.isShareDialogOpen, shareDialogState.shareUrl, shareDialogState.isSharing]);
   
   // Reset state when dialog closes
   useEffect(() => {
-    if (!isShareDialogOpen) {
-      setShareUrl(null);
-      setCopied(false);
+    if (!shareDialogState.isShareDialogOpen) {
+      setShareDialogState(prev => ({ ...prev, shareUrl: null, copied: false }));
     }
-  }, [isShareDialogOpen]);
+  }, [shareDialogState.isShareDialogOpen]);
 
   const handleCopyLink = async () => {
-    if (!shareUrl) return;
+    if (!shareDialogState.shareUrl) return;
     
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
+      await navigator.clipboard.writeText(shareDialogState.shareUrl);
+      setShareDialogState(prev => ({ ...prev, copied: true }));
       toast.success('Link skopiowany!', {
         description: 'Link do listy został skopiowany do schowka.',
       });
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setShareDialogState(prev => ({ ...prev, copied: false })), 2000);
     } catch (error) {
       console.error('Failed to copy link', error);
       toast.error('Nie udało się skopiować linku', {
@@ -272,9 +278,9 @@ export function SmartCartWidget() {
             className="w-full"
             size="lg"
             onClick={handleFinalize}
-            disabled={isFinalizing}
+            disabled={finalizeState.isFinalizing}
           >
-            {isFinalizing ? (
+            {finalizeState.isFinalizing ? (
               'Generuję linki...'
             ) : (
               <>
@@ -284,7 +290,7 @@ export function SmartCartWidget() {
             )}
           </Button>
 
-          <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+          <Dialog open={shareDialogState.isShareDialogOpen} onOpenChange={(open) => setShareDialogState(prev => ({ ...prev, isShareDialogOpen: open }))}>
             <DialogTrigger asChild>
               <Button
                 variant="outline"
@@ -302,12 +308,12 @@ export function SmartCartWidget() {
                   Skopiuj link i prześlij znajomym. Lista będzie dostępna przez 30 dni.
                 </DialogDescription>
               </DialogHeader>
-              {shareUrl ? (
+              {shareDialogState.shareUrl ? (
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2">
                     <Input
                       readOnly
-                      value={shareUrl}
+                      value={shareDialogState.shareUrl ?? ''}
                       className="flex-1"
                     />
                     <Button
@@ -315,7 +321,7 @@ export function SmartCartWidget() {
                       variant="outline"
                       onClick={handleCopyLink}
                     >
-                      {copied ? (
+                      {shareDialogState.copied ? (
                         <Check className="h-4 w-4" />
                       ) : (
                         <Copy className="h-4 w-4" />
@@ -327,7 +333,9 @@ export function SmartCartWidget() {
                       variant="secondary"
                       className="w-full"
                       onClick={() => {
-                        window.open(shareUrl, '_blank');
+                        if (shareDialogState.shareUrl) {
+                          window.open(shareDialogState.shareUrl, '_blank');
+                        }
                       }}
                     >
                       <ExternalLink className="mr-2 h-4 w-4" />
@@ -337,7 +345,9 @@ export function SmartCartWidget() {
                       variant="outline"
                       className="w-full"
                       onClick={() => {
-                        window.location.href = `mailto:?subject=Sprawdź moją listę zakupową&body=Cześć! Sprawdź moją listę zakupową: ${encodeURIComponent(shareUrl)}`;
+                        if (shareDialogState.shareUrl) {
+                          window.location.href = `mailto:?subject=Sprawdź moją listę zakupową&body=Cześć! Sprawdź moją listę zakupową: ${encodeURIComponent(shareDialogState.shareUrl)}`;
+                        }
                       }}
                     >
                       <Mail className="mr-2 h-4 w-4" />
@@ -360,14 +370,14 @@ export function SmartCartWidget() {
       </Card>
 
       {/* Generated Links (after finalization) */}
-      {generatedLinks.length > 0 && (
+      {finalizeState.generatedLinks.length > 0 && (
         <Card className="p-6 border-primary">
           <h3 className="font-semibold mb-3">✅ Linki zostały wygenerowane!</h3>
           <p className="text-sm text-muted-foreground mb-4">
             Otworzyliśmy karty z produktami. Kliknij ponownie, aby otworzyć linki:
           </p>
           <div className="space-y-2">
-            {generatedLinks.map(({ product, affiliateLink }) => (
+            {finalizeState.generatedLinks.map(({ product, affiliateLink }) => (
               <Button
                 key={product.id}
                 variant="outline"
