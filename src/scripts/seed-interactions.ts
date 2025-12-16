@@ -121,8 +121,8 @@ try {
     const dealsData = [
       {
         id: 'hot-deal-1',
-        title: 'iPhone 15 Pro - rewelacyjna cena!',
-        description: 'Najnowszy iPhone w super promocji. Limitowana ilość.',
+        title: { pl: 'iPhone 15 Pro - rewelacyjna cena!', en: 'iPhone 15 Pro - amazing price!' },
+        description: { pl: 'Najnowszy iPhone w super promocji. Limitowana ilość.', en: 'Latest iPhone on sale. Limited quantity.' },
         price: 4299,
         originalPrice: 5499,
         link: 'https://example.com/iphone-15-pro',
@@ -140,8 +140,8 @@ try {
       },
       {
         id: 'hot-deal-2',
-        title: 'MacBook Air M3 - fenomenalna oferta',
-        description: 'Nowy MacBook z chipem M3 w najlepszej cenie na rynku.',
+        title: { pl: 'MacBook Air M3 - fenomenalna oferta', en: 'MacBook Air M3 - phenomenal offer' },
+        description: { pl: 'Nowy MacBook z chipem M3 w najlepszej cenie na rynku.', en: 'New MacBook with M3 chip at the best market price.' },
         price: 5499,
         originalPrice: 6999,
         link: 'https://example.com/macbook-air-m3',
@@ -159,8 +159,8 @@ try {
       },
       {
         id: 'hot-deal-3',
-        title: 'Sony WH-1000XM5 - najlepsze słuchawki',
-        description: 'Flagowe słuchawki z ANC w super cenie.',
+        title: { pl: 'Sony WH-1000XM5 - najlepsze słuchawki', en: 'Sony WH-1000XM5 - best headphones' },
+        description: { pl: 'Flagowe słuchawki z ANC w super cenie.', en: 'Flagship ANC headphones at a great price.' },
         price: 1199,
         originalPrice: 1699,
         link: 'https://example.com/sony-wh1000xm5',
@@ -178,8 +178,8 @@ try {
       },
       {
         id: 'pending-deal-1',
-        title: 'Test Deal - Pending Moderation',
-        description: 'Ten deal czeka na moderację.',
+        title: { pl: 'Test Deal - Pending Moderation', en: 'Test Deal - Pending Moderation' },
+        description: { pl: 'Ten deal czeka na moderację.', en: 'This deal is awaiting moderation.' },
         price: 99,
         originalPrice: 199,
         link: 'https://example.com/pending-deal',
