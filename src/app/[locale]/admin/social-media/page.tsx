@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TemplatesTab } from '@/components/admin/templates-tab';
 import { BulkPostCreator } from '@/components/admin/bulk-post-creator';
+import { ManualPublisher } from '@/components/admin/manual-publisher';
+import { CalendarView } from '@/components/admin/calendar-view';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,7 +49,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 
 const PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok'];
@@ -232,6 +235,10 @@ export default function SocialMediaAdminPage() {
             <Send className="h-4 w-4 mr-2" />
             Kolejka Postów ({posts.length})
           </TabsTrigger>
+          <TabsTrigger value="calendar">
+            <Calendar className="h-4 w-4 mr-2" />
+            Kalendarz
+          </TabsTrigger>
           <TabsTrigger value="templates">
             <Eye className="h-4 w-4 mr-2" />
             Szablony ({templates.length})
@@ -293,10 +300,25 @@ export default function SocialMediaAdminPage() {
                   onApprove={handleApprovePost}
                   onCancel={handleCancelPost}
                   onRetry={handleRetryPost}
+                  onUpdate={loadData}
                 />
               ))
             )}
           </div>
+        </TabsContent>
+
+        {/* CALENDAR TAB */}
+        <TabsContent value="calendar" className="space-y-4">
+          <CalendarView
+            posts={posts}
+            onPostClick={(post) => {
+              // Scroll to post in queue or show modal
+              console.log('Clicked post:', post);
+            }}
+            onDateClick={(date) => {
+              console.log('Clicked date:', date);
+            }}
+          />
         </TabsContent>
 
         {/* TEMPLATES TAB */}
@@ -499,12 +521,14 @@ function PostCard({
   post,
   onApprove,
   onCancel,
-  onRetry
+  onRetry,
+  onUpdate
 }: {
   post: SocialPost;
   onApprove: (id: string) => void;
   onCancel: (id: string) => void;
   onRetry: (id: string) => void;
+  onUpdate?: () => void;
 }) {
   const Icon = PLATFORM_ICONS[post.platform];
   const statusColors: Record<string, string> = {
@@ -554,24 +578,48 @@ function PostCard({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          <div className="p-3 bg-muted rounded text-sm">
-            {post.content.text}
+        <div className="space-y-4">
+          {/* Content Preview */}
+          <div className="space-y-3">
+            <div className="p-3 bg-muted rounded text-sm whitespace-pre-wrap">
+              {post.content.text}
+            </div>
+            {post.itemData.image && (
+              <img 
+                src={post.itemData.image} 
+                alt={post.itemData.title}
+                className="w-full max-w-md h-48 object-cover rounded"
+              />
+            )}
+            {post.content.linkUrl && (
+              <div className="text-sm text-muted-foreground break-all">
+                🔗 {post.content.linkUrl}
+              </div>
+            )}
+            {post.content.hashtags && post.content.hashtags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {post.content.hashtags.map((tag, idx) => (
+                  <Badge key={idx} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
-          {post.itemData.image && (
-            <img 
-              src={post.itemData.image} 
-              alt={post.itemData.title}
-              className="w-32 h-32 object-cover rounded"
-            />
-          )}
-          <div className="text-sm text-muted-foreground">
-            {post.content.linkUrl}
-          </div>
+
+          {/* Error Display */}
           {post.error && (
             <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-600 dark:text-red-400">
               <strong>Błąd:</strong> {post.error.message}
             </div>
+          )}
+
+          {/* Manual Publisher Integration */}
+          {(post.status === 'approved' || post.status === 'posted') && (
+            <>
+              <Separator />
+              <ManualPublisher post={post} onUpdate={onUpdate} />
+            </>
           )}
         </div>
       </CardContent>
