@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TemplatesTab } from '@/components/admin/templates-tab';
+import { BulkPostCreator } from '@/components/admin/bulk-post-creator';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,7 +46,8 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 
 const PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok'];
@@ -233,6 +236,10 @@ export default function SocialMediaAdminPage() {
             <Eye className="h-4 w-4 mr-2" />
             Szablony ({templates.length})
           </TabsTrigger>
+          <TabsTrigger value="bulk">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Masowe Tworzenie
+          </TabsTrigger>
         </TabsList>
 
         {/* CONFIGURATION TAB */}
@@ -294,19 +301,12 @@ export default function SocialMediaAdminPage() {
 
         {/* TEMPLATES TAB */}
         <TabsContent value="templates" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Szablony Postów</CardTitle>
-              <CardDescription>
-                Zarządzaj szablonami treści dla różnych platform. Używaj placeholderów: {'{title}'}, {'{price}'}, {'{url}'}, {'{merchant}'}, {'{temperature}'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Funkcja szablonów będzie dostępna wkrótce
-              </p>
-            </CardContent>
-          </Card>
+          <TemplatesTab templates={templates} onUpdate={loadData} />
+        </TabsContent>
+
+        {/* BULK CREATOR TAB */}
+        <TabsContent value="bulk" className="space-y-4">
+          <BulkPostCreator userId={user?.uid} />
         </TabsContent>
       </Tabs>
     </div>

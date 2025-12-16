@@ -1194,7 +1194,35 @@ export async function createDeal(data: Omit<Deal, 'id' | 'postedAt' | 'createdAt
     temperature: data.temperature ?? 0,
     voteCount: data.voteCount ?? 0,
   });
-  return docRef.id;
+  
+  const dealId = docRef.id;
+  
+  // Auto-queue hot deals to social media (if enabled and deal is approved)
+  if (data.status === 'approved' && data.temperature && data.temperature > 500) {
+    try {
+      const { autoQueueHotDeal } = await import('./social-automation');
+      const discount = data.originalPrice && data.price 
+        ? Math.round(((data.originalPrice - data.price) / data.originalPrice) * 100)
+        : undefined;
+      
+      await autoQueueHotDeal(dealId, {
+        title: data.title,
+        description: data.description,
+        price: data.price,
+        originalPrice: data.originalPrice,
+        discount,
+        temperature: data.temperature,
+        merchant: data.merchant,
+        imageUrl: data.image,
+        url: data.link,
+      });
+    } catch (error) {
+      // Don't fail deal creation if social auto-queue fails
+      console.error('Failed to auto-queue hot deal to social media:', error);
+    }
+  }
+  
+  return dealId;
 }
 
 // Placeholder data for users to fix build error

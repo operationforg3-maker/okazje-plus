@@ -160,7 +160,9 @@ export const batchImportDeals = onCall(
         // Poprawny obiekt zgodny z interfejsem Deal
         const newDealData: Omit<Deal, "id"> = {
           title: deal.title,
-          description: deal.description || "",
+          description: typeof deal.description === 'string' 
+            ? { pl: deal.description, en: deal.description, de: deal.description || "" } 
+            : (deal.description || { pl: "", en: "", de: "" }),
           price: typeof deal.price === "number" ? deal.price : 0,
           originalPrice: deal.originalPrice,
           link: deal.link,

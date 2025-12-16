@@ -148,6 +148,7 @@ export async function createSocialPost(
     scheduledFor?: string;
     autoApprove?: boolean;
     createdBy?: string;
+    metadata?: any;
   }
 ): Promise<string> {
   const now = new Date().toISOString();
@@ -163,6 +164,7 @@ export async function createSocialPost(
     attempts: 0,
     metadata: {
       createdBy: options?.createdBy || 'auto',
+      ...options?.metadata,
       ...(options?.autoApprove && {
         manuallyApproved: false
       })
@@ -427,6 +429,10 @@ export function generatePostContent(
 
 /**
  * Generate AI-powered post content with optimized images
+ * NOTE: This function has been moved to server action at src/app/actions/social-ai.ts
+ * to avoid bundling Genkit in client code. Use generateAIContentAction() instead.
+ * 
+ * @deprecated Use generateAIContentAction from '@/app/actions/social-ai' instead
  */
 export async function generateAIPostContent(
   platform: SocialPlatform,
@@ -434,87 +440,24 @@ export async function generateAIPostContent(
   itemData: any,
   template?: SocialTemplate
 ): Promise<{ content: string; imageUrl?: string; hashtags?: string[] }> {
-  try {
-    // Use Genkit AI flow to generate content
-    const { generateSocialContent } = await import('../ai/flows/social-content/generateSocialPost');
-    
-    const aiContent = await generateSocialContent(platform, type, itemData, {
-      style: template?.imageStyle || 'casual',
-      includeEmojis: true,
-      includePrice: !!itemData.price,
-      includeHashtags: true,
-    });
-
-    // Generate optimized image if source image exists
-    let finalImageUrl = itemData.imageUrl;
-    if (itemData.imageUrl) {
-      try {
-        const { generateSocialImage } = await import('./image-generator');
-        const imageResult = await generateSocialImage({
-          platform,
-          sourceImageUrl: itemData.imageUrl,
-          overlayData: {
-            title: itemData.title,
-            price: itemData.price,
-            originalPrice: itemData.originalPrice,
-            discount: itemData.discount,
-            temperature: itemData.temperature,
-            merchant: itemData.merchant,
-            badge: itemData.temperature && itemData.temperature > 500 ? '🔥 HOT DEAL' : undefined,
-          },
-          style: template?.imageStyle || 'clean',
-        });
-        finalImageUrl = imageResult.url;
-      } catch (imageError) {
-        console.error('Failed to generate social image, using original:', imageError);
-      }
-    }
-
-    // Build final content with title, description, hashtags
-    let content = aiContent.title;
-    
-    // Add emojis if suggested
-    if (aiContent.emojiSuggestions && aiContent.emojiSuggestions.length > 0) {
-      content = `${aiContent.emojiSuggestions[0]} ${content}`;
-    }
-    
-    content += `\n\n${aiContent.description}`;
-    
-    // Add CTA
-    if (aiContent.callToAction) {
-      content += `\n\n${aiContent.callToAction}`;
-    }
-    
-    // Add hashtags at the end
-    if (aiContent.hashtags && aiContent.hashtags.length > 0) {
-      content += `\n\n${aiContent.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
-    }
-
-    return {
-      content,
-      imageUrl: finalImageUrl,
-      hashtags: aiContent.hashtags,
-    };
-  } catch (error) {
-    console.error('AI content generation failed, using fallback:', error);
-    
-    // Fallback: basic template
-    const { title, description, price, imageUrl } = itemData;
-    
-    let content = `🔥 ${title}\n\n`;
-    if (description) {
-      content += `${description.slice(0, 200)}...\n\n`;
-    }
-    if (price) {
-      content += `💰 Cena: ${price} zł\n\n`;
-    }
-    content += `#okazje #promocje #zakupy`;
-    
-    return {
-      content,
-      imageUrl,
-    };
+  console.warn('generateAIPostContent is deprecated. Use generateAIContentAction from @/app/actions/social-ai instead.');
+  
+  // Fallback: basic template
+  const { title, description, price, imageUrl } = itemData;
+  
+  let content = `🔥 ${title}\n\n`;
+  if (description) {
+    content += `${description.slice(0, 200)}...\n\n`;
   }
+  if (price) {
+    content += `💰 Cena: ${price} zł\n\n`;
+  }
+  content += `#okazje #promocje #zakupy`;
+  
+  return {
+    content,
+    imageUrl,
+  };
 }
 
 /**
@@ -660,8 +603,9 @@ export async function bulkCreatePosts(
     for (const platform of platforms) {
       try {
         // Generate content (AI or template-based)
-        let content: string;
+        let contentText: string;
         let imageUrl: string | undefined;
+        let hashtags: string[] = [];
         let metadata: any = {};
 
         if (options?.useAI) {
@@ -670,21 +614,26 @@ export async function bulkCreatePosts(
             item.type,
             item.data
           );
-          content = aiResult.content;
+          contentText = aiResult.content;
           imageUrl = aiResult.imageUrl;
+          hashtags = aiResult.hashtags || [];
           metadata.hashtags = aiResult.hashtags;
         } else {
           // Simple template
-          content = `🔥 ${item.data.title}\n\n`;
+          contentText = `🔥 ${item.data.title}\n\n`;
           if (item.data.description) {
-            content += `${item.data.description.slice(0, 150)}...\n\n`;
+            contentText += `${item.data.description.slice(0, 150)}...\n\n`;
           }
           if (item.data.price) {
-            content += `💰 ${item.data.price} zł\n\n`;
+            contentText += `💰 ${item.data.price} zł\n\n`;
           }
-          content += `#okazje #promocje`;
+          contentText += `#okazje #promocje`;
           imageUrl = item.data.imageUrl;
+          hashtags = ['okazje', 'promocje'];
         }
+
+        // Build tracking URL
+        const linkUrl = buildTrackingUrl(item.data.url || item.data.link || '', platform, item.id);
 
         // Schedule for optimal time if requested
         let scheduledFor: string | undefined;
@@ -692,18 +641,22 @@ export async function bulkCreatePosts(
           scheduledFor = getOptimalPostingTime(platform).toISOString();
         }
 
-        // Create post
+        // Create post with proper content object
         const postId = await createSocialPost(
           platform,
           item.type,
           item.id,
           item.data,
-          content,
           {
+            text: contentText,
             imageUrl,
+            linkUrl,
+            hashtags,
+          },
+          {
             scheduledFor,
-            metadata,
             createdBy: options?.createdBy,
+            autoApprove: options?.autoApprove,
           }
         );
 

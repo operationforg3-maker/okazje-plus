@@ -5,8 +5,9 @@
  * Creates engaging copy, relevant hashtags, and image prompts.
  */
 
-import { defineFlow, runFlow } from '@genkit-ai/core';
-import { gemini20FlashExp } from '@genkit-ai/vertexai';
+'use server';
+
+import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 
 // Input schema
@@ -44,100 +45,78 @@ const GenerateSocialPostOutputSchema = z.object({
   emojiSuggestions: z.array(z.string()).optional().describe('Suggested emojis to use'),
 });
 
-export const generateSocialPostFlow = defineFlow(
+const prompt = ai.definePrompt({
+  name: 'generateSocialPostPrompt',
+  input: { schema: GenerateSocialPostInputSchema },
+  output: { schema: GenerateSocialPostOutputSchema },
+  prompt: `Jesteś ekspertem od marketingu w social media. Twoim zadaniem jest stworzenie idealnego posta dla platformy {{{platform}}}.
+
+**Dane produktu/okazji:**
+- Tytuł: {{{itemData.title}}}
+- Opis: {{{itemData.description}}}
+- Cena: {{{itemData.price}}} zł
+- Cena oryginalna: {{{itemData.originalPrice}}} zł  
+- Rabat: {{{itemData.discount}}}%
+- Temperatura: {{{itemData.temperature}}}°
+- Sklep: {{{itemData.merchant}}}
+- Kategoria: {{{itemData.category}}}
+
+**Wymagania:**
+Platforma: {{{platform}}}
+Typ: {{{type}}}
+Styl: {{{template.style}}}
+
+**Zadanie:**
+1. **Tytuł**: Krótki, chwytliwy hook (20-50 znaków)
+2. **Opis**: Angażujący tekst główny (200-600 znaków w zależności od platformy)
+3. **Hashtagi**: 3-10 relevantnych hashtagów po polsku
+4. **CTA**: Krótkie wezwanie do działania (5-15 słów)
+5. **Emoji**: 3-5 pasujących emoji
+6. **Image prompt**: Opcjonalny prompt do AI image generation
+
+**Wytyczne dla platform:**
+- Facebook: 400 chars, 5 hashtags, casual/engaging
+- Instagram: 300 chars, 10 hashtags, visual/trendy
+- Twitter: 280 chars, 3 hashtags, concise/punchy
+- LinkedIn: 600 chars, 5 hashtags, professional
+- TikTok: 150 chars, 5 hashtags, fun/energetic
+
+Język: Polski. Zachowaj autentyczność, unikaj clickbaitów.
+`,
+});
+
+export const generateSocialPostFlow = ai.defineFlow(
   {
     name: 'generateSocialPost',
     inputSchema: GenerateSocialPostInputSchema,
     outputSchema: GenerateSocialPostOutputSchema,
   },
   async (input) => {
-    const { platform, type, itemData, template } = input;
-
-    // Platform-specific constraints
-    const platformConstraints: Record<string, { maxLength: number; maxHashtags: number; tone: string }> = {
-      facebook: { maxLength: 400, maxHashtags: 5, tone: 'casual and engaging' },
-      instagram: { maxLength: 300, maxHashtags: 10, tone: 'visual and trendy' },
-      twitter: { maxLength: 280, maxHashtags: 3, tone: 'concise and punchy' },
-      linkedin: { maxLength: 600, maxHashtags: 5, tone: 'professional and informative' },
-      tiktok: { maxLength: 150, maxHashtags: 5, tone: 'fun and energetic' },
-    };
-
-    const constraints = platformConstraints[platform];
-    const maxLength = template?.maxLength || constraints.maxLength;
-    const includeEmojis = template?.includeEmojis !== false;
-    const includePrice = template?.includePrice !== false;
-    const includeHashtags = template?.includeHashtags !== false;
-    const style = template?.style || 'casual';
-
-    // Build prompt
-    const prompt = `
-Jesteś ekspertem od marketingu w social media. Twoim zadaniem jest stworzenie idealnego posta dla platformy ${platform.toUpperCase()}.
-
-**Dane produktu/okazji:**
-- Tytuł: ${itemData.title}
-- Opis: ${itemData.description || 'brak'}
-- Cena: ${itemData.price ? `${itemData.price} zł` : 'brak'}
-- Cena oryginalna: ${itemData.originalPrice ? `${itemData.originalPrice} zł` : 'brak'}
-- Rabat: ${itemData.discount ? `${itemData.discount}%` : 'brak'}
-- Temperatura: ${itemData.temperature ? `${itemData.temperature}°` : 'brak'}
-- Sklep: ${itemData.merchant || 'brak'}
-- Kategoria: ${itemData.category || 'brak'}
-
-**Wymagania platformy:**
-- Maksymalna długość: ${maxLength} znaków
-- Maksymalna liczba hashtagów: ${constraints.maxHashtags}
-- Ton komunikacji: ${constraints.tone}
-- Styl: ${style}
-- Emoji: ${includeEmojis ? 'tak, używaj emotikonów' : 'nie, bez emotikonów'}
-- Cena w poście: ${includePrice ? 'tak, podkreśl cenę' : 'nie, skupij się na produkcie'}
-- Hashtagi: ${includeHashtags ? 'tak, dodaj relevantne hashtagi' : 'nie, bez hashtagów'}
-
-**Zadanie:**
-1. **Tytuł/nagłówek**: Krótki, chwytliwy hook (20-50 znaków)
-2. **Opis**: Angażujący tekst główny zgodny z tonem platformy
-   - Podkreśl unikalną wartość oferty
-   - Jeśli jest wysoka temperatura/rabat, zaakcentuj to
-   - Dodaj emocjonalny element (ekscytacja, pilność, wartość)
-   - ${includePrice && itemData.price ? 'Wyraźnie podaj cenę' : ''}
-3. **Hashtagi**: ${constraints.maxHashtags} relevantnych hashtagów po polsku
-   - Mix popularnych (#okazje, #promocje) i niszowych
-   - Hashtagi kategorii produktu
-   - Bez nadmiernego spamu
-4. **CTA**: Krótkie, konkretne wezwanie do działania (5-15 słów)
-5. **Emoji suggestions**: ${includeEmojis ? '3-5 pasujących emoji do użycia w tekście' : 'pusta lista'}
-6. **Image prompt**: Opcjonalny prompt do generowania obrazu AI (jeśli brak zdjęcia produktu)
-
-**Ważne:**
-- Język: Polski
-- Nie przekraczaj limitu ${maxLength} znaków dla opisu
-- Zachowaj autentyczność i unikaj clickbaitów
-- Dla LinkedIn: bardziej merytoryczny, wartościowy content
-- Dla Instagram/TikTok: wizualny, dynamiczny, młodzieżowy
-- Dla Twitter: zwięzły, na temat, z wyraźnym CTA
-- Dla Facebook: ciepły, społecznościowy, angażujący
-
-Zwróć TYLKO JSON zgodny ze schematem outputowym.
-`;
-
     try {
-      // Generate content using Gemini 2.0 Flash
-      const result = await gemini20FlashExp.generate({
-        prompt,
-        config: {
-          temperature: 0.8, // Creative but controlled
-          maxOutputTokens: 1024,
-        },
-        output: {
-          format: 'json',
-          schema: GenerateSocialPostOutputSchema,
-        },
-      });
-
-      const generated = result.output as z.infer<typeof GenerateSocialPostOutputSchema>;
+      const { output } = await prompt(input);
+      
+      if (!output) {
+        throw new Error('No output from AI');
+      }
+      
+      const generated = output;
+      
+      // Platform-specific constraints
+      const platformConstraints: Record<string, { maxLength: number; maxHashtags: number }> = {
+        facebook: { maxLength: 400, maxHashtags: 5 },
+        instagram: { maxLength: 300, maxHashtags: 10 },
+        twitter: { maxLength: 280, maxHashtags: 3 },
+        linkedin: { maxLength: 600, maxHashtags: 5 },
+        tiktok: { maxLength: 150, maxHashtags: 5 },
+      };
+      
+      const constraints = platformConstraints[input.platform];
+      const includeHashtags = input.template?.includeHashtags !== false;
+      const includeEmojis = input.template?.includeEmojis !== false;
 
       // Post-processing: ensure constraints
-      if (generated.description.length > maxLength) {
-        generated.description = generated.description.slice(0, maxLength - 3) + '...';
+      if (generated.description.length > constraints.maxLength) {
+        generated.description = generated.description.slice(0, constraints.maxLength - 3) + '...';
       }
 
       if (generated.hashtags.length > constraints.maxHashtags) {
@@ -161,16 +140,23 @@ Zwróć TYLKO JSON zgodny ze schematem outputowym.
       console.error('Error generating social post content:', error);
       
       // Fallback: basic template
-      const fallbackTitle = itemData.title.slice(0, 50);
-      const fallbackDescription = itemData.description || `Sprawdź tę okazję: ${itemData.title}`;
+      const fallbackTitle = input.itemData.title.slice(0, 50);
+      const fallbackDescription = input.itemData.description || `Sprawdź tę okazję: ${input.itemData.title}`;
       const fallbackHashtags = ['#okazje', '#promocje', '#zakupy'];
+      const platformConstraints: Record<string, { maxLength: number }> = {
+        facebook: { maxLength: 400 },
+        instagram: { maxLength: 300 },
+        twitter: { maxLength: 280 },
+        linkedin: { maxLength: 600 },
+        tiktok: { maxLength: 150 },
+      };
       
       return {
         title: fallbackTitle,
-        description: fallbackDescription.slice(0, maxLength),
-        hashtags: includeHashtags ? fallbackHashtags : [],
+        description: fallbackDescription.slice(0, platformConstraints[input.platform].maxLength),
+        hashtags: input.template?.includeHashtags !== false ? fallbackHashtags : [],
         callToAction: 'Sprawdź teraz! 🔥',
-        emojiSuggestions: includeEmojis ? ['🔥', '💰', '🎁'] : [],
+        emojiSuggestions: input.template?.includeEmojis !== false ? ['🔥', '💰', '🎁'] : [],
       };
     }
   }
@@ -184,8 +170,8 @@ export async function generateSocialContent(
   type: 'deal' | 'product' | 'article',
   itemData: any,
   template?: any
-) {
-  return runFlow(generateSocialPostFlow, {
+): Promise<z.infer<typeof GenerateSocialPostOutputSchema>> {
+  return generateSocialPostFlow({
     platform,
     type,
     itemData,

@@ -9,6 +9,7 @@
     "sourceMap": true,
     "strict": false,
     "target": "es2017",
+    "skipLibCheck": true,
     "baseUrl": "..",
     "paths": {
       "@/*": ["src/*"]

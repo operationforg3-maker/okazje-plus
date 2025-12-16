@@ -2101,15 +2101,18 @@ export interface SocialConfig {
 }
 
 export interface SocialTemplate {
-  id: string;
+  id?: string;
   platform: SocialPlatform;
-  type: 'deal' | 'product';
+  type: 'deal' | 'product' | 'article';
   name: string;
-  template: string; // Template with placeholders: {title}, {price}, {url}, {merchant}, {temperature}
-  enabled: boolean;
+  template?: string; // Deprecated - use contentTemplate
+  contentTemplate?: string; // Template with placeholders: {title}, {price}, {url}, {merchant}, {temperature}
+  hashtagsTemplate?: string; // Hashtag template (optional)
+  imageStyle?: 'clean' | 'minimal' | 'bold' | 'gradient'; // Image overlay style
+  enabled?: boolean;
   maxLength?: number; // Platform character limit
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type SocialPostStatus = 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'cancelled';

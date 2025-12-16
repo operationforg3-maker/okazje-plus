@@ -126,7 +126,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     : false;
   const originBadgeLabel = shippingOrigin || (shipsFromEU ? 'Magazyn EU' : '');
   
-  const isHotDeal = tags.includes('hot_deal');
+  const isHotDealTag = tags.includes('hot_deal');
   const isBestsellerTag = tags.includes('bestseller');
   const isNewArrival = tags.includes('new_arrival');
   const isPolishMarket = tags.includes('polish_market');
