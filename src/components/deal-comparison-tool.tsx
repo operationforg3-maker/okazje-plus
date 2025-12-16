@@ -36,6 +36,7 @@ export function DealComparisonTool() {
     isOpen: false,
     isMounted: false
   });
+  const [isExpanded, setIsExpanded] = useState(false);
   const { addItem: addToCart, isInCart } = useSmartCart();
 
   useEffect(() => {
@@ -149,7 +150,6 @@ export function DealComparisonTool() {
   }
 
   // Smart cart features
-  const [isExpanded, setIsExpanded] = useState(false);
   const totalValue = comparisonState.items.reduce((sum, item) => sum + getPrice(item), 0);
   const avgPrice = comparisonState.items.length > 0 ? totalValue / comparisonState.items.length : 0;
   const lowestPrice = comparisonState.items.length > 0 ? Math.min(...comparisonState.items.map(getPrice)) : 0;
