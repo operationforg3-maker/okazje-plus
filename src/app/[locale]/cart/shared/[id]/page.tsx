@@ -135,7 +135,13 @@ function SharedCartPageContent() {
 
   const expiresDate = new Date(cartData.expiresAt);
   const createdDate = new Date(cartData.createdAt);
-  const daysLeft = Math.ceil((expiresDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    const now = Date.now();
+    const diff = Math.ceil((expiresDate.getTime() - now) / (1000 * 60 * 60 * 24));
+    setDaysLeft(diff);
+  }, [expiresDate]);
 
   return (
     <div className="min-h-screen bg-muted/30 py-8">
@@ -169,8 +175,8 @@ function SharedCartPageContent() {
                   </div>
                 </CardDescription>
               </div>
-              <Badge variant={daysLeft > 7 ? 'default' : 'destructive'}>
-                Wygasa za {daysLeft} dni
+              <Badge variant={daysLeft !== null && daysLeft > 7 ? 'default' : 'destructive'}>
+                {daysLeft === null ? 'Liczenie...' : `Wygasa za ${daysLeft} dni`}
               </Badge>
             </div>
           </CardHeader>
