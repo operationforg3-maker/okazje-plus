@@ -20,6 +20,8 @@ export function useSelectedCurrency(): SupportedCurrency {
   const [currency, setCurrency] = useState<SupportedCurrency>('PLN');
   
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const savedCurrency = localStorage.getItem('preferredCurrency') as SupportedCurrency;
     if (savedCurrency && ['PLN', 'USD', 'EUR', 'GBP'].includes(savedCurrency)) {
       setCurrency(savedCurrency);
