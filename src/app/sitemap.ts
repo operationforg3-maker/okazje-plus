@@ -43,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const products = await getRecommendedProducts(1000);
     productUrls = products.map((product) => ({
       url: `${baseUrl}/products/${product.id}`,
-      lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
+      lastModified: new Date(), // Product type doesn't have updatedAt
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     }));

@@ -52,6 +52,11 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  alternates: {
+    types: {
+      'application/rss+xml': 'https://okazjeplus.pl/rss.xml',
+    },
+  },
 };
 
 export default async function RootLayout({

@@ -148,11 +148,14 @@ export default async function DealDetailPage({ params }: PageProps) {
   const { deal, relatedDeals } = data;
   
   // JSON-LD structured data dla Google Rich Results
+  const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || 'Okazja';
+  const dealDescription = typeof deal.description === 'string' ? deal.description : deal.description?.pl || '';
+  
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Offer',
-    name: deal.title,
-    description: deal.description,
+    name: dealTitle,
+    description: dealDescription,
     image: deal.image,
     url: `https://okazje.plus/pl/deals/${deal.id}`,
     priceCurrency: 'PLN',
@@ -210,7 +213,7 @@ export default async function DealDetailPage({ params }: PageProps) {
       {
         '@type': 'ListItem',
         position: 3,
-        name: deal.title,
+        name: dealTitle,
         item: `https://okazjeplus.pl/deals/${deal.id}`
       }
     ]

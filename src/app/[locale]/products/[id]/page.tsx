@@ -165,11 +165,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const { product, relatedProducts, recentRatings } = data;
   
   // JSON-LD structured data dla Google Rich Results
+  const productName = typeof product.name === 'string' ? product.name : product.name?.pl || 'Produkt';
+  const productDescription = typeof product.description === 'string' ? product.description : (product.shortDescription?.pl || product.fullDescription?.pl || '');
+  
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: product.name,
-    description: product.description,
+    name: productName,
+    description: productDescription,
     image: product.image,
     sku: product.id,
     brand: {
@@ -209,6 +212,32 @@ export default async function ProductDetailPage({ params }: PageProps) {
       })),
     }),
   };
+
+  // BreadcrumbList schema for better navigation in Google
+  const breadcrumbList = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Strona główna',
+        item: 'https://okazjeplus.pl'
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Produkty',
+        item: 'https://okazjeplus.pl/products'
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: productName,
+        item: `https://okazjeplus.pl/products/${product.id}`
+      }
+    ]
+  };
   
   return (
     <>
@@ -216,6 +245,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }}
       />
       
       {/* Client component z interaktywnym UI */}
