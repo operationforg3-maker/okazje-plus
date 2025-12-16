@@ -20,23 +20,23 @@ export function useSelectedCurrency(): SupportedCurrency {
   const [currency, setCurrency] = useState<SupportedCurrency>('PLN');
   
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedCurrency = localStorage.getItem('preferredCurrency') as SupportedCurrency;
-      if (savedCurrency && ['PLN', 'USD', 'EUR', 'GBP'].includes(savedCurrency)) {
-        setCurrency(savedCurrency);
-      }
-      
-      // Listen for currency changes
-      const handleCurrencyChange = (e: CustomEvent) => {
-        setCurrency(e.detail.currency);
-      };
-      
-      window.addEventListener('currencyChange', handleCurrencyChange as EventListener);
-      
-      return () => {
-        window.removeEventListener('currencyChange', handleCurrencyChange as EventListener);
-      };
+    if (typeof window === 'undefined') return;
+    
+    const savedCurrency = localStorage.getItem('preferredCurrency') as SupportedCurrency;
+    if (savedCurrency && ['PLN', 'USD', 'EUR', 'GBP'].includes(savedCurrency)) {
+      setCurrency(savedCurrency);
     }
+    
+    // Listen for currency changes
+    const handleCurrencyChange = (e: CustomEvent) => {
+      setCurrency(e.detail.currency);
+    };
+    
+    window.addEventListener('currencyChange', handleCurrencyChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('currencyChange', handleCurrencyChange as EventListener);
+    };
   }, []);
   
   return currency;
