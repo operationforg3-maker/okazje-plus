@@ -165,8 +165,12 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const { product, relatedProducts, recentRatings } = data;
   
   // JSON-LD structured data dla Google Rich Results
-  const productName = typeof product.name === 'string' ? product.name : product.name?.pl || 'Produkt';
-  const productDescription = typeof product.description === 'string' ? product.description : (product.shortDescription?.pl || product.fullDescription?.pl || '');
+  const productName = typeof product.title === 'object' 
+    ? (product.title.pl || product.title.en || 'Produkt')
+    : (product.name || 'Produkt');
+  const productDescription = typeof product.description === 'string' 
+    ? product.description 
+    : (product.shortDescription?.pl || product.fullDescription?.pl || '');
   
   const jsonLd = {
     '@context': 'https://schema.org',

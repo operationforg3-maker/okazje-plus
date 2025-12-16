@@ -46,8 +46,8 @@ export async function GET(request: NextRequest) {
 
     const rows = deals.map(deal => [
       deal.id,
-      `"${(deal.title || '').replace(/"/g, '""')}"`, // Escape cudzysłowów
-      `"${(deal.description || '').replace(/"/g, '""')}"`,
+      `"${((deal.title?.pl || deal.title?.en || '') as string).replace(/"/g, '""')}"`, // Escape cudzysłowów
+      `"${((deal.description?.pl || deal.description?.en || '') as string).replace(/"/g, '""')}"`,
       deal.price || 0,
       deal.originalPrice || '',
       deal.link || '',

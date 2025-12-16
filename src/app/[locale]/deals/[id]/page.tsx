@@ -61,7 +61,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : null;
   
   const metaTitle = `${deal.title} - ${price}${discount ? ` (-${discount}%)` : ''} | Okazje Plus`;
-  const metaDescription = `${deal.description.slice(0, 120)}... Temperatura: ${deal.temperature}°, ${deal.voteCount} głosów. ${originalPrice ? `Cena przed obniżką: ${originalPrice}.` : ''}`;
+  const dealTitle = deal.title?.pl || deal.title?.en || 'Okazja';
+  const dealDescription = deal.description?.pl || deal.description?.en || '';
+  const metaDescription = `${dealDescription.slice(0, 120)}... Temperatura: ${deal.temperature}°, ${deal.voteCount} głosów. ${originalPrice ? `Cena przed obniżką: ${originalPrice}.` : ''}`;
   
   const keywords = [
     deal.mainCategorySlug,

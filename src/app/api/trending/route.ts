@@ -19,8 +19,11 @@ export async function GET() {
     const predictions = await Promise.all(
       deals.map(async (d) => {
         try {
+          const dealName = typeof d.title === 'object' 
+            ? (d.title.pl || d.title.en || 'Deal')
+            : d.title;
           const input = {
-            dealName: d.title,
+            dealName: dealName,
             currentRating: 4.0, // brak ratingów na dealach – konserwatywny default
             numberOfRatings: Math.max(d.voteCount ?? 0, d.commentsCount ?? 0),
             temperature: d.temperature ?? 0,

@@ -120,7 +120,7 @@ function ProfilePage() {
                   itemTitle = (dealDoc.data() as any).title;
                 } else {
                   const helperDeal = await getDealById(parentId).catch(() => null);
-                  itemTitle = helperDeal?.title;
+                  itemTitle = helperDeal?.title?.pl || helperDeal?.title?.en || 'Okazja';
                 }
               } else if (parentCollection === 'products') {
                 itemType = 'product';

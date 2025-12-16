@@ -51,6 +51,7 @@ import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useContentLanguage } from '@/hooks/use-content-language';
 import { SpecCardGrid } from '@/components/spec-card-grid';
 import {
   Tooltip,
@@ -97,6 +98,9 @@ interface Props {
 }
 
 export default function DealDetailClient({ deal, relatedDeals }: Props) {
+  const { getText } = useContentLanguage();
+  const dealTitle = typeof deal.title === 'object' ? getText(deal.title) : deal.title;
+  const dealDescription = typeof deal.description === 'object' ? getText(deal.description) : deal.description;
   const { user } = useAuth();
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -323,7 +327,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
           </>
         )}
         <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-        <span className="font-medium text-foreground truncate max-w-[200px]">{deal.title}</span>
+        <span className="font-medium text-foreground truncate max-w-[200px]">{dealTitle}</span>
       </div>
 
       {/* Main Deal Section */}
@@ -334,7 +338,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
             <div className="relative aspect-[4/3] bg-card rounded-xl shadow-lg overflow-hidden border">
               <Image
                 src={images[currentImageIndex].src}
-                alt={images[currentImageIndex].alt}
+                alt={dealTitle}
                 fill
                 className="object-contain p-4 md:p-8"
                 priority
@@ -424,7 +428,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                   >
                     <Image
                       src={img.src}
-                      alt={img.alt}
+                      alt={dealTitle}
                       fill
                       className="object-contain p-1"
                     />
@@ -457,7 +461,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
             </div>
 
             <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl mb-4 break-words">
-              {deal.title}
+              {dealTitle}
             </h1>
 
             {/* Meta Info */}
@@ -479,7 +483,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
             </div>
 
             <p className="text-base text-muted-foreground leading-relaxed whitespace-pre-line">
-              {deal.description}
+              {dealDescription}
             </p>
 
             {/* Spec cards highlight */}
@@ -629,7 +633,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
                 <ShareButton 
                   type="deal"
                   itemId={deal.id}
-                  title={deal.title}
+                  title={dealTitle}
                   url={`/deals/${deal.id}`}
                   size="lg"
                   variant="outline"
