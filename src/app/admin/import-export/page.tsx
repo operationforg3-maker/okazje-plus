@@ -375,12 +375,42 @@ export default function ImportExportPage() {
                   {result.summary.total && <div>📦 Razem: <strong>{result.summary.total}</strong></div>}
                   {result.summary.toCreate && <div>➕ Do utworzenia: <strong>{result.summary.toCreate}</strong></div>}
                   {result.summary.toUpdate && <div>🔄 Do aktualizacji: <strong>{result.summary.toUpdate}</strong></div>}
+                  {result.summary.flags && (
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>🈯 Z tłumaczeniami: <strong>{result.summary.flags.translated}</strong></div>
+                      <div>✨ Wzbogacone: <strong>{result.summary.flags.enriched}</strong></div>
+                      <div>📐 Specyfikacje: <strong>{result.summary.flags.specs}</strong></div>
+                      <div>⭐ Oceny zewn.: <strong>{result.summary.flags.externalRatings}</strong></div>
+                    </div>
+                  )}
                 </div>
               )}
               {result.result && (
                 <div className="space-y-1 text-sm">
                   <div>✅ Utworzono: <strong>{result.result.created || 0}</strong></div>
                   <div>🔄 Zaktualizowano: <strong>{result.result.updated || 0}</strong></div>
+                </div>
+              )}
+              {Array.isArray(result.preview) && result.preview.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-xs font-semibold mb-1">Podgląd (max 10):</div>
+                  <div className="space-y-1">
+                    {result.preview.map((p: any, idx: number) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs">
+                        <Badge variant="outline">{p.action}</Badge>
+                        <span className="font-mono">{p.product?.name || p.product?.id || 'item'}</span>
+                        {p.flags && (
+                          <div className="flex gap-1">
+                            {p.flags.hasTranslations && <Badge>🈯 tłumaczenia</Badge>}
+                            {p.flags.hasEnrichment && <Badge>✨ wzbog.</Badge>}
+                            {Array.isArray(p.flags.importElements) && p.flags.importElements.map((el: string) => (
+                              <Badge key={el} variant="secondary">{el}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

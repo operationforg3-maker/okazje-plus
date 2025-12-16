@@ -94,6 +94,19 @@ Główny widok z kluczowymi metrykami:
 - Deduplikacja (AI): wykrywanie duplikatów przed zapisem
 - Upsert: aktualizacja istniejących produktów po `metadata.originalId` lub `affiliateUrl`
 
+**Moderacja – stan danych (Dry-Run):**
+- 🈯 `translated`: wykryte tłumaczenia (title/description w wielu językach)
+- ✨ `enriched`: obecne wzbogacenie (specyfikacje/SEO/AI)
+- 📐 `specs`: liczba itemów ze specyfikacjami
+- ⭐ `externalRatings`: liczba itemów z oceną zewnętrzną
+
+**Preferowane narzędzia (aktualne):**
+- Import produktów: `/admin/import-export` (zakładka Import JSON → Produkty)
+- Import okazji: `/admin/import-export` (Import JSON → Okazje)
+
+**Przestarzałe/legacy:**
+- Skrypty seedingowe – tylko do dev/demo; nie tworzą pełnych obiektów (używaj Import & Export)
+
 #### **Import Okazji** (`/admin/deals-import`)
 - CSV import okazji
 - Bulk AI Import

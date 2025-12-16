@@ -203,14 +203,24 @@ export async function dryRunImportProducts(input: unknown) {
   const { products, upsert, dedupe } = parsed.data;
   const normalized = products.map(normalizeProductInput);
   let toCreate = 0, toUpdate = 0, duplicates = 0;
-  const preview: Array<{ product: any; action: string; reason?: string; duplicateOf?: string; similarity?: number }> = [];
+  const preview: Array<{ product: any; action: string; reason?: string; duplicateOf?: string; similarity?: number; flags?: { hasTranslations: boolean; hasEnrichment: boolean; importElements: string[] } }> = [];
   
   for (const p of normalized.slice(0, 50)) {
     const existingId = await findExistingProduct({ originalId: p.metadata?.originalId, affiliateUrl: p.affiliateUrl });
     if (existingId) {
       if (upsert) {
         toUpdate++;
-        preview.push({ product: { id: existingId, name: p.name }, action: "update", reason: "Existing product found" });
+        preview.push({ product: { id: existingId, name: p.name }, action: "update", reason: "Existing product found", flags: {
+          hasTranslations: !!(p.title && typeof p.title === 'object' && (p.title.en || p.title.de || p.title.fr || p.title.es)),
+          hasEnrichment: !!p.metadata?.specifications || !!p.seo || !!p.ai,
+          importElements: [
+            p.metadata?.specifications ? 'specifications' : '',
+            p.ratingSources?.external ? 'externalRating' : '',
+            p.metadata?.evaluateRate ? 'evaluateRate' : '',
+            p.metadata?.evaluateCount ? 'evaluateCount' : '',
+            p.seo ? 'seo' : '',
+          ].filter(Boolean)
+        }});
       } else {
         duplicates++;
         preview.push({ product: { name: p.name }, action: "skip", reason: "Duplicate (upsert=false)" });
@@ -221,21 +231,70 @@ export async function dryRunImportProducts(input: unknown) {
         const dupeCheck = await detectDuplicate(productMock, 0.85);
         if (dupeCheck.isDuplicate && dupeCheck.similarProduct) {
           duplicates++;
-          preview.push({ product: { name: p.name }, action: "skip", reason: "AI detected duplicate", duplicateOf: dupeCheck.similarProduct.id, similarity: dupeCheck.similarity });
+          preview.push({ product: { name: p.name }, action: "skip", reason: "AI detected duplicate", duplicateOf: dupeCheck.similarProduct.id, similarity: dupeCheck.similarity, flags: {
+            hasTranslations: !!(p.title && typeof p.title === 'object' && (p.title.en || p.title.de || p.title.fr || p.title.es)),
+            hasEnrichment: !!p.metadata?.specifications || !!p.seo || !!p.ai,
+            importElements: [
+              p.metadata?.specifications ? 'specifications' : '',
+              p.ratingSources?.external ? 'externalRating' : '',
+              p.metadata?.evaluateRate ? 'evaluateRate' : '',
+              p.metadata?.evaluateCount ? 'evaluateCount' : '',
+              p.seo ? 'seo' : '',
+            ].filter(Boolean)
+          }});
         } else {
           toCreate++;
-          preview.push({ product: { name: p.name }, action: "create", reason: "No duplicate found" });
+          preview.push({ product: { name: p.name }, action: "create", reason: "No duplicate found", flags: {
+            hasTranslations: !!(p.title && typeof p.title === 'object' && (p.title.en || p.title.de || p.title.fr || p.title.es)),
+            hasEnrichment: !!p.metadata?.specifications || !!p.seo || !!p.ai,
+            importElements: [
+              p.metadata?.specifications ? 'specifications' : '',
+              p.ratingSources?.external ? 'externalRating' : '',
+              p.metadata?.evaluateRate ? 'evaluateRate' : '',
+              p.metadata?.evaluateCount ? 'evaluateCount' : '',
+              p.seo ? 'seo' : '',
+            ].filter(Boolean)
+          }});
         }
       } catch {
         toCreate++;
-        preview.push({ product: { name: p.name }, action: "create", reason: "Dedupe check failed (will create)" });
+        preview.push({ product: { name: p.name }, action: "create", reason: "Dedupe check failed (will create)", flags: {
+          hasTranslations: !!(p.title && typeof p.title === 'object' && (p.title.en || p.title.de || p.title.fr || p.title.es)),
+          hasEnrichment: !!p.metadata?.specifications || !!p.seo || !!p.ai,
+          importElements: [
+            p.metadata?.specifications ? 'specifications' : '',
+            p.ratingSources?.external ? 'externalRating' : '',
+            p.metadata?.evaluateRate ? 'evaluateRate' : '',
+            p.metadata?.evaluateCount ? 'evaluateCount' : '',
+            p.seo ? 'seo' : '',
+          ].filter(Boolean)
+        }});
       }
     } else {
       toCreate++;
-      preview.push({ product: { name: p.name }, action: "create" });
+      preview.push({ product: { name: p.name }, action: "create", flags: {
+        hasTranslations: !!(p.title && typeof p.title === 'object' && (p.title.en || p.title.de || p.title.fr || p.title.es)),
+        hasEnrichment: !!p.metadata?.specifications || !!p.seo || !!p.ai,
+        importElements: [
+          p.metadata?.specifications ? 'specifications' : '',
+          p.ratingSources?.external ? 'externalRating' : '',
+          p.metadata?.evaluateRate ? 'evaluateRate' : '',
+          p.metadata?.evaluateCount ? 'evaluateCount' : '',
+          p.seo ? 'seo' : '',
+        ].filter(Boolean)
+      }});
     }
   }
-  return { ok: true, summary: { total: normalized.length, toCreate, toUpdate, duplicates }, preview: preview.slice(0, 10) };
+  const summaryFlags = normalized.reduce((acc, p) => {
+    const hasTranslations = !!(p.title && typeof p.title === 'object' && (p.title.en || p.title.de || p.title.fr || p.title.es));
+    const hasEnrichment = !!p.metadata?.specifications || !!p.seo || !!p.ai;
+    if (hasTranslations) acc.translated++;
+    if (hasEnrichment) acc.enriched++;
+    if (p.metadata?.specifications) acc.specs++;
+    if (p.ratingSources?.external) acc.externalRatings++;
+    return acc;
+  }, { translated: 0, enriched: 0, specs: 0, externalRatings: 0 });
+  return { ok: true, summary: { total: normalized.length, toCreate, toUpdate, duplicates, flags: summaryFlags }, preview: preview.slice(0, 10) };
 }
 
 export async function runImportProducts(input: unknown) {
