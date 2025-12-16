@@ -271,20 +271,24 @@ function DynamicShowcaseColumn({ activeCategory, smartLoading, smartTopProducts,
 
 export function MegaMenu() {
   const { user, loading: authLoading, logout } = useAuth();
-  const [categories, setCategories] = React.useState<Category[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [promotedItems, setPromotedItems] = React.useState<ShowcaseItem[]>([]);
-  const [dealOfTheDay, setDealOfTheDay] = React.useState<DealHighlight | null>(null);
-  const [activeIndex, setActiveIndex] = React.useState(0);
-  const [smartTopProducts, setSmartTopProducts] = React.useState<Product[]>([]);
-  const [smartHotDeals, setSmartHotDeals] = React.useState<Deal[]>([]);
-  const [smartLoading, setSmartLoading] = React.useState(false);
+  const [menuState, setMenuState] = React.useState({
+    categories: [] as Category[],
+    promotedItems: [] as ShowcaseItem[],
+    dealOfTheDay: null as DealHighlight | null,
+    isLoading: true,
+    activeIndex: 0,
+  });
+  const [smartState, setSmartState] = React.useState({
+    topProducts: [] as Product[],
+    hotDeals: [] as Deal[],
+    loading: false,
+  });
 
   React.useEffect(() => {
     let mounted = true;
 
     const loadData = async () => {
-      setIsLoading(true);
+      setMenuState(prev => ({ ...prev, isLoading: true }));
       try {
         const [fetchedCategories, showcaseConfig] = await Promise.all([
           getCategories(),
@@ -292,7 +296,6 @@ export function MegaMenu() {
         ]);
 
         if (!mounted) return;
-        setCategories(fetchedCategories);
 
         let localPromoted: ShowcaseItem[] = [];
         let localDealOfTheDay: DealHighlight | null = null;
@@ -381,18 +384,25 @@ export function MegaMenu() {
         }
 
         if (!mounted) return;
-        setPromotedItems(localPromoted.slice(0, 3));
-        setDealOfTheDay(localDealOfTheDay);
+        // Batch all state updates into single setState
+        setMenuState(prev => ({
+          ...prev,
+          categories: fetchedCategories,
+          promotedItems: localPromoted.slice(0, 3),
+          dealOfTheDay: localDealOfTheDay,
+          isLoading: false,
+        }));
       } catch (error) {
         console.error("Nie udało się pobrać danych mega menu", error);
         if (!mounted) return;
-        setCategories([]);
-        setPromotedItems([]);
-        setDealOfTheDay(null);
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+        // Batch error state into single setState
+        setMenuState(prev => ({
+          ...prev,
+          categories: [],
+          promotedItems: [],
+          dealOfTheDay: null,
+          isLoading: false,
+        }));
       }
     };
 
@@ -402,40 +412,38 @@ export function MegaMenu() {
     };
   }, []);
 
-  const categoriesCount = categories.length;
+  const categoriesCount = menuState.categories.length;
 
   React.useEffect(() => {
-    if (categoriesCount === 0 && activeIndex !== 0) {
-      setActiveIndex(0);
+    if (categoriesCount === 0 && menuState.activeIndex !== 0) {
+      setMenuState(prev => ({ ...prev, activeIndex: 0 }));
       return;
     }
 
-    if (activeIndex >= categoriesCount && categoriesCount > 0) {
-      setActiveIndex(0);
+    if (menuState.activeIndex >= categoriesCount && categoriesCount > 0) {
+      setMenuState(prev => ({ ...prev, activeIndex: 0 }));
     }
-  }, [categoriesCount, activeIndex]);
+  }, [categoriesCount, menuState.activeIndex]);
 
-  const activeCategory = categories[activeIndex] ?? null;
-  const dealOfTheDayPrice = formatCurrency(dealOfTheDay?.price);
+  const activeCategory = menuState.categories[menuState.activeIndex] ?? null;
+  const dealOfTheDayPrice = formatCurrency(menuState.dealOfTheDay?.price);
 
   // Ładowanie inteligentnych bannerów dla aktywnej kategorii z mini-cache
   React.useEffect(() => {
     let cancelled = false;
     async function loadSmart() {
       if (!activeCategory) {
-        setSmartTopProducts([]);
-        setSmartHotDeals([]);
+        setSmartState(prev => ({ ...prev, topProducts: [], hotDeals: [] }));
         return;
       }
-      setSmartLoading(true);
+      setSmartState(prev => ({ ...prev, loading: true }));
       try {
         const key = activeCategory.slug ?? activeCategory.id;
         const now = Date.now();
         const cached = smartCache[key];
         if (cached && now - cached.ts < 60_000) {
           if (!cancelled) {
-            setSmartTopProducts(cached.tops);
-            setSmartHotDeals(cached.hots);
+            setSmartState(prev => ({ ...prev, topProducts: cached.tops, hotDeals: cached.hots, loading: false }));
           }
         } else {
           const [tops, hots] = await Promise.all([
@@ -443,18 +451,14 @@ export function MegaMenu() {
             getHotDealsByCategory(key, 3),
           ]);
           if (!cancelled) {
-            setSmartTopProducts(tops);
-            setSmartHotDeals(hots);
+            setSmartState(prev => ({ ...prev, topProducts: tops, hotDeals: hots, loading: false }));
             smartCache[key] = { tops, hots, ts: now };
           }
         }
       } catch (e) {
         if (!cancelled) {
-          setSmartTopProducts([]);
-          setSmartHotDeals([]);
+          setSmartState(prev => ({ ...prev, topProducts: [], hotDeals: [], loading: false }));
         }
-      } finally {
-        if (!cancelled) setSmartLoading(false);
       }
     }
     void loadSmart();
@@ -467,19 +471,19 @@ export function MegaMenu() {
         Katalog
       </NavigationMenuTrigger>
   <NavigationMenuContent className="w-screen max-w-none border-t border-border/60 bg-background/95 shadow-lg backdrop-blur animate-fade">
-        {isLoading ? (
+        {menuState.isLoading ? (
           <div className="grid gap-6 px-4 py-8 md:grid-cols-[minmax(220px,1fr)_minmax(520px,2.5fr)_minmax(260px,1.2fr)] md:px-12">
             <Skeleton className="h-72 w-full" />
             <Skeleton className="h-72 w-full" />
             <Skeleton className="h-72 w-full" />
           </div>
-        ) : categories.length === 0 ? (
+        ) : menuState.categories.length === 0 ? (
           <div className="flex items-center justify-center px-6 py-16 text-sm text-muted-foreground">
             Brak zdefiniowanych kategorii. Dodaj je w panelu administracyjnym.
           </div>
         ) : (
           <div className="grid gap-6 px-4 py-8 md:grid-cols-[minmax(220px,1fr)_minmax(520px,2.5fr)_minmax(260px,1.2fr)] md:px-12">
-            <CategoryColumn categories={categories} activeIndex={activeIndex} setActiveIndex={setActiveIndex} />
+            <CategoryColumn categories={menuState.categories} activeIndex={menuState.activeIndex} setActiveIndex={(idx) => setMenuState(prev => ({ ...prev, activeIndex: idx }))} />
 
             <SubTreeColumn activeCategory={activeCategory} />
 
@@ -742,7 +746,7 @@ export function MegaMenu() {
               ) : null}
 
               {/* Inteligentne banery (automatyczne) + skeletony */}
-              {smartLoading ? (
+              {smartState.loading ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-xl border border-border/60 bg-card/90 p-4 space-y-3">
                     <div className="flex items-center justify-between">
@@ -775,16 +779,16 @@ export function MegaMenu() {
                     ))}
                   </div>
                 </div>
-              ) : (smartTopProducts.length > 0 || smartHotDeals.length > 0) && (
+              ) : (smartState.topProducts.length > 0 || smartState.hotDeals.length > 0) && (
                 <div className="grid gap-4 md:grid-cols-2">
-                  {smartTopProducts.length > 0 && (
+                  {smartState.topProducts.length > 0 && (
                     <div className="rounded-xl border border-border/60 bg-card/90 p-4">
                       <div className="mb-3 flex items-center justify-between">
                         <p className="text-sm font-semibold">Najwyżej oceniane</p>
                         <Badge variant="secondary">Auto</Badge>
                       </div>
                       <div className="space-y-3">
-                        {smartTopProducts.map((p) => (
+                        {smartState.topProducts.map((p) => (
                           <Link key={p.id} href={`/products/${p.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
                             <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
                               {p.image ? <Image src={p.image} alt={p.name} fill className="object-cover" /> : null}
@@ -798,14 +802,14 @@ export function MegaMenu() {
                       </div>
                     </div>
                   )}
-                  {smartHotDeals.length > 0 && (
+                  {smartState.hotDeals.length > 0 && (
                     <div className="rounded-xl border border-border/60 bg-card/90 p-4">
                       <div className="mb-3 flex items-center justify-between">
                         <p className="text-sm font-semibold">Gorące teraz</p>
                         <Badge variant="secondary">Auto</Badge>
                       </div>
                       <div className="space-y-3">
-                        {smartHotDeals.map((d) => (
+                        {smartState.hotDeals.map((d) => (
                           <Link key={d.id} href={`/deals/${d.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
                             <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
                               {d.image ? <Image src={d.image} alt={d.title} fill className="object-cover" /> : null}
@@ -955,13 +959,13 @@ export function MegaMenu() {
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Deal dnia
                 </p>
-                {dealOfTheDay ? (
-                  <Link href={dealOfTheDay.href} className="block">
+                {menuState.dealOfTheDay ? (
+                  <Link href={menuState.dealOfTheDay.href} className="block">
                     <div className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm">
-                      {dealOfTheDay.image ? (
+                      {menuState.dealOfTheDay.image ? (
                         <Image
-                          src={dealOfTheDay.image}
-                          alt={dealOfTheDay.title}
+                          src={menuState.dealOfTheDay.image}
+                          alt={menuState.dealOfTheDay.title}
                           width={280}
                           height={160}
                           className="h-32 w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -969,11 +973,11 @@ export function MegaMenu() {
                       ) : null}
                       <div className="space-y-2 p-4">
                         <p className="text-sm font-semibold leading-tight line-clamp-2">
-                          {dealOfTheDay.title}
+                          {menuState.dealOfTheDay.title}
                         </p>
-                        {dealOfTheDay.description ? (
+                        {menuState.dealOfTheDay.description ? (
                           <p className="text-xs text-muted-foreground line-clamp-3">
-                            {dealOfTheDay.description}
+                            {menuState.dealOfTheDay.description}
                           </p>
                         ) : null}
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -982,7 +986,7 @@ export function MegaMenu() {
                           ) : null}
                           <span className="flex items-center gap-1 font-medium text-amber-500">
                             <Flame className="h-3.5 w-3.5" />
-                            {dealOfTheDay.temperature} pkt
+                            {menuState.dealOfTheDay.temperature} pkt
                           </span>
                         </div>
                       </div>
