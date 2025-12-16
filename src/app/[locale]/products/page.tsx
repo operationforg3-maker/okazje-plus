@@ -7,6 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
+import ProductListCard from '@/components/product-list-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,7 @@ function ProductsPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [insightsOpen, setInsightsOpen] = useState(false);
 
   // Wczytaj kategorie i ustaw z URL
@@ -100,6 +102,10 @@ function ProductsPageContent() {
       if (savedView === 'list' || savedView === 'grid') {
         setViewMode(savedView);
       }
+      const savedDensity = localStorage.getItem('products_density');
+      if (savedDensity === 'compact' || savedDensity === 'comfortable') {
+        setCardDensity(savedDensity);
+      }
     } catch {}
   }, []);
 
@@ -147,6 +153,10 @@ function ProductsPageContent() {
     try { localStorage.setItem('products_view_mode', viewMode); } catch {}
   }, [viewMode]);
 
+  useEffect(() => {
+    try { localStorage.setItem('products_density', cardDensity); } catch {}
+  }, [cardDensity]);
+
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products;
     const needle = searchTerm.toLowerCase();
@@ -174,11 +184,12 @@ function ProductsPageContent() {
     currency: 'PLN',
   });
 
-  const gridWrapperClass = viewMode === 'grid'
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-    : 'space-y-4';
+  const gridWrapperClass = cardDensity === 'compact'
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
-  const cardWrapperClass = '';
+  const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
+  const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
 
   // Sidebar Content (reusable for desktop and mobile)
   // Refs dla auto-scroll do wybranej kategorii
@@ -483,7 +494,8 @@ function ProductsPageContent() {
                         className="h-8 px-3"
                         onClick={() => setViewMode('grid')}
                       >
-                        <LayoutGrid className="h-4 w-4" />
+                        <LayoutGrid className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Kafelki</span>
                       </Button>
                       <Button
                         variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -491,27 +503,64 @@ function ProductsPageContent() {
                         className="h-8 px-3"
                         onClick={() => setViewMode('list')}
                       >
-                        <List className="h-4 w-4" />
+                        <List className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Lista</span>
+                      </Button>
+                    </div>
+
+                    {/* Density Toggle */}
+                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                      <Button
+                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setCardDensity('comfortable')}
+                      >
+                        Standard
+                      </Button>
+                      <Button
+                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setCardDensity('compact')}
+                      >
+                        Kompakt
                       </Button>
                     </div>
                   </div>
                 </div>
                 {isLoading ? (
-                  <div className={gridWrapperClass}>
+                  <div className={cn(
+                    viewMode === 'list' ? listWrapperClass : gridWrapperClass
+                  )}>
                     {[...Array(6)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="bg-muted animate-pulse rounded-lg h-80"
-                      />
+                      <div key={i} className={cn(
+                        "bg-muted animate-pulse rounded-lg",
+                        viewMode === 'list'
+                          ? 'h-48'
+                          : cardDensity === 'compact' ? 'h-80' : 'h-96'
+                      )} />
                     ))}
                   </div>
                 ) : filteredProducts.length > 0 ? (
                   <>
-                    <div className={gridWrapperClass}>
-                      {displayedProducts.map((product) => (
-                        <ProductCardBoundary key={product.id} product={product} viewMode={viewMode} />
-                      ))}
-                    </div>
+                    {viewMode === 'list' ? (
+                      <div className={listWrapperClass}>
+                        {displayedProducts.map((product) => (
+                          <div key={product.id} className={cardWrapperClass}>
+                            <ProductListCard product={product} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={gridWrapperClass}>
+                        {displayedProducts.map((product) => (
+                          <div key={product.id} className={cardWrapperClass}>
+                            <ProductCardBoundary product={product} viewMode={viewMode} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     
                     {/* Infinite scroll loader */}
                     {hasMore && (
