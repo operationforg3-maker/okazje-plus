@@ -51,15 +51,8 @@ const CART_STORAGE_KEY = 'smart_cart_items';
  * Smart Cart Provider
  */
 export function SmartCartProvider({ children }: { children: ReactNode }) {
-  // Safely get auth context - may be null during SSR or initial render
-  let user = null;
-  try {
-    const authContext = useAuth();
-    user = authContext?.user || null;
-  } catch (e) {
-    // AuthContext not available yet - continue with null user (guest mode)
-    console.warn('[SmartCartProvider] AuthContext not available, using guest mode');
-  }
+  const authContext = useAuth();
+  const user = authContext?.user || null;
   
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
