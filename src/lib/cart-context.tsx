@@ -83,11 +83,13 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
             }
           }
           
-          const stored = localStorage.getItem(CART_STORAGE_KEY);
-          if (stored) {
-            const parsed = JSON.parse(stored) as CartItem[];
-            setItems(parsed);
-            logger.info(`Loaded ${parsed.length} items from localStorage cart`);
+          if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(CART_STORAGE_KEY);
+            if (stored) {
+              const parsed = JSON.parse(stored) as CartItem[];
+              setItems(parsed);
+              logger.info(`Loaded ${parsed.length} items from localStorage cart`);
+            }
           }
         } catch (error) {
           logger.error('Failed to load cart', { error });
@@ -110,7 +112,9 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     const saveCart = async () => {
       try {
         // Save to localStorage (always, for guests and backup)
-        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+        }
         
         if (user) {
           // Save to Firestore for logged-in users

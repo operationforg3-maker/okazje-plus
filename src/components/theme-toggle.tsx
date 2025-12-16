@@ -25,22 +25,28 @@ export function ThemeToggle({
   className,
   size = 'icon',
 }: { className?: string; size?: 'icon' | 'sm' | 'default' }) {
+  const [isMounted, setIsMounted] = useState(false);
   const [theme, setTheme] = useState<Theme>('system');
   const t = useTranslations('common');
 
   // Initialize from storage
   useEffect(() => {
+    setIsMounted(true);
+    
     try {
-      const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-      const initial: Theme = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
-      setTheme(initial);
-      applyTheme(initial);
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+        const initial: Theme = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+        setTheme(initial);
+        applyTheme(initial);
+      }
     } catch {}
   }, []);
 
   // React to system theme changes when in 'system'
   useEffect(() => {
-    if (theme !== 'system') return;
+    if (!isMounted || theme !== 'system' || typeof window === 'undefined') return;
+    
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => applyTheme('system');
     try {
@@ -52,18 +58,36 @@ export function ThemeToggle({
     return () => {
       try { mq.removeEventListener('change', handler); } catch { mq.removeListener(handler); }
     };
-  }, [theme]);
+  }, [theme, isMounted]);
 
   const cycle = () => {
     const next: Theme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
     setTheme(next);
-    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
-    applyTheme(next);
+    
+    if (typeof window !== 'undefined') {
+      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+      applyTheme(next);
+    }
   };
 
   const label = useMemo(() => {
     return theme === 'light' ? t('theme.light') : theme === 'dark' ? t('theme.dark') : t('theme.system');
   }, [theme, t]);
+
+  // Don't render until mounted to avoid hydration mismatch
+  if (!isMounted) {
+    return (
+      <Button
+        variant="outline"
+        size={size}
+        className={cn('rounded-full', className)}
+        disabled
+        aria-label="Loading theme"
+      >
+        <Laptop className="h-5 w-5" />
+      </Button>
+    );
+  }
 
   return (
     <Button

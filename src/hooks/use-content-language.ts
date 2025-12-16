@@ -56,10 +56,13 @@ function setStoredLanguage(lang: SupportedLanguage): void {
  * Hook for managing content language (M4 Enhanced)
  */
 export function useContentLanguage() {
+  const [isMounted, setIsMounted] = useState(false);
   const [language, setLanguageState] = useState<SupportedLanguage>(DEFAULT_LANGUAGE);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     // Priority: 1. Stored preference, 2. Browser language, 3. Default
     const stored = getStoredLanguage();
     const detected = detectBrowserLanguage();
@@ -86,6 +89,7 @@ export function useContentLanguage() {
     setLanguage,
     getText, // M4: New helper for LocalizedText
     isLoading,
+    isMounted, // Export for components that need to check mount state
     isPolish: language === 'pl',
     isEnglish: language === 'en',
     isGerman: language === 'de',

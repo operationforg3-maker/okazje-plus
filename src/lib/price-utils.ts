@@ -17,12 +17,17 @@ import {
  * Hook to get current selected currency from localStorage
  */
 export function useSelectedCurrency(): SupportedCurrency {
+  const [isMounted, setIsMounted] = useState(false);
   const [currency, setCurrency] = useState<SupportedCurrency>('PLN');
   
   useEffect(() => {
-    const savedCurrency = localStorage.getItem('preferredCurrency') as SupportedCurrency;
-    if (savedCurrency && ['PLN', 'USD', 'EUR', 'GBP'].includes(savedCurrency)) {
-      setCurrency(savedCurrency);
+    setIsMounted(true);
+    
+    if (typeof window !== 'undefined') {
+      const savedCurrency = localStorage.getItem('preferredCurrency') as SupportedCurrency;
+      if (savedCurrency && ['PLN', 'USD', 'EUR', 'GBP'].includes(savedCurrency)) {
+        setCurrency(savedCurrency);
+      }
     }
     
     // Listen for currency changes
@@ -30,10 +35,14 @@ export function useSelectedCurrency(): SupportedCurrency {
       setCurrency(e.detail.currency);
     };
     
-    window.addEventListener('currencyChange', handleCurrencyChange as EventListener);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('currencyChange', handleCurrencyChange as EventListener);
+    }
     
     return () => {
-      window.removeEventListener('currencyChange', handleCurrencyChange as EventListener);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('currencyChange', handleCurrencyChange as EventListener);
+      }
     };
   }, []);
   

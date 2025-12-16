@@ -32,23 +32,29 @@ export function CurrencySwitcher() {
 
   // Load currency from localStorage on mount
   useEffect(() => {
-    const savedCurrency = localStorage.getItem('preferredCurrency') || 'PLN';
-    setCurrency(savedCurrency);
     setIsMounted(true);
+    
+    if (typeof window !== 'undefined') {
+      const savedCurrency = localStorage.getItem('preferredCurrency') || 'PLN';
+      setCurrency(savedCurrency);
+    }
   }, []);
 
   const switchCurrency = (newCurrency: string, enabled: boolean) => {
     if (!enabled) return;
     
     setCurrency(newCurrency);
-    localStorage.setItem('preferredCurrency', newCurrency);
     
-    // Show toast notification
-    const currencyName = SUPPORTED_CURRENCIES.find(c => c.code === newCurrency)?.name || newCurrency;
-    toast.success(`Waluta zmieniona na ${currencyName}`);
-    
-    // Dispatch custom event for components to react to currency change
-    window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: newCurrency } }));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preferredCurrency', newCurrency);
+      
+      // Show toast notification
+      const currencyName = SUPPORTED_CURRENCIES.find(c => c.code === newCurrency)?.name || newCurrency;
+      toast.success(`Waluta zmieniona na ${currencyName}`);
+      
+      // Dispatch custom event for components to react to currency change
+      window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: newCurrency } }));
+    }
   };
 
   // Don't render dropdown content until mounted to avoid hydration mismatch
