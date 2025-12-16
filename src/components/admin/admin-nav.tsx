@@ -66,23 +66,25 @@ const navStructure: (NavItem | NavGroup)[] = [
     title: 'Import & Export',
     icon: Upload,
     items: [
-      { title: 'Konsola Import/Export', href: '/admin/import-export', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
-    ],
-  },
-  {
-    title: 'Legacy (Importy)',
-    icon: Download,
-    items: [
+      { title: 'Import/Export Console', href: '/admin/import-export', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
+      { title: 'AliExpress Import', href: '/admin/aliexpress-import', icon: Search, badge: 'AI', badgeVariant: 'secondary' },
+      { title: 'Allegro Import', href: '/admin/allegro-import', icon: Search },
+      { title: 'Amazon Import', href: '/admin/amazon-import', icon: Search },
+      { title: 'Convertiser Import', href: '/admin/convertiser-import', icon: Zap },
+      { title: 'eBay Import', href: '/admin/ebay-import', icon: Search },
+      { title: 'Bulk Import', href: '/admin/bulk-import', icon: Database },
+      { title: 'Batch Import', href: '/admin/batch-import', icon: Layers },
       { title: 'Kombajn', href: '/admin/harvester', icon: Combine },
       { title: 'Auto-Import Kombajn', href: '/admin/auto-import', icon: Sparkles },
       { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
-      { title: 'AliExpress', href: '/admin/aliexpress-import', icon: Search },
-      { title: 'Allegro', href: '/admin/allegro-import', icon: Search },
-      { title: 'Amazon', href: '/admin/amazon-import', icon: Search },
-      { title: 'Convertiser', href: '/admin/convertiser-import', icon: Zap },
-      { title: 'eBay', href: '/admin/ebay-import', icon: Search },
-      { title: 'Bulk Import', href: '/admin/bulk-import', icon: Database },
-      { title: 'Batch Import', href: '/admin/batch-import', icon: Layers },
+    ],
+  },
+  {
+    title: 'Legacy (Archived)',
+    icon: Download,
+    items: [
+      // Archived imports moved to main Import & Export section
+      // This section kept for reference/rollback
     ],
   },
   {

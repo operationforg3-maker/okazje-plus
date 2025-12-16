@@ -37,8 +37,17 @@ const pathNames: Record<string, string> = {
   '/admin/convertiser-import': 'Import Convertiser',
   '/admin/ebay-import': 'Import eBay',
   '/admin/bulk-import': 'Bulk Import',
+  '/admin/aliexpress-import': 'AliExpress Import',
+  '/admin/allegro-import': 'Allegro Import',
+  '/admin/amazon-import': 'Amazon Import',
+  '/admin/convertiser-import': 'Convertiser Import',
+  '/admin/ebay-import': 'eBay Import',
+  '/admin/bulk-import': 'Bulk Import',
   '/admin/batch-import': 'Batch Import',
-  '/admin/import': 'Import danych',
+  '/admin/harvester': 'Kombajn',
+  '/admin/auto-import': 'Auto-Import Kombajn',
+  '/admin/imports': 'Import Monitor',
+  '/admin/import-export': 'Import/Export Console',
   '/admin/social-media': 'Social Media Automation',
 };
 
