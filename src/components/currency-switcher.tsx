@@ -44,14 +44,17 @@ export function CurrencySwitcher() {
     if (!enabled) return;
     
     setCurrency(newCurrency);
-    localStorage.setItem('preferredCurrency', newCurrency);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preferredCurrency', newCurrency);
+      
+      // Dispatch custom event for components to react to currency change
+      window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: newCurrency } }));
+    }
     
     // Show toast notification
     const currencyName = SUPPORTED_CURRENCIES.find(c => c.code === newCurrency)?.name || newCurrency;
     toast.success(`Waluta zmieniona na ${currencyName}`);
-    
-    // Dispatch custom event for components to react to currency change
-    window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: newCurrency } }));
   };
 
   // Don't render dropdown content until mounted to avoid hydration mismatch
