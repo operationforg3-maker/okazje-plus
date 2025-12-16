@@ -392,7 +392,7 @@ export async function getSocialPostLogs(postId: string): Promise<SocialPostLog[]
 // ============================================================================
 
 /**
- * Generate post content from template
+ * Generate post content from template (simple placeholder replacement)
  */
 export function generatePostContent(
   template: string,
@@ -423,6 +423,98 @@ export function generatePostContent(
   });
   
   return content.trim();
+}
+
+/**
+ * Generate AI-powered post content with optimized images
+ */
+export async function generateAIPostContent(
+  platform: SocialPlatform,
+  type: 'deal' | 'product' | 'article',
+  itemData: any,
+  template?: SocialTemplate
+): Promise<{ content: string; imageUrl?: string; hashtags?: string[] }> {
+  try {
+    // Use Genkit AI flow to generate content
+    const { generateSocialContent } = await import('../ai/flows/social-content/generateSocialPost');
+    
+    const aiContent = await generateSocialContent(platform, type, itemData, {
+      style: template?.imageStyle || 'casual',
+      includeEmojis: true,
+      includePrice: !!itemData.price,
+      includeHashtags: true,
+    });
+
+    // Generate optimized image if source image exists
+    let finalImageUrl = itemData.imageUrl;
+    if (itemData.imageUrl) {
+      try {
+        const { generateSocialImage } = await import('./image-generator');
+        const imageResult = await generateSocialImage({
+          platform,
+          sourceImageUrl: itemData.imageUrl,
+          overlayData: {
+            title: itemData.title,
+            price: itemData.price,
+            originalPrice: itemData.originalPrice,
+            discount: itemData.discount,
+            temperature: itemData.temperature,
+            merchant: itemData.merchant,
+            badge: itemData.temperature && itemData.temperature > 500 ? '🔥 HOT DEAL' : undefined,
+          },
+          style: template?.imageStyle || 'clean',
+        });
+        finalImageUrl = imageResult.url;
+      } catch (imageError) {
+        console.error('Failed to generate social image, using original:', imageError);
+      }
+    }
+
+    // Build final content with title, description, hashtags
+    let content = aiContent.title;
+    
+    // Add emojis if suggested
+    if (aiContent.emojiSuggestions && aiContent.emojiSuggestions.length > 0) {
+      content = `${aiContent.emojiSuggestions[0]} ${content}`;
+    }
+    
+    content += `\n\n${aiContent.description}`;
+    
+    // Add CTA
+    if (aiContent.callToAction) {
+      content += `\n\n${aiContent.callToAction}`;
+    }
+    
+    // Add hashtags at the end
+    if (aiContent.hashtags && aiContent.hashtags.length > 0) {
+      content += `\n\n${aiContent.hashtags.map(tag => tag.startsWith('#') ? tag : `#${tag}`).join(' ')}`;
+    }
+
+    return {
+      content,
+      imageUrl: finalImageUrl,
+      hashtags: aiContent.hashtags,
+    };
+  } catch (error) {
+    console.error('AI content generation failed, using fallback:', error);
+    
+    // Fallback: basic template
+    const { title, description, price, imageUrl } = itemData;
+    
+    let content = `🔥 ${title}\n\n`;
+    if (description) {
+      content += `${description.slice(0, 200)}...\n\n`;
+    }
+    if (price) {
+      content += `💰 Cena: ${price} zł\n\n`;
+    }
+    content += `#okazje #promocje #zakupy`;
+    
+    return {
+      content,
+      imageUrl,
+    };
+  }
 }
 
 /**
@@ -504,4 +596,172 @@ export async function getSocialPostStats(): Promise<{
   });
   
   return stats;
+}
+
+/**
+ * Get optimal posting time for a platform based on historical data
+ * Returns ISO timestamp for next optimal posting time
+ */
+export function getOptimalPostingTime(platform: SocialPlatform): Date {
+  // Best times based on social media research (Warsaw timezone GMT+1)
+  const optimalHours: Record<SocialPlatform, number[]> = {
+    facebook: [12, 13, 18, 19], // Lunch and evening
+    instagram: [11, 13, 17, 19], // Before lunch, after work
+    twitter: [9, 12, 17, 18], // Morning, lunch, commute home
+    linkedin: [8, 12, 17], // Business hours
+    tiktok: [18, 19, 20, 21], // Evening entertainment hours
+  };
+
+  const now = new Date();
+  const hours = optimalHours[platform];
+  
+  // Find next optimal hour
+  const currentHour = now.getHours();
+  let nextHour = hours.find(h => h > currentHour);
+  
+  // If no hour found today, use first hour tomorrow
+  if (!nextHour) {
+    nextHour = hours[0];
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(nextHour, 0, 0, 0);
+    return tomorrow;
+  }
+  
+  // Set to next optimal hour today
+  const nextTime = new Date(now);
+  nextTime.setHours(nextHour, 0, 0, 0);
+  return nextTime;
+}
+
+/**
+ * Bulk create social posts from multiple deals/products
+ */
+export async function bulkCreatePosts(
+  items: Array<{
+    id: string;
+    type: 'deal' | 'product';
+    data: any;
+  }>,
+  platforms: SocialPlatform[],
+  options?: {
+    useAI?: boolean;
+    autoApprove?: boolean;
+    scheduleOptimal?: boolean;
+    createdBy?: string;
+  }
+): Promise<{ success: string[]; failed: Array<{ id: string; error: string }> }> {
+  const results = {
+    success: [] as string[],
+    failed: [] as Array<{ id: string; error: string }>,
+  };
+
+  for (const item of items) {
+    for (const platform of platforms) {
+      try {
+        // Generate content (AI or template-based)
+        let content: string;
+        let imageUrl: string | undefined;
+        let metadata: any = {};
+
+        if (options?.useAI) {
+          const aiResult = await generateAIPostContent(
+            platform,
+            item.type,
+            item.data
+          );
+          content = aiResult.content;
+          imageUrl = aiResult.imageUrl;
+          metadata.hashtags = aiResult.hashtags;
+        } else {
+          // Simple template
+          content = `🔥 ${item.data.title}\n\n`;
+          if (item.data.description) {
+            content += `${item.data.description.slice(0, 150)}...\n\n`;
+          }
+          if (item.data.price) {
+            content += `💰 ${item.data.price} zł\n\n`;
+          }
+          content += `#okazje #promocje`;
+          imageUrl = item.data.imageUrl;
+        }
+
+        // Schedule for optimal time if requested
+        let scheduledFor: string | undefined;
+        if (options?.scheduleOptimal) {
+          scheduledFor = getOptimalPostingTime(platform).toISOString();
+        }
+
+        // Create post
+        const postId = await createSocialPost(
+          platform,
+          item.type,
+          item.id,
+          item.data,
+          content,
+          {
+            imageUrl,
+            scheduledFor,
+            metadata,
+            createdBy: options?.createdBy,
+          }
+        );
+
+        // Auto-approve if requested
+        if (options?.autoApprove && options?.createdBy) {
+          await approveSocialPost(postId, options.createdBy);
+        }
+
+        results.success.push(`${platform}-${item.id}`);
+      } catch (error: any) {
+        console.error(`Failed to create post for ${platform}-${item.id}:`, error);
+        results.failed.push({
+          id: `${platform}-${item.id}`,
+          error: error.message || 'Unknown error',
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Auto-queue hot deal to social media
+ * Call this after deal is approved
+ */
+export async function autoQueueHotDeal(
+  dealId: string,
+  dealData: any,
+  threshold: number = 500
+): Promise<void> {
+  // Only queue if temperature is above threshold
+  if (!dealData.temperature || dealData.temperature < threshold) {
+    return;
+  }
+
+  // Get active platforms
+  const configs = await getAllSocialConfigs();
+  const activePlatforms = Object.entries(configs)
+    .filter(([_, config]) => config.enabled && config.settings?.autoPost)
+    .map(([platform]) => platform as SocialPlatform);
+
+  if (activePlatforms.length === 0) {
+    console.log('No active platforms with autoPost enabled');
+    return;
+  }
+
+  // Bulk create posts for all active platforms
+  await bulkCreatePosts(
+    [{ id: dealId, type: 'deal', data: dealData }],
+    activePlatforms,
+    {
+      useAI: true, // Always use AI for hot deals
+      autoApprove: true, // Auto-approve hot deals
+      scheduleOptimal: true, // Schedule for best time
+      createdBy: 'system',
+    }
+  );
+
+  console.log(`Auto-queued hot deal ${dealId} to ${activePlatforms.length} platforms`);
 }
