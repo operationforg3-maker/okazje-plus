@@ -74,14 +74,11 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isNew, setIsNew] = useState(false);
   const [relativeTime, setRelativeTime] = useState('');
+  const [formattedPrice, setFormattedPrice] = useState<string | null>(null);
+  const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
+  const [formattedSavings, setFormattedSavings] = useState<string | null>(null);
+  const [discount, setDiscount] = useState<number | null>(null);
   
-  const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
-  const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
-  const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
-  const savings = typeof deal.originalPrice === 'number' && deal.originalPrice > deal.price 
-    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price)
-    : null;
   const description = safeText(deal.description);
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
@@ -104,7 +101,26 @@ export default function DealListCard({ deal }: DealListCardProps) {
     
     const relTime = getRelativeTime(deal.postedAt);
     setRelativeTime(relTime);
-  }, [deal.postedAt]);
+    
+    // Format prices on client only (Intl.NumberFormat is browser-dependent)
+    const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
+    setFormattedPrice(formatted);
+    
+    if (typeof deal.originalPrice === 'number') {
+      const formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
+      setFormattedOriginal(formattedOrig);
+      
+      if (deal.originalPrice > 0) {
+        setDiscount(Math.round(100 - (deal.price / deal.originalPrice) * 100));
+      }
+      
+      if (deal.originalPrice > deal.price) {
+        const savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
+        setFormattedSavings(savings);
+      }
+    }
+  }, [deal.postedAt, deal.price, deal.originalPrice]);
 
   return (
     <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
@@ -199,15 +215,15 @@ export default function DealListCard({ deal }: DealListCardProps) {
 
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-2xl font-bold text-primary">{price}</p>
-            {original && (
-              <p className="text-base text-muted-foreground line-through">{original}</p>
+            <p className="text-2xl font-bold text-primary">{formattedPrice || 'N/A'}</p>
+            {formattedOriginal && (
+              <p className="text-base text-muted-foreground line-through">{formattedOriginal}</p>
             )}
             {typeof discount === 'number' && discount > 0 && (
               <Badge variant="destructive">-{discount}%</Badge>
             )}
-            {savings && (
-              <span className="text-xs font-semibold text-green-600">Oszczędzasz {savings}</span>
+            {formattedSavings && (
+              <span className="text-xs font-semibold text-green-600">Oszczędzasz {formattedSavings}</span>
             )}
           </div>
 

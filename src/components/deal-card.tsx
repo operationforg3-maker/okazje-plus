@@ -111,6 +111,7 @@ export default function DealCard({ deal }: DealCardProps) {
   const [formattedPrice, setFormattedPrice] = useState<string | null>(null);
   const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
   const [formattedSavings, setFormattedSavings] = useState<string | null>(null);
+  const [formattedShippingCost, setFormattedShippingCost] = useState<string | null>(null);
   const [discount, setDiscount] = useState<number | null>(null);
 
   // Hydration safety - sync locale on mount and format prices
@@ -136,7 +137,13 @@ export default function DealCard({ deal }: DealCardProps) {
         setFormattedSavings(savings);
       }
     }
-  }, [localeFromParams, deal.price, deal.originalPrice]);
+    
+    // Format shipping cost
+    if (typeof deal.shippingCost === 'number' && deal.shippingCost > 0) {
+      const shipping = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.shippingCost);
+      setFormattedShippingCost(shipping);
+    }
+  }, [localeFromParams, deal.price, deal.originalPrice, deal.shippingCost]);
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   
@@ -636,8 +643,8 @@ export default function DealCard({ deal }: DealCardProps) {
               Magazyn: {warehouseInfo}
             </span>
           )}
-          {typeof deal.shippingCost === 'number' && deal.shippingCost > 0 && (
-            <span>Koszt wysyłki: {new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.shippingCost)}</span>
+          {formattedShippingCost && (
+            <span>Koszt wysyłki: {formattedShippingCost}</span>
           )}
           {deal.cashback && (
             <span className="font-semibold text-green-600">
