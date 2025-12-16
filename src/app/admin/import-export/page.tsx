@@ -6,9 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Zap, Copy, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertCircle, Zap, Copy, Trash2, Activity, Settings } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
+import { JobsMonitor } from "@/components/admin/jobs-monitor";
+import { JobQueueManager } from "@/components/admin/job-queue-manager";
 
 type DataType = "okazje" | "produkty";
 type StatusFilter = "gotowe" | "drafty" | "wszystko";
@@ -207,7 +210,7 @@ export default function ImportExportPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="font-headline text-3xl font-bold">📊 Import & Export</h1>
+        <h1 className="font-headline text-3xl font-bold">📊 Import & Export Console</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowHistory(!showHistory)}>
             📋 Historia ({sessions.length})
@@ -219,6 +222,24 @@ export default function ImportExportPage() {
           )}
         </div>
       </div>
+
+      <Tabs defaultValue="import" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="import" className="gap-2">
+            <Copy className="h-4 w-4" />
+            Import JSON
+          </TabsTrigger>
+          <TabsTrigger value="jobs" className="gap-2">
+            <Activity className="h-4 w-4" />
+            Job Monitor
+          </TabsTrigger>
+          <TabsTrigger value="queue" className="gap-2">
+            <Settings className="h-4 w-4" />
+            Job Queue
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="import" className="space-y-6 mt-6">
 
       {/* OPCJE */}
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -353,6 +374,42 @@ export default function ImportExportPage() {
           </CardContent>
         </Card>
       )}
+        </TabsContent>
+
+        <TabsContent value="jobs" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Monitor Jobów Importu
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Podgląd i zarządzanie aktywnymi zadaniami importu z różnych źródeł
+              </p>
+            </CardHeader>
+            <CardContent>
+              <JobsMonitor />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="queue" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Kolejka Zadań
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Twórz i zarządzaj zadaniami importu w kolejce
+              </p>
+            </CardHeader>
+            <CardContent>
+              <JobQueueManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
