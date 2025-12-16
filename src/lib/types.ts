@@ -401,6 +401,7 @@ export interface ProductModerationState {
 export interface ProductImportMetadata {
   source: 'aliexpress' | 'manual' | 'csv';
   originalId?: string;
+  createdAt?: string; // ISO timestamp when product was first created
   importedAt?: string;
   importedBy?: string;
   orders?: number;

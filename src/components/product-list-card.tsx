@@ -87,13 +87,13 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   };
 
   const categoryLabel = product.mainCategorySlug || product.subCategorySlug || product.category || null;
-  const rating = (product as any).rating || (product.ratingCard?.rating) || 0;
+  const rating = (product as any).rating || (product.ratingCard?.average) || 0;
   const ratingCount = (product as any).ratingCount || (product.ratingCard?.count) || 0;
 
   // Check if product is new (created less than 7 days ago)
   const isNew = (() => {
     try {
-      const timestamp = product.metadata?.createdAt || product.metadata?.importedAt;
+      const timestamp: any = product.metadata?.createdAt || product.metadata?.importedAt;
       if (!timestamp) return false;
       
       const created = new Date(
