@@ -234,9 +234,9 @@ export interface LocalizedText {
  * SmartPrice - Enhanced price model with shipping & omnibus compliance
  */
 export interface SmartPrice {
-  basePrice: number;               // Base product price in USD (source of truth)
-  amount: number;                 // Legacy: Base product price (deprecated, use basePrice)
-  currency: 'USD';                 // Always USD - converted on display
+  basePrice?: number;              // Base product price in USD (source of truth - optional for backward compatibility)
+  amount: number;                  // Base product price (can be in any currency)
+  currency: string;                // Currency code (USD preferred, but supports PLN/EUR/GBP)
   shippingCost: number;           // Calculated shipping cost in USD
   totalPrice: number;              // basePrice + shippingCost (displayed as "Total Landed Cost")
   lowestPrice30Days?: number;     // Omnibus directive compliance (lowest price in last 30 days)

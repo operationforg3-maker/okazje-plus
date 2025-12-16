@@ -370,14 +370,9 @@ export default function AdminProductsPage() {
                     Cena
                   </SortableTableHead>
                   <TableHead className="hidden md:table-cell">Oceny</TableHead>
-                  <SortableTableHead
-                    columnKey="meta.salesVolume"
-                    sortConfig={sortConfig}
-                    onSort={requestSort}
-                    className="hidden lg:table-cell"
-                  >
+                  <TableHead className="hidden lg:table-cell">
                     Sprzedaż
-                  </SortableTableHead>
+                  </TableHead>
                   <TableHead className="hidden lg:table-cell">AI Score</TableHead>
                   <TableHead className="hidden lg:table-cell">Status</TableHead>
                   <TableHead>

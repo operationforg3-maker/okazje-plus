@@ -10,7 +10,7 @@ import {
   generateSmartContent, 
   batchGenerateSmartContent,
   SmartContentInput 
-} from '../../smartContentFlow';
+} from '../smartContentFlow';
 import { logger } from '@/lib/logging';
 
 export interface SmartContentConfig extends ImportStageConfig {

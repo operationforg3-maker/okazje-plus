@@ -90,6 +90,8 @@ export interface EnrichedProduct {
   originalPrice?: number;
   discount?: number;
   sales_volume?: number; // AliExpress sales volume (orders count)
+  rating?: number; // AliExpress rating (0-5)
+  orders?: number; // Number of orders (same as sales_volume, kept for compatibility)
   
   // Normalized (English) - Backend language
   titleNormalizedEN: string;
@@ -121,10 +123,18 @@ export interface EnrichedProduct {
   currency: 'USD' | 'PLN' | 'EUR';
   exchangeRate?: number;
   
-  // Category assignments
+  // Category assignments (English slugs for backend)
   categorySlugEN: string;
   subcategorySlugEN: string;
   subsubcategorySlugEN: string;
+  
+  // Category names (Polish for UI)
+  mainCategorySlug?: string; // Alias for categorySlugEN
+  subCategorySlug?: string;  // Alias for subcategorySlugEN
+  subSubCategorySlug?: string; // Alias for subsubcategorySlugEN
+  categoryName?: string;
+  subcategoryName?: string;
+  subsubcategoryName?: string;
   
   // Quality metadata
   quality: {

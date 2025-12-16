@@ -481,8 +481,56 @@ export class AliExpressClient {
     countryCode: string = 'PL',
     quantity: number = 1
   ): Promise<{
-    const logistics = await this.getLogisticsInfo(productId, country, quantity);
-    return logistics?.shippingCost || 0;     options: [],
+    shippingCost: number;
+    currency: string;
+    isFreeShipping: boolean;
+    estimatedDays: number;
+    shippingMethod: string;
+    options: Array<{
+      method: string;
+      cost: number;
+      days: number;
+      company: string;
+    }>;
+  } | null> {
+    logger.info('Fetching logistics info', { productId, countryCode, quantity });
+    
+    try {
+      const params = {
+        product_id: productId,
+        product_num: quantity.toString(),
+        country_code: countryCode,
+        send_goods_country_code: 'CN', // Most AliExpress products ship from China
+      };
+      
+      const result = await this.request<any>('aliexpress.logistics.buyer.freight.get', params);
+      
+      // Parse response
+      const responseKey = Object.keys(result)[0];
+      const responseData = result[responseKey];
+      
+      if (!responseData || responseData.resp_code !== 200) {
+        logger.warn('Logistics API returned error, assuming free shipping', { responseData });
+        return {
+          shippingCost: 0,
+          currency: 'USD',
+          isFreeShipping: true,
+          estimatedDays: 14,
+          shippingMethod: 'Standard Shipping',
+          options: [],
+        };
+      }
+      
+      const freight = responseData.result?.freight;
+      if (!Array.isArray(freight) || freight.length === 0) {
+        logger.info('No shipping options found, assuming free shipping');
+        return {
+          shippingCost: 0,
+          currency: 'USD',
+          isFreeShipping: true,
+          estimatedDays: 14,
+          shippingMethod: 'Standard Shipping',
+          options: [],
         };
       }
       

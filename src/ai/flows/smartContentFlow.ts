@@ -165,7 +165,7 @@ OUTPUT FORMAT (JSON):
       },
     });
     
-    const text = response.text();
+    const text = (response as any).text ? String((response as any).text) : '';
     
     // Extract JSON from response (handle markdown code blocks)
     const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
@@ -235,7 +235,7 @@ OUTPUT FORMAT (JSON):
       },
     });
     
-    const text = response.text();
+    const text = (response as any).text ? String((response as any).text) : '';
     const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       throw new Error('No JSON found in SEO response');
