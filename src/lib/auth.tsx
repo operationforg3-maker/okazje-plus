@@ -34,8 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUserObj: FirebaseUser | null) => {
-      setFirebaseUser(firebaseUserObj);
-      
       if (firebaseUserObj) {
         const userRef = doc(db, 'users', firebaseUserObj.uid);
         const docSnap = await getDoc(userRef);
@@ -52,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           // Upewnij się, że w dokumencie użytkownika przechowywane jest pole uid oraz aktualne metadane
           await setDoc(userRef, normalizedUser, { merge: true });
+          // Batch all setState calls into single update
+          setFirebaseUser(firebaseUserObj);
           setUser(normalizedUser);
         } else {
           const newUser: User = {
@@ -62,9 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: 'user', 
           };
           await setDoc(userRef, newUser);
+          // Batch all setState calls into single update
+          setFirebaseUser(firebaseUserObj);
           setUser(newUser);
         }
       } else {
+        // Batch all setState calls into single update
+        setFirebaseUser(null);
         setUser(null);
       }
       setLoading(false);

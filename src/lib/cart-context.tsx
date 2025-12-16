@@ -56,12 +56,20 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   const hasLoadedRef = useRef(false);
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
 
+  // SSR safety - mark as mounted
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Load cart from storage on mount/user change
   useEffect(() => {
+    if (!isMounted) return;
+    
     const currentUserId = user?.uid;
     
     // Only load if: 1. First mount OR 2. User ID changed
@@ -105,7 +113,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
       loadCart();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid]);
+  }, [isMounted, user?.uid]);
 
   // Save cart to storage whenever it changes
   useEffect(() => {
