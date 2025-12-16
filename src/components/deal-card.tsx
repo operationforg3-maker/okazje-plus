@@ -107,19 +107,36 @@ export default function DealCard({ deal }: DealCardProps) {
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   
-  // Hydration safety - sync locale on mount
+  // Format prices using state to fix Intl.NumberFormat hydration mismatch
+  const [formattedPrice, setFormattedPrice] = useState<string | null>(null);
+  const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
+  const [formattedSavings, setFormattedSavings] = useState<string | null>(null);
+  const [discount, setDiscount] = useState<number | null>(null);
+
+  // Hydration safety - sync locale on mount and format prices
   useEffect(() => {
     setIsMounted(true);
     setLocale(localeFromParams);
-  }, [localeFromParams]);
-  
-  const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
-  const original = typeof deal.originalPrice === 'number' ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice) : null;
-  const discount = typeof deal.originalPrice === 'number' && deal.originalPrice > 0 ? Math.round(100 - (deal.price / deal.originalPrice) * 100) : null;
-  const savings = typeof deal.originalPrice === 'number' && deal.originalPrice > deal.price 
-    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price)
-    : null;
+    
+    // Format prices on client only (Intl.NumberFormat is browser-dependent)
+    const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
+    setFormattedPrice(formatted);
+    
+    if (typeof deal.originalPrice === 'number') {
+      const formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
+      setFormattedOriginal(formattedOrig);
+      
+      if (deal.originalPrice > 0) {
+        setDiscount(Math.round(100 - (deal.price / deal.originalPrice) * 100));
+      }
+      
+      if (deal.originalPrice > deal.price) {
+        const savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
+        setFormattedSavings(savings);
+      }
+    }
+  }, [localeFromParams, deal.price, deal.originalPrice]);
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   
@@ -691,13 +708,13 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xl font-bold text-primary">{price}</span>
-          {original && <span className="text-sm text-muted-foreground line-through">{original}</span>}
+          <span className="text-xl font-bold text-primary">{formattedPrice || 'N/A'}</span>
+          {formattedOriginal && <span className="text-sm text-muted-foreground line-through">{formattedOriginal}</span>}
           {typeof discount === 'number' && discount > 0 && (
             <Badge variant="destructive">-{discount}%</Badge>
           )}
-          {savings && (
-            <span className="ml-auto text-xs font-semibold text-green-600">Oszczędzasz {savings}</span>
+          {formattedSavings && (
+            <span className="ml-auto text-xs font-semibold text-green-600">Oszczędzasz {formattedSavings}</span>
           )}
         </div>
 

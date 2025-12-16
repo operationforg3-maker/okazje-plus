@@ -120,7 +120,9 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={cn('min-h-screen bg-background font-body antialiased')}
+      <body 
+        suppressHydrationWarning
+        className={cn('min-h-screen bg-background font-body antialiased')}
         style={{ WebkitOverflowScrolling: 'touch' }}>
         <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
