@@ -49,8 +49,7 @@ interface ProductCardProps {
 export default function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: ProductCardProps) {
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
-  const [isMounted, setIsMounted] = useState(false);
-  const [locale, setLocale] = useState('pl');
+  const [locale, setLocale] = useState(() => localeFromParams);
   const prefix = `/${locale}`;
   const { getText } = useContentLanguage();
   const { addItem, isInCart } = useSmartCart();
@@ -64,7 +63,6 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
   // Hydration safety - sync locale on mount
   useEffect(() => {
-    setIsMounted(true);
     setLocale(localeFromParams);
   }, [localeFromParams]);
 
