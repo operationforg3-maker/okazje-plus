@@ -8,8 +8,10 @@ import { useEffect, useState } from 'react';
  * Detects: Rakuten, Shoop, Honey, GetResponse, Pouch, Capital One Shopping, etc.
  */
 export function useCashbackDetector() {
-  const [hasCashbackExtension, setHasCashbackExtension] = useState(false);
-  const [extensionName, setExtensionName] = useState<string | null>(null);
+  const [cashbackState, setCashbackState] = useState<{ 
+    hasCashbackExtension: boolean; 
+    extensionName: string | null;
+  }>({ hasCashbackExtension: false, extensionName: null });
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -35,8 +37,7 @@ export function useCashbackDetector() {
         try {
           if ((window as any)[identifier] !== undefined) {
             console.warn(`[Cashback Detector] Detected: ${name}`);
-            setExtensionName(name);
-            setHasCashbackExtension(true);
+            setCashbackState({ hasCashbackExtension: true, extensionName: name });
             return;
           }
         } catch (e) {
@@ -59,8 +60,7 @@ export function useCashbackDetector() {
                 rule.cssText?.includes('rakuten') ||
                 rule.cssText?.includes('shoop')
               ) {
-                setExtensionName('Unknown Cashback Extension');
-                setHasCashbackExtension(true);
+                setCashbackState({ hasCashbackExtension: true, extensionName: 'Unknown Cashback Extension' });
                 return;
               }
             }
@@ -80,8 +80,7 @@ export function useCashbackDetector() {
           { type: 'cashback-check' },
           (response: any) => {
             if (response && response.detected) {
-              setExtensionName('Browser Extension (Cashback)');
-              setHasCashbackExtension(true);
+              setCashbackState({ hasCashbackExtension: true, extensionName: 'Browser Extension (Cashback)' });
             }
           }
         );
@@ -89,11 +88,11 @@ export function useCashbackDetector() {
         // Extension not available or blocked
       }
     }
-  }, []);
+    }, []);
 
   return {
-    hasCashbackExtension,
-    extensionName,
-    shouldWarnUser: hasCashbackExtension,
+    hasCashbackExtension: cashbackState.hasCashbackExtension,
+    extensionName: cashbackState.extensionName,
+    shouldWarnUser: cashbackState.hasCashbackExtension,
   };
 }
