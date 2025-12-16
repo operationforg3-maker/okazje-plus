@@ -1,39 +1,143 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/auth-helpers';
-import { adminDb } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import { generateText } from '@/lib/vertex';
 
 /**
  * POST /api/admin/products/ai-enrich
- * AI-powered SEO enrichment for ALL products (not just drafts)
+ * AI-powered SEO enrichment for products - creates a background job
  * Generates: SEO meta tags, keywords, imageHint, benefits, tags
  * Uses Gemini for comprehensive content optimization
  */
 export async function POST(req: NextRequest) {
-  const auth = await checkAdminAuth(req);
-  if (!auth.authorized) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   try {
+    // Auth check
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Missing or invalid authorization header' }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    try {
+      await adminAuth.verifyIdToken(token);
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const limit = Math.min(Math.max(Number(body?.limit ?? 50), 1), 500);
-    const { mainCategorySlug, subCategorySlug, subSubCategorySlug, status } = body || {};
+    const { mainCategorySlug, subCategorySlug, subSubCategorySlug, status, force, force } = body || {};
+
+    // Create job in Firestore
+    const jobRef = adminDb.collection('import_jobs').doc();
+    const jobId = jobRef.id;
+    const now = new Date().toISOString();
+
+    const jobData = {
+      id: jobId,
+      type: 'ai-enrich',
+      status: 'queued',
+      progress: {
+        total: limit,
+        completed: 0,
+        failed: 0,
+        current: 0,
+      },
+      filters: {
+        limit,
+        status: status || null,
+        force: force || false,
+        mainCategorySlug: mainCategorySlug || null,
+        subCategorySlug: subCategorySlug || null,
+        subSubCategorySlug: subSubCategorySlug || null,
+      },
+      createdAt: now,
+      updatedAt: now,
+      startedAt: now,
+      completedAt: null,
+      logs: [],
+    };
+
+    await jobRef.set(jobData);
+    console.log(`[AI Enrich] Job created: ${jobId}`);
+
+    // Start processor in background
+    setImmediate(() => {
+      processAIEnrichJob(jobId).catch((e) => {
+        console.error(`[AI Enrich] Processor failed for job ${jobId}:`, e);
+        jobRef.update({
+          status: 'failed',
+          error: e.message,
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }).catch(console.error);
+      });
+    });
+
+    return NextResponse.json({
+      success: true,
+      jobId,
+      message: `Job AI ubogacania uruchomiony (max ${limit} produktów)`,
+    }, { status: 202 });
+  } catch (e: any) {
+    console.error('[AI Enrich] Error:', e);
+    return NextResponse.json({ error: e.message || 'AI enrichment failed' }, { status: 500 });
+  }
+}
+
+/**
+ * Background processor for AI enrichment jobs
+ */
+export async function processAIEnrichJob(jobId: string) {
+  const jobRef = adminDb.collection('import_jobs').doc(jobId);
+  
+  try {
+    console.log(`[AI Enrich Processor] Starting job ${jobId}`);
+    
+    await jobRef.update({
+      status: 'running',
+      startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    const jobSnap = await jobRef.get();
+    const jobData = jobSnap.data();
+    if (!jobData) throw new Error('Job not found');
+
+    const { limit, status, force, mainCategorySlug, subCategorySlug, subSubCategorySlug } = jobData.filters || {};
 
     let q: FirebaseFirestore.Query = adminDb.collection('products');
-    
-    // Optional status filter (if not provided, process ALL statuses)
     if (status) q = q.where('status', '==', String(status));
-    
     if (mainCategorySlug) q = q.where('mainCategorySlug', '==', String(mainCategorySlug));
     if (subCategorySlug) q = q.where('subCategorySlug', '==', String(subCategorySlug));
     if (subSubCategorySlug) q = q.where('subSubCategorySlug', '==', String(subSubCategorySlug));
 
-    const snap = await q.limit(limit).get();
-    if (snap.empty) return NextResponse.json({ success: true, updated: 0, skipped: 0 });
+    const snap = await q.limit(limit || 50).get();
+    
+    if (snap.empty) {
+      await jobRef.update({
+        status: 'completed',
+        'progress.total': 0,
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    await jobRef.update({ 'progress.total': snap.docs.length });
 
     let updatedCount = 0;
     let skippedCount = 0;
 
-    for (const doc of snap.docs) {
+    for (let i = 0; i < snap.docs.length; i++) {
+      const doc = snap.docs[i];
+
+      // Update progress
+      await jobRef.update({
+        'progress.current': i,
+        updatedAt: new Date().toISOString(),
+      });
+
       try {
         const data = doc.data() || {};
         
@@ -43,7 +147,7 @@ export async function POST(req: NextRequest) {
                               data.seo?.de?.metaTitle && 
                               data.ai?.enrichment?.version >= 3;
         
-        if (hasEnrichment && !body.force) {
+        if (hasEnrichment && !force) {
           skippedCount++;
           continue;
         }
@@ -177,19 +281,34 @@ Return JSON:
         // Rate limit: 300ms between products (more complex prompt)
         await new Promise(r => setTimeout(r, 300));
       } catch (e: any) {
-        console.error(`[AI Enrich] Error for product ${doc.id}:`, e.message);
+        console.error(`[AI Enrich Processor] Error for product ${doc.id}:`, e.message);
         skippedCount++;
+        await jobRef.update({ 'progress.failed': skippedCount });
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      updated: updatedCount, 
-      skipped: skippedCount,
-      message: `Ubogacono ${updatedCount} produktów, pominięto ${skippedCount}`,
+    await jobRef.update({
+      status: 'completed',
+      'progress.completed': updatedCount,
+      'progress.failed': skippedCount,
+      completedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      logs: [{
+        timestamp: new Date().toISOString(),
+        message: `Ubogacono ${updatedCount} produktów, pominięto ${skippedCount}`,
+        status: 'success',
+      }],
     });
+
+    console.log(`[AI Enrich Processor] Job ${jobId} completed: ${updatedCount} updated, ${skippedCount} skipped`);
   } catch (e: any) {
-    console.error('[AI Enrich] Error:', e);
-    return NextResponse.json({ error: e.message || 'AI enrichment failed' }, { status: 500 });
+    console.error('[AI Enrich Processor] Error:', e);
+    await jobRef.update({
+      status: 'failed',
+      error: e.message,
+      completedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    throw e;
   }
 }

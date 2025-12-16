@@ -173,7 +173,7 @@ export default function ImportExportPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'AI Translate failed');
-      toast.success(data.message || `AI tłumaczenie: ${data.updated} produktów`);
+      toast.success(data.message || `AI tłumaczenie: job ${data.jobId} uruchomiony`);
     } catch (e: any) {
       toast.error(e.message || 'AI Translate failed');
     } finally {
@@ -200,7 +200,7 @@ export default function ImportExportPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'AI Enrich failed');
-      toast.success(data.message || `AI ubogacanie: ${data.updated} produktów`);
+      toast.success(data.message || `AI ubogacanie: job ${data.jobId} uruchomiony`);
     } catch (e: any) {
       toast.error(e.message || 'AI Enrich failed');
     } finally {

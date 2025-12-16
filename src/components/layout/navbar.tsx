@@ -42,13 +42,13 @@ export function Navbar() {
   const prefix = `/${locale}`;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
       <div className="page-container flex flex-col gap-3 py-3">
         <div className="flex items-center gap-3">
           {/* Mobile Nav */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="outline" size="icon" className="rounded-full border-border/60 bg-card/80">
+              <Button variant="ghost" size="icon" className="rounded-full">
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">Otwórz menu</span>
               </Button>
@@ -143,11 +143,11 @@ export function Navbar() {
 
         {/* Secondary quick links (mobile-friendly scroll) */}
         <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
-          <span className="rounded-full bg-card/80 px-3 py-1 font-medium text-foreground/80">Sezonowe hity</span>
-          <Link href={`${prefix}/deals?sort=hot`} className="rounded-full border border-border/50 bg-card/60 px-3 py-1 transition-colors hover:border-primary hover:text-primary">Najgorętsze</Link>
-          <Link href={`${prefix}/deals?sort=new`} className="rounded-full border border-border/50 bg-card/60 px-3 py-1 transition-colors hover:border-primary hover:text-primary">Najnowsze</Link>
-          <Link href={`${prefix}/products?sort=trending`} className="rounded-full border border-border/50 bg-card/60 px-3 py-1 transition-colors hover:border-primary hover:text-primary">Trendy</Link>
-          <Link href={`${prefix}/forum`} className="rounded-full border border-border/50 bg-card/60 px-3 py-1 transition-colors hover:border-primary hover:text-primary">Forum</Link>
+          <span className="rounded-full px-3 py-1 font-medium text-foreground/70">Sezonowe hity</span>
+          <Link href={`${prefix}/deals?sort=hot`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Najgorętsze</Link>
+          <Link href={`${prefix}/deals?sort=new`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Najnowsze</Link>
+          <Link href={`${prefix}/products?sort=trending`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Trendy</Link>
+          <Link href={`${prefix}/forum`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Forum</Link>
         </div>
       </div>
     </header>

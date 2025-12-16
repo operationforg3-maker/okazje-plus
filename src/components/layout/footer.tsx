@@ -27,17 +27,17 @@ export function Footer() {
     : builtAt;
 
   return (
-    <footer className="mt-10 border-t border-border/40 bg-background/70 backdrop-blur">
+    <footer className="mt-10 border-t border-border/20 bg-background/95\">
       <div className="page-container py-10">
         <div className="grid gap-8 md:grid-cols-3 lg:grid-cols-12">
-          <div className="lg:col-span-4 rounded-2xl border border-border/50 bg-card/80 p-6 shadow-lg shadow-primary/5">
+          <div className="lg:col-span-4 rounded-lg p-6\">
             <Link href="/" className="flex items-center gap-2">
               <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-10 md:h-12" />
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
               Zaufana społeczność wyszukująca najlepsze okazje. Nowy wygląd, ta sama solidna baza ofert.
             </p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs font-medium text-foreground/80">
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium text-foreground/70\">
               <ShoppingBag className="h-4 w-4" />
               Świeże promocje dodawane codziennie
             </div>

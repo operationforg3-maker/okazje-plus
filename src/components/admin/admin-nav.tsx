@@ -155,8 +155,8 @@ export function AdminNav() {
               <CollapsibleTrigger
                 className={cn(
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  hasActiveChild && 'bg-accent/50'
+                  'hover:bg-muted',
+                  hasActiveChild && 'text-primary'
                 )}
               >
                 <item.icon className="h-4 w-4 flex-shrink-0" />
@@ -176,8 +176,8 @@ export function AdminNav() {
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                       isActive(subItem.href)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-accent hover:text-accent-foreground'
+                        ? 'bg-primary/20 text-primary font-semibold'
+                        : 'hover:bg-muted'
                     )}
                   >
                     <subItem.icon className="h-4 w-4 flex-shrink-0" />
@@ -201,8 +201,8 @@ export function AdminNav() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive(item.href)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent hover:text-accent-foreground'
+                  ? 'bg-primary/20 text-primary font-semibold'
+                  : 'hover:bg-muted'
               )}
             >
               <item.icon className="h-4 w-4 flex-shrink-0" />

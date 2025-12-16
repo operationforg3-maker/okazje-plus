@@ -60,7 +60,7 @@ export default function AdminLayout({
         <div className="flex min-h-screen w-full">
           <AdminNav />
           <SidebarInset className="flex flex-1 flex-col w-full">
-            <header className="sticky top-0 z-10 flex h-14 md:h-16 items-center gap-2 md:gap-4 border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 md:px-6 shrink-0 shadow-sm">
+            <header className="sticky top-0 z-10 flex h-14 md:h-16 items-center gap-2 md:gap-4 border-b border-border/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90 px-3 md:px-6 shrink-0 shadow-none">
               <div className="flex items-center gap-4 flex-1">
                 <SidebarTrigger className="md:hidden">
                   <PanelLeft />
