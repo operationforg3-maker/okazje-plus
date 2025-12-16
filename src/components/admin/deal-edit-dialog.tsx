@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Languages } from 'lucide-react';
+import { auth } from '@/lib/firebase';
 
 interface DealEditDialogProps {
   deal: Deal;
@@ -37,6 +38,7 @@ export default function DealEditDialog({
   onSuccess,
 }: DealEditDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [aiTranslating, setAiTranslating] = useState(false);
   const [formData, setFormData] = useState({
     title: deal.title,
     description: deal.description,
@@ -45,6 +47,40 @@ export default function DealEditDialog({
     link: deal.link,
     status: deal.status || 'approved',
   });
+
+  const handleAITranslate = async () => {
+    setAiTranslating(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
+
+      const response = await fetch('/api/admin/deals/ai-translate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          limit: 1,
+          dealId: deal.id,
+          force: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'AI translation failed');
+      }
+
+      const data = await response.json();
+      toast.success(data.message || 'AI tłumaczenie uruchomione');
+    } catch (error: any) {
+      toast.error(error.message || 'Błąd AI tłumaczenia');
+    } finally {
+      setAiTranslating(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,6 +202,30 @@ export default function DealEditDialog({
               onChange={(e) => setFormData({ ...formData, link: e.target.value })}
               required
             />
+          </div>
+
+          <div className="border-t pt-4 space-y-3">
+            <Label className="text-sm font-semibold">🤖 AI Actions</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAITranslate}
+                disabled={loading || aiTranslating}
+                className="flex-1"
+              >
+                {aiTranslating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Languages className="mr-2 h-4 w-4" />
+                )}
+                Tłumacz (AI)
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Uruchom tłumaczenie dla tej okazji. Wynik pojawi się w Job Monitorze.
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

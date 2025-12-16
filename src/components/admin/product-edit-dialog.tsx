@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Languages, Sparkles } from 'lucide-react';
+import { auth } from '@/lib/firebase';
 
 interface ProductEditDialogProps {
   product: Product;
@@ -37,6 +38,8 @@ export default function ProductEditDialog({
   onSuccess,
 }: ProductEditDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [aiTranslating, setAiTranslating] = useState(false);
+  const [aiEnriching, setAiEnriching] = useState(false);
   const toInputText = (value: unknown): string => {
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
@@ -57,6 +60,74 @@ export default function ProductEditDialog({
     affiliateUrl: toInputText(product.affiliateUrl),
     status: typeof product.status === 'string' ? product.status : 'draft',
   });
+
+  const handleAITranslate = async () => {
+    setAiTranslating(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
+
+      const response = await fetch('/api/admin/products/ai-translate', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          limit: 1,
+          productId: product.id,
+          force: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'AI translation failed');
+      }
+
+      const data = await response.json();
+      toast.success(data.message || 'AI tłumaczenie uruchomione');
+    } catch (error: any) {
+      toast.error(error.message || 'Błąd AI tłumaczenia');
+    } finally {
+      setAiTranslating(false);
+    }
+  };
+
+  const handleAIEnrich = async () => {
+    setAiEnriching(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
+
+      const response = await fetch('/api/admin/products/ai-enrich', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          limit: 1,
+          productId: product.id,
+          force: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'AI enrichment failed');
+      }
+
+      const data = await response.json();
+      toast.success(data.message || 'AI ubogacanie uruchomione');
+    } catch (error: any) {
+      toast.error(error.message || 'Błąd AI ubogacania');
+    } finally {
+      setAiEnriching(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +236,45 @@ export default function ProductEditDialog({
               onChange={(e) => setFormData({ ...formData, affiliateUrl: e.target.value })}
               required
             />
+          </div>
+
+          <div className="border-t pt-4 space-y-3">
+            <Label className="text-sm font-semibold">🤖 AI Actions</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAITranslate}
+                disabled={loading || aiTranslating || aiEnriching}
+                className="flex-1"
+              >
+                {aiTranslating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Languages className="mr-2 h-4 w-4" />
+                )}
+                Tłumacz (AI)
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAIEnrich}
+                disabled={loading || aiTranslating || aiEnriching}
+                className="flex-1"
+              >
+                {aiEnriching ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Ubogać SEO (AI)
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Uruchom tłumaczenie lub ubogacanie SEO dla tego produktu. Wyniki pojawią się w Job Monitorze.
+            </p>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

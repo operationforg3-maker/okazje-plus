@@ -14,13 +14,18 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
 import { Category, Product, Deal } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import { useTranslations } from 'next-intl';
+import { useAuth } from '@/lib/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 const toSearchableText = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -28,9 +33,25 @@ const toSearchableText = (value: unknown): string => {
   return '';
 };
 
+type SortOption = 'recommended' | 'newest' | 'rating' | 'price_asc' | 'price_desc';
+
+interface SavedFilter {
+  name: string;
+  sortBy: SortOption;
+  priceRange: [number, number];
+  quickFilters: {
+    freeShipping: boolean;
+    topRated: boolean;
+    bestsellers: boolean;
+  };
+  categoryId?: string;
+  subcategorySlug?: string;
+}
+
 function ProductsPageContent() {
   const searchParams = useSearchParams();
   const t = useTranslations('products');
+  const { user } = useAuth();
   const mainCategoryParam = searchParams.get('mainCategory');
   const subCategoryParam = searchParams.get('subCategory');
   const subSubCategoryParam = searchParams.get('subSubCategory');
@@ -45,6 +66,14 @@ function ProductsPageContent() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const [sortBy, setSortBy] = useState<SortOption>('recommended');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
+  const [quickFilters, setQuickFilters] = useState({
+    freeShipping: false,
+    topRated: false,
+    bestsellers: false,
+  });
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
 
   // Wczytaj kategorie i ustaw z URL
@@ -167,6 +196,83 @@ function ProductsPageContent() {
     });
   }, [products, searchTerm]);
 
+  // Helper function to extract price from smartPrice or legacy price
+  const getProductPrice = (product: Product): number => {
+    if (typeof product.price === 'number') return product.price;
+    if (typeof product.price === 'object' && 'amount' in product.price) {
+      return (product.price as any).amount || 0;
+    }
+    return 0;
+  };
+
+  // Filtered and sorted products
+  const filteredAndSortedProducts = useMemo(() => {
+    let result = [...filteredProducts];
+
+    // Apply price range filter
+    result = result.filter((product) => {
+      const price = getProductPrice(product);
+      return price >= priceRange[0] && price <= priceRange[1];
+    });
+
+    // Apply quick filters
+    if (quickFilters.freeShipping) {
+      result = result.filter((product) => {
+        // Check if product has free shipping (smartPrice or legacy)
+        if (typeof product.price === 'object' && 'shippingCost' in product.price) {
+          return (product.price as any).shippingCost === 0;
+        }
+        return false;
+      });
+    }
+
+    if (quickFilters.topRated) {
+      result = result.filter((product) => {
+        const rating = (product as any).rating || product.ratingCard?.rating || 0;
+        return rating >= 4.5;
+      });
+    }
+
+    if (quickFilters.bestsellers) {
+      result = result.filter((product) => {
+        const ordersCount = (product as any).ordersCount || 0;
+        return ordersCount > 100;
+      });
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'newest':
+        result.sort((a, b) => {
+          const aTime = a.metadata?.importedAt || a.metadata?.createdAt || 0;
+          const bTime = b.metadata?.importedAt || b.metadata?.createdAt || 0;
+          const aMs = typeof aTime === 'object' && 'seconds' in aTime ? aTime.seconds * 1000 : 0;
+          const bMs = typeof bTime === 'object' && 'seconds' in bTime ? bTime.seconds * 1000 : 0;
+          return bMs - aMs;
+        });
+        break;
+      case 'rating':
+        result.sort((a, b) => {
+          const aRating = (a as any).rating || a.ratingCard?.rating || 0;
+          const bRating = (b as any).rating || b.ratingCard?.rating || 0;
+          return bRating - aRating;
+        });
+        break;
+      case 'price_asc':
+        result.sort((a, b) => getProductPrice(a) - getProductPrice(b));
+        break;
+      case 'price_desc':
+        result.sort((a, b) => getProductPrice(b) - getProductPrice(a));
+        break;
+      case 'recommended':
+      default:
+        // Keep original order (recommended/featured)
+        break;
+    }
+
+    return result;
+  }, [filteredProducts, priceRange, quickFilters, sortBy]);
+
   // Infinite scroll hook - ładuje kolejne produkty przy scrollowaniu
   const {
     displayedItems: displayedProducts,
@@ -174,7 +280,7 @@ function ProductsPageContent() {
     isLoading: isLoadingMore,
     observerTarget,
   } = useInfiniteScroll({
-    items: filteredProducts,
+    items: filteredAndSortedProducts,
     initialItemsPerPage: 20,
     loadMoreThreshold: 500,
   });
@@ -190,6 +296,94 @@ function ProductsPageContent() {
 
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
+
+  // Load saved filters for logged-in users
+  useEffect(() => {
+    if (!user?.uid) return;
+    async function loadSavedFilters() {
+      try {
+        const docRef = doc(db, 'users', user!.uid, 'preferences', 'productFilters');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setSavedFilters(docSnap.data().filters || []);
+        }
+      } catch (error: any) {
+        // Silent fallback - filters are optional
+        if (process.env.NODE_ENV === 'development') {
+          console.info('[savedFilters] Could not load product filters:', error?.message);
+        }
+      }
+    }
+    loadSavedFilters();
+  }, [user]);
+
+  // Functions for saved filters
+  const saveCurrentFilter = async () => {
+    if (!user?.uid) {
+      toast.error('Zaloguj się, aby zapisać filtry');
+      return;
+    }
+
+    const filterName = prompt('Podaj nazwę dla tego zestawu filtrów:');
+    if (!filterName) return;
+
+    const newFilter: SavedFilter = {
+      name: filterName,
+      sortBy,
+      priceRange,
+      quickFilters,
+      categoryId: selectedCategory?.id,
+      subcategorySlug: selectedSubcategory || undefined,
+    };
+
+    try {
+      const updatedFilters = [...savedFilters, newFilter];
+      const docRef = doc(db, 'users', user.uid, 'preferences', 'productFilters');
+      await setDoc(docRef, { filters: updatedFilters });
+      setSavedFilters(updatedFilters);
+      toast.success(`Filtr "${filterName}" został zapisany!`);
+    } catch (error) {
+      console.error('Error saving filter:', error);
+      toast.error('Nie udało się zapisać filtra');
+    }
+  };
+
+  const loadSavedFilter = (filter: SavedFilter) => {
+    setSortBy(filter.sortBy);
+    setPriceRange(filter.priceRange);
+    setQuickFilters(filter.quickFilters);
+    
+    if (filter.categoryId) {
+      const cat = categories.find(c => c.id === filter.categoryId);
+      if (cat) {
+        setSelectedCategory(cat);
+      }
+    }
+    if (filter.subcategorySlug) {
+      setSelectedSubcategory(filter.subcategorySlug);
+      setSelectedSubSubcategory(null);
+    } else {
+      setSelectedSubcategory(null);
+      setSelectedSubSubcategory(null);
+    }
+    
+    toast.success(`Załadowano filtr: ${filter.name}`);
+  };
+
+  const deleteSavedFilter = async (filterName: string) => {
+    if (!user?.uid) return;
+
+    try {
+      const updatedFilters = savedFilters.filter(f => f.name !== filterName);
+      const docRef = doc(db, 'users', user.uid, 'preferences', 'productFilters');
+      await setDoc(docRef, { filters: updatedFilters });
+      setSavedFilters(updatedFilters);
+      toast.success('Filtr został usunięty');
+    } catch (error) {
+      console.error('Error deleting filter:', error);
+      toast.error('Nie udało się usunąć filtra');
+    }
+  };
 
   // Sidebar Content (reusable for desktop and mobile)
   // Refs dla auto-scroll do wybranej kategorii
@@ -470,11 +664,131 @@ function ProductsPageContent() {
 
               {/* Subcategories przeniesione do lewego panelu */}
 
+              {/* Filters Card */}
+              <Card className="mb-4 lg:mb-6">
+                <CardContent className="p-4 space-y-4">
+                  {/* Sortowanie i Zakres ceny */}
+                  <div className="flex flex-wrap gap-3">
+                    {/* Sortowanie */}
+                    <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+                      <SelectTrigger className="w-[200px]">
+                        <TrendingUp className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Sortuj" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="recommended">Polecane</SelectItem>
+                        <SelectItem value="newest">Najnowsze</SelectItem>
+                        <SelectItem value="rating">Najwyżej oceniane</SelectItem>
+                        <SelectItem value="price_asc">Cena: rosnąco</SelectItem>
+                        <SelectItem value="price_desc">Cena: malejąco</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Zakres ceny */}
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg bg-muted/40">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Cena:</span>
+                      <Input
+                        type="number"
+                        placeholder="Min"
+                        value={priceRange[0]}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 0;
+                          setPriceRange([val, priceRange[1]]);
+                        }}
+                        className="h-8 w-20 text-xs"
+                      />
+                      <span className="text-muted-foreground">-</span>
+                      <Input
+                        type="number"
+                        placeholder="Max"
+                        value={priceRange[1]}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value) || 10000;
+                          setPriceRange([priceRange[0], val]);
+                        }}
+                        className="h-8 w-20 text-xs"
+                      />
+                      <span className="text-sm">zł</span>
+                    </div>
+                  </div>
+
+                  {/* Quick filters - chipy */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge
+                      variant={quickFilters.freeShipping ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
+                    >
+                      <Truck className="h-3 w-3 mr-1" />
+                      Darmowa dostawa
+                    </Badge>
+                    <Badge
+                      variant={quickFilters.topRated ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setQuickFilters(prev => ({ ...prev, topRated: !prev.topRated }))}
+                    >
+                      <Star className="h-3 w-3 mr-1" />
+                      Wysoko oceniane (4.5+)
+                    </Badge>
+                    <Badge
+                      variant={quickFilters.bestsellers ? 'default' : 'outline'}
+                      className="cursor-pointer hover:bg-primary/10 transition-colors"
+                      onClick={() => setQuickFilters(prev => ({ ...prev, bestsellers: !prev.bestsellers }))}
+                    >
+                      <Flame className="h-3 w-3 mr-1" />
+                      Bestsellery
+                    </Badge>
+                  </div>
+
+                  {/* Zapisane filtry */}
+                  {user && savedFilters.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2 border-t">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Bookmark className="h-3 w-3" />
+                        Zapisane filtry:
+                      </span>
+                      {savedFilters.map((filter) => (
+                        <Badge
+                          key={filter.name}
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-secondary/80 transition-colors group"
+                        >
+                          <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSavedFilter(filter.name);
+                            }}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Przycisk zapisywania filtra */}
+                  {user && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={saveCurrentFilter}
+                      className="w-full sm:w-auto"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Zapisz obecne filtry
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Products Grid */}
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-headline text-base font-semibold">
-                    Produkty ({filteredProducts.length})
+                    Produkty ({filteredAndSortedProducts.length})
                   </h3>
 
                   <div className="flex items-center gap-2">

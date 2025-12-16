@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const limit = Math.min(Math.max(Number(body?.limit ?? 50), 1), 500);
-    const { mainCategorySlug, subCategorySlug, subSubCategorySlug, status, force } = body || {};
+    const { mainCategorySlug, subCategorySlug, subSubCategorySlug, status, force, productId } = body || {};
 
     // Create job in Firestore
     const jobRef = adminDb.collection('import_jobs').doc();
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
         limit,
         status: status || null,
         force: force || false,
+        productId: productId || null,
         mainCategorySlug: mainCategorySlug || null,
         subCategorySlug: subCategorySlug || null,
         subSubCategorySlug: subSubCategorySlug || null,
@@ -104,15 +105,26 @@ export async function processAITranslateJob(jobId: string) {
     const jobData = jobSnap.data();
     if (!jobData) throw new Error('Job not found');
 
-    const { limit, status, force, mainCategorySlug, subCategorySlug, subSubCategorySlug } = jobData.filters || {};
+    const { limit, status, force, productId, mainCategorySlug, subCategorySlug, subSubCategorySlug } = jobData.filters || {};
 
-    let q: FirebaseFirestore.Query = adminDb.collection('products');
-    if (status) q = q.where('status', '==', String(status));
-    if (mainCategorySlug) q = q.where('mainCategorySlug', '==', String(mainCategorySlug));
-    if (subCategorySlug) q = q.where('subCategorySlug', '==', String(subCategorySlug));
-    if (subSubCategorySlug) q = q.where('subSubCategorySlug', '==', String(subSubCategorySlug));
-
-    const snap = await q.limit(limit || 50).get();
+    let snap: FirebaseFirestore.QuerySnapshot;
+    
+    // If specific productId provided, fetch only that product
+    if (productId) {
+      const doc = await adminDb.collection('products').doc(String(productId)).get();
+      if (!doc.exists) {
+        throw new Error(`Product ${productId} not found`);
+      }
+      snap = { docs: [doc], empty: false } as any;
+    } else {
+      // Otherwise use filters
+      let q: FirebaseFirestore.Query = adminDb.collection('products');
+      if (status) q = q.where('status', '==', String(status));
+      if (mainCategorySlug) q = q.where('mainCategorySlug', '==', String(mainCategorySlug));
+      if (subCategorySlug) q = q.where('subCategorySlug', '==', String(subCategorySlug));
+      if (subSubCategorySlug) q = q.where('subSubCategorySlug', '==', String(subSubCategorySlug));
+      snap = await q.limit(limit || 50).get();
+    }
     
     if (snap.empty) {
       await jobRef.update({
