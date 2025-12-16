@@ -374,10 +374,6 @@ export default function ImportExportPage() {
 
       <Tabs defaultValue="jobs" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="import" className="gap-2">
-            <Copy className="h-4 w-4" />
-            Import JSON
-          </TabsTrigger>
           <TabsTrigger value="jobs" className="gap-2">
             <Activity className="h-4 w-4" />
             Job Monitor
@@ -385,6 +381,10 @@ export default function ImportExportPage() {
           <TabsTrigger value="queue" className="gap-2">
             <Settings className="h-4 w-4" />
             Job Queue
+          </TabsTrigger>
+          <TabsTrigger value="import" className="gap-2 opacity-80">
+            <Copy className="h-4 w-4" />
+            Import JSON (opcjonalne)
           </TabsTrigger>
         </TabsList>
 

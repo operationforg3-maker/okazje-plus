@@ -54,14 +54,10 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-primary/5 to-background">
+    <div className="min-h-screen bg-background">
       {/* HERO SECTION */}
       <section className="relative overflow-hidden">
-        {/* Animated background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-background to-background" />
 
         <div className="page-container relative py-16 md:py-24 lg:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -114,7 +110,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* CATEGORIES SHOWCASE - Mega Menu with Images */}
-      <section className="py-16 bg-gradient-to-b from-background via-primary/5 to-background">
+      <section className="py-16 bg-background">
         <div className="page-container">
           <div className="text-center mb-12">
             <h2 className="font-headline text-4xl md:text-5xl font-bold mb-4">
@@ -302,7 +298,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* FORUM TEASER */}
-      <section className="py-16 bg-gradient-to-br from-primary/10 via-accent/5 to-transparent">
+      <section className="py-16 bg-card/40 border-y border-border/60">
         <div className="page-container">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <MessageSquare className="h-16 w-16 mx-auto text-primary" />
