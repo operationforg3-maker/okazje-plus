@@ -475,21 +475,26 @@ export default function DealCard({ deal }: DealCardProps) {
           )}
         </div>
         
-        <div className="absolute right-2 bottom-2">
-          <AdminEditButton
-            onClick={() => setEditDialogOpen(true)}
-            className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
-            tooltip="Edytuj deal (admin)"
-          />
-        </div>
+        {/* Admin Edit Button (Bottom-right overlay) */}
+        {user?.role === 'admin' && (
+          <div className="absolute right-2 bottom-2">
+            <AdminEditButton
+              onClick={() => setEditDialogOpen(true)}
+              className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+              tooltip="Edytuj deal (admin)"
+            />
+          </div>
+        )}
       </div>
       
-      {/* Edit Dialog */}
-      <DealEditDialog
-        deal={deal}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-      />
+      {/* Edit Dialog (Admin only) */}
+      {user?.role === 'admin' && (
+        <DealEditDialog
+          deal={deal}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
+      )}
       
       <div className="flex-grow space-y-3 p-4 sm:p-5">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
