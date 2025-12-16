@@ -197,7 +197,7 @@ export default function CartPage() {
                           {product.mainCategorySlug}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          Dodano: {new Date(addedAt).toLocaleDateString('pl-PL')}
+                          Dodano: {new Date(addedAt).toLocaleDateString('pl-PL', { timeZone: 'UTC' })}
                         </span>
                       </div>
 

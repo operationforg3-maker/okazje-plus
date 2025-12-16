@@ -159,7 +159,8 @@ function SharedCartPageContent() {
                     {createdDate.toLocaleDateString('pl-PL', { 
                       year: 'numeric', 
                       month: 'long', 
-                      day: 'numeric' 
+                      day: 'numeric',
+                      timeZone: 'UTC'
                     })}
                   </div>
                   <div className="flex items-center space-sm text-sm">
