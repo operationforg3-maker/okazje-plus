@@ -72,12 +72,21 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [isNew, setIsNew] = useState(false);
-  const [relativeTime, setRelativeTime] = useState('');
-  const [formattedPrice, setFormattedPrice] = useState<string | null>(null);
-  const [formattedOriginal, setFormattedOriginal] = useState<string | null>(null);
-  const [formattedSavings, setFormattedSavings] = useState<string | null>(null);
-  const [discount, setDiscount] = useState<number | null>(null);
+  const [dealData, setDealData] = useState<{
+    isNew: boolean;
+    relativeTime: string;
+    formattedPrice: string | null;
+    formattedOriginal: string | null;
+    formattedSavings: string | null;
+    discount: number | null;
+  }>({
+    isNew: false,
+    relativeTime: '',
+    formattedPrice: null,
+    formattedOriginal: null,
+    formattedSavings: null,
+    discount: null,
+  });
   
   const description = safeText(deal.description);
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
@@ -97,29 +106,38 @@ export default function DealListCard({ deal }: DealListCardProps) {
     const posted = new Date(deal.postedAt);
     const now = new Date();
     const diffDays = (now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24);
-    setIsNew(diffDays <= 7);
+    const isNewDeal = diffDays <= 7;
     
     const relTime = getRelativeTime(deal.postedAt);
-    setRelativeTime(relTime);
     
     // Format prices on client only (Intl.NumberFormat is browser-dependent)
     const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
     const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
-    setFormattedPrice(formatted);
+    
+    let formattedOrig: string | null = null;
+    let calculatedDiscount: number | null = null;
+    let savings: string | null = null;
     
     if (typeof deal.originalPrice === 'number') {
-      const formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
-      setFormattedOriginal(formattedOrig);
+      formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
       
       if (deal.originalPrice > 0) {
-        setDiscount(Math.round(100 - (deal.price / deal.originalPrice) * 100));
+        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
       }
       
       if (deal.originalPrice > deal.price) {
-        const savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
-        setFormattedSavings(savings);
+        savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
       }
     }
+    
+    setDealData({
+      isNew: isNewDeal,
+      relativeTime: relTime,
+      formattedPrice: formatted,
+      formattedOriginal: formattedOrig,
+      formattedSavings: savings,
+      discount: calculatedDiscount,
+    });
   }, [deal.postedAt, deal.price, deal.originalPrice]);
 
   return (
@@ -142,7 +160,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
               Hot
             </Badge>
           )}
-          {isNew && (
+          {dealData.isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg text-xs">
               <Sparkles className="mr-1 h-3 w-3" />
               Nowość
@@ -180,7 +198,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {relativeTime}
+              {dealData.relativeTime}
             </span>
             <span>przez <span className="font-medium text-foreground">{postedBy}</span></span>
             {categoryLabel && (
@@ -215,15 +233,15 @@ export default function DealListCard({ deal }: DealListCardProps) {
 
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-2xl font-bold text-primary">{formattedPrice || 'N/A'}</p>
-            {formattedOriginal && (
-              <p className="text-base text-muted-foreground line-through">{formattedOriginal}</p>
+            <p className="text-2xl font-bold text-primary">{dealData.formattedPrice || 'N/A'}</p>
+            {dealData.formattedOriginal && (
+              <p className="text-base text-muted-foreground line-through">{dealData.formattedOriginal}</p>
             )}
-            {typeof discount === 'number' && discount > 0 && (
-              <Badge variant="destructive">-{discount}%</Badge>
+            {typeof dealData.discount === 'number' && dealData.discount > 0 && (
+              <Badge variant="destructive">-{dealData.discount}%</Badge>
             )}
-            {formattedSavings && (
-              <span className="text-xs font-semibold text-green-600">Oszczędzasz {formattedSavings}</span>
+            {dealData.formattedSavings && (
+              <span className="text-xs font-semibold text-green-600">Oszczędzasz {dealData.formattedSavings}</span>
             )}
           </div>
 
