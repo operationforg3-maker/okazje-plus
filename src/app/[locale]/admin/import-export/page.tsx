@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
 import { JobsMonitor } from "@/components/admin/jobs-monitor";
 import { JobQueueManager } from "@/components/admin/job-queue-manager";
+import { Label } from "@/components/ui/label";
 
 type DataType = "okazje" | "produkty";
 type StatusFilter = "gotowe" | "drafty" | "wszystko";
@@ -44,10 +45,158 @@ export default function ImportExportPage() {
   // Config okazje
   const [autoApprove, setAutoApprove] = useState(false);
 
+  // API importy + AI (iteracja po bazie)
+  const [fetchType, setFetchType] = useState<"keyword-search" | "hot-products" | "convertiser" | "category-direct">("hot-products");
+  const [fetchMaxItems, setFetchMaxItems] = useState(10);
+  const [fetchMaxBatches, setFetchMaxBatches] = useState(3);
+  const [fullImportType, setFullImportType] = useState<"keyword-search" | "hot-products" | "convertiser" | "category-direct">("hot-products");
+  const [fullImportMax, setFullImportMax] = useState(10);
+  const [catTree, setCatTree] = useState<any[]>([]);
+  const [selectedCat, setSelectedCat] = useState<string>("");
+  const [selectedSub, setSelectedSub] = useState<string>("");
+  const [selectedSubSub, setSelectedSubSub] = useState<string>("");
+  const [loadingFullImport, setLoadingFullImport] = useState(false);
+  const [loadingDrafts, setLoadingDrafts] = useState(false);
+  const [loadingDealsImport, setLoadingDealsImport] = useState(false);
+  const [loadingAITranslate, setLoadingAITranslate] = useState(false);
+  const [loadingAIEnrich, setLoadingAIEnrich] = useState(false);
+
   const getAuthToken = async () => {
     const user = auth.currentUser;
     if (!user) throw new Error("Not authenticated");
     return await user.getIdToken();
+  };
+
+  useEffect(() => {
+    // Załaduj drzewo kategorii (do filtrowania operacji na bazie)
+    const loadCats = async () => {
+      try {
+        const token = await getAuthToken();
+        const res = await fetch('/api/admin/categories/tree', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        setCatTree(data.tree || []);
+      } catch {}
+    };
+    loadCats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Importy z API – pełny pipeline
+  const runFullImport = async () => {
+    try {
+      setLoadingFullImport(true);
+      const token = await getAuthToken();
+      const res = await fetch('/api/admin/import/start', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'products', importerType: fullImportType, maxItemsPerSubcategory: fullImportMax })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Full import failed');
+      toast.success(`Job uruchomiony: ${data.jobId}`);
+    } catch (e: any) {
+      toast.error(e.message || 'Full import failed');
+    } finally {
+      setLoadingFullImport(false);
+    }
+  };
+
+  // Import: pobierz i zapisz szkice (drafty)
+  const runFetchSaveDrafts = async () => {
+    try {
+      setLoadingDrafts(true);
+      const token = await getAuthToken();
+      const res = await fetch('/api/admin/import/fetch-save-drafts', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          importerType: fetchType,
+          maxItemsPerSubcategory: fetchMaxItems,
+          maxBatches: fetchMaxBatches,
+          onlyCategorySlug: selectedCat || undefined,
+          onlySubcategorySlug: selectedSub || undefined,
+          onlySubSubcategorySlug: selectedSubSub || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Fetch+Save failed');
+      toast.success(`Szkice: batch=${data.batches}, pobrane=${data.fetched}, zapisane=${data.saved}, pominiete=${data.skipped}`);
+    } catch (e: any) {
+      toast.error(e.message || 'Fetch+Save failed');
+    } finally {
+      setLoadingDrafts(false);
+    }
+  };
+
+  // Deale z API (np. AliExpress)
+  const runDealsImport = async () => {
+    try {
+      setLoadingDealsImport(true);
+      const token = await getAuthToken();
+      const res = await fetch('/api/admin/import/start', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'deals', importerType: 'keyword-search', maxItemsPerSubcategory: 10 })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Deals import failed');
+      toast.success(`Deale: job uruchomiony: ${data.jobId}`);
+    } catch (e: any) {
+      toast.error(e.message || 'Deals import failed');
+    } finally {
+      setLoadingDealsImport(false);
+    }
+  };
+
+  // AI tłumaczenie po bazie (z filtrami kategorii)
+  const runAITranslate = async () => {
+    try {
+      setLoadingAITranslate(true);
+      const token = await getAuthToken();
+      const res = await fetch('/api/admin/products/ai-translate', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          limit: 50,
+          mainCategorySlug: selectedCat || undefined,
+          subCategorySlug: selectedSub || undefined,
+          subSubCategorySlug: selectedSubSub || undefined,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'AI Translate failed');
+      toast.success(data.message || `AI tłumaczenie: ${data.updated} produktów`);
+    } catch (e: any) {
+      toast.error(e.message || 'AI Translate failed');
+    } finally {
+      setLoadingAITranslate(false);
+    }
+  };
+
+  // AI ubogacanie SEO po bazie (z filtrami kategorii)
+  const runAIEnrich = async () => {
+    try {
+      setLoadingAIEnrich(true);
+      const token = await getAuthToken();
+      const res = await fetch('/api/admin/products/ai-enrich', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          limit: 50,
+          mainCategorySlug: selectedCat || undefined,
+          subCategorySlug: selectedSub || undefined,
+          subSubCategorySlug: selectedSubSub || undefined,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'AI Enrich failed');
+      toast.success(data.message || `AI ubogacanie: ${data.updated} produktów`);
+    } catch (e: any) {
+      toast.error(e.message || 'AI Enrich failed');
+    } finally {
+      setLoadingAIEnrich(false);
+    }
   };
 
   const addLog = (sessionId: string, message: string) => {
@@ -223,7 +372,7 @@ export default function ImportExportPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="import" className="w-full">
+      <Tabs defaultValue="jobs" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="import" className="gap-2">
             <Copy className="h-4 w-4" />
@@ -377,6 +526,110 @@ export default function ImportExportPage() {
         </TabsContent>
 
         <TabsContent value="jobs" className="space-y-6 mt-6">
+          {/* Narzędzia API + AI iterujące po bazie danych */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                ⚙️ Importy API + AI (na bazie)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Pełny import */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label>Źródło</Label>
+                  <select className="w-full border rounded px-2 py-2 h-10" value={fullImportType} onChange={e=>setFullImportType(e.target.value as any)}>
+                    <option value="hot-products">AliExpress: Hot Products</option>
+                    <option value="keyword-search">AliExpress: Keyword Search</option>
+                    <option value="convertiser">Convertiser</option>
+                    <option value="category-direct">AliExpress: Category Direct</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Maks. produktów/kategoria</Label>
+                  <Input type="number" min={1} max={100} value={fullImportMax} onChange={e=>setFullImportMax(parseInt(e.target.value || '1', 10))} />
+                </div>
+                <div className="flex items-end">
+                  <Button onClick={runFullImport} disabled={loadingFullImport} className="w-full">
+                    {loadingFullImport ? 'Uruchamianie…' : 'Uruchom pełny import'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Fetch & Save drafts */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label>Fetch typ</Label>
+                  <select className="w-full border rounded px-2 py-2 h-10" value={fetchType} onChange={e=>setFetchType(e.target.value as any)}>
+                    <option value="hot-products">AliExpress: Hot Products</option>
+                    <option value="keyword-search">AliExpress: Keyword Search</option>
+                    <option value="convertiser">Convertiser</option>
+                    <option value="category-direct">AliExpress: Category Direct</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Maks. produktów/kategoria</Label>
+                  <Input type="number" min={1} max={100} value={fetchMaxItems} onChange={e=>setFetchMaxItems(parseInt(e.target.value || '1', 10))} />
+                </div>
+                <div>
+                  <Label>Maks. batchy</Label>
+                  <Input type="number" min={1} max={50} value={fetchMaxBatches} onChange={e=>setFetchMaxBatches(parseInt(e.target.value || '1', 10))} />
+                </div>
+                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Kategoria (EN slug)</Label>
+                    <select className="w-full border rounded px-2 py-2 h-10" value={selectedCat} onChange={e=>{setSelectedCat(e.target.value); setSelectedSub(''); setSelectedSubSub('');}}>
+                      <option value="">— Wszystkie —</option>
+                      {catTree.map((c: any) => (
+                        <option key={c.id} value={c.slug}>{c.name} ({c.slug})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Podkategoria</Label>
+                    <select className="w-full border rounded px-2 py-2 h-10" value={selectedSub} onChange={e=>{setSelectedSub(e.target.value); setSelectedSubSub('');}} disabled={!selectedCat}>
+                      <option value="">— Wszystkie —</option>
+                      {catTree.find((c:any)=>c.slug===selectedCat)?.subcategories?.map((s:any)=>(
+                        <option key={s.id} value={s.slug}>{s.name} ({s.slug})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Pod-podkategoria</Label>
+                    <select className="w-full border rounded px-2 py-2 h-10" value={selectedSubSub} onChange={e=>setSelectedSubSub(e.target.value)} disabled={!selectedSub}>
+                      <option value="">— Wszystkie —</option>
+                      {catTree.find((c:any)=>c.slug===selectedCat)?.subcategories?.find((s:any)=>s.slug===selectedSub)?.subcategories?.map((ss:any)=>(
+                        <option key={ss.id} value={ss.slug}>{ss.name} ({ss.slug})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="md:col-span-3">
+                  <Button onClick={runFetchSaveDrafts} disabled={loadingDrafts}>
+                    {loadingDrafts ? 'Uruchamianie…' : 'Uruchom: Fetch & Save szkice'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Deale */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <Button onClick={runDealsImport} disabled={loadingDealsImport}>
+                  {loadingDealsImport ? 'Uruchamianie…' : 'Pobierz Deale (AliExpress)'}
+                </Button>
+              </div>
+
+              {/* AI */}
+              <div className="flex flex-col md:flex-row gap-3">
+                <Button onClick={runAITranslate} disabled={loadingAITranslate} variant="secondary">
+                  {loadingAITranslate ? 'AI tłumaczenie…' : '🌐 AI Tłumaczenie (DB)'}
+                </Button>
+                <Button onClick={runAIEnrich} disabled={loadingAIEnrich} variant="secondary">
+                  {loadingAIEnrich ? 'AI SEO…' : '🚀 AI Ubogacanie SEO (DB)'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
