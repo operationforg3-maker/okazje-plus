@@ -61,6 +61,11 @@ export default function ImportExportPage() {
   const [loadingAITranslate, setLoadingAITranslate] = useState(false);
   const [loadingAIEnrich, setLoadingAIEnrich] = useState(false);
 
+  // Opcje AI
+  const [aiLimit, setAiLimit] = useState(50);
+  const [aiStatus, setAiStatus] = useState<string>(""); // "approved" | "draft" | "pending" | "rejected" | ""
+  const [aiForce, setAiForce] = useState(false);
+
   const getAuthToken = async () => {
     const user = auth.currentUser;
     if (!user) throw new Error("Not authenticated");
@@ -158,7 +163,9 @@ export default function ImportExportPage() {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          limit: 50,
+          limit: aiLimit,
+          status: aiStatus || undefined,
+          force: aiForce || undefined,
           mainCategorySlug: selectedCat || undefined,
           subCategorySlug: selectedSub || undefined,
           subSubCategorySlug: selectedSubSub || undefined,
@@ -183,7 +190,9 @@ export default function ImportExportPage() {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          limit: 50,
+          limit: aiLimit,
+          status: aiStatus || undefined,
+          force: aiForce || undefined,
           mainCategorySlug: selectedCat || undefined,
           subCategorySlug: selectedSub || undefined,
           subSubCategorySlug: selectedSubSub || undefined,
@@ -619,13 +628,37 @@ export default function ImportExportPage() {
               </div>
 
               {/* AI */}
-              <div className="flex flex-col md:flex-row gap-3">
-                <Button onClick={runAITranslate} disabled={loadingAITranslate} variant="secondary">
-                  {loadingAITranslate ? 'AI tłumaczenie…' : '🌐 AI Tłumaczenie (DB)'}
-                </Button>
-                <Button onClick={runAIEnrich} disabled={loadingAIEnrich} variant="secondary">
-                  {loadingAIEnrich ? 'AI SEO…' : '🚀 AI Ubogacanie SEO (DB)'}
-                </Button>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <Label>Limit rekordów</Label>
+                    <Input type="number" min={1} max={500} value={aiLimit} onChange={e=>setAiLimit(parseInt(e.target.value || '50', 10))} />
+                  </div>
+                  <div>
+                    <Label>Status (opcjonalnie)</Label>
+                    <select className="w-full border rounded px-2 py-2 h-10" value={aiStatus} onChange={e=>setAiStatus(e.target.value)}>
+                      <option value="">— Wszystkie —</option>
+                      <option value="draft">📝 Draft</option>
+                      <option value="pending">⏳ Pending</option>
+                      <option value="approved">✅ Approved</option>
+                      <option value="rejected">❌ Rejected</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-2">
+                      <Checkbox checked={aiForce} onCheckedChange={v=>setAiForce(!!v)} />
+                      Wymuś ponowne przetworzenie (force)
+                    </label>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3">
+                  <Button onClick={runAITranslate} disabled={loadingAITranslate} variant="secondary">
+                    {loadingAITranslate ? 'AI tłumaczenie…' : '🌐 AI Tłumaczenie (DB)'}
+                  </Button>
+                  <Button onClick={runAIEnrich} disabled={loadingAIEnrich} variant="secondary">
+                    {loadingAIEnrich ? 'AI SEO…' : '🚀 AI Ubogacanie SEO (DB)'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
