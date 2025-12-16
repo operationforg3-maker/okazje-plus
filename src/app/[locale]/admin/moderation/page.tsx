@@ -26,6 +26,8 @@ interface BulkItem { id: string; type: 'deal' | 'product'; }
 function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'; items: any[]; onAction: () => Promise<void> }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [processing, setProcessing] = useState(false);
+  const [loadingAllItems, setLoadingAllItems] = useState(false);
+  const [totalItemsInDb, setTotalItemsInDb] = useState<number | null>(null);
   const { toast } = useToast();
 
   const toggle = (id: string) => setSelected(p => ({ ...p, [id]: !p[id] }));
@@ -35,6 +37,41 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
     items.forEach(item => all[item.id] = true);
     setSelected(all);
   };
+  
+  const selectAllInDatabase = async () => {
+    try {
+      setLoadingAllItems(true);
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
+        return;
+      }
+      const token = await currentUser.getIdToken();
+      
+      // Pobierz wszystkie IDs z bazy
+      const res = await fetch(`/api/admin/moderation/get-all-ids?type=${type}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!res.ok) throw new Error('Nie udało się pobrać wszystkich ID');
+      
+      const data = await res.json();
+      const allIds: Record<string, boolean> = {};
+      data.ids.forEach((id: string) => allIds[id] = true);
+      setSelected(allIds);
+      setTotalItemsInDb(data.total);
+      
+      toast({ 
+        title: 'Zaznaczono wszystkie', 
+        description: `Zaznaczono ${data.total} ${type === 'deal' ? 'okazji' : 'produktów'} z bazy danych` 
+      });
+    } catch (error: any) {
+      toast({ title: 'Błąd', description: error.message || 'Nie udało się pobrać wszystkich itemów', variant: 'destructive' });
+    } finally {
+      setLoadingAllItems(false);
+    }
+  };
+  
   const allSelectedIds = Object.entries(selected).filter(([, v]) => v).map(([id]) => id);
 
   async function bulk(action: 'approve' | 'reject' | 'delete' | 'change-status', status?: string) {
@@ -75,8 +112,17 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast({ title: 'Sukces', description: data.message });
+        const message = data.message || `Przetworzono ${data.processed || allSelectedIds.length} elementów`;
+        const description = data.processed && data.total && data.processed < data.total 
+          ? `Przetworzono ${data.processed}/${data.total} elementów`
+          : undefined;
+        toast({ 
+          title: 'Sukces', 
+          description: description || message,
+          duration: 5000
+        });
         clear();
+        setTotalItemsInDb(null); // Reset counter po akcji
         await onAction();
       } else {
         toast({ title: 'Błąd', description: data.message || 'Wystąpił błąd', variant: 'destructive' });
@@ -94,10 +140,22 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
         <span className="text-sm font-semibold">
           Zbiorcza moderacja: {type === 'deal' ? 'Okazje' : 'Produkty'} 
           <Badge variant="secondary" className="ml-2">{allSelectedIds.length} zaznaczonych</Badge>
+          {totalItemsInDb && totalItemsInDb > items.length && (
+            <Badge variant="outline" className="ml-1 text-xs">z {totalItemsInDb} w bazie</Badge>
+          )}
         </span>
         <div className="ml-auto flex gap-2">
           <Button size="sm" variant="outline" onClick={selectAll} disabled={processing || items.length === 0}>
-            Zaznacz wszystkie
+            Zaznacz widoczne ({items.length})
+          </Button>
+          <Button 
+            size="sm" 
+            variant="default" 
+            onClick={selectAllInDatabase} 
+            disabled={loadingAllItems || processing}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            {loadingAllItems ? 'Ładowanie...' : '🌐 Zaznacz wszystkie w bazie'}
           </Button>
           <Button size="sm" variant="outline" onClick={clear} disabled={processing || allSelectedIds.length === 0}>
             Wyczyść

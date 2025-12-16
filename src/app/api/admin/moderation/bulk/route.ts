@@ -68,21 +68,36 @@ export async function POST(req: NextRequest) {
 
     const ts = FieldValue.serverTimestamp();
 
+    // Dziel na batche po max 500 (Firestore limit)
+    const BATCH_SIZE = 500;
+    const batches: any[][] = [];
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      batches.push(items.slice(i, i + BATCH_SIZE));
+    }
+
     // Dla delete używamy osobnych operacji (batch.delete)
     if (action === 'delete') {
-      const batch = adminDb.batch();
-      for (const item of items) {
-        if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
-        const col = item.type === 'deal' ? 'deals' : 'products';
-        const docRef = adminDb.collection(col).doc(item.id);
-        batch.delete(docRef);
+      let processed = 0;
+      for (const batchItems of batches) {
+        const batch = adminDb.batch();
+        for (const item of batchItems) {
+          if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
+          const col = item.type === 'deal' ? 'deals' : 'products';
+          const docRef = adminDb.collection(col).doc(item.id);
+          batch.delete(docRef);
+          processed++;
+        }
+        await batch.commit();
       }
-      await batch.commit();
-      return NextResponse.json({ success: true, message: `Usunięto ${items.length} elementów` });
+      return NextResponse.json({ 
+        success: true, 
+        message: `Usunięto ${processed} elementów w ${batches.length} batch${batches.length > 1 ? 'ach' : 'u'}`,
+        processed,
+        total: items.length
+      });
     }
 
     // Dla approve/reject/change-status używamy update
-    const batch = adminDb.batch();
     let newStatus: string;
 
     if (action === 'change-status') {
@@ -91,18 +106,25 @@ export async function POST(req: NextRequest) {
       newStatus = action === 'approve' ? 'approved' : 'rejected';
     }
 
-    for (const item of items) {
-      if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
-      const col = item.type === 'deal' ? 'deals' : 'products';
-      const docRef = adminDb.collection(col).doc(item.id);
-      batch.update(docRef, { status: newStatus, updatedAt: ts });
+    let processed = 0;
+    for (const batchItems of batches) {
+      const batch = adminDb.batch();
+      for (const item of batchItems) {
+        if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
+        const col = item.type === 'deal' ? 'deals' : 'products';
+        const docRef = adminDb.collection(col).doc(item.id);
+        batch.update(docRef, { status: newStatus, updatedAt: ts });
+        processed++;
+      }
+      await batch.commit();
     }
-
-    await batch.commit();
 
     return NextResponse.json({ 
       success: true, 
-      message: `Zmieniono status ${items.length} elementów na ${newStatus}` 
+      message: `Zmieniono status ${processed} elementów na ${newStatus} (${batches.length} batch${batches.length > 1 ? 'y' : ''})`,
+      processed,
+      total: items.length,
+      status: newStatus
     });
   } catch (e: any) {
     console.error('[bulk moderation] error', e);
