@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Zap, Copy, Trash2, Activity, Settings } from "lucide-react";
+import { AlertCircle, Zap, Copy, Trash2, Activity, Settings, Globe, Check } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
 import { JobsMonitor } from "@/components/admin/jobs-monitor";
@@ -63,8 +63,16 @@ export default function ImportExportPage() {
 
   // Opcje AI
   const [aiLimit, setAiLimit] = useState(50);
-  const [aiStatus, setAiStatus] = useState<string>(""); // "approved" | "draft" | "pending" | "rejected" | ""
+  const [aiStatus, setAiStatus] = useState<string>("");
   const [aiForce, setAiForce] = useState(false);
+  
+  // Multilingual support
+  const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set(["pl", "en"]));
+  const availableLanguages = [
+    { code: "pl", name: "🇵🇱 Polski" },
+    { code: "en", name: "🇬🇧 English" },
+    { code: "de", name: "🇩🇪 Deutsch" },
+  ];
 
   const getAuthToken = async () => {
     const user = auth.currentUser;
@@ -73,7 +81,6 @@ export default function ImportExportPage() {
   };
 
   useEffect(() => {
-    // Załaduj drzewo kategorii (do filtrowania operacji na bazie)
     const loadCats = async () => {
       try {
         const token = await getAuthToken();
@@ -84,10 +91,8 @@ export default function ImportExportPage() {
       } catch {}
     };
     loadCats();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Importy z API – pełny pipeline
   const runFullImport = async () => {
     try {
       setLoadingFullImport(true);
@@ -107,7 +112,6 @@ export default function ImportExportPage() {
     }
   };
 
-  // Import: pobierz i zapisz szkice (drafty)
   const runFetchSaveDrafts = async () => {
     try {
       setLoadingDrafts(true);
@@ -134,7 +138,6 @@ export default function ImportExportPage() {
     }
   };
 
-  // Deale z API (np. AliExpress)
   const runDealsImport = async () => {
     try {
       setLoadingDealsImport(true);
@@ -154,7 +157,6 @@ export default function ImportExportPage() {
     }
   };
 
-  // AI tłumaczenie po bazie (z filtrami kategorii)
   const runAITranslate = async () => {
     try {
       setLoadingAITranslate(true);
@@ -181,7 +183,6 @@ export default function ImportExportPage() {
     }
   };
 
-  // AI ubogacanie SEO po bazie (z filtrami kategorii)
   const runAIEnrich = async () => {
     try {
       setLoadingAIEnrich(true);
@@ -359,10 +360,25 @@ export default function ImportExportPage() {
 
   const copySampleJSON = () => {
     const sample = importType === "produkty"
-      ? JSON.stringify([{name:"Produkt",description:"Opis",price:99.99,affiliateUrl:"https://example.com",mainCategorySlug:"elektronika",subCategorySlug:"smartfony"}], null, 2)
-      : JSON.stringify([{title:"Okazja",description:"Opis",price:49.99,link:"https://example.com",mainCategorySlug:"elektronika",subCategorySlug:"akcesoria"}], null, 2);
+      ? JSON.stringify([{
+        title: { pl: "Produkt", en: "Product" },
+        shortDescription: { pl: "Krótki opis", en: "Short desc" },
+        fullDescription: { pl: "Pełny opis", en: "Full description" },
+        price: 99.99,
+        affiliateUrl: "https://example.com",
+        mainCategorySlug: "elektronika",
+        subCategorySlug: "smartfony"
+      }], null, 2)
+      : JSON.stringify([{
+        title: { pl: "Okazja", en: "Deal" },
+        description: { pl: "Opis", en: "Description" },
+        price: 49.99,
+        link: "https://example.com",
+        mainCategorySlug: "elektronika",
+        subCategorySlug: "akcesoria"
+      }], null, 2);
     navigator.clipboard.writeText(sample);
-    toast.success("Skopiowano!");
+    toast.success("Skopiowano format LocalizedText!");
   };
 
   return (
@@ -380,6 +396,19 @@ export default function ImportExportPage() {
           )}
         </div>
       </div>
+
+      {/* LocalizedText Info Banner */}
+      <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-300">
+        <CardContent className="pt-4">
+          <div className="flex gap-3 items-start">
+            <Globe className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <p className="font-semibold text-green-900">🌍 Standard: LocalizedText (pl/en/de)</p>
+              <p className="text-sm text-green-800">Wszystkie produkty i okazje są przechowywane w formacie wielojęzycznym. Pola tekstowe (title, description itp.) muszą być obiektami z kopiami w pl/en i opcjonalnie de.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="jobs" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -428,16 +457,30 @@ export default function ImportExportPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold">🔧 Przetwarzanie</label>
-              {importType === "produkty" && (
-                <div className="flex gap-2">
-                  <label className="flex items-center gap-1 cursor-pointer"><Checkbox checked={enrichData} onCheckedChange={(v) => setEnrichData(!!v)} /> Enrich</label>
-                  <label className="flex items-center gap-1 cursor-pointer"><Checkbox checked={translateData} onCheckedChange={(v) => setTranslateData(!!v)} /> Tłumacz</label>
-                </div>
-              )}
-              {importType === "okazje" && (
-                <label className="flex items-center gap-1 cursor-pointer"><Checkbox checked={translateData} onCheckedChange={(v) => setTranslateData(!!v)} /> Tłumacz</label>
-              )}
+              <label className="text-sm font-semibold">🌐 Języki w JSON</label>
+              <div className="flex flex-wrap gap-2">
+                {availableLanguages.map(lang => (
+                  <Button
+                    key={lang.code}
+                    variant={selectedLanguages.has(lang.code) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const newLangs = new Set(selectedLanguages);
+                      if (newLangs.has(lang.code)) {
+                        if (newLangs.size > 1) newLangs.delete(lang.code);
+                      } else {
+                        newLangs.add(lang.code);
+                      }
+                      setSelectedLanguages(newLangs);
+                    }}
+                    className="gap-1"
+                  >
+                    {selectedLanguages.has(lang.code) && <Check className="h-3 w-3" />}
+                    {lang.name}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Informacyjnie - wskazuje jakie języki spodziewasz się w JSON</p>
             </div>
           </div>
         </CardContent>
@@ -475,6 +518,42 @@ export default function ImportExportPage() {
         </CardHeader>
         <CardContent>
           <Textarea placeholder="Wklej JSON..." value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="h-40 font-mono text-xs" />
+        </CardContent>
+      </Card>
+
+      {/* Format Info */}
+      <Card className="bg-blue-50 border border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-sm">📝 Format JSON (LocalizedText)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {importType === "produkty" ? (
+              <div className="text-xs space-y-2">
+                <p className="font-semibold">Wymagane pola dla produktu:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li><code>title: {`{ pl: "...", en: "..." }`}</code> - LocalizedText</li>
+                  <li><code>shortDescription: {`{ pl: "...", en: "..." }`}</code> - LocalizedText</li>
+                  <li><code>fullDescription: {`{ pl: "...", en: "..." }`}</code> - LocalizedText</li>
+                  <li><code>price</code> - liczba (wymagana)</li>
+                  <li><code>affiliateUrl</code> - URL (wymagany)</li>
+                  <li><code>mainCategorySlug</code> - kategoria (wymagany)</li>
+                  <li><code>subCategorySlug</code> - opcjonalnie</li>
+                </ul>
+              </div>
+            ) : (
+              <div className="text-xs space-y-2">
+                <p className="font-semibold">Wymagane pola dla okazji:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                  <li><code>title: {`{ pl: "...", en: "..." }`}</code> - LocalizedText</li>
+                  <li><code>description: {`{ pl: "...", en: "..." }`}</code> - LocalizedText</li>
+                  <li><code>price</code> - liczba lub SmartPrice (wymagana)</li>
+                  <li><code>link</code> - URL (wymagany)</li>
+                  <li><code>mainCategorySlug</code> - kategoria (wymagany)</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -627,39 +706,66 @@ export default function ImportExportPage() {
                 </Button>
               </div>
 
-              {/* AI */}
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <Label>Limit rekordów</Label>
-                    <Input type="number" min={1} max={500} value={aiLimit} onChange={e=>setAiLimit(parseInt(e.target.value || '50', 10))} />
+              {/* AI Processing Card */}
+              <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 md:col-span-3">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5" />
+                    🎯 AI Przetwarzanie (Background Jobs)
+                  </CardTitle>
+                  <p className="text-sm text-purple-900 mt-2">
+                    Operacje AI są uruchamiane jako background jobs zarządzane przez system. Możesz śledzić postęp w poniższej karcie <strong>Monitor Jobów Importu</strong>.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <Label>Limit rekordów do przetworzenia</Label>
+                      <Input type="number" min={1} max={500} value={aiLimit} onChange={e=>setAiLimit(parseInt(e.target.value || '50', 10))} />
+                      <p className="text-xs text-muted-foreground mt-1">Ile rekordów przetworzyć w jednym job'ie</p>
+                    </div>
+                    <div>
+                      <Label>Filtruj po statusie (opcjonalnie)</Label>
+                      <select className="w-full border rounded px-2 py-2 h-10" value={aiStatus} onChange={e=>setAiStatus(e.target.value)}>
+                        <option value="">— Wszystkie statusy —</option>
+                        <option value="draft">📝 Draft (wersje robocze)</option>
+                        <option value="pending">⏳ Pending (oczekujące)</option>
+                        <option value="approved">✅ Approved (zatwierdzone)</option>
+                        <option value="rejected">❌ Rejected (odrzucone)</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">Przetwarzaj tylko konkretne statusy</p>
+                    </div>
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <Checkbox checked={aiForce} onCheckedChange={v=>setAiForce(!!v)} />
+                        <span className="text-sm">Wymuś ponowne<br/>przetworzenie</span>
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Status (opcjonalnie)</Label>
-                    <select className="w-full border rounded px-2 py-2 h-10" value={aiStatus} onChange={e=>setAiStatus(e.target.value)}>
-                      <option value="">— Wszystkie —</option>
-                      <option value="draft">📝 Draft</option>
-                      <option value="pending">⏳ Pending</option>
-                      <option value="approved">✅ Approved</option>
-                      <option value="rejected">❌ Rejected</option>
-                    </select>
+
+                  <div className="bg-white rounded p-3 border border-purple-100">
+                    <p className="text-xs font-semibold text-purple-900 mb-2">Co zrobimy:</p>
+                    <ul className="text-xs space-y-1 text-muted-foreground">
+                      <li>📖 <strong>Tłumaczenie:</strong> Przetłumaczy title/description z pl na en/de</li>
+                      <li>🚀 <strong>Ubogacanie:</strong> Dodanie SEO keywords i ulepszenie opisów</li>
+                      <li>✅ <strong>Format:</strong> Wszystkie dane w LocalizedText (pl/en/de)</li>
+                      <li>⏳ <strong>Wykonanie:</strong> W tle - możesz śledzić w Job Monitor</li>
+                    </ul>
                   </div>
-                  <div className="flex items-end">
-                    <label className="flex items-center gap-2">
-                      <Checkbox checked={aiForce} onCheckedChange={v=>setAiForce(!!v)} />
-                      Wymuś ponowne przetworzenie (force)
-                    </label>
+
+                  <div className="flex flex-col md:flex-row gap-3">
+                    <Button onClick={runAITranslate} disabled={loadingAITranslate} className="bg-blue-600 hover:bg-blue-700 md:flex-1">
+                      {loadingAITranslate ? '⏳ Tworzenie job\'u…' : '🌐 Utwórz Job: AI Tłumaczenie'}
+                    </Button>
+                    <Button onClick={runAIEnrich} disabled={loadingAIEnrich} className="bg-purple-600 hover:bg-purple-700 md:flex-1">
+                      {loadingAIEnrich ? '⏳ Tworzenie job\'u…' : '🚀 Utwórz Job: AI Ubogacanie'}
+                    </Button>
                   </div>
-                </div>
-                <div className="flex flex-col md:flex-row gap-3">
-                  <Button onClick={runAITranslate} disabled={loadingAITranslate} variant="secondary">
-                    {loadingAITranslate ? 'AI tłumaczenie…' : '🌐 AI Tłumaczenie (DB)'}
-                  </Button>
-                  <Button onClick={runAIEnrich} disabled={loadingAIEnrich} variant="secondary">
-                    {loadingAIEnrich ? 'AI SEO…' : '🚀 AI Ubogacanie SEO (DB)'}
-                  </Button>
-                </div>
-              </div>
+                  <p className="text-xs text-muted-foreground italic">
+                    💡 Po kliknięciu uruchomi się job w tle. Przejdź do karty <strong>Job Monitor</strong> aby śledzić postęp.
+                  </p>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
 
