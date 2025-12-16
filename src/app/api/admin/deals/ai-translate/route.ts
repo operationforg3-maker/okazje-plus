@@ -161,8 +161,12 @@ export async function processAIDealTranslateJob(jobId: string) {
           continue;
         }
 
-        const sourceTitle = data.title?.en || data.title || '';
-        const sourceDesc = data.description?.en || data.description || '';
+        // Handle both new (LocalizedText) and legacy (string) formats
+        const titleObj = typeof data.title === 'object' ? data.title : { pl: data.title || '', en: data.title || '' };
+        const descObj = typeof data.description === 'object' ? data.description : { pl: data.description || '', en: data.description || '' };
+        
+        const sourceTitle = titleObj.en || titleObj.pl || '';
+        const sourceDesc = descObj.en || descObj.pl || '';
 
         if (!sourceTitle || !sourceDesc) {
           skippedCount++;

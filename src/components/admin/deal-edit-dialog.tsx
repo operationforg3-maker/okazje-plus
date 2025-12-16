@@ -40,8 +40,8 @@ export default function DealEditDialog({
   const [loading, setLoading] = useState(false);
   const [aiTranslating, setAiTranslating] = useState(false);
   const [formData, setFormData] = useState({
-    title: deal.title,
-    description: deal.description,
+    title: deal.title?.pl || deal.title?.en || '',
+    description: deal.description?.pl || deal.description?.en || '',
     price: deal.price.toString(),
     originalPrice: deal.originalPrice?.toString() || '',
     link: deal.link,
@@ -91,8 +91,14 @@ export default function DealEditDialog({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
+          title: {
+            ...(typeof deal.title === 'object' ? deal.title : { pl: deal.title || '', en: deal.title || '' }),
+            pl: formData.title, // Update Polish version only
+          },
+          description: {
+            ...(typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' }),
+            pl: formData.description, // Update Polish version only
+          },
           price: parseFloat(formData.price),
           originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : undefined,
           link: formData.link,
@@ -130,17 +136,18 @@ export default function DealEditDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Tytuł okazji</Label>
+            <Label htmlFor="title">Tytuł okazji (PL)</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
             />
+            <p className="text-xs text-muted-foreground">Edytujesz polską wersję. Inne języki zostają zachowane.</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Opis</Label>
+            <Label htmlFor="description">Opis (PL)</Label>
             <Textarea
               id="description"
               value={formData.description}
@@ -148,6 +155,7 @@ export default function DealEditDialog({
               rows={3}
               required
             />
+            <p className="text-xs text-muted-foreground">Edytujesz polską wersję. Inne języki zostają zachowane.</p>
           </div>
 
           <div className="grid grid-cols-3 gap-4">

@@ -94,7 +94,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
           url: deal.image,
           width: 1200,
           height: 630,
-          alt: deal.title,
+          alt: dealTitle,
         },
       ],
     },

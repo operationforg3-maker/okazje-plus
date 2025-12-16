@@ -820,7 +820,7 @@ function AdminPage() {
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="font-semibold text-muted-foreground w-6">#{i + 1}</div>
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{deal.title}</div>
+                          <div className="font-medium truncate">{deal.title?.pl || deal.title?.en || 'Bez tytułu'}</div>
                           <div className="text-sm text-muted-foreground">
                             {deal.mainCategorySlug} {deal.subCategorySlug && `→ ${deal.subCategorySlug}`}
                           </div>
@@ -952,7 +952,7 @@ function AdminPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium">Nowa gorąca okazja</div>
-                      <div className="text-sm text-muted-foreground truncate">{deal.title}</div>
+                      <div className="text-sm text-muted-foreground truncate">{deal.title?.pl || deal.title?.en || 'Bez tytułu'}</div>
                     </div>
                     <div className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(deal.postedAt).toLocaleDateString('pl-PL', { 

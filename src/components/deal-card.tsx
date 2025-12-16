@@ -22,7 +22,6 @@ import { RatingBar } from './rating-bar';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
-import { getLocalizedField, type SupportedLanguage } from '@/lib/i18n-utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import {
   Tooltip,
@@ -170,8 +169,12 @@ export default function DealCard({ deal }: DealCardProps) {
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   
   // Get localized deal title and description - use safe defaults to prevent hydration mismatch
-  const dealTitle = isMounted ? getLocalizedField(deal, 'title', locale as SupportedLanguage) : (deal.title && typeof deal.title === 'object' ? 'Okazja' : deal.title || 'Okazja');
-  const dealDescription = isMounted ? getLocalizedField(deal, 'description', locale as SupportedLanguage) : (deal.description && typeof deal.description === 'object' ? '' : deal.description || '');
+  // Handle both LocalizedText and legacy string formats
+  const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || 'Okazja', en: deal.title || 'Deal' };
+  const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
+  
+  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || 'Okazja');
+  const dealDescription = isMounted ? getText(descObj) : (descObj.pl || '');
   
   const couponCode = safeText(deal.couponCode);
   const deliveryTime = safeText(deal.importMetadata?.deliveryTime);

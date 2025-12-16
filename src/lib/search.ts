@@ -295,17 +295,18 @@ async function getFirestoreAutocompleteSuggestions(q: string, limit = 5): Promis
 
     // Filtruj deals po tytule lub opisie
     deals
-      .filter(d => 
-        d.title.toLowerCase().includes(normalizedQuery) || 
-        d.description?.toLowerCase().includes(normalizedQuery)
-      )
+      .filter(d => {
+        const title = (d.title?.pl || d.title?.en || '').toLowerCase();
+        const desc = (d.description?.pl || d.description?.en || '').toLowerCase();
+        return title.includes(normalizedQuery) || desc.includes(normalizedQuery);
+      })
       .slice(0, Math.max(0, limit - out.length))
       .forEach(d => {
         out.push({
           type: 'deal',
           id: d.id,
-          label: d.title,
-          subLabel: d.description,
+          label: d.title?.pl || d.title?.en || 'Bez tytułu',
+          subLabel: d.description?.pl || d.description?.en || '',
         });
       });
 

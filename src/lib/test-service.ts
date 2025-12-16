@@ -531,7 +531,7 @@ async function testDataQuality(): Promise<{ status: 'pass' | 'fail' | 'warning';
     const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
     
     const withoutImages = deals.filter(d => !d.image || d.image === '').length;
-    const withoutDescriptions = deals.filter(d => !d.description || d.description === '').length;
+    const withoutDescriptions = deals.filter(d => !d.description || (!d.description.pl && !d.description.en)).length;
     const percentage = deals.length > 0 ? Math.round((withoutImages / deals.length) * 100) : 0;
     
     if (percentage > 30) {

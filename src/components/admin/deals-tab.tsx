@@ -22,7 +22,7 @@ export function DealsTab() {
       {/* TODO: Add deal management functionality */}
       <ul>
         {deals.map(deal => (
-          <li key={deal.id}>{deal.title}</li>
+          <li key={deal.id}>{deal.title?.pl || deal.title?.en || 'Bez tytułu'}</li>
         ))}
       </ul>
     </div>

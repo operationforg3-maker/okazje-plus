@@ -109,8 +109,8 @@ export async function generateModerationScore(
 Analyze this ${itemType} for moderation and provide a quality/safety score.
 
 ${itemType === 'product' ? 'Product' : 'Deal'} Details:
-- Title: ${itemType === 'product' ? (item as Product).name : (item as Deal).title}
-- Description: ${item.description.substring(0, 500)}
+- Title: ${itemType === 'product' ? (item as Product).name : ((item as Deal).title?.pl || (item as Deal).title?.en || 'Bez tytułu')}
+- Description: ${(item.description && typeof item.description === 'object' ? (item.description.pl || item.description.en || '') : (item.description || '')).substring(0, 500)}
 - Price: ${itemType === 'product' ? (item as Product).price : (item as Deal).price}
 ${
   itemType === 'product'

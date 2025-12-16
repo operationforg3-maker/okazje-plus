@@ -162,9 +162,14 @@ export async function processAITranslateJob(jobId: string) {
           continue;
         }
 
-        const sourceTitle = data.title?.en || data.name || '';
-        const sourceDesc = data.fullDescription?.en || data.description || '';
-        const sourceShortDesc = data.shortDescription?.en || sourceDesc.slice(0, 200);
+        // Handle both new (LocalizedText) and legacy (string) formats
+        const titleObj = typeof data.title === 'object' ? data.title : { pl: data.name || '', en: data.name || '' };
+        const fullDescObj = typeof data.fullDescription === 'object' ? data.fullDescription : { pl: data.longDescription || data.description || '', en: data.longDescription || data.description || '' };
+        const shortDescObj = typeof data.shortDescription === 'object' ? data.shortDescription : { pl: data.description || '', en: data.description || '' };
+        
+        const sourceTitle = titleObj.en || titleObj.pl || '';
+        const sourceDesc = fullDescObj.en || fullDescObj.pl || '';
+        const sourceShortDesc = shortDescObj.en || shortDescObj.pl || sourceDesc.slice(0, 200);
         const features = data.features || [];
 
         if (!sourceTitle || !sourceDesc) {

@@ -391,7 +391,7 @@ export default function AdminDealsPage() {
                 ) : (
                   displayDeals.slice((currentPage-1)*itemsPerPage, (currentPage-1)*itemsPerPage + itemsPerPage).map((deal) => (
                   <TableRow key={deal.id}>
-                    <TableCell className="font-medium">{deal.title}</TableCell>
+                    <TableCell className="font-medium">{deal.title?.pl || deal.title?.en || 'Bez tytułu'}</TableCell>
                     <TableCell>
                       <Badge variant={deal.status === 'approved' ? 'secondary' : deal.status === 'draft' ? 'outline' : 'destructive'}>
                         {deal.status === 'approved' ? 'Zatwierdzona' : deal.status === 'draft' ? 'Wersja robocza' : 'Odrzucona'}
