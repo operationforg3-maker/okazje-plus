@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, Download, ExternalLink, Star, CheckSquare, ChevronRight } from 'lucide-react';
+import { Loader2, Search, Download, ExternalLink, Star, CheckSquare, ChevronRight, Sparkles } from 'lucide-react';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { collection } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
@@ -89,6 +89,16 @@ function AliExpressImportPage() {
   const [details, setDetails] = useState<Record<string, any>>({});
   const [fieldSelection, setFieldSelection] = useState<Record<string, { title: boolean; description: boolean; images: boolean; price: boolean; rating: boolean }>>({});
   const [aiTestLoading, setAiTestLoading] = useState(false);
+  
+  // AI Pipeline Configuration
+  const [aiConfig, setAiConfig] = useState({
+    enableSmartContent: true,      // Generuj AI content (PL/EN/DE)
+    enableAutoPromote: true,        // Auto-promuj hot deals
+    enableShippingCalc: true,       // Oblicz koszty wysyłki
+    enableQualityScore: true,       // Oblicz AI quality score
+    minQualityScore: 60,            // Minimalny score do zatwierdzenia
+    autoApprove: false,             // Auto-zatwierdź high-quality (score >80)
+  });
 
   const formatPrice = (amount: number, currency: string = 'PLN') =>
     format.number(amount, { style: 'currency', currency });
@@ -584,6 +594,141 @@ function AliExpressImportPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* AI Configuration Panel */}
+      {step === 'search' && (
+        <Card className="border-2 border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-blue-500" />
+              Konfiguracja AI Pipeline
+            </CardTitle>
+            <CardDescription>
+              Zaawansowane funkcje AI dla importowanych produktów
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Left column */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Smart Content Generation</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Generuj AI content w PL/EN/DE z SEO i JSON-LD
+                    </p>
+                  </div>
+                  <Checkbox
+                    checked={aiConfig.enableSmartContent}
+                    onCheckedChange={(checked) =>
+                      setAiConfig({ ...aiConfig, enableSmartContent: checked as boolean })
+                    }
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Auto Hot Deal Promotion</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Auto-promuj produkty: rabat {'>'40%, rating >'}4.5, sales {'>'}100
+                    </p>
+                  </div>
+                  <Checkbox
+                    checked={aiConfig.enableAutoPromote}
+                    onCheckedChange={(checked) =>
+                      setAiConfig({ ...aiConfig, enableAutoPromote: checked as boolean })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Shipping Cost Calculator</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Oblicz dokładne koszty wysyłki przez Logistics API
+                    </p>
+                  </div>
+                  <Checkbox
+                    checked={aiConfig.enableShippingCalc}
+                    onCheckedChange={(checked) =>
+                      setAiConfig({ ...aiConfig, enableShippingCalc: checked as boolean })
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Right column */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">AI Quality Scoring</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Oblicz score 0-100 (spam, kompletność, zgodność)
+                    </p>
+                  </div>
+                  <Checkbox
+                    checked={aiConfig.enableQualityScore}
+                    onCheckedChange={(checked) =>
+                      setAiConfig({ ...aiConfig, enableQualityScore: checked as boolean })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="minQualityScore">
+                    Minimalny AI Score ({aiConfig.minQualityScore})
+                  </Label>
+                  <Input
+                    id="minQualityScore"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={aiConfig.minQualityScore}
+                    onChange={(e) =>
+                      setAiConfig({ ...aiConfig, minQualityScore: parseInt(e.target.value) })
+                    }
+                    className="w-full"
+                    disabled={!aiConfig.enableQualityScore}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Produkty poniżej tego score zostaną odrzucone
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-base font-medium">Auto-Approve High Quality</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Auto-zatwierdź produkty z score {'>'}80
+                    </p>
+                  </div>
+                  <Checkbox
+                    checked={aiConfig.autoApprove}
+                    onCheckedChange={(checked) =>
+                      setAiConfig({ ...aiConfig, autoApprove: checked as boolean })
+                    }
+                    disabled={!aiConfig.enableQualityScore}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="secondary" className="text-xs">
+                  ⚡ Pipeline Stages: 4
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  🤖 Vertex AI Gemini 2.0 Flash
+                </Badge>
+                <Badge variant="secondary" className="text-xs">
+                  🌍 Multi-language (PL/EN/DE)
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Krok 1: Wyszukiwarka */}
       {step === 'search' && (

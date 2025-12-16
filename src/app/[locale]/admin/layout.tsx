@@ -39,6 +39,7 @@ const pathNames: Record<string, string> = {
   '/admin/bulk-import': 'Bulk Import',
   '/admin/batch-import': 'Batch Import',
   '/admin/import': 'Import danych',
+  '/admin/social-media': 'Social Media Automation',
 };
 
 export default function AdminLayout({
