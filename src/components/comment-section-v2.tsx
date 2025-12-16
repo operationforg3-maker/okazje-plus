@@ -30,16 +30,22 @@ interface CommentSectionProps {
 
 export default function CommentSectionV2({ collectionName, docId }: CommentSectionProps) {
   const { user } = useAuth();
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [deletingComment, setDeletingComment] = useState<Comment | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState<Record<string, string>>({});
-  const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState<Record<string, string>>({});
-  const [cooldownUntil, setCooldownUntil] = useState<number>(0);
+  const [commentState, setCommentState] = useState({
+    comments: [] as Comment[],
+    newComment: '',
+    deletingComment: null as Comment | null,
+    isDeleting: false,
+    cooldownUntil: 0,
+  });
+  const [replyState, setReplyState] = useState({
+    replyingTo: null as string | null,
+    replyContent: {} as Record<string, string>,
+    expandedReplies: new Set<string>(),
+  });
+  const [editState, setEditState] = useState({
+    editingId: null as string | null,
+    editContent: {} as Record<string, string>,
+  });
 
   // Sprawdź czy user jest adminem (prawdziwa rola z User doc)
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
@@ -49,7 +55,8 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
 
   useEffect(() => {
     async function fetchComments() {
-      setComments(await getComments(collectionName, docId, 100));
+      const comments = await getComments(collectionName, docId, 100);
+      setCommentState(prev => ({ ...prev, comments }));
     }
     fetchComments();
   }, [collectionName, docId]);
@@ -81,12 +88,12 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
       return;
     }
     const now = Date.now();
-    if (now < cooldownUntil) {
-      const wait = Math.ceil((cooldownUntil - now) / 1000);
+    if (now < commentState.cooldownUntil) {
+      const wait = Math.ceil((commentState.cooldownUntil - now) / 1000);
       toast.error(`Zaczekaj ${wait}s przed dodaniem kolejnego komentarza.`);
       return;
     }
-    if (!newComment.trim()) {
+    if (!commentState.newComment.trim()) {
       return;
     }
     try {
@@ -97,27 +104,34 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
         userId: user.uid,
         userDisplayName: user.displayName || 'Ty',
         userPhotoURL: user.photoURL || undefined,
-        content: newComment,
+        content: commentState.newComment,
         createdAt: new Date().toISOString(),
         parentId: null,
         repliesCount: 0,
       };
-      setComments((prev) => [tempComment, ...prev]);
+      setCommentState(prev => ({ 
+        ...prev, 
+        comments: [tempComment, ...prev.comments],
+        newComment: ''
+      }));
       commentsCount.increment?.(1);
-      setNewComment('');
 
-      await addComment(collectionName, docId, user.uid, newComment);
-      void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, newComment.length);
-      // 5 sekundowy cooldown
-      setCooldownUntil(Date.now() + 5000);
-
-      // Po zapisie pobierz odświeżone komentarze z serwera
-      setComments(await getComments(collectionName, docId, 100));
+      await addComment(collectionName, docId, user.uid, commentState.newComment);
+      void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, commentState.newComment.length);
+      
+      // 5 sekundowy cooldown + pobierz odświeżone komentarze
+      const comments = await getComments(collectionName, docId, 100);
+      setCommentState(prev => ({ 
+        ...prev, 
+        comments,
+        cooldownUntil: Date.now() + 5000
+      }));
       toast.success("Komentarz został dodany.");
     } catch (error) {
       // rollback optimistic update
       commentsCount.decrement?.(1);
-      setComments(await getComments(collectionName, docId, 100));
+      const comments = await getComments(collectionName, docId, 100);
+      setCommentState(prev => ({ ...prev, comments }));
       toast.error("Wystąpił błąd podczas dodawania komentarza.");
     }
   };
@@ -128,13 +142,13 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
       return;
     }
     const now = Date.now();
-    if (now < cooldownUntil) {
-      const wait = Math.ceil((cooldownUntil - now) / 1000);
+    if (now < commentState.cooldownUntil) {
+      const wait = Math.ceil((commentState.cooldownUntil - now) / 1000);
       toast.error(`Zaczekaj ${wait}s przed dodaniem odpowiedzi.`);
       return;
     }
     
-    const content = replyContent[parentId];
+    const content = replyState.replyContent[parentId];
     if (!content?.trim()) {
       return;
     }
@@ -142,21 +156,25 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
     try {
       await addComment(collectionName, docId, user.uid, content, parentId);
       void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, content.length);
-      setCooldownUntil(Date.now() + 5000);
 
-      // Pobierz odświeżone komentarze
-      setComments(await getComments(collectionName, docId, 100));
+      // Pobierz odświeżone komentarze, wyczyść pole odpowiedzi i podbij cooldown
+      const comments = await getComments(collectionName, docId, 100);
+      const updatedReplyContent = { ...replyState.replyContent };
+      delete updatedReplyContent[parentId];
+      const expandedReplies = new Set(replyState.expandedReplies);
+      expandedReplies.add(parentId);
       
-      // Wyczyść pole odpowiedzi
-      setReplyContent(prev => {
-        const updated = { ...prev };
-        delete updated[parentId];
-        return updated;
-      });
-      setReplyingTo(null);
-      
-      // Automatycznie rozwiń odpowiedzi
-      setExpandedReplies(prev => new Set(prev).add(parentId));
+      setCommentState(prev => ({ 
+        ...prev, 
+        comments,
+        cooldownUntil: Date.now() + 5000
+      }));
+      setReplyState(prev => ({
+        ...prev,
+        replyingTo: null,
+        replyContent: updatedReplyContent,
+        expandedReplies
+      }));
       
       toast.success("Odpowiedź została dodana.");
     } catch (error) {
@@ -165,11 +183,10 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
   };
 
   const handleDeleteComment = async () => {
-    if (!deletingComment) return;
+    if (!commentState.deletingComment) return;
 
-    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/admin/comments/${deletingComment.id}`, {
+      const response = await fetch(`/api/admin/comments/${commentState.deletingComment.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ collectionName, docId }),
@@ -183,34 +200,42 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
 
       toast.success('Komentarz został usunięty');
       
-      // Refresh comments
-      setComments(await getComments(collectionName, docId, 100));
+      // Refresh comments and clear state in single setState
+      const comments = await getComments(collectionName, docId, 100);
+      setCommentState(prev => ({ 
+        ...prev,
+        comments,
+        deletingComment: null,
+        isDeleting: false
+      }));
     } catch (error: any) {
       toast.error(error.message || 'Wystąpił błąd podczas usuwania komentarza');
       console.error('Delete comment error:', error);
-    } finally {
-      setIsDeleting(false);
-      setDeletingComment(null);
+      // Still reset deleting state on error
+      setCommentState(prev => ({ 
+        ...prev,
+        isDeleting: false
+      }));
     }
   };
 
   const toggleReplies = (commentId: string) => {
-    setExpandedReplies(prev => {
-      const updated = new Set(prev);
+    setReplyState(prev => {
+      const updated = new Set(prev.expandedReplies);
       if (updated.has(commentId)) {
         updated.delete(commentId);
       } else {
         updated.add(commentId);
       }
-      return updated;
+      return { ...prev, expandedReplies: updated };
     });
   };
 
   const renderComment = (comment: Comment & { replies?: Comment[] }, level: number = 0) => {
     const hasReplies = (comment.repliesCount || 0) > 0 || (comment.replies && comment.replies.length > 0);
-    const isExpanded = expandedReplies.has(comment.id);
-    const isReplying = replyingTo === comment.id;
-    const isEditing = editingId === comment.id;
+    const isExpanded = replyState.expandedReplies.has(comment.id);
+    const isReplying = replyState.replyingTo === comment.id;
+    const isEditing = editState.editingId === comment.id;
 
     return (
       <div key={comment.id} className={level > 0 ? 'ml-8 mt-4' : ''}>
@@ -254,8 +279,8 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
               ) : (
                 <div className="mt-2 space-y-2">
                   <Textarea
-                    value={editContent[comment.id] ?? comment.content}
-                    onChange={(e) => setEditContent(prev => ({...prev, [comment.id]: e.target.value}))}
+                    value={editState.editContent[comment.id] ?? comment.content}
+                    onChange={(e) => setEditState(prev => ({...prev, editContent: {...prev.editContent, [comment.id]: e.target.value}}))}
                     className="min-h-[80px]"
                   />
                   <div className="flex gap-2">
@@ -263,19 +288,20 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
                       size="sm"
                       onClick={async () => {
                         if (!user) return;
-                        const newVal = (editContent[comment.id] ?? '').trim();
+                        const newVal = (editState.editContent[comment.id] ?? '').trim();
                         if (!newVal) return;
                         try {
                           await updateComment(collectionName, docId, comment.id, user.uid, newVal);
-                          setEditingId(null);
-                          setComments(await getComments(collectionName, docId, 100));
+                          const comments = await getComments(collectionName, docId, 100);
+                          setEditState(prev => ({ ...prev, editingId: null }));
+                          setCommentState(prev => ({ ...prev, comments }));
                           toast.success('Komentarz zaktualizowany');
                         } catch (e) {
                           toast.error('Nie udało się zaktualizować komentarza');
                         }
                       }}
                     >Zapisz</Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>Anuluj</Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditState(prev => ({ ...prev, editingId: null }))}>Anuluj</Button>
                   </div>
                 </div>
               )}
@@ -286,7 +312,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setReplyingTo(isReplying ? null : comment.id)}
+                    onClick={() => setReplyState(prev => ({ ...prev, replyingTo: isReplying ? null : comment.id }))}
                     className="h-7 px-2 text-xs"
                   >
                     <Reply className="h-3 w-3 mr-1" />
@@ -298,7 +324,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setEditingId(isEditing ? null : comment.id)}
+                    onClick={() => setEditState(prev => ({ ...prev, editingId: isEditing ? null : comment.id }))}
                     className="h-7 px-2 text-xs"
                   >
                     Edytuj
@@ -332,15 +358,15 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
                 <div className="mt-3 space-y-2">
                   <Textarea
                     placeholder="Napisz odpowiedź..."
-                    value={replyContent[comment.id] || ''}
-                    onChange={(e) => setReplyContent(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                    value={replyState.replyContent[comment.id] || ''}
+                    onChange={(e) => setReplyState(prev => ({ ...prev, replyContent: { ...prev.replyContent, [comment.id]: e.target.value } }))}
                     className="min-h-[80px]"
                   />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleSubmitReply(comment.id)}>
                       Wyślij odpowiedź
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => setReplyingTo(null)}>
+                    <Button size="sm" variant="outline" onClick={() => setReplyState(prev => ({ ...prev, replyingTo: null }))}>
                       Anuluj
                     </Button>
                   </div>
@@ -353,7 +379,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setDeletingComment(comment)}
+                onClick={() => setCommentState(prev => ({ ...prev, deletingComment: comment }))}
                 className="opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -372,23 +398,23 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
     );
   };
 
-  const organizedComments = organizeComments(comments);
+  const organizedComments = organizeComments(commentState.comments);
 
   return (
     <div className="mt-8">
       <h3 className="font-headline text-2xl font-bold mb-4">
-        Komentarze ({comments.length})
+        Komentarze ({commentState.comments.length})
       </h3>
       
       {user && (
         <div className="mb-6 space-y-2">
           <Textarea 
             placeholder="Dodaj swój komentarz..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
+            value={commentState.newComment}
+            onChange={(e) => setCommentState(prev => ({ ...prev, newComment: e.target.value }))}
             className="mb-2 min-h-[100px]"
           />
-          <Button onClick={handleSubmitComment} disabled={!newComment.trim()}>
+          <Button onClick={handleSubmitComment} disabled={!commentState.newComment.trim()}>
             Dodaj komentarz
           </Button>
         </div>
@@ -405,7 +431,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
       </div>
 
       {/* Dialog potwierdzenia usunięcia */}
-      <AlertDialog open={!!deletingComment} onOpenChange={(open) => !open && setDeletingComment(null)}>
+      <AlertDialog open={!!commentState.deletingComment} onOpenChange={(open) => !open && setCommentState(prev => ({ ...prev, deletingComment: null }))}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -414,21 +440,21 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
             </AlertDialogTitle>
             <AlertDialogDescription>
               Czy na pewno chcesz usunąć ten komentarz? Ta operacja jest nieodwracalna.
-              {deletingComment && (deletingComment.repliesCount || 0) > 0 && (
+              {commentState.deletingComment && (commentState.deletingComment.repliesCount || 0) > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
-                  UWAGA: Ten komentarz ma {deletingComment.repliesCount} odpowiedzi, które również zostaną usunięte.
+                  UWAGA: Ten komentarz ma {commentState.deletingComment.repliesCount} odpowiedzi, które również zostaną usunięte.
                 </span>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Anuluj</AlertDialogCancel>
+            <AlertDialogCancel disabled={commentState.isDeleting}>Anuluj</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteComment}
-              disabled={isDeleting}
+              disabled={commentState.isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? 'Usuwam...' : 'Usuń komentarz'}
+              {commentState.isDeleting ? 'Usuwam...' : 'Usuń komentarz'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
