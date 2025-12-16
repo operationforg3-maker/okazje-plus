@@ -45,7 +45,7 @@ export function ThemeToggle({
 
   // React to system theme changes when in 'system'
   useEffect(() => {
-    if (!isMounted || theme !== 'system' || typeof window === 'undefined') return;
+    if (!isMounted || theme !== 'system') return;
     
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => applyTheme('system');
@@ -63,11 +63,8 @@ export function ThemeToggle({
   const cycle = () => {
     const next: Theme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
     setTheme(next);
-    
-    if (typeof window !== 'undefined') {
-      try { localStorage.setItem(STORAGE_KEY, next); } catch {}
-      applyTheme(next);
-    }
+    try { localStorage.setItem(STORAGE_KEY, next); } catch {}
+    applyTheme(next);
   };
 
   const label = useMemo(() => {
