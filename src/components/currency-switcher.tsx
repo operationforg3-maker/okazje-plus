@@ -32,9 +32,12 @@ export function CurrencySwitcher() {
 
   // Load currency from localStorage on mount
   useEffect(() => {
-    const savedCurrency = localStorage.getItem('preferredCurrency') || 'PLN';
-    setCurrency(savedCurrency);
     setIsMounted(true);
+    
+    if (typeof window !== 'undefined') {
+      const savedCurrency = localStorage.getItem('preferredCurrency') || 'PLN';
+      setCurrency(savedCurrency);
+    }
   }, []);
 
   const switchCurrency = (newCurrency: string, enabled: boolean) => {
