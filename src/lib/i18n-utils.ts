@@ -239,7 +239,19 @@ export function getPriceAmount(price: SmartPrice | number): number {
  * @returns Total price as number
  */
 export function getTotalPrice(price: SmartPrice | number): number {
-  return typeof price === 'number' ? price : price.totalPrice;
+  if (typeof price === 'number') {
+    return price;
+  }
+  
+  // If totalPrice is set, use it
+  if (typeof price.totalPrice === 'number' && price.totalPrice > 0) {
+    return price.totalPrice;
+  }
+  
+  // Otherwise calculate: amount + shippingCost
+  const amount = price.amount || 0;
+  const shipping = price.shippingCost || 0;
+  return amount + shipping;
 }
 
 /**

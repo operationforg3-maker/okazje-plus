@@ -52,7 +52,13 @@ function toDraftPayload(p: AliExpressProduct, slugs: { main: string; sub: string
     imageHint: titleEN,
     affiliateUrl: p.link,
     // Price as SmartPrice-like object
-    price: { amount, currency: p.currency || 'PLN', totalPrice: amount, lastUpdated: new Date().toISOString() },
+    price: { 
+      amount, 
+      currency: p.currency || 'PLN', 
+      shippingCost: 0, // Will be calculated later
+      totalPrice: amount, // Will be recalculated with shipping
+      lastUpdated: new Date().toISOString() 
+    },
     originalPrice: p.originalPrice,
     discountPercent: p.discount,
     currency: p.currency || 'PLN',

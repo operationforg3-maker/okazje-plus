@@ -189,6 +189,32 @@ export default async function DealDetailPage({ params }: PageProps) {
       worstRating: 1,
     },
   };
+
+  // BreadcrumbList schema for better navigation in Google
+  const breadcrumbList = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Strona główna',
+        item: 'https://okazjeplus.pl'
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Okazje',
+        item: 'https://okazjeplus.pl/deals'
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: deal.title,
+        item: `https://okazjeplus.pl/deals/${deal.id}`
+      }
+    ]
+  };
   
   return (
     <>
@@ -196,6 +222,10 @@ export default async function DealDetailPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }}
       />
       
       {/* Client component z interaktywnym UI */}

@@ -87,6 +87,50 @@ export default async function RootLayout({
                   }}
                 />
         <meta name="convertiser-verification" content="3bc0a4fd6e7289720f9c2784de4b87f345bcca47" />
+        {/* WebSite Schema with Search Action for Google Rich Results */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'Okazje+',
+              alternateName: 'OkazjePlus',
+              url: 'https://okazjeplus.pl',
+              description: 'Najlepsze okazje zakupowe, promocje i wyprzedaże w Polsce. Społeczność dzieląca się najgorętszymi ofertami i cenami produktów.',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: 'https://okazjeplus.pl/search?q={search_term_string}'
+                },
+                'query-input': 'required name=search_term_string'
+              }
+            })
+          }}
+        />
+        {/* Organization Schema */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Okazje+',
+              url: 'https://okazjeplus.pl',
+              logo: 'https://okazjeplus.pl/Logotyp_okazjePlus.png',
+              sameAs: [
+                'https://www.facebook.com/okazjeplus',
+                'https://twitter.com/okazjeplus'
+              ],
+              contactPoint: {
+                '@type': 'ContactPoint',
+                contactType: 'customer service',
+                availableLanguage: ['Polish', 'English', 'German']
+              }
+            })
+          }}
+        />
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-4M4NQB0PQD"></script>
         <script
