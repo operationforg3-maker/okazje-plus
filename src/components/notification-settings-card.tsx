@@ -71,27 +71,36 @@ const ICON_MAP = {
 };
 
 export function NotificationSettingsCard() {
-  const [isSupported, setIsSupported] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
-  const [enabled, setEnabled] = useState(false);
-  const [subscribedTopics, setSubscribedTopics] = useState<string[]>([]);
+  const [notificationState, setNotificationState] = useState<{
+    isSupported: boolean;
+    permission: NotificationPermission;
+    enabled: boolean;
+    subscribedTopics: string[];
+  }>({
+    isSupported: false,
+    permission: 'default',
+    enabled: false,
+    subscribedTopics: [],
+  });
   const [isRequesting, setIsRequesting] = useState(false);
 
   useEffect(() => {
-    setIsSupported(isNotificationSupported());
-    setPermission(getNotificationPermission());
-    setEnabled(getNotificationPreference());
-    setSubscribedTopics(getSubscribedTopics());
+    setNotificationState({
+      isSupported: isNotificationSupported(),
+      permission: getNotificationPermission(),
+      enabled: getNotificationPreference(),
+      subscribedTopics: getSubscribedTopics(),
+    });
   }, []);
 
   const handleRequestPermission = async () => {
     setIsRequesting(true);
     try {
       const granted = await requestNotificationPermission();
-      setPermission(getNotificationPermission());
+      setNotificationState(prev => ({ ...prev, permission: getNotificationPermission() }));
       
       if (granted) {
-        setEnabled(true);
+        setNotificationState(prev => ({ ...prev, enabled: true }));
         setNotificationPreference(true);
         toast.success('Powiadomienia włączone!');
         
@@ -113,7 +122,7 @@ export function NotificationSettingsCard() {
   };
 
   const handleToggleEnabled = (checked: boolean) => {
-    setEnabled(checked);
+    setNotificationState(prev => ({ ...prev, enabled: checked }));
     setNotificationPreference(checked);
     toast.success(checked ? 'Powiadomienia włączone' : 'Powiadomienia wyłączone');
   };
@@ -122,11 +131,11 @@ export function NotificationSettingsCard() {
     try {
       if (subscribe) {
         await subscribeToTopic(topicId);
-        setSubscribedTopics([...subscribedTopics, topicId]);
+        setNotificationState(prev => ({ ...prev, subscribedTopics: [...prev.subscribedTopics, topicId] }));
         toast.success('Subskrypcja aktywna');
       } else {
         await unsubscribeFromTopic(topicId);
-        setSubscribedTopics(subscribedTopics.filter(t => t !== topicId));
+        setNotificationState(prev => ({ ...prev, subscribedTopics: prev.subscribedTopics.filter(t => t !== topicId) }));
         toast.success('Subskrypcja anulowana');
       }
     } catch (error) {
@@ -135,7 +144,7 @@ export function NotificationSettingsCard() {
     }
   };
 
-  if (!isSupported) {
+  if (!notificationState.isSupported) {
     return (
       <Card>
         <CardHeader>
@@ -168,40 +177,40 @@ export function NotificationSettingsCard() {
           <div className="space-y-1">
             <div className="flex items-center space-sm">
               <p className="font-medium">Status powiadomień</p>
-              {permission === 'granted' && (
+              {notificationState.permission === 'granted' && (
                 <Badge variant="default" className="space-sm">
                   <Check className="h-3 w-3" />
                   Aktywne
                 </Badge>
               )}
-              {permission === 'denied' && (
+              {notificationState.permission === 'denied' && (
                 <Badge variant="destructive" className="space-sm">
                   <X className="h-3 w-3" />
                   Zablokowane
                 </Badge>
               )}
-              {permission === 'default' && (
+              {notificationState.permission === 'default' && (
                 <Badge variant="outline">Nieaktywne</Badge>
               )}
             </div>
             <p className="text-sm text-muted-foreground">
-              {permission === 'granted' && 'Powiadomienia są włączone'}
-              {permission === 'denied' && 'Zmień ustawienia w przeglądarce, aby włączyć powiadomienia'}
-              {permission === 'default' && 'Kliknij poniżej, aby włączyć powiadomienia'}
+              {notificationState.permission === 'granted' && 'Powiadomienia są włączone'}
+              {notificationState.permission === 'denied' && 'Zmień ustawienia w przeglądarce, aby włączyć powiadomienia'}
+              {notificationState.permission === 'default' && 'Kliknij poniżej, aby włączyć powiadomienia'}
             </p>
           </div>
-          {permission === 'default' && (
+          {notificationState.permission === 'default' && (
             <Button onClick={handleRequestPermission} disabled={isRequesting}>
               {isRequesting ? 'Włączam...' : 'Włącz powiadomienia'}
             </Button>
           )}
-          {permission === 'granted' && (
-            <Switch checked={enabled} onCheckedChange={handleToggleEnabled} />
+          {notificationState.permission === 'granted' && (
+            <Switch checked={notificationState.enabled} onCheckedChange={handleToggleEnabled} />
           )}
         </div>
 
         {/* Topics */}
-        {permission === 'granted' && enabled && (
+        {notificationState.permission === 'granted' && notificationState.enabled && (
           <div className="space-y-4">
             <div>
               <h4 className="font-medium mb-2">Rodzaje powiadomień</h4>
@@ -231,7 +240,7 @@ export function NotificationSettingsCard() {
                     </div>
                     <Switch
                       id={`topic-${topic.id}`}
-                      checked={subscribedTopics.includes(topic.id)}
+                      checked={notificationState.subscribedTopics.includes(topic.id)}
                       onCheckedChange={(checked) => handleToggleTopic(topic.id, checked)}
                     />
                   </div>
