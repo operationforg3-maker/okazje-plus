@@ -31,61 +31,79 @@ type ComparisonItem = (Deal | Product) & { type: 'deal' | 'product' };
 const MAX_COMPARISON_ITEMS = 4;
 
 export function DealComparisonTool() {
-  const [items, setItems] = useState<ComparisonItem[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [comparisonState, setComparisonState] = useState({
+    items: [] as ComparisonItem[],
+    isOpen: false,
+    isMounted: false
+  });
   const { addItem: addToCart, isInCart } = useSmartCart();
 
   useEffect(() => {
-    setIsMounted(true);
-    // Load from localStorage only on client
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('comparisonItems');
+      let loadedItems: ComparisonItem[] = [];
+      
       if (stored) {
         try {
-          setItems(JSON.parse(stored));
+          loadedItems = JSON.parse(stored);
         } catch (error) {
           console.error('Error parsing comparison items:', error);
           localStorage.removeItem('comparisonItems');
         }
       }
+      
+      // SINGLE setState
+      setComparisonState(prev => ({
+        ...prev,
+        isMounted: true,
+        items: loadedItems
+      }));
     }
   }, []);
 
   useEffect(() => {
     // Save to localStorage only on client
-    if (typeof window !== 'undefined' && isMounted) {
-      localStorage.setItem('comparisonItems', JSON.stringify(items));
+    if (typeof window !== 'undefined' && comparisonState.isMounted) {
+      localStorage.setItem('comparisonItems', JSON.stringify(comparisonState.items));
     }
-  }, [items, isMounted]);
+  }, [comparisonState.items, comparisonState.isMounted]);
 
   const addItem = (item: ComparisonItem) => {
-    if (items.length >= MAX_COMPARISON_ITEMS) {
+    if (comparisonState.items.length >= MAX_COMPARISON_ITEMS) {
       toast.error(`Możesz porównać maksymalnie ${MAX_COMPARISON_ITEMS} elementy`);
       return;
     }
 
-    if (items.some(i => i.id === item.id)) {
+    if (comparisonState.items.some(i => i.id === item.id)) {
       toast.error('Ten element jest już w porównaniu');
       return;
     }
 
-    setItems([...items, item]);
+    setComparisonState(prev => ({
+      ...prev,
+      items: [...prev.items, item]
+    }));
     toast.success('Dodano do porównania', {
       action: {
         label: 'Pokaż',
-        onClick: () => setIsOpen(true),
+        onClick: () => setComparisonState(prev => ({ ...prev, isOpen: true })),
       },
     });
   };
 
   const removeItem = (itemId: string) => {
-    setItems(items.filter(i => i.id !== itemId));
+    setComparisonState(prev => ({
+      ...prev,
+      items: prev.items.filter(i => i.id !== itemId)
+    }));
     toast.success('Usunięto z porównania');
   };
 
   const clearAll = () => {
-    setItems([]);
+    setComparisonState(prev => ({
+      ...prev,
+      items: []
+    }));
     toast.success('Wyczyszczono porównanie');
   };
 
@@ -126,28 +144,28 @@ export function DealComparisonTool() {
     return (item as Product).name;
   };
 
-  if (!isMounted) {
+  if (!comparisonState.isMounted) {
     return null;
   }
 
   // Smart cart features
   const [isExpanded, setIsExpanded] = useState(false);
-  const totalValue = items.reduce((sum, item) => sum + getPrice(item), 0);
-  const avgPrice = items.length > 0 ? totalValue / items.length : 0;
-  const lowestPrice = items.length > 0 ? Math.min(...items.map(getPrice)) : 0;
-  const bestDeal = items.find(item => getPrice(item) === lowestPrice);
+  const totalValue = comparisonState.items.reduce((sum, item) => sum + getPrice(item), 0);
+  const avgPrice = comparisonState.items.length > 0 ? totalValue / comparisonState.items.length : 0;
+  const lowestPrice = comparisonState.items.length > 0 ? Math.min(...comparisonState.items.map(getPrice)) : 0;
+  const bestDeal = comparisonState.items.find(item => getPrice(item) === lowestPrice);
 
   return (
     <>
       {/* Floating Smart Cart - lewitujący przycisk z mini-podglądem */}
       <div className="fixed bottom-6 right-6 z-50">
         {/* Expanded mini-preview */}
-        {isExpanded && items.length > 0 && (
+        {isExpanded && comparisonState.items.length > 0 && (
           <div className="absolute bottom-20 right-0 w-80 bg-card border border-border rounded-lg shadow-2xl mb-2 overflow-hidden animate-in slide-in-from-bottom-5">
             <div className="p-4 bg-muted/50 border-b flex items-center justify-between">
               <h3 className="font-semibold text-sm flex items-center gap-2">
                 <Scale className="h-4 w-4" />
-                Porównujesz {items.length} {items.length === 1 ? 'produkt' : 'produkty'}
+                Porównujesz {comparisonState.items.length} {comparisonState.items.length === 1 ? 'produkt' : 'produkty'}
               </h3>
               <Button
                 variant="ghost"
@@ -179,7 +197,7 @@ export function DealComparisonTool() {
 
             {/* Mini product cards */}
             <div className="max-h-64 overflow-y-auto">
-              {items.map((item) => {
+              {comparisonState.items.map((item) => {
                 const price = getPrice(item);
                 const isBest = price === lowestPrice;
                 return (
@@ -265,7 +283,7 @@ export function DealComparisonTool() {
                 size="sm"
                 onClick={() => {
                   let added = 0;
-                  items.forEach(item => {
+                  comparisonState.items.forEach(item => {
                     if (item.type === 'product' && !isInCart((item as Product).id)) {
                       addToCart(item as Product);
                       added++;
@@ -285,7 +303,7 @@ export function DealComparisonTool() {
                 className="w-full gap-2"
                 size="sm"
                 onClick={() => {
-                  setIsOpen(true);
+                  setComparisonState(prev => ({ ...prev, isOpen: true }));
                   setIsExpanded(false);
                 }}
               >
@@ -307,15 +325,15 @@ export function DealComparisonTool() {
         )}
 
         {/* Main floating button */}
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <Sheet open={comparisonState.isOpen} onOpenChange={(open) => setComparisonState(prev => ({ ...prev, isOpen: open }))}>
           <SheetTrigger asChild>
             <Button
               size="lg"
               className="rounded-full shadow-2xl gap-2 relative group hover:scale-105 transition-transform"
-              disabled={items.length === 0}
-              variant={items.length === 0 ? 'outline' : 'default'}
+              disabled={comparisonState.items.length === 0}
+              variant={comparisonState.items.length === 0 ? 'outline' : 'default'}
               onClick={(e) => {
-                if (items.length > 0 && !isOpen) {
+                if (comparisonState.items.length > 0 && !comparisonState.isOpen) {
                   // On first click, expand preview instead of opening sheet
                   e.preventDefault();
                   setIsExpanded(!isExpanded);
@@ -324,12 +342,12 @@ export function DealComparisonTool() {
             >
               <Scale className="h-5 w-5" />
               Porównaj
-              {items.length > 0 && (
+              {comparisonState.items.length > 0 && (
                 <Badge
                   variant="secondary"
                   className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center p-0 rounded-full bg-primary text-primary-foreground"
                 >
-                  {items.length}
+                  {comparisonState.items.length}
                 </Badge>
               )}
             </Button>
@@ -339,23 +357,23 @@ export function DealComparisonTool() {
               <SheetTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Scale className="h-5 w-5" />
-                  Porównanie {items.length === 1 ? 'elementu' : 'elementów'}
+                  Porównanie {comparisonState.items.length === 1 ? 'elementu' : 'elementów'}
                 </span>
-                {items.length > 0 && (
+                {comparisonState.items.length > 0 && (
                   <Button variant="outline" size="sm" onClick={clearAll}>
                     Wyczyść wszystko
                   </Button>
                 )}
               </SheetTitle>
               <SheetDescription>
-                {items.length === 0 
+                {comparisonState.items.length === 0 
                   ? 'Kliknij przycisk "Porównaj" (ikona wagi) na kartach okazji, aby dodać je do porównania'
-                  : `Porównaj ceny, dostępność i parametry ${items.length} ${items.length === 1 ? 'elementu' : 'elementów'}`
+                  : `Porównaj ceny, dostępność i parametry ${comparisonState.items.length} ${comparisonState.items.length === 1 ? 'elementu' : 'elementów'}`
                 }
               </SheetDescription>
             </SheetHeader>
 
-            {items.length === 0 ? (
+            {comparisonState.items.length === 0 ? (
               <div className="mt-12 flex flex-col items-center justify-center gap-4 text-center">
                 <Scale className="h-16 w-16 text-muted-foreground" />
                 <div>
@@ -412,7 +430,7 @@ export function DealComparisonTool() {
                     className="gap-2"
                     onClick={() => {
                       let added = 0;
-                      items.forEach(item => {
+                      comparisonState.items.forEach(item => {
                         if (item.type === 'product' && !isInCart((item as Product).id)) {
                           addToCart(item as Product);
                           added++;
@@ -433,7 +451,7 @@ export function DealComparisonTool() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[200px] sticky left-0 bg-background">Parametr</TableHead>
-                    {items.map((item) => (
+                    {comparisonState.items.map((item) => (
                       <TableHead key={item.id} className="min-w-[250px]">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
@@ -459,9 +477,9 @@ export function DealComparisonTool() {
                   {/* Price Row */}
                   <TableRow>
                     <TableCell className="font-medium sticky left-0 bg-background">Cena</TableCell>
-                    {items.map((item) => {
+                    {comparisonState.items.map((item) => {
                       const price = getPrice(item);
-                      const isLowest = price === Math.min(...items.map(getPrice));
+                      const isLowest = price === Math.min(...comparisonState.items.map(getPrice));
                       return (
                         <TableCell key={item.id}>
                           <div className="flex items-center gap-2">
@@ -476,10 +494,10 @@ export function DealComparisonTool() {
                   </TableRow>
 
                   {/* Temperature Row (for deals) */}
-                  {items.some(i => i.type === 'deal') && (
+                  {comparisonState.items.some(i => i.type === 'deal') && (
                     <TableRow>
                       <TableCell className="font-medium sticky left-0 bg-background">Temperatura</TableCell>
-                      {items.map((item) => {
+                      {comparisonState.items.map((item) => {
                         const temp = getTemperature(item);
                         return (
                           <TableCell key={item.id}>
@@ -500,7 +518,7 @@ export function DealComparisonTool() {
                   {/* Shipping Row */}
                   <TableRow>
                     <TableCell className="font-medium sticky left-0 bg-background">Dostawa</TableCell>
-                    {items.map((item) => (
+                    {comparisonState.items.map((item) => (
                       <TableCell key={item.id}>{getShipping(item)}</TableCell>
                     ))}
                   </TableRow>
@@ -508,16 +526,16 @@ export function DealComparisonTool() {
                   {/* Store Row */}
                   <TableRow>
                     <TableCell className="font-medium sticky left-0 bg-background">Sklep</TableCell>
-                    {items.map((item) => (
+                    {comparisonState.items.map((item) => (
                       <TableCell key={item.id}>{getStore(item)}</TableCell>
                     ))}
                   </TableRow>
 
                   {/* Rating Row (for products) */}
-                  {items.some(i => i.type === 'product') && (
+                  {comparisonState.items.some(i => i.type === 'product') && (
                     <TableRow>
                       <TableCell className="font-medium sticky left-0 bg-background">Ocena</TableCell>
-                      {items.map((item) => {
+                      {comparisonState.items.map((item) => {
                         if (item.type === 'product') {
                           const product = item as Product;
                           const rating = product.ratingCard?.average ?? undefined;
@@ -544,10 +562,10 @@ export function DealComparisonTool() {
                   )}
 
                   {/* Brand Row (for products) */}
-                  {items.some(i => i.type === 'product') && (
+                  {comparisonState.items.some(i => i.type === 'product') && (
                     <TableRow>
                       <TableCell className="font-medium sticky left-0 bg-background">Marka</TableCell>
-                      {items.map((item) => {
+                      {comparisonState.items.map((item) => {
                         if (item.type === 'product') {
                           const product = item as Product;
                           return (
@@ -564,7 +582,7 @@ export function DealComparisonTool() {
                   {/* Link Row */}
                   <TableRow>
                     <TableCell className="font-medium sticky left-0 bg-background">Akcja</TableCell>
-                    {items.map((item) => (
+                    {comparisonState.items.map((item) => (
                       <TableCell key={item.id}>
                         <Link
                           href={`/${item.type === 'deal' ? 'deals' : 'products'}/${item.id}`}
