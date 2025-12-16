@@ -134,7 +134,7 @@ System AI automatycznie:
 ## 📊 Analityka (`/admin/analytics`)
 
 ### Google Analytics 4
-- **Tracking ID**: G-4M4NQB0PQD
+- **Tracking ID**: G-FT6DRFR25D
 - **Property ID**: 491578768
 - Link do konsoli GA4: [analytics.google.com](https://analytics.google.com/analytics/web/#/p491578768)
 

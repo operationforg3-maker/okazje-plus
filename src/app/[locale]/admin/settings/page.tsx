@@ -239,7 +239,7 @@ function SettingsPage() {
                     <Input 
                       id="ga4" 
                       placeholder="G-XXXXXXXXXX"
-                      defaultValue="G-4M4NQB0PQD"
+                      defaultValue="G-FT6DRFR25D"
                       readOnly
                       className="bg-muted"
                     />

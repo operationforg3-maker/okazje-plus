@@ -82,7 +82,7 @@ Przeanalizowano cały kod aplikacji pod kątem integracji frontendu z backendem.
   - Używa `getGlobalAnalytics()` z `src/lib/analytics.ts`
   - Główny tab działa (totals, trends)
   - Taby **devices, sources, pages, conversions** mają tekst `"(statyczne placeholdery)"`
-- **Backend:** Google Analytics 4 jest skonfigurowane (G-4M4NQB0PQD)
+- **Backend:** Google Analytics 4 jest skonfigurowane (G-FT6DRFR25D)
 - **Rozwiązanie:** 
   - GA4 działa tylko po stronie klienta (tracking)
   - Dane są w Google Analytics Console

@@ -233,7 +233,7 @@ const pendingDeals = [
 ## 📊 Analityka (/admin/analytics/page.tsx)
 
 ### ✅ DZIAŁA POPRAWNIE
-- ✅ Google Analytics 4 tracking aktywny (G-4M4NQB0PQD)
+- ✅ Google Analytics 4 tracking aktywny (G-FT6DRFR25D)
 - ✅ Status integracji wyświetlany
 
 ### ⚠️ ATRAPY

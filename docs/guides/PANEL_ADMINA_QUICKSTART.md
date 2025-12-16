@@ -86,6 +86,14 @@ Główny widok z kluczowymi metrykami:
 - Bulk import (max 50 na raz)
 - AI processing (kategorie, normalizacja)
 
+#### **Import Produktów** (`/admin/products-import`)
+- JSON import produktów z wzbogaconymi danymi
+- Obsługa **LocalizedText** (title/description/longDescription w wielu językach)
+- Import **specyfikacji technicznych** (`metadata.specifications` lub `specifications`)
+- Import **ocen zewnętrznych** (AliExpress `evaluateRate`, `evaluateCount`, `merchantRating`) → mapowane na `ratingSources.external`
+- Deduplikacja (AI): wykrywanie duplikatów przed zapisem
+- Upsert: aktualizacja istniejących produktów po `metadata.originalId` lub `affiliateUrl`
+
 #### **Import Okazji** (`/admin/deals-import`)
 - CSV import okazji
 - Bulk AI Import
@@ -138,7 +146,7 @@ Główny widok z kluczowymi metrykami:
 ### 📊 Analityka
 
 #### **Analytics** (`/admin/analytics`)
-- Google Analytics 4 (G-4M4NQB0PQD)
+- Google Analytics 4 (G-FT6DRFR25D)
 - Overview: views, clicks, users, sessions, shares
 - Wykres dzienny (7/14/30 dni)
 - Top deals i products

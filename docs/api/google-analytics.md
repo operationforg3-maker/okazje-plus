@@ -1,7 +1,7 @@
 # Google Analytics 4 - Integracja
 
 ## Status
-✅ **Aktywne** - Tracking ID: `G-4M4NQB0PQD`
+✅ **Aktywne** - Tracking ID: `G-FT6DRFR25D`
 
 ## Konfiguracja
 
@@ -157,7 +157,7 @@ Jeśli w przyszłości chcesz go ukryć:
 
 ```bash
 # .env.local
-NEXT_PUBLIC_GA_TRACKING_ID=G-4M4NQB0PQD
+NEXT_PUBLIC_GA_TRACKING_ID=G-FT6DRFR25D
 ```
 
 Wtedy w `layout.tsx` i `analytics.ts` użyj:

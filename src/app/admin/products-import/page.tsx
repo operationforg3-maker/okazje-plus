@@ -20,14 +20,16 @@ export default function ProductsImportPage() {
     return await user.getIdToken();
   };
 
-  // Walidacja pól produktu
+  // Walidacja pól produktu – nie kasujemy obiektów LocalizedText
   function validateProducts(products: any[]): any[] {
-    return products.map((p, idx) => ({
-      ...p,
-      description: typeof p.description === 'string' ? p.description : '',
-      seoDescription: typeof p.seoDescription === 'string' ? p.seoDescription : '',
-      longDescription: typeof p.longDescription === 'string' ? p.longDescription : '',
-    }));
+    return products.map((p, idx) => {
+      const validated: any = { ...p };
+      // Jeśli description/longDescription/seoDescription to obiekt (LocalizedText), zachowaj; jeśli pusty – ustaw domyślny string
+      if (validated.description === undefined || validated.description === null) validated.description = '';
+      if (validated.longDescription === undefined || validated.longDescription === null) validated.longDescription = '';
+      if (validated.seoDescription === undefined || validated.seoDescription === null) validated.seoDescription = '';
+      return validated;
+    });
   }
 
   const dryRun = async () => {

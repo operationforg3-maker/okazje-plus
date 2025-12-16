@@ -76,7 +76,7 @@ function AnalyticsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5" /> Google Analytics 4</CardTitle>
-          <CardDescription>Tracking ID: G-4M4NQB0PQD</CardDescription>
+          <CardDescription>Tracking ID: G-FT6DRFR25D</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 p-6 flex items-start gap-3">

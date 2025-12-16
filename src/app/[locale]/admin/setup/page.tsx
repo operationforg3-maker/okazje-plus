@@ -938,7 +938,7 @@ function SetupPage() {
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div>
                     <div className="font-medium">Google Analytics 4</div>
-                    <div className="text-sm text-muted-foreground">G-4M4NQB0PQD</div>
+                    <div className="text-sm text-muted-foreground">G-FT6DRFR25D</div>
                   </div>
                   <Badge variant="default">Aktywne</Badge>
                 </div>

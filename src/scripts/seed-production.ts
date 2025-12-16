@@ -315,8 +315,8 @@ function generateDealForCategory(
 
   const deal: Deal = {
     id: uuidv4(),
-    title,
-    description,
+    title: { pl: title, en: title },
+    description: { pl: description, en: description },
     price: basePrice,
     originalPrice,
     link: generateFakeDealLink(),

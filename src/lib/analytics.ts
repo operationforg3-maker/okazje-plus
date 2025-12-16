@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-export const GA_TRACKING_ID = 'G-4M4NQB0PQD';
+export const GA_TRACKING_ID = 'G-FT6DRFR25D';
 
 /**
  * Sprawdź czy GA jest dostępne

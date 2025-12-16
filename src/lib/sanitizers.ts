@@ -165,17 +165,21 @@ const sanitizeGallery = (raw: any): ProductImageEntry[] => {
   return normalized;
 };
 
-const sanitizeSpecifications = (raw: any): Array<{ key: string; value: string }> | undefined => {
+const sanitizeSpecifications = (raw: any): Array<{ key?: string; name?: string; value: string; unit?: string }> | undefined => {
   if (!Array.isArray(raw)) return undefined;
   const normalized = raw
     .map((spec) => {
       if (!spec || typeof spec !== 'object') return null;
-      const key = ensureString(spec.key, '');
       const value = ensureString(spec.value, '');
-      if (!key || !value) return null;
-      return { key, value };
+      if (!value) return null;
+      return {
+        key: ensureOptionalString(spec.key),
+        name: ensureOptionalString(spec.name),
+        value,
+        unit: ensureOptionalString(spec.unit),
+      };
     })
-    .filter(Boolean) as Array<{ key: string; value: string }>;
+    .filter(Boolean) as Array<{ key?: string; name?: string; value: string; unit?: string }>;
   return normalized.length > 0 ? normalized : undefined;
 };
 
@@ -287,6 +291,22 @@ const sanitizeDealMetadata = (raw: any): Deal['metadata'] | undefined => {
   return pruneObject(metadata) as Deal['metadata'];
 };
 
+const sanitizeLocalizedText = (raw: any, fallback: string): { pl: string; en: string; [key: string]: string | undefined } => {
+  if (typeof raw === 'string' && raw.trim()) {
+    return { pl: raw.trim(), en: raw.trim() };
+  }
+  if (raw && typeof raw === 'object') {
+    const pl = ensureOptionalString(raw.pl) || fallback;
+    const en = ensureOptionalString(raw.en) || pl;
+    const result: Record<string, string | undefined> = { pl, en };
+    if (raw.de) result.de = ensureOptionalString(raw.de);
+    if (raw.fr) result.fr = ensureOptionalString(raw.fr);
+    if (raw.es) result.es = ensureOptionalString(raw.es);
+    return result as { pl: string; en: string; [key: string]: string | undefined };
+  }
+  return { pl: fallback, en: fallback };
+};
+
 export const sanitizeProductPayload = (raw: Partial<Product>): Omit<Product, 'id'> => {
   const gallery = sanitizeGallery(raw.gallery);
   const ratingCard = sanitizeRatingCard(raw.ratingCard);
@@ -299,10 +319,18 @@ export const sanitizeProductPayload = (raw: Partial<Product>): Omit<Product, 'id
     ? (status as Product['status'])
     : 'draft';
 
+  const nameFallback = ensureString(raw.name || 'Produkt', 'Produkt');
+  const descriptionFallback = ensureString(raw.description || '', '');
+  const longDescriptionFallback = ensureString(raw.longDescription || raw.description || '', '');
+
   return {
-    name: ensureString(raw.name, 'Produkt'),
-    description: ensureString(raw.description, ''),
-    longDescription: ensureString(raw.longDescription || raw.description || ''),
+    name: nameFallback,
+    description: descriptionFallback,
+    longDescription: longDescriptionFallback,
+    title: raw.title ? sanitizeLocalizedText(raw.title, nameFallback) : sanitizeLocalizedText(raw.name, 'Produkt'),
+    shortDescription: raw.shortDescription ? sanitizeLocalizedText(raw.shortDescription, descriptionFallback) : sanitizeLocalizedText(raw.description, ''),
+    fullDescription: raw.fullDescription ? sanitizeLocalizedText(raw.fullDescription, longDescriptionFallback) : sanitizeLocalizedText(raw.longDescription || raw.description, ''),
+    seoDescription: raw.seoDescription ? sanitizeLocalizedText(raw.seoDescription, descriptionFallback) : undefined,
     image: ensureString(raw.image, FALLBACK_IMAGE) || FALLBACK_IMAGE,
     imageHint: ensureString(raw.imageHint || raw.name || 'produkt', 'produkt'),
     affiliateUrl: ensureString(raw.affiliateUrl, FALLBACK_URL) || FALLBACK_URL,

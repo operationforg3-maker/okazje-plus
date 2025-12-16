@@ -201,10 +201,35 @@ export default function ImportExportPage() {
 
   const copySampleJSON = () => {
     const sample = importType === "produkty"
-      ? JSON.stringify([{name:"Produkt",description:"Opis",price:99.99,affiliateUrl:"https://example.com",mainCategorySlug:"elektronika",subCategorySlug:"smartfony"}], null, 2)
-      : JSON.stringify([{title:"Okazja",description:"Opis",price:49.99,link:"https://example.com",mainCategorySlug:"elektronika",subCategorySlug:"akcesoria"}], null, 2);
+      ? JSON.stringify([{
+          title: { pl: "Smartfon 5G", en: "5G Smartphone" },
+          shortDescription: { pl: "Nowoczesny telefon z aparatem 50MP", en: "Modern phone with 50MP camera" },
+          fullDescription: { pl: "Szczegółowy opis produktu...", en: "Detailed product description..." },
+          affiliateUrl: "https://example.com/product",
+          price: 1299,
+          originalPrice: 1699,
+          mainCategorySlug: "elektronika",
+          subCategorySlug: "smartfony",
+          specifications: [
+            { name: "RAM", value: "8", unit: "GB" },
+            { name: "Ekran", value: "6.5 inch AMOLED" }
+          ],
+          ratingSources: {
+            external: { average: 4.5, count: 12345, source: "aliexpress" }
+          },
+          metadata: { originalId: "ae_12345" }
+        }], null, 2)
+      : JSON.stringify([{
+          title: { pl: "Okazja dnia", en: "Deal of the day" },
+          description: { pl: "Niesamowita oferta!", en: "Amazing offer!" },
+          price: 49.99,
+          originalPrice: 99.99,
+          link: "https://example.com",
+          mainCategorySlug: "elektronika",
+          subCategorySlug: "akcesoria"
+        }], null, 2);
     navigator.clipboard.writeText(sample);
-    toast.success("Skopiowano!");
+    toast.success("Skopiowano przykład z LocalizedText + specs!");
   };
 
   return (
@@ -316,7 +341,14 @@ export default function ImportExportPage() {
           <Button size="sm" variant="outline" onClick={copySampleJSON}><Copy className="h-4 w-4" /></Button>
         </CardHeader>
         <CardContent>
-          <Textarea placeholder="Wklej JSON..." value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} className="h-40 font-mono text-xs" />
+          <Textarea 
+            placeholder={importType === "produkty" 
+              ? "Wklej JSON produktów... (obsługuje: title/shortDescription/fullDescription jako LocalizedText {pl,en,...}, specifications[], ratingSources.external, metadata.evaluateRate)" 
+              : "Wklej JSON okazji... (obsługuje: title/description jako LocalizedText {pl,en,...})"} 
+            value={jsonInput} 
+            onChange={(e) => setJsonInput(e.target.value)} 
+            className="h-40 font-mono text-xs" 
+          />
         </CardContent>
       </Card>
 
