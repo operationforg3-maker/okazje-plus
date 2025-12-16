@@ -98,6 +98,14 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   const isVerifiedMerchant = merchantRating >= 95;
   const isBestseller = ordersCount > 1000;
   const hasFastShipping = (product as any).shippingMethod === 'express' || ((product as any).estimatedDeliveryDays && (product as any).estimatedDeliveryDays <= 7);
+  
+  // AI Quality Score
+  const aiScore = product.aiContent?.score || 0;
+  const isAIRecommended = aiScore > 80;
+  
+  // Hot Deal indicator
+  const isHotDeal = product.meta?.isHotDeal || false;
+  const salesVolume = product.meta?.salesVolume || 0;
   const inCart = isInCart(product.id);
 
   const metadata = product.metadata || {};
@@ -255,6 +263,22 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                 Zweryfikowany
               </Badge>
             )}
+            
+            {/* AI Quality Badge */}
+            {isAIRecommended && (
+              <Badge className="bg-purple-500 text-white badge-trust">
+                <Zap className="w-3 h-3 mr-1" />
+                AI Rekomenduje
+              </Badge>
+            )}
+            
+            {/* Hot Deal Badge */}
+            {isHotDeal && (
+              <Badge className="bg-red-500 text-white badge-trust animate-pulse">
+                <Zap className="w-3 h-3 mr-1" />
+                HOT DEAL
+              </Badge>
+            )}
           </div>
 
           {/* Discount Badge (Top-right corner) */}
@@ -356,6 +380,17 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                   <span className="text-sm text-secondary flex items-center space-sm font-medium">
                     <MessageSquare className="w-4 h-4" />
                     {commentsCount} opinii
+                  </span>
+                </>
+              )}
+              
+              {/* Sales Volume (from AliExpress) */}
+              {salesVolume > 0 && (
+                <>
+                  <span className="text-tertiary">•</span>
+                  <span className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center space-sm font-semibold">
+                    <TrendingDown className="w-4 h-4" />
+                    {salesVolume.toLocaleString()} sprzedanych
                   </span>
                 </>
               )}

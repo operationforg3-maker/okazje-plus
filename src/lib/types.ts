@@ -201,6 +201,23 @@ export interface Subcategory {
 // ============================================
 
 /**
+ * AIContent - AI-generated multilingual content with quality score
+ */
+export interface AIContent {
+  titlePL: string;                // AI-generated Polish title
+  titleEN: string;                // AI-generated English title
+  titleDE: string;                // AI-generated German title
+  description: Record<string, string>; // Localized HTML descriptions { pl: '...', en: '...', de: '...' }
+  bullets: Record<string, string[]>;   // Localized feature bullets { pl: [...], en: [...], de: [...] }
+  score: number;                  // AI Quality Score 0-100
+  seoTitle?: Record<string, string>;   // SEO-optimized titles { pl: '...', en: '...', de: '...' }
+  seoDescription?: Record<string, string>; // SEO meta descriptions
+  jsonLd?: string;                // JSON-LD structured data for rich snippets
+  generatedAt?: string;           // ISO timestamp of AI generation
+  modelVersion?: string;          // AI model version used (e.g., 'gemini-2.0-flash')
+}
+
+/**
  * LocalizedText - Multi-language text support with fallback chain
  * Priority: current language -> English -> Polish
  */
@@ -217,15 +234,17 @@ export interface LocalizedText {
  * SmartPrice - Enhanced price model with shipping & omnibus compliance
  */
 export interface SmartPrice {
-  amount: number;                 // Base product price
-  currency: string;                // e.g., "PLN", "USD", "EUR"
-  shippingCost: number;           // Calculated shipping cost to Poland
-  totalPrice: number;              // amount + shippingCost (displayed as "Total Landed Cost")
+  basePrice: number;               // Base product price in USD (source of truth)
+  amount: number;                 // Legacy: Base product price (deprecated, use basePrice)
+  currency: 'USD';                 // Always USD - converted on display
+  shippingCost: number;           // Calculated shipping cost in USD
+  totalPrice: number;              // basePrice + shippingCost (displayed as "Total Landed Cost")
   lowestPrice30Days?: number;     // Omnibus directive compliance (lowest price in last 30 days)
-  originalPrice?: number;          // Original price before discount
+  originalPrice?: number;          // Original price before discount in USD
   discountPercent?: number;        // Calculated discount percentage
   freeShipping?: boolean;          // True if shippingCost is 0
   lastUpdated?: string;            // ISO timestamp of last price update
+  estimatedDeliveryDays?: number; // Estimated shipping time in days
 }
 
 // Zaktualizowany interfejs Product (M4 Enhanced)
@@ -310,8 +329,16 @@ export interface Product {
   metaTitle?: string; // M2: Meta title for SEO
   metaDescription?: string; // M2: Meta description for SEO
   ai?: ProductAiMeta; // Dane analityczne AI (duplikaty, propozycje)
+  aiContent?: AIContent; // AI-generated multilingual content with quality score
   moderation?: ProductModerationState; // Informacje o procesie moderacji
   metadata?: ProductImportMetadata; // Źródło importu i dane oryginalne
+  meta?: {
+    isHotDeal: boolean;              // Auto-calculated: discount > 40% AND rating > 4.5
+    importedAt: string;              // ISO timestamp of import
+    salesVolume?: number;            // AliExpress sales volume (orders count)
+    averageStarRate?: number;        // AliExpress star rating (0-5)
+    conversionRate?: number;         // Estimated conversion rate (if available)
+  };
   /**
    * Future-proof dwukierunkowe powiązanie: lista dealId powiązanych z tym produktem.
    * Aktualizowana transakcyjnie przy dodaniu/usunięciu powiązania.
@@ -2029,4 +2056,116 @@ export interface PreRegistration {
   ipAddress?: string;
   userAgent?: string;
   referralSource?: string;
+}
+
+// ====== SOCIAL MEDIA AUTOMATION ======
+export type SocialPlatform = 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'tiktok';
+
+export interface SocialConfig {
+  id: string; // document ID = platform name
+  platform: SocialPlatform;
+  enabled: boolean;
+  credentials: {
+    accessToken?: string;
+    pageId?: string; // Facebook/Instagram Page ID
+    organizationId?: string; // LinkedIn Organization ID
+    accountId?: string; // Twitter/TikTok account ID
+    refreshToken?: string;
+    expiresAt?: string;
+  };
+  settings: {
+    autoPost: boolean; // Auto-publish or require manual approval
+    postFrequency: number; // Minutes between posts (min 5)
+    maxPostsPerDay: number;
+    postTypes: ('deal' | 'product')[]; // What to post
+    minTemperature?: number; // Min temperature/rating to auto-post
+    includeImage: boolean;
+    includePrice: boolean;
+    addHashtags: boolean;
+    customHashtags?: string[];
+    utmParams: {
+      source: string;
+      medium: string;
+      campaign: string;
+    };
+  };
+  stats: {
+    totalPosts: number;
+    successfulPosts: number;
+    failedPosts: number;
+    lastPostAt?: string;
+    lastError?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SocialTemplate {
+  id: string;
+  platform: SocialPlatform;
+  type: 'deal' | 'product';
+  name: string;
+  template: string; // Template with placeholders: {title}, {price}, {url}, {merchant}, {temperature}
+  enabled: boolean;
+  maxLength?: number; // Platform character limit
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SocialPostStatus = 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'cancelled';
+
+export interface SocialPost {
+  id: string;
+  platform: SocialPlatform;
+  status: SocialPostStatus;
+  type: 'deal' | 'product';
+  itemId: string; // Deal or Product ID
+  itemData: {
+    title: string;
+    description?: string;
+    price?: number;
+    image?: string;
+    url: string;
+    merchant?: string;
+    temperature?: number;
+    category?: string;
+  };
+  content: {
+    text: string; // Generated post text
+    imageUrl?: string;
+    linkUrl: string; // Short URL with UTM params
+    hashtags?: string[];
+  };
+  scheduledFor?: string; // When to post (null = ASAP)
+  postedAt?: string;
+  platformPostId?: string; // ID from platform API
+  platformUrl?: string; // Public URL of the post
+  attempts: number;
+  lastAttemptAt?: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: any;
+  };
+  metadata: {
+    templateId?: string;
+    manuallyApproved?: boolean;
+    approvedBy?: string;
+    approvedAt?: string;
+    createdBy?: string; // 'auto' or userId
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SocialPostLog {
+  id: string;
+  postId: string;
+  platform: SocialPlatform;
+  action: 'created' | 'approved' | 'posted' | 'failed' | 'cancelled' | 'retried';
+  status: SocialPostStatus;
+  message: string;
+  error?: any;
+  userId?: string;
+  timestamp: string;
 }

@@ -370,6 +370,16 @@ export default function AdminProductsPage() {
                     Cena
                   </SortableTableHead>
                   <TableHead className="hidden md:table-cell">Oceny</TableHead>
+                  <SortableTableHead
+                    columnKey="meta.salesVolume"
+                    sortConfig={sortConfig}
+                    onSort={requestSort}
+                    className="hidden lg:table-cell"
+                  >
+                    Sprzedaż
+                  </SortableTableHead>
+                  <TableHead className="hidden lg:table-cell">AI Score</TableHead>
+                  <TableHead className="hidden lg:table-cell">Status</TableHead>
                   <TableHead>
                     <span className="sr-only">Akcje</span>
                   </TableHead>
@@ -378,7 +388,7 @@ export default function AdminProductsPage() {
               <TableBody>
                 {paginatedData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       Brak produktów. Dodaj pierwszy produkt klikając przycisk "Dodaj produkt".
                     </TableCell>
                   </TableRow>
@@ -403,6 +413,44 @@ export default function AdminProductsPage() {
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {product.ratingCard.count}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {product.meta?.salesVolume ? (
+                        <Badge variant="secondary" className="font-mono">
+                          {product.meta.salesVolume.toLocaleString()}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {product.aiContent?.score ? (
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={product.aiContent.score > 80 ? 'default' : product.aiContent.score > 60 ? 'secondary' : 'destructive'}
+                            className="font-mono"
+                          >
+                            {product.aiContent.score}
+                          </Badge>
+                          {product.aiContent.score > 80 && (
+                            <Sparkles className="h-4 w-4 text-purple-500" />
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={product.status === 'approved' ? 'default' : 'secondary'}>
+                          {product.status}
+                        </Badge>
+                        {product.meta?.isHotDeal && (
+                          <Badge variant="destructive" className="text-xs animate-pulse">
+                            🔥 HOT DEAL
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

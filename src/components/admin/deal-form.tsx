@@ -28,8 +28,10 @@ interface DealFormProps {
 }
 
 interface DealFormData {
-  title: string;
-  description: string;
+  title: string; // PL
+  titleEn?: string; // EN optional
+  description: string; // PL
+  descriptionEn?: string; // EN optional
   price: number;
   originalPrice?: number;
   link: string;
@@ -61,8 +63,10 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
   } = useForm<DealFormData>({
     defaultValues: deal
       ? {
-          title: deal.title,
-          description: deal.description,
+          title: typeof deal.title === 'object' ? deal.title.pl : (deal as any).title,
+          titleEn: typeof deal.title === 'object' ? deal.title.en : undefined,
+          description: typeof deal.description === 'object' ? deal.description.pl : (deal as any).description,
+          descriptionEn: typeof deal.description === 'object' ? deal.description.en : undefined,
           price: deal.price,
           originalPrice: deal.originalPrice,
           link: deal.link,
@@ -144,6 +148,9 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
     try {
       const dealData = {
         ...data,
+        // LocalizedText mapping
+        title: { pl: data.title, en: data.titleEn || data.title },
+        description: { pl: data.description, en: data.descriptionEn || data.description },
         useAI, // Wyślij informację o użyciu AI
         temperature: deal?.temperature || 0,
         commentsCount: deal?.commentsCount || 0,
@@ -231,7 +238,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Tytuł */}
+          {/* Tytuł (PL) */}
           <div className="space-y-2">
             <Label htmlFor="title">
               Tytuł okazji <span className="text-destructive">*</span>
@@ -248,8 +255,13 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
               <p className="text-sm text-destructive">{errors.title.message}</p>
             )}
           </div>
+          {/* Tytuł (EN) */}
+          <div className="space-y-2">
+            <Label htmlFor="titleEn">Title (EN)</Label>
+            <Input id="titleEn" {...register('titleEn')} placeholder="Optional English title" />
+          </div>
 
-          {/* Opis */}
+          {/* Opis (PL) */}
           <div className="space-y-2">
             <Label htmlFor="description">
               Opis <span className="text-destructive">*</span>
@@ -266,6 +278,11 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
             {errors.description && (
               <p className="text-sm text-destructive">{errors.description.message}</p>
             )}
+          </div>
+          {/* Opis (EN) */}
+          <div className="space-y-2">
+            <Label htmlFor="descriptionEn">Description (EN)</Label>
+            <Textarea id="descriptionEn" {...register('descriptionEn')} placeholder="Optional English description" rows={3} />
           </div>
 
           {/* URL okazji */}

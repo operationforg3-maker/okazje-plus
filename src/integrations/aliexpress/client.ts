@@ -299,7 +299,21 @@ export class AliExpressClient {
       });
       
       // Transform products to our format
-      const transformedProducts = products.map((p: any) => {
+      const transformedProducts = products
+        .filter((p: any) => {
+          // Quality validation: filter out low-rated products
+          const rating = p.evaluate_rate ? parseFloat(p.evaluate_rate) : 0;
+          if (rating > 0 && rating < 4.0) {
+            logger.debug('Filtering out low-rated product', { 
+              productId: p.product_id, 
+              title: p.product_title,
+              rating 
+            });
+            return false;
+          }
+          return true;
+        })
+        .map((p: any) => {
         // Zbierz wszystkie dostępne zdjęcia
         const imageUrls: string[] = [];
         
@@ -325,6 +339,9 @@ export class AliExpressClient {
         // Deduplikacja
         const uniqueImages = [...new Set(imageUrls.filter(Boolean))];
         
+        const rating = p.evaluate_rate ? parseFloat(p.evaluate_rate) : 0;
+        const salesVolume = p.volume ? parseInt(p.volume, 10) : 0;
+        
         return {
           item_id: p.product_id || p.item_id,
           title: p.product_title || p.title,
@@ -333,14 +350,15 @@ export class AliExpressClient {
           price: {
             current: parseFloat(p.target_sale_price || p.sale_price || '0'),
             original: parseFloat(p.target_original_price || p.original_price || '0'),
-            currency: 'USD',
+            currency: 'USD', // Always USD
           },
           product_url: p.promotion_link || p.product_detail_url,
           discount_percent: p.discount ? parseFloat(p.discount) : undefined,
-          rating: p.evaluate_rate ? {
-            score: parseFloat(p.evaluate_rate),
-            count: 0,
+          rating: rating > 0 ? {
+            score: rating,
+            count: p.volume || 0, // Use volume as rating count proxy
           } : undefined,
+          sales_volume: salesVolume, // Track sales volume for hot deal calculation
           shipping: {
             free: p.ship_to_days === '0',
             cost: 0,
@@ -391,6 +409,9 @@ export class AliExpressClient {
         keywords: params.q,
         page_no: params.page || 1,
         page_size: Math.min(params.limit || 20, 50), // TOP API max 50
+        target_currency: 'USD', // ALWAYS USD for price stability
+        target_language: 'EN',   // English as source of truth
+        sort: params.sort || 'LAST_VOLUME_DESC', // Default: Best-selling products (commercial feed strategy)
       };
       
       // Add optional filters
@@ -399,10 +420,6 @@ export class AliExpressClient {
       }
       if (params.maxPrice) {
         topApiParams.max_price = params.maxPrice;
-      }
-      if (params.sort) {
-        // Map sort param if needed
-        topApiParams.sort = params.sort;
       }
       
       const result = await this.request<any>('aliexpress.affiliate.product.query', topApiParams);
@@ -449,10 +466,71 @@ export class AliExpressClient {
   }
 
   /**
+   * Get logistics information for a product (shipping costs, methods, delivery time)
+   * 
+   * Uses AliExpress Logistics API to get comprehensive shipping data
+   * Method: aliexpress.logistics.buyer.freight.get
+   * 
+   * @param productId AliExpress product ID
+   * @param countryCode Target country code (default: PL)
+   * @param quantity Product quantity (default: 1)
+   * @returns Logistics info with shipping options or null if unavailable
+   */
+  async getLogisticsInfo(
+    productId: string,
+    countryCode: string = 'PL',
+    quantity: number = 1
+  ): Promise<{
+    const logistics = await this.getLogisticsInfo(productId, country, quantity);
+    return logistics?.shippingCost || 0;     options: [],
+        };
+      }
+      
+      // Parse all shipping options
+      const shippingOptions = freight.map((option: any) => ({
+        method: option.service_name || 'Standard',
+        cost: parseFloat(option.freight_amount?.amount || '0'),
+        days: parseInt(option.estimated_delivery_time || '14', 10),
+        company: option.company || 'AliExpress',
+      }));
+      
+      // Find cheapest shipping option
+      const cheapestShipping = shippingOptions.reduce((min, current) => 
+        current.cost < min.cost ? current : min
+      , shippingOptions[0]);
+      
+      logger.info('Logistics info retrieved', {
+        productId,
+        shippingCost: cheapestShipping.cost,
+        optionsCount: shippingOptions.length,
+      });
+      
+      return {
+        shippingCost: cheapestShipping.cost,
+        currency: 'USD',
+        isFreeShipping: cheapestShipping.cost === 0,
+        estimatedDays: cheapestShipping.days,
+        shippingMethod: cheapestShipping.method,
+        options: shippingOptions,
+      };
+    } catch (error) {
+      logger.error('Logistics API error, assuming free shipping', { error });
+      // Graceful degradation - assume free shipping on error
+      return {
+        shippingCost: 0,
+        currency: 'USD',
+        isFreeShipping: true,
+        estimatedDays: 14,
+        shippingMethod: 'Standard Shipping',
+        options: [],
+      };
+    }
+  }
+
+  /**
    * Calculate shipping cost to Poland (M4 Smart Pricing)
    * 
-   * Uses AliExpress Logistics API to get real shipping costs
-   * Method: aliexpress.logistics.buyer.freight.get
+   * Simplified wrapper around getLogisticsInfo that returns only the cost
    * 
    * @param productId AliExpress product ID
    * @param country Target country code (default: PL)

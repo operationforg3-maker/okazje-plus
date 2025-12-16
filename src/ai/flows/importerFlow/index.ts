@@ -223,25 +223,40 @@ export async function runProductImportPipeline(
     console.log(`[ProductImporter] Enriched: ${enriched.length} products\n`);
     await logToJob(jobId, `Stage 3: Enriched ${enriched.length} products`);
     
-    // STAGE 4: TRANSLATE (optional)
-    let translated = enriched;
-    if (config.translateToPolish !== false) {
-      console.log(`[ProductImporter] Stage 4: TRANSLATE to Polish`);
-      await logToJob(jobId, `Stage 4: Translating to Polish...`);
-      translated = await translateProducts(
-        enriched,
-        {
-          name: 'translate',
-          batchSize: config.translate?.batchSize ?? 20,
-          delayBetweenItems: config.translate?.delayBetweenItems ?? 30,
-          delayBetweenBatches: config.translate?.delayBetweenBatches ?? 200,
-          maxRetries: config.translate?.maxRetries ?? 0,
-        }
-      );
-      
-      console.log(`[ProductImporter] Translated: ${translated.length} products\n`);
-      await logToJob(jobId, `Stage 4: Translated ${translated.length} products`);
-    }
+    // STAGE 4: AI SMART CONTENT GENERATION (Parallel Multilingual)
+    console.log(`[ProductImporter] Stage 4: AI SMART CONTENT GENERATION`);
+    await logToJob(jobId, `Stage 4: Generating AI content (PL/EN/DE)...`);
+    
+    const { generateSmartContentForProducts } = await import('./stageSmartContent');
+    const withAIContent = await generateSmartContentForProducts(
+      enriched,
+      {
+        name: 'smartcontent',
+        batchSize: config.translate?.batchSize ?? 10,
+        delayBetweenItems: config.translate?.delayBetweenItems ?? 200,
+        delayBetweenBatches: config.translate?.delayBetweenBatches ?? 1000,
+        maxRetries: config.translate?.maxRetries ?? 2,
+      }
+    );
+    
+    console.log(`[ProductImporter] AI Content Generated: ${withAIContent.length} products\n`);
+    await logToJob(jobId, `Stage 4: Generated AI content for ${withAIContent.length} products`);
+    
+    // STAGE 4.5: AUTO-PROMOTE HOT DEALS
+    console.log(`[ProductImporter] Stage 4.5: AUTO-PROMOTE HOT DEALS`);
+    await logToJob(jobId, `Stage 4.5: Auto-promoting hot deals...`);
+    
+    const { autoPromoteHotDeals } = await import('./stageAutoPromote');
+    const promotionResult = await autoPromoteHotDeals(withAIContent, {
+      minDiscount: 40,
+      minRating: 4.5,
+      minSalesVolume: 100,
+    });
+    
+    console.log(`[ProductImporter] Hot Deals Promoted: ${promotionResult.promoted.length} products\n`);
+    await logToJob(jobId, `Stage 4.5: Promoted ${promotionResult.promoted.length} hot deals`);
+    
+    let translated = withAIContent;
     
     // STAGE 5: SAVE
     console.log(`[ProductImporter] Stage 5: SAVE to Firestore`);

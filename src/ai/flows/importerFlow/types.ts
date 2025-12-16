@@ -89,6 +89,7 @@ export interface EnrichedProduct {
   price: number;
   originalPrice?: number;
   discount?: number;
+  sales_volume?: number; // AliExpress sales volume (orders count)
   
   // Normalized (English) - Backend language
   titleNormalizedEN: string;
@@ -97,6 +98,22 @@ export interface EnrichedProduct {
   // Translated to Polish - UI language
   titlePL?: string;
   descriptionPL?: string;
+  
+  // AI-generated multilingual content
+  aiContent?: {
+    titlePL: string;
+    titleEN: string;
+    titleDE: string;
+    description: Record<string, string>;
+    bullets: Record<string, string[]>;
+    score: number;
+    seoTitle?: Record<string, string>;
+    seoDescription?: Record<string, string>;
+    jsonLd?: string;
+    generatedAt?: string;
+    modelVersion?: string;
+    warnings?: string[];
+  };
   
   // Currency
   priceUSD: number;

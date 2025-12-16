@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Sparkles,
   Combine,
+  Share2,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -106,6 +107,13 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Dashboard Analytics', href: '/admin/analytics', icon: TrendingUp },
       { title: 'Statystyki', href: '/admin/stats', icon: FileBarChart },
+    ],
+  },
+  {
+    title: 'Marketing',
+    icon: Share2,
+    items: [
+      { title: 'Social Media', href: '/admin/social-media', icon: Share2, badge: 'NEW', badgeVariant: 'default' },
     ],
   },
   {

@@ -81,6 +81,7 @@ function ProfilePage() {
   const [commentsWithContext, setCommentsWithContext] = useState<Array<Comment & { 
     itemTitle?: string; 
     itemType?: 'deal' | 'product';
+    itemId?: string;
   }>>([]);
 
   useEffect(() => {
@@ -117,7 +118,10 @@ function ProfilePage() {
                 itemType = 'deal';
                 const dealDoc = await getDoc(doc(db, 'deals', parentId));
                 if (dealDoc && dealDoc.exists()) {
-                  itemTitle = (dealDoc.data() as any).title;
+                  const rawTitle = (dealDoc.data() as any).title;
+                  itemTitle = typeof rawTitle === 'string' 
+                    ? rawTitle 
+                    : rawTitle?.pl || rawTitle?.en || 'Okazja';
                 } else {
                   const helperDeal = await getDealById(parentId).catch(() => null);
                   itemTitle = helperDeal?.title?.pl || helperDeal?.title?.en || 'Okazja';
@@ -126,10 +130,16 @@ function ProfilePage() {
                 itemType = 'product';
                 const productDoc = await getDoc(doc(db, 'products', parentId));
                 if (productDoc && productDoc.exists()) {
-                  itemTitle = (productDoc.data() as any).name;
+                  const rawName = (productDoc.data() as any).name;
+                  itemTitle = typeof rawName === 'string' 
+                    ? rawName 
+                    : rawName?.pl || rawName?.en || 'Produkt';
                 } else {
                   const helperProduct = await getProductById(parentId).catch(() => null);
-                  itemTitle = helperProduct?.name;
+                  const hpName: any = (helperProduct as any)?.name;
+                  itemTitle = typeof hpName === 'string' 
+                    ? hpName 
+                    : hpName?.pl || hpName?.en || 'Produkt';
                 }
               }
             } catch (err) {
@@ -206,12 +216,20 @@ function ProfilePage() {
 
             if ((comment as any).itemType === 'deal') {
               const deal = await getDealById(itemId).catch(() => null);
-              if (deal) return { ...comment, itemTitle: deal.title, itemType: 'deal' as const };
+              if (deal) return { 
+                ...comment, 
+                itemTitle: (deal.title as any)?.pl || (deal.title as any)?.en || 'Okazja', 
+                itemType: 'deal' as const,
+              };
             }
 
             if ((comment as any).itemType === 'product') {
               const product = await getProductById(itemId).catch(() => null);
-              if (product) return { ...comment, itemTitle: product.name, itemType: 'product' as const };
+              if (product) return { 
+                ...comment, 
+                itemTitle: (product as any).name?.pl || (product as any).name?.en || (product as any).name || 'Produkt', 
+                itemType: 'product' as const,
+              };
             }
 
             return comment;
@@ -563,7 +581,7 @@ function ProfilePage() {
                             {/* Link do okazji/produktu */}
                             {comment.itemTitle && (
                               <Link 
-                                href={comment.itemType === 'deal' ? `/deals/${comment.dealId}` : `/products/${comment.dealId}`}
+                                href={comment.itemType === 'deal' ? `/deals/${(comment as any).itemId}` : `/products/${(comment as any).itemId}`}
                                 className="text-sm font-medium text-primary hover:underline mb-2 flex items-center gap-1 group"
                               >
                                 <span className="truncate">{comment.itemTitle}</span>
