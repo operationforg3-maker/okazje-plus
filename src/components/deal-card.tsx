@@ -23,6 +23,7 @@ import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import { getLocalizedField, type SupportedLanguage } from '@/lib/i18n-utils';
+import { useContentLanguage } from '@/hooks/use-content-language';
 import {
   Tooltip,
   TooltipContent,
@@ -94,6 +95,7 @@ export default function DealCard({ deal }: DealCardProps) {
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState('pl');
   const prefix = `/${locale}`;
+  const { getText } = useContentLanguage();
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { addToComparison } = useComparison();
   const { user } = useAuth();
