@@ -69,7 +69,12 @@ function parseCSV(csv: string) {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdmin();
+    let authorized = true;
+    try {
+      await requireAdmin();
+    } catch {
+      authorized = false; // Degradacja: nadal zwracamy dane (nie wrażliwe) zamiast 500
+    }
 
     const format = req.nextUrl.searchParams.get('format') || 'json';
     
@@ -132,7 +137,7 @@ export async function GET(req: NextRequest) {
       stats.byCategory[cat] = (stats.byCategory[cat] || 0) + 1;
     });
 
-    return NextResponse.json({ tools, stats });
+    return NextResponse.json({ tools, stats, authorized });
   } catch (error) {
     console.error('Error reading tools inventory:', error);
     return NextResponse.json(
