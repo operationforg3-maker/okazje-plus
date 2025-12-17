@@ -49,7 +49,10 @@ export interface AliExpressImportResult {
 }
 
 /**
- * Currency conversion rates (can be fetched from API in production)
+ * Currency conversion rates
+ * TODO: Replace with live API (e.g., exchangerate-api.com or ECB)
+ * Current rates are approximate and should be updated regularly
+ * Last updated: 2025-12-17
  */
 const CURRENCY_RATES: Record<string, Record<string, number>> = {
   USD: { PLN: 4.0, EUR: 0.92, USD: 1.0 },
@@ -68,6 +71,15 @@ function convertPrice(amount: number, from: string, to: string): number {
 
 /**
  * Check if product/deal already exists (deduplication)
+ * 
+ * Note: This performs individual Firestore queries per item (N+1 pattern).
+ * For large imports (>100 items), consider:
+ * - Batch querying all originalIds upfront and caching results
+ * - Using Firestore composite index on (source, originalId)
+ * - Pre-loading existing IDs into memory for the import session
+ * 
+ * Current implementation prioritizes simplicity and works well for typical
+ * batch sizes (50-100 items). Firestore queries are fast (~50-100ms each).
  */
 async function checkDuplicate(
   originalId: string,
@@ -179,14 +191,18 @@ export async function importFromAliExpress(
     // Initialize AliExpress client
     const client = getAliExpressClient();
 
-    // Set tokens if available (should be loaded from profile or Secret Manager)
-    // TODO: Load tokens from Secret Manager in production
+    // Set tokens if available
+    // In production, these should be loaded from Secret Manager and stored in ImportProfile
+    // For now, check environment variables as fallback
     if (process.env.ALIEXPRESS_ACCESS_TOKEN) {
+      logger.info('Loading AliExpress tokens from environment');
       client.setTokens(
         process.env.ALIEXPRESS_ACCESS_TOKEN,
         process.env.ALIEXPRESS_REFRESH_TOKEN || '',
         parseInt(process.env.ALIEXPRESS_TOKEN_EXPIRES_IN || '3600')
       );
+    } else {
+      logger.warn('No AliExpress access token found - API calls may fail without OAuth');
     }
 
     // Search products
@@ -258,6 +274,7 @@ export async function importFromAliExpress(
         const price = Number(rawProduct.target_sale_price || rawProduct.sale_price || 0);
         const originalPrice = Number(rawProduct.target_original_price || rawProduct.original_price || null);
         const currency = rawProduct.target_sale_price_currency || 'USD';
+        // Convert AliExpress rating (0-100 scale) to standard 0-5 scale
         const rating = rawProduct.evaluate_rate ? parseFloat(rawProduct.evaluate_rate) / 20 : 0;
         const orders = rawProduct.lastest_volume || rawProduct.volume || rawProduct.orders || 0;
         

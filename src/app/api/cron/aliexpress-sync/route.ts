@@ -15,7 +15,15 @@ export async function GET(request: NextRequest) {
   try {
     // Verify cron authorization
     const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET || 'dev-secret';
+    const cronSecret = process.env.CRON_SECRET;
+    
+    if (!cronSecret) {
+      logger.error('CRON_SECRET not configured');
+      return NextResponse.json(
+        { error: 'Service misconfigured' },
+        { status: 500 }
+      );
+    }
     
     if (authHeader !== `Bearer ${cronSecret}`) {
       logger.warn('Unauthorized cron request', { authHeader });

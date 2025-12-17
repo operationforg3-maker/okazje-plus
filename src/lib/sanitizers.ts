@@ -7,14 +7,18 @@ type DealMetadata = NonNullable<Deal['metadata']>;
 const FALLBACK_IMAGE = '/icon_okazjeplus.svg'; // Używamy istniejącej ikony jako fallback
 const FALLBACK_URL = '#';
 const FALLBACK_CATEGORY = 'inne';
+// Unified source types for Products (from metadata) and Deals (from source field)
 const PRODUCT_METADATA_SOURCES: ProductMetadata['source'][] = ['aliexpress', 'manual', 'csv', 'amazon', 'allegro', 'ebay'];
 const DEAL_SOURCES: readonly NonNullable<Deal['source']>[] = [
   'manual',
   'aliexpress',
   'csv',
+  'amazon',
+  'allegro',
   'pepper',
   'mydealz',
   'reddit',
+  'auto-scraped',
   'other',
 ] as const;
 
