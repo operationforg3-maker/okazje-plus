@@ -630,7 +630,7 @@ function AliExpressImportPage() {
                   <div className="space-y-0.5">
                     <Label className="text-base font-medium">Auto Hot Deal Promotion</Label>
                     <p className="text-sm text-muted-foreground">
-                      Auto-promuj produkty: rabat {'>'40%, rating >'}4.5, sales {'>'}100
+                      Auto-promuj produkty: rabat &gt;40%, rating &gt;4.5, sales &gt;100
                     </p>
                   </div>
                   <Checkbox
