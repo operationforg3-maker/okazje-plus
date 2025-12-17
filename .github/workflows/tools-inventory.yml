@@ -51,6 +51,4 @@ jobs:
       - name: Verify upload
         run: |
           gcloud storage ls gs://${{ secrets.GCS_BUCKET_NAME || 'okazje-plus-reports' }}/tools-inventory/
-          git add docs/reports/
-          git commit -m "chore(reports): auto-update tools inventory [skip ci]"
-          git push
+          echo "✅ Tools inventory uploaded to GCS successfully"
