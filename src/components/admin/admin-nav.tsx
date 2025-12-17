@@ -119,6 +119,13 @@ const navStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
+    title: 'System',
+    icon: Database,
+    items: [
+      { title: 'Inwentarz Narzędzi', href: '/admin/tools-inventory', icon: FileBarChart, badge: 'NEW', badgeVariant: 'secondary' },
+    ],
+  },
+  {
     title: 'Konfiguracja',
     icon: Settings,
     items: [

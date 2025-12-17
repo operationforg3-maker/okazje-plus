@@ -1,0 +1,41 @@
+{
+  "title": "Inwentarz Narzędzi",
+  "description": "Przegląd wszystkich narzędzi importu, wzbogacania i tłumaczeń",
+  "loading": "Ładowanie...",
+  "error": "Nie udało się załadować inwentarza",
+  "regenerateSuccess": "Raport wygenerowany pomyślnie",
+  "regenerateError": "Nie udało się wygenerować raportu",
+  "downloadCsv": "Pobierz CSV",
+  "regenerate": "Regeneruj",
+  "stats": {
+    "total": "Wszystkie Narzędzia",
+    "hasUI": "Ma UI",
+    "hasAPI": "Ma API",
+    "hasBackend": "Ma Backend",
+    "hasTests": "Ma Testy",
+    "coverage": "pokrycia"
+  },
+  "alerts": {
+    "lowTestCoverage": "Niska pokrycie testami",
+    "lowTestCoverageDesc": "Tylko {percent}% narzędzi ma testy. Rozważ dodanie testów do zwiększenia niezawodności."
+  },
+  "table": {
+    "tool": "Narzędzie",
+    "category": "Kategoria",
+    "lastModified": "Ostatnia Modyfikacja",
+    "owner": "Owner",
+    "ui": "UI",
+    "api": "API",
+    "backend": "Backend",
+    "tests": "Testy"
+  },
+  "tabs": {
+    "all": "Wszystkie",
+    "byCategory": "Narzędzia według Kategorii",
+    "byCategoryDesc": "Kliknij kategorię aby filtrować"
+  },
+  "fullyCovered": {
+    "title": "Narzędzia z Pełnym Pokryciem",
+    "description": "{count} narzędzi ma UI, API, Backend i Testy"
+  }
+}
