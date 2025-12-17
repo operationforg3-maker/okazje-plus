@@ -17,6 +17,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
+    "report:tools": "node scripts/generate-tools-inventory.mjs",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:interactions": "ts-node src/scripts/seed-interactions.ts",
     "seed:categories": "tsx src/scripts/seed-categories-full.ts",

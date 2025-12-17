@@ -1,0 +1,92 @@
+category,tool,hasUI,hasAPI,hasBackend,hasTests,lastModified,owner,ui,apiCount,apis,backendModules,testFiles,notes
+Import,Import & Export Console,yes,yes,no,no,2025-12-16,"welldonetg974","src/app/[locale]/admin/import-export/page.tsx",15,"src/app/api/admin/import/bestsellers/route.ts
+src/app/api/admin/import/dashboard/summary/route.ts
+src/app/api/admin/import/debug/route.ts
+src/app/api/admin/import/fetch-save-drafts/route.ts
+src/app/api/admin/import/history/route.ts
+src/app/api/admin/import/kill-all/route.ts
+src/app/api/admin/import/list/route.ts
+src/app/api/admin/import/queue/[jobId]/route.ts
+src/app/api/admin/import/queue/route.ts
+src/app/api/admin/import/quick-test/route.ts
+src/app/api/admin/import/rollback/route.ts
+src/app/api/admin/import/start/route.ts
+src/app/api/admin/import/status/route.ts
+src/app/api/admin/import/test/route.ts
+src/app/api/admin/import/test-diagnostics/route.ts","","",""
+Import,AliExpress Import (AI),yes,yes,yes,no,2025-12-17,"welldonetg974","src/app/[locale]/admin/aliexpress-import/page.tsx",9,"src/app/api/admin/aliexpress/advanced/batch-search/route.ts
+src/app/api/admin/aliexpress/advanced/coupons/route.ts
+src/app/api/admin/aliexpress/categories/route.ts
+src/app/api/admin/aliexpress/health/route.ts
+src/app/api/admin/aliexpress/import/route.ts
+src/app/api/admin/aliexpress/item/route.ts
+src/app/api/admin/aliexpress/search/route.ts
+src/app/api/admin/aliexpress/sku-detail/route.ts
+src/app/api/admin/aliexpress/suggest-category/route.ts","src/ai/flows/aliexpress/aiCurateProduct.ts
+src/ai/flows/aliexpress/aiDealDescriptionPL.ts
+src/ai/flows/aliexpress/aiDealQualityScore.ts
+src/ai/flows/aliexpress/aiGenerateSEODescription.ts
+src/ai/flows/aliexpress/aiGenerateSearchKeywords.ts
+src/ai/flows/aliexpress/aiNormalizeTitleMultilang.ts
+src/ai/flows/aliexpress/aiNormalizeTitlePL.ts
+src/ai/flows/aliexpress/aiProductEnrichmentBatchPL.ts
+src/ai/flows/aliexpress/aiProductEnrichmentPL.ts
+src/ai/flows/aliexpress/aiSuggestCategory.ts
+src/ai/flows/importerFlow/index.ts
+src/ai/flows/importerFlow/stageAutoPromote.ts
+src/ai/flows/importerFlow/stageDeals.ts
+src/ai/flows/importerFlow/stageDedupe.ts
+src/ai/flows/importerFlow/stageEnhance.ts
+src/ai/flows/importerFlow/stageEnrich.ts
+src/ai/flows/importerFlow/stageFetch.ts
+src/ai/flows/importerFlow/stageSave.ts
+src/ai/flows/importerFlow/stageSmartContent.ts
+src/ai/flows/importerFlow/stageTranslate.ts
+src/ai/flows/importerFlow/types.ts","",""
+Import,Import Monitor,yes,yes,no,no,2025-12-16,"welldonetg974","src/app/[locale]/admin/imports/page.tsx",15,"src/app/api/admin/import/bestsellers/route.ts
+src/app/api/admin/import/dashboard/summary/route.ts
+src/app/api/admin/import/debug/route.ts
+src/app/api/admin/import/fetch-save-drafts/route.ts
+src/app/api/admin/import/history/route.ts
+src/app/api/admin/import/kill-all/route.ts
+src/app/api/admin/import/list/route.ts
+src/app/api/admin/import/queue/[jobId]/route.ts
+src/app/api/admin/import/queue/route.ts
+src/app/api/admin/import/quick-test/route.ts
+src/app/api/admin/import/rollback/route.ts
+src/app/api/admin/import/start/route.ts
+src/app/api/admin/import/status/route.ts
+src/app/api/admin/import/test/route.ts
+src/app/api/admin/import/test-diagnostics/route.ts","","",""
+Import,Smart Import,yes,yes,no,no,2025-12-14,"welldonetg974","src/app/[locale]/admin/smart-import/page.tsx",2,"src/app/api/admin/smart-import/route.ts
+src/app/api/admin/smart-import/test/route.ts","","",""
+Import,Auto Import (AI orchestration),yes,yes,no,no,2025-12-13,"welldonetg974","src/app/[locale]/admin/auto-import/page.tsx",1,"src/app/api/admin/ai/auto-import/route.ts","","",""
+Legacy Import,Deals Import (legacy),yes,yes,no,no,2025-12-15,"welldonetg974","src/app/[locale]/admin/deals-import/page.tsx",2,"src/app/api/admin/deals/import/route.ts
+src/app/api/admin/deals/import-aliexpress/route.ts","","",""
+Legacy Import,Allegro Import (legacy UI),yes,yes,no,no,2025-12-09,"welldonetg974","src/app/[locale]/admin/allegro-import/page.tsx",2,"src/app/api/admin/allegro/import/route.ts
+src/app/api/admin/allegro/search/route.ts","","",""
+Legacy Import,Amazon Import (legacy UI),yes,yes,no,no,2025-12-07,"welldonetg974","src/app/[locale]/admin/amazon-import/page.tsx",2,"src/app/api/admin/amazon/import/route.ts
+src/app/api/admin/amazon/search/route.ts","","",""
+Legacy Import,eBay Import (legacy UI),yes,yes,no,no,2025-12-09,"welldonetg974","src/app/[locale]/admin/ebay-import/page.tsx",2,"src/app/api/admin/ebay/import/route.ts
+src/app/api/admin/ebay/search/route.ts","","",""
+Legacy Import,Convertiser Import (legacy UI),yes,yes,no,no,2025-12-07,"welldonetg974","src/app/[locale]/admin/convertiser-import/page.tsx",2,"src/app/api/admin/convertiser/import/route.ts
+src/app/api/admin/convertiser/search/route.ts","","",""
+Enhancement,AI Tools (Enhance/Enrich/Translate),yes,yes,yes,no,2025-12-16,"welldonetg974","src/app/[locale]/admin/ai-tools/page.tsx",3,"src/app/api/admin/deals/ai-translate/route.ts
+src/app/api/admin/products/ai-enrich/route.ts
+src/app/api/admin/products/ai-translate/route.ts","src/ai/deal-enricher.ts
+src/ai/flows/importerFlow/index.ts
+src/ai/flows/importerFlow/stageAutoPromote.ts
+src/ai/flows/importerFlow/stageDeals.ts
+src/ai/flows/importerFlow/stageDedupe.ts
+src/ai/flows/importerFlow/stageEnhance.ts
+src/ai/flows/importerFlow/stageEnrich.ts
+src/ai/flows/importerFlow/stageFetch.ts
+src/ai/flows/importerFlow/stageSave.ts
+src/ai/flows/importerFlow/stageSmartContent.ts
+src/ai/flows/importerFlow/stageTranslate.ts
+src/ai/flows/importerFlow/types.ts","",""
+Translation,Translations Admin,no,yes,yes,no,2025-12-14,"welldonetg974","",1,"src/app/api/admin-import/translations/route.ts","src/ai/flows/translation/aiTranslateDescriptionToPL.ts
+src/ai/flows/translation/aiTranslateTitleToPL.ts","",""
+Translation,Product Translations,yes,yes,yes,no,2025-12-16,"welldonetg974","src/app/[locale]/admin/products/page.tsx",2,"src/app/api/admin/products/ai-translate/route.ts
+src/app/api/admin/products/translate-drafts/route.ts","src/ai/flows/translation/aiTranslateDescriptionToPL.ts
+src/ai/flows/translation/aiTranslateTitleToPL.ts","",""
