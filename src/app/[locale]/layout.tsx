@@ -170,7 +170,6 @@ export default async function RootLayout({
         suppressHydrationWarning
         className={cn('min-h-screen bg-background font-body antialiased')}
         style={{ WebkitOverflowScrolling: 'touch' }}>
-        {/* Lazy-loaded analytics - GTM + FB Pixel load after page renders */}
         <AnalyticsProvider />
 
         <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
