@@ -60,18 +60,26 @@ export async function GET(req: NextRequest) {
     try {
       const [content] = await file.download();
       csv = content.toString('utf-8');
-    } catch (error) {
+    } catch (gcsError) {
       // Fallback: try local file if GCS not available
       try {
         const { promises: fs } = await import('fs');
         const path = await import('path');
         const csvPath = path.join(process.cwd(), 'docs', 'reports', 'tools-inventory.csv');
         csv = await fs.readFile(csvPath, 'utf-8');
-      } catch {
-        return NextResponse.json(
-          { error: 'Tools inventory not found in GCS or local storage' },
-          { status: 404 }
-        );
+      } catch (fsError) {
+        // Final fallback: return empty inventory (prevents 500 errors during migration)
+        console.warn('Tools inventory unavailable (GCS + local file not found). Returning empty.');
+        return NextResponse.json({
+          tools: [],
+          stats: {
+            total: 0,
+            byCategory: {},
+            coverage: { hasUI: 0, hasAPI: 0, hasBackend: 0, hasTests: 0 },
+            fullyCovered: 0,
+          },
+          note: 'Inventory temporarily unavailable. GCS bucket not configured yet.'
+        });
       }
     }
 

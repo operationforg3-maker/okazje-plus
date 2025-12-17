@@ -99,10 +99,22 @@ export default function ToolsInventoryPage() {
     );
   }
 
-  if (!data) {
+  if (!data || data.tools.length === 0) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground">Brak danych</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Inwentarz Narzędzi</h1>
+          <p className="text-muted-foreground">
+            Przegląd wszystkich narzędzi importu, wzbogacania i tłumaczeń
+          </p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-center text-muted-foreground py-8">
+              Brak dostępnych narzędzi
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -114,11 +126,14 @@ export default function ToolsInventoryPage() {
   const categories = ['all', ...Object.keys(data.stats.byCategory)];
 
   const CoverageIcon = ({ value }: { value: string }) => {
-    if (value === 'yes') return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    if (value === '✅' || value === 'yes') return <CheckCircle2 className="h-4 w-4 text-green-500" />;
     return <XCircle className="h-4 w-4 text-red-500" />;
   };
 
-  const coveragePercent = (count: number) => ((count / data.stats.total) * 100).toFixed(0);
+  const coveragePercent = (count: number) => {
+    if (data.stats.total === 0) return '0';
+    return ((count / data.stats.total) * 100).toFixed(0);
+  };
 
   return (
     <div className="space-y-6">
