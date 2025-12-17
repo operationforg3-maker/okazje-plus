@@ -6,7 +6,10 @@ import {vertexAI} from '@genkit-ai/vertexai';
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'okazje-plus';
 const location = process.env.VERTEX_AI_LOCATION || 'europe-west1';
 
-console.log(`✅ Vertex AI configured: project=${projectId}, location=${location}`);
+// Only log if not in serverless environment
+if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
+  console.log(`✅ Vertex AI configured: project=${projectId}, location=${location}`);
+}
 
 export const ai = genkit({
   plugins: [
