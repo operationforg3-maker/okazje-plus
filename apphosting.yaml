@@ -3,6 +3,8 @@
 # Updated: 2025-12-12 15:35 - Force rebuild with skipExisting=false fix
 runConfig:
   minInstances: 0
+  maxInstances: 100
+  concurrency: 200
 
 # Environment variables for the Next.js build process.
 # These are used to embed the Firebase config into the client-side code.

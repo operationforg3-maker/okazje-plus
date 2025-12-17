@@ -23,7 +23,7 @@ if (process.env.REDIS_URL) {
   console.info('REDIS_URL not set — using in-memory LRU cache as fallback. For production set REDIS_URL to enable shared caching and rate-limiter.');
 }
 
-const lru = new LRUCache<string, any>({ max: 1000, ttl: 1000 * 60 * 2 });
+const lru = new LRUCache<string, any>({ max: 50, ttl: 1000 * 30 }); // Ultra-minimal cache for 256MB Cloud Run
 
 export async function cacheGet(key: string): Promise<any | null> {
   if (redis) {
