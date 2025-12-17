@@ -1,22 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { Storage } from '@google-cloud/storage';
+import { requireAdmin } from '@/lib/auth-server';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { requireAdmin } from '@/lib/auth-server';
 
 const execAsync = promisify(exec);
+
+// Parse CSV with quoted fields support
+function parseCSV(csv: string) {
+  const lines = csv.trim().split('\n');
+  const headers = lines[0].split(',');
+  
+  const tools = lines.slice(1).map(line => {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    values.push(current.trim());
+
+    const obj: Record<string, string> = {};
+    headers.forEach((header, i) => {
+      obj[header.trim()] = (values[i] || '').trim();
+    });
+    return obj;
+  });
+
+  return tools;
+}
 
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin();
 
     const format = req.nextUrl.searchParams.get('format') || 'json';
-    const reportsDir = path.join(process.cwd(), 'docs', 'reports');
+    
+    // Read from Cloud Storage
+    const storage = new Storage();
+    const bucketName = process.env.GCS_BUCKET || 'okazje-plus-reports';
+    const bucket = storage.bucket(bucketName);
+    const file = bucket.file('tools-inventory/current.csv');
 
+    let csv: string;
+    try {
+      const [content] = await file.download();
+      csv = content.toString('utf-8');
+    } catch (error) {
+      // Fallback: try local file if GCS not available
+      try {
+        const { promises: fs } = await import('fs');
+        const path = await import('path');
+        const csvPath = path.join(process.cwd(), 'docs', 'reports', 'tools-inventory.csv');
+        csv = await fs.readFile(csvPath, 'utf-8');
+      } catch {
+        return NextResponse.json(
+          { error: 'Tools inventory not found in GCS or local storage' },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Handle different formats
     if (format === 'csv') {
-      const csvPath = path.join(reportsDir, 'tools-inventory.csv');
-      const csv = await fs.readFile(csvPath, 'utf-8');
       return new NextResponse(csv, {
         headers: {
           'Content-Type': 'text/csv',
@@ -26,60 +86,44 @@ export async function GET(req: NextRequest) {
     }
 
     if (format === 'md') {
-      const mdPath = path.join(reportsDir, 'tools-inventory.md');
-      const md = await fs.readFile(mdPath, 'utf-8');
-      return new NextResponse(md, {
-        headers: { 'Content-Type': 'text/markdown' },
-      });
+      // Try to get markdown from GCS
+      try {
+        const mdFile = bucket.file('tools-inventory/current.md');
+        const [content] = await mdFile.download();
+        const md = content.toString('utf-8');
+        return new NextResponse(md, {
+          headers: { 'Content-Type': 'text/markdown' },
+        });
+      } catch {
+        // Fallback to local MD file
+        const { promises: fs } = await import('fs');
+        const path = await import('path');
+        const mdPath = path.join(process.cwd(), 'docs', 'reports', 'tools-inventory.md');
+        const md = await fs.readFile(mdPath, 'utf-8');
+        return new NextResponse(md, {
+          headers: { 'Content-Type': 'text/markdown' },
+        });
+      }
     }
 
     // Parse CSV to JSON
-    const csvPath = path.join(reportsDir, 'tools-inventory.csv');
-    const csv = await fs.readFile(csvPath, 'utf-8');
-    const lines = csv.trim().split('\n');
-    const headers = lines[0].split(',');
-    
-    const tools = lines.slice(1).map(line => {
-      // Simple CSV parser (handles quoted fields)
-      const values: string[] = [];
-      let current = '';
-      let inQuotes = false;
-      
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          values.push(current.trim());
-          current = '';
-        } else {
-          current += char;
-        }
-      }
-      values.push(current.trim());
-
-      const obj: Record<string, string> = {};
-      headers.forEach((header, i) => {
-        obj[header] = values[i] || '';
-      });
-      return obj;
-    });
+    const tools = parseCSV(csv);
 
     // Calculate stats
     const stats = {
       total: tools.length,
       byCategory: {} as Record<string, number>,
       coverage: {
-        hasUI: tools.filter(t => t.hasUI === 'yes').length,
-        hasAPI: tools.filter(t => t.hasAPI === 'yes').length,
-        hasBackend: tools.filter(t => t.hasBackend === 'yes').length,
-        hasTests: tools.filter(t => t.hasTests === 'yes').length,
+        hasUI: tools.filter(t => t.hasUI === '✅').length,
+        hasAPI: tools.filter(t => t.hasAPI === '✅').length,
+        hasBackend: tools.filter(t => t.hasBackend === '✅').length,
+        hasTests: tools.filter(t => t.hasTests === '✅').length,
       },
       fullyCovered: tools.filter(t => 
-        t.hasUI === 'yes' && 
-        t.hasAPI === 'yes' && 
-        t.hasBackend === 'yes' && 
-        t.hasTests === 'yes'
+        t.hasUI === '✅' && 
+        t.hasAPI === '✅' && 
+        t.hasBackend === '✅' && 
+        t.hasTests === '✅'
       ).length,
     };
 
@@ -92,7 +136,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error reading tools inventory:', error);
     return NextResponse.json(
-      { error: 'Failed to read tools inventory' },
+      { error: 'Failed to read tools inventory', details: (error as Error).message },
       { status: 500 }
     );
   }

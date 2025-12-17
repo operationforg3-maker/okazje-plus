@@ -1,305 +1,214 @@
-# Tools Inventory (Import / Enhancement / Translation)
+# Tools Inventory
+Generated: 2025-12-17T13:06:40.372Z
 
-Generated: 2025-12-17T11:09:49.929Z
+| Category | Tool | Description | Has UI | Has API | Backend | Tests | Last Modified |
+|---|---|---|:---:|:---:|:---:|:---:|---|
+| Import | AliExpress Integration | Scrapes products from AliExpress via API... | ✅ | ✅ | ✅ | ✅ | 2025-12-17 |
+| Import | Allegro Integration | Fetches deals and products from Allegro ... | ✅ | ✅ | ✅ | ❌ | 2025-12-17 |
+| Import | CSV Bulk Import | Accepts CSV uploads with product/deal da... | ✅ | ✅ | ✅ | ❌ | 2025-12-17 |
+| Enhancement | Price Monitoring | Tracks price changes over time for deals... | ❌ | ❌ | ❌ | ❌ | - |
+| Enhancement | Product Enrichment (AI) | Uses Vertex AI Gemini to enhance product... | ✅ | ✅ | ✅ | ❌ | 2025-12-16 |
+| Enhancement | Image Processing | Validates, optimizes, and stores product... | ❌ | ❌ | ❌ | ❌ | - |
+| Enhancement | Category Mapping | Maps external marketplace categories to ... | ✅ | ✅ | ✅ | ❌ | 2025-12-15 |
+| Translation | Multi-Language UI (next-intl) | i18n framework for Polish/English/German... | ❌ | ✅ | ✅ | ❌ | 2025-12-14 |
+| Translation | Product Description Translation | Translates product titles and descriptio... | ✅ | ✅ | ✅ | ❌ | 2025-12-16 |
+| Translation | Comment Localization | Optionally translates user comments for ... | ❌ | ✅ | ✅ | ❌ | 2025-12-14 |
+| Data Quality | Duplicate Detection | Identifies and merges duplicate products... | ✅ | ❌ | ❌ | ❌ | 2025-11-28 |
+| Monitoring | Import Job Status Tracking | Real-time monitoring of background impor... | ✅ | ✅ | ✅ | ❌ | 2025-12-17 |
+| Monitoring | Voting & Temperature Algorithm | Heat-based ranking system that surfaces ... | ❌ | ✅ | ❌ | ❌ | 2025-12-11 |
 
-| Category | Tool | Last Modified | Owner | Has UI | Has API | Has Backend | Has Tests |
-|---|---|---|---|:---:|:---:|:---:|:---:|
-| Import | Import & Export Console | 2025-12-16 | welldonetg974 | yes | yes | no | no |
-| Import | AliExpress Import (AI) | 2025-12-17 | welldonetg974 | yes | yes | yes | no |
-| Import | Import Monitor | 2025-12-16 | welldonetg974 | yes | yes | no | no |
-| Import | Smart Import | 2025-12-14 | welldonetg974 | yes | yes | no | no |
-| Import | Auto Import (AI orchestration) | 2025-12-13 | welldonetg974 | yes | yes | no | no |
-| Legacy Import | Deals Import (legacy) | 2025-12-15 | welldonetg974 | yes | yes | no | no |
-| Legacy Import | Allegro Import (legacy UI) | 2025-12-09 | welldonetg974 | yes | yes | no | no |
-| Legacy Import | Amazon Import (legacy UI) | 2025-12-07 | welldonetg974 | yes | yes | no | no |
-| Legacy Import | eBay Import (legacy UI) | 2025-12-09 | welldonetg974 | yes | yes | no | no |
-| Legacy Import | Convertiser Import (legacy UI) | 2025-12-07 | welldonetg974 | yes | yes | no | no |
-| Enhancement | AI Tools (Enhance/Enrich/Translate) | 2025-12-16 | welldonetg974 | yes | yes | yes | no |
-| Translation | Translations Admin | 2025-12-14 | welldonetg974 | no | yes | yes | no |
-| Translation | Product Translations | 2025-12-16 | welldonetg974 | yes | yes | yes | no |
+## Tool Details
+### AliExpress Integration
+**Category:** Import
+**Opis:** Scrapes products from AliExpress via API and imports into platform
+**Przeznaczenie:** Automates product discovery and import workflow from AliExpress marketplace
+**Sposób działania:** Uses AliExpress API to fetch product data, validates schema, enriches with translations, imports to Firestore
 
-## Details
-### Import & Export Console
-- Category: Import
-- Last Modified: 2025-12-16
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/import-export/page.tsx
-- APIs (15):
-  - src/app/api/admin/import/bestsellers/route.ts
-  - src/app/api/admin/import/dashboard/summary/route.ts
-  - src/app/api/admin/import/debug/route.ts
-  - src/app/api/admin/import/fetch-save-drafts/route.ts
-  - src/app/api/admin/import/history/route.ts
-  - src/app/api/admin/import/kill-all/route.ts
-  - src/app/api/admin/import/list/route.ts
-  - src/app/api/admin/import/queue/[jobId]/route.ts
-  - src/app/api/admin/import/queue/route.ts
-  - src/app/api/admin/import/quick-test/route.ts
-  - src/app/api/admin/import/rollback/route.ts
-  - src/app/api/admin/import/start/route.ts
-  - src/app/api/admin/import/status/route.ts
-  - src/app/api/admin/import/test/route.ts
-  - src/app/api/admin/import/test-diagnostics/route.ts
-- Backend modules:
-  - -
-- Tests: no
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ✅ (42) |
+| Backend | ✅ |
+| Tests | ✅ |
+| Last Modified | 2025-12-17 |
+| Owner | welldonetg974 |
 
-### AliExpress Import (AI)
-- Category: Import
-- Last Modified: 2025-12-17
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/aliexpress-import/page.tsx
-- APIs (9):
-  - src/app/api/admin/aliexpress/advanced/batch-search/route.ts
-  - src/app/api/admin/aliexpress/advanced/coupons/route.ts
-  - src/app/api/admin/aliexpress/categories/route.ts
-  - src/app/api/admin/aliexpress/health/route.ts
-  - src/app/api/admin/aliexpress/import/route.ts
-  - src/app/api/admin/aliexpress/item/route.ts
-  - src/app/api/admin/aliexpress/search/route.ts
-  - src/app/api/admin/aliexpress/sku-detail/route.ts
-  - src/app/api/admin/aliexpress/suggest-category/route.ts
-- Backend modules:
-  - src/ai/flows/aliexpress/aiCurateProduct.ts
-  - src/ai/flows/aliexpress/aiDealDescriptionPL.ts
-  - src/ai/flows/aliexpress/aiDealQualityScore.ts
-  - src/ai/flows/aliexpress/aiGenerateSEODescription.ts
-  - src/ai/flows/aliexpress/aiGenerateSearchKeywords.ts
-  - src/ai/flows/aliexpress/aiNormalizeTitleMultilang.ts
-  - src/ai/flows/aliexpress/aiNormalizeTitlePL.ts
-  - src/ai/flows/aliexpress/aiProductEnrichmentBatchPL.ts
-  - src/ai/flows/aliexpress/aiProductEnrichmentPL.ts
-  - src/ai/flows/aliexpress/aiSuggestCategory.ts
-  - src/ai/flows/importerFlow/index.ts
-  - src/ai/flows/importerFlow/stageAutoPromote.ts
-  - src/ai/flows/importerFlow/stageDeals.ts
-  - src/ai/flows/importerFlow/stageDedupe.ts
-  - src/ai/flows/importerFlow/stageEnhance.ts
-  - src/ai/flows/importerFlow/stageEnrich.ts
-  - src/ai/flows/importerFlow/stageFetch.ts
-  - src/ai/flows/importerFlow/stageSave.ts
-  - src/ai/flows/importerFlow/stageSmartContent.ts
-  - src/ai/flows/importerFlow/stageTranslate.ts
-  - src/ai/flows/importerFlow/types.ts
-- Tests: no
+### Allegro Integration
+**Category:** Import
+**Opis:** Fetches deals and products from Allegro Polish marketplace
+**Przeznaczenie:** Enables automated deal discovery from Allegro via official API
+**Sposób działania:** Calls Allegro REST API, parses deal/product listings, applies filters, stores in Firestore
 
-### Import Monitor
-- Category: Import
-- Last Modified: 2025-12-16
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/imports/page.tsx
-- APIs (15):
-  - src/app/api/admin/import/bestsellers/route.ts
-  - src/app/api/admin/import/dashboard/summary/route.ts
-  - src/app/api/admin/import/debug/route.ts
-  - src/app/api/admin/import/fetch-save-drafts/route.ts
-  - src/app/api/admin/import/history/route.ts
-  - src/app/api/admin/import/kill-all/route.ts
-  - src/app/api/admin/import/list/route.ts
-  - src/app/api/admin/import/queue/[jobId]/route.ts
-  - src/app/api/admin/import/queue/route.ts
-  - src/app/api/admin/import/quick-test/route.ts
-  - src/app/api/admin/import/rollback/route.ts
-  - src/app/api/admin/import/start/route.ts
-  - src/app/api/admin/import/status/route.ts
-  - src/app/api/admin/import/test/route.ts
-  - src/app/api/admin/import/test-diagnostics/route.ts
-- Backend modules:
-  - -
-- Tests: no
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ✅ (35) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-17 |
+| Owner | welldonetg974 |
 
-### Smart Import
-- Category: Import
-- Last Modified: 2025-12-14
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/smart-import/page.tsx
-- APIs (2):
-  - src/app/api/admin/smart-import/route.ts
-  - src/app/api/admin/smart-import/test/route.ts
-- Backend modules:
-  - -
-- Tests: no
+### CSV Bulk Import
+**Category:** Import
+**Opis:** Accepts CSV uploads with product/deal data for bulk processing
+**Przeznaczenie:** Allows partners to batch-upload products via structured CSV format
+**Sposób działania:** Validates CSV schema, parses rows, performs duplicate checks, queues import jobs, processes asynchronously
 
-### Auto Import (AI orchestration)
-- Category: Import
-- Last Modified: 2025-12-13
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/auto-import/page.tsx
-- APIs (1):
-  - src/app/api/admin/ai/auto-import/route.ts
-- Backend modules:
-  - -
-- Tests: no
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ✅ (34) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-17 |
+| Owner | welldonetg974 |
 
-### Deals Import (legacy)
-- Category: Legacy Import
-- Last Modified: 2025-12-15
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/deals-import/page.tsx
-- APIs (2):
-  - src/app/api/admin/deals/import/route.ts
-  - src/app/api/admin/deals/import-aliexpress/route.ts
-- Backend modules:
-  - -
-- Tests: no
+### Price Monitoring
+**Category:** Enhancement
+**Opis:** Tracks price changes over time for deals and products
+**Przeznaczenie:** Detects price drops and triggers notifications to users
+**Sposób działania:** Scheduled Cloud Function samples product prices daily, calculates deltas, flags hot deals
 
-### Allegro Import (legacy UI)
-- Category: Legacy Import
-- Last Modified: 2025-12-09
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/allegro-import/page.tsx
-- APIs (2):
-  - src/app/api/admin/allegro/import/route.ts
-  - src/app/api/admin/allegro/search/route.ts
-- Backend modules:
-  - -
-- Tests: no
+| Property | Value |
+|---|---|
+| UI | ❌ |
+| API Routes | ❌ (0) |
+| Backend | ❌ |
+| Tests | ❌ |
+| Last Modified | - |
+| Owner | - |
 
-### Amazon Import (legacy UI)
-- Category: Legacy Import
-- Last Modified: 2025-12-07
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/amazon-import/page.tsx
-- APIs (2):
-  - src/app/api/admin/amazon/import/route.ts
-  - src/app/api/admin/amazon/search/route.ts
-- Backend modules:
-  - -
-- Tests: no
+### Product Enrichment (AI)
+**Category:** Enhancement
+**Opis:** Uses Vertex AI Gemini to enhance product descriptions and categories
+**Przeznaczenie:** Improves product data quality and searchability via AI-generated enhancements
+**Sposób działania:** Genkit flow calls Gemini with product schema, generates better title/description/tags
 
-### eBay Import (legacy UI)
-- Category: Legacy Import
-- Last Modified: 2025-12-09
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/ebay-import/page.tsx
-- APIs (2):
-  - src/app/api/admin/ebay/import/route.ts
-  - src/app/api/admin/ebay/search/route.ts
-- Backend modules:
-  - -
-- Tests: no
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ✅ (15) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-16 |
+| Owner | welldonetg974 |
 
-### Convertiser Import (legacy UI)
-- Category: Legacy Import
-- Last Modified: 2025-12-07
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/convertiser-import/page.tsx
-- APIs (2):
-  - src/app/api/admin/convertiser/import/route.ts
-  - src/app/api/admin/convertiser/search/route.ts
-- Backend modules:
-  - -
-- Tests: no
+### Image Processing
+**Category:** Enhancement
+**Opis:** Validates, optimizes, and stores product images in Firebase Storage
+**Przeznaczenie:** Ensures image quality, handles multiple formats, generates thumbnails
+**Sposób działania:** Downloads from source URLs, validates dimensions/format, resizes for web, uploads to Firebase with CDN
 
-### AI Tools (Enhance/Enrich/Translate)
-- Category: Enhancement
-- Last Modified: 2025-12-16
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/ai-tools/page.tsx
-- APIs (3):
-  - src/app/api/admin/deals/ai-translate/route.ts
-  - src/app/api/admin/products/ai-enrich/route.ts
-  - src/app/api/admin/products/ai-translate/route.ts
-- Backend modules:
-  - src/ai/deal-enricher.ts
-  - src/ai/flows/importerFlow/index.ts
-  - src/ai/flows/importerFlow/stageAutoPromote.ts
-  - src/ai/flows/importerFlow/stageDeals.ts
-  - src/ai/flows/importerFlow/stageDedupe.ts
-  - src/ai/flows/importerFlow/stageEnhance.ts
-  - src/ai/flows/importerFlow/stageEnrich.ts
-  - src/ai/flows/importerFlow/stageFetch.ts
-  - src/ai/flows/importerFlow/stageSave.ts
-  - src/ai/flows/importerFlow/stageSmartContent.ts
-  - src/ai/flows/importerFlow/stageTranslate.ts
-  - src/ai/flows/importerFlow/types.ts
-- Tests: no
+| Property | Value |
+|---|---|
+| UI | ❌ |
+| API Routes | ❌ (0) |
+| Backend | ❌ |
+| Tests | ❌ |
+| Last Modified | - |
+| Owner | - |
 
-### Translations Admin
-- Category: Translation
-- Last Modified: 2025-12-14
-- Owner: welldonetg974
-- UI: -
-- APIs (1):
-  - src/app/api/admin-import/translations/route.ts
-- Backend modules:
-  - src/ai/flows/translation/aiTranslateDescriptionToPL.ts
-  - src/ai/flows/translation/aiTranslateTitleToPL.ts
-- Tests: no
+### Category Mapping
+**Category:** Enhancement
+**Opis:** Maps external marketplace categories to platform 3-level hierarchy
+**Przeznaczenie:** Normalizes diverse marketplace categories into consistent platform taxonomy
+**Sposób działania:** Genkit flow analyzes category names, matches against predefined mappings, suggests categories
 
-### Product Translations
-- Category: Translation
-- Last Modified: 2025-12-16
-- Owner: welldonetg974
-- UI: src/app/[locale]/admin/products/page.tsx
-- APIs (2):
-  - src/app/api/admin/products/ai-translate/route.ts
-  - src/app/api/admin/products/translate-drafts/route.ts
-- Backend modules:
-  - src/ai/flows/translation/aiTranslateDescriptionToPL.ts
-  - src/ai/flows/translation/aiTranslateTitleToPL.ts
-- Tests: no
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ✅ (1) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-15 |
+| Owner | welldonetg974 |
 
+### Multi-Language UI (next-intl)
+**Category:** Translation
+**Opis:** i18n framework for Polish/English/German UI translation
+**Przeznaczenie:** Provides route-based locale switching and translated UI components
+**Sposób działania:** next-intl middleware intercepts by locale segment, loads JSON catalogs, provides hooks
 
-## Discovered Admin APIs (raw)
-- src/app/api/admin/ai/auto-import/route.ts
-- src/app/api/admin/ai/command/route.ts
-- src/app/api/admin/ai/enhance-deal/route.ts
-- src/app/api/admin/ai/enhance-product/route.ts
-- src/app/api/admin/ai/fill-categories/route.ts
-- src/app/api/admin/ai/history/route.ts
-- src/app/api/admin/ai/wipe/route.ts
-- src/app/api/admin/aliexpress/advanced/batch-search/route.ts
-- src/app/api/admin/aliexpress/advanced/coupons/route.ts
-- src/app/api/admin/aliexpress/categories/route.ts
-- src/app/api/admin/aliexpress/health/route.ts
-- src/app/api/admin/aliexpress/import/route.ts
-- src/app/api/admin/aliexpress/item/route.ts
-- src/app/api/admin/aliexpress/search/route.ts
-- src/app/api/admin/aliexpress/sku-detail/route.ts
-- src/app/api/admin/aliexpress/suggest-category/route.ts
-- src/app/api/admin/allegro/import/route.ts
-- src/app/api/admin/allegro/search/route.ts
-- src/app/api/admin/amazon/import/route.ts
-- src/app/api/admin/amazon/search/route.ts
-- src/app/api/admin/convertiser/import/route.ts
-- src/app/api/admin/convertiser/search/route.ts
-- src/app/api/admin/deals/[id]/route.ts
-- src/app/api/admin/deals/ai-translate/route.ts
-- src/app/api/admin/deals/bulk-delete/route.ts
-- src/app/api/admin/deals/export/route.ts
-- src/app/api/admin/deals/from-product/route.ts
-- src/app/api/admin/deals/import/route.ts
-- src/app/api/admin/deals/import-aliexpress/route.ts
-- src/app/api/admin/deals/route.ts
-- src/app/api/admin/ebay/import/route.ts
-- src/app/api/admin/ebay/search/route.ts
-- src/app/api/admin/import/bestsellers/route.ts
-- src/app/api/admin/import/dashboard/summary/route.ts
-- src/app/api/admin/import/debug/route.ts
-- src/app/api/admin/import/fetch-save-drafts/route.ts
-- src/app/api/admin/import/history/route.ts
-- src/app/api/admin/import/kill-all/route.ts
-- src/app/api/admin/import/list/route.ts
-- src/app/api/admin/import/queue/[jobId]/route.ts
-- src/app/api/admin/import/queue/route.ts
-- src/app/api/admin/import/quick-test/route.ts
-- src/app/api/admin/import/rollback/route.ts
-- src/app/api/admin/import/start/route.ts
-- src/app/api/admin/import/status/route.ts
-- src/app/api/admin/import/test/route.ts
-- src/app/api/admin/import/test-diagnostics/route.ts
-- src/app/api/admin/products/[id]/route.ts
-- src/app/api/admin/products/ai-enrich/route.ts
-- src/app/api/admin/products/ai-translate/route.ts
-- src/app/api/admin/products/approve-drafts/route.ts
-- src/app/api/admin/products/bulk-delete/route.ts
-- src/app/api/admin/products/enhance-ai/route.ts
-- src/app/api/admin/products/enrich-drafts/route.ts
-- src/app/api/admin/products/export/route.ts
-- src/app/api/admin/products/import-batch/route.ts
-- src/app/api/admin/products/ingest/route.ts
-- src/app/api/admin/products/route.ts
-- src/app/api/admin/products/translate-drafts/route.ts
-- src/app/api/admin/smart-import/route.ts
-- src/app/api/admin/smart-import/test/route.ts
+| Property | Value |
+|---|---|
+| UI | ❌ |
+| API Routes | ✅ (1) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-14 |
+| Owner | welldonetg974 |
+
+### Product Description Translation
+**Category:** Translation
+**Opis:** Translates product titles and descriptions to multiple languages via Genkit
+**Przeznaczenie:** Makes products discoverable in German/English markets
+**Sposób działania:** Genkit flow detects Polish text, calls Gemini to translate, validates quality, stores translations
+
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ✅ (16) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-16 |
+| Owner | welldonetg974 |
+
+### Comment Localization
+**Category:** Translation
+**Opis:** Optionally translates user comments for cross-language visibility
+**Przeznaczenie:** Enables cross-language community engagement
+**Sposób działania:** On comment creation, detects language, triggers translation flow, stores original + translations
+
+| Property | Value |
+|---|---|
+| UI | ❌ |
+| API Routes | ✅ (2) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-14 |
+| Owner | welldonetg974 |
+
+### Duplicate Detection
+**Category:** Data Quality
+**Opis:** Identifies and merges duplicate products from multiple import sources
+**Przeznaczenie:** Prevents duplicate listings and improves catalog cleanliness
+**Sposób działania:** Compares product title/URL/SKU against catalog, calculates similarity score, flags/merges duplicates
+
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ❌ (0) |
+| Backend | ❌ |
+| Tests | ❌ |
+| Last Modified | 2025-11-28 |
+| Owner | copilot-swe-agent[bot] |
+
+### Import Job Status Tracking
+**Category:** Monitoring
+**Opis:** Real-time monitoring of background import jobs and processing status
+**Przeznaczenie:** Provides admins with visibility into import queue, completion rates, error logs
+**Sposób działania:** Cloud Function stores job state in Firestore, UI polls endpoint, displays progress and errors
+
+| Property | Value |
+|---|---|
+| UI | ✅ |
+| API Routes | ✅ (34) |
+| Backend | ✅ |
+| Tests | ❌ |
+| Last Modified | 2025-12-17 |
+| Owner | welldonetg974 |
+
+### Voting & Temperature Algorithm
+**Category:** Monitoring
+**Opis:** Heat-based ranking system that surfaces trending deals/products
+**Przeznaczenie:** Dynamically ranks content based on user engagement without raw vote counts
+**Sposób działania:** Calculates temperature from votes + time decay, periodically recalculates hot deals, caches in Redis
+
+| Property | Value |
+|---|---|
+| UI | ❌ |
+| API Routes | ✅ (1) |
+| Backend | ❌ |
+| Tests | ❌ |
+| Last Modified | 2025-12-11 |
+| Owner | welldonetg974 |
