@@ -58,6 +58,7 @@ jobs:
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}' > $HOME/firebase-key.json
           echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> $GITHUB_ENV
+          firebase experiments:enable webframeworks
 
       - name: Deploy Hosting + Functions
         run: firebase deploy --only hosting,functions --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive
