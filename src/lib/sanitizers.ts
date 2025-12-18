@@ -7,14 +7,18 @@ type DealMetadata = NonNullable<Deal['metadata']>;
 const FALLBACK_IMAGE = '/icon_okazjeplus.svg'; // Używamy istniejącej ikony jako fallback
 const FALLBACK_URL = '#';
 const FALLBACK_CATEGORY = 'inne';
-const PRODUCT_METADATA_SOURCES: ProductMetadata['source'][] = ['aliexpress', 'manual', 'csv'];
+// Unified source types for Products (from metadata) and Deals (from source field)
+const PRODUCT_METADATA_SOURCES: ProductMetadata['source'][] = ['aliexpress', 'manual', 'csv', 'amazon', 'allegro', 'ebay'];
 const DEAL_SOURCES: readonly NonNullable<Deal['source']>[] = [
   'manual',
   'aliexpress',
   'csv',
+  'amazon',
+  'allegro',
   'pepper',
   'mydealz',
   'reddit',
+  'auto-scraped',
   'other',
 ] as const;
 
@@ -183,6 +187,26 @@ const sanitizeSpecifications = (raw: any): Array<{ key?: string; name?: string; 
   return normalized.length > 0 ? normalized : undefined;
 };
 
+const sanitizePriceHistory = (raw: any): Array<{ price: number; currency: string; timestamp: string; source: string }> | undefined => {
+  if (!Array.isArray(raw)) return undefined;
+  const normalized = raw
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const price = ensureOptionalNumber(entry.price);
+      const currency = ensureOptionalString(entry.currency);
+      const timestamp = ensureOptionalString(entry.timestamp);
+      if (price === undefined || !currency || !timestamp) return null;
+      return {
+        price,
+        currency,
+        timestamp,
+        source: ensureString(entry.source, 'manual'),
+      };
+    })
+    .filter(Boolean) as Array<{ price: number; currency: string; timestamp: string; source: string }>;
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 const sanitizeProductMetadata = (raw: any): Product['metadata'] | undefined => {
   if (!raw || typeof raw !== 'object') return undefined;
   const source = ensureOptionalString(raw.source);
@@ -192,14 +216,19 @@ const sanitizeProductMetadata = (raw: any): Product['metadata'] | undefined => {
   const metadata: ProductMetadata = {
     source: normalizedSource,
     originalId: ensureOptionalString(raw.originalId),
+    createdAt: ensureOptionalString(raw.createdAt),
     importedAt: ensureOptionalString(raw.importedAt),
     importedBy: ensureOptionalString(raw.importedBy),
+    locale: ensureOptionalString(raw.locale),
     orders: ensureOptionalNumber(raw.orders),
     shipping: ensureOptionalString(raw.shipping),
     merchant: ensureOptionalString(raw.merchant),
     merchantId: ensureOptionalString(raw.merchantId),
     brand: ensureOptionalString(raw.brand),
     rawDataStored: raw.rawDataStored === undefined ? undefined : ensureBoolean(raw.rawDataStored),
+    currencyRate: ensureOptionalNumber(raw.currencyRate),
+    qualityScore: ensureOptionalNumber(raw.qualityScore),
+    priceHistory: sanitizePriceHistory(raw.priceHistory),
     promotionId: ensureOptionalString(raw.promotionId),
     commissionRate: ensureOptionalNumber(raw.commissionRate),
     evaluateCount: ensureOptionalNumber(raw.evaluateCount),
@@ -269,8 +298,11 @@ const sanitizeDealMetadata = (raw: any): Deal['metadata'] | undefined => {
   if (!raw || typeof raw !== 'object') return undefined;
   const metadata: DealMetadata = {
     source: ensureOptionalString(raw.source),
+    originalId: ensureOptionalString(raw.originalId),
     importedAt: ensureOptionalString(raw.importedAt),
+    importedBy: ensureOptionalString(raw.importedBy),
     originalUrl: ensureOptionalString(raw.originalUrl),
+    locale: ensureOptionalString(raw.locale),
     promotionId: ensureOptionalString(raw.promotionId),
     commissionRate: ensureOptionalNumber(raw.commissionRate),
     evaluateCount: ensureOptionalNumber(raw.evaluateCount),
@@ -287,6 +319,11 @@ const sanitizeDealMetadata = (raw: any): Deal['metadata'] | undefined => {
     warehouse: ensureOptionalString(raw.warehouse),
     deliveryTime: ensureOptionalString(raw.deliveryTime),
     shippingMethod: ensureOptionalString(raw.shippingMethod),
+    merchant: ensureOptionalString(raw.merchant),
+    merchantId: ensureOptionalString(raw.merchantId),
+    orders: ensureOptionalNumber(raw.orders),
+    brand: ensureOptionalString(raw.brand),
+    priceHistory: sanitizePriceHistory(raw.priceHistory),
   };
   return pruneObject(metadata) as Deal['metadata'];
 };

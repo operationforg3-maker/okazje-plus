@@ -426,42 +426,51 @@ export interface ProductModerationState {
 }
 
 export interface ProductImportMetadata {
-  source: 'aliexpress' | 'manual' | 'csv';
-  originalId?: string;
+  source: 'aliexpress' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'ebay';
+  originalId?: string; // External ID from source platform
   createdAt?: string; // ISO timestamp when product was first created
-  importedAt?: string;
-  importedBy?: string;
-  orders?: number;
-  shipping?: string;
-  merchant?: string;
-  merchantId?: string;
-  brand?: string; // Marka produktu
-  rawDataStored?: boolean;
+  importedAt?: string; // ISO timestamp when imported to our system
+  importedBy?: string; // UID of user who triggered import
+  orders?: number; // Number of orders/sales from source
+  shipping?: string; // Shipping description
+  merchant?: string; // Merchant/seller name
+  merchantId?: string; // Merchant ID in source system
+  brand?: string; // Brand name
+  rawDataStored?: boolean; // Whether raw API response is stored
+  locale?: string; // Locale of import (e.g., 'pl', 'en', 'de')
   
   // Currency conversion metadata
-  currencyRate?: number; // USD to target currency exchange rate (e.g., 4.0 for PLN)
+  currencyRate?: number; // Exchange rate at import time (e.g., 4.0 for USD→PLN)
   qualityScore?: number; // 0-100 overall quality score
   
-  // Advanced API fields
+  // Price tracking
+  priceHistory?: Array<{
+    price: number;
+    currency: string;
+    timestamp: string;
+    source: 'import' | 'sync' | 'manual';
+  }>;
+  
+  // Advanced API fields (AliExpress, Amazon, etc.)
   promotionId?: string;
-  commissionRate?: number; // Prowizja dla afiliacji (0-100)
-  evaluateCount?: number; // Liczba ocen (różne od orders)
-  evaluateRate?: string; // Surowa ocena z API (np. "4.5/5")
-  sellerRating?: number; // Ocena sprzedawcy (0-5)
+  commissionRate?: number; // Affiliate commission rate (0-100)
+  evaluateCount?: number; // Number of reviews/ratings
+  evaluateRate?: string; // Raw rating from API (e.g., "4.5/5")
+  sellerRating?: number; // Seller rating (0-5)
   returnPolicy?: string | {
     allowed: boolean;
     days: number;
     conditions?: string;
   };
-  hotProduct?: boolean; // Czy produkt jest w hot products
-  flashDeal?: boolean; // Czy promocja flash
-  platformProductType?: string; // Typ produktu w platformie
+  hotProduct?: boolean; // Marked as hot/trending in source
+  flashDeal?: boolean; // Flash sale/deal
+  platformProductType?: string; // Product type in source platform
   stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
-  stockLevel?: number; // Liczba dostępnych sztuk
-  specifications?: Array<{key?: string; name?: string; value: string; unit?: string}>; // Specyfikacje techniczne
+  stockLevel?: number; // Available quantity
+  specifications?: Array<{key?: string; name?: string; value: string; unit?: string}>; // Technical specs
   productVideoUrl?: string;
-  warehouse?: string;
-  deliveryTime?: string;
+  warehouse?: string; // Warehouse location
+  deliveryTime?: string; // Estimated delivery time
   freeShipping?: boolean;
   shippingCost?: number;
   shippingMethod?: string;
@@ -584,11 +593,14 @@ export interface Deal {
     scoredAt?: string;
   };
   
-  // Import Metadata
+  // Import Metadata (unified with Product)
   importMetadata?: {
-    source?: string;
-    importedAt?: string;
+    source?: 'aliexpress' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'pepper' | 'mydealz' | 'reddit' | 'auto-scraped';
+    originalId?: string; // External ID from source
+    importedAt?: string; // ISO timestamp
+    importedBy?: string; // UID of importer
     originalUrl?: string;
+    locale?: string; // Locale of import
     promotionId?: string;
     commissionRate?: number;
     evaluateCount?: number;
@@ -598,13 +610,24 @@ export interface Deal {
     hotProduct?: boolean;
     flashDeal?: boolean;
     platformProductType?: string;
-    stockStatus?: string;
+    stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
     stockLevel?: number;
     specifications?: any;
     productVideoUrl?: string;
     warehouse?: string;
     deliveryTime?: string;
     shippingMethod?: string;
+    merchant?: string;
+    merchantId?: string;
+    orders?: number;
+    brand?: string;
+    // Price tracking for deals
+    priceHistory?: Array<{
+      price: number;
+      currency: string;
+      timestamp: string;
+      source: 'import' | 'sync' | 'manual';
+    }>;
   };
   
   // General Metadata
@@ -1015,25 +1038,64 @@ export interface ImportRun {
     skipped: number; // Items skipped (duplicates, filters, etc)
     errors: number; // Items that failed to process
     duplicates?: number; // Detected duplicates
+    autoApproved?: number; // Items auto-approved based on config
+    aiEnriched?: number; // Items enriched with AI
   };
   startedAt: string;
   finishedAt?: string;
   durationMs?: number;
   errorSummary?: ImportError[];
-  logsRef?: string; // Reference to detailed logs (e.g., Storage path)
-  triggeredBy: 'scheduled' | 'manual';
+  logsRef?: string; // Reference to detailed logs (e.g., Storage path or import_logs collection)
+  triggeredBy: 'scheduled' | 'manual' | 'cron';
   triggeredByUid?: string; // If manual
+  config?: {
+    maxItems?: number;
+    autoApprove?: boolean;
+    enableAI?: boolean;
+    dryRun?: boolean;
+  };
+  // Progress tracking for long-running imports
+  progress?: {
+    current: number;
+    total: number;
+    phase: 'fetching' | 'processing' | 'enriching' | 'completing';
+  };
 }
 
 /**
  * ImportError - categorized error type for import failures
  */
 export interface ImportError {
-  code: 'NETWORK' | 'RATE_LIMIT' | 'MAPPING' | 'VALIDATION' | 'UNKNOWN';
+  code: 'NETWORK' | 'RATE_LIMIT' | 'MAPPING' | 'VALIDATION' | 'DEDUPLICATION' | 'AI_ENRICHMENT' | 'UNKNOWN';
   message: string;
   itemId?: string; // Original item ID from vendor
   timestamp: string;
   details?: any; // Additional error context
+  retryable?: boolean; // Whether this error can be retried
+}
+
+/**
+ * ImportItemLog - detailed log entry for individual imported items
+ * Stored in import_logs subcollection under each ImportRun
+ */
+export interface ImportItemLog {
+  id: string;
+  importRunId: string; // Parent ImportRun
+  originalId: string; // ID from source vendor
+  action: 'created' | 'updated' | 'skipped' | 'error';
+  itemType: 'product' | 'deal';
+  itemId?: string; // Our internal ID (if created/updated)
+  reason?: string; // Reason for skip/error
+  error?: ImportError;
+  timestamp: string;
+  metadata?: {
+    title?: string;
+    price?: number;
+    category?: string;
+    aiEnriched?: boolean;
+    autoApproved?: boolean;
+    duplicateOf?: string; // ID of duplicate item if detected
+  };
 }
 
 /**
