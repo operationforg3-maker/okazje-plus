@@ -1,18 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 
-// Inicjalizacja Firebase Admin SDK
-const apps = getApps();
-if (!apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_WEBAPP_CONFIG || '{}');
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
-}
+export const dynamic = 'force-dynamic';
 
-const db = getFirestore();
+function getDb() {
+  const apps = getApps();
+  if (apps.length === 0) {
+    const config = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!config) {
+      throw new Error('Brak FIREBASE_SERVICE_ACCOUNT');
+    }
+
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(config);
+    } catch (e) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT nie jest valid JSON');
+    }
+
+    if (!serviceAccount.project_id) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT wymaga project_id');
+    }
+
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
+  }
+
+  return getFirestore();
+}
 
 interface ScheduledTask {
   id: string;
@@ -27,6 +44,7 @@ interface ScheduledTask {
 
 export async function POST(req: NextRequest) {
   try {
+    getDb();
     const { taskId, config } = await req.json();
 
     if (!taskId) {
