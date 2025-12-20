@@ -25,113 +25,6 @@ import {
 
 export default function M6PipelineVisualizerPage() {
   const [activeTab, setActiveTab] = useState("overview");
-  const [simulationStage, setSimulationStage] = useState(0);
-
-  // Mock stages data
-  const stages: Array<{
-    id: string;
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    status: "completed" | "idle" | "running" | "failed";
-    progress?: number;
-    stats?: Record<string, number | string>;
-  }> = [
-    {
-      id: "source",
-      title: "1. Fetch from Sources",
-      description: "AliExpress/Amazon/Allegro API",
-      icon: <Database className="w-6 h-6" />,
-      status: "completed" as const,
-      stats: {
-        "Products Found": 150,
-        "API Calls": "3",
-        "Time": "8.2s",
-      },
-    },
-    {
-      id: "identity",
-      title: "2. Calculate Identity Hash",
-      description: "SHA-256(title + image_hash)",
-      icon: <Zap className="w-6 h-6" />,
-      status: simulationStage >= 1 ? "completed" : "idle",
-      stats:
-        simulationStage >= 1
-          ? {
-              "Hashes Calculated": 150,
-              "Unique Hashes": "120",
-              "Time": "2.1s",
-            }
-          : {},
-    },
-    {
-      id: "dedup",
-      title: "3. Deduplication Check",
-      description: "Find existing products by hash",
-      icon: <Layers className="w-6 h-6" />,
-      status:
-        simulationStage >= 2
-          ? "completed"
-          : simulationStage === 1
-            ? "running"
-            : "idle",
-      progress: simulationStage === 1 ? 65 : undefined,
-      stats:
-        simulationStage >= 2
-          ? {
-              "New Products": 50,
-              "Duplicates": "70",
-              "New Deals": "70",
-            }
-          : {},
-    },
-    {
-      id: "firestore",
-      title: "4. Save to Firestore",
-      description: "ProductCore + DealM6 documents",
-      icon: <Database className="w-6 h-6" />,
-      status: simulationStage >= 3 ? "completed" : "idle",
-      stats: simulationStage >= 3 ? { "Writes": "120", "Time": "3.4s" } : {},
-    },
-    {
-      id: "refiner",
-      title: "5. AI Refiner (Optional)",
-      description: "Enrich with Gemini 2.0 Flash",
-      icon: <Zap className="w-6 h-6" />,
-      status: simulationStage >= 4 ? "completed" : "idle",
-      stats: simulationStage >= 4
-        ? {
-            "Enriched": 50,
-            "Tags Generated": "150",
-            "Time": "12.3s",
-          }
-        : {},
-    },
-  ];
-
-  const mockDeals = [
-    {
-      id: "deal-1",
-      merchantName: "CableMaster",
-      price: 9.99,
-      shipping: 2.5,
-      currency: "USD",
-    },
-    {
-      id: "deal-2",
-      merchantName: "TechStore",
-      price: 11.99,
-      shipping: 0,
-      currency: "USD",
-    },
-    {
-      id: "deal-3",
-      merchantName: "MegaDeals",
-      price: 10.99,
-      shipping: 3.0,
-      currency: "USD",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 p-8">
@@ -232,19 +125,55 @@ export default function M6PipelineVisualizerPage() {
               </CardContent>
             </Card>
 
-            <M6PipelineVisualizer stages={stages.slice(0, 3)} />
+            <M6PipelineVisualizer stages={[
+              {
+                id: "source",
+                title: "1. Fetch from Sources",
+                description: "AliExpress/Amazon/Allegro API",
+                icon: <Database className="w-6 h-6" />,
+                status: "idle" as const,
+              },
+              {
+                id: "identity",
+                title: "2. Calculate Identity Hash",
+                description: "SHA-256(title + image_hash)",
+                icon: <Zap className="w-6 h-6" />,
+                status: "idle" as const,
+              },
+              {
+                id: "dedup",
+                title: "3. Deduplication Check",
+                description: "Find existing products by hash",
+                icon: <Layers className="w-6 h-6" />,
+                status: "idle" as const,
+              },
+            ]} />
 
             {/* Example: Product Deduplication */}
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-slate-900">
-                Przykład: Deduplikacja USB-C Cable
+                Jak działa deduplikacja?
               </h2>
+
+              <Card className="bg-blue-50 border border-blue-300">
+                <CardContent className="pt-6">
+                  <p className="text-sm text-slate-700 mb-4">
+                    Ten panel pokazuje edukacyjny przykład M6 pipeline'u. Aby zobaczyć rzeczywiste dane z Twojej bazy:
+                  </p>
+                  <ol className="list-decimal ml-5 space-y-2 text-sm text-slate-700">
+                    <li>Wejdź do zakładki "Historia Jobów"</li>
+                    <li>Uruchom Harvester z rzeczywistym zapytaniem</li>
+                    <li>Obserwuj live progress i deduplicization</li>
+                    <li>Po zakończeniu job'u - zobacz dokładne statystyki</li>
+                  </ol>
+                </CardContent>
+              </Card>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Identity Hash */}
                 <IdentityHashVisualizer
-                  title="USB-C Cable 2M Fast Charging"
-                  imageUrl="https://via.placeholder.com/150?text=USB-C+Cable"
+                  title="Przykład: USB-C Cable 2M Fast Charging"
+                  imageUrl="/api/placeholder?w=150&h=150"
                   hash="a7f3b2c1d8e9f5g6h7j8k9l0m1n2o3p4q5r6s7t8u9v0"
                 />
 
@@ -260,12 +189,45 @@ export default function M6PipelineVisualizerPage() {
             {/* Deal Comparison */}
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-slate-900">
-                Porównanie Deal'i (ten sam produkt)
+                Jak system zarządza Deal'ami?
               </h2>
-              <p className="text-slate-600">
-                Ten sam produkt dostępny u 3 sprzedawców:
-              </p>
-              <DealComparisonGrid deals={mockDeals} />
+              <Card className="bg-slate-50 border-0">
+                <CardContent className="pt-6 space-y-4">
+                  <p className="text-sm text-slate-700">
+                    M6 system pozwala na:
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-700 ml-4 list-disc">
+                    <li><strong>1:N relacja</strong> - jeden ProductCore może mieć wiele Deal'i</li>
+                    <li><strong>Różne źródła</strong> - AliExpress, Amazon, Allegro w tym samym produkcie</li>
+                    <li><strong>Dynamiczne ceny</strong> - system śledzi historię cen</li>
+                    <li><strong>Ranking ciepła</strong> - Deal'e ranglujemy po temperature (popularności)</li>
+                    <li><strong>Real-time updates</strong> - ceny mogą się zmieniać w ciągu godzin</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <DealComparisonGrid deals={[
+                {
+                  id: "deal-1",
+                  merchantName: "Merchant A",
+                  price: 9.99,
+                  shipping: 2.5,
+                  currency: "USD",
+                },
+                {
+                  id: "deal-2",
+                  merchantName: "Merchant B",
+                  price: 11.99,
+                  shipping: 0,
+                  currency: "USD",
+                },
+                {
+                  id: "deal-3",
+                  merchantName: "Merchant C",
+                  price: 10.99,
+                  shipping: 3.0,
+                  currency: "USD",
+                },
+              ]} />
             </div>
           </TabsContent>
 

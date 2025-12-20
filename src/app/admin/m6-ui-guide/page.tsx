@@ -347,11 +347,11 @@ export default function M6UIGuidePage() {
             </Card>
           </div>
 
-          <div className="bg-amber-900 border border-amber-700 rounded-lg p-4">
-            <p className="text-sm text-amber-200">
-              ⚠️ API endpoints są mockowe w tym demo. Wdróż je w
-              <span className="font-mono text-amber-300"> src/app/api/admin/* </span>
-              aby połączyć UI z prawdziwymi Harvester/Refiner klasami
+          <div className="bg-green-900 border border-green-700 rounded-lg p-4">
+            <p className="text-sm text-green-200">
+              ✅ API endpoints są <span className="font-semibold">LIVE i działające</span>!
+              <br />
+              <span className="text-xs mt-1 block">POST /api/admin/harvester/run | POST /api/admin/refiner/run | GET /api/admin/harvester-jobs</span>
             </p>
           </div>
         </div>

@@ -471,7 +471,7 @@ function HarvesterWizard({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder='np. "USB-C Cable 2m" lub "Gaming Laptop"'
+            placeholder="np. USB-C Cable, Gaming Laptop, Wireless Headphones..."
             className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             onKeyPress={(e) => e.key === "Enter" && handleRun()}
           />
@@ -633,7 +633,7 @@ function RefinerPanel({ onJobCreated }: { onJobCreated: () => void }) {
             <textarea
               value={productIds}
               onChange={(e) => setProductIds(e.target.value)}
-              placeholder="prod_123456&#10;prod_789012&#10;prod_345678"
+              placeholder="Wklej ID produktów - jedno ID na linię&#10;Przykład: prod_abc123"
               className="w-full h-40 px-3 py-2 text-sm rounded-lg border border-slate-300 focus:ring-2 focus:ring-amber-500 font-mono"
             />
           </div>
