@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getRecommendedProducts, getProductsByCategory, getCategories, getDealById, getNavigationShowcase } from '@/lib/data';
+import { getRecommendedProducts, getProductsByCategory, getCategoriesWithContent, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
 import ProductListCard from '@/components/product-list-card';
@@ -82,7 +82,7 @@ function ProductsPageContent() {
       setIsLoading(true);
       try {
         const [fetchedCategories, showcaseConfig] = await Promise.all([
-          getCategories(),
+          getCategoriesWithContent('products'),
           getNavigationShowcase(),
         ]);
         

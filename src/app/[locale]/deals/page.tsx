@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { getHotDeals, getCategories, getNavigationShowcase, getProductById, getDealsByCategory } from '@/lib/data';
+import { getHotDeals, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { Deal, Category, Product } from '@/lib/types';
 import DealCard from '@/components/deal-card';
@@ -264,7 +264,7 @@ export default function DealsPage() {
       setIsLoading(true);
       try {
         const [fetchedCategories, showcaseConfig, hotDeals] = await Promise.all([
-          getCategories(),
+          getCategoriesWithContent('deals'),
           getNavigationShowcase(),
           getHotDeals(100), // Pobierz gorące okazje na start
         ]);

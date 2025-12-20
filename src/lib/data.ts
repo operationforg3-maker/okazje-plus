@@ -1017,6 +1017,90 @@ export async function getCategories(): Promise<Category[]> {
   return sortedCategories;
 }
 
+/**
+ * Pobiera kategorie z deals/produktami (filtruje puste)
+ * Sprawdza ile deals/produktów jest w każdej kategorii i subcategorii
+ * @param contentType 'deals' lub 'products'
+ */
+export async function getCategoriesWithContent(
+  contentType: 'deals' | 'products' = 'deals'
+): Promise<Category[]> {
+  const allCategories = await getCategories();
+  
+  // Funkcja pomocnicza do sprawdzenia czy kategoria ma kontentu
+  const getCategoryContentCount = async (categoryId: string): Promise<number> => {
+    try {
+      const collection_name = contentType === 'deals' ? 'deals' : 'products';
+      const dealsRef = collection(db, collection_name);
+      const q = query(
+        dealsRef,
+        where('mainCategorySlug', '==', categoryId),
+        where('status', '==', 'approved'),
+        limit(1) // Wystarczy wiedza czy istnieje choć jeden
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.size > 0 ? 1 : 0;
+    } catch {
+      return 0;
+    }
+  };
+  
+  // Filtruj kategorie - zostawiaj tylko te, które mają kontentu
+  const filteredCategories = await Promise.all(
+    allCategories.map(async (category) => {
+      const hasContent = await getCategoryContentCount(category.id!);
+      
+      if (!hasContent && (!category.subcategories || category.subcategories.length === 0)) {
+        return null; // Usuń kategorię bez treści i bez podkategorii
+      }
+      
+      // Filtruj podkategorie aby pokazywać tylko te, które mają kontentu
+      if (category.subcategories) {
+        const filteredSubcategories = await Promise.all(
+          category.subcategories.map(async (subcategory) => {
+            const subHasContent = await getCategoryContentCount(subcategory.slug! || subcategory.id!);
+            
+            if (!subHasContent && (!subcategory.subcategories || subcategory.subcategories.length === 0)) {
+              return null; // Usuń podkategorię bez treści i bez pod-podkategorii
+            }
+            
+            // Filtruj pod-podkategorie
+            if (subcategory.subcategories) {
+              const filteredSubSubcategories = await Promise.all(
+                subcategory.subcategories.map(async (subsubcategory) => {
+                  const subsubHasContent = await getCategoryContentCount(subsubcategory.slug! || subsubcategory.id!);
+                  return subsubHasContent > 0 ? subsubcategory : null;
+                })
+              );
+              
+              return {
+                ...subcategory,
+                subcategories: filteredSubSubcategories.filter(s => s !== null),
+              };
+            }
+            
+            return subHasContent > 0 ? subcategory : null;
+          })
+        );
+        
+        const validSubcategories = filteredSubcategories.filter(s => s !== null);
+        
+        // Jeśli kategoria nie ma treści ale ma podkategorie z treścią, zachowaj kategorię
+        if (hasContent > 0 || validSubcategories.length > 0) {
+          return {
+            ...category,
+            subcategories: validSubcategories,
+          };
+        }
+      }
+      
+      return hasContent > 0 ? category : null;
+    })
+  );
+  
+  return filteredCategories.filter(c => c !== null);
+}
+
 export async function getDealById(dealId: string): Promise<Deal | null> {
   const dealRef = doc(db, "deals", dealId);
   const snapshot = await getDoc(dealRef);

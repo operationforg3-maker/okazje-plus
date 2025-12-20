@@ -3,13 +3,14 @@
 Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid churn, and mirror existing patterns.
 
 ## Big picture architecture
-- **Platform**: Polish deals/products platform — Next.js 15 app router + Firebase (Auth/Firestore/Storage) + Genkit AI + optional Typesense search
+- **Platform**: Product-comparison marketplace (M6+, like Ceneo/PriceRunner) — Next.js 15 app router + Firebase (Auth/Firestore/Storage) + Genkit AI + optional Typesense search
 - **Deployment**: Firebase App Hosting (europe-west1); Cloud Functions in `okazje-plus/` subdirectory
 - **App structure**: i18n with next-intl (`src/app/[locale]/*`); admin panel at `src/app/admin/*`; shadcn UI components
-- **Data flow**: `src/lib/data.ts` centralizes ALL Firestore queries/mutations (use `status: "approved"` filter for public content). Single source of truth for types: `src/lib/types.ts`
+- **Data model (M6)**: **ProductCore** (immutable, deduped) + **Deal** (mutable, multiple per product). Types: `src/lib/types.ts`; queries: `src/lib/data.ts`
+- **Automation layer (M6)**: Smart harvester/refiner in `src/lib/automation/*` — fetches from AliExpress/Amazon/Allegro, dedupes by identity hash, enriches with AI
 - **Categories**: Three-level hierarchy via `mainCategorySlug`, `subCategorySlug`, `subSubCategorySlug` (see `Category`, `Subcategory`, `SubSubcategory` interfaces)
-- **Ranking**: Temperature-based "heat" algorithm (not raw votes) for deals/products. See implementations in `src/components/deals-list.tsx` and `src/components/deal-card.tsx`
-- **Realtime features**: Optimistic UI updates for votes/comments. Hooks: `use-comments-count.ts`, `use-pagination.ts`, `use-notifications.ts`
+- **Ranking**: Temperature-based "heat" algorithm (not raw votes) for deals. See `src/lib/data.ts` and `src/components/deal-card.tsx`
+- **Realtime features**: Optimistic UI updates for votes/comments. Hooks: `use-comments-count.ts`, `use-pagination.ts`, `use-notifications.ts`. Notifications via Cloud Function triggers
 
 ## Authentication & security
 - **Dual Firebase config**: Server uses `FIREBASE_WEBAPP_CONFIG` (App Hosting runtime); client uses `NEXT_PUBLIC_*` env vars (embedded at build time)
@@ -20,6 +21,15 @@ Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid ch
 
 ## Data layer patterns
 - **ALWAYS use `src/lib/data.ts`**: Never query Firestore directly in components. Add new queries to this module
+- **M6 Data Model**: Two-entity pattern:
+  - **ProductCore** (immutable): One per unique product; identity = SHA-256(normalized_title + image_hash); contains specs, ratings, multilingual descriptions, best price, searchTags
+  - **Deal** (mutable): Specific offer from seller; foreign key to ProductCore; price + shipping + source (AliExpress/Amazon/Allegro); price history for compliance; vote count & temperature
+  - **Key queries**: `getHotDeals()` filters approved deals by temperature; `getProductCoreById()` + `getLinkedDeals()` for detail pages
+- **Automation (M6)**: `src/lib/automation/*` orchestrates harvesting → deduplication → enrichment:
+  - **Harvester** (`harvester.ts`): Fetches from APIs, calculates identity hash, creates/links ProductCores, creates Deal documents
+  - **Refiner** (`refiner.ts`): AI-enriches specs, generates multilingual descriptions, calculates quality scores, extracts search tags
+  - **Identity Matcher** (`identity-matcher.ts`): Prevents duplicate products via hash-based lookup
+  - **Migration** (`migration.ts`): Legacy deal → M6 conversion (reference for schema understanding)
 - **Caching strategy**: Redis if `REDIS_URL` present, else in-memory LRU. Helpers: `cacheGet(key)`, `cacheSet(key, value, ttl)`
 - **Cache invalidation**: `src/lib/cache-invalidation.ts` exports invalidation helpers (e.g., `invalidateHotDealsCache()`). Call after mutations
 - **Sanitization**: All data from Firestore passes through sanitizers (`src/lib/sanitizers.ts`) before returning to prevent XSS/injection
@@ -31,7 +41,16 @@ Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid ch
 - **Model**: Vertex AI Gemini 2.0 Flash (uses ADC credentials in production, `GEMINI_API_KEY` for local dev)
 - **Dev workflow**: `npm run genkit:dev` starts Genkit UI on port 4000; `npm run genkit:watch` for hot reload
 - **Flow structure**: Import flows in `dev.ts` to register them. Admin panel calls flows via server actions (see `src/app/admin/*` pages)
-- **Common flows**: Translation (`translation/`), category mapping, product enrichment, import validation (see `src/ai/flows/` subdirs)
+- **Common flows**: Translation (`translation/`), category mapping, product enrichment (specs → multilingual descriptions), import validation (see `src/ai/flows/` subdirs)
+- **Usage in automation**: Refiner uses AI to enrich ProductCore with descriptions & quality scores; Harvester may call translation flows for multilingual content
+
+## Notifications system (M5)
+- **In-app**: NotificationBell component in navbar; polls every 30s for unread notifications; auto-marks as read on click
+- **Email**: SendGrid integration (`SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` env vars); graceful fallback if unconfigured
+- **Types**: `comment_reply` (auto-triggered), `system` (price alerts), `new_deal`, `deal_approved`, `deal_rejected`
+- **Cloud Function triggers**: `notifyOnDealCommentReply`, `notifyOnProductCommentReply` (okazje-plus/src/index.ts); create notification on parent comment author reply
+- **Data layer**: `createNotification()`, `getNotifications()`, `getUnreadNotifications()`, `markNotificationAsRead()` in `src/lib/data.ts`
+- **When adding**: Use existing notification types; pass metadata for rich content; ensure email templates in Cloud Function match type
 
 ## Cloud Functions (`okazje-plus/`)
 - **Location**: Separate Node.js package in `okazje-plus/` with own `package.json` and `tsconfig.json`
@@ -42,7 +61,7 @@ Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid ch
 - **Deployment**: `npm run deploy:functions` or `npm run deploy:prod` (builds both Next.js and Functions)
 - **Local dev**: Functions run via Firebase Emulator; `firebase emulators:start` for full local stack
 - **Build**: Separate `tsconfig.json` in `okazje-plus/`; must `npm install` inside subfolder before first deploy
-- **Notifications**: M5 implemented auto-notification triggers for comment replies + email integration (SendGrid)
+- **Notifications (M5)**: Auto-notification triggers for comment replies + email integration (SendGrid)
 
 ## Internationalization (i18n)
 - **Framework**: next-intl with route-based locales (`/pl/`, `/en/`, `/de/`)
@@ -143,7 +162,9 @@ ALIEXPRESS_APP_KEY=xxx             # Marketplace integration
 ## Documentation
 - **Index**: `docs/INDEX.md` (comprehensive guide to all docs, updated Dec 2025)
 - **Quick start**: `docs/QUICK_START.md`
-- **Latest milestone**: `docs/milestones/M5_COMPLETION_SUMMARY.md` (notifications + price alerts)
+- **Latest milestones**: 
+  - M6 (Dec 2025): `docs/milestones/M6_PRODUCT_CENTRIC_ARCHITECTURE.md` + `M6_EXECUTION_SUMMARY.md` (Product-centric model, smart harvester/refiner, identity matching)
+  - M5 (Nov 2025): `docs/milestones/M5_COMPLETION_SUMMARY.md` (notifications + price alerts + email integration)
 - **API guides**: `docs/api/*` (AliExpress, Allegro, Vertex AI)
 - **Testing**: `docs/testing/tests-quickstart.md`
 - **Troubleshooting**: `docs/troubleshooting/IMPORT_JOBS_NOT_WORKING.md`
