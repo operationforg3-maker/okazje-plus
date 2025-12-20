@@ -510,10 +510,14 @@ export interface ProductImportMetadata {
 }
 
 // ============================================
-// Deal Type (Okazje)
+// Deal Type (Okazje) - LEGACY
 // ============================================
 
-export interface Deal {
+/**
+ * @deprecated Use DealM6 (line 2314) for new code. This legacy interface kept for Cloud Functions compatibility.
+ * Will be removed after Cloud Functions migration to M6 schema.
+ */
+export interface DealLegacy {
   id: string;
   
   // M4: Multi-language fields (STANDARD - all deals must use LocalizedText)
@@ -667,6 +671,12 @@ export interface Deal {
     expiryCheckedAt?: string;
   };
 }
+
+/**
+ * Type alias for backward compatibility. Cloud Functions use DealLegacy schema.
+ * New M6 code should use DealM6 interface (line 2314+).
+ */
+export type Deal = DealLegacy;
 
 // Reszta interfejsów pozostaje bez zmian
 export interface ProductRatingCard {
@@ -2307,11 +2317,12 @@ export interface ProductCore {
 }
 
 /**
- * Deal - The mutable offer/listing entity
+ * DealM6 - The mutable offer/listing entity (M6 Product-Centric Architecture)
  * Represents a specific price point from a specific seller
  * Always links to exactly one ProductCore
+ * Use this interface for new M6 code. Legacy code uses DealLegacy/Deal.
  */
-export interface Deal {
+export interface DealM6 {
   id: string;
   
   // Foreign Key

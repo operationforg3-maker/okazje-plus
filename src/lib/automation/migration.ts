@@ -20,7 +20,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Deal, Product, ProductCore, Deal as DealType } from '@/lib/types';
+import { Deal as DealLegacy, DealM6, Product, ProductCore } from '@/lib/types';
 import { calculateIdentityHash, calculateTitleHash, calculateImageHash } from '@/lib/automation/identity-matcher';
 
 interface MigrationStats {
@@ -205,17 +205,17 @@ async function getOldProducts(): Promise<Product[]> {
 /**
  * Fetch all old deals
  */
-async function getOldDeals(): Promise<Deal[]> {
+async function getOldDeals(): Promise<DealLegacy[]> {
   const ref = collection(db, 'deals');
   const q = query(ref); // Get all
   const snap = await getDocs(q);
-  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Deal));
+  return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as DealLegacy));
 }
 
 /**
  * Convert old Product to new ProductCore
  */
-function convertProductToCore(product: Product, deals: Deal[]): ProductCore {
+function convertProductToCore(product: Product, deals: DealLegacy[]): ProductCore {
   // Find deals linked to this product
   const linkedDeals = deals.filter(
     (d) => d.linkedProductIds?.includes(product.id)
@@ -303,10 +303,10 @@ function convertProductToCore(product: Product, deals: Deal[]): ProductCore {
 /**
  * Convert old Deal to new Deal format
  */
-function convertDealToNew(oldDeal: Deal, productId: string): DealType {
+function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
   const now = new Date().toISOString();
 
-  const deal: DealType = {
+  const deal: DealM6 = {
     id: oldDeal.id,
     productId,
     price: {

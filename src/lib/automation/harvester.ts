@@ -14,7 +14,7 @@ import {
 import { db } from '@/lib/firebase';
 import {
   ProductCore,
-  Deal,
+  DealM6,
   HarvesterJob,
   IdentityMatch,
   LocalizedText,
@@ -428,7 +428,7 @@ export class SmartHarvester {
   ): Promise<string> {
     const now = new Date().toISOString();
 
-    const deal: Partial<Deal> = {
+    const deal: Partial<DealM6> = {
       productId,
       price: {
         amount: sourceProduct.price,
@@ -491,7 +491,7 @@ export class SmartHarvester {
     let bestCurrency = 'PLN';
 
     for (const dealDoc of dealsSnapshot.docs) {
-      const deal = dealDoc.data() as Deal;
+      const deal = dealDoc.data() as DealM6;
       const totalPrice = deal.price.amount + (deal.shipping.cost || 0);
       
       // TODO: Normalize currency to PLN for comparison
