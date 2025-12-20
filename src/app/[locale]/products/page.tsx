@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getRecommendedProducts, getProductsByCategory, getCategoriesWithContent, getDealById, getNavigationShowcase } from '@/lib/data';
+import { getRecommendedProducts, getProductsByCategory, getCategories, getCategoriesWithContent, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
 import ProductListCard from '@/components/product-list-card';
@@ -75,6 +75,7 @@ function ProductsPageContent() {
   });
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [showEmptyCategories, setShowEmptyCategories] = useState(false);
 
   // Wczytaj kategorie i ustaw z URL
   useEffect(() => {
@@ -82,7 +83,7 @@ function ProductsPageContent() {
       setIsLoading(true);
       try {
         const [fetchedCategories, showcaseConfig] = await Promise.all([
-          getCategoriesWithContent('products'),
+          showEmptyCategories ? getCategories() : getCategoriesWithContent('products'),
           getNavigationShowcase(),
         ]);
         
@@ -123,7 +124,7 @@ function ProductsPageContent() {
       }
     }
     fetchData();
-  }, [mainCategoryParam, subCategoryParam]);
+  }, [mainCategoryParam, subCategoryParam, showEmptyCategories]);
 
   useEffect(() => {
     try {
@@ -459,7 +460,17 @@ function ProductsPageContent() {
 
   const SidebarContent = () => (
     <div className="space-y-2">
-      <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-headline text-lg font-semibold">Kategorie</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowEmptyCategories(!showEmptyCategories)}
+          className="text-xs"
+        >
+          {showEmptyCategories ? 'Ukryj puste' : 'Pokaż wszystkie'}
+        </Button>
+      </div>
       <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
         {/* Przycisk "Wszystkie" */}
         <div className="mb-1">

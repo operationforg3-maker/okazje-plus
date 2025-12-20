@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { getHotDeals, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory } from '@/lib/data';
+import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { Deal, Category, Product } from '@/lib/types';
 import DealCard from '@/components/deal-card';
@@ -75,6 +75,7 @@ export default function DealsPage() {
   });
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [showEmptyCategories, setShowEmptyCategories] = useState(false);
 
   // Helper: unify postedAt to timestamp (ms)
   const toTimestamp = (value: any): number => {
@@ -264,7 +265,7 @@ export default function DealsPage() {
       setIsLoading(true);
       try {
         const [fetchedCategories, showcaseConfig, hotDeals] = await Promise.all([
-          getCategoriesWithContent('deals'),
+          showEmptyCategories ? getCategories() : getCategoriesWithContent('deals'),
           getNavigationShowcase(),
           getHotDeals(100), // Pobierz gorące okazje na start
         ]);
@@ -285,7 +286,7 @@ export default function DealsPage() {
       }
     }
     fetchData();
-  }, []);
+  }, [showEmptyCategories]);
 
   // Pobierz deals przy zmianie kategorii / subkategorii / wyszukiwaniu
   useEffect(() => {
@@ -562,9 +563,18 @@ export default function DealsPage() {
   // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
   const SidebarContent = () => (
     <div className="space-y-2">
-      <h2 className="font-headline text-lg font-semibold mb-4">Kategorie</h2>
-      <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
-        {/* All categories */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-headline text-lg font-semibold">Kategorie</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowEmptyCategories(!showEmptyCategories)}
+          className="text-xs"
+        >
+          {showEmptyCategories ? 'Ukryj puste' : 'Pokaż wszystkie'}
+        </Button>
+      </div>
+      <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">{/* All categories */}
         <div className="mb-1">
           <button
             ref={allCategoriesButtonRef}
