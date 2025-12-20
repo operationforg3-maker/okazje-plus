@@ -173,7 +173,7 @@ export default function M6PipelineVisualizerPage() {
                 {/* Identity Hash */}
                 <IdentityHashVisualizer
                   title="Przykład: USB-C Cable 2M Fast Charging"
-                  imageUrl="/api/placeholder?w=150&h=150"
+                  imageUrl="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' fill='%23ddd'%3E%3Crect width='150' height='150' fill='%23f5f5f5'/%3E%3Ctext x='50%25' y='50%25' font-size='14' fill='%23999' text-anchor='middle' dy='.3em'%3EProduce Image%3C/text%3E%3C/svg%3E"
                   hash="a7f3b2c1d8e9f5g6h7j8k9l0m1n2o3p4q5r6s7t8u9v0"
                 />
 
@@ -231,36 +231,44 @@ export default function M6PipelineVisualizerPage() {
             </div>
           </TabsContent>
 
-          {/* TAB: Simulation */}
+          {/* TAB: Education */}
           <TabsContent value="simulation" className="space-y-6">
             <Card className="bg-white border-0 shadow-sm">
               <CardHeader>
-                <CardTitle>Pipeline Simulation</CardTitle>
+                <CardTitle>Jak wygląda cały Pipeline?</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-slate-600">
-                  Kliknij poniżej, aby zobaczyć każdy etap pipeline'a w działaniu
-                </p>
-
-                <div className="flex gap-2 flex-wrap">
-                  {stages.map((stage, idx) => (
-                    <Button
-                      key={stage.id}
-                      onClick={() => setSimulationStage(idx)}
-                      variant={
-                        idx === simulationStage ? "default" : "outline"
-                      }
-                      size="sm"
-                    >
-                      Etap {idx + 1}
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="pt-4">
-                  <M6PipelineVisualizer
-                    stages={stages.slice(0, simulationStage + 1)}
-                  />
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <p className="text-sm text-slate-700">
+                    <strong>M6 Pipeline</strong> to sekwencja automatycznych operacji, która:
+                  </p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 text-sm mb-2">1️⃣ Fetching</h4>
+                      <p className="text-xs text-blue-800">Pobiera produkty z AliExpress, Amazon, Allegro APIs</p>
+                    </div>
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <h4 className="font-semibold text-purple-900 text-sm mb-2">2️⃣ Identity Hash</h4>
+                      <p className="text-xs text-purple-800">SHA-256(title + image_hash) → jednoznaczna identyfikacja</p>
+                    </div>
+                    <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                      <h4 className="font-semibold text-indigo-900 text-sm mb-2">3️⃣ Deduplication</h4>
+                      <p className="text-xs text-indigo-800">Szuka istniejących produktów po hash'u → reuse lub create</p>
+                    </div>
+                    <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+                      <h4 className="font-semibold text-cyan-900 text-sm mb-2">4️⃣ Firestore Persist</h4>
+                      <p className="text-xs text-cyan-800">Zapisuje ProductCore + DealM6 documents</p>
+                    </div>
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <h4 className="font-semibold text-amber-900 text-sm mb-2">5️⃣ AI Enrichment</h4>
+                      <p className="text-xs text-amber-800">Gemini 2.0 Flash generuje opisy, specs, tagi, quality score</p>
+                    </div>
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <h4 className="font-semibold text-green-900 text-sm mb-2">6️⃣ Ready for Users</h4>
+                      <p className="text-xs text-green-800">Produkty dostępne na froncie z complete metadata</p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
