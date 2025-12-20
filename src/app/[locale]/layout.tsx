@@ -148,6 +148,32 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        
+        {/* Google Analytics 4 */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-FT6DRFR25D"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-FT6DRFR25D', {
+                page_path: window.location.pathname,
+                send_page_view: true
+              });
+            `,
+          }}
+        />
+        
+        {/* Google Tag (Server-side container) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              gtag('config', 'GT-T9WXFDLK');
+            `,
+          }}
+        />
+        
         {/* hreflang alternate links (only PL live) */}
         <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="pl" />
         <link rel="alternate" href="https://okazjeplus.pl/pl/" hrefLang="x-default" />
@@ -170,8 +196,6 @@ export default async function RootLayout({
         suppressHydrationWarning
         className={cn('min-h-screen bg-background font-body antialiased')}
         style={{ WebkitOverflowScrolling: 'touch' }}>
-        <AnalyticsProvider />
-
         <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
           <AuthProvider>
             <CurrencyProvider>

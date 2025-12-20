@@ -116,9 +116,10 @@ export function Navbar() {
             <LanguageSwitcherMenu />
             <CurrencySwitcher />
             <ThemeToggle />
-            <Button asChild className="hidden lg:inline-flex rounded-full bg-primary px-4 shadow-lg shadow-primary/20">
+            {/* PRIMARY CTA: Add Deal - Now visible on md+ screens */}
+            <Button asChild className="hidden md:inline-flex rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all">
               <Link href={`${prefix}/add-deal`}>
-                Dodaj okazję
+                + Dodaj Okazję
               </Link>
             </Button>
             <Button variant="ghost" size="icon" className="relative rounded-full" asChild>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Package,
   Search,
@@ -25,7 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCollection } from "react-firebase-hooks/firestore";
-import { collection } from "firebase/firestore";
+import { collection, doc, query, updateDoc, where } from "firebase/firestore";
 import { db, functions } from '@/lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { Category } from '@/lib/types';
@@ -46,6 +47,109 @@ type AliExpressProduct = {
 
 type ImportState = 'idle' | 'searching' | 'previewing' | 'importing' | 'completed';
 
+export type AutopilotProfile = {
+  id: string;
+  name?: string;
+  enabled?: boolean;
+  maxItemsPerRun?: number;
+};
+
+export function AutopilotCard({
+  profiles,
+  loading,
+  running,
+  message,
+  onToggle,
+  onRunProfile,
+  onRunAll,
+}: {
+  profiles: AutopilotProfile[];
+  loading: boolean;
+  running: boolean;
+  message: string | null;
+  onToggle: (profileId: string, enabled: boolean) => void;
+  onRunProfile: (profileId: string, maxItems?: number) => void;
+  onRunAll: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle>Autopilot AliExpress</CardTitle>
+          <CardDescription>Włącz profile i uruchom hurtowo (jak cron)</CardDescription>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={onRunAll} disabled={running || loading}>
+            {running ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Uruchom autopilota teraz
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {message && (
+          <Alert>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="border rounded-md">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Profil</TableHead>
+                <TableHead>Max / run</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Akcje</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-sm text-muted-foreground">Ładowanie profili…</TableCell>
+                </TableRow>
+              )}
+              {!loading && profiles.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-sm text-muted-foreground">Brak profili AliExpress</TableCell>
+                </TableRow>
+              )}
+              {profiles.map((profile) => (
+                <TableRow key={profile.id}>
+                  <TableCell className="font-medium">{profile.name || profile.id}</TableCell>
+                  <TableCell>{profile.maxItemsPerRun || 50}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={!!profile.enabled}
+                        onCheckedChange={(v) => onToggle(profile.id, Boolean(v))}
+                        data-testid={`toggle-${profile.id}`}
+                      />
+                      <Badge variant={profile.enabled ? 'default' : 'outline'}>
+                        {profile.enabled ? 'Aktywny' : 'Wyłączony'}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={running}
+                      onClick={() => onRunProfile(profile.id, profile.maxItemsPerRun || 50)}
+                      data-testid={`run-${profile.id}`}
+                    >
+                      Uruchom teraz
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AliExpressImporter() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState('');
@@ -57,6 +161,8 @@ export default function AliExpressImporter() {
   const [categoryMapping, setCategoryMapping] = useState<{ [productId: string]: { main: string; sub: string } }>({});
   const [productDetails, setProductDetails] = useState<{ [productId: string]: any }>({});
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
+  const [autopilotRunning, setAutopilotRunning] = useState(false);
+  const [autopilotMessage, setAutopilotMessage] = useState<string | null>(null);
 
   // Health check state
   const [health, setHealth] = useState<{
@@ -89,6 +195,76 @@ export default function AliExpressImporter() {
   // Pobieranie kategorii
   const [categoriesSnapshot] = useCollection(collection(db, 'categories'));
   const categoriesData: Category[] = categoriesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() } as Category)) || [];
+
+  // Import profiles (AliExpress only) for autopilot controls
+  const [profilesSnapshot, profilesLoading] = useCollection(
+    query(collection(db, 'importProfiles'), where('vendorId', '==', 'aliexpress'))
+  );
+  const importProfiles: Array<{ id: string; name?: string; enabled?: boolean; maxItemsPerRun?: number; mapping?: any; filters?: any; }>
+    = profilesSnapshot?.docs.map(doc => ({ id: doc.id, ...doc.data() })) || [];
+
+  const toggleProfileEnabled = async (profileId: string, enabled: boolean) => {
+    try {
+      await updateDoc(doc(db, 'importProfiles', profileId), {
+        enabled,
+        updatedAt: new Date().toISOString(),
+      });
+      toast.success(`Profil ${enabled ? 'włączony' : 'wyłączony'}`);
+    } catch (e: any) {
+      console.error('Enable toggle failed', e);
+      toast.error('Nie udało się zaktualizować profilu');
+    }
+  };
+
+  const runProfileNow = async (profileId: string, maxItems?: number) => {
+    setAutopilotRunning(true);
+    setAutopilotMessage(null);
+    try {
+      const res = await fetch('/api/admin/imports/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId, maxItems }),
+      });
+
+      const body = await res.json();
+      if (!res.ok || !body?.success) {
+        throw new Error(body?.error || body?.message || 'Import nie powiódł się');
+      }
+
+      const msg = body?.importRunId
+        ? `Import uruchomiony (run ${body.importRunId})`
+        : 'Import uruchomiony';
+      setAutopilotMessage(msg);
+      toast.success(msg);
+    } catch (e: any) {
+      const message = e?.message || 'Import nieudany';
+      setAutopilotMessage(message);
+      toast.error(message);
+    } finally {
+      setAutopilotRunning(false);
+    }
+  };
+
+  const runAutopilotAll = async () => {
+    setAutopilotRunning(true);
+    setAutopilotMessage(null);
+    try {
+      const res = await fetch('/api/admin/autopilot/run', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body?.error || 'Autopilot nie powiódł się');
+      }
+      const summary = `Autopilot: ${body.successful || 0}/${body.total || 0} profili`; 
+      setAutopilotMessage(summary);
+      toast.success(summary);
+    } catch (e: any) {
+      const message = e?.message || 'Autopilot nieudany';
+      setAutopilotMessage(message);
+      toast.error(message);
+    } finally {
+      setAutopilotRunning(false);
+    }
+  };
 
   // Mock search results - w produkcji to będzie prawdziwe API call
   const mockSearchResults: AliExpressProduct[] = [
@@ -485,6 +661,16 @@ export default function AliExpressImporter() {
           </Alert>
         )}
       </div>
+
+      <AutopilotCard
+        profiles={importProfiles}
+        loading={profilesLoading}
+        running={autopilotRunning}
+        message={autopilotMessage}
+        onToggle={toggleProfileEnabled}
+        onRunProfile={runProfileNow}
+        onRunAll={runAutopilotAll}
+      />
 
       {/* Search Section */}
       <Card>

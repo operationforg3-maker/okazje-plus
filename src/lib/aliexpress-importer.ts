@@ -14,6 +14,7 @@ import { adminDb } from './firebase-admin';
 import { Product, Deal, ImportRun, ImportItemLog, ImportError, ImportProfile } from './types';
 import { sanitizeProductPayload, sanitizeDealPayload } from './sanitizers';
 import { logger } from './logger';
+import { convertPrice } from './fx';
 
 export interface AliExpressImportConfig {
   profileId: string;
@@ -46,27 +47,6 @@ export interface AliExpressImportResult {
     aiEnriched: number;
   };
   errors: ImportError[];
-}
-
-/**
- * Currency conversion rates
- * TODO: Replace with live API (e.g., exchangerate-api.com or ECB)
- * Current rates are approximate and should be updated regularly
- * Last updated: 2025-12-17
- */
-const CURRENCY_RATES: Record<string, Record<string, number>> = {
-  USD: { PLN: 4.0, EUR: 0.92, USD: 1.0 },
-  PLN: { PLN: 1.0, EUR: 0.23, USD: 0.25 },
-  EUR: { PLN: 4.35, EUR: 1.0, USD: 1.09 },
-};
-
-/**
- * Convert price from one currency to another
- */
-function convertPrice(amount: number, from: string, to: string): number {
-  if (from === to) return amount;
-  const rate = CURRENCY_RATES[from]?.[to] || 1.0;
-  return Math.round(amount * rate * 100) / 100;
 }
 
 /**
@@ -210,9 +190,10 @@ export async function importFromAliExpress(
     logger.info('Searching AliExpress products', { query: searchQuery });
 
     // Use affiliate hot products API for better quality
+    const maxItems = config.maxItems || profile.maxItemsPerRun || 50;
     const searchResponse = await client.getAffiliateHotProducts(
       config.categoryFilter ? [config.categoryFilter] : undefined,
-      config.maxItems || 50
+      maxItems
     );
 
     // Parse response (structure varies by API method)
@@ -229,13 +210,24 @@ export async function importFromAliExpress(
     // Update progress
     await importRunRef.update({
       'stats.fetched': result.stats.fetched,
-      'progress.total': products.length,
+      'progress.total': Math.min(products.length, maxItems),
       'progress.phase': 'processing',
     });
 
+    const filterConfig = {
+      minPrice: config.minPrice ?? profile.filters?.minPrice,
+      maxPrice: config.maxPrice ?? profile.filters?.maxPrice,
+      minRating: config.minRating ?? profile.filters?.minRating,
+      minOrders: config.minOrders ?? profile.filters?.minOrders,
+      minDiscount: config.minDiscount ?? profile.filters?.minDiscount,
+    };
+
+    // Apply maxItems slicing to guard against API overfetch
+    const productsToProcess = products.slice(0, maxItems);
+
     // Process each product
-    for (let i = 0; i < products.length; i++) {
-      const rawProduct = products[i];
+    for (let i = 0; i < productsToProcess.length; i++) {
+      const rawProduct = productsToProcess[i];
       const originalId = String(rawProduct.product_id || rawProduct.productId || rawProduct.item_id || '');
       
       if (!originalId) {
@@ -250,6 +242,59 @@ export async function importFromAliExpress(
       }
 
       try {
+        // Extract and normalize product data
+        const title = rawProduct.product_title || rawProduct.title || rawProduct.item_title || '';
+        const price = Number(rawProduct.target_sale_price || rawProduct.sale_price || 0);
+        const originalPrice = Number(rawProduct.target_original_price || rawProduct.original_price || null);
+        const currency = rawProduct.target_sale_price_currency || 'USD';
+        // Convert AliExpress rating (0-100 scale) to standard 0-5 scale
+        const rating = rawProduct.evaluate_rate ? parseFloat(rawProduct.evaluate_rate) / 20 : 0;
+        const orders = rawProduct.lastest_volume || rawProduct.volume || rawProduct.orders || 0;
+        
+        // Convert price to PLN using live FX
+        const pricePLN = await convertPrice(price, currency, 'PLN');
+        const originalPricePLN = originalPrice ? await convertPrice(originalPrice, currency, 'PLN') : undefined;
+
+        // Calculate discount
+        const discountPercent = originalPrice && price < originalPrice
+          ? Math.round(((originalPrice - price) / originalPrice) * 100)
+          : 0;
+
+        // Apply filters early to avoid unnecessary writes
+        const filterFailures: string[] = [];
+        if (filterConfig.minPrice && pricePLN < filterConfig.minPrice) {
+          filterFailures.push(`minPrice:${filterConfig.minPrice}`);
+        }
+        if (filterConfig.maxPrice && pricePLN > filterConfig.maxPrice) {
+          filterFailures.push(`maxPrice:${filterConfig.maxPrice}`);
+        }
+        if (filterConfig.minRating && rating < filterConfig.minRating) {
+          filterFailures.push(`minRating:${filterConfig.minRating}`);
+        }
+        if (filterConfig.minOrders && orders < filterConfig.minOrders) {
+          filterFailures.push(`minOrders:${filterConfig.minOrders}`);
+        }
+        if (filterConfig.minDiscount && discountPercent < filterConfig.minDiscount) {
+          filterFailures.push(`minDiscount:${filterConfig.minDiscount}`);
+        }
+
+        if (filterFailures.length > 0) {
+          result.stats.skipped++;
+          await logImportItem(result.importRunId, {
+            originalId,
+            action: 'skipped',
+            itemType: 'product',
+            reason: `Filtered: ${filterFailures.join(',')}`,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              title,
+              price: pricePLN,
+              category: profile.mapping.targetMainCategory,
+            },
+          });
+          continue;
+        }
+
         // Check for duplicates
         const existingId = await checkDuplicate(originalId, 'aliexpress', 'products');
         if (existingId) {
@@ -268,24 +313,6 @@ export async function importFromAliExpress(
           });
           continue;
         }
-
-        // Extract and normalize product data
-        const title = rawProduct.product_title || rawProduct.title || rawProduct.item_title || '';
-        const price = Number(rawProduct.target_sale_price || rawProduct.sale_price || 0);
-        const originalPrice = Number(rawProduct.target_original_price || rawProduct.original_price || null);
-        const currency = rawProduct.target_sale_price_currency || 'USD';
-        // Convert AliExpress rating (0-100 scale) to standard 0-5 scale
-        const rating = rawProduct.evaluate_rate ? parseFloat(rawProduct.evaluate_rate) / 20 : 0;
-        const orders = rawProduct.lastest_volume || rawProduct.volume || rawProduct.orders || 0;
-        
-        // Convert price to PLN
-        const pricePLN = convertPrice(price, currency, 'PLN');
-        const originalPricePLN = originalPrice ? convertPrice(originalPrice, currency, 'PLN') : undefined;
-
-        // Calculate discount
-        const discountPercent = originalPrice && price < originalPrice
-          ? Math.round(((originalPrice - price) / originalPrice) * 100)
-          : 0;
 
         // Extract images
         const mainImage = rawProduct.product_main_image_url || rawProduct.image_url || '';
@@ -351,7 +378,7 @@ export async function importFromAliExpress(
             orders,
             merchant: rawProduct.shop_title || rawProduct.shop_name,
             merchantId: rawProduct.shop_id,
-            currencyRate: CURRENCY_RATES[currency]?.PLN || 1.0,
+            currencyRate: pricePLN && price ? pricePLN / price : 1.0,
             priceHistory: [
               {
                 price: pricePLN,

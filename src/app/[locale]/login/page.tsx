@@ -30,6 +30,26 @@ export default function LoginPage() {
           </p>
         </div>
         <LoginForm />
+        
+        {/* Sign up + Forgot Password Links */}
+        <div className="space-y-3 text-center">
+          <p className="text-sm text-muted-foreground">
+            {t('noAccount')}{' '}
+            <Link
+              href="/register"
+              className="font-semibold text-primary hover:underline underline-offset-2"
+            >
+              {t('signUp')}
+            </Link>
+          </p>
+          <Link
+            href="/forgot-password"
+            className="block text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+          >
+            {t('forgotPassword')}
+          </Link>
+        </div>
+        
         <p className="px-8 text-center text-sm text-muted-foreground">
           {t('termsText')}{' '}
           <Link

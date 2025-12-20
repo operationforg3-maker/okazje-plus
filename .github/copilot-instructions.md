@@ -35,9 +35,13 @@ Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid ch
 
 ## Cloud Functions (`okazje-plus/`)
 - **Location**: Separate Node.js package in `okazje-plus/` with own `package.json` and `tsconfig.json`
+- **Monorepo structure**: Subfolder acts like separate project but imports types from parent (`../../src/lib/types`)
 - **Shared types**: Import from `../../src/lib/types` (NOT duplicated). Respect `firestore.rules` in Function logic
+- **Entry point**: `okazje-plus/src/index.ts` (2000+ lines) exports all triggers/callables
 - **Triggers**: Document triggers (comments → notifications), scheduled jobs (price monitoring), callable functions (CSV import)
 - **Deployment**: `npm run deploy:functions` or `npm run deploy:prod` (builds both Next.js and Functions)
+- **Local dev**: Functions run via Firebase Emulator; `firebase emulators:start` for full local stack
+- **Build**: Separate `tsconfig.json` in `okazje-plus/`; must `npm install` inside subfolder before first deploy
 - **Notifications**: M5 implemented auto-notification triggers for comment replies + email integration (SendGrid)
 
 ## Internationalization (i18n)
@@ -58,6 +62,7 @@ Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid ch
 ```bash
 npm run dev              # Next.js dev server (:9002) with Turbopack
 npm run genkit:dev       # Genkit UI for testing AI flows (:4000)
+npm run genkit:watch     # Genkit with hot reload
 npm run typecheck        # TypeScript validation (strict mode)
 npm run lint             # ESLint (auto-fix with --fix)
 npm run test             # Jest unit tests (*.test.ts, *.spec.ts)
@@ -74,6 +79,25 @@ npm run deploy:prod      # Deploy everything
 - **Unit tests**: Jest config in `jest.config.js`; colocate with source files
 - **E2E tests**: Playwright config in `playwright.config.ts`; uses port 9002 by default (configurable via `NEXT_PORT`)
 - **Test patterns**: Always test status filters, admin role checks, cache invalidation, optimistic UI rollback
+
+## Debugging utilities (root-level scripts)
+Root directory contains 30+ debugging scripts for common troubleshooting tasks. These bypass UI and directly inspect Firestore:
+- **Import debugging**: `check-imports.mjs`, `check-job-status.js`, `debug-import-flow.js`, `check-specific-job.mjs`
+- **Data inspection**: `check-products.mjs`, `check-categories.mjs`, `check-titles.js`, `verify_products.js`
+- **Logs analysis**: `check-full-logs.mjs`, `show-full-logs.mjs`, `inspect-logs.mjs`, `check-firestore-logs.mjs`
+- **Job management**: `clean-stuck-jobs.mjs`, `trigger-processor.mjs`, `run-processor.mjs`
+- **Quick checks**: `simple_check.js`, `check_batch.js`, `fetch_products.js`
+- **Pattern**: Most scripts use `.mjs` (ESM) or `.js` (CommonJS); run with `node <script>` or `tsx <script>` for TypeScript
+- **Service account**: Scripts use `serviceAccountKey.json` for Firebase Admin SDK access (never commit this file!)
+- **When to use**: Direct database inspection, bypassing Next.js API layer; analyzing production data; emergency fixes
+
+## API routes & server actions
+- **Route pattern**: API routes in `src/app/api/**/route.ts` export `GET`, `POST`, etc. as named async functions
+- **Auth in routes**: Import `getServerAuthSession()` from `src/lib/auth-server.ts`; call at top of handler to get session
+- **Server actions**: Colocated with page components or in `src/app/actions/*.ts`; always start with `'use server'` directive
+- **Admin endpoints**: Prefix admin-only routes with `/api/admin/*`; use `requireAdmin()` helper before logic
+- **CORS**: Not explicitly configured — relies on Next.js defaults. For external API access, add headers manually
+- **Error handling**: Throw `HttpsError` in Cloud Functions; return `NextResponse` with status codes in API routes
 
 ## Environment variables (`.env.local`)
 **Required**:

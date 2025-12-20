@@ -120,6 +120,12 @@ env:
     secret: CRON_SECRET
     availability:
       - RUNTIME
+  
+  # FX API for live currency conversion
+  - variable: FX_API_URL
+    value: https://api.exchangerate.host/latest
+    availability:
+      - RUNTIME
 
   # Typesense (wyszukiwarka) – host/port/protocol używane także w build (embed do klienta)
   - variable: NEXT_PUBLIC_TYPESENSE_HOST

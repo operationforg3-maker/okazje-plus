@@ -101,6 +101,30 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               </div>
             </form>
 
+            {/* Primary CTAs - Browse Categories + Add Deal */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto pt-4">
+              <Button size="lg" variant="outline" className="rounded-full font-semibold" asChild>
+                <Link href="/deals">
+                  <Flame className="mr-2 h-5 w-5" />
+                  Gorące okazje
+                </Link>
+              </Button>
+              
+              <Button size="lg" className="rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold text-white shadow-lg" asChild>
+                <Link href="/add-deal">
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  Dodaj okazję
+                </Link>
+              </Button>
+              
+              <Button size="lg" variant="outline" className="rounded-full font-semibold" asChild>
+                <Link href="/products">
+                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  Produkty
+                </Link>
+              </Button>
+            </div>
+
             {/* Quick Stats - Real time from database */}
             <div className="max-w-3xl mx-auto">
               <RealTimeStats />

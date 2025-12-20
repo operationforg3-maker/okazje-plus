@@ -842,18 +842,45 @@ export default function DealCard({ deal }: DealCardProps) {
           </Button>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Button 
+            variant={isFavorited ? "default" : "outline"} 
+            size="sm" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFavorite();
+            }}
+            aria-label={isFavorited ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
+            disabled={isFavoriteLoading}
+            className={isFavorited ? "bg-red-500 hover:bg-red-600" : ""}
+          >
+            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
+          </Button>
           <ShareButton 
             type="deal" 
             itemId={deal.id} 
             title={dealTitle || 'Okazja'} 
             url={`/deals/${deal.id}`} 
-            variant="ghost" 
+            variant="outline" 
             size="sm" 
             onShared={(platform) => handleShareTrack(platform)} 
           />
           <Button 
-            variant="ghost" 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toast.success("📢 Będziesz powiadomiony o zmianach ceny!");
+            }}
+            aria-label="Alert cenowy"
+            className="gap-1"
+          >
+            <AlertTriangle className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
             size="sm" 
             onClick={(e) => {
               e.preventDefault();

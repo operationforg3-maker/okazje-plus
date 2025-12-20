@@ -562,56 +562,80 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
 
           {/* Action Buttons Row */}
           <div className={cn(
-            "flex items-center gap-2",
+            "flex flex-col gap-2",
             viewMode === 'list' ? "mt-auto" : "mt-auto pt-2"
           )}>
             
-            {/* Add to Cart Button (Primary CTA) */}
+            {/* PRIMARY: Buy Now Button (Direct Affiliate) */}
             <Button
-              onClick={handleAddToCart}
-              disabled={isAddingToCart || inCart}
-              className={cn(
-                "flex-1 font-semibold transition-all h-10 text-sm",
-                inCart 
-                  ? "bg-green-500 hover:bg-green-600 text-white" 
-                  : "bg-primary hover:bg-primary/90"
-              )}
-              size="default"
+              asChild
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold text-sm h-10 shadow-md hover:shadow-lg transition-all"
             >
-              {isAddingToCart ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
-                  Dodawanie...
-                </>
-              ) : inCart ? (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  W koszyku
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="w-4 h-4 mr-2" />
-                  Do wspólnego koszyka
-                </>
-              )}
+              <a 
+                href={product.affiliateUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  trackFirestoreClick(product.id, 'product', 'buy_now_button');
+                }}
+              >
+                🚀 Kup teraz
+                <ExternalLink className="w-3 h-3 ml-2" />
+              </a>
             </Button>
 
-            {viewMode !== 'list' && (
-              /* Compare Button */
+            <div className={cn(
+              "flex items-center gap-2",
+              viewMode === 'list' ? "" : ""
+            )}>
+              {/* SECONDARY: Add to Shared Cart Button */}
               <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  addToComparison({ ...product, type: 'product' });
-                }}
-                className="px-3 border-2 border-strong hover:bg-surface-hover bg-surface"
+                onClick={handleAddToCart}
+                disabled={isAddingToCart || inCart}
+                className={cn(
+                  "flex-1 font-semibold transition-all h-9 text-xs",
+                  inCart 
+                    ? "bg-green-500 hover:bg-green-600 text-white" 
+                    : "bg-primary hover:bg-primary/90"
+                )}
+                size="default"
               >
-                <Scale className="w-4 h-4 mr-2" />
-                Porównaj
+                {isAddingToCart ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent mr-2" />
+                    Dodawanie...
+                  </>
+                ) : inCart ? (
+                  <>
+                    <Check className="w-3 h-3 mr-2" />
+                    W koszyku
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-3 h-3 mr-2" />
+                    Do koszyka
+                  </>
+                )}
               </Button>
-            )}
+
+              {viewMode !== 'list' && (
+                /* Compare Button */
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addToComparison({ ...product, type: 'product' });
+                  }}
+                  className="px-2 h-9 border-2 border-strong hover:bg-surface-hover bg-surface"
+                >
+                  <Scale className="w-3 h-3 mr-1" />
+                  Porównaj
+                </Button>
+              )}
+            </div>
 
             {/* Favorite Button */}
             <TooltipProvider>

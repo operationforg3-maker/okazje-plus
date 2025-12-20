@@ -13,24 +13,11 @@ import { logger } from '@/lib/logger';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron authorization
+    // Verify cron authorization (Cloud Scheduler sends OIDC token)
     const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (!cronSecret) {
-      logger.error('CRON_SECRET not configured');
-      return NextResponse.json(
-        { error: 'Service misconfigured' },
-        { status: 500 }
-      );
-    }
-    
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      logger.warn('Unauthorized cron request', { authHeader });
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!authHeader) {
+      logger.warn('Unauthorized cron request: missing auth header');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     logger.info('Starting scheduled AliExpress sync');
