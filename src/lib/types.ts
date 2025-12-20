@@ -2234,3 +2234,250 @@ export interface SocialPostLog {
   userId?: string;
   timestamp: string;
 }
+
+// ============================================
+// M6: PRODUCT-CENTRIC ARCHITECTURE (NEW)
+// Separation of immutable Products from mutable Deals/Offers
+// ============================================
+
+/**
+ * ProductCore - The immutable product entity
+ * Represents a unique product identified by normalized specs
+ * Maps to multiple Deals (offers) from different sources
+ */
+export interface ProductCore {
+  id: string;
+  
+  // Identity & Uniqueness
+  identityHash: string; // SHA-256 of normalized title + primary image hash
+  // Prevents duplicate products from different sources
+  
+  // Product Information
+  title: LocalizedText; // Multi-language title
+  shortDescription: LocalizedText; // Concise 1-2 sentence description
+  fullDescription: LocalizedText; // Detailed description (optional, generated)
+  
+  // Specifications (Standardized Key-Value)
+  specs: Record<string, string>; // e.g., {"RAM": "16GB", "Storage": "512GB SSD", "Screen": "15.6\" OLED"}
+  
+  // Taxonomy
+  mainCategorySlug: string;
+  subCategorySlug: string;
+  subSubCategorySlug?: string;
+  
+  // Media
+  images: string[]; // Gallery URLs (high-res)
+  primaryImageHash?: string; // Hash of primary image for identity matching
+  
+  // Ratings & Reviews
+  reviewsSummary: LocalizedText; // AI-generated pros/cons summary (e.g., "Users praise durability and performance...")
+  rating: {
+    score: number; // 0-5
+    count: number; // Number of reviews/ratings
+    provider: 'mixed' | 'aliexpress' | 'amazon' | 'allegro' | 'users' | 'editorial';
+  };
+  
+  // Best Price (Calculated Field - Updated when deals change)
+  bestPrice: {
+    amount: number;
+    currency: 'USD'; // Store in USD for consistency
+  };
+  
+  // Linked Offers
+  linkedDealIds: string[]; // Foreign keys to Deal documents
+  
+  // SEO & Search
+  searchTags: string[]; // For Typesense/full-text search
+  seoTitle?: string;
+  seoDescription?: string;
+  
+  // Status & Moderation
+  status: 'draft' | 'pending_approval' | 'approved' | 'rejected';
+  
+  // Metadata
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+  createdBy?: string; // UID of creator
+  approvedBy?: string; // UID of approver
+  
+  // Quality Metrics
+  aiQualityScore?: number; // 0-100
+  confidence?: number; // 0-1 confidence in specs/data quality
+  warnings?: string[]; // e.g., ["missing_specs", "low_rating_count"]
+}
+
+/**
+ * Deal - The mutable offer/listing entity
+ * Represents a specific price point from a specific seller
+ * Always links to exactly one ProductCore
+ */
+export interface Deal {
+  id: string;
+  
+  // Foreign Key
+  productId: string; // References ProductCore.id (required)
+  
+  // Pricing (Omnibus Directive Compliance)
+  price: {
+    amount: number;
+    currency: string; // USD, PLN, EUR, etc.
+  };
+  lowestPriceIn30Days?: number; // Omnibus Directive: lowest price last 30 days
+  originalPrice?: number; // Price before discount (for compliance)
+  discount?: {
+    amount?: number;
+    percentage?: number;
+  };
+  
+  // Shipping
+  shipping: {
+    cost: number; // In same currency as price
+    timeDays: number; // Estimated delivery in days
+    method?: string; // e.g., "Standard", "Express"
+    fromCountry?: string;
+  };
+  
+  // Source & Affiliate
+  source: 'aliexpress' | 'amazon' | 'allegro' | 'ebay' | 'manual';
+  affiliateLink: string; // Generated with tracking code
+  merchantName?: string;
+  merchantRating?: number; // 0-5
+  
+  // Deal Properties
+  title: LocalizedText; // Offer-specific title (may differ from product)
+  dealType?: 'sale' | 'coupon' | 'flash_deal' | 'cashback' | 'regular';
+  couponCode?: string;
+  
+  // Availability
+  stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order';
+  stockLevel?: number;
+  
+  // Expiry
+  expiryDate?: string; // ISO date
+  isActive: boolean; // Whether deal is still valid
+  
+  // Price History (Time-series for Omnibus compliance)
+  priceHistory: Array<{
+    date: string; // ISO date YYYY-MM-DD
+    price: number;
+    currency: string;
+    lowestPrice?: number; // Lowest price available that day
+  }>;
+  
+  // Engagement
+  voteCount: number;
+  temperature: number; // Heat algorithm based on votes
+  commentsCount: number;
+  
+  // Moderation
+  status: 'draft' | 'approved' | 'rejected';
+  
+  // Metadata
+  createdAt: string; // ISO timestamp
+  updatedAt: string; // ISO timestamp
+  createdBy?: string; // UID of user who posted
+  approvedBy?: string; // UID of moderator
+  
+  // Import/Source Info
+  sourceProductId?: string; // ID in source system (e.g., AliExpress product ID)
+  sourceUrl: string; // Original product URL
+}
+
+/**
+ * HarvesterJob - Tracks product harvesting operations
+ * Used to monitor import progress and prevent duplicates
+ */
+export interface HarvesterJob {
+  id: string;
+  
+  // Job Metadata
+  status: 'running' | 'completed' | 'failed' | 'paused';
+  source: 'aliexpress' | 'amazon' | 'allegro' | 'manual';
+  
+  // Input Parameters
+  query: string; // Search term or category ID
+  maxResults: number;
+  
+  // Results
+  productsFound: number;
+  productsCreated: number;
+  dealsCreated: number;
+  duplicatesSkipped: number;
+  errors: Array<{
+    productId?: string;
+    message: string;
+    timestamp: string;
+  }>;
+  
+  // Progress
+  startedAt: string; // ISO timestamp
+  completedAt?: string; // ISO timestamp
+  lastUpdatedAt: string; // ISO timestamp
+  
+  // Logs
+  logs: Array<{
+    level: 'info' | 'warn' | 'error';
+    message: string;
+    timestamp: string;
+    details?: any;
+  }>;
+}
+
+/**
+ * RefinerJob - Tracks AI enrichment operations
+ * Used to clean specs, generate descriptions, etc.
+ */
+export interface RefinerJob {
+  id: string;
+  
+  // Job Metadata
+  status: 'running' | 'completed' | 'failed' | 'paused';
+  
+  // Input
+  productIds: string[]; // Products to enrich
+  refinationType: 'specs_cleanup' | 'description_generation' | 'review_summary' | 'full_enrichment';
+  
+  // Results
+  productsProcessed: number;
+  productsSuccessful: number;
+  productsFailed: number;
+  
+  // Progress
+  startedAt: string; // ISO timestamp
+  completedAt?: string; // ISO timestamp
+  lastUpdatedAt: string; // ISO timestamp
+  
+  // Logs
+  logs: Array<{
+    productId: string;
+    status: 'success' | 'failed';
+    message: string;
+    timestamp: string;
+    details?: any;
+  }>;
+}
+
+/**
+ * IdentityMatch - For product deduplication
+ * Stores calculated hashes for efficient matching
+ */
+export interface IdentityMatch {
+  id: string;
+  
+  // Hash Values
+  titleHash: string; // Normalized title hash
+  primaryImageHash: string; // Primary image hash
+  combinedHash: string; // SHA-256(titleHash + imageHash) = Identity
+  
+  // Product Reference
+  productId: string; // Links to ProductCore
+  
+  // Source Info
+  source: string; // Where this hash came from
+  sourceProductId?: string; // ID in source system
+  
+  // Quality
+  confidence: number; // 0-1 confidence in match
+  
+  createdAt: string;
+}

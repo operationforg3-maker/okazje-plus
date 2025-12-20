@@ -2257,3 +2257,290 @@ export async function getAiCommandHistory(limitCount: number = 20) {
   }));
 }
 
+// ============================================
+// M6: PRODUCT-CENTRIC ARCHITECTURE QUERIES
+// ============================================
+
+/**
+ * Get a ProductCore by ID
+ */
+export async function getProductCore(productId: string): Promise<any | null> {
+  try {
+    const docRef = doc(db, "product_cores", productId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  } catch (err) {
+    console.error("Error fetching product core:", err);
+    return null;
+  }
+}
+
+/**
+ * Get ProductCore with all linked Deals
+ */
+export async function getProductWithDeals(productId: string): Promise<{ product: any; deals: any[] } | null> {
+  try {
+    const product = await getProductCore(productId);
+    if (!product) return null;
+
+    const dealsRef = collection(db, "deals");
+    const q = query(dealsRef, where("productId", "==", productId), where("status", "==", "approved"));
+    const dealsSnap = await getDocs(q);
+    const deals = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    return { product, deals };
+  } catch (err) {
+    console.error("Error fetching product with deals:", err);
+    return null;
+  }
+}
+
+/**
+ * Get all ProductCores (with optional status filter)
+ */
+export async function getAllProductCores(
+  status?: string,
+  limit: number = 100
+): Promise<any[]> {
+  try {
+    const ref = collection(db, "product_cores");
+    const constraints = [orderBy("updatedAt", "desc"), limit(limit)];
+
+    if (status) {
+      constraints.unshift(where("status", "==", status));
+    }
+
+    const q = query(ref, ...constraints);
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("Error fetching product cores:", err);
+    return [];
+  }
+}
+
+/**
+ * Get Deals for a specific ProductCore
+ */
+export async function getDealsForProduct(productId: string): Promise<any[]> {
+  try {
+    const dealsRef = collection(db, "deals");
+    const q = query(
+      dealsRef,
+      where("productId", "==", productId),
+      where("status", "==", "approved"),
+      orderBy("price.amount", "asc") // Sort by price ascending (best deals first)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("Error fetching deals for product:", err);
+    return [];
+  }
+}
+
+/**
+ * Get best (lowest) deal for a ProductCore
+ */
+export async function getBestDealForProduct(productId: string): Promise<any | null> {
+  try {
+    const deals = await getDealsForProduct(productId);
+    if (deals.length === 0) return null;
+
+    // Find the deal with the lowest total price (product + shipping)
+    const bestDeal = deals.reduce((best, current) => {
+      const bestTotal = (best.price?.amount || 0) + (best.shipping?.cost || 0);
+      const currentTotal = (current.price?.amount || 0) + (current.shipping?.cost || 0);
+      return currentTotal < bestTotal ? current : best;
+    });
+
+    return bestDeal;
+  } catch (err) {
+    console.error("Error getting best deal:", err);
+    return null;
+  }
+}
+
+/**
+ * Search ProductCores by title or specs
+ */
+export async function searchProductCores(
+  searchText: string,
+  limit: number = 20
+): Promise<any[]> {
+  try {
+    // For now, use simple substring search
+    // TODO: Integrate with Typesense for full-text search
+    const ref = collection(db, "product_cores");
+    const q = query(
+      ref,
+      where("status", "==", "approved"),
+      orderBy("updatedAt", "desc"),
+      limit(limit)
+    );
+
+    const snap = await getDocs(q);
+    const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Client-side filtering
+    const searchLower = searchText.toLowerCase();
+    return products.filter(p => {
+      const title = (p.title?.pl || "").toLowerCase();
+      const specs = Object.entries(p.specs || {})
+        .map(([k, v]) => `${k} ${v}`.toLowerCase())
+        .join(" ");
+
+      return title.includes(searchLower) || specs.includes(searchLower);
+    });
+  } catch (err) {
+    console.error("Error searching products:", err);
+    return [];
+  }
+}
+
+/**
+ * Get ProductCores by category (M6)
+ */
+export async function getProductCoresByCategory(
+  mainCategorySlug: string,
+  subCategorySlug?: string,
+  limit: number = 50
+): Promise<any[]> {
+  try {
+    const ref = collection(db, "product_cores");
+    const constraints = [
+      where("status", "==", "approved"),
+      where("mainCategorySlug", "==", mainCategorySlug),
+      orderBy("bestPrice.amount", "asc"),
+      limit(limit),
+    ];
+
+    if (subCategorySlug) {
+      constraints.push(where("subCategorySlug", "==", subCategorySlug));
+    }
+
+    const q = query(ref, ...constraints);
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("Error fetching products by category:", err);
+    return [];
+  }
+}
+
+/**
+ * Update ProductCore best price (called when deals change)
+ */
+export async function updateProductBestPrice(productId: string): Promise<void> {
+  try {
+    const deals = await getDealsForProduct(productId);
+    if (deals.length === 0) return;
+
+    // Find lowest price
+    const bestDeal = deals.reduce((best, current) => {
+      const bestPrice = (best.price?.amount || 0) + (best.shipping?.cost || 0);
+      const currentPrice = (current.price?.amount || 0) + (current.shipping?.cost || 0);
+      return currentPrice < bestPrice ? current : best;
+    });
+
+    const productRef = doc(db, "product_cores", productId);
+    await updateDoc(productRef, {
+      bestPrice: {
+        amount: (bestDeal.price?.amount || 0) + (bestDeal.shipping?.cost || 0),
+        currency: "USD",
+      },
+      linkedDealIds: deals.map((d: any) => d.id),
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("Error updating product best price:", err);
+  }
+}
+
+/**
+ * Get Harvester jobs
+ */
+export async function getHarvesterJobs(limit: number = 20): Promise<any[]> {
+  try {
+    const ref = collection(db, "harvester_jobs");
+    const q = query(ref, orderBy("startedAt", "desc"), limit(limit));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("Error fetching harvester jobs:", err);
+    return [];
+  }
+}
+
+/**
+ * Get Refiner jobs
+ */
+export async function getRefinerJobs(limit: number = 20): Promise<any[]> {
+  try {
+    const ref = collection(db, "refiner_jobs");
+    const q = query(ref, orderBy("startedAt", "desc"), limit(limit));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("Error fetching refiner jobs:", err);
+    return [];
+  }
+}
+
+/**
+ * Get a specific Harvester job
+ */
+export async function getHarvesterJob(jobId: string): Promise<any | null> {
+  try {
+    const docRef = doc(db, "harvester_jobs", jobId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  } catch (err) {
+    console.error("Error fetching harvester job:", err);
+    return null;
+  }
+}
+
+/**
+ * Merge two ProductCores (admin operation)
+ * Combines specs and redirects all deals from targetId to sourceId
+ */
+export async function mergeProductCores(sourceId: string, targetId: string): Promise<void> {
+  try {
+    const source = await getProductCore(sourceId);
+    const target = await getProductCore(targetId);
+
+    if (!source || !target) throw new Error("Product not found");
+
+    // Merge specs
+    const mergedSpecs = { ...target.specs, ...source.specs };
+
+    // Get all deals from target
+    const targetDeals = await getDealsForProduct(targetId);
+
+    // Update all deals to point to source
+    const batch = writeBatch(db);
+    for (const deal of targetDeals) {
+      const dealRef = doc(db, "deals", deal.id);
+      batch.update(dealRef, { productId: sourceId });
+    }
+
+    // Update source product
+    const sourceRef = doc(db, "product_cores", sourceId);
+    batch.update(sourceRef, {
+      specs: mergedSpecs,
+      linkedDealIds: [...(source.linkedDealIds || []), ...targetDeals.map((d: any) => d.id)],
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Delete target product
+    const targetRef = doc(db, "product_cores", targetId);
+    batch.delete(targetRef);
+
+    await batch.commit();
+  } catch (err) {
+    console.error("Error merging products:", err);
+    throw err;
+  }
+}
+

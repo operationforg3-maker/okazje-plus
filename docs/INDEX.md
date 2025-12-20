@@ -28,7 +28,8 @@ docs/
 - **[guides/M3_QUICK_START.md](guides/M3_QUICK_START.md)** – szybki start dla modułów Milestone 3
 
 ### Aktualne milestone'y
-- **[milestones/M5_COMPLETION_SUMMARY.md](milestones/M5_COMPLETION_SUMMARY.md)** – powiadomienia i alerty cenowe (najnowszy)
+- **[milestones/M6_PRODUCT_CENTRIC_ARCHITECTURE.md](milestones/M6_PRODUCT_CENTRIC_ARCHITECTURE.md)** – architektura product-centric, harvester & refiner (NAJNOWSZY)
+- **[milestones/M5_COMPLETION_SUMMARY.md](milestones/M5_COMPLETION_SUMMARY.md)** – powiadomienia i alerty cenowe
 - **[milestones/MILESTONE_4_README.md](milestones/MILESTONE_4_README.md)** – integracja multi-marketplace
 - **[milestones/LAUNCH_READINESS_COMPLETION_SUMMARY.md](milestones/LAUNCH_READINESS_COMPLETION_SUMMARY.md)** – gotowość do uruchomienia
 
