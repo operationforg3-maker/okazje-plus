@@ -128,19 +128,22 @@ export default function AdminCategoriesPage() {
     setIsSubmittingMain(true);
     try {
       const categoryRef = doc(db, "categories", data.slug);
-      // Create a new category with an empty subcategories array and translations (EN primary)
+      const nameEn = data.nameEn?.trim() || data.namePl?.trim();
+      const namePl = data.namePl?.trim() || data.nameEn?.trim();
+      const nameDe = data.nameDe?.trim() || nameEn || namePl; // ensure DE present for interface consistency
+
       const newCategory: Omit<Category, 'id'> = {
-        name: data.nameEn || data.namePl,
+        name: nameEn || namePl,
         slug: data.slug,
         translations: {
-          en: { name: data.nameEn || data.namePl },
-          pl: { name: data.namePl || data.nameEn },
-          de: data.nameDe ? { name: data.nameDe } : undefined,
+          en: { name: nameEn || '' },
+          pl: { name: namePl || '' },
+          de: { name: nameDe || '' },
         },
         subcategories: [],
       };
       await setDoc(categoryRef, newCategory);
-      toast.success(`Kategoria "${data.nameEn || data.namePl}" została dodana.`);
+      toast.success(`Kategoria "${nameEn || namePl}" została dodana.`);
       resetMain();
     } catch (error) {
       console.error("Błąd dodawania kategorii:", error);
@@ -155,25 +158,27 @@ export default function AdminCategoriesPage() {
     setIsSubmittingSub(true);
     try {
       const categoryRef = doc(db, "categories", editingCategory.id);
+      const nameEn = data.nameEn?.trim() || data.namePl?.trim();
+      const namePl = data.namePl?.trim() || data.nameEn?.trim();
+      const nameDe = data.nameDe?.trim() || nameEn || namePl; // ensure DE present
+
       const newSubcategory: Subcategory = {
-        name: data.nameEn || data.namePl,
+        name: nameEn || namePl,
         slug: data.slug,
         translations: {
-          en: { name: data.nameEn || data.namePl },
-          pl: { name: data.namePl || data.nameEn },
-          de: data.nameDe ? { name: data.nameDe } : undefined,
+          en: { name: nameEn || '' },
+          pl: { name: namePl || '' },
+          de: { name: nameDe || '' },
         },
         subcategories: [],
       };
       
-      // Atomically add the new subcategory to the "subcategories" array field.
       await updateDoc(categoryRef, {
         subcategories: arrayUnion(newSubcategory),
       });
       
-      toast.success(`Podkategoria "${data.nameEn || data.namePl}" została dodana.`);
+      toast.success(`Podkategoria "${nameEn || namePl}" została dodana.`);
       resetSub();
-      // The hook 'useCollection' will automatically update the UI.
     } catch (error) {
       console.error("Błąd dodawania podkategorii:", error);
       toast.error("Wystąpił błąd. Spróbuj ponownie.");
@@ -189,25 +194,30 @@ export default function AdminCategoriesPage() {
       const categoryRef = doc(db, "categories", editingCategory.id);
       const latestCat = allCategories?.find(c => c.id === editingCategory.id);
       if (!latestCat) throw new Error('Brak kategorii');
+
+      const nameEn = data.nameEn?.trim() || data.namePl?.trim();
+      const namePl = data.namePl?.trim() || data.nameEn?.trim();
+      const nameDe = data.nameDe?.trim() || nameEn || namePl; // ensure DE present
+
       const updatedSubs = (latestCat.subcategories || []).map(sub => {
         if (sub.slug !== data.parentSlug) return sub;
         const existing = Array.isArray(sub.subcategories) ? sub.subcategories : [];
         const newSubSub = {
-          name: data.nameEn || data.namePl,
+          name: nameEn || namePl,
           slug: data.slug,
           translations: {
-            en: { name: data.nameEn || data.namePl },
-            pl: { name: data.namePl || data.nameEn },
-            de: data.nameDe ? { name: data.nameDe } : undefined,
+            en: { name: nameEn || '' },
+            pl: { name: namePl || '' },
+            de: { name: nameDe || '' },
           },
         };
         return { ...sub, subcategories: [...existing, newSubSub] };
       });
       await updateDoc(categoryRef, { subcategories: updatedSubs });
-      toast.success(`Pod-podkategoria "${data.nameEn || data.namePl}" została dodana.`);
+      toast.success(`Pod-podkategoria "${nameEn || namePl}" została dodana.`);
       resetSubSub();
     } catch (error) {
-      console.error("Błąd dodawania pod-podkategorii:", error);
+      console.error("Błąd dodawania pod-podkategori:", error);
       toast.error("Wystąpił błąd. Spróbuj ponownie.");
     } finally {
       setIsSubmittingSub(false);
