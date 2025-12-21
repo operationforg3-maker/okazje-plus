@@ -59,6 +59,59 @@ export class SmartHarvester {
   }
 
   /**
+   * Build a list of category query strings by walking the 3-level tree in Firestore.
+   * Each entry is formatted as `main/sub/subsub` (falls back to `main/sub` when no sub-sub exists).
+   */
+  static async buildCategoryQueries(rootCategorySlug?: string): Promise<string[]> {
+    const queries: string[] = [];
+
+    try {
+      const mainCategories = [] as Array<{ id: string; slug: string }>;
+
+      if (rootCategorySlug) {
+        const mainRef = doc(db, 'categories', rootCategorySlug);
+        const mainDoc = await getDoc(mainRef);
+        if (mainDoc.exists()) {
+          const data = mainDoc.data() as any;
+          mainCategories.push({ id: mainDoc.id, slug: data?.slug || mainDoc.id });
+        }
+      } else {
+        const mainSnapshot = await getDocs(collection(db, 'categories'));
+        mainSnapshot.forEach((docSnap) => {
+          const data = docSnap.data() as any;
+          mainCategories.push({ id: docSnap.id, slug: data?.slug || docSnap.id });
+        });
+      }
+
+      for (const main of mainCategories) {
+        const subSnapshot = await getDocs(collection(doc(db, 'categories', main.id), 'subcategories'));
+        for (const subDoc of subSnapshot.docs) {
+          const subData = subDoc.data() as any;
+          const subSlug = subData?.slug || subDoc.id;
+
+          const subSubSnapshot = await getDocs(collection(doc(db, 'categories', main.id, 'subcategories', subDoc.id), 'subcategories'));
+
+          if (subSubSnapshot.empty) {
+            queries.push(`${main.slug}/${subSlug}`);
+            continue;
+          }
+
+          subSubSnapshot.forEach((subSubDoc) => {
+            const subSubData = subSubDoc.data() as any;
+            const subSubSlug = subSubData?.slug || subSubDoc.id;
+            queries.push(`${main.slug}/${subSlug}/${subSubSlug}`);
+          });
+        }
+      }
+
+      return Array.from(new Set(queries));
+    } catch (error) {
+      console.error('[Harvester] Failed to build category queries', error);
+      return [];
+    }
+  }
+
+  /**
    * Log an entry to the job
    */
   private addLog(

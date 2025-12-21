@@ -12,6 +12,9 @@ import { SmartHarvester } from '@/lib/automation/harvester';
  *   source: 'aliexpress' | 'amazon' | 'allegro',
  *   query: string,
  *   maxResults: number (10-200)
+ *   mode?: 'single' | 'category-tree'
+ *   rootCategorySlug?: string // optional: limit traversal to one main category
+ *   categories?: string[] // optional: explicit category paths to iterate
  * }
  * 
  * Response:
@@ -34,10 +37,10 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json();
-    const { source, query, maxResults } = body;
+    const { source, query, maxResults, mode = 'single', rootCategorySlug, categories: categoriesFromBody } = body;
 
     // 3. Validate input
-    if (!source || !query) {
+    if (!source || (!query && mode !== 'category-tree')) {
       return NextResponse.json(
         { error: 'Missing source or query' },
         { status: 400 }
@@ -53,18 +56,37 @@ export async function POST(request: NextRequest) {
 
     const max = Math.max(10, Math.min(200, maxResults || 50));
 
-    // 4. Create job ID and run harvester
+    // 4. Resolve categories when running full tree mode
+    let categories: string[] | undefined;
+    if (mode === 'category-tree') {
+      categories = await SmartHarvester.buildCategoryQueries(rootCategorySlug);
+      if (!categories || categories.length === 0) {
+        return NextResponse.json(
+          { error: 'Brak kategorii do przetworzenia (sprawdź czy drzewko jest zbudowane)' },
+          { status: 400 }
+        );
+      }
+    } else if (Array.isArray(categoriesFromBody) && categoriesFromBody.length > 0) {
+      categories = categoriesFromBody;
+    }
+
+    // 5. Create job ID and run harvester
     const jobId = `harvest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const harvester = new SmartHarvester(jobId);
 
-    // 5. Run harvest (returns HarvesterJob result)
+    const effectiveQuery = categories && categories.length > 0
+      ? `category-tree (${categories.length})`
+      : query;
+
+    // 6. Run harvest (returns HarvesterJob result)
     const result = await harvester.harvestProducts(
       source as 'aliexpress' | 'amazon' | 'allegro',
-      query,
-      max
+      effectiveQuery,
+      max,
+      categories
     );
 
-    // 6. Return results
+    // 7. Return results
     return NextResponse.json({
       success: true,
       job: result,

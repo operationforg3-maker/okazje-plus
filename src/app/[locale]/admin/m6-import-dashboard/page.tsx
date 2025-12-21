@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import {
   Pause,
   RefreshCw,
   Code,
+  ListTree,
 } from "lucide-react";
 
 interface HarvesterJob {
@@ -42,35 +43,84 @@ interface HarvesterJob {
 }
 
 export default function M6ImportDashboard() {
+  const { getIdToken } = useAuth();
   const [jobs, setJobs] = useState<HarvesterJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<HarvesterJob | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Initialize only on client
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Load admin token once on mount
   useEffect(() => {
-    if (!mounted) return;
-    
-    loadJobs();
-    const interval = setInterval(loadJobs, 3000);
-    return () => clearInterval(interval);
-  }, [mounted]);
+    let cancelled = false;
 
-  const loadJobs = async () => {
+    const loadToken = async () => {
+      try {
+        const token = await getIdToken?.();
+        if (!cancelled) {
+          setAuthToken(token || null);
+          setAuthError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+        }
+      }
+    };
+
+    loadToken();
+    return () => {
+      cancelled = true;
+    };
+  }, [getIdToken]);
+
+  useEffect(() => {
+    if (!mounted || !authToken) return;
+
+    loadJobs(authToken);
+    const interval = setInterval(() => loadJobs(authToken), 8000);
+    return () => clearInterval(interval);
+  }, [mounted, authToken]);
+
+  const loadJobs = async (token?: string) => {
+    if (!token) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch("/api/admin/harvester-jobs");
+      const res = await fetch("/api/admin/harvester-jobs", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setAuthError("Brak uprawnień administratora do odczytu jobów.");
+        setJobs([]);
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
       setJobs(data.jobs || []);
+      setAuthError(null);
     } catch (err) {
       console.error("Error loading jobs", err);
+      setAuthError("Nie udało się pobrać listy jobów (sprawdź sieć / uprawnienia)");
     } finally {
       setLoading(false);
     }
   };
+
+  const refreshJobs = () => loadJobs(authToken || undefined);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -121,6 +171,12 @@ export default function M6ImportDashboard() {
             Zarządzaj potkiem importu produktów z automatyczną deduplicacją i wzbogacaniem AI
           </p>
         </div>
+
+        {authError && (
+          <div className="p-4 border border-red-200 bg-red-50 text-red-800 rounded-lg">
+            {authError}
+          </div>
+        )}
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -199,7 +255,7 @@ export default function M6ImportDashboard() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={loadJobs}
+                    onClick={refreshJobs}
                     className="gap-2"
                   >
                     <RefreshCw className="w-4 h-4" />
@@ -387,17 +443,32 @@ export default function M6ImportDashboard() {
 
           {/* TAB: Nowy Harvester */}
           <TabsContent value="harvester">
-            <HarvesterWizard onJobCreated={loadJobs} />
+            <div className="space-y-4">
+              <HarvesterWizard
+                onJobCreated={refreshJobs}
+                authToken={authToken}
+                setAuthError={setAuthError}
+              />
+              <CategoryTreeBuilder
+                authToken={authToken}
+                onFinished={refreshJobs}
+                setAuthError={setAuthError}
+              />
+            </div>
           </TabsContent>
 
           {/* TAB: AI Refiner */}
           <TabsContent value="refiner">
-            <RefinerPanel onJobCreated={loadJobs} />
+            <RefinerPanel
+              onJobCreated={refreshJobs}
+              authToken={authToken}
+              setAuthError={setAuthError}
+            />
           </TabsContent>
 
           {/* TAB: Live Monitor */}
           <TabsContent value="monitor">
-            <LiveMonitor />
+            <LiveMonitor authToken={authToken} setAuthError={setAuthError} />
           </TabsContent>
         </Tabs>
       </div>
@@ -405,11 +476,119 @@ export default function M6ImportDashboard() {
   );
 }
 
+/* ==================== CATEGORY TREE BUILDER ==================== */
+function CategoryTreeBuilder({
+  authToken,
+  onFinished,
+  setAuthError,
+}: {
+  authToken: string | null;
+  onFinished?: () => void;
+  setAuthError: (message: string | null) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  const handleBuild = async () => {
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      setResult("❌ Brak tokenu administratora");
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/categories/auto-build", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setAuthError("Brak uprawnień administratora do budowania kategorii.");
+        setResult("❌ Brak uprawnień administratora");
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        setResult(`❌ ${data.error || "Nie udało się zbudować drzewka"}`);
+        return;
+      }
+
+      const summary = data.message ||
+        `✅ Zbudowano ${data.categories ?? data.mainCount ?? 0} kategorii, ${data.subcategories ?? data.subCount ?? 0} podkategorii, ${data.subSubcategories ?? data.subSubCount ?? 0} pod-podkategorii (EN slug + EN description).`;
+      setResult(summary);
+      setAuthError(null);
+      onFinished?.();
+    } catch (err) {
+      setResult(`❌ ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="bg-white border-0 shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ListTree className="w-5 h-5 text-green-600" />
+          Drzewko kategorii (3 poziomy)
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-slate-700">
+          Zbuduj pełne drzewko kategorii M6 (slug i description w EN, tłumaczenia dodasz później). Uwzględnia podkategorie i pod-podkategorie.
+        </p>
+
+        <Button
+          onClick={handleBuild}
+          disabled={loading}
+          className="w-full gap-2 bg-green-600 hover:bg-green-700"
+          size="lg"
+        >
+          {loading ? (
+            <>
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              Budowanie...
+            </>
+          ) : (
+            <>
+              <Download className="w-5 h-5" />
+              Zbuduj EN slug + EN description
+            </>
+          )}
+        </Button>
+
+        {result && (
+          <div
+            className={`p-4 rounded-lg border-2 text-sm ${
+              result.startsWith("✅")
+                ? "border-green-300 bg-green-50 text-green-800"
+                : "border-red-300 bg-red-50 text-red-800"
+            }`}
+          >
+            {result}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ==================== HARVESTER WIZARD ==================== */
 function HarvesterWizard({
   onJobCreated,
+  authToken,
+  setAuthError,
 }: {
   onJobCreated: () => void;
+  authToken: string | null;
+  setAuthError: (message: string | null) => void;
 }) {
   const [source, setSource] = useState<"aliexpress" | "amazon" | "allegro">(
     "aliexpress"
@@ -418,17 +597,49 @@ function HarvesterWizard({
   const [maxResults, setMaxResults] = useState(50);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [useCategoryTree, setUseCategoryTree] = useState(false);
+  const [rootCategorySlug, setRootCategorySlug] = useState("");
 
   const handleRun = async () => {
-    if (!query.trim()) return;
+    if (!useCategoryTree && !query.trim()) return;
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      setResult({ error: "Brak tokenu administratora" });
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     try {
+      const payload: Record<string, any> = {
+        source,
+        query: query.trim() || "category-tree",
+        maxResults,
+      };
+
+      if (useCategoryTree) {
+        payload.mode = "category-tree";
+        if (rootCategorySlug.trim()) {
+          payload.rootCategorySlug = rootCategorySlug.trim();
+        }
+      }
+
       const res = await fetch("/api/admin/harvester/run", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source, query, maxResults }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(payload),
       });
+
+      if (res.status === 401 || res.status === 403) {
+        setAuthError("Brak uprawnień administratora do uruchomienia harvestera.");
+        setResult({ error: "Brak uprawnień administratora" });
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
       setResult(data);
       onJobCreated();
@@ -488,6 +699,37 @@ function HarvesterWizard({
           </p>
         </div>
 
+        <div className="space-y-2 border border-slate-200 rounded-lg p-4 bg-slate-50">
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <input
+              type="checkbox"
+              checked={useCategoryTree}
+              onChange={(e) => setUseCategoryTree(e.target.checked)}
+            />
+            Iteruj całe drzewo kategorii (3 poziomy, slug/description w EN)
+          </label>
+          <p className="text-xs text-slate-600">
+            Pobierze wszystkie pod- i pod-podkategorie z Firestore (EN slug + EN description). Jeśli drzewko nie istnieje, najpierw zbuduj je poniżej.
+          </p>
+          {useCategoryTree && (
+            <div className="space-y-2 pl-1 md:pl-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                Opcjonalny główny slug (angielski)
+              </label>
+              <input
+                type="text"
+                value={rootCategorySlug}
+                onChange={(e) => setRootCategorySlug(e.target.value)}
+                placeholder="np. electronics"
+                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-[11px] text-slate-500">
+                Pozostaw puste aby ziterować wszystkie główne kategorie. Slugi są po angielsku, opisy w EN (tłumaczenia dodasz później).
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Step 3: Max results */}
         <div className="space-y-3">
           <label className="block text-sm font-semibold text-slate-900">
@@ -509,7 +751,7 @@ function HarvesterWizard({
         {/* Action button */}
         <Button
           onClick={handleRun}
-          disabled={!query.trim() || loading}
+          disabled={(!useCategoryTree && !query.trim()) || loading}
           size="lg"
           className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
         >
@@ -549,7 +791,15 @@ function HarvesterWizard({
 }
 
 /* ==================== REFINER PANEL ==================== */
-function RefinerPanel({ onJobCreated }: { onJobCreated: () => void }) {
+function RefinerPanel({
+  onJobCreated,
+  authToken,
+  setAuthError,
+}: {
+  onJobCreated: () => void;
+  authToken: string | null;
+  setAuthError: (message: string | null) => void;
+}) {
   const [productIds, setProductIds] = useState("");
   const [refinationType, setRefinationType] = useState<"full_enrichment" | "specs_cleanup">(
     "full_enrichment"
@@ -559,6 +809,12 @@ function RefinerPanel({ onJobCreated }: { onJobCreated: () => void }) {
 
   const handleRun = async () => {
     if (!productIds.trim()) return;
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      setResult({ error: "Brak tokenu administratora" });
+      return;
+    }
+
     setLoading(true);
     setResult(null);
     try {
@@ -568,9 +824,20 @@ function RefinerPanel({ onJobCreated }: { onJobCreated: () => void }) {
         .filter((id) => id.length > 0);
       const res = await fetch("/api/admin/refiner/run", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ productIds: ids, refinationType }),
       });
+
+      if (res.status === 401 || res.status === 403) {
+        setAuthError("Brak uprawnień administratora do uruchomienia refinera.");
+        setResult({ error: "Brak uprawnień administratora" });
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
       setResult(data);
       onJobCreated();
@@ -688,7 +955,13 @@ function RefinerPanel({ onJobCreated }: { onJobCreated: () => void }) {
 }
 
 /* ==================== LIVE MONITOR ==================== */
-function LiveMonitor() {
+function LiveMonitor({
+  authToken,
+  setAuthError,
+}: {
+  authToken: string | null;
+  setAuthError: (message: string | null) => void;
+}) {
   const [code, setCode] = useState(`// Przykład: Szybki test harvestera
 const harvester = new SmartHarvester('test-job-123');
 const result = await harvester.harvestProducts('aliexpress', 'USB-C Cable', 50);
@@ -704,14 +977,31 @@ console.log('Results:', result);
   const [running, setRunning] = useState(false);
 
   const handleRun = async () => {
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      setOutput(["Brak tokenu administratora"]);
+      return;
+    }
+
     setRunning(true);
     setOutput([]);
     try {
       const res = await fetch("/api/admin/execute-code", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
         body: JSON.stringify({ code }),
       });
+
+      if (res.status === 401 || res.status === 403) {
+        setAuthError("Brak uprawnień administratora do wykonania kodu.");
+        setOutput(["Brak uprawnień administratora"]);
+        setRunning(false);
+        return;
+      }
+
       const data = await res.json();
       setOutput(data.logs || []);
     } catch (err) {
