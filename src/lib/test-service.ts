@@ -474,6 +474,7 @@ async function testUserActivity(): Promise<{ status: 'pass' | 'fail' | 'warning'
     const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const recentDealsQuery = query(
       collection(db, 'deals'),
+      where('status', '==', 'approved'),
       where('postedAt', '>=', last30Days.toISOString()),
       limit(100)
     );
@@ -781,11 +782,18 @@ async function securityFavoritesIsolation(opts?: TestAuthOptions): Promise<Secur
     const favRef = await addDoc(collection(db,'favorites'), { userId:login.uid, dealId:'fake-deal', createdAt:new Date().toISOString() });
     await authLogout();
     // attempt guest read
-    const favSnap = await getDoc(doc(db,'favorites', favRef.id));
-    if (favSnap.exists()) {
-      return { status:'fail', message:'Guest could read private favorite' };
+    try {
+      const favSnap = await getDoc(doc(db,'favorites', favRef.id));
+      if (favSnap.exists()) {
+        return { status:'fail', message:'Guest could read private favorite' };
+      }
+      return { status:'pass', message:'Guest cannot read favorite (expected)' };
+    } catch (e:any) {
+      if (String(e.message).includes('Missing or insufficient permissions')) {
+        return { status:'pass', message:'Guest blocked by security rules' };
+      }
+      return { status:'fail', message:`Favorite test error: ${e.message}` };
     }
-    return { status:'pass', message:'Guest cannot read favorite (expected)' };
   } catch (e:any) {
     await authLogout();
     return { status:'fail', message:`Favorite test error: ${e.message}` };
@@ -800,9 +808,16 @@ async function securityNotificationsIsolation(opts?: TestAuthOptions): Promise<S
     const notRef = await addDoc(collection(db,'notifications'), { userId:login.uid, type:'info', message:'Test', createdAt:new Date().toISOString() });
     await authLogout();
     // guest cannot read
-    const snap = await getDoc(doc(db,'notifications',notRef.id));
-    if (snap.exists()) return { status:'fail', message:'Guest could read notification' };
-    return { status:'pass', message:'Guest blocked from reading notification' };
+    try {
+      const snap = await getDoc(doc(db,'notifications',notRef.id));
+      if (snap.exists()) return { status:'fail', message:'Guest could read notification' };
+      return { status:'pass', message:'Guest blocked from reading notification' };
+    } catch (e:any) {
+      if (String(e.message).includes('Missing or insufficient permissions')) {
+        return { status:'pass', message:'Guest blocked by security rules' };
+      }
+      return { status:'fail', message:`Notification isolation error: ${e.message}` };
+    }
   } catch (e:any) {
     await authLogout();
     return { status:'fail', message:`Notification isolation error: ${e.message}` };
