@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,12 +45,20 @@ export default function M6ImportDashboard() {
   const [jobs, setJobs] = useState<HarvesterJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<HarvesterJob | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Initialize only on client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
+    if (!mounted) return;
+    
     loadJobs();
     const interval = setInterval(loadJobs, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [mounted]);
 
   const loadJobs = async () => {
     try {

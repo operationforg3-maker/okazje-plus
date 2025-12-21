@@ -30,8 +30,7 @@ import { HarvesterJob } from '@/lib/types';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verify admin authentication
-    const session = await getServerAuthSession();
-    await requireAdmin(session);
+    const session = await requireAdmin();
 
     // 2. Get query params
     const searchParams = request.nextUrl.searchParams;

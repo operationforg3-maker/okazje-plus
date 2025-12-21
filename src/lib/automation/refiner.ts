@@ -28,7 +28,107 @@ export class AIRefiner {
   }
 
   /**
-   * Main entry point: Refine draft products
+   * Refine all existing products in database by status
+   * Iterates through entire collection and enriches each product individually
+   * 
+   * @param status - Filter products by status (e.g., 'draft', 'pending_approval')
+   * @param limit - Maximum products to refine in one job
+   * @param refinationType - Type of refinement to apply
+   */
+  async refineExistingProducts(
+    status?: string,
+    limit: number = 100,
+    refinationType: 'full_enrichment' | 'specs_cleanup' = 'full_enrichment'
+  ): Promise<RefinerJob> {
+    const jobStartTime = new Date().toISOString();
+    let productsSuccessful = 0;
+    let productsFailed = 0;
+    const processedIds: string[] = [];
+
+    try {
+      this.addLog('info', `Starting DB refinement job: status=${status || 'all'}, limit=${limit}, type=${refinationType}`);
+
+      // Build query to fetch products from database
+      const productsRef = collection(db, 'product_cores');
+      let q;
+      
+      if (status) {
+        q = query(
+          productsRef,
+          where('status', '==', status)
+        );
+      } else {
+        q = query(productsRef);
+      }
+
+      const snapshot = await getDocs(q);
+      const totalProducts = snapshot.docs.length;
+      this.addLog('info', `Found ${totalProducts} products to refine (limit: ${limit})`);
+
+      let processCount = 0;
+
+      // Iterate through each product document
+      for (const doc of snapshot.docs) {
+        if (processCount >= limit) {
+          this.addLog('info', `Reached limit of ${limit} products. Stopping.`);
+          break;
+        }
+
+        const productId = doc.id;
+        const product = doc.data() as ProductCore;
+        processedIds.push(productId);
+
+        try {
+          this.addLog('info', `Refining product ${processCount + 1}/${Math.min(limit, totalProducts)}: ${product.title.pl || 'Unknown'}`);
+
+          // Perform refinement based on type
+          const refined = await this.performRefinement(product, refinationType);
+
+          // Update product in Firestore
+          await this.updateProduct(productId, refined);
+
+          this.addLog(
+            'success',
+            `Refined ${product.title.pl || 'Unknown'}`,
+            { productId, refinationType }
+          );
+          productsSuccessful++;
+        } catch (err) {
+          this.addLog(
+            'failed',
+            `Failed to refine ${product.title.pl || 'Unknown'}`,
+          );
+          productsFailed++;
+        }
+
+        processCount++;
+      }
+
+      const job: RefinerJob = {
+        id: this.jobId,
+        status: 'completed',
+        productIds: processedIds,
+        refinationType,
+        productsProcessed: processedIds.length,
+        productsSuccessful,
+        productsFailed,
+        startedAt: jobStartTime,
+        completedAt: new Date().toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+        logs: this.logs,
+      };
+
+      await this.updateJobRecord(job);
+      this.addLog('success', `DB refinement completed: ${productsSuccessful} successful, ${productsFailed} failed`);
+      return job;
+    } catch (err) {
+      this.addLog('failed', 'DB refinement job failed');
+      throw err;
+    }
+  }
+
+  /**
+   * Main entry point: Refine specific products by ID
    */
   async refineProducts(
     productIds: string[],
@@ -413,16 +513,35 @@ export class AIRefiner {
    * Add log entry
    */
   private addLog(
-    productId: string,
-    status: 'success' | 'failed',
-    message: string
+    productIdOrMessage: string,
+    statusOrLevel?: 'success' | 'failed' | 'info' | 'error' | 'warn',
+    messageOrDetails?: string | Record<string, any>
   ): void {
-    this.logs.push({
-      productId,
-      status,
-      message,
-      timestamp: new Date().toISOString(),
-    });
+    // Support two signatures:
+    // Old: addLog(productId, status, message)
+    // New: addLog(message, level) or addLog(message, level, details)
+    
+    const isOldSignature = statusOrLevel === 'success' || statusOrLevel === 'failed';
+    
+    if (isOldSignature) {
+      // Old signature: (productId, status, message)
+      this.logs.push({
+        productId: productIdOrMessage,
+        status: statusOrLevel as 'success' | 'failed',
+        message: messageOrDetails as string,
+        timestamp: new Date().toISOString(),
+      });
+    } else {
+      // New signature: (message, level, details?)
+      const level = statusOrLevel || 'info';
+      console.log(`[${level.toUpperCase()}] ${productIdOrMessage}`, messageOrDetails || '');
+      this.logs.push({
+        productId: 'system',
+        status: 'success', // Fallback to maintain type compatibility
+        message: productIdOrMessage,
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 }
 

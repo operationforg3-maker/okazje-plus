@@ -78,14 +78,22 @@ export class SmartHarvester {
   /**
    * Main entry point: Harvest products from a source
    * Returns the harvester job with results
+   * 
+   * @param source - API source (aliexpress, amazon, allegro)
+   * @param query - Search query or category slug (e.g., 'phones', 'phones/flagship' for sub-categories)
+   * @param maxResults - Maximum products to fetch
+   * @param categories - Optional: Iterate through multiple categories/sub-categories
    */
   async harvestProducts(
     source: 'aliexpress' | 'amazon' | 'allegro',
     query: string,
-    maxResults: number = 50
+    maxResults: number = 50,
+    categories?: string[] // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
-    this.addLog('info', `Starting harvest job: source=${source}, query=${query}, maxResults=${maxResults}`);
+    const queries = categories && categories.length > 0 ? categories : [query];
+    
+    this.addLog('info', `Starting harvest job: source=${source}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
 
     let productsFound = 0;
     let productsCreated = 0;
@@ -94,75 +102,93 @@ export class SmartHarvester {
     const errors: HarvesterJob['errors'] = [];
 
     try {
-      // Step 1: Fetch products from source API
-      const sourceProducts = await this.fetchFromSource(source, query, maxResults);
-      productsFound = sourceProducts.length;
-      this.addLog('info', `Fetched ${productsFound} products from ${source}`);
-
-      // Step 2: Process each product (create or link)
-      for (const sourceProduct of sourceProducts) {
+      // Iterate through all provided queries/categories
+      for (const currentQuery of queries) {
+        this.addLog('info', `Processing query/category: ${currentQuery}`);
+        
         try {
-          const identityHash = calculateIdentityHash(
-            sourceProduct.title,
-            sourceProduct.imageUrl
-          );
+          // Step 1: Fetch products from source API
+          const sourceProducts = await this.fetchFromSource(source, currentQuery, maxResults);
+          productsFound += sourceProducts.length;
+          this.addLog('info', `Fetched ${sourceProducts.length} products from ${source} for query "${currentQuery}"`);
 
-          // Check if this product already exists
-          const existingProduct = await this.findProductByIdentity(identityHash);
+          // Step 2: Process each product (create or link)
+          for (const sourceProduct of sourceProducts) {
+            try {
+              const identityHash = calculateIdentityHash(
+                sourceProduct.title,
+                sourceProduct.imageUrl
+              );
 
-          if (existingProduct) {
-            // Existing product: Create new Deal
-            this.addLog(
-              'info',
-              `Found existing product ${existingProduct.id}, creating new deal`
-            );
+              // Check if this product already exists
+              const existingProduct = await this.findProductByIdentity(identityHash);
 
-            const dealId = await this.createDeal(
-              existingProduct.id,
-              sourceProduct,
-              source
-            );
-            dealsCreated++;
+              if (existingProduct) {
+                // Existing product: Create new Deal
+                this.addLog(
+                  'info',
+                  `Found existing product ${existingProduct.id}, creating new deal`
+                );
 
-            // Update product's best price
-            await this.updateProductBestPrice(existingProduct.id);
-            duplicatesSkipped++;
-          } else {
-            // New product: Create ProductCore + Deal
-            this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
+                const dealId = await this.createDeal(
+                  existingProduct.id,
+                  sourceProduct,
+                  source
+                );
+                dealsCreated++;
 
-            const productId = await this.createProductCore(
-              sourceProduct,
-              identityHash,
-              source
-            );
-            productsCreated++;
+                // Update product's best price
+                await this.updateProductBestPrice(existingProduct.id);
+                duplicatesSkipped++;
+              } else {
+                // New product: Create ProductCore + Deal
+                this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
 
-            // Create associated deal
-            const dealId = await this.createDeal(
-              productId,
-              sourceProduct,
-              source
-            );
-            dealsCreated++;
+                const productId = await this.createProductCore(
+                  sourceProduct,
+                  identityHash,
+                  source
+                );
+                productsCreated++;
 
-            // Record identity match for future lookups
-            await this.recordIdentityMatch(
-              identityHash,
-              productId,
-              source,
-              sourceProduct.sourceProductId
-            );
+                // Create associated deal
+                const dealId = await this.createDeal(
+                  productId,
+                  sourceProduct,
+                  source
+                );
+                dealsCreated++;
+
+                // Record identity match for future lookups
+                await this.recordIdentityMatch(
+                  identityHash,
+                  productId,
+                  source,
+                  sourceProduct.sourceProductId
+                );
+              }
+            } catch (err) {
+              this.addLog(
+                'error',
+                `Failed to process product: ${sourceProduct.title}`,
+                err
+              );
+              errors.push({
+                productId: sourceProduct.sourceProductId,
+                message: (err as Error).message,
+                timestamp: new Date().toISOString(),
+              });
+            }
           }
-        } catch (err) {
+        } catch (queryErr) {
           this.addLog(
             'error',
-            `Failed to process product: ${sourceProduct.title}`,
-            err
+            `Failed to harvest from query "${currentQuery}"`,
+            queryErr
           );
           errors.push({
-            productId: sourceProduct.sourceProductId,
-            message: (err as Error).message,
+            productId: `query_${currentQuery}`,
+            message: (queryErr as Error).message,
             timestamp: new Date().toISOString(),
           });
         }
@@ -174,7 +200,7 @@ export class SmartHarvester {
         id: this.jobId,
         status: 'completed',
         source,
-        query,
+        query: queries.join(', '),
         maxResults,
         productsFound,
         productsCreated,
