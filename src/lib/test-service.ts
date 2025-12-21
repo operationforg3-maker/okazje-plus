@@ -493,6 +493,9 @@ async function testUserActivity(): Promise<{ status: 'pass' | 'fail' | 'warning'
       details: { users: totalUsers, recentDeals }
     };
   } catch (error: any) {
+    if (String(error.message).includes('permission')) {
+      return { status: 'warning', message: 'User activity requires read permissions for approved deals', details: { error: error.message } };
+    }
     return { status: 'fail', message: `User activity test failed: ${error.message}` };
   }
 }
