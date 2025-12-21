@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerAuthSession, requireAdmin } from '@/lib/auth-server';
+import { requireAdmin } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  getDocs,
-  where,
-} from 'firebase/firestore';
 import { HarvesterJob } from '@/lib/types';
 
 /**
@@ -37,9 +29,8 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get('status');
     const limitParam = Math.min(100, parseInt(searchParams.get('limit') || '50'));
 
-    // 3. Build Firestore query
-    // Build Admin SDK query
-    let q = adminDb.collection('harvester_jobs');
+    // 3. Build Firestore query (Admin SDK)
+    let q: FirebaseFirestore.Query = adminDb.collection('harvester_jobs');
     if (statusFilter && ['running', 'completed', 'failed', 'paused'].includes(statusFilter)) {
       q = q.where('status', '==', statusFilter);
     }
