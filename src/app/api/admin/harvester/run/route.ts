@@ -40,9 +40,19 @@ export async function POST(request: NextRequest) {
     const { source, query, maxResults, mode = 'single', rootCategorySlug, categories: categoriesFromBody } = body;
 
     // 3. Validate input
-    if (!source || (!query && mode !== 'category-tree')) {
+    const isQueryValid = query && typeof query === 'string' && query.trim().length > 0 && query.trim() !== 'category-tree';
+    const isCategoryTreeMode = mode === 'category-tree' || (query?.trim() === '' && mode === 'single') || (query?.trim() === 'category-tree');
+    
+    if (!source) {
       return NextResponse.json(
-        { error: 'Missing source or query' },
+        { error: 'Missing source' },
+        { status: 400 }
+      );
+    }
+
+    if (!isQueryValid && !isCategoryTreeMode) {
+      return NextResponse.json(
+        { error: 'Missing query or must set mode=category-tree' },
         { status: 400 }
       );
     }
@@ -79,11 +89,13 @@ export async function POST(request: NextRequest) {
       : query;
 
     // 6. Run harvest (returns HarvesterJob result)
+    const isTreeMode = isCategoryTreeMode || (categories && categories.length > 0);
     const result = await harvester.harvestProducts(
       source as 'aliexpress' | 'amazon' | 'allegro',
       effectiveQuery,
       max,
-      categories
+      categories,
+      isTreeMode // Pass tree mode flag
     );
 
     // 7. Return results

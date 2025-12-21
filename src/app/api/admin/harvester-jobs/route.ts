@@ -40,28 +40,27 @@ export async function GET(request: NextRequest) {
     // 3. Build Firestore query
     const jobsRef = collection(db, 'harvester_jobs');
     
-    let q;
+    let constraints: any[] = [];
     if (statusFilter && ['running', 'completed', 'failed', 'paused'].includes(statusFilter)) {
-      q = query(
-        jobsRef,
-        where('status', '==', statusFilter),
-        orderBy('startedAt', 'desc'),
-        limit(limitParam)
-      );
-    } else {
-      q = query(
-        jobsRef,
-        orderBy('startedAt', 'desc'),
-        limit(limitParam)
-      );
+      constraints.push(where('status', '==', statusFilter));
     }
+    constraints.push(limit(limitParam));
+
+    const q = query(jobsRef, ...constraints);
 
     // 4. Execute query
     const snapshot = await getDocs(q);
-    const jobs: HarvesterJob[] = snapshot.docs.map(doc => ({
+    const allDocs = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     } as HarvesterJob));
+    
+    // Sort in-memory (avoid Firestore composite index requirement)
+    const jobs = allDocs.sort((a, b) => {
+      const aTime = new Date(a.startedAt || 0).getTime();
+      const bTime = new Date(b.startedAt || 0).getTime();
+      return bTime - aTime;
+    });
 
     // 5. Return results
     return NextResponse.json({

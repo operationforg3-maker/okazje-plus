@@ -141,12 +141,15 @@ export class SmartHarvester {
     source: 'aliexpress' | 'amazon' | 'allegro',
     query: string,
     maxResults: number = 50,
-    categories?: string[] // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
+    categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
+    isTreeMode: boolean = false // True when harvesting from category tree
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
-    const queries = categories && categories.length > 0 ? categories : [query];
     
-    this.addLog('info', `Starting harvest job: source=${source}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
+    // For tree mode, use categories; otherwise use the query parameter
+    const queries = (isTreeMode && categories && categories.length > 0) ? categories : [query];
+    
+    this.addLog('info', `Starting harvest job: source=${source}, mode=${isTreeMode ? 'category-tree' : 'single'}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
 
     let productsFound = 0;
     let productsCreated = 0;
@@ -161,12 +164,24 @@ export class SmartHarvester {
         
         try {
           // Step 1: Fetch products from source API
-          const sourceProducts = await this.fetchFromSource(source, currentQuery, maxResults);
+          // For tree mode: extract category name from path (e.g., 'electronics/phones/flagship' -> 'flagship')
+          const searchTerm = isTreeMode 
+            ? currentQuery.split('/').pop() || currentQuery 
+            : currentQuery;
+            
+          const sourceProducts = await this.fetchFromSource(source, searchTerm, maxResults, isTreeMode);
+          
+          // For category-tree mode: Filter by rating/quality (top products only)
+          let filteredProducts = sourceProducts;
+          if (isTreeMode && sourceProducts.length > 0) {
+            filteredProducts = this.filterTopQualityProducts(sourceProducts, Math.ceil(maxResults * 0.6));
+          }
+          
           productsFound += sourceProducts.length;
-          this.addLog('info', `Fetched ${sourceProducts.length} products from ${source} for query "${currentQuery}"`);
+          this.addLog('info', `Fetched ${sourceProducts.length} products from ${source} for "${currentQuery}", using ${filteredProducts.length} after quality filter`);
 
           // Step 2: Process each product (create or link)
-          for (const sourceProduct of sourceProducts) {
+          for (const sourceProduct of filteredProducts) {
             try {
               const identityHash = calculateIdentityHash(
                 sourceProduct.title,
@@ -307,7 +322,8 @@ export class SmartHarvester {
   private async fetchFromSource(
     source: 'aliexpress' | 'amazon' | 'allegro',
     searchQuery: string,
-    maxResults: number
+    maxResults: number,
+    isTreeMode: boolean = false
   ): Promise<
     Array<{
       title: string;
@@ -327,7 +343,7 @@ export class SmartHarvester {
   > {
     switch (source) {
       case 'aliexpress':
-        return await this.fetchFromAliExpress(searchQuery, maxResults);
+        return await this.fetchFromAliExpress(searchQuery, maxResults, isTreeMode);
       case 'amazon':
         return await this.fetchFromAmazon(searchQuery, maxResults);
       case 'allegro':
@@ -338,22 +354,44 @@ export class SmartHarvester {
   }
 
   /**
+   * Filter products to keep only top quality ones by rating/ratingCount
+   */
+  private filterTopQualityProducts(
+    products: any[],
+    limit: number
+  ): any[] {
+    return products
+      .filter(p => p.rating && p.rating >= 4.0) // Min 4-star rating
+      .sort((a, b) => {
+        // Sort by: ratingCount (descending) then rating (descending)
+        if (b.ratingCount !== a.ratingCount) {
+          return (b.ratingCount || 0) - (a.ratingCount || 0);
+        }
+        return (b.rating || 0) - (a.rating || 0);
+      })
+      .slice(0, limit);
+  }
+
+  /**
    * Fetch products from AliExpress using real API
    * Integrated with production AliExpress client
    */
-  private async fetchFromAliExpress(searchQuery: string, maxResults: number) {
+  private async fetchFromAliExpress(searchQuery: string, maxResults: number, isTreeMode: boolean = false) {
     try {
       const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
       const client = createAliExpressClient();
       
-      this.addLog('info', `Fetching from AliExpress: "${searchQuery}"`);
+      this.addLog('info', `Fetching from AliExpress: "${searchQuery}" (treeMode=${isTreeMode})`);
+      
+      // For tree mode: use higher maxResults to fetch more, then filter by rating
+      const fetchSize = isTreeMode ? Math.min(maxResults * 2, 100) : Math.min(maxResults, 50);
       
       const response = await client.searchProducts({
         q: searchQuery,
-        pageSize: Math.min(maxResults, 50),
+        pageSize: fetchSize,
         targetCurrency: 'PLN',
         targetLanguage: 'PL',
-        sort: 'price_asc', // Fixed: use proper sort value
+        sort: isTreeMode ? 'rating' : 'price_asc', // For tree mode, sort by rating; otherwise by price
       });
       
       if (!response.success || !response.products) {

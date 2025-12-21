@@ -51,10 +51,15 @@ export default function M6ImportDashboard() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Initialize only on client
+  // Critical: Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
+  
+  // Don't render anything until client is ready
+  if (!mounted) {
+    return null;
+  }
 
   // Load admin token once on mount
   useEffect(() => {
@@ -81,12 +86,12 @@ export default function M6ImportDashboard() {
   }, [getIdToken]);
 
   useEffect(() => {
-    if (!mounted || !authToken) return;
+    if (!authToken) return;
 
     loadJobs(authToken);
     const interval = setInterval(() => loadJobs(authToken), 8000);
     return () => clearInterval(interval);
-  }, [mounted, authToken]);
+  }, [authToken]);
 
   const loadJobs = async (token?: string) => {
     if (!token) {
