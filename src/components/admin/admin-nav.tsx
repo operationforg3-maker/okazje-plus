@@ -126,6 +126,15 @@ const navStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
+    title: 'M6 System',
+    icon: Zap,
+    items: [
+      { title: 'Import Dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp, badge: 'NEW', badgeVariant: 'default' },
+      { title: 'Pipeline Visualizer', href: '/admin/m6-pipeline-visualizer', icon: Layers, badge: 'NEW', badgeVariant: 'default' },
+      { title: 'UI Guide', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
+    ],
+  },
+  {
     title: 'Konfiguracja',
     icon: Settings,
     items: [
