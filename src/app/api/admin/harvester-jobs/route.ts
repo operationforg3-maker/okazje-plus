@@ -38,21 +38,18 @@ export async function GET(request: NextRequest) {
     const limitParam = Math.min(100, parseInt(searchParams.get('limit') || '50'));
 
     // 3. Build Firestore query
-    const jobsRef = collection(adminDb, 'harvester_jobs');
-    
-    let constraints: any[] = [];
+    // Build Admin SDK query
+    let q = adminDb.collection('harvester_jobs');
     if (statusFilter && ['running', 'completed', 'failed', 'paused'].includes(statusFilter)) {
-      constraints.push(where('status', '==', statusFilter));
+      q = q.where('status', '==', statusFilter);
     }
-    constraints.push(limit(limitParam));
+    q = q.limit(limitParam);
 
-    const q = query(jobsRef, ...constraints);
-
-    // 4. Execute query
-    const snapshot = await getDocs(q);
-    const allDocs = snapshot.docs.map(doc => ({
+    // 4. Execute query (Admin SDK)
+    const snapshot = await q.get();
+    const allDocs = snapshot.docs.map((doc) => ({
       id: doc.id,
-      ...doc.data(),
+      ...(doc.data() as any),
     } as HarvesterJob));
     
     // Sort in-memory (avoid Firestore composite index requirement)
