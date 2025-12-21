@@ -184,4 +184,10 @@
     "serverError": "Server error",
     "networkError": "Network error"
   }
+  ,
+  "home": {
+    "categories": {
+      "empty": "Categories will be available soon"
+    }
+  }
 }
