@@ -51,6 +51,7 @@ export default function DealsPage() {
   const { user } = useAuth();
   const t = useTranslations('deals');
   const locale = useLocale();
+  const [mounted, setMounted] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -76,6 +77,15 @@ export default function DealsPage() {
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [showEmptyCategories, setShowEmptyCategories] = useState(false);
+
+  // Hydration guard: render only after client mounts to avoid SSR/CSR mismatches in dynamic UI
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   // Helper: unify postedAt to timestamp (ms)
   const toTimestamp = (value: any): number => {
