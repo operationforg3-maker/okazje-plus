@@ -56,11 +56,6 @@ export default function M6ImportDashboard() {
     setMounted(true);
   }, []);
   
-  // Don't render anything until client is ready
-  if (!mounted) {
-    return null;
-  }
-
   // Load admin token once on mount
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +87,11 @@ export default function M6ImportDashboard() {
     const interval = setInterval(() => loadJobs(authToken), 8000);
     return () => clearInterval(interval);
   }, [authToken]);
+
+  // Don't render anything until client is ready
+  if (!mounted) {
+    return null;
+  }
 
   const loadJobs = async (token?: string) => {
     if (!token) {
