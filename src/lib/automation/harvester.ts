@@ -24,6 +24,7 @@ import {
   calculateTitleHash,
   calculateImageHash,
   extractDimensionsFromTitle,
+  normalizeProductIdentifier,
 } from './identity-matcher';
 
 /**
@@ -191,6 +192,7 @@ export class SmartHarvester {
             try {
               // PRIORITY 1: Check for existing product by standard identifiers (EAN/GTIN/UPC/MPN)
               let existingProduct = null;
+              let identityHash = '';
               
               if (sourceProduct.ean || sourceProduct.gtin || sourceProduct.upc || sourceProduct.mpn) {
                 existingProduct = await this.findProductByIdentifiers({
@@ -207,7 +209,7 @@ export class SmartHarvester {
               
               // PRIORITY 2: Fallback to identity hash (title + image)
               if (!existingProduct) {
-                const identityHash = calculateIdentityHash(
+                identityHash = calculateIdentityHash(
                   sourceProduct.title,
                   sourceProduct.imageUrl
                 );
@@ -590,6 +592,15 @@ export class SmartHarvester {
   ): Promise<string> {
     const now = new Date().toISOString();
 
+    // Normalize identifiers for consistent matching
+    const normalizedIdentifiers = {
+      sku: sourceProduct.sku ? normalizeProductIdentifier(sourceProduct.sku) : undefined,
+      ean: sourceProduct.ean ? normalizeProductIdentifier(sourceProduct.ean) : undefined,
+      gtin: sourceProduct.gtin ? normalizeProductIdentifier(sourceProduct.gtin) : undefined,
+      upc: sourceProduct.upc ? normalizeProductIdentifier(sourceProduct.upc) : undefined,
+      mpn: sourceProduct.mpn ? normalizeProductIdentifier(sourceProduct.mpn) : undefined,
+    };
+
     // Extract specs from title (fallback if not provided by source)
     const extractedSpecs = extractDimensionsFromTitle(sourceProduct.title);
     const specs = sourceProduct.specs || extractedSpecs;
@@ -641,11 +652,7 @@ export class SmartHarvester {
         originalId: sourceProduct.sourceProductId,
         importedAt: now,
         // Product identifiers (critical for deduplication & SEO)
-        sku: sourceProduct.sku,
-        ean: sourceProduct.ean,
-        gtin: sourceProduct.gtin,
-        upc: sourceProduct.upc,
-        mpn: sourceProduct.mpn,
+        ...normalizedIdentifiers,
       } as any,
     };
 
