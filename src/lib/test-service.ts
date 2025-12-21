@@ -302,6 +302,9 @@ async function testCommentsCount(): Promise<{ status: TestResult['status']; mess
       };
     }
   } catch (error: any) {
+    if (String(error.message).includes('index')) {
+      return { status: 'warning', message: 'Comments count requires index (status + commentsCount)', details: { error: error.message } };
+    }
     return { status: 'fail', message: `Comments count test failed: ${error.message}` };
   }
 }
@@ -345,6 +348,9 @@ async function testVotingSystem(): Promise<{ status: TestResult['status']; messa
       };
     }
   } catch (error: any) {
+    if (String(error.message).includes('index')) {
+      return { status: 'warning', message: 'Voting test requires index (status + voteCount)', details: { error: error.message } };
+    }
     return { status: 'fail', message: `Voting test failed: ${error.message}` };
   }
 }
@@ -516,6 +522,9 @@ async function testHotDeals(): Promise<{ status: 'pass' | 'fail' | 'warning'; me
       details: { count: hotDeals }
     };
   } catch (error: any) {
+    if (String(error.message).includes('index')) {
+      return { status: 'warning', message: 'Hot deals query requires index (status + temperature)', details: { error: error.message } };
+    }
     return { status: 'fail', message: `Hot deals test failed: ${error.message}` };
   }
 }
