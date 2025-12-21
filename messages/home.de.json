@@ -20,7 +20,8 @@
     "title": "Kategorien durchsuchen",
     "subtitle": "Finde, was du suchst",
     "subcategories": "Unterkategorien",
-    "viewAll": "Alle Kategorien anzeigen"
+    "viewAll": "Alle Kategorien anzeigen",
+    "empty": "Kategorien werden bald verfügbar sein"
   },
   "hotDeals": {
     "title": "Heißeste Angebote",

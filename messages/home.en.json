@@ -20,7 +20,8 @@
     "title": "Browse categories",
     "subtitle": "Find what you're looking for",
     "subcategories": "subcategories",
-    "viewAll": "View all categories"
+    "viewAll": "View all categories",
+    "empty": "Categories will be available soon"
   },
   "hotDeals": {
     "title": "Hottest deals",
