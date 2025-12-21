@@ -55,6 +55,62 @@ export function calculateIdentityHash(title: string, imageUrl: string): string {
 }
 
 /**
+ * Normalize product identifier (SKU/EAN/GTIN/UPC) for matching
+ * - Remove whitespace, dashes, dots
+ * - Uppercase
+ * - Validate format if applicable
+ */
+export function normalizeProductIdentifier(identifier: string): string {
+  return identifier
+    .replace(/[\s\-\.]/g, '')
+    .toUpperCase()
+    .trim();
+}
+
+/**
+ * Check if two products match by standard identifiers (SKU/EAN/GTIN/UPC)
+ * Returns true if ANY identifier matches (exact match after normalization)
+ * This is the STRONGEST deduplication signal - should be checked FIRST
+ */
+export function matchByIdentifiers(
+  identifiers1: { sku?: string; ean?: string; gtin?: string; upc?: string; mpn?: string },
+  identifiers2: { sku?: string; ean?: string; gtin?: string; upc?: string; mpn?: string }
+): boolean {
+  // Check EAN (most universal for European products)
+  if (identifiers1.ean && identifiers2.ean) {
+    if (normalizeProductIdentifier(identifiers1.ean) === normalizeProductIdentifier(identifiers2.ean)) {
+      return true;
+    }
+  }
+  
+  // Check GTIN (global standard)
+  if (identifiers1.gtin && identifiers2.gtin) {
+    if (normalizeProductIdentifier(identifiers1.gtin) === normalizeProductIdentifier(identifiers2.gtin)) {
+      return true;
+    }
+  }
+  
+  // Check UPC (North American standard)
+  if (identifiers1.upc && identifiers2.upc) {
+    if (normalizeProductIdentifier(identifiers1.upc) === normalizeProductIdentifier(identifiers2.upc)) {
+      return true;
+    }
+  }
+  
+  // Check MPN (Manufacturer Part Number - unique per manufacturer)
+  if (identifiers1.mpn && identifiers2.mpn) {
+    if (normalizeProductIdentifier(identifiers1.mpn) === normalizeProductIdentifier(identifiers2.mpn)) {
+      return true;
+    }
+  }
+  
+  // SKU is seller-specific, only match if from same source
+  // (handled separately in harvester logic)
+  
+  return false;
+}
+
+/**
  * Calculate similarity score between two text strings (0-1)
  * Uses Levenshtein distance normalized to 0-1
  */

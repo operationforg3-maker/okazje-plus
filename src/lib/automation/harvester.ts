@@ -44,6 +44,12 @@ interface RawProduct {
   rating?: number;
   ratingCount?: number;
   images?: string[];
+  // Product identifiers (for deduplication & SEO)
+  sku?: string;
+  ean?: string;
+  gtin?: string;
+  upc?: string;
+  mpn?: string;
 }
 
 /**
@@ -183,13 +189,34 @@ export class SmartHarvester {
           // Step 2: Process each product (create or link)
           for (const sourceProduct of filteredProducts) {
             try {
-              const identityHash = calculateIdentityHash(
-                sourceProduct.title,
-                sourceProduct.imageUrl
-              );
-
-              // Check if this product already exists
-              const existingProduct = await this.findProductByIdentity(identityHash);
+              // PRIORITY 1: Check for existing product by standard identifiers (EAN/GTIN/UPC/MPN)
+              let existingProduct = null;
+              
+              if (sourceProduct.ean || sourceProduct.gtin || sourceProduct.upc || sourceProduct.mpn) {
+                existingProduct = await this.findProductByIdentifiers({
+                  ean: sourceProduct.ean,
+                  gtin: sourceProduct.gtin,
+                  upc: sourceProduct.upc,
+                  mpn: sourceProduct.mpn,
+                });
+                
+                if (existingProduct) {
+                  this.addLog('info', `Found existing product by identifier (EAN/GTIN): ${existingProduct.id}`);
+                }
+              }
+              
+              // PRIORITY 2: Fallback to identity hash (title + image)
+              if (!existingProduct) {
+                const identityHash = calculateIdentityHash(
+                  sourceProduct.title,
+                  sourceProduct.imageUrl
+                );
+                existingProduct = await this.findProductByIdentity(identityHash);
+                
+                if (existingProduct) {
+                  this.addLog('info', `Found existing product by identity hash: ${existingProduct.id}`);
+                }
+              }
 
               if (existingProduct) {
                 // Existing product: Create new Deal
@@ -417,6 +444,12 @@ export class SmartHarvester {
         rating: p.rating?.score || 0,
         ratingCount: p.rating?.count || 0,
         images: Array.isArray(p.image_urls) ? p.image_urls : [],
+        // Product identifiers (for robust deduplication & SEO)
+        sku: p.sku || undefined,
+        ean: p.ean || p.barcode || undefined,
+        gtin: p.gtin || undefined,
+        upc: p.upc || undefined,
+        mpn: p.mpn || p.manufacturer_part_number || undefined,
       }));
     } catch (error) {
       this.addLog('error', `AliExpress API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -469,6 +502,80 @@ export class SmartHarvester {
       return snapshot.docs[0].data() as ProductCore;
     } catch (err) {
       this.addLog('error', 'Error finding product by identity', err);
+      return null;
+    }
+  }
+
+  /**
+   * Find product by standard identifiers (EAN/GTIN/UPC/MPN)
+   * PRIORITY MATCHING: Checks identifiers in order: EAN -> GTIN -> UPC -> MPN
+   * Returns first match found
+   */
+  private async findProductByIdentifiers(
+    identifiers: { ean?: string; gtin?: string; upc?: string; mpn?: string }
+  ): Promise<ProductCore | null> {
+    try {
+      const { normalizeProductIdentifier } = await import('./identity-matcher');
+      
+      // Check EAN (most common in Europe)
+      if (identifiers.ean) {
+        const normalizedEan = normalizeProductIdentifier(identifiers.ean);
+        const q = query(
+          collection(db, 'product_cores'),
+          where('metadata.ean', '==', normalizedEan)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          this.addLog('info', `Found product by EAN: ${normalizedEan}`);
+          return snapshot.docs[0].data() as ProductCore;
+        }
+      }
+      
+      // Check GTIN (global standard)
+      if (identifiers.gtin) {
+        const normalizedGtin = normalizeProductIdentifier(identifiers.gtin);
+        const q = query(
+          collection(db, 'product_cores'),
+          where('metadata.gtin', '==', normalizedGtin)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          this.addLog('info', `Found product by GTIN: ${normalizedGtin}`);
+          return snapshot.docs[0].data() as ProductCore;
+        }
+      }
+      
+      // Check UPC (North America)
+      if (identifiers.upc) {
+        const normalizedUpc = normalizeProductIdentifier(identifiers.upc);
+        const q = query(
+          collection(db, 'product_cores'),
+          where('metadata.upc', '==', normalizedUpc)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          this.addLog('info', `Found product by UPC: ${normalizedUpc}`);
+          return snapshot.docs[0].data() as ProductCore;
+        }
+      }
+      
+      // Check MPN (Manufacturer Part Number)
+      if (identifiers.mpn) {
+        const normalizedMpn = normalizeProductIdentifier(identifiers.mpn);
+        const q = query(
+          collection(db, 'product_cores'),
+          where('metadata.mpn', '==', normalizedMpn)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          this.addLog('info', `Found product by MPN: ${normalizedMpn}`);
+          return snapshot.docs[0].data() as ProductCore;
+        }
+      }
+      
+      return null;
+    } catch (err) {
+      this.addLog('error', 'Error finding product by identifiers', err);
       return null;
     }
   }
@@ -529,6 +636,17 @@ export class SmartHarvester {
       status: 'pending_approval', // Requires AI enrichment before approval
       createdAt: now,
       updatedAt: now,
+      metadata: {
+        source: source as any,
+        originalId: sourceProduct.sourceProductId,
+        importedAt: now,
+        // Product identifiers (critical for deduplication & SEO)
+        sku: sourceProduct.sku,
+        ean: sourceProduct.ean,
+        gtin: sourceProduct.gtin,
+        upc: sourceProduct.upc,
+        mpn: sourceProduct.mpn,
+      } as any,
     };
 
     const docRef = await addDoc(collection(db, 'product_cores'), product);

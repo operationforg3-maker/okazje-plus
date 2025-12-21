@@ -428,6 +428,15 @@ export interface ProductModerationState {
 export interface ProductImportMetadata {
   source: 'aliexpress' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'ebay';
   originalId?: string; // External ID from source platform
+  
+  // Product identifiers (critical for deduplication & SEO)
+  sku?: string; // Stock Keeping Unit (seller's internal ID)
+  ean?: string; // European Article Number (8 or 13 digits)
+  gtin?: string; // Global Trade Item Number (GTIN-8/12/13/14)
+  upc?: string; // Universal Product Code (12 digits, primarily North America)
+  isbn?: string; // International Standard Book Number (for books)
+  mpn?: string; // Manufacturer Part Number
+  
   createdAt?: string; // ISO timestamp when product was first created
   importedAt?: string; // ISO timestamp when imported to our system
   importedBy?: string; // UID of user who triggered import
