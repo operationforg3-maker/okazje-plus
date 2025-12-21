@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAuthSession, requireAdmin } from '@/lib/auth-server';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebase-admin';
 import {
   collection,
   query,
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const limitParam = Math.min(100, parseInt(searchParams.get('limit') || '50'));
 
     // 3. Build Firestore query
-    const jobsRef = collection(db, 'harvester_jobs');
+    const jobsRef = collection(adminDb, 'harvester_jobs');
     
     let constraints: any[] = [];
     if (statusFilter && ['running', 'completed', 'failed', 'paused'].includes(statusFilter)) {
