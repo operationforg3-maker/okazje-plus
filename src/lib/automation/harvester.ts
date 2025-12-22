@@ -503,7 +503,7 @@ export class SmartHarvester {
         .get();
 
       if (snapshot.empty) return null;
-      return snapshot.docs[0].data() as ProductCore;
+      return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ProductCore;
     } catch (err) {
       this.addLog('error', 'Error finding product by identity', err);
       return null;
@@ -531,7 +531,7 @@ export class SmartHarvester {
           .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by EAN: ${normalizedEan}`);
-          return snapshot.docs[0].data() as ProductCore;
+          return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ProductCore;
         }
       }
       
@@ -545,7 +545,7 @@ export class SmartHarvester {
           .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by GTIN: ${normalizedGtin}`);
-          return snapshot.docs[0].data() as ProductCore;
+          return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ProductCore;
         }
       }
       
@@ -559,7 +559,7 @@ export class SmartHarvester {
           .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by UPC: ${normalizedUpc}`);
-          return snapshot.docs[0].data() as ProductCore;
+          return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ProductCore;
         }
       }
       
@@ -573,7 +573,7 @@ export class SmartHarvester {
           .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by MPN: ${normalizedMpn}`);
-          return snapshot.docs[0].data() as ProductCore;
+          return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ProductCore;
         }
       }
       
