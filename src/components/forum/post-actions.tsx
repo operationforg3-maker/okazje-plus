@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Edit, Trash2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -168,6 +168,7 @@ export function PostActions({
           <DialogHeader>
             <DialogTitle>Potwierdź usunięcie</DialogTitle>
           </DialogHeader>
+          <DialogDescription className="sr-only">Okno dialogowe potwierdzenia usunięcia posta</DialogDescription>
           <p className="text-sm text-muted-foreground">
             Czy na pewno chcesz usunąć ten post? Ta akcja nie może być cofnięta.
           </p>

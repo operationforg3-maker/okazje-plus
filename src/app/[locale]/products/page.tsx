@@ -648,14 +648,18 @@ function ProductsPageContent() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[300px] p-6">
-                  <SidebarContent />
+                  <div suppressHydrationWarning>
+                    <SidebarContent />
+                  </div>
                 </SheetContent>
               </Sheet>
             </div>
 
             {/* Left Sidebar - Categories (Desktop only) */}
             <div className="hidden lg:block lg:col-span-3">
-              <SidebarContent />
+              <div suppressHydrationWarning>
+                <SidebarContent />
+              </div>
             </div>
 
             {/* Center Content - Subcategories & Products */}
