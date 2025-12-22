@@ -44,7 +44,7 @@ export default function AdminCatalogPage() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/admin/harvester/start', {
+      const response = await fetch('/api/admin/harvester/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
