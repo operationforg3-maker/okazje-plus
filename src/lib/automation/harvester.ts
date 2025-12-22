@@ -160,6 +160,24 @@ export class SmartHarvester {
     
     this.addLog('info', `Starting harvest job: source=${source}, mode=${isTreeMode ? 'category-tree' : 'single'}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
 
+    // Initialize job record immediately (so UI can poll for status)
+    const initialJob: HarvesterJob = {
+      id: this.jobId,
+      status: 'running',
+      source,
+      query: queries.join(', '),
+      maxResults,
+      productsFound: 0,
+      productsCreated: 0,
+      dealsCreated: 0,
+      duplicatesSkipped: 0,
+      errors: [],
+      startedAt: jobStartTime,
+      lastUpdatedAt: jobStartTime,
+      logs: this.logs,
+    };
+    await this.updateJobRecord(initialJob);
+
     let productsFound = 0;
     let productsCreated = 0;
     let dealsCreated = 0;

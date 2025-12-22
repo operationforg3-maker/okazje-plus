@@ -87,20 +87,40 @@ export async function POST(request: NextRequest) {
       ? `category-tree (${categories.length})`
       : query;
 
-    // 6. Run harvest (returns HarvesterJob result)
+    // 6. Initialize job record (for immediate response to UI)
     const isTreeMode = isCategoryTreeMode || (categories && categories.length > 0);
-    const result = await harvester.harvestProducts(
+    const initialJob = {
+      id: jobId,
+      status: 'running' as const,
+      source,
+      query: effectiveQuery,
+      maxResults: max,
+      productsFound: 0,
+      productsCreated: 0,
+      dealsCreated: 0,
+      duplicatesSkipped: 0,
+      errors: [],
+      startedAt: new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
+      logs: [],
+    };
+
+    // 7. Run harvest in background (don't await - async execution)
+    harvester.harvestProducts(
       source as 'aliexpress' | 'amazon' | 'allegro',
       effectiveQuery,
       max,
       categories,
-      isTreeMode // Pass tree mode flag
-    );
+      isTreeMode
+    ).catch((err) => {
+      console.error(`[Harvester ${jobId}] Background job failed:`, err);
+    });
 
-    // 7. Return results
+    // 8. Return job ID immediately (UI can poll for updates)
     return NextResponse.json({
       success: true,
-      job: result,
+      job: initialJob,
+      message: 'Harvester started in background. Poll /api/admin/harvester-jobs for updates.',
     });
   } catch (error: any) {
     console.error('[Harvester API Error]', error);
