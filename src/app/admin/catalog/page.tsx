@@ -55,7 +55,8 @@ export default function AdminCatalogPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start harvester');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to start harvester' }));
+        throw new Error(errorData.error || 'Failed to start harvester');
       }
 
       const data = await response.json();
@@ -86,7 +87,8 @@ export default function AdminCatalogPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start refiner');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to start refiner' }));
+        throw new Error(errorData.error || 'Failed to start refiner');
       }
 
       const data = await response.json();
