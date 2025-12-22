@@ -229,11 +229,11 @@ export class SmartHarvester {
                   `Found existing product ${existingProduct.id}, creating new deal`
                 );
 
-                const dealId = await this.createDeal(
-                  existingProduct.id,
-                  sourceProduct,
-                  source
-                );
+                if (!existingProduct.id || typeof existingProduct.id !== 'string') {
+                  throw new Error('Existing product missing valid id');
+                }
+
+                const dealId = await this.createDeal(existingProduct.id, sourceProduct, source);
                 dealsCreated++;
 
                 // Update product's best price
@@ -670,6 +670,9 @@ export class SmartHarvester {
     sourceProduct: RawProduct,
     source: 'aliexpress' | 'amazon' | 'allegro'
   ): Promise<string> {
+    if (!productId || typeof productId !== 'string') {
+      throw new Error('Invalid productId for deal creation');
+    }
     const now = new Date().toISOString();
 
     const deal: Partial<DealM6> = {
@@ -720,6 +723,7 @@ export class SmartHarvester {
    * Update ProductCore with new deal reference and recalculate best price
    */
   private async updateProductBestPrice(productId: string): Promise<void> {
+    if (!productId || typeof productId !== 'string') return;
     // Fetch all deals for this product
     const dealsSnapshot = await adminDb
       .collection('deals')
