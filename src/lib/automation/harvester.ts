@@ -112,11 +112,27 @@ export class SmartHarvester {
     message: string,
     details?: any
   ) {
+    // Serialize details to plain object (avoid Error instances, etc.)
+    let serializedDetails: any = undefined;
+    if (details !== undefined) {
+      if (details instanceof Error) {
+        serializedDetails = { message: details.message, stack: details.stack };
+      } else if (typeof details === 'object' && details !== null) {
+        try {
+          serializedDetails = JSON.parse(JSON.stringify(details));
+        } catch {
+          serializedDetails = String(details);
+        }
+      } else {
+        serializedDetails = details;
+      }
+    }
+
     this.logs.push({
       level,
       message,
       timestamp: new Date().toISOString(),
-      details,
+      details: serializedDetails,
     });
     console.log(`[${level.toUpperCase()}] ${message}`, details || '');
   }
