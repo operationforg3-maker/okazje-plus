@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-server';
-import { AIRefiner } from '@/lib/automation/refiner';
+import { refinePendingProducts } from '@/lib/automation/refiner';
 
 /**
  * POST /api/admin/refiner/run
@@ -19,19 +19,12 @@ export async function POST(request: NextRequest) {
 
     console.log('[Refiner API] Starting refiner', { limit, dryRun });
 
-    // 3. Create job ID and run refiner
-    const jobId = `refine_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const refiner = new AIRefiner(jobId);
-
-    // 4. Run refinement on pending_approval ProductCores
-    const result = await refiner.refinePendingProducts({
-      limit,
-      dryRun,
-    });
+    // 3. Run refinement on pending_approval ProductCores
+    const result = await refinePendingProducts();
 
     console.log('[Refiner API] Completed', result);
 
-    // 5. Return results
+    // 4. Return results
     return NextResponse.json({
       success: true,
       job: result,
