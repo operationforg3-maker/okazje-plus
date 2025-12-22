@@ -399,6 +399,14 @@
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
     },
+      {
+        "collectionGroup": "product_cores",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "status", "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" }
+        ]
+      },
     {
       "collectionGroup": "deals",
       "queryScope": "COLLECTION",
