@@ -28,7 +28,11 @@ export async function GET(request: NextRequest) {
     const snapshot = await q.get();
 
     const products = snapshot.docs.map(doc => ({
-      ...doc.data(),
+      ...(() => {
+        const data = doc.data();
+        const { id, ...rest } = data;
+        return rest;
+      })(),
       id: doc.id,
     }));
 
