@@ -565,9 +565,9 @@ function ProductsPageContent() {
                         </button>
 
                         {/* Pod-podkategorie (trzeci poziom) */}
-                        {subActive && sortedSubSubcategories && sortedSubSubcategories.length > 0 && (
+                        {subActive && sub.subcategories && sub.subcategories.length > 0 && selectedSubcategory === subSlug && (
                           <div className="ml-2 space-y-1 border-l border-muted-foreground/30 pl-3">
-                            {sortedSubSubcategories.map((subsub) => {
+                            {sub.subcategories.map((subsub) => {
                               const subSubSlug = subsub.slug || subsub.id;
                               return (
                                 <button
