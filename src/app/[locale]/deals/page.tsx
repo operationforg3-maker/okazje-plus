@@ -51,7 +51,6 @@ export default function DealsPage() {
   const { user } = useAuth();
   const t = useTranslations('deals');
   const locale = useLocale();
-  const [mounted, setMounted] = useState(false);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -77,15 +76,7 @@ export default function DealsPage() {
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [showEmptyCategories, setShowEmptyCategories] = useState(false);
-
-  // Hydration guard: render only after client mounts to avoid SSR/CSR mismatches in dynamic UI
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
+  const categoryInitialized = useRef(false);
 
   // Helper: unify postedAt to timestamp (ms)
   const toTimestamp = (value: any): number => {
@@ -151,7 +142,8 @@ export default function DealsPage() {
   // Wczytaj zapisaną kategorię / podkategorię gdy tylko będą dostępne kategorie
   // Najpierw sprawdź query params, potem dopiero localStorage (jeśli brak query)
   useEffect(() => {
-    if (categories.length === 0) return;
+    if (categories.length === 0 || categoryInitialized.current) return;
+    categoryInitialized.current = true;
     try {
       const params = new URLSearchParams(window.location.search);
       const mainParam = params.get('mainCategory');
