@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-server';
-import { refinePendingProducts } from '@/lib/automation/refiner';
+import { startRefinerJob } from '@/lib/automation/refiner';
+import { adminDb } from '@/lib/firebase-admin';
 
 /**
  * POST /api/admin/refiner/run
@@ -19,12 +20,33 @@ export async function POST(request: NextRequest) {
 
     console.log('[Refiner API] Starting refiner', { limit, dryRun });
 
-    // 3. Run refinement on pending_approval ProductCores
-    const result = await refinePendingProducts();
+    // 3. Fetch pending_approval ProductCores
+    let query = adminDb.collection('product_cores').where('status', '==', 'pending_approval');
+    const snapshot = await query.limit(limit).get();
+    const productIds = snapshot.docs.map(doc => doc.id);
+
+    console.log(`[Refiner API] Found ${productIds.length} pending products`);
+
+    if (productIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        job: {
+          id: `refine_${Date.now()}`,
+          status: 'skipped',
+          message: 'No pending_approval products to refine',
+          productsFound: 0,
+          productsEnriched: 0,
+          errors: [],
+        },
+      });
+    }
+
+    // 4. Run refinement
+    const result = await startRefinerJob(productIds, 'full_enrichment');
 
     console.log('[Refiner API] Completed', result);
 
-    // 4. Return results
+  // 5. Return results
     return NextResponse.json({
       success: true,
       job: result,
