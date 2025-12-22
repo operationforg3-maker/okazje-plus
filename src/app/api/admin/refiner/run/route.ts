@@ -1,63 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerAuthSession, requireAdmin } from '@/lib/auth-server';
+import { requireAdmin } from '@/lib/auth-server';
 import { AIRefiner } from '@/lib/automation/refiner';
 
 /**
  * POST /api/admin/refiner/run
  * 
- * Uruchamia AI Refiner do wzbogacania produktów
- * 
- * Request body:
- * {
- *   productIds: string[],
- *   refinationType: 'full_enrichment' | 'specs_cleanup'
- * }
- * 
- * Response:
- * {
- *   jobId: string,
- *   productsSuccessful: number,
- *   productsFailed: number,
- *   details: Record<productId, {status, message}>,
- *   logs: Array<{productId, status, message}>
- * }
+ * Uruchamia Refiner na pending_approval ProductCores
+ * Body (optional): { limit?: number, dryRun?: boolean }
  */
 export async function POST(request: NextRequest) {
   try {
     // 1. Verify admin authentication
-    const session = await getServerAuthSession();
-    await requireAdmin(session);
+    await requireAdmin();
 
-    // 2. Parse request body
-    const body = await request.json();
-    const { productIds, refinationType } = body;
+    // 2. Parse request body (optional)
+    const body = await request.json().catch(() => ({}));
+    const { limit = 50, dryRun = false } = body;
 
-    // 3. Validate input
-    if (!Array.isArray(productIds) || productIds.length === 0) {
-      return NextResponse.json(
-        { error: 'productIds must be a non-empty array' },
-        { status: 400 }
-      );
-    }
+    console.log('[Refiner API] Starting refiner', { limit, dryRun });
 
-    if (!['full_enrichment', 'specs_cleanup'].includes(refinationType)) {
-      return NextResponse.json(
-        { error: 'Invalid refinationType. Must be full_enrichment or specs_cleanup' },
-        { status: 400 }
-      );
-    }
-
-    // 4. Create job ID and run refiner
+    // 3. Create job ID and run refiner
     const jobId = `refine_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const refiner = new AIRefiner(jobId);
 
-    // 5. Run refinement (returns RefinerJob result)
-    const result = await refiner.refineProducts(
-      productIds,
-      refinationType as 'full_enrichment' | 'specs_cleanup'
-    );
+    // 4. Run refinement on pending_approval ProductCores
+    const result = await refiner.refinePendingProducts({
+      limit,
+      dryRun,
+    });
 
-    // 6. Return results
+    console.log('[Refiner API] Completed', result);
+
+    // 5. Return results
     return NextResponse.json({
       success: true,
       job: result,
