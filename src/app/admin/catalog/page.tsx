@@ -79,8 +79,10 @@ export default function AdminCatalogPage() {
     setMessage(null);
 
     try {
-      const response = await fetch('/api/admin/refiner/pending', {
+      const response = await fetch('/api/admin/refiner/run', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 50 }),
       });
 
       if (!response.ok) {
