@@ -1,17 +1,4 @@
-import {
-  collection,
-  doc,
-  query,
-  where,
-  getDocs,
-  getDoc,
-  addDoc,
-  updateDoc,
-  serverTimestamp,
-  increment,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebase-admin';
 import {
   ProductCore,
   DealM6,
@@ -76,14 +63,13 @@ export class SmartHarvester {
       const mainCategories = [] as Array<{ id: string; slug: string }>;
 
       if (rootCategorySlug) {
-        const mainRef = doc(db, 'categories', rootCategorySlug);
-        const mainDoc = await getDoc(mainRef);
-        if (mainDoc.exists()) {
+        const mainDoc = await adminDb.collection('categories').doc(rootCategorySlug).get();
+        if (mainDoc.exists) {
           const data = mainDoc.data() as any;
           mainCategories.push({ id: mainDoc.id, slug: data?.slug || mainDoc.id });
         }
       } else {
-        const mainSnapshot = await getDocs(collection(db, 'categories'));
+        const mainSnapshot = await adminDb.collection('categories').get();
         mainSnapshot.forEach((docSnap) => {
           const data = docSnap.data() as any;
           mainCategories.push({ id: docSnap.id, slug: data?.slug || docSnap.id });
@@ -91,12 +77,12 @@ export class SmartHarvester {
       }
 
       for (const main of mainCategories) {
-        const subSnapshot = await getDocs(collection(doc(db, 'categories', main.id), 'subcategories'));
+        const subSnapshot = await adminDb.collection(`categories/${main.id}/subcategories`).get();
         for (const subDoc of subSnapshot.docs) {
           const subData = subDoc.data() as any;
           const subSlug = subData?.slug || subDoc.id;
 
-          const subSubSnapshot = await getDocs(collection(doc(db, 'categories', main.id, 'subcategories', subDoc.id), 'subcategories'));
+          const subSubSnapshot = await adminDb.collection(`categories/${main.id}/subcategories/${subDoc.id}/subcategories`).get();
 
           if (subSubSnapshot.empty) {
             queries.push(`${main.slug}/${subSlug}`);
@@ -494,11 +480,11 @@ export class SmartHarvester {
     identityHash: string
   ): Promise<ProductCore | null> {
     try {
-      const q = query(
-        collection(db, 'product_cores'),
-        where('identityHash', '==', identityHash)
-      );
-      const snapshot = await getDocs(q);
+      const snapshot = await adminDb
+        .collection('product_cores')
+        .where('identityHash', '==', identityHash)
+        .limit(1)
+        .get();
 
       if (snapshot.empty) return null;
       return snapshot.docs[0].data() as ProductCore;
@@ -522,11 +508,11 @@ export class SmartHarvester {
       // Check EAN (most common in Europe)
       if (identifiers.ean) {
         const normalizedEan = normalizeProductIdentifier(identifiers.ean);
-        const q = query(
-          collection(db, 'product_cores'),
-          where('metadata.ean', '==', normalizedEan)
-        );
-        const snapshot = await getDocs(q);
+        const snapshot = await adminDb
+          .collection('product_cores')
+          .where('metadata.ean', '==', normalizedEan)
+          .limit(1)
+          .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by EAN: ${normalizedEan}`);
           return snapshot.docs[0].data() as ProductCore;
@@ -536,11 +522,11 @@ export class SmartHarvester {
       // Check GTIN (global standard)
       if (identifiers.gtin) {
         const normalizedGtin = normalizeProductIdentifier(identifiers.gtin);
-        const q = query(
-          collection(db, 'product_cores'),
-          where('metadata.gtin', '==', normalizedGtin)
-        );
-        const snapshot = await getDocs(q);
+        const snapshot = await adminDb
+          .collection('product_cores')
+          .where('metadata.gtin', '==', normalizedGtin)
+          .limit(1)
+          .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by GTIN: ${normalizedGtin}`);
           return snapshot.docs[0].data() as ProductCore;
@@ -550,11 +536,11 @@ export class SmartHarvester {
       // Check UPC (North America)
       if (identifiers.upc) {
         const normalizedUpc = normalizeProductIdentifier(identifiers.upc);
-        const q = query(
-          collection(db, 'product_cores'),
-          where('metadata.upc', '==', normalizedUpc)
-        );
-        const snapshot = await getDocs(q);
+        const snapshot = await adminDb
+          .collection('product_cores')
+          .where('metadata.upc', '==', normalizedUpc)
+          .limit(1)
+          .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by UPC: ${normalizedUpc}`);
           return snapshot.docs[0].data() as ProductCore;
@@ -564,11 +550,11 @@ export class SmartHarvester {
       // Check MPN (Manufacturer Part Number)
       if (identifiers.mpn) {
         const normalizedMpn = normalizeProductIdentifier(identifiers.mpn);
-        const q = query(
-          collection(db, 'product_cores'),
-          where('metadata.mpn', '==', normalizedMpn)
-        );
-        const snapshot = await getDocs(q);
+        const snapshot = await adminDb
+          .collection('product_cores')
+          .where('metadata.mpn', '==', normalizedMpn)
+          .limit(1)
+          .get();
         if (!snapshot.empty) {
           this.addLog('info', `Found product by MPN: ${normalizedMpn}`);
           return snapshot.docs[0].data() as ProductCore;
@@ -656,7 +642,7 @@ export class SmartHarvester {
       } as any,
     };
 
-    const docRef = await addDoc(collection(db, 'product_cores'), product);
+    const docRef = await adminDb.collection('product_cores').add(product);
     return docRef.id;
   }
 
@@ -710,7 +696,7 @@ export class SmartHarvester {
       updatedAt: now,
     };
 
-    const docRef = await addDoc(collection(db, 'deals'), deal);
+    const docRef = await adminDb.collection('deals').add(deal);
     return docRef.id;
   }
 
@@ -719,12 +705,11 @@ export class SmartHarvester {
    */
   private async updateProductBestPrice(productId: string): Promise<void> {
     // Fetch all deals for this product
-    const dealsQuery = query(
-      collection(db, 'deals'),
-      where('productId', '==', productId),
-      where('isActive', '==', true)
-    );
-    const dealsSnapshot = await getDocs(dealsQuery);
+    const dealsSnapshot = await adminDb
+      .collection('deals')
+      .where('productId', '==', productId)
+      .where('isActive', '==', true)
+      .get();
 
     if (dealsSnapshot.empty) return;
 
@@ -744,8 +729,8 @@ export class SmartHarvester {
     }
 
     // Update product with new best price (M6: bestPrice is {amount, currency})
-    const productRef = doc(db, 'product_cores', productId);
-    await updateDoc(productRef, {
+    const productRef = adminDb.collection('product_cores').doc(productId);
+    await productRef.update({
       bestPrice: {
         amount: bestPrice !== Infinity ? bestPrice : 0,
         currency: 'USD', // Store in USD for consistency per M6
@@ -776,25 +761,30 @@ export class SmartHarvester {
       createdAt: new Date().toISOString(),
     };
 
-    await addDoc(collection(db, 'identity_matches'), match);
+    await adminDb.collection('identity_matches').add(match);
   }
 
   /**
    * Update the harvester job record in Firestore
    */
   private async updateJobRecord(job: HarvesterJob): Promise<void> {
-    const jobRef = doc(db, 'harvester_jobs', this.jobId);
-    await updateDoc(jobRef, {
+    const jobRef = adminDb.collection('harvester_jobs').doc(this.jobId);
+    await jobRef.set({
+      id: job.id,
+      source: job.source,
+      query: job.query,
+      maxResults: job.maxResults,
       status: job.status,
       productsFound: job.productsFound,
       productsCreated: job.productsCreated,
       dealsCreated: job.dealsCreated,
       duplicatesSkipped: job.duplicatesSkipped,
-      errors: job.errors,
-      completedAt: job.completedAt,
+      errors: job.errors || [],
+      startedAt: job.startedAt,
+      completedAt: job.completedAt || null,
       lastUpdatedAt: job.lastUpdatedAt,
-      logs: job.logs,
-    });
+      logs: job.logs || [],
+    }, { merge: true });
   }
 }
 
@@ -825,7 +815,7 @@ export async function startHarvesterJob(
     logs: [],
   };
 
-  await addDoc(collection(db, 'harvester_jobs'), jobRecord);
+  await adminDb.collection('harvester_jobs').add(jobRecord);
 
   // Run harvester
   const harvester = new SmartHarvester(jobId);

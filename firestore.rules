@@ -29,7 +29,7 @@ service cloud.firestore {
       return !(field in request.resource.data) || (request.resource.data[field] >= minVal);
     }
     function allowedStatus(field) {
-      return !(field in request.resource.data) || request.resource.data[field] in ['draft','pending','approved','rejected'];
+      return !(field in request.resource.data) || request.resource.data[field] in ['draft','pending','pending_approval','approved','rejected'];
     }
 
     ////////////////////////////////
@@ -126,6 +126,17 @@ service cloud.firestore {
         // Jeśli zmieniamy status, tylko admin
         !(request.resource.data.status in ['approved','rejected']) || isAdmin()
       );
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // PRODUCT_CORES (M6)
+    ////////////////////////////////
+    match /product_cores/{productId} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if isAdmin() && allowedStatus('status');
+      // Updates tylko dla administratora; pola są immutable poza statusem/bestPrice/linkedDealIds
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 

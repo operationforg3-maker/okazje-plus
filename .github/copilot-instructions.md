@@ -1,16 +1,17 @@
 # Okazje Plus — AI Coding Assistant Guide
 
-Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid churn, and mirror existing patterns.
+**Updated:** December 21, 2025 | **Status:** M6 Product-Centric Architecture Complete  
+Productivity-first guide for this codebase. Keep Polish-facing UI/text, mirror existing patterns, avoid data model churn.
 
 ## Big picture architecture
-- **Platform**: Product-comparison marketplace (M6+, like Ceneo/PriceRunner) — Next.js 15 app router + Firebase (Auth/Firestore/Storage) + Genkit AI + optional Typesense search
-- **Deployment**: Firebase App Hosting (europe-west1); Cloud Functions in `okazje-plus/` subdirectory
-- **App structure**: i18n with next-intl (`src/app/[locale]/*`); admin panel at `src/app/admin/*`; shadcn UI components
-- **Data model (M6)**: **ProductCore** (immutable, deduped) + **Deal** (mutable, multiple per product). Types: `src/lib/types.ts`; queries: `src/lib/data.ts`
-- **Automation layer (M6)**: Smart harvester/refiner in `src/lib/automation/*` — fetches from AliExpress/Amazon/Allegro, dedupes by identity hash, enriches with AI
-- **Categories**: Three-level hierarchy via `mainCategorySlug`, `subCategorySlug`, `subSubCategorySlug` (see `Category`, `Subcategory`, `SubSubcategory` interfaces)
-- **Ranking**: Temperature-based "heat" algorithm (not raw votes) for deals. See `src/lib/data.ts` and `src/components/deal-card.tsx`
-- **Realtime features**: Optimistic UI updates for votes/comments. Hooks: `use-comments-count.ts`, `use-pagination.ts`, `use-notifications.ts`. Notifications via Cloud Function triggers
+- **Platform**: Product-comparison marketplace (M6, like Ceneo/PriceRunner) — Next.js 15 app router + Firebase (Auth/Firestore/Storage) + Vertex AI Genkit + optional Typesense search
+- **Deployment**: Firebase App Hosting (europe-west1); Cloud Functions in `okazje-plus/` subdirectory (Node.js 22)
+- **App structure**: i18n with next-intl (`src/app/[locale]/*`); admin panel at `src/app/admin/*`; shadcn/ui components; server actions for mutations
+- **Data model (M6)**: **ProductCore** (immutable, one per product) + **Deal** (mutable, multiple per product). Types in `src/lib/types.ts` (~2500 lines); all queries in `src/lib/data.ts` (~2600 lines)
+- **Automation layer (M6)**: Harvester (fetch/dedupe) → Refiner (AI enrich) in `src/lib/automation/*`. Harvester creates ProductCore + Deal from raw API data; Refiner enriches with specs, descriptions, quality scores. Identity matching via SHA-256(title + image hash).
+- **Categories**: Three-level hierarchy (`mainCategorySlug` → `subCategorySlug` → `subSubCategorySlug`). Admin seeds via `src/scripts/seed-categories-full.ts`.
+- **Ranking**: Temperature-based "heat" (exponential decay on vote timestamp) for deals, not raw vote counts. Calculated server-side. See `getHotDeals()` in `src/lib/data.ts`.
+- **Realtime features**: Optimistic UI updates (votes/comments) with rollback on error. Notifications via Cloud Function triggers (auto-comment-reply alerts). In-app notification polling every 30s.
 
 ## Authentication & security
 - **Dual Firebase config**: Server uses `FIREBASE_WEBAPP_CONFIG` (App Hosting runtime); client uses `NEXT_PUBLIC_*` env vars (embedded at build time)
@@ -20,29 +21,37 @@ Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid ch
 - **Admin checks**: Use `requireAdmin()` in server actions; check `session.role === 'admin'` in API routes
 
 ## Data layer patterns
-- **ALWAYS use `src/lib/data.ts`**: Never query Firestore directly in components. Add new queries to this module
-- **M6 Data Model**: Two-entity pattern:
-  - **ProductCore** (immutable): One per unique product; identity = SHA-256(normalized_title + image_hash); contains specs, ratings, multilingual descriptions, best price, searchTags
-  - **Deal** (mutable): Specific offer from seller; foreign key to ProductCore; price + shipping + source (AliExpress/Amazon/Allegro); price history for compliance; vote count & temperature
-  - **Key queries**: `getHotDeals()` filters approved deals by temperature; `getProductCoreById()` + `getLinkedDeals()` for detail pages
+- **ALWAYS use `src/lib/data.ts`**: Never query Firestore directly in components. Add new queries to this module. NEVER access collections from UI code.
+- **M6 Data Model**: Two-entity pattern with strict separation:
+  - **ProductCore** (immutable): Firestore collection `product_cores`. One per unique product. Identity = SHA-256(normalized_title + image_hash). Fields: `title`, `imageUrl`, `specs` (key-value normalized), `description` (multilingual), `ratings`, `bestPrice`, `bestDealId`, `sourceLinks`, `status`, `qualityScore` (0-100), `searchTags`. Created/updated only by Harvester.
+  - **Deal** (mutable): Firestore collection `deals`. Specific seller offer. Fields: `productCoreId` (FK), `sourceId`, `source` (AliExpress/Amazon/Allegro), `price`, `shippingCost`, `totalPrice`, `merchantRating`, `inStock`, `priceHistory` (timestamped, Omnibus compliance), `votes`, `temperature`, `status`, `comments`. User-facing mutations (votes, comments) here.
+  - **Key queries**: `getHotDeals()` filters approved, sorted by temperature; `getProductCoreById()` fetches product; `getLinkedDeals(productCoreId)` fetches all deals for product; `getDealsForCategory()` for listing pages.
 - **Automation (M6)**: `src/lib/automation/*` orchestrates harvesting → deduplication → enrichment:
-  - **Harvester** (`harvester.ts`): Fetches from APIs, calculates identity hash, creates/links ProductCores, creates Deal documents
-  - **Refiner** (`refiner.ts`): AI-enriches specs, generates multilingual descriptions, calculates quality scores, extracts search tags
-  - **Identity Matcher** (`identity-matcher.ts`): Prevents duplicate products via hash-based lookup
-  - **Migration** (`migration.ts`): Legacy deal → M6 conversion (reference for schema understanding)
-- **Caching strategy**: Redis if `REDIS_URL` present, else in-memory LRU. Helpers: `cacheGet(key)`, `cacheSet(key, value, ttl)`
-- **Cache invalidation**: `src/lib/cache-invalidation.ts` exports invalidation helpers (e.g., `invalidateHotDealsCache()`). Call after mutations
-- **Sanitization**: All data from Firestore passes through sanitizers (`src/lib/sanitizers.ts`) before returning to prevent XSS/injection
-- **Status filtering**: Public queries MUST filter `status: "approved"`; admin queries can see all statuses (draft/pending/approved/rejected)
-- **Batch operations**: Use `chunkArray()` helper (max 30 items) for Firestore `in` queries to avoid limits
+  - **Harvester** (`harvester.ts`): (1) Fetch from API; (2) Calculate identity hash; (3) Check if product exists via `IdentityMatch` lookup; (4) Create or link ProductCore; (5) Create Deal document; (6) Record IdentityMatch for future runs. **Returns:** HarvesterJob progress. Called from admin UI via server action. **Uses Firebase Admin SDK** for direct database writes without client SDK limitations.
+  - **Refiner** (`refiner.ts`): (1) Fetch pending ProductCores; (2) Normalize specs (extract RAM/Storage/Screen from title/specs); (3) Call Gemini to generate multilingual descriptions; (4) Calculate quality score; (5) Extract searchTags. **Input:** ProductCore with minimal data. **Output:** Enriched ProductCore. Called via server action or Cloud Function. **Uses Firebase Admin SDK** for batch operations.
+  - **Identity Matcher** (`identity-matcher.ts`): SHA-256 for title & image; fuzzy Levenshtein matching; dimension extraction (12GB RAM → "12GB"). Prevents duplicates.
+  - **Migration** (`migration.ts`): Legacy Deal → M6 schema reference (read-only for understanding old structure).
+- **Caching strategy**: Redis if `REDIS_URL` set, else in-memory LRU (max 500 entries, 60s default TTL). Lazy import on server only (`src/lib/cache.ts`).
+- **Cache invalidation**: `src/lib/cache-invalidation.ts` exports helpers like `invalidateHotDealsCache()`, `invalidateProductCache(productId)`. Call **immediately after any Firestore mutation** (vote, comment, product update). Pattern: `await cacheInvalidationFn(); await dbMutation();` — invalidate first to avoid stale reads.
+- **Sanitization**: All Firestore data sanitized via `sanitizeDealRecord()`, `sanitizeProductRecord()` in `src/lib/sanitizers.ts` before returning. Prevents XSS. **Do this in data.ts queries, not in components.**
+- **Status filtering**: Public queries MUST filter `status: "approved"`. Admin queries (`getProductsForAdmin()`, `getDealsForAdmin()`) return all statuses. Never expose draft/pending/rejected to public without explicit check.
+- **Batch operations**: Use `chunkArray(array, 30)` helper for Firestore `in` clauses (max 30 items per query). For bulk mutations use `writeBatch()` (max 500 ops per batch).
 
 ## AI/Genkit integration
 - **Setup**: Entry point `src/ai/genkit.ts`, individual flows in `src/ai/flows/*`, local dev runner `src/ai/dev.ts`
-- **Model**: Vertex AI Gemini 2.0 Flash (uses ADC credentials in production, `GEMINI_API_KEY` for local dev)
-- **Dev workflow**: `npm run genkit:dev` starts Genkit UI on port 4000; `npm run genkit:watch` for hot reload
-- **Flow structure**: Import flows in `dev.ts` to register them. Admin panel calls flows via server actions (see `src/app/admin/*` pages)
-- **Common flows**: Translation (`translation/`), category mapping, product enrichment (specs → multilingual descriptions), import validation (see `src/ai/flows/` subdirs)
-- **Usage in automation**: Refiner uses AI to enrich ProductCore with descriptions & quality scores; Harvester may call translation flows for multilingual content
+- **Model**: Vertex AI Gemini 2.0 Flash Experimental (`vertexai/gemini-2.0-flash-exp`). Uses ADC (Application Default Credentials) in production; local dev can use `GEMINI_API_KEY`.
+- **Dev workflow**: `npm run genkit:dev` starts interactive Genkit UI on port 4000; `npm run genkit:watch` for hot reload of flow code.
+- **Flow registration**: Import flows in `src/ai/dev.ts` to register them in Genkit. Each flow exports named function decorated with `@genkit()`.
+- **Common flows** (`src/ai/flows/`):
+  - `enrichment.ts`: Cleans specs, generates descriptions, calculates quality score (used by Refiner)
+  - `translation/`: Translates product descriptions to EN/DE
+  - `category-mapping.ts`: Maps raw product → category hierarchy
+  - `deals/`: Deal-specific enrichment (review summaries, trending predictions)
+  - `aliexpress/`: Parse AliExpress HTML, extract specs
+  - `draftDealFiller/`: Fill missing fields in new deals
+- **Flow structure**: `defineFlow()` takes `{ name, description, inputSchema, outputSchema }` + async handler. Input/output validation automatic. Genkit provides structured logging.
+- **Usage in automation**: Refiner calls `enrichment` flow for each ProductCore batch; Harvester may call translation flows for multilingual content. Server actions in admin UI directly call flows via `runFlow()`.
+- **Error handling**: Flows auto-retry on transient errors. Catch exceptions in flow handlers; log context (product ID, flow name) for debugging. Genkit stores flow traces in Firestore for inspection.
 
 ## Notifications system (M5)
 - **In-app**: NotificationBell component in navbar; polls every 30s for unread notifications; auto-marks as read on click
@@ -80,17 +89,26 @@ Productivity-first guide for this codebase. Keep Polish-facing UI/text, avoid ch
 ## Development workflow
 ```bash
 npm run dev              # Next.js dev server (:9002) with Turbopack
-npm run genkit:dev       # Genkit UI for testing AI flows (:4000)
-npm run genkit:watch     # Genkit with hot reload
+npm run genkit:dev       # Genkit UI for testing/debugging AI flows (:4000)
+npm run genkit:watch     # Genkit with hot reload for flow development
 npm run typecheck        # TypeScript validation (strict mode)
-npm run lint             # ESLint (auto-fix with --fix)
+npm run lint             # ESLint (run with --fix for auto-fix)
 npm run test             # Jest unit tests (*.test.ts, *.spec.ts)
+npm run test:watch       # Jest watch mode for TDD
 npm run test:e2e         # Playwright E2E tests (tests/ dir)
-npm run build            # Production build
-npm run deploy:hosting   # Deploy Next.js to App Hosting
+npm run build            # Production build (validates TS + runs next build)
+npm run seed:categories  # Seed category hierarchy to Firestore
+npm run deploy:hosting   # Deploy Next.js to Firebase App Hosting
 npm run deploy:functions # Deploy Cloud Functions only
-npm run deploy:prod      # Deploy everything
+npm run deploy:prod      # Deploy everything (hosting + functions)
 ```
+
+**Local development setup**:
+1. Copy `.env.local.example` → `.env.local` with Firebase project credentials + `GEMINI_API_KEY`
+2. Run `npm run dev` to start Next.js on port 9002
+3. Parallel terminal: `npm run genkit:dev` to test AI flows on port 4000
+4. Use browser DevTools to inspect Firestore via Firebase console (`console.firebase.google.com`)
+5. For production simulation: `firebase emulators:start` (requires `firebase-tools` CLI)
 
 ## Testing approaches
 - **Quick system tests**: Admin UI → "Testy" tab → "Uruchom Testy" button; or `POST /api/admin/tests/run` with admin token
@@ -109,6 +127,10 @@ Root directory contains 30+ debugging scripts for common troubleshooting tasks. 
 - **Pattern**: Most scripts use `.mjs` (ESM) or `.js` (CommonJS); run with `node <script>` or `tsx <script>` for TypeScript
 - **Service account**: Scripts use `serviceAccountKey.json` for Firebase Admin SDK access (never commit this file!)
 - **When to use**: Direct database inspection, bypassing Next.js API layer; analyzing production data; emergency fixes
+- **Examples**: 
+  - `node check-products.mjs` — inspect all products in Firestore
+  - `node check-job-status.js <jobId>` — debug stuck harvester job
+  - `tsx debug-import-flow.js` — trace entire import pipeline with logs
 
 ## API routes & server actions
 - **Route pattern**: API routes in `src/app/api/**/route.ts` export `GET`, `POST`, etc. as named async functions
@@ -170,3 +192,13 @@ ALIEXPRESS_APP_KEY=xxx             # Marketplace integration
 - **Troubleshooting**: `docs/troubleshooting/IMPORT_JOBS_NOT_WORKING.md`
 
 When in doubt about patterns, check existing implementations in the same domain (e.g., deals vs products follow parallel structures).
+
+## Advanced patterns & gotchas
+- **Server-side vs client code**: Server actions/API routes must use `src/lib/auth-server.ts`. Client components use `useAuth()` hook. Never import server modules into client code.
+- **Temperature calculation**: Done server-side in `getHotDeals()` via decay formula. Never expose raw vote counts to UI; always use temperature. See line ~65 in `src/lib/data.ts`.
+- **Deal vs Product mutations**: Vote/comment on Deal, not Product. Product fields are immutable except `status`. Refiner updates ProductCore, not user mutations.
+- **Identity hash stability**: Once a ProductCore is created with a hash, the hash must never change (data consistency). Always recalculate identically or lookup existing via `IdentityMatch` table.
+- **Firestore index gotchas**: Compound queries (orderBy + where + limit) require indexes in `firestore.indexes.json`. Firestore auto-suggests them; check logs if query fails with "FAILED_PRECONDITION".
+- **Admin vs moderator**: `requireAdmin()` is strict (only admin role). Moderator role exists but has fewer permissions (see `firestore.rules`). Assign judiciously.
+- **Cloud Function cold starts**: Deploy is slow; test locally via `firebase emulators:start`. Functions file size matters (keep sharp, @sendgrid minimal).
+- **Next.js app router quirks**: No `next/router`; use URL params in `[id]` directories. Static generation not fully used; mostly dynamic due to real-time nature.

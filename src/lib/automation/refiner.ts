@@ -1,15 +1,4 @@
-import {
-  collection,
-  doc,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  addDoc,
-  getDoc,
-  writeBatch,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { adminDb } from '@/lib/firebase-admin';
 import { ProductCore, RefinerJob, LocalizedText } from '@/lib/types';
 
 /**
@@ -49,19 +38,12 @@ export class AIRefiner {
       this.addLog('info', `Starting DB refinement job: status=${status || 'all'}, limit=${limit}, type=${refinationType}`);
 
       // Build query to fetch products from database
-      const productsRef = collection(db, 'product_cores');
-      let q;
-      
-      if (status) {
-        q = query(
-          productsRef,
-          where('status', '==', status)
-        );
-      } else {
-        q = query(productsRef);
-      }
+      const productsRef = adminDb.collection('product_cores');
+      const q = status
+        ? productsRef.where('status', '==', status)
+        : productsRef;
 
-      const snapshot = await getDocs(q);
+      const snapshot = await q.get();
       const totalProducts = snapshot.docs.length;
       this.addLog('info', `Found ${totalProducts} products to refine (limit: ${limit})`);
 
@@ -468,9 +450,9 @@ export class AIRefiner {
    */
   private async getProduct(productId: string): Promise<ProductCore | null> {
     try {
-      const docRef = doc(db, 'product_cores', productId);
-      const docSnap = await getDoc(docRef);
-      return docSnap.exists() ? (docSnap.data() as ProductCore) : null;
+      const docRef = adminDb.collection('product_cores').doc(productId);
+      const docSnap = await docRef.get();
+      return docSnap.exists ? (docSnap.data() as ProductCore) : null;
     } catch (err) {
       console.error('Error fetching product:', err);
       return null;
@@ -484,17 +466,17 @@ export class AIRefiner {
     productId: string,
     updates: Partial<ProductCore>
   ): Promise<void> {
-    const docRef = doc(db, 'product_cores', productId);
-    await updateDoc(docRef, updates as any);
+    const docRef = adminDb.collection('product_cores').doc(productId);
+    await docRef.update(updates as any);
   }
 
   /**
    * Update job record
    */
   private async updateJobRecord(job: RefinerJob): Promise<void> {
-    const jobRef = doc(db, 'refiner_jobs', this.jobId);
+    const jobRef = adminDb.collection('refiner_jobs').doc(this.jobId);
     try {
-      await updateDoc(jobRef, {
+      await jobRef.set({
         status: job.status,
         productsProcessed: job.productsProcessed,
         productsSuccessful: job.productsSuccessful,
@@ -502,10 +484,10 @@ export class AIRefiner {
         completedAt: job.completedAt,
         lastUpdatedAt: job.lastUpdatedAt,
         logs: job.logs,
-      });
+      }, { merge: true });
     } catch {
       // If doc doesn't exist, create it
-      await addDoc(collection(db, 'refiner_jobs'), job);
+      await adminDb.collection('refiner_jobs').add(job);
     }
   }
 
@@ -562,12 +544,10 @@ export async function startRefinerJob(
  * Helper: Refine all pending_approval products
  */
 export async function refinePendingProducts(): Promise<RefinerJob> {
-  const q = query(
-    collection(db, 'product_cores'),
-    where('status', '==', 'pending_approval')
-  );
-
-  const snapshot = await getDocs(q);
+  const snapshot = await adminDb
+    .collection('product_cores')
+    .where('status', '==', 'pending_approval')
+    .get();
   const productIds = snapshot.docs.map(doc => doc.id);
 
   if (productIds.length === 0) {

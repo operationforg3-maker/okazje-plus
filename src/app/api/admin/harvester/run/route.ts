@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerAuthSession, requireAdmin } from '@/lib/auth-server';
+import { requireAdmin } from '@/lib/auth-server';
 import { SmartHarvester } from '@/lib/automation/harvester';
 
 /**
@@ -32,8 +32,7 @@ import { SmartHarvester } from '@/lib/automation/harvester';
 export async function POST(request: NextRequest) {
   try {
     // 1. Verify admin authentication
-    const session = await getServerAuthSession();
-    await requireAdmin(session);
+    await requireAdmin();
 
     // 2. Parse request body
     const body = await request.json();
