@@ -243,10 +243,19 @@ export class SmartHarvester {
                 // New product: Create ProductCore + Deal
                 this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
 
+                // Parse category hierarchy from query (e.g., 'electronics/phones/flagship')
+                const categoryParts = currentQuery.split('/');
+                const categoryInfo = {
+                  mainCategorySlug: categoryParts[0] || 'uncategorized',
+                  subCategorySlug: categoryParts[1] || 'uncategorized',
+                  subSubCategorySlug: categoryParts[2] || undefined,
+                };
+
                 const productId = await this.createProductCore(
                   sourceProduct,
                   identityHash,
-                  source
+                  source,
+                  categoryInfo
                 );
                 productsCreated++;
 
@@ -590,7 +599,8 @@ export class SmartHarvester {
   private async createProductCore(
     sourceProduct: any,
     identityHash: string,
-    source: string
+    source: string,
+    categoryInfo?: { mainCategorySlug: string; subCategorySlug: string; subSubCategorySlug?: string }
   ): Promise<string> {
     const now = new Date().toISOString();
 
@@ -625,8 +635,9 @@ export class SmartHarvester {
         en: '',
       },
       specs,
-      mainCategorySlug: 'uncategorized',
-      subCategorySlug: 'uncategorized',
+      mainCategorySlug: categoryInfo?.mainCategorySlug || 'uncategorized',
+      subCategorySlug: categoryInfo?.subCategorySlug || 'uncategorized',
+      subSubCategorySlug: categoryInfo?.subSubCategorySlug,
       images: [sourceProduct.imageUrl],
       primaryImageHash: calculateImageHash(sourceProduct.imageUrl),
       reviewsSummary: {
