@@ -12,6 +12,7 @@ import { withAuth } from '@/components/auth/withAuth';
 import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { JobsMonitor } from '@/components/admin/jobs-monitor';
+import { HarvesterJobsMonitor } from '@/components/admin/harvester-jobs-monitor';
 import { ScheduleManager } from '@/components/admin/schedule-manager';
 import { LinkVerifier } from '@/components/admin/link-verifier';
 import { FirebaseIndexManager } from '@/components/admin/firebase-index-manager';
@@ -130,7 +131,7 @@ function HarvesterPage() {
             </TabsContent>
 
             <TabsContent value="jobs" className="space-y-4">
-              <JobsMonitor onConsoleLog={addLog} />
+              <HarvesterJobsMonitor onConsoleLog={addLog} />
             </TabsContent>
 
             <TabsContent value="schedule" className="space-y-4">
