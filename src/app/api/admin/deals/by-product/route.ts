@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const snapshot = await adminDb
       .collection('deals')
-      .where('productId', '==', productId)
+      .where('productCoreId', '==', productId)
       .orderBy('createdAt', 'desc')
       .limit(100)
       .get();

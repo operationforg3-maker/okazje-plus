@@ -2371,7 +2371,7 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
     if (!product) return null;
 
     const dealsRef = collection(db, "deals");
-    const q = query(dealsRef, where("productId", "==", productId), where("status", "==", "approved"));
+    const q = query(dealsRef, where("productCoreId", "==", productId), where("status", "==", "approved"));
     const dealsSnap = await getDocs(q);
     const deals = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -2414,7 +2414,7 @@ export async function getDealsForProduct(productId: string): Promise<any[]> {
     const dealsRef = collection(db, "deals");
     const q = query(
       dealsRef,
-      where("productId", "==", productId),
+      where("productCoreId", "==", productId),
       where("status", "==", "approved"),
       orderBy("price.amount", "asc") // Sort by price ascending (best deals first)
     );
