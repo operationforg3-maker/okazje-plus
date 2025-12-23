@@ -702,33 +702,53 @@ export class SmartHarvester {
     if (!productId || typeof productId !== 'string') {
       throw new Error('Invalid productId for deal creation');
     }
-    const now = new Date().toISOString();
 
-    const deal: Partial<DealM6> = {
+    // Pobierz ProductCore aby uzupełnić pola legacy wymagane przez UI
+    const productSnap = await adminDb.collection('product_cores').doc(productId).get();
+    const product = productSnap.exists ? (productSnap.data() as ProductCore) : null;
+    const primaryImage = sourceProduct.imageUrl || product?.images?.[0];
+
+    if (!primaryImage) {
+      throw new Error('Cannot create deal without image');
+    }
+
+    const now = new Date().toISOString();
+    const mainCategorySlug = product?.mainCategorySlug || 'uncategorized';
+    const subCategorySlug = product?.subCategorySlug || 'uncategorized';
+    const subSubCategorySlug = product?.subSubCategorySlug;
+
+    // Przechowujemy pola M6 oraz legacy, aby UI nie dostawał pustych/mocked rekordów
+    const deal: any = {
+      // M6 fields
       productId,
-      price: {
+      priceV2: {
         amount: sourceProduct.price,
         currency: sourceProduct.currency || 'PLN',
       },
-      originalPrice: sourceProduct.price, // TODO: Extract discount price if available
+      price: sourceProduct.price, // legacy pole wymagane przez UI
+      originalPrice: sourceProduct.originalPrice ?? sourceProduct.price,
       shipping: {
         cost: sourceProduct.shippingCost || 0,
         timeDays: sourceProduct.shippingDays || 7,
       },
-      source: source as any, // External sources (aliexpress/amazon/allegro)
+      shippingCost: sourceProduct.shippingCost || 0,
+      source: source as any,
       affiliateLink: sourceProduct.sourceUrl,
+      link: sourceProduct.sourceUrl,
       merchantName: sourceProduct.merchantName || source,
+      merchant: sourceProduct.merchantName || source,
       merchantRating: sourceProduct.merchantRating,
       title: {
         pl: sourceProduct.title,
         en: sourceProduct.title,
         de: sourceProduct.title,
       },
+      description: product?.shortDescription || { pl: '', en: '', de: '' },
       stockStatus: 'in_stock',
       isActive: true,
       priceHistory: [
         {
-          date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+          date: new Date().toISOString().split('T')[0],
           price: sourceProduct.price,
           currency: sourceProduct.currency || 'PLN',
           lowestPrice: sourceProduct.price,
@@ -737,11 +757,23 @@ export class SmartHarvester {
       voteCount: 0,
       temperature: 0,
       commentsCount: 0,
-      status: 'approved', // Auto-approve harvested deals
+      status: 'approved',
       sourceProductId: sourceProduct.sourceProductId,
       sourceUrl: sourceProduct.sourceUrl,
       createdAt: now,
       updatedAt: now,
+      postedAt: now,
+      postedBy: 'harvester',
+      category: mainCategorySlug,
+      mainCategorySlug,
+      subCategorySlug,
+      subSubCategorySlug,
+      image: primaryImage,
+      imageHint: sourceProduct.imageUrl || primaryImage,
+      gallery: product?.images || [primaryImage],
+      linkedProductIds: [productId],
+      dealType: 'sale',
+      tags: product?.searchTags || [],
     };
 
     const docRef = await adminDb.collection('deals').add(deal);

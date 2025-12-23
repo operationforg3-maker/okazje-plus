@@ -1,8 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { doc, getDoc, collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { Deal } from '@/lib/types';
+import { Deal, LocalizedText } from '@/lib/types';
+import { getDealById, getDealsForProduct, getHotDeals, getProductCore } from '@/lib/data';
 import DealDetailClient from './deal-detail-client';
 
 // Force dynamic rendering dla real-time danych
@@ -13,30 +12,103 @@ interface PageProps {
   params: { id: string; locale: string };
 }
 
+// Normalizacja M6 → legacy Deal (UI wymaga legacy pól)
+function ensureLocalizedText(value: any, fallback: string): LocalizedText {
+  if (typeof value === 'string') {
+    return { pl: value, en: value, de: value };
+  }
+  if (value && typeof value === 'object') {
+    return {
+      pl: value.pl || value.en || value.de || fallback,
+      en: value.en || value.pl || value.de || fallback,
+      de: value.de || value.pl || value.en || fallback,
+    };
+  }
+  return { pl: fallback, en: fallback, de: fallback };
+}
+
+function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
+  const priceAmount = typeof raw?.price === 'number' ? raw.price : raw?.price?.amount ?? raw?.priceV2?.amount ?? 0;
+  const image = raw?.image || product?.images?.[0];
+  if (!image) return null;
+
+  const title = ensureLocalizedText(raw?.title, product?.title?.pl || 'Okazja');
+  const description = ensureLocalizedText(raw?.description, product?.shortDescription?.pl || '');
+  const link = raw?.link || raw?.affiliateLink || raw?.sourceUrl || '';
+  const mainCategorySlug = raw?.mainCategorySlug || product?.mainCategorySlug || 'inne';
+  const subCategorySlug = raw?.subCategorySlug || product?.subCategorySlug || 'inne';
+
+  return {
+    id: raw?.id,
+    title,
+    description,
+    price: priceAmount,
+    originalPrice: typeof raw?.originalPrice === 'number' ? raw.originalPrice : priceAmount,
+    link,
+    image,
+    imageHint: raw?.imageHint || image,
+    postedBy: raw?.postedBy || 'system',
+    postedAt: raw?.postedAt || raw?.createdAt || new Date().toISOString(),
+    voteCount: raw?.voteCount ?? 0,
+    temperature: raw?.temperature ?? 0,
+    commentsCount: raw?.commentsCount ?? 0,
+    shareCount: raw?.shareCount,
+    category: raw?.category || mainCategorySlug,
+    mainCategorySlug,
+    subCategorySlug,
+    subSubCategorySlug: raw?.subSubCategorySlug || product?.subSubCategorySlug,
+    merchant: raw?.merchant || raw?.merchantName,
+    shippingCost: raw?.shippingCost ?? raw?.shipping?.cost ?? 0,
+    status: raw?.status || 'approved',
+    createdBy: raw?.createdBy,
+    createdAt: raw?.createdAt,
+    updatedAt: raw?.updatedAt,
+    linkedProductIds: raw?.linkedProductIds || (product?.id ? [product.id] : []),
+    externalOriginalId: raw?.externalOriginalId || raw?.sourceProductId,
+    source: raw?.source || 'manual',
+    dealType: raw?.dealType,
+    couponCode: raw?.couponCode,
+    freeShipping: raw?.freeShipping ?? (raw?.shipping?.cost === 0 ? true : undefined),
+    cashback: raw?.cashback,
+    minOrderValue: raw?.minOrderValue,
+    stockAlert: raw?.stockAlert,
+    expiryDate: raw?.expiryDate,
+    availableQuantity: raw?.availableQuantity,
+    limitPerUser: raw?.limitPerUser,
+    requiresMembership: raw?.requiresMembership,
+    conditions: raw?.conditions || [],
+    gallery: raw?.gallery || product?.images || [image],
+    verified: raw?.verified,
+    verifiedAt: raw?.verifiedAt,
+    verifiedBy: raw?.verifiedBy,
+    tags: raw?.tags || product?.searchTags || [],
+    aiQuality: raw?.aiQuality,
+    importMetadata: raw?.importMetadata,
+    metadata: raw?.metadata,
+  } satisfies Deal;
+}
+
 // Server-side data fetching
 async function getDealData(id: string) {
-  const docRef = doc(db, "deals", id);
-  const docSnap = await getDoc(docRef);
-  
-  if (!docSnap.exists()) {
+  const dealDoc = await getDealById(id);
+  if (!dealDoc || (dealDoc as any).status && (dealDoc as any).status !== 'approved') {
     return null;
   }
-  
-  const deal = { id: docSnap.id, ...docSnap.data() } as Deal;
-  
-  // Fetch related deals from same subcategory
-  const relatedQuery = query(
-    collection(db, "deals"),
-    where("subCategorySlug", "==", deal.subCategorySlug),
-    where("status", "==", "approved"),
-    limit(4)
-  );
-  const relatedSnap = await getDocs(relatedQuery);
-  const relatedDeals = relatedSnap.docs
-    .map(doc => ({ id: doc.id, ...doc.data() } as Deal))
-    .filter(d => d.id !== id)
-    .slice(0, 3);
-  
+
+  const productId = (dealDoc as any).productId || (dealDoc as any).linkedProductIds?.[0];
+  const product = productId ? await getProductCore(productId) : null;
+  const deal = normalizeDealForUi(dealDoc, product);
+  if (!deal) return null;
+
+  let relatedDeals: Deal[] = [];
+  if (productId) {
+    const relatedDocs = await getDealsForProduct(productId);
+    relatedDeals = relatedDocs
+      .filter(d => d.id !== id)
+      .map(d => normalizeDealForUi(d as any, product))
+      .filter(Boolean) as Deal[];
+  }
+
   return { deal, relatedDeals };
 }
 
@@ -52,6 +124,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   
   const { deal } = data;
+  const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || deal.title?.en || 'Okazja';
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
   const originalPrice = deal.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice)
@@ -60,10 +133,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100)
     : null;
   
-  const metaTitle = `${deal.title} - ${price}${discount ? ` (-${discount}%)` : ''} | Okazje Plus`;
-  const dealTitle = deal.title?.pl || deal.title?.en || 'Okazja';
-  const dealDescription = deal.description?.pl || deal.description?.en || '';
-  const metaDescription = `${dealDescription.slice(0, 120)}... Temperatura: ${deal.temperature}°, ${deal.voteCount} głosów. ${originalPrice ? `Cena przed obniżką: ${originalPrice}.` : ''}`;
+  const metaTitle = `${dealTitle} - ${price}${discount ? ` (-${discount}%)` : ''} | Okazje Plus`;
+  const dealDescription = typeof deal.description === 'string' ? deal.description : deal.description?.pl || deal.description?.en || '';
+  const metaDescription = `${dealDescription.slice(0, 120)}... Temperatura: ${deal.temperature ?? 0}°, ${(deal.voteCount ?? 0)} głosów. ${originalPrice ? `Cena przed obniżką: ${originalPrice}.` : ''}`;
   
   const keywords = [
     deal.mainCategorySlug,
@@ -121,19 +193,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 // Optional: Generate static params for hot deals
 export async function generateStaticParams() {
-  const dealsRef = collection(db, "deals");
-  const q = query(
-    dealsRef,
-    where("status", "==", "approved"),
-    orderBy("temperature", "desc"),
-    limit(100)
-  );
-  
   try {
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-    }));
+    const deals = await getHotDeals(100);
+    return deals.map(deal => ({ id: deal.id }));
   } catch (error) {
     console.error('Error generating static params:', error);
     return [];

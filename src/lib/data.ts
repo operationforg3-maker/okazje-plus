@@ -938,6 +938,7 @@ export async function getCategories(): Promise<Category[]> {
                     id: ssDoc.id,
                     icon: ssData.icon,
                     description: ssData.description,
+                    importKeywords: ssData.importKeywords,
                     translations: ssData.translations,
                     sortOrder: ssData.sortOrder,
                     image: ssData.image,
@@ -1107,7 +1108,9 @@ export async function getDealById(dealId: string): Promise<Deal | null> {
   if (!snapshot.exists()) {
     return null;
   }
-  return { id: snapshot.id, ...(snapshot.data() as Omit<Deal, "id">) };
+  const raw = snapshot.data();
+  const sanitized = sanitizeDealRecord(raw, snapshot.id);
+  return { ...(raw as any), ...sanitized } as Deal;
 }
 
 export async function getProductById(productId: string): Promise<Product | null> {

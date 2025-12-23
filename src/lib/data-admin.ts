@@ -232,6 +232,30 @@ export async function deleteAllDeals(): Promise<number> {
   return deleteCollectionDocuments(ref);
 }
 
+/**
+ * Usuwa wszystkie ProductCore z kolekcji "product_cores" (Admin SDK)
+ */
+export async function deleteAllProductCores(): Promise<number> {
+  const ref = adminDb.collection('product_cores');
+  return deleteCollectionDocuments(ref);
+}
+
+/**
+ * Usuwa wszystkie wpisy dopasowań tożsamości (identity_matches)
+ */
+export async function deleteAllIdentityMatches(): Promise<number> {
+  const ref = adminDb.collection('identity_matches');
+  return deleteCollectionDocuments(ref);
+}
+
+/**
+ * Usuwa historię zadań harvestera (harvester_jobs)
+ */
+export async function deleteAllHarvesterJobs(): Promise<number> {
+  const ref = adminDb.collection('harvester_jobs');
+  return deleteCollectionDocuments(ref);
+}
+
 function isDealDocumentValid(data: FirebaseFirestore.DocumentData | undefined): boolean {
   if (!data) return false;
   if (Object.keys(data).length === 0) return false;
@@ -304,6 +328,15 @@ async function deleteSubcollections(categoryRef: FirebaseFirestore.DocumentRefer
     // Usuń subcategory
     await subcategoryDoc.ref.delete();
     deletedCount++;
+  }
+
+  // Usuń kafelki kategorii (tiles)
+  const tilesSnapshot = await categoryRef.collection('tiles').get();
+  if (!tilesSnapshot.empty) {
+    const tilesBatch = adminDb.batch();
+    tilesSnapshot.docs.forEach(doc => tilesBatch.delete(doc.ref));
+    await tilesBatch.commit();
+    deletedCount += tilesSnapshot.size;
   }
   
   return deletedCount;

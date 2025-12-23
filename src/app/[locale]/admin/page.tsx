@@ -87,7 +87,18 @@ function AiConsole() {
       }
       
       const data = await res.json();
-      setResult(data.message || '✅ Baza danych wyczyszczona');
+      const summaryLines = [
+        data.message,
+        '',
+        `ProductCore: ${data.deletedProductCores ?? 0}`,
+        `Products (legacy): ${data.deletedProducts ?? 0}`,
+        `Deals: ${data.deletedDeals ?? 0}`,
+        `Categories: ${data.deletedCategories ?? 0}`,
+        `Subcategories: ${data.deletedSubcategories ?? 0}`,
+        `Identity matches: ${data.deletedIdentityMatches ?? 0}`,
+        `Harvester jobs: ${data.deletedHarvesterJobs ?? 0}`,
+      ].filter(Boolean).join('\n');
+      setResult(summaryLines || '✅ Baza danych wyczyszczona');
     } catch (e: any) {
       setResult(`❌ Błąd połączenia: ${e.message}`);
       console.error('Fetch error:', e);
