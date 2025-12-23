@@ -2486,25 +2486,51 @@ export async function searchProductCores(
 }
 
 /**
+ * Get recommended ProductCores (M6)
+ */
+export async function getRecommendedProductCores(count: number = 50): Promise<any[]> {
+  try {
+    const ref = collection(db, "product_cores");
+    const q = query(
+      ref,
+      where("status", "==", "approved"),
+      orderBy("bestPrice.amount", "asc"),
+      limit(count)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error("Error fetching recommended products:", err);
+    return [];
+  }
+}
+
+/**
  * Get ProductCores by category (M6)
  */
 export async function getProductCoresByCategory(
   mainCategorySlug: string,
   subCategorySlug?: string,
+  subSubCategorySlug?: string,
   limit: number = 50
 ): Promise<any[]> {
   try {
     const ref = collection(db, "product_cores");
-    const constraints = [
+    const constraints: any[] = [
       where("status", "==", "approved"),
       where("mainCategorySlug", "==", mainCategorySlug),
       orderBy("bestPrice.amount", "asc"),
-      limit(limit),
     ];
 
     if (subCategorySlug) {
       constraints.push(where("subCategorySlug", "==", subCategorySlug));
     }
+
+    if (subSubCategorySlug) {
+      constraints.push(where("subSubCategorySlug", "==", subSubCategorySlug));
+    }
+
+    constraints.push(limit(limit));
 
     const q = query(ref, ...constraints);
     const snap = await getDocs(q);
