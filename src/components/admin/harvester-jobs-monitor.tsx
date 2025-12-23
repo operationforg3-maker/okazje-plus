@@ -33,6 +33,7 @@ export function HarvesterJobsMonitor({ onConsoleLog }: HarvesterJobsMonitorProps
   const [jobs, setJobs] = useState<HarvesterJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [killing, setKilling] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -107,6 +108,38 @@ export function HarvesterJobsMonitor({ onConsoleLog }: HarvesterJobsMonitorProps
     } catch (err) {
       toast.error('Nie udało się usunąć zadania');
       onConsoleLog?.('❌ Nie udało się usunąć zadania', 'error');
+    }
+  };
+
+  const wipeDatabase = async () => {
+    const confirmation1 = confirm('⚠️⚠️⚠️ UWAGA: To USUNIE WSZYSTKIE dane z bazy!\n\ndeals, product_cores, identity_matches, harvester_jobs\n\nCzy NA PEWNO chcesz kontynuować?');
+    if (!confirmation1) return;
+    
+    const confirmation2 = confirm('🚨 OSTATNIE OSTRZEŻENIE!\n\nTo jest NIEODWRACALNE!\n\nWpisz "TAK" w konsoli, aby potwierdzić.');
+    if (!confirmation2) return;
+
+    setWiping(true);
+    try {
+      const idToken = await getIdToken();
+      const res = await fetch('/api/admin/harvester/wipe', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to wipe database');
+      const data = await res.json();
+      toast.success(`🗑️ Wyczyszczono ${data.total} dokumentów`);
+      onConsoleLog?.(`✅ WIPE: ${JSON.stringify(data.deleted)}`, 'success');
+      await fetchJobs();
+    } catch (err: any) {
+      toast.error('Nie udało się wyczyścić bazy');
+      onConsoleLog?.(`❌ WIPE błąd: ${err.message}`, 'error');
+      console.error(err);
+    } finally {
+      setWiping(false);
     }
   };
 
@@ -185,6 +218,62 @@ export function HarvesterJobsMonitor({ onConsoleLog }: HarvesterJobsMonitorProps
               </p>
             </div>
             <Button
+              variant="destructive"
+              onClick={killAllRunningJobs}
+              disabled={killing}
+              className="gap-2"
+            >
+              {killing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Zatrzymywanie...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" />
+                  Kill All
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* WIPE Database Button */}
+      <div className="bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-950 dark:to-orange-950 border-2 border-red-400 dark:border-red-700 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-red-900 dark:text-red-100 flex items-center gap-2">
+              🗑️ WIPE DATABASE
+              <Badge variant="destructive" className="text-xs">DANGER</Badge>
+            </h3>
+            <p className="text-sm text-red-800 dark:text-red-300 mt-1">
+              Usuwa WSZYSTKIE dane: deals, product_cores, identity_matches, harvester_jobs
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-1 font-semibold">
+              ⚠️ Ta operacja jest NIEODWRACALNA!
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            onClick={wipeDatabase}
+            disabled={wiping}
+            className="gap-2 bg-red-600 hover:bg-red-700"
+          >
+            {wiping ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Czyszczenie...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                WIPE ALL
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
               variant="destructive"
               onClick={killAllRunningJobs}
               disabled={killing}
