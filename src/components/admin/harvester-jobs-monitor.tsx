@@ -274,26 +274,6 @@ export function HarvesterJobsMonitor({ onConsoleLog }: HarvesterJobsMonitorProps
           </Button>
         </div>
       </div>
-              variant="destructive"
-              onClick={killAllRunningJobs}
-              disabled={killing}
-              className="gap-2"
-            >
-              {killing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Zatrzymywanie...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4" />
-                  Kill All
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
 
       {/* Tabs */}
       <Tabs defaultValue="running" className="w-full">
