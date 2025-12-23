@@ -770,7 +770,7 @@ export class SmartHarvester {
     // Przechowujemy pola M6 oraz legacy, aby UI nie dostawał pustych/mocked rekordów
     const deal: any = {
       // M6 fields
-      productId,
+      productCoreId: productId,  // M6: Link to ProductCore
       priceV2: {
         amount: sourceProduct.price,
         currency: sourceProduct.currency || 'PLN',
@@ -836,7 +836,7 @@ export class SmartHarvester {
     // Fetch all deals for this product
     const dealsSnapshot = await adminDb
       .collection('deals')
-      .where('productId', '==', productId)
+      .where('productCoreId', '==', productId)
       .where('isActive', '==', true)
       .get();
 
