@@ -81,16 +81,19 @@ async function checkDeals() {
 
     // Zapisz przykłady (pierwsze 5)
     if (examples.length < 5) {
+      const titleText = typeof deal.title === 'string'
+        ? deal.title
+        : (deal.title?.pl || deal.title?.en || deal.title?.de || 'Brak tytułu');
       examples.push({
         id: doc.id,
-        title: deal.title?.substring(0, 60) || 'Brak tytułu',
+        title: (titleText || 'Brak tytułu').substring(0, 60),
         mainSlug: mainSlug || '❌',
         subSlug: subSlug || '❌',
         subSubSlug: subSubSlug || '❌',
         category: deal.category || '❌',
         status,
         source,
-        price: deal.price || 0,
+        price: typeof deal.price === 'number' ? deal.price : (deal.price?.amount || 0),
       });
     }
   });

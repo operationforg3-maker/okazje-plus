@@ -85,14 +85,28 @@ export class SmartHarvester {
           const subSubSnapshot = await adminDb.collection(`categories/${main.id}/subcategories/${subDoc.id}/subcategories`).get();
 
           if (subSubSnapshot.empty) {
+            // Base path for subcategory
             queries.push(`${main.slug}/${subSlug}`);
+            // Expand with sub-level import keywords to iterate more targets
+            const subKeywords: string[] = Array.isArray(subData?.importKeywords) ? subData.importKeywords : [];
+            for (const kw of subKeywords) {
+              const normKw = (kw || '').trim();
+              if (normKw) queries.push(`${main.slug}/${subSlug}/${normKw}`);
+            }
             continue;
           }
 
           subSubSnapshot.forEach((subSubDoc) => {
             const subSubData = subSubDoc.data() as any;
             const subSubSlug = subSubData?.slug || subSubDoc.id;
+            // Base path for sub-subcategory
             queries.push(`${main.slug}/${subSlug}/${subSubSlug}`);
+            // Also iterate per import keyword to widen coverage
+            const keywords: string[] = Array.isArray(subSubData?.importKeywords) ? subSubData.importKeywords : [];
+            for (const kw of keywords) {
+              const normKw = (kw || '').trim();
+              if (normKw) queries.push(`${main.slug}/${subSlug}/${subSubSlug}/${normKw}`);
+            }
           });
         }
       }
@@ -635,6 +649,26 @@ export class SmartHarvester {
     const extractedSpecs = extractDimensionsFromTitle(sourceProduct.title);
     const specs = sourceProduct.specs || extractedSpecs;
 
+    // Try to auto-map category from product title when categoryInfo is missing/uncategorized
+    let mappedCategory = categoryInfo;
+    try {
+      const needsMapping = !mappedCategory || !mappedCategory.mainCategorySlug || mappedCategory.mainCategorySlug === 'uncategorized';
+      if (needsMapping) {
+        const { matchCategoryByText } = await import('@/lib/category-mapper');
+        const match = await matchCategoryByText(sourceProduct.title || '');
+        if (match) {
+          mappedCategory = {
+            mainCategorySlug: match.mainCategorySlug,
+            subCategorySlug: match.subCategorySlug || 'general',
+            subSubCategorySlug: match.subSubCategorySlug,
+          };
+          this.addLog('info', `Auto-mapped category: ${mappedCategory.mainCategorySlug}/${mappedCategory.subCategorySlug}/${mappedCategory.subSubCategorySlug || ''}`);
+        }
+      }
+    } catch (e) {
+      this.addLog('warn', 'Category auto-mapping failed', e);
+    }
+
     const product: ProductCore = {
       id: '', // Will be set by Firestore
       identityHash,
@@ -653,9 +687,9 @@ export class SmartHarvester {
         en: '',
       },
       specs,
-      mainCategorySlug: categoryInfo?.mainCategorySlug || 'uncategorized',
-      subCategorySlug: categoryInfo?.subCategorySlug || 'uncategorized',
-      subSubCategorySlug: categoryInfo?.subSubCategorySlug,
+      mainCategorySlug: mappedCategory?.mainCategorySlug || 'uncategorized',
+      subCategorySlug: mappedCategory?.subCategorySlug || 'uncategorized',
+      subSubCategorySlug: mappedCategory?.subSubCategorySlug,
       images: [sourceProduct.imageUrl],
       primaryImageHash: calculateImageHash(sourceProduct.imageUrl),
       reviewsSummary: {
@@ -713,9 +747,25 @@ export class SmartHarvester {
     }
 
     const now = new Date().toISOString();
-    const mainCategorySlug = product?.mainCategorySlug || 'uncategorized';
-    const subCategorySlug = product?.subCategorySlug || 'uncategorized';
-    const subSubCategorySlug = product?.subSubCategorySlug;
+    let mainCategorySlug = product?.mainCategorySlug || 'uncategorized';
+    let subCategorySlug = product?.subCategorySlug || 'uncategorized';
+    let subSubCategorySlug = product?.subSubCategorySlug;
+
+    // If product has no category, attempt to map and persist
+    if (!product || !product.mainCategorySlug || product.mainCategorySlug === 'uncategorized') {
+      try {
+        const { ensureProductCategory } = await import('@/lib/category-mapper');
+        const mapped = await ensureProductCategory(productId, sourceProduct.title);
+        if (mapped) {
+          mainCategorySlug = mapped.mainCategorySlug;
+          subCategorySlug = mapped.subCategorySlug || subCategorySlug;
+          subSubCategorySlug = mapped.subSubCategorySlug || subSubCategorySlug;
+          this.addLog('info', `Deal category mapped: ${mainCategorySlug}/${subCategorySlug}/${subSubCategorySlug || ''}`);
+        }
+      } catch (e) {
+        this.addLog('warn', 'Deal category mapping failed', e);
+      }
+    }
 
     // Przechowujemy pola M6 oraz legacy, aby UI nie dostawał pustych/mocked rekordów
     const deal: any = {
@@ -738,12 +788,10 @@ export class SmartHarvester {
       merchantName: sourceProduct.merchantName || source,
       merchant: sourceProduct.merchantName || source,
       merchantRating: sourceProduct.merchantRating,
-      title: {
-        pl: sourceProduct.title,
-        en: sourceProduct.title,
-        de: sourceProduct.title,
-      },
-      description: product?.shortDescription || { pl: '', en: '', de: '' },
+      title: sourceProduct.title || 'Produkt',
+      description: typeof product?.shortDescription === 'object' 
+        ? (product.shortDescription.pl || product.shortDescription.en || '') 
+        : (product?.shortDescription || ''),
       stockStatus: 'in_stock',
       isActive: true,
       priceHistory: [
@@ -764,7 +812,7 @@ export class SmartHarvester {
       updatedAt: now,
       postedAt: now,
       postedBy: 'harvester',
-      category: mainCategorySlug,
+      category: `${mainCategorySlug}${subCategorySlug ? '/' + subCategorySlug : ''}${subSubCategorySlug ? '/' + subSubCategorySlug : ''}`,
       mainCategorySlug,
       subCategorySlug,
       subSubCategorySlug,

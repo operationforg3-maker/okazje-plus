@@ -189,6 +189,21 @@ export class AIRefiner {
   ): Promise<Partial<ProductCore>> {
     const refined: Partial<ProductCore> = {};
 
+    // Ensure ProductCore has deepest possible category (prefer sub-sub) before content enrichment
+    try {
+      const needsCategory = !product.mainCategorySlug || product.mainCategorySlug === 'uncategorized' || !product.subSubCategorySlug;
+      if (needsCategory) {
+        const { matchCategoryByText } = await import('@/lib/category-mapper');
+        const baseText = `${product.title?.pl || ''} ${Object.keys(product.specs || {}).join(' ')}`;
+        const match = await matchCategoryByText(baseText);
+        if (match) {
+          refined.mainCategorySlug = match.mainCategorySlug;
+          refined.subCategorySlug = match.subCategorySlug || product.subCategorySlug || 'general';
+          refined.subSubCategorySlug = match.subSubCategorySlug || product.subSubCategorySlug;
+        }
+      }
+    } catch (_) {}
+
     if (refinationType === 'full_enrichment' || refinationType === 'specs_cleanup') {
       // Clean up specs using AI
       refined.specs = await this.cleanupSpecs(product.specs);
