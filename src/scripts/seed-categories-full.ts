@@ -451,7 +451,9 @@ async function seedCategories() {
       icon: mainCat.icon || '📦',
       sortOrder: mainCat.sortOrder,
       translations: {
+        pl: { name: mainCat.name },
         en: { name: englishMainName },
+        de: { name: englishMainName }, // Use English as fallback for German
       },
       subcategories: [], // Empty for new structure
       createdAt: new Date().toISOString(),
@@ -475,7 +477,9 @@ async function seedCategories() {
           sortOrder: (idx + 1) * 10,
         })),
         translations: {
+          pl: { name: subCat.name },
           en: { name: englishSubName },
+          de: { name: englishSubName }, // Use English as fallback for German
         },
         createdAt: new Date().toISOString(),
       });
@@ -494,7 +498,9 @@ async function seedCategories() {
           slugPl: subSubCat.slug,
           aliexpressKeywords: subSubCat.aliexpressKeywords || [],
           translations: {
+            pl: { name: subSubCat.name },
             en: { name: englishSubSubName },
+            de: { name: englishSubSubName }, // Use English as fallback for German
           },
           createdAt: new Date().toISOString(),
         });
