@@ -27,6 +27,33 @@ interface MainCategory {
   subcategories: SubCategory[];
 }
 
+const MAIN_SLUG_MAP: Record<string, string> = {
+  'elektronika': 'electronics',
+  'dom-ogrod': 'home-garden',
+  'moda': 'fashion',
+  'sport-turystyka': 'sports-outdoors',
+  'dziecko': 'kids-baby',
+  'zdrowie-uroda': 'health-beauty',
+  'motoryzacja': 'automotive',
+  'ksiazki-multimedia': 'books-media',
+};
+
+const slugify = (text: string): string =>
+  text
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+
+const toTitleCase = (text: string): string =>
+  text
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
 /**
  * Complete category structure for Polish market
  */
@@ -412,45 +439,63 @@ async function seedCategories() {
   let subSubCategoriesCount = 0;
 
   for (const mainCat of CATEGORY_STRUCTURE) {
-    console.log(`📁 Creating main category: ${mainCat.name} (${mainCat.slug})`);
+    const englishMainSlug = MAIN_SLUG_MAP[mainCat.slug] || slugify(mainCat.slug);
+    const englishMainName = toTitleCase(englishMainSlug.replace(/-/g, ' '));
+    console.log(`📁 Creating main category: ${mainCat.name} (${mainCat.slug} -> ${englishMainSlug})`);
     
-    const mainCatRef = adminDb.collection('categories').doc(mainCat.slug);
+    const mainCatRef = adminDb.collection('categories').doc(englishMainSlug);
     batch.set(mainCatRef, {
       name: mainCat.name,
-      slug: mainCat.slug,
+      slug: englishMainSlug,
+      slugPl: mainCat.slug,
       icon: mainCat.icon || '📦',
       sortOrder: mainCat.sortOrder,
+      translations: {
+        en: { name: englishMainName },
+      },
       subcategories: [], // Empty for new structure
       createdAt: new Date().toISOString(),
     });
     categoriesCount++;
 
     for (const subCat of mainCat.subcategories) {
-      console.log(`  📂 Creating subcategory: ${subCat.name} (${subCat.slug})`);
+      const englishSubSlug = slugify(subCat.aliexpressKeywords?.[0] || subCat.slug);
+      const englishSubName = toTitleCase((subCat.aliexpressKeywords?.[0] || englishSubSlug).replace(/-/g, ' '));
+      console.log(`  📂 Creating subcategory: ${subCat.name} (${subCat.slug} -> ${englishSubSlug})`);
       
-      const subCatRef = mainCatRef.collection('subcategories').doc(subCat.slug);
+      const subCatRef = mainCatRef.collection('subcategories').doc(englishSubSlug);
       batch.set(subCatRef, {
         name: subCat.name,
-        slug: subCat.slug,
+        slug: englishSubSlug,
+        slugPl: subCat.slug,
         sortOrder: 10,
         subcategories: subCat.subcategories.map((sub, idx) => ({
           name: sub.name,
-          slug: sub.slug,
+          slug: slugify(sub.aliexpressKeywords?.[0] || sub.slug),
           sortOrder: (idx + 1) * 10,
         })),
+        translations: {
+          en: { name: englishSubName },
+        },
         createdAt: new Date().toISOString(),
       });
       subCategoriesCount++;
 
       // Create sub-subcategories collection
       for (const subSubCat of subCat.subcategories) {
-        console.log(`    📄 Creating sub-subcategory: ${subSubCat.name} (${subSubCat.slug})`);
+        const englishSubSubSlug = slugify(subSubCat.aliexpressKeywords?.[0] || subSubCat.slug);
+        const englishSubSubName = toTitleCase((subSubCat.aliexpressKeywords?.[0] || englishSubSubSlug).replace(/-/g, ' '));
+        console.log(`    📄 Creating sub-subcategory: ${subSubCat.name} (${subSubCat.slug} -> ${englishSubSubSlug})`);
         
-        const subSubCatRef = subCatRef.collection('subcategories').doc(subSubCat.slug);
+        const subSubCatRef = subCatRef.collection('subcategories').doc(englishSubSubSlug);
         batch.set(subSubCatRef, {
           name: subSubCat.name,
-          slug: subSubCat.slug,
+          slug: englishSubSubSlug,
+          slugPl: subSubCat.slug,
           aliexpressKeywords: subSubCat.aliexpressKeywords || [],
+          translations: {
+            en: { name: englishSubSubName },
+          },
           createdAt: new Date().toISOString(),
         });
         subSubCategoriesCount++;
