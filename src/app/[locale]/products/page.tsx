@@ -4,10 +4,11 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getRecommendedProductCores, getProductCoresByCategory, getCategories, getCategoriesWithContent, getDealById, getNavigationShowcase } from '@/lib/data';
+import { getRecommendedProductCores, getProductCoresByCategory, getCategories, getCategoriesWithContent, getDealById, getNavigationShowcase, getProductCoresByFilters } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
 import ProductListCard from '@/components/product-list-card';
+import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ import { useAuth } from '@/lib/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { UnifiedFilters, SortBy } from '@/lib/filter-config';
 
 const toSearchableText = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -33,17 +35,12 @@ const toSearchableText = (value: unknown): string => {
   return '';
 };
 
-type SortOption = 'recommended' | 'newest' | 'rating' | 'price_asc' | 'price_desc';
+type SortOption = 'recommended' | 'newest' | 'rating' | 'price_asc' | 'price_desc' | 'hot' | 'discount_desc';
 
 interface SavedFilter {
   name: string;
   sortBy: SortOption;
-  priceRange: [number, number];
-  quickFilters: {
-    freeShipping: boolean;
-    topRated: boolean;
-    bestsellers: boolean;
-  };
+  filters: UnifiedFilters;
   categoryId?: string;
   subcategorySlug?: string;
 }
@@ -66,13 +63,8 @@ function ProductsPageContent() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
-  const [sortBy, setSortBy] = useState<SortOption>('recommended');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
-  const [quickFilters, setQuickFilters] = useState({
-    freeShipping: false,
-    topRated: false,
-    bestsellers: false,
-  });
+  const [sortBy, setSortBy] = useState<SortBy>('relevance');
+  const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({});
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [showEmptyCategories, setShowEmptyCategories] = useState(false);

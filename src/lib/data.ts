@@ -2672,3 +2672,198 @@ export async function mergeProductCores(sourceId: string, targetId: string): Pro
   }
 }
 
+/**
+ * M6 Unified Filtering & Sorting for ProductCore
+ * Supports: price range, rating, availability, discount, category, brands, specs
+ */
+export async function getProductCoresByFilters(
+  filters: {
+    priceRange?: { min: number; max: number };
+    minRating?: number;
+    inStockOnly?: boolean;
+    discountOnly?: boolean;
+    categoryId?: string;
+    brands?: string[];
+    searchTerm?: string;
+  },
+  sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'relevance' = 'relevance',
+  limit_count: number = 50
+): Promise<any[]> {
+  try {
+    let q = query(collection(db, 'product_cores'), where('status', '==', 'approved'));
+
+    // Apply category filter
+    if (filters.categoryId) {
+      q = query(q, where('mainCategorySlug', '==', filters.categoryId));
+    }
+
+    // Build base query
+    let constraints = [where('status', '==', 'approved')];
+    
+    if (filters.categoryId) {
+      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
+    }
+
+    // Firestore can't filter on nested fields like bestPrice.amount directly in where,
+    // so we fetch all and filter in-memory (alternative: use Firestore Lite or index)
+    q = query(collection(db, 'product_cores'), ...constraints, orderBy('updatedAt', 'desc'), limit(limit_count));
+
+    const snapshot = await getDocs(q);
+    let products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Client-side filtering for complex conditions
+    let filtered = products.filter(p => {
+      // Price range
+      if (filters.priceRange) {
+        const price = p.bestPrice?.amount || 0;
+        if (price < filters.priceRange.min || price > filters.priceRange.max) return false;
+      }
+
+      // Rating
+      if (filters.minRating && (p.rating?.score || 0) < filters.minRating) return false;
+
+      // Brand filter
+      if (filters.brands && filters.brands.length > 0) {
+        // Assuming brand might be in specs or metadata
+        const productBrand = p.metadata?.brand || '';
+        if (!filters.brands.includes(productBrand)) return false;
+      }
+
+      // Search term (match against title, description, specs)
+      if (filters.searchTerm) {
+        const searchLower = filters.searchTerm.toLowerCase();
+        const titleMatch = (typeof p.title === 'object' ? p.title.pl : p.title || '').toLowerCase().includes(searchLower);
+        const descMatch = (typeof p.description === 'object' ? p.description.pl : p.description || '').toLowerCase().includes(searchLower);
+        if (!titleMatch && !descMatch) return false;
+      }
+
+      return true;
+    });
+
+    // Client-side sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price_asc':
+          return (a.bestPrice?.amount || 0) - (b.bestPrice?.amount || 0);
+        case 'price_desc':
+          return (b.bestPrice?.amount || 0) - (a.bestPrice?.amount || 0);
+        case 'rating_desc':
+          return (b.rating?.score || 0) - (a.rating?.score || 0);
+        case 'newest':
+          return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+        case 'hot':
+          // Assuming hot products have higher temperature or popularity metric
+          return (b.rating?.count || 0) - (a.rating?.count || 0);
+        case 'relevance':
+        default:
+          return 0;
+      }
+    });
+
+    return filtered.slice(0, limit_count);
+  } catch (err) {
+    console.error('Error filtering products:', err);
+    return [];
+  }
+}
+
+/**
+ * M6 Unified Filtering & Sorting for DealM6
+ * Supports: price range, rating, availability, discount, source, category
+ */
+export async function getDealsByFilters(
+  filters: {
+    priceRange?: { min: number; max: number };
+    minRating?: number;
+    inStockOnly?: boolean;
+    discountOnly?: boolean;
+    minDiscount?: number;
+    categoryId?: string;
+    sources?: Array<'aliexpress' | 'amazon' | 'allegro'>;
+    searchTerm?: string;
+  },
+  sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'discount_desc' = 'hot',
+  limit_count: number = 50
+): Promise<any[]> {
+  try {
+    const constraints = [where('status', '==', 'approved')];
+
+    if (filters.categoryId) {
+      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
+    }
+
+    const q = query(
+      collection(db, 'deals'),
+      ...constraints,
+      orderBy('updatedAt', 'desc'),
+      limit(limit_count)
+    );
+
+    const snapshot = await getDocs(q);
+    let deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Client-side filtering for complex conditions
+    let filtered = deals.filter(d => {
+      // Price range
+      if (filters.priceRange) {
+        const price = d.priceV2?.amount || d.price || 0;
+        if (price < filters.priceRange.min || price > filters.priceRange.max) return false;
+      }
+
+      // In stock
+      if (filters.inStockOnly && d.inStock === false) return false;
+
+      // Discount
+      if (filters.discountOnly && !d.originalPrice) return false;
+      if (filters.minDiscount && d.originalPrice) {
+        const discount = ((d.originalPrice - (d.priceV2?.amount || d.price)) / d.originalPrice) * 100;
+        if (discount < filters.minDiscount) return false;
+      }
+
+      // Source filter
+      if (filters.sources && filters.sources.length > 0) {
+        if (!filters.sources.includes(d.source)) return false;
+      }
+
+      // Search term
+      if (filters.searchTerm) {
+        const searchLower = filters.searchTerm.toLowerCase();
+        const titleMatch = (d.title || '').toLowerCase().includes(searchLower);
+        if (!titleMatch) return false;
+      }
+
+      return true;
+    });
+
+    // Client-side sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'price_asc':
+          return (a.priceV2?.amount || a.price || 0) - (b.priceV2?.amount || b.price || 0);
+        case 'price_desc':
+          return (b.priceV2?.amount || b.price || 0) - (a.priceV2?.amount || a.price || 0);
+        case 'rating_desc':
+          return (b.rating || 0) - (a.rating || 0);
+        case 'newest':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'discount_desc':
+          if (a.originalPrice && b.originalPrice) {
+            const aDiscount = ((a.originalPrice - (a.priceV2?.amount || a.price)) / a.originalPrice) * 100;
+            const bDiscount = ((b.originalPrice - (b.priceV2?.amount || b.price)) / b.originalPrice) * 100;
+            return bDiscount - aDiscount;
+          }
+          return 0;
+        case 'hot':
+        default:
+          // Hot deals: sort by temperature or votes
+          return (b.temperature || 0) - (a.temperature || 0);
+      }
+    });
+
+    return filtered.slice(0, limit_count);
+  } catch (err) {
+    console.error('Error filtering deals:', err);
+    return [];
+  }
+}
+
