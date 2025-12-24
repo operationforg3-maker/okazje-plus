@@ -21,6 +21,7 @@ interface RawProduct {
   title: string;
   imageUrl: string;
   price: number;
+  originalPrice?: number; // Price before discount (for strikethrough display)
   currency: string;
   shippingCost: number;
   shippingDays: number;
@@ -31,7 +32,13 @@ interface RawProduct {
   specs?: Record<string, string>;
   rating?: number;
   ratingCount?: number;
-  images?: string[];
+  images?: string[]; // All product images (gallery)
+  variants?: Array<{ // Product variants (colors, sizes, etc.)
+    id: string;
+    name: string; // e.g., "Color", "Size"
+    values: string[]; // e.g., ["Black", "White"], ["S", "M", "L"]
+    sku?: string;
+  }>;
   // Product identifiers (for deduplication & SEO)
   sku?: string;
   ean?: string;
@@ -228,12 +235,18 @@ export class SmartHarvester {
               let existingProduct = null;
               let identityHash = '';
               
-              if (sourceProduct.ean || sourceProduct.gtin || sourceProduct.upc || sourceProduct.mpn) {
+              // Type-safe access to identifiers
+              const productEan = sourceProduct.ean;
+              const productGtin = sourceProduct.gtin;
+              const productUpc = sourceProduct.upc;
+              const productMpn = sourceProduct.mpn;
+              
+              if (productEan || productGtin || productUpc || productMpn) {
                 existingProduct = await this.findProductByIdentifiers({
-                  ean: sourceProduct.ean,
-                  gtin: sourceProduct.gtin,
-                  upc: sourceProduct.upc,
-                  mpn: sourceProduct.mpn,
+                  ean: productEan,
+                  gtin: productGtin,
+                  upc: productUpc,
+                  mpn: productMpn,
                 });
                 
                 if (existingProduct) {
@@ -460,7 +473,7 @@ export class SmartHarvester {
       
       const response = await client.searchProducts({
         q: searchQuery,
-        pageSize: fetchSize,
+        limit: fetchSize,
         targetCurrency: 'PLN',
         targetLanguage: 'PL',
         sort: isTreeMode ? 'rating' : 'price_asc', // For tree mode, sort by rating; otherwise by price
@@ -478,6 +491,7 @@ export class SmartHarvester {
         title: p.title || p.product_title || '',
         imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '',
         price: p.price?.current || 0,
+        originalPrice: p.price?.original || undefined, // Price before discount
         currency: p.price?.currency || 'PLN',
         shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
         shippingDays: 7, // Default estimate
@@ -488,7 +502,8 @@ export class SmartHarvester {
         specs: extractDimensionsFromTitle(p.title || ''),
         rating: p.rating?.score || 0,
         ratingCount: p.rating?.count || 0,
-        images: Array.isArray(p.image_urls) ? p.image_urls : [],
+        images: Array.isArray(p.image_urls) ? p.image_urls : [], // Full gallery
+        variants: Array.isArray(p.variants) ? p.variants : undefined, // Product variants (colors, sizes)
         // Product identifiers (for robust deduplication & SEO)
         sku: p.sku || undefined,
         ean: p.ean || p.barcode || undefined,
@@ -649,6 +664,17 @@ export class SmartHarvester {
     const extractedSpecs = extractDimensionsFromTitle(sourceProduct.title);
     const specs = sourceProduct.specs || extractedSpecs;
 
+    // Add variants to specs if available (temporary solution until schema supports variants)
+    if (sourceProduct.variants && Array.isArray(sourceProduct.variants) && sourceProduct.variants.length > 0) {
+      sourceProduct.variants.forEach((variant: any, idx: number) => {
+        const variantKey = `variant_${idx}_${variant.name?.toLowerCase() || 'option'}`;
+        specs[variantKey] = Array.isArray(variant.values) ? variant.values.join(', ') : '';
+        if (variant.sku) {
+          specs[`${variantKey}_sku`] = variant.sku;
+        }
+      });
+    }
+
     // Try to auto-map category from product title when categoryInfo is missing/uncategorized
     let mappedCategory = categoryInfo;
     try {
@@ -690,7 +716,7 @@ export class SmartHarvester {
       mainCategorySlug: mappedCategory?.mainCategorySlug || 'uncategorized',
       subCategorySlug: mappedCategory?.subCategorySlug || 'uncategorized',
       subSubCategorySlug: mappedCategory?.subSubCategorySlug,
-      images: [sourceProduct.imageUrl],
+      images: sourceProduct.images && sourceProduct.images.length > 0 ? sourceProduct.images : [sourceProduct.imageUrl],
       primaryImageHash: calculateImageHash(sourceProduct.imageUrl),
       reviewsSummary: {
         pl: 'No reviews yet',
@@ -706,7 +732,6 @@ export class SmartHarvester {
         amount: sourceProduct.price,
         currency: 'USD', // M6: Store in USD for consistency
       },
-      bestPriceCurrency: sourceProduct.currency || 'PLN',
       linkedDealIds: [],
       searchTags: [],
       status: 'pending_approval', // Requires AI enrichment before approval
