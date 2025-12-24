@@ -445,17 +445,16 @@ async function seedCategories() {
     
     const mainCatRef = adminDb.collection('categories').doc(englishMainSlug);
     batch.set(mainCatRef, {
-      name: mainCat.name,
+      name: englishMainName,
       slug: englishMainSlug,
-      slugPl: mainCat.slug,
       icon: mainCat.icon || '📦',
       sortOrder: mainCat.sortOrder,
       translations: {
         pl: { name: mainCat.name },
         en: { name: englishMainName },
-        de: { name: englishMainName }, // Use English as fallback for German
+        de: { name: englishMainName },
       },
-      subcategories: [], // Empty for new structure
+      subcategories: [],
       createdAt: new Date().toISOString(),
     });
     categoriesCount++;
@@ -467,19 +466,18 @@ async function seedCategories() {
       
       const subCatRef = mainCatRef.collection('subcategories').doc(englishSubSlug);
       batch.set(subCatRef, {
-        name: subCat.name,
+        name: englishSubName,
         slug: englishSubSlug,
-        slugPl: subCat.slug,
         sortOrder: 10,
         subcategories: subCat.subcategories.map((sub, idx) => ({
-          name: sub.name,
+          name: toTitleCase((sub.aliexpressKeywords?.[0] || sub.slug).replace(/-/g, ' ')),
           slug: slugify(sub.aliexpressKeywords?.[0] || sub.slug),
           sortOrder: (idx + 1) * 10,
         })),
         translations: {
           pl: { name: subCat.name },
           en: { name: englishSubName },
-          de: { name: englishSubName }, // Use English as fallback for German
+          de: { name: englishSubName },
         },
         createdAt: new Date().toISOString(),
       });
@@ -493,14 +491,13 @@ async function seedCategories() {
         
         const subSubCatRef = subCatRef.collection('subcategories').doc(englishSubSubSlug);
         batch.set(subSubCatRef, {
-          name: subSubCat.name,
+          name: englishSubSubName,
           slug: englishSubSubSlug,
-          slugPl: subSubCat.slug,
           aliexpressKeywords: subSubCat.aliexpressKeywords || [],
           translations: {
             pl: { name: subSubCat.name },
             en: { name: englishSubSubName },
-            de: { name: englishSubSubName }, // Use English as fallback for German
+            de: { name: englishSubSubName },
           },
           createdAt: new Date().toISOString(),
         });
