@@ -23,7 +23,7 @@ jobs:
         run: npm ci
       
       - name: Run TypeScript check
-        run: npm run typecheck || echo "TypeScript errors exist but build continues (ignoreBuildErrors: true)"
+        run: npm run typecheck || true
       
       - name: Run tests
         run: npm run test
