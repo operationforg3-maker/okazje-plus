@@ -33,7 +33,9 @@ interface RawProduct {
   merchantRating?: number;
   specs?: Record<string, string>;
   rating?: number;
-  ratingCount?: number;
+  ratingCount?: number; // Number of reviews/ratings
+  evaluateCount?: number; // AliExpress: Liczba opinii (alternatywa dla ratingCount)
+  soldCount?: number; // AliExpress: Liczba sprzedanych/ocenionych (dla popularity metric)
   images?: string[]; // All product images (gallery)
   variants?: Array<{ // Product variants (colors, sizes, etc.)
     id: string;
@@ -792,7 +794,8 @@ export class SmartHarvester {
       },
       rating: {
         score: sourceProduct.rating || 0,
-        count: sourceProduct.ratingCount || 0,
+        // Polepszenie: użyj evaluateCount jeśli ratingCount nie dostępny (AliExpress API)
+        count: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
         provider: 'mixed' as any, // Harvester sources are external
       },
       bestPrice: {
@@ -888,8 +891,10 @@ export class SmartHarvester {
         rating: sourceProduct.merchantRating,
       },
       salesMetrics: {
-        soldCount: 0,
-        reviewCount: sourceProduct.ratingCount || 0,
+        // Polepszenie: użyj soldCount z AliExpress (dla popularity sorting)
+        soldCount: sourceProduct.soldCount || sourceProduct.evaluateCount || 0,
+        // Polepszenie: użyj evaluateCount jeśli ratingCount nie dostępny
+        reviewCount: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
         avgRating: sourceProduct.rating || 0,
       },
       title: sourceProduct.title || 'Produkt',
