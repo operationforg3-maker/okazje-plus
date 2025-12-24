@@ -3,9 +3,11 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory } from '@/lib/data';
+import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsByFilters } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { Deal, Category, Product } from '@/lib/types';
+import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
+import { UnifiedFilters, SortBy } from '@/lib/filter-config';
 import DealCard from '@/components/deal-card';
 import DealListCard from '@/components/deal-list-card';
 import { Input } from '@/components/ui/input';
@@ -62,7 +64,12 @@ export default function DealsPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
-  const [sortBy, setSortBy] = useState<SortOption>('hottest');
+  const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({
+    priceRange: { min: 0, max: 10000 },
+    rating: undefined,
+    availability: 'all',
+  });
+  const [sortBy, setSortBy] = useState<SortBy>('hot');
   const [typeFilter, setTypeFilter] = useState<DealTypeFilter>('all');
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(10000);
@@ -290,7 +297,7 @@ export default function DealsPage() {
     fetchData();
   }, [showEmptyCategories]);
 
-  // Pobierz deals przy zmianie kategorii / subkategorii / wyszukiwaniu
+  // Pobierz deals przy zmianie kategorii / subkategorii / wyszukiwaniu / filtrów
   useEffect(() => {
     let cancelled = false;
     async function fetchDeals() {
@@ -306,19 +313,14 @@ export default function DealsPage() {
             limit: 100,
           });
           if (!cancelled) setDeals(results);
-        } else if (selectedCategory) {
-          // Filtrowanie według kategorii
-          const categoryDeals = await getDealsByCategory(
-            selectedCategory.id,
-            selectedSubcategory || undefined,
-            selectedSubSubcategory || undefined,
-            100
-          );
-          if (!cancelled) setDeals(categoryDeals);
         } else {
-          // Brak filtrów - pokaż gorące okazje
-          const hotDeals = await getHotDeals(100);
-          if (!cancelled) setDeals(hotDeals);
+          // Użyj zunifiowanych filtrów do pobierania dealów
+          const filterConfig = {
+            ...unifiedFilters,
+            categoryId: selectedCategory?.id || selectedCategory?.slug || unifiedFilters.categoryId,
+          };
+          const filteredDeals = await getDealsByFilters(filterConfig, sortBy, 100);
+          if (!cancelled) setDeals(filteredDeals);
         }
       } catch (error) {
         console.error('Error fetching deals:', error);
@@ -328,7 +330,7 @@ export default function DealsPage() {
     }
     const t = setTimeout(fetchDeals, 250); // debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
+  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
 
   // Sortowanie i filtrowanie lokalne (po pobraniu z API)
   const filteredAndSortedDeals = useMemo(() => {
@@ -750,18 +752,53 @@ export default function DealsPage() {
                     Kategorie i filtry
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] p-6">
-                  <div suppressHydrationWarning>
-                    <SidebarContent />
-                  </div>
+                <SheetContent side="left" className="w-[80vw] p-0 flex flex-col">
+                  <ScrollArea className="h-full flex-1">
+                    <div className="p-4 space-y-6">
+                      {/* Categories */}
+                      <div suppressHydrationWarning>
+                        <SidebarContent />
+                      </div>
+
+                      {/* Separator */}
+                      <div className="border-t pt-4" />
+
+                      {/* Unified Filters (Mobile) */}
+                      <UnifiedFilterSidebar
+                        filters={unifiedFilters}
+                        onFiltersChange={setUnifiedFilters}
+                        sortBy={sortBy}
+                        onSortChange={setSortBy}
+                        categoryId={selectedCategory?.id}
+                        isMobile={true}
+                        onClose={() => setIsMobileSidebarOpen(false)}
+                      />
+                    </div>
+                  </ScrollArea>
                 </SheetContent>
               </Sheet>
             </div>
 
             {/* Left Sidebar - Categories (Desktop only) */}
             <div className="hidden lg:block lg:col-span-3">
-              <div suppressHydrationWarning>
-                <SidebarContent />
+              <div className="space-y-4">
+                {/* Categories */}
+                <div suppressHydrationWarning>
+                  <SidebarContent />
+                </div>
+
+                {/* Separator */}
+                <div className="border-t pt-4" />
+
+                {/* Unified Filters (Desktop) */}
+                <UnifiedFilterSidebar
+                  filters={unifiedFilters}
+                  onFiltersChange={setUnifiedFilters}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  categoryId={selectedCategory?.id}
+                  isMobile={false}
+                />
               </div>
             </div>
 

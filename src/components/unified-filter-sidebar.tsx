@@ -208,7 +208,6 @@ export function UnifiedFilterSidebar({
                   filters.priceRange?.max || DEFAULT_FILTERS.price.max,
                 ]}
                 onValueChange={handlePriceChange}
-                range
                 className="w-full"
               />
               <div className="flex gap-2 text-sm">

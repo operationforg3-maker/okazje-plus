@@ -131,7 +131,7 @@ function ProductsPageContent() {
     } catch {}
   }, []);
 
-  // Pobierz ProductCore przy zmianie kategorii / subkategorii / wyszukiwaniu
+  // Pobierz ProductCore przy zmianie kategorii / subkategorii / wyszukiwaniu / filtrów
   useEffect(() => {
     let cancelled = false;
     async function fetchProducts() {
@@ -147,19 +147,14 @@ function ProductsPageContent() {
             limit: 100,
           });
           if (!cancelled) setProducts(results || []);
-        } else if (!selectedCategory) {
-          // Wszystkie produkty (polecane) - M6 ProductCore
-          const allProducts = await getRecommendedProductCores(100);
-          if (!cancelled) setProducts(allProducts);
         } else {
-          // Produkty z wybranej kategorii (M6 ProductCore)
-          const categoryProducts = await getProductCoresByCategory(
-            selectedCategory.slug || selectedCategory.id,
-            selectedSubcategory || undefined,
-            selectedSubSubcategory || undefined,
-            100
-          );
-          if (!cancelled) setProducts(categoryProducts);
+          // Użyj zunifiowanych filtrów do pobierania ProductCore
+          const filterConfig = {
+            ...unifiedFilters,
+            categoryId: selectedCategory?.id || selectedCategory?.slug || unifiedFilters.categoryId,
+          };
+          const filteredProducts = await getProductCoresByFilters(filterConfig, sortBy, 100);
+          if (!cancelled) setProducts(filteredProducts);
         }
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -169,7 +164,7 @@ function ProductsPageContent() {
     }
     const t = setTimeout(fetchProducts, 250); // drobny debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
+  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
 
   useEffect(() => {
     try { localStorage.setItem('products_view_mode', viewMode); } catch {}
@@ -622,19 +617,52 @@ function ProductsPageContent() {
                     Kategorie i filtry
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] p-6">
-                  <div suppressHydrationWarning>
-                    <SidebarContent />
-                  </div>
+                <SheetContent side="left" className="w-[80vw] p-0 flex flex-col">
+                  <ScrollArea className="h-full flex-1">
+                    <div className="p-4 space-y-6">
+                      {/* Categories */}
+                      <div suppressHydrationWarning>
+                        <SidebarContent />
+                      </div>
+
+                      {/* Separator */}
+                      <div className="border-t pt-4" />
+
+                      {/* Unified Filters (Mobile) */}
+                      <UnifiedFilterSidebar
+                        filters={unifiedFilters}
+                        onFiltersChange={setUnifiedFilters}
+                        sortBy={sortBy}
+                        onSortChange={setSortBy}
+                        categoryId={selectedCategory?.id}
+                        isMobile={true}
+                        onClose={() => setIsMobileSidebarOpen(false)}
+                      />
+                    </div>
+                  </ScrollArea>
                 </SheetContent>
               </Sheet>
             </div>
 
-            {/* Left Sidebar - Categories (Desktop only) */}
-            <div className="hidden lg:block lg:col-span-3">
+            {/* Left Sidebar - Categories & Unified Filters (Desktop only) */}
+            <div className="hidden lg:block lg:col-span-3 space-y-6">
+              {/* Categories */}
               <div suppressHydrationWarning>
                 <SidebarContent />
               </div>
+
+              {/* Separator */}
+              <div className="border-t pt-4" />
+
+              {/* Unified Filters Sidebar */}
+              <UnifiedFilterSidebar
+                filters={unifiedFilters}
+                onFiltersChange={setUnifiedFilters}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                categoryId={selectedCategory?.id}
+                isMobile={false}
+              />
             </div>
 
             {/* Center Content - Subcategories & Products */}
