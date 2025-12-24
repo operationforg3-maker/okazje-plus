@@ -194,64 +194,15 @@ function ProductsPageContent() {
     return product.bestPrice?.amount || 0;
   };
 
-  // Filtered and sorted products
-  const filteredAndSortedProducts = useMemo(() => {
-    let result = [...filteredProducts];
-    // Apply price range filter
-    result = result.filter((product) => {
-      const price = getProductPrice(product);
-      return price >= priceRange[0] && price <= priceRange[1];
-    });
-
-    // Apply quick filters
-    if (quickFilters.topRated) {
-      result = result.filter((product) => {
-        const rating = product.rating?.score || 0;
-        return rating >= 4.5;
-      });
-    }
-
-    // Note: freeShipping i bestsellers require Deal data, skip here (would need separate query)
-
-    // Apply sorting
-    switch (sortBy) {
-      case 'newest':
-        result.sort((a, b) => {
-          const aTime = new Date(a.createdAt || 0).getTime();
-          const bTime = new Date(b.createdAt || 0).getTime();
-          return bTime - aTime;
-        });
-        break;
-      case 'rating':
-        result.sort((a, b) => {
-          const aRating = a.rating?.score || 0;
-          const bRating = b.rating?.score || 0;
-          return bRating - aRating;
-        });
-        break;
-      case 'price_asc':
-        result.sort((a, b) => getProductPrice(a) - getProductPrice(b));
-        break;
-      case 'price_desc':
-        result.sort((a, b) => getProductPrice(b) - getProductPrice(a));
-        break;
-      case 'recommended':
-      default:
-        // Keep original order (recommended/featured)
-        break;
-    }
-
-    return result;
-  }, [filteredProducts, priceRange, quickFilters, sortBy]);
-
   // Infinite scroll hook - ładuje kolejne produkty przy scrollowaniu
+  // Filtry i sortowanie są teraz obsługiwane przez getProductCoresByFilters w useEffect
   const {
     displayedItems: displayedProducts,
     hasMore,
     isLoading: isLoadingMore,
     observerTarget,
   } = useInfiniteScroll({
-    items: filteredAndSortedProducts,
+    items: products, // Bezpośrednio z products (już przefiltrowane i posortowane)
     initialItemsPerPage: 20,
     loadMoreThreshold: 500,
   });
