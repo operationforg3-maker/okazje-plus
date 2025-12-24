@@ -2494,11 +2494,17 @@ export async function getRecommendedProductCores(count: number = 50): Promise<an
     const q = query(
       ref,
       where("status", "==", "approved"),
-      orderBy("bestPrice.amount", "asc"),
-      limit(count)
+      limit(count * 2) // Fetch more to account for sorting on client
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Sort by price on client side to avoid requiring a complex index
+    products.sort((a, b) => {
+      const priceA = a.bestPrice?.amount || 0;
+      const priceB = b.bestPrice?.amount || 0;
+      return priceA - priceB;
+    });
+    return products.slice(0, count);
   } catch (err) {
     console.error("Error fetching recommended products:", err);
     return [];
@@ -2519,7 +2525,6 @@ export async function getProductCoresByCategory(
     const constraints: any[] = [
       where("status", "==", "approved"),
       where("mainCategorySlug", "==", mainCategorySlug),
-      orderBy("bestPrice.amount", "asc"),
     ];
 
     if (subCategorySlug) {
@@ -2530,11 +2535,21 @@ export async function getProductCoresByCategory(
       constraints.push(where("subSubCategorySlug", "==", subSubCategorySlug));
     }
 
-    constraints.push(limit(limit));
+    // Fetch more to account for sorting on client side
+    constraints.push(limit(limit * 2));
 
     const q = query(ref, ...constraints);
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    // Sort by price on client side to avoid requiring complex indexes
+    products.sort((a, b) => {
+      const priceA = a.bestPrice?.amount || 0;
+      const priceB = b.bestPrice?.amount || 0;
+      return priceA - priceB;
+    });
+    
+    return products.slice(0, limit);
   } catch (err) {
     console.error("Error fetching products by category:", err);
     return [];
