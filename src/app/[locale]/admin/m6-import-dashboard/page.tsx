@@ -26,6 +26,7 @@ import {
   RefreshCw,
   Code,
   ListTree,
+  Trash2,
 } from "lucide-react";
 
 interface HarvesterJob {
@@ -50,6 +51,8 @@ export default function M6ImportDashboard() {
   const [mounted, setMounted] = useState(false);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [killing, setKilling] = useState(false);
+  const [wiping, setWiping] = useState(false);
 
   // Critical: Prevent hydration mismatch
   useEffect(() => {
@@ -126,6 +129,54 @@ export default function M6ImportDashboard() {
   };
 
   const refreshJobs = () => loadJobs(authToken || undefined);
+
+  const killAllRunningJobs = async () => {
+    if (!authToken) return setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+    if (!confirm('⚠️ Czy na pewno chcesz zatrzymać WSZYSTKIE aktywne zadania harvestera?')) return;
+    setKilling(true);
+    try {
+      const res = await fetch('/api/admin/harvester/kill-all', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error('Kill All failed');
+      await refreshJobs();
+      alert('✅ Zatrzymano aktywne zadania');
+    } catch (e: any) {
+      alert(`❌ Błąd zatrzymywania: ${e?.message || e}`);
+    } finally {
+      setKilling(false);
+    }
+  };
+
+  const wipeDatabase = async () => {
+    if (!authToken) return setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+    const c1 = confirm('⚠️⚠️⚠️ UWAGA: To USUNIE WSZYSTKIE dane (deals, product_cores, identity_matches, harvester_jobs). Kontynuować?');
+    if (!c1) return;
+    const c2 = confirm('🚨 OSTATNIE OSTRZEŻENIE! Operacja jest NIEODWRACALNA. Kontynuować?');
+    if (!c2) return;
+    setWiping(true);
+    try {
+      const res = await fetch('/api/admin/harvester/wipe', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error('WIPE failed');
+      const data = await res.json();
+      await refreshJobs();
+      alert(`🗑️ Wyczyszczono ${data.total} dokumentów`);
+    } catch (e: any) {
+      alert(`❌ Błąd WIPE: ${e?.message || e}`);
+    } finally {
+      setWiping(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -229,6 +280,40 @@ export default function M6ImportDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Danger Controls (Kill All / WIPE) */}
+        <Card className="bg-white border-2 border-red-200">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h3 className="font-semibold text-red-700">Strefa krytyczna</h3>
+                <p className="text-sm text-slate-600">
+                  Szybkie akcje administracyjne dla harvestera (M6): zatrzymanie aktywnych jobów i pełny WIPE bazy importu.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {jobs.some(j => j.status === 'running') && (
+                  <Button
+                    variant="destructive"
+                    onClick={killAllRunningJobs}
+                    disabled={killing}
+                    className="gap-2"
+                  >
+                    {killing ? 'Zatrzymywanie…' : (<><Zap className="w-4 h-4" /> Kill All</>)}
+                  </Button>
+                )}
+                <Button
+                  variant="destructive"
+                  onClick={wipeDatabase}
+                  disabled={wiping}
+                  className="gap-2 bg-red-600 hover:bg-red-700"
+                >
+                  {wiping ? 'Czyszczenie…' : (<><Trash2 className="w-4 h-4" /> WIPE ALL</>)}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="jobs" className="space-y-4">
