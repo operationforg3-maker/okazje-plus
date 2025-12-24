@@ -208,6 +208,7 @@ export class SmartHarvester {
     let dealsCreated = 0;
     let duplicatesSkipped = 0;
     const errors: HarvesterJob['errors'] = [];
+    let processedCount = 0; // Counter for periodic updates
 
     try {
       // Iterate through all provided queries/categories
@@ -323,6 +324,26 @@ export class SmartHarvester {
                   source,
                   sourceProduct.sourceProductId
                 );
+              }
+
+              // Periodic update: Update job status co 5 produktów
+              processedCount++;
+              if (processedCount % 5 === 0) {
+                await this.updateJobRecord({
+                  id: this.jobId,
+                  status: 'running',
+                  source,
+                  query: queries.join(', '),
+                  maxResults,
+                  productsFound,
+                  productsCreated,
+                  dealsCreated,
+                  duplicatesSkipped,
+                  errors,
+                  startedAt: jobStartTime,
+                  lastUpdatedAt: new Date().toISOString(),
+                  logs: this.logs,
+                });
               }
             } catch (err) {
               this.addLog(
