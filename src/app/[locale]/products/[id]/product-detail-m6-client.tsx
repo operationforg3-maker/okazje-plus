@@ -18,8 +18,6 @@ import {
   Package,
   Sparkles,
   TrendingUp,
-  ChevronLeft,
-  ChevronRight as ChevronRightIcon,
   Heart,
   ShoppingCart,
   MessageSquare,
@@ -28,6 +26,8 @@ import {
 import { PriceComparisonTable } from '@/components/price-comparison-table';
 import { ProductPriceHistoryChart } from '@/components/product-price-history-chart';
 import { SpecsTable } from '@/components/specs-table';
+import GalleryM6 from '@/components/gallery-m6';
+import VariantsM6 from '@/components/variants-m6';
 import CommentSection from '@/components/comment-section';
 import RatingInput from '@/components/rating-input';
 import ShareButton from '@/components/share-button';
@@ -54,7 +54,6 @@ export default function ProductDetailM6Client({
   const { user } = useAuth();
   const [userRating, setUserRating] = useState<ProductRating | null>(null);
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'rate'>('description');
 
   // Use productCore if M6, otherwise use product
@@ -85,18 +84,18 @@ export default function ProductDetailM6Client({
   // Extract data
   const title = typeof productData.title === 'object' 
     ? (productData.title.pl || productData.title.en || 'Produkt')
-    : (productData.name || 'Produkt');
+    : (productData?.name || 'Produkt');
     
   const description = typeof productData.description === 'string'
     ? productData.description
-    : (productData.shortDescription?.pl || productData.fullDescription?.pl || '');
+    : (productData?.shortDescription?.pl || productData?.fullDescription?.pl || (isM6 ? productCore?.description?.pl : product?.description) || '');
 
   // Images - M6 has images array, legacy has single image
-  const images = isM6 
-    ? productCore.images.map((url, idx) => ({ id: idx.toString(), src: url, alt: title, type: 'url' as const }))
+  const imageUrls = isM6 
+    ? productCore.images && Array.isArray(productCore.images) ? productCore.images : []
     : (product.gallery && product.gallery.length > 0 
-        ? product.gallery 
-        : [{ id: '0', src: product.image, alt: title, type: 'url' as const }]);
+        ? product.gallery.map(g => g.src) 
+        : [product.image]);
 
   // Price - M6 has bestPrice, legacy has price
   const priceAmount = isM6 ? productCore.bestPrice.amount : (product.price || 0);
@@ -115,13 +114,6 @@ export default function ProductDetailM6Client({
         return acc;
       }, {}) || {});
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % images.length);
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
-  };
 
   return (
     <div className="page-container py-4 md:py-8 lg:py-12">
@@ -140,59 +132,8 @@ export default function ProductDetailM6Client({
 
       {/* Hero Section - Gallery + Price Widget */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 mb-8">
-        {/* Image Gallery */}
-        <div className="space-y-4">
-          {/* Main Image */}
-          <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-            <Image
-              src={images[currentImageIndex].src}
-              alt={images[currentImageIndex].alt || title}
-              fill
-              className="object-contain p-4"
-              priority
-            />
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white p-2 rounded-full shadow-lg transition-all"
-                  aria-label="Next image"
-                >
-                  <ChevronRightIcon className="w-5 h-5" />
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Thumbnails */}
-          {images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {images.map((img, idx) => (
-                <button
-                  key={img.id}
-                  onClick={() => setCurrentImageIndex(idx)}
-                  className={`relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-all ${
-                    idx === currentImageIndex ? 'border-primary' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <Image
-                    src={img.src}
-                    alt={img.alt || `${title} - ${idx + 1}`}
-                    fill
-                    className="object-contain p-1"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Image Gallery - Using GalleryM6 Component */}
+        <GalleryM6 images={imageUrls} title={title} />
 
         {/* Price Widget & Actions */}
         <div className="space-y-6">
