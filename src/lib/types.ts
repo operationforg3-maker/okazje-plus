@@ -33,6 +33,7 @@ export interface SubSubcategory {
   color?: string;
   translations?: Record<string, { name: string; description?: string }>;
   importKeywords?: string[]; // frazy pomocne w importach/wyszukiwaniu
+  aliexpressCategoryIds?: string[]; // AliExpress category IDs dla hot-products mode
   exampleProducts?: Array<{ name: string; category: string }>; // przykładowe produkty z tej kategorii
   searchKeywords?: string[]; // słowa kluczowe do wyszukiwania (AI-generated)
 }
@@ -152,11 +153,13 @@ export interface Subcategory {
     importedAt?: string;
     originalUrl?: string;
     scrapedData?: Record<string, any>;
+    originalId?: string; // Original product ID from source
     promotionId?: string;
     commissionRate?: number;
     evaluateCount?: number;
     evaluateRate?: string;
     sellerRating?: number;
+    aliexpressCategoryIds?: string[]; // NEW: For hot-products mode
     returnPolicy?: string;
     hotProduct?: boolean;
     flashDeal?: boolean;
@@ -168,10 +171,7 @@ export interface Subcategory {
     warehouse?: string;
     deliveryTime?: string;
     shippingMethod?: string;
-    originalId?: string;
     orders?: number;
-    
-    // Enhanced fields for deals
     flashSale?: {
       active: boolean;
       appSalePrice?: number;
@@ -193,6 +193,7 @@ export interface Subcategory {
     merchantRating?: number;
     certifications?: string[];
     videoUrl?: string;
+    [key: string]: any; // Allow additional metadata fields
   };
 }
 
@@ -2275,9 +2276,20 @@ export interface ProductCore {
   title: LocalizedText; // Multi-language title
   shortDescription: LocalizedText; // Concise 1-2 sentence description
   fullDescription: LocalizedText; // Detailed description (optional, generated)
+  /**
+   * Optional unified description field (HTML), per locale
+   * Aligns with master data schema (description: Localized<HTML>)
+   */
+  description?: LocalizedText;
   
   // Specifications (Standardized Key-Value)
   specs: Record<string, string>; // e.g., {"RAM": "16GB", "Storage": "512GB SSD", "Screen": "15.6\" OLED"}
+  /**
+   * Optional localized specs map to support multi-language spec labels
+   */
+  specsLocalized?: {
+    [locale: string]: Record<string, string>;
+  };
   
   // Taxonomy
   mainCategorySlug: string;
@@ -2287,6 +2299,10 @@ export interface ProductCore {
   // Media
   images: string[]; // Gallery URLs (high-res)
   primaryImageHash?: string; // Hash of primary image for identity matching
+  /**
+   * Optional product video URL (e.g., AliExpress product_video_url)
+   */
+  videoUrl?: string;
   
   // Ratings & Reviews
   reviewsSummary: LocalizedText; // AI-generated pros/cons summary (e.g., "Users praise durability and performance...")
@@ -2294,6 +2310,18 @@ export interface ProductCore {
     score: number; // 0-5
     count: number; // Number of reviews/ratings
     provider: 'mixed' | 'aliexpress' | 'amazon' | 'allegro' | 'users' | 'editorial';
+  };
+  /**
+   * Optional structured features, pros, cons (per locale)
+   */
+  features?: {
+    [locale: string]: string[];
+  };
+  pros?: {
+    [locale: string]: string[];
+  };
+  cons?: {
+    [locale: string]: string[];
   };
   
   // Best Price (Calculated Field - Updated when deals change)
@@ -2307,8 +2335,20 @@ export interface ProductCore {
   
   // SEO & Search
   searchTags: string[]; // For Typesense/full-text search
-  seoTitle?: string;
-  seoDescription?: string;
+  seoTitle?: string; // Single-locale SEO title (legacy)
+  seoDescription?: string; // Single-locale SEO description (legacy)
+  /**
+   * Optional localized SEO fields and slug
+   */
+  seoTitleLocalized?: {
+    [locale: string]: string;
+  };
+  seoDescriptionLocalized?: {
+    [locale: string]: string;
+  };
+  slug?: {
+    [locale: string]: string;
+  };
   
   // Status & Moderation
   status: 'draft' | 'pending_approval' | 'approved' | 'rejected';
@@ -2321,6 +2361,14 @@ export interface ProductCore {
   
   // Quality Metrics
   aiQualityScore?: number; // 0-100
+  /**
+   * Semantic embeddings vector for AI search (e.g., 768 dims)
+   */
+  embeddings?: number[];
+  /**
+   * AI rating of product quality (0-100), aligns with master schema
+   */
+  aiRating?: number;
   confidence?: number; // 0-1 confidence in specs/data quality
   warnings?: string[]; // e.g., ["missing_specs", "low_rating_count"]
 }
@@ -2336,6 +2384,8 @@ export interface DealM6 {
   
   // Foreign Key
   productId: string; // References ProductCore.id (required)
+  /** Alias for master schema compatibility */
+  productCoreId?: string;
   
   // Pricing (Omnibus Directive Compliance)
   price: {
@@ -2348,6 +2398,8 @@ export interface DealM6 {
     amount?: number;
     percentage?: number;
   };
+  /** Optional discount percent shortcut (master schema "discount: Int") */
+  discountPercent?: number;
   
   // Shipping
   shipping: {
@@ -2360,6 +2412,9 @@ export interface DealM6 {
   // Source & Affiliate
   source: 'aliexpress' | 'amazon' | 'allegro' | 'ebay' | 'manual';
   affiliateLink: string; // Generated with tracking code
+  /** Master schema names */
+  affiliateUrl?: string;
+  dealUrl?: string;
   merchantName?: string;
   merchantRating?: number; // 0-5
   
@@ -2370,6 +2425,8 @@ export interface DealM6 {
   
   // Availability
   stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order';
+  /** Overall lifecycle status per master schema */
+  lifecycleStatus?: 'active' | 'expired' | 'out_of_stock' | 'banned';
   stockLevel?: number;
   
   // Expiry
@@ -2397,6 +2454,20 @@ export interface DealM6 {
   updatedAt: string; // ISO timestamp
   createdBy?: string; // UID of user who posted
   approvedBy?: string; // UID of moderator
+  /** Last check timestamp for offer synchronization */
+  lastCheck?: string; // ISO timestamp
+  /** Structured seller and sales metrics (master schema) */
+  seller?: {
+    id?: string;
+    name?: string;
+    url?: string;
+    rating?: number;
+  };
+  salesMetrics?: {
+    soldCount?: number;
+    reviewCount?: number;
+    avgRating?: number;
+  };
   
   // Import/Source Info
   sourceProductId?: string; // ID in source system (e.g., AliExpress product ID)

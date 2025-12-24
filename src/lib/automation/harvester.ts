@@ -27,6 +27,7 @@ interface RawProduct {
   shippingDays: number;
   sourceProductId: string;
   sourceUrl: string;
+  videoUrl?: string; // Product video URL from source (e.g., AliExpress)
   merchantName?: string;
   merchantRating?: number;
   specs?: Record<string, string>;
@@ -497,6 +498,7 @@ export class SmartHarvester {
         shippingDays: 7, // Default estimate
         sourceProductId: String(p.item_id || p.product_id || ''),
         sourceUrl: p.product_url || '',
+        videoUrl: p.product_video_url || p.video_url || undefined,
         merchantName: 'AliExpress',
         merchantRating: 4.0,
         specs: extractDimensionsFromTitle(p.title || ''),
@@ -677,6 +679,7 @@ export class SmartHarvester {
 
     // Try to auto-map category from product title when categoryInfo is missing/uncategorized
     let mappedCategory = categoryInfo;
+    let categoryMetadata: any = {}; // NEW: Store aliexpressCategoryIds & searchKeywords
     try {
       const needsMapping = !mappedCategory || !mappedCategory.mainCategorySlug || mappedCategory.mainCategorySlug === 'uncategorized';
       if (needsMapping) {
@@ -689,6 +692,39 @@ export class SmartHarvester {
             subSubCategorySlug: match.subSubCategorySlug,
           };
           this.addLog('info', `Auto-mapped category: ${mappedCategory.mainCategorySlug}/${mappedCategory.subCategorySlug}/${mappedCategory.subSubCategorySlug || ''}`);
+        }
+      }
+
+      // NEW: Fetch category metadata (aliexpressCategoryIds, searchKeywords) from Firestore
+      if (mappedCategory?.mainCategorySlug && mappedCategory.mainCategorySlug !== 'uncategorized') {
+        try {
+          const mainCatRef = adminDb.collection('categories').doc(mappedCategory.mainCategorySlug);
+          const subCatRef = mainCatRef.collection('subcategories').doc(mappedCategory.subCategorySlug);
+          
+          // Try to get sub-subcategory metadata if available
+          if (mappedCategory.subSubCategorySlug) {
+            const subSubRef = subCatRef.collection('subcategories').doc(mappedCategory.subSubCategorySlug);
+            const subSubDoc = await subSubRef.get();
+            if (subSubDoc.exists) {
+              const subSubData = subSubDoc.data();
+              categoryMetadata.aliexpressCategoryIds = subSubData?.aliexpressCategoryIds || [];
+              categoryMetadata.searchKeywords = subSubData?.searchKeywords || [];
+            }
+          } else {
+            // Fallback to sub-category level
+            const subDoc = await subCatRef.get();
+            if (subDoc.exists) {
+              const subData = subDoc.data();
+              categoryMetadata.aliexpressCategoryIds = subData?.aliexpressCategoryIds || [];
+              categoryMetadata.searchKeywords = subData?.searchKeywords || [];
+            }
+          }
+          
+          if (categoryMetadata.aliexpressCategoryIds?.length > 0) {
+            this.addLog('info', `Category enriched with AliExpress IDs: ${categoryMetadata.aliexpressCategoryIds.join(', ')}`);
+          }
+        } catch (e) {
+          this.addLog('warn', 'Failed to fetch category metadata from Firestore', e);
         }
       }
     } catch (e) {
@@ -718,6 +754,7 @@ export class SmartHarvester {
       subSubCategorySlug: mappedCategory?.subSubCategorySlug,
       images: sourceProduct.images && sourceProduct.images.length > 0 ? sourceProduct.images : [sourceProduct.imageUrl],
       primaryImageHash: calculateImageHash(sourceProduct.imageUrl),
+      videoUrl: sourceProduct.videoUrl,
       reviewsSummary: {
         pl: 'No reviews yet',
         en: 'No reviews yet',
@@ -733,7 +770,7 @@ export class SmartHarvester {
         currency: 'USD', // M6: Store in USD for consistency
       },
       linkedDealIds: [],
-      searchTags: [],
+      searchTags: categoryMetadata.searchKeywords || [],
       status: 'pending_approval', // Requires AI enrichment before approval
       createdAt: now,
       updatedAt: now,
@@ -741,6 +778,8 @@ export class SmartHarvester {
         source: source as any,
         originalId: sourceProduct.sourceProductId,
         importedAt: now,
+        // NEW: AliExpress category IDs for hot-products mode
+        aliexpressCategoryIds: categoryMetadata.aliexpressCategoryIds || [],
         // Product identifiers (critical for deduplication & SEO)
         ...normalizedIdentifiers,
       } as any,
@@ -813,6 +852,16 @@ export class SmartHarvester {
       merchantName: sourceProduct.merchantName || source,
       merchant: sourceProduct.merchantName || source,
       merchantRating: sourceProduct.merchantRating,
+      seller: {
+        name: sourceProduct.merchantName || source,
+        url: sourceProduct.sourceUrl,
+        rating: sourceProduct.merchantRating,
+      },
+      salesMetrics: {
+        soldCount: 0,
+        reviewCount: sourceProduct.ratingCount || 0,
+        avgRating: sourceProduct.rating || 0,
+      },
       title: sourceProduct.title || 'Produkt',
       description: typeof product?.shortDescription === 'object' 
         ? (product.shortDescription.pl || product.shortDescription.en || '') 

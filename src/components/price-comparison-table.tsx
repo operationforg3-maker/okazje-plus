@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, TrendingDown, ShoppingCart } from 'lucide-react';
+import { ExternalLink, TrendingDown } from 'lucide-react';
 import { getDealsForProduct } from '@/lib/data';
 
 interface PriceComparisonTableProps {
@@ -48,13 +48,13 @@ export function PriceComparisonTable({
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center p-8">Loading deals...</div>;
+    return <div className="flex items-center justify-center p-8">Ładowanie ofert...</div>;
   }
 
   if (deals.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
-        <p>No deals found for this product</p>
+        <p>Brak ofert dla tego produktu</p>
       </div>
     );
   }
@@ -71,21 +71,21 @@ export function PriceComparisonTable({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Price Comparison</h3>
-        <span className="text-sm text-gray-500">{deals.length} store{deals.length !== 1 ? 's' : ''}</span>
+        <h3 className="text-lg font-semibold">Porównanie cen</h3>
+        <span className="text-sm text-gray-500">{deals.length} sklep{deals.length !== 1 ? 'ów' : ''}</span>
       </div>
 
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
-              <TableHead>Store</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Shipping</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead>Delivery</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead className="text-right">Action</TableHead>
+              <TableHead>Sklep</TableHead>
+              <TableHead className="text-right">Cena</TableHead>
+              <TableHead className="text-right">Dostawa</TableHead>
+              <TableHead className="text-right">Razem</TableHead>
+              <TableHead>Dostawa</TableHead>
+              <TableHead>Ocena</TableHead>
+              <TableHead className="text-right">Akcja</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -115,11 +115,11 @@ export function PriceComparisonTable({
                   {/* Product Price */}
                   <TableCell className="text-right">
                     <span className="font-semibold">
-                      ${productPrice.toFixed(2)}
+                      {productPrice.toFixed(2)} zł
                     </span>
                     {deal.originalPrice && (
                       <p className="text-xs text-gray-500 line-through">
-                        ${deal.originalPrice.toFixed(2)}
+                        {deal.originalPrice.toFixed(2)} zł
                       </p>
                     )}
                   </TableCell>
@@ -128,17 +128,17 @@ export function PriceComparisonTable({
                   <TableCell className="text-right">
                     {shippingCost === 0 ? (
                       <Badge variant="secondary" className="text-green-700 bg-green-100">
-                        FREE
+                        DARMOWA
                       </Badge>
                     ) : (
-                      <span>${shippingCost.toFixed(2)}</span>
+                      <span>{shippingCost.toFixed(2)} zł</span>
                     )}
                   </TableCell>
 
                   {/* Total Price (Highlighted) */}
                   <TableCell className="text-right">
                     <div className="text-lg font-bold text-green-600">
-                      ${totalPrice.toFixed(2)}
+                      {totalPrice.toFixed(2)} zł
                     </div>
                   </TableCell>
 
@@ -146,7 +146,7 @@ export function PriceComparisonTable({
                   <TableCell>
                     {deal.shipping?.timeDays ? (
                       <span className="text-sm">
-                        {deal.shipping.timeDays} {deal.shipping.timeDays === 1 ? 'day' : 'days'}
+                        {deal.shipping.timeDays} {deal.shipping.timeDays === 1 ? 'dzień' : 'dni'}
                       </span>
                     ) : (
                       <span className="text-gray-400 text-sm">—</span>
@@ -181,7 +181,7 @@ export function PriceComparisonTable({
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2"
                       >
-                        Buy
+                        Kup
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </Button>
@@ -199,7 +199,7 @@ export function PriceComparisonTable({
           <div className="flex items-center gap-3">
             <TrendingDown className="w-5 h-5 text-green-600" />
             <p className="text-sm text-green-800">
-              Best price: Save compared to other stores. Free shipping available.
+              Najniższa cena: oszczędzasz względem innych sklepów. Możliwa darmowa dostawa.
             </p>
           </div>
         </div>

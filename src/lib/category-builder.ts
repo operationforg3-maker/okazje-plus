@@ -10,6 +10,8 @@ export type CategorySeed = Omit<Category, 'id'> & {
         Omit<SubSubcategory, 'id'> & {
           importKeywords?: string[];
           aliexpressKeywords?: string[];
+          aliexpressCategoryIds?: string[];
+          searchKeywords?: string[];
         }
       >;
       importKeywords?: string[];
@@ -104,6 +106,16 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
           : [];
         const finalKeywords = importKeywords.length > 0 ? importKeywords : subsub.name ? [subsub.name] : [];
 
+        // NEW: AliExpress category IDs
+        const aliexpressCategoryIds = (subsub as any).aliexpressCategoryIds ?? [];
+
+        // NEW: Generate searchKeywords from EN translation + importKeywords
+        const enName = (subsub as any).translations?.en?.name || subsub.name || '';
+        const searchKeywords = [
+          enName,
+          ...finalKeywords,
+        ].filter(Boolean);
+
         const subSubRef = subRef.collection('subcategories').doc(subSubSlug);
         await subSubRef.set(
           {
@@ -115,6 +127,8 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
             sortOrder: subsub.sortOrder ?? 0,
             translations: subsub.translations ?? {},
             importKeywords: finalKeywords,
+            aliexpressCategoryIds,
+            searchKeywords,
             updatedAt: new Date(),
           },
           { merge: true }

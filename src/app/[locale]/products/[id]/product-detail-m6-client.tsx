@@ -33,6 +33,7 @@ import RatingInput from '@/components/rating-input';
 import ShareButton from '@/components/share-button';
 import { formatPrice } from '@/lib/i18n-utils';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useSmartCart } from '@/lib/cart-context';
 
 interface Props {
   productCore?: ProductCore;
@@ -55,6 +56,7 @@ export default function ProductDetailM6Client({
   const [userRating, setUserRating] = useState<ProductRating | null>(null);
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'rate'>('description');
+  const { addItem, isInCart } = useSmartCart();
 
   // Use productCore if M6, otherwise use product
   const productData = isM6 ? productCore : product;
@@ -113,6 +115,31 @@ export default function ProductDetailM6Client({
         acc[key] = spec.value;
         return acc;
       }, {}) || {});
+
+  // Best deal (lowest total price) for "Kup teraz"
+  const bestDeal = (() => {
+    if (!isM6 || !Array.isArray(deals) || deals.length === 0) return null;
+    try {
+      return deals.reduce((best, current) => {
+        const bestTotal = (best.price?.amount || 0) + (best.shippingCost || best.shipping?.cost || 0);
+        const currentTotal = (current.price?.amount || 0) + (current.shippingCost || current.shipping?.cost || 0);
+        return currentTotal < bestTotal ? current : best;
+      }, deals[0]);
+    } catch {
+      return deals[0];
+    }
+  })();
+
+  // Helper: map ProductCore -> minimal Product for SmartCart
+  const asLegacyProduct = (): Product => {
+    return {
+      id: productId,
+      name: typeof productData.title === 'object' ? (productData.title.pl || productData.title.en || 'Produkt') : (productData as any).name || 'Produkt',
+      image: imageUrls?.[0] || (product as any)?.image || '',
+      price: { amount: priceAmount, currency: 'PLN' } as any,
+      affiliateUrl: bestDeal?.affiliateLink || (bestDeal as any)?.sourceUrl || (productData as any)?.affiliateUrl,
+    } as unknown as Product;
+  };
 
 
   return (
@@ -188,6 +215,26 @@ export default function ProductDetailM6Client({
 
           {/* Actions */}
           <div className="flex gap-3">
+            {/* Kup teraz */}
+            {bestDeal && (
+              <Button asChild size="lg" className="flex-1">
+                <a href={bestDeal.affiliateLink || (bestDeal as any).sourceUrl} target="_blank" rel="noopener noreferrer">
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Kup teraz
+                </a>
+              </Button>
+            )}
+            {/* Do koszyka */}
+            <Button
+              size="lg"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => addItem(asLegacyProduct(), 1)}
+              disabled={isInCart(productId)}
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              {isInCart(productId) ? 'W koszyku' : 'Do koszyka'}
+            </Button>
             <Button
               onClick={() => toggleFavorite()}
               variant="outline"
@@ -202,14 +249,97 @@ export default function ProductDetailM6Client({
               url={typeof window !== 'undefined' ? window.location.href : ''}
               title={title}
             />
+            {/* Porównaj (scroll do tabeli) */}
+            {isM6 && deals.length > 0 && (
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  const el = document.getElementById('price-comparison');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <Scale className="w-5 h-5 mr-2" />
+                Porównaj
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Product Video (if available) */}
+      {isM6 && productCore?.videoUrl && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Wideo produktu</CardTitle>
+            <CardDescription>Materiał wideo źródłowy (AliExpress)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+              <video controls className="w-full h-full" src={productCore.videoUrl} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Features / Pros & Cons (if available) */}
+      {isM6 && (productCore?.features?.pl?.length || productCore?.pros?.pl?.length || productCore?.cons?.pl?.length) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {productCore?.features?.pl && productCore.features.pl.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Cechy produktu</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc pl-5 space-y-1">
+                  {productCore.features.pl.map((f, idx) => (
+                    <li key={idx} className="text-sm text-gray-700">{f}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+          {(productCore?.pros?.pl?.length || productCore?.cons?.pl?.length) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Plusy i minusy</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {productCore?.pros?.pl && productCore.pros.pl.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-green-700">Plusy</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {productCore.pros.pl.map((p, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">{p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {productCore?.cons?.pl && productCore.cons.pl.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-red-700">Minusy</h4>
+                      <ul className="list-disc pl-5 space-y-1">
+                        {productCore.cons.pl.map((c, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Price Comparison Table (M6 only) */}
       {isM6 && deals.length > 0 && (
-        <div className="mb-8">
-          <PriceComparisonTable productId={productId} deals={deals} />
+        <div className="mb-8" id="price-comparison">
+          <PriceComparisonTable productId={productId} onBuyClick={(deal: any) => {
+            // Optional: also add to cart after clicking buy
+            try { addItem(asLegacyProduct(), 1); } catch {}
+          }} />
         </div>
       )}
 

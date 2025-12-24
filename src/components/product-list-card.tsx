@@ -7,10 +7,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, ShoppingCart, ExternalLink, Clock, Tag } from 'lucide-react';
+import { Star, ShoppingCart, ExternalLink, Clock, Tag, Heart, Scale } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
+import { useFavorites } from '@/hooks/use-favorites';
+import { useSmartCart } from '@/lib/cart-context';
 
 interface ProductListCardProps {
   product: ProductCore;
@@ -58,6 +60,8 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   const locale = useLocale();
   const prefix = locale ? `/${locale}` : '';
   const { getText } = useContentLanguage();
+  const { isFavorited, isLoading: favLoading, toggleFavorite } = useFavorites(product.id, 'product');
+  const { addItem, isInCart } = useSmartCart();
   const [productData, setProductData] = useState({
     relativeTime: 'niedawno',
     formattedPrice: 'N/A',
@@ -204,7 +208,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           >
             <a href={product.affiliateUrl || '#'} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4 mr-1" />
-              Przejdź
+              Kup teraz
             </a>
           </Button>
           <Button
@@ -217,6 +221,42 @@ export default function ProductListCard({ product }: ProductListCardProps) {
               Szczegóły
             </Link>
           </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => addItem({
+                id: product.id,
+                name: typeof product.title === 'object' ? (product.title.pl || product.title.en || 'Produkt') : (product.title as any) || 'Produkt',
+                image: Array.isArray(product.images) ? product.images[0] : '',
+                price: { amount: product.bestPrice?.amount || 0, currency: 'PLN' } as any,
+                affiliateUrl: (product as any).affiliateUrl,
+              } as any, 1)}
+              disabled={isInCart(product.id)}
+            >
+              <ShoppingCart className="h-4 w-4 mr-1" />
+              {isInCart(product.id) ? 'W koszyku' : 'Do koszyka'}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => toggleFavorite()}
+              disabled={favLoading}
+            >
+              <Heart className={`h-4 w-4 mr-1 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+              {isFavorited ? 'Ulubione' : 'Do ulubionych'}
+            </Button>
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+            >
+              <Link href={`${prefix}/products/${product.id}#price-comparison`}>
+                <Scale className="h-4 w-4 mr-1" />
+                Porównaj
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

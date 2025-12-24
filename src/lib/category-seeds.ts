@@ -8,7 +8,7 @@ import { Category, Subcategory, SubSubcategory } from './types';
 
 // Helper: Dodaj tłumaczenia do SubSubcategory
 const withTranslations = (
-  subsub: { name: string; slug: string; sortOrder?: number; icon?: string; color?: string; importKeywords?: string[] },
+  subsub: { name: string; slug: string; sortOrder?: number; icon?: string; color?: string; importKeywords?: string[]; aliexpressCategoryIds?: string[] },
   en: string,
   de: string
 ): SubSubcategory => ({
@@ -16,6 +16,7 @@ const withTranslations = (
   // Auto-populate importKeywords from English name if not provided
   // This ensures all subcategories have English search terms for AliExpress/APIs
   importKeywords: subsub.importKeywords || [en],
+  aliexpressCategoryIds: subsub.aliexpressCategoryIds || [],
   translations: {
     en: { name: en },
     de: { name: de }
@@ -80,22 +81,22 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
         icon: '📱',
         sortOrder: 1,
         subcategories: [
-          withTranslations({ name: 'Smartfony', slug: 'smartfony', sortOrder: 1 }, 'Smartphones', 'Smartphones'),
-          withTranslations({ name: 'iPhone', slug: 'iphone', sortOrder: 2 }, 'iPhone', 'iPhone'),
-          withTranslations({ name: 'Samsung Galaxy', slug: 'samsung-galaxy', sortOrder: 3 }, 'Samsung Galaxy', 'Samsung Galaxy'),
-          withTranslations({ name: 'Xiaomi', slug: 'xiaomi-smartfony', sortOrder: 4 }, 'Xiaomi', 'Xiaomi'),
-          withTranslations({ name: 'Huawei', slug: 'huawei-smartfony', sortOrder: 5 }, 'Huawei', 'Huawei'),
-          withTranslations({ name: 'Oppo', slug: 'oppo', sortOrder: 6 }, 'Oppo', 'Oppo'),
-          withTranslations({ name: 'Realme', slug: 'realme', sortOrder: 7 }, 'Realme', 'Realme'),
+          withTranslations({ name: 'Smartfony', slug: 'smartfony', sortOrder: 1, aliexpressCategoryIds: ['509'] }, 'Smartphones', 'Smartphones'),
+          withTranslations({ name: 'iPhone', slug: 'iphone', sortOrder: 2, aliexpressCategoryIds: ['509'] }, 'iPhone', 'iPhone'),
+          withTranslations({ name: 'Samsung Galaxy', slug: 'samsung-galaxy', sortOrder: 3, aliexpressCategoryIds: ['509'] }, 'Samsung Galaxy', 'Samsung Galaxy'),
+          withTranslations({ name: 'Xiaomi', slug: 'xiaomi-smartfony', sortOrder: 4, aliexpressCategoryIds: ['509'] }, 'Xiaomi', 'Xiaomi'),
+          withTranslations({ name: 'Huawei', slug: 'huawei-smartfony', sortOrder: 5, aliexpressCategoryIds: ['509'] }, 'Huawei', 'Huawei'),
+          withTranslations({ name: 'Oppo', slug: 'oppo', sortOrder: 6, aliexpressCategoryIds: ['509'] }, 'Oppo', 'Oppo'),
+          withTranslations({ name: 'Realme', slug: 'realme', sortOrder: 7, aliexpressCategoryIds: ['509'] }, 'Realme', 'Realme'),
           withTranslations({ name: 'Telefony klasyczne', slug: 'telefony-klasyczne', sortOrder: 2 }, 'Classic phones', 'Klassische Telefone'),
-          withTranslations({ name: 'Akcesoria GSM', slug: 'akcesoria-gsm', sortOrder: 3 }, 'GSM accessories', 'GSM-Zubehör'),
-          withTranslations({ name: 'Etui i pokrowce', slug: 'etui-pokrowce', sortOrder: 4 }, 'Cases and covers', 'Hüllen und Taschen'),
-          withTranslations({ name: 'Ładowarki i kable', slug: 'ladowarki-kable', sortOrder: 5 }, 'Chargers and cables', 'Ladegeräte und Kabel'),
-          withTranslations({ name: 'Ładowarki bezprzewodowe', slug: 'ladowarki-bezprzewodowe', sortOrder: 6 }, 'Wireless chargers', 'Wireless Ladegeräte'),
-          withTranslations({ name: 'Kable USB-C', slug: 'kable-usb-c', sortOrder: 7 }, 'USB-C cables', 'USB-C Kabel'),
-          withTranslations({ name: 'Kable Lightning', slug: 'kable-lightning', sortOrder: 8 }, 'Lightning cables', 'Lightning Kabel'),
-          withTranslations({ name: 'Power banki', slug: 'power-banki', sortOrder: 6 }, 'Power banks', 'Powerbanks'),
-          withTranslations({ name: 'Folie i szkła ochronne', slug: 'folie-szkla', sortOrder: 7 }, 'Screen protectors', 'Schutzfolien und Glas'),
+          withTranslations({ name: 'Akcesoria GSM', slug: 'akcesoria-gsm', sortOrder: 3, aliexpressCategoryIds: ['509'] }, 'GSM accessories', 'GSM-Zubehör'),
+          withTranslations({ name: 'Etui i pokrowce', slug: 'etui-pokrowce', sortOrder: 4, aliexpressCategoryIds: ['509'] }, 'Cases and covers', 'Hüllen und Taschen'),
+          withTranslations({ name: 'Ładowarki i kable', slug: 'ladowarki-kable', sortOrder: 5, aliexpressCategoryIds: ['509'] }, 'Chargers and cables', 'Ladegeräte und Kabel'),
+          withTranslations({ name: 'Ładowarki bezprzewodowe', slug: 'ladowarki-bezprzewodowe', sortOrder: 6, aliexpressCategoryIds: ['509'] }, 'Wireless chargers', 'Wireless Ladegeräte'),
+          withTranslations({ name: 'Kable USB-C', slug: 'kable-usb-c', sortOrder: 7, aliexpressCategoryIds: ['509'] }, 'USB-C cables', 'USB-C Kabel'),
+          withTranslations({ name: 'Kable Lightning', slug: 'kable-lightning', sortOrder: 8, aliexpressCategoryIds: ['509'] }, 'Lightning cables', 'Lightning Kabel'),
+          withTranslations({ name: 'Power banki', slug: 'power-banki', sortOrder: 6, aliexpressCategoryIds: ['509'] }, 'Power banks', 'Powerbanks'),
+          withTranslations({ name: 'Folie i szkła ochronne', slug: 'folie-szkla', sortOrder: 7, aliexpressCategoryIds: ['509'] }, 'Screen protectors', 'Schutzfolien und Glas'),
           withTranslations({ name: 'Uchwyty samochodowe', slug: 'uchwyty-samochodowe-telefon', sortOrder: 8 }, 'Car phone holders', 'Autotelefonhalter'),
           withTranslations({ name: 'Karty SIM', slug: 'karty-sim', sortOrder: 9 }, 'SIM cards', 'SIM-Karten'),
           withTranslations({ name: 'Aparaty słuchowe', slug: 'aparaty-sluchowe', sortOrder: 10 }, 'Hearing aids', 'Hörgeräte'),
@@ -107,17 +108,17 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
         icon: '💻',
         sortOrder: 2,
         subcategories: [
-          withTranslations({ name: 'Laptopy', slug: 'laptopy', sortOrder: 1 }, 'Laptops', 'Laptops'),
-          withTranslations({ name: 'Komputery stacjonarne', slug: 'komputery-stacjonarne', sortOrder: 2 }, 'Desktop computers', 'Desktops'),
-          withTranslations({ name: 'Monitory', slug: 'monitory', sortOrder: 3 }, 'Monitors', 'Monitore'),
-          withTranslations({ name: 'Dyski twarde i SSD', slug: 'dyski-ssd', sortOrder: 4 }, 'Hard drives and SSD', 'Festplatten und SSDs'),
-          withTranslations({ name: 'Karty graficzne', slug: 'karty-graficzne', sortOrder: 5 }, 'Graphics cards', 'Grafikkarten'),
-          withTranslations({ name: 'Procesory', slug: 'procesory', sortOrder: 6 }, 'Processors', 'Prozessoren'),
-          withTranslations({ name: 'Płyty główne', slug: 'plyty-glowne', sortOrder: 7 }, 'Motherboards', 'Motherboards'),
-          withTranslations({ name: 'Pamięci RAM', slug: 'pamieci-ram', sortOrder: 8 }, 'RAM memory', 'RAM-Speicher'),
-          withTranslations({ name: 'Obudowy PC', slug: 'obudowy-pc', sortOrder: 9 }, 'PC cases', 'PC-Gehäuse'),
-          withTranslations({ name: 'Zasilacze', slug: 'zasilacze', sortOrder: 10 }, 'Power supplies', 'Stromversorgungen'),
-          withTranslations({ name: 'Chłodzenie PC', slug: 'chlodzenie-pc', sortOrder: 11 }, 'PC cooling', 'PC-Kühlung'),
+          withTranslations({ name: 'Laptopy', slug: 'laptopy', sortOrder: 1, aliexpressCategoryIds: ['7'] }, 'Laptops', 'Laptops'),
+          withTranslations({ name: 'Komputery stacjonarne', slug: 'komputery-stacjonarne', sortOrder: 2, aliexpressCategoryIds: ['7'] }, 'Desktop computers', 'Desktops'),
+          withTranslations({ name: 'Monitory', slug: 'monitory', sortOrder: 3, aliexpressCategoryIds: ['7'] }, 'Monitors', 'Monitore'),
+          withTranslations({ name: 'Dyski twarde i SSD', slug: 'dyski-ssd', sortOrder: 4, aliexpressCategoryIds: ['7'] }, 'Hard drives and SSD', 'Festplatten und SSDs'),
+          withTranslations({ name: 'Karty graficzne', slug: 'karty-graficzne', sortOrder: 5, aliexpressCategoryIds: ['7'] }, 'Graphics cards', 'Grafikkarten'),
+          withTranslations({ name: 'Procesory', slug: 'procesory', sortOrder: 6, aliexpressCategoryIds: ['7'] }, 'Processors', 'Prozessoren'),
+          withTranslations({ name: 'Płyty główne', slug: 'plyty-glowne', sortOrder: 7, aliexpressCategoryIds: ['7'] }, 'Motherboards', 'Motherboards'),
+          withTranslations({ name: 'Pamięci RAM', slug: 'pamieci-ram', sortOrder: 8, aliexpressCategoryIds: ['7'] }, 'RAM memory', 'RAM-Speicher'),
+          withTranslations({ name: 'Obudowy PC', slug: 'obudowy-pc', sortOrder: 9, aliexpressCategoryIds: ['7'] }, 'PC cases', 'PC-Gehäuse'),
+          withTranslations({ name: 'Zasilacze', slug: 'zasilacze', sortOrder: 10, aliexpressCategoryIds: ['7'] }, 'Power supplies', 'Stromversorgungen'),
+          withTranslations({ name: 'Chłodzenie PC', slug: 'chlodzenie-pc', sortOrder: 11, aliexpressCategoryIds: ['7'] }, 'PC cooling', 'PC-Kühlung'),
         ]
       }, 'Computers and laptops', 'Computer und Laptops'),
       withSubTranslations({
