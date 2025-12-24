@@ -66,6 +66,8 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     relativeTime: 'niedawno',
     formattedPrice: 'N/A',
   });
+  const [bestDeal, setBestDeal] = useState<any | null>(null);
+  const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? null);
 
   // Get title in current language (ProductCore has multilingual title)
   const displayTitle = typeof product.title === 'object'
@@ -78,7 +80,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     : (product.shortDescription || '');
   const description = safeText(descriptionText).substring(0, 120);
 
-  // Price from ProductCore.bestPrice
+  // Price from ProductCore.bestPrice (fallback)
   const price = product.bestPrice?.amount || 0;
 
   const categoryLabel = product.mainCategorySlug || product.subCategorySlug || null;
@@ -100,13 +102,35 @@ export default function ProductListCard({ product }: ProductListCardProps) {
 
   useEffect(() => {
     const relTime = getRelativeTime(product.createdAt);
-    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(price);
+    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(bestTotalPrice ?? price);
 
     setProductData({
       relativeTime: relTime,
       formattedPrice: formatted,
     });
-  }, [product.createdAt, price]);
+  }, [product.createdAt, price, bestTotalPrice]);
+
+  // Fetch best deal for this product to get accurate affiliate link and total price
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getBestDealForProduct } = await import('@/lib/data');
+        const deal = await getBestDealForProduct(product.id);
+        if (!cancelled) {
+          setBestDeal(deal);
+          // Jeśli produkt ma już bestTotalPrice, użyj go. W przeciwnym wypadku policz z dealu.
+          if (product?.bestTotalPrice && product.bestTotalPrice > 0) {
+            setBestTotalPrice(product.bestTotalPrice);
+          } else {
+            const total = (deal?.price?.amount || 0) + (deal?.shipping?.cost || 0);
+            if (total > 0) setBestTotalPrice(total);
+          }
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [product.id]);
 
   // Get primary image from ProductCore gallery
   const primaryImage = Array.isArray(product.images) && product.images.length > 0
@@ -206,9 +230,13 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             size="sm"
             className="whitespace-nowrap"
           >
-            <a href={product.affiliateUrl || '#'} target="_blank" rel="noopener noreferrer">
+            <a
+              href={(bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl || '#')}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <ExternalLink className="h-4 w-4 mr-1" />
-              Kup teraz
+              Przejdź do oferty
             </a>
           </Button>
           <Button
@@ -226,13 +254,13 @@ export default function ProductListCard({ product }: ProductListCardProps) {
               size="sm"
               variant="secondary"
               onClick={() => addItem({
-                id: product.id,
+                id: bestDeal?.id || product.id,
                 name: typeof product.title === 'object' ? (product.title.pl || product.title.en || 'Produkt') : (product.title as any) || 'Produkt',
                 image: Array.isArray(product.images) ? product.images[0] : '',
-                price: { amount: product.bestPrice?.amount || 0, currency: 'PLN' } as any,
-                affiliateUrl: (product as any).affiliateUrl,
+                price: { amount: (bestTotalPrice ?? product.bestPrice?.amount || 0), currency: 'PLN' } as any,
+                affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
               } as any, 1)}
-              disabled={isInCart(product.id)}
+              disabled={isInCart(bestDeal?.id || product.id)}
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
               {isInCart(product.id) ? 'W koszyku' : 'Do koszyka'}

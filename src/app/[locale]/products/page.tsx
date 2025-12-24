@@ -757,7 +757,7 @@ function ProductsPageContent() {
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-headline text-base font-semibold">
-                    Produkty ({filteredAndSortedProducts.length})
+                    Produkty ({products.length})
                   </h3>
 
                   <div className="flex items-center gap-2">
@@ -825,7 +825,7 @@ function ProductsPageContent() {
                       )} />
                     ))}
                   </div>
-                ) : filteredProducts.length > 0 ? (
+                ) : products.length > 0 ? (
                   <>
                     {viewMode === 'list' ? (
                       <div className={listWrapperClass}>

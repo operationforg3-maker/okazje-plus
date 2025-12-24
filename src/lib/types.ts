@@ -2329,6 +2329,16 @@ export interface ProductCore {
     amount: number;
     currency: 'PLN' | 'USD' | 'EUR'; // M6: PLN for Polish market, USD/EUR for international
   };
+  /**
+   * ID najlepszej (najtańszej) oferty powiązanej z tym produktem
+   * Ustawiane przez harvester/refiner po zmianach w ofertach
+   */
+  bestDealId?: string;
+  /**
+   * Najniższa łączna cena (produkt + dostawa) w PLN dla najlepszej oferty
+   * Ułatwia szybkie wyświetlenie ceny bez dodatkowych zapytań
+   */
+  bestTotalPrice?: number;
   
   // Linked Offers
   linkedDealIds: string[]; // Foreign keys to Deal documents

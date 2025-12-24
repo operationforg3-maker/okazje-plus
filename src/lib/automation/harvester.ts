@@ -975,15 +975,17 @@ export class SmartHarvester {
     // Find the best (lowest) total price (product price + shipping)
     let bestPrice = Infinity;
     let bestCurrency = 'PLN';
+    let bestDealId: string | null = null;
 
     for (const dealDoc of dealsSnapshot.docs) {
       const deal = dealDoc.data() as DealM6;
-      const totalPrice = deal.price.amount + (deal.shipping.cost || 0);
+      const totalPrice = (deal.price?.amount || 0) + ((deal.shipping?.cost as any) || 0);
       
       // TODO: Normalize currency to PLN for comparison
       if (totalPrice < bestPrice) {
         bestPrice = totalPrice;
         bestCurrency = deal.price.currency;
+        bestDealId = dealDoc.id;
       }
     }
 
@@ -992,8 +994,10 @@ export class SmartHarvester {
     await productRef.update({
       bestPrice: {
         amount: bestPrice !== Infinity ? bestPrice : 0,
-        currency: bestCurrency, // Use currency from best deal (should be PLN)
+        currency: bestCurrency, // should be PLN
       },
+      bestTotalPrice: bestPrice !== Infinity ? bestPrice : 0,
+      bestDealId: bestDealId || null,
       linkedDealIds: dealsSnapshot.docs.map(d => d.id),
       updatedAt: new Date().toISOString(),
     });
