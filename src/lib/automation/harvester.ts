@@ -13,6 +13,7 @@ import {
   extractDimensionsFromTitle,
   normalizeProductIdentifier,
 } from './identity-matcher';
+import { convertToPLN } from '@/lib/currency-exchange';
 
 /**
  * Raw product data from external APIs (before transformation)
@@ -461,6 +462,7 @@ export class SmartHarvester {
   /**
    * Fetch products from AliExpress using real API
    * Integrated with production AliExpress client
+   * M6 FIX: Converts USD prices to PLN using NBP exchange rates
    */
   private async fetchFromAliExpress(searchQuery: string, maxResults: number, isTreeMode: boolean = false) {
     try {
@@ -475,8 +477,6 @@ export class SmartHarvester {
       const response = await client.searchProducts({
         q: searchQuery,
         limit: fetchSize,
-        targetCurrency: 'PLN',
-        targetLanguage: 'PL',
         sort: isTreeMode ? 'rating' : 'price_asc', // For tree mode, sort by rating; otherwise by price
       });
       
@@ -487,31 +487,61 @@ export class SmartHarvester {
       
       this.addLog('info', `Found ${response.products.length} products from AliExpress`);
       
-      // Transform to RawProduct format
-      return response.products.map((p: any) => ({
-        title: p.title || p.product_title || '',
-        imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '',
-        price: p.price?.current || 0,
-        originalPrice: p.price?.original || undefined, // Price before discount
-        currency: p.price?.currency || 'PLN',
-        shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
-        shippingDays: 7, // Default estimate
-        sourceProductId: String(p.item_id || p.product_id || ''),
-        sourceUrl: p.product_url || '',
-        videoUrl: p.product_video_url || p.video_url || undefined,
-        merchantName: 'AliExpress',
-        merchantRating: 4.0,
-        specs: extractDimensionsFromTitle(p.title || ''),
-        rating: p.rating?.score || 0,
-        ratingCount: p.rating?.count || 0,
-        images: Array.isArray(p.image_urls) ? p.image_urls : [], // Full gallery
-        variants: Array.isArray(p.variants) ? p.variants : undefined, // Product variants (colors, sizes)
-        // Product identifiers (for robust deduplication & SEO)
-        sku: p.sku || undefined,
-        ean: p.ean || p.barcode || undefined,
-        gtin: p.gtin || undefined,
-        upc: p.upc || undefined,
-        mpn: p.mpn || p.manufacturer_part_number || undefined,
+      // Transform to RawProduct format with USD→PLN conversion
+      return Promise.all(response.products.map(async (p: any) => {
+        const sourcePrice = p.price?.current || 0;
+        const sourceCurrency = p.price?.currency || 'USD';
+        
+        // M6 FIX: Convert to PLN if in USD
+        let priceInPLN = sourcePrice;
+        if (sourceCurrency === 'USD') {
+          try {
+            priceInPLN = await convertToPLN(sourcePrice, 'USD');
+            this.addLog('info', `Price conversion: ${sourcePrice} USD → ${priceInPLN} PLN`);
+          } catch (error) {
+            this.addLog('warn', `Price conversion failed for ${sourcePrice} ${sourceCurrency}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            // Fallback: use 4.0 exchange rate
+            priceInPLN = Math.round(sourcePrice * 4.0 * 100) / 100;
+            this.addLog('warn', `Using fallback rate: ${sourcePrice} USD → ${priceInPLN} PLN`);
+          }
+        }
+        
+        // Same for original price
+        const sourceOriginalPrice = p.price?.original || undefined;
+        let originalPriceInPLN = sourceOriginalPrice;
+        if (sourceOriginalPrice && sourceCurrency === 'USD') {
+          try {
+            originalPriceInPLN = await convertToPLN(sourceOriginalPrice, 'USD');
+          } catch {
+            originalPriceInPLN = Math.round(sourceOriginalPrice * 4.0 * 100) / 100;
+          }
+        }
+        
+        return {
+          title: p.title || p.product_title || '',
+          imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '',
+          price: priceInPLN,
+          originalPrice: originalPriceInPLN, // Price before discount
+          currency: 'PLN', // Always PLN after conversion
+          shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
+          shippingDays: 7, // Default estimate
+          sourceProductId: String(p.item_id || p.product_id || ''),
+          sourceUrl: p.product_url || '',
+          videoUrl: p.product_video_url || p.video_url || undefined,
+          merchantName: 'AliExpress',
+          merchantRating: 4.0,
+          specs: extractDimensionsFromTitle(p.title || ''),
+          rating: p.rating?.score || 0,
+          ratingCount: p.rating?.count || 0,
+          images: Array.isArray(p.image_urls) ? p.image_urls : [], // Full gallery
+          variants: Array.isArray(p.variants) ? p.variants : undefined, // Product variants (colors, sizes)
+          // Product identifiers (for robust deduplication & SEO)
+          sku: p.sku || undefined,
+          ean: p.ean || p.barcode || undefined,
+          gtin: p.gtin || undefined,
+          upc: p.upc || undefined,
+          mpn: p.mpn || p.manufacturer_part_number || undefined,
+        };
       }));
     } catch (error) {
       this.addLog('error', `AliExpress API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -767,7 +797,7 @@ export class SmartHarvester {
       },
       bestPrice: {
         amount: sourceProduct.price,
-        currency: 'USD', // M6: Store in USD for consistency
+        currency: sourceProduct.currency || 'PLN', // M6: sourceProduct.currency is now PLN after conversion
       },
       linkedDealIds: [],
       searchTags: categoryMetadata.searchKeywords || [],
@@ -936,7 +966,7 @@ export class SmartHarvester {
     await productRef.update({
       bestPrice: {
         amount: bestPrice !== Infinity ? bestPrice : 0,
-        currency: 'USD', // Store in USD for consistency per M6
+        currency: bestCurrency, // Use currency from best deal (should be PLN)
       },
       linkedDealIds: dealsSnapshot.docs.map(d => d.id),
       updatedAt: new Date().toISOString(),

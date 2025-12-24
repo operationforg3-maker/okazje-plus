@@ -2327,7 +2327,7 @@ export interface ProductCore {
   // Best Price (Calculated Field - Updated when deals change)
   bestPrice: {
     amount: number;
-    currency: 'USD'; // Store in USD for consistency
+    currency: 'PLN' | 'USD' | 'EUR'; // M6: PLN for Polish market, USD/EUR for international
   };
   
   // Linked Offers
@@ -2358,6 +2358,16 @@ export interface ProductCore {
   updatedAt: string; // ISO timestamp
   createdBy?: string; // UID of creator
   approvedBy?: string; // UID of approver
+  /**
+   * Optional metadata for system integration (e.g., source IDs, enrichment data)
+   */
+  metadata?: {
+    source?: 'aliexpress' | 'amazon' | 'allegro' | string;
+    originalId?: string; // Original product ID from source
+    importedAt?: string; // When it was first imported
+    aliexpressCategoryIds?: string[]; // AliExpress category IDs for hot-products queries
+    [key: string]: any; // Allow additional fields for flexibility
+  };
   
   // Quality Metrics
   aiQualityScore?: number; // 0-100
