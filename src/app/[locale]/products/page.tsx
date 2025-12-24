@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getRecommendedProducts, getProductsByCategory, getCategories, getCategoriesWithContent, getDealById, getNavigationShowcase } from '@/lib/data';
+import { getRecommendedProductCores, getProductCoresByCategory, getCategories, getCategoriesWithContent, getDealById, getNavigationShowcase } from '@/lib/data';
 import { searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
 import ProductListCard from '@/components/product-list-card';
@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
-import { Category, Product, Deal } from '@/lib/types';
+import { Category, ProductCore, Deal } from '@/lib/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -55,7 +55,7 @@ function ProductsPageContent() {
   const mainCategoryParam = searchParams.get('mainCategory');
   const subCategoryParam = searchParams.get('subCategory');
   const subSubCategoryParam = searchParams.get('subSubCategory');
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductCore[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
@@ -139,7 +139,7 @@ function ProductsPageContent() {
     } catch {}
   }, []);
 
-  // Pobierz produkty przy zmianie kategorii / subkategorii / wyszukiwaniu
+  // Pobierz ProductCore przy zmianie kategorii / subkategorii / wyszukiwaniu
   useEffect(() => {
     let cancelled = false;
     async function fetchProducts() {
@@ -147,21 +147,21 @@ function ProductsPageContent() {
       try {
         const q = searchTerm.trim();
         if (q.length > 1) {
-          // Wyszukiwanie z filtrowaniem po kategorii (jeśli wybrana)
+          // Wyszukiwanie - szukaj w ProductCore via Typesense
           const results = await searchProductsTypesense(q, {
             mainCategorySlug: selectedCategory?.slug || selectedCategory?.id,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
             limit: 100,
           });
-          if (!cancelled) setProducts(results);
+          if (!cancelled) setProducts(results || []);
         } else if (!selectedCategory) {
-          // Wszystkie produkty (polecane)
-          const allProducts = await getRecommendedProducts(100);
+          // Wszystkie produkty (polecane) - M6 ProductCore
+          const allProducts = await getRecommendedProductCores(100);
           if (!cancelled) setProducts(allProducts);
         } else {
-          // Produkty z wybranej kategorii
-          const categoryProducts = await getProductsByCategory(
+          // Produkty z wybranej kategorii (M6 ProductCore)
+          const categoryProducts = await getProductCoresByCategory(
             selectedCategory.slug || selectedCategory.id,
             selectedSubcategory || undefined,
             selectedSubSubcategory || undefined,
@@ -187,29 +187,29 @@ function ProductsPageContent() {
     try { localStorage.setItem('products_density', cardDensity); } catch {}
   }, [cardDensity]);
 
+  // Filtruj produkty na podstawie wyszukiwania (szukaj w title/shortDescription)
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return products;
     const needle = searchTerm.toLowerCase();
     return products.filter((product) => {
-      const name = toSearchableText(product.name).toLowerCase();
-      const description = toSearchableText(product.description).toLowerCase();
-      return name.includes(needle) || description.includes(needle);
+      const title = typeof product.title === 'object'
+        ? (product.title.pl || product.title.en || product.title.de || '').toLowerCase()
+        : (product.title || '').toString().toLowerCase();
+      const desc = typeof product.shortDescription === 'object'
+        ? (product.shortDescription.pl || product.shortDescription.en || product.shortDescription.de || '').toLowerCase()
+        : (product.shortDescription || '').toString().toLowerCase();
+      return title.includes(needle) || desc.includes(needle);
     });
   }, [products, searchTerm]);
 
-  // Helper function to extract price from smartPrice or legacy price
-  const getProductPrice = (product: Product): number => {
-    if (typeof product.price === 'number') return product.price;
-    if (typeof product.price === 'object' && 'amount' in product.price) {
-      return (product.price as any).amount || 0;
-    }
-    return 0;
+  // Helper function to extract price from ProductCore
+  const getProductPrice = (product: ProductCore): number => {
+    return product.bestPrice?.amount || 0;
   };
 
   // Filtered and sorted products
   const filteredAndSortedProducts = useMemo(() => {
     let result = [...filteredProducts];
-
     // Apply price range filter
     result = result.filter((product) => {
       const price = getProductPrice(product);
@@ -217,45 +217,28 @@ function ProductsPageContent() {
     });
 
     // Apply quick filters
-    if (quickFilters.freeShipping) {
-      result = result.filter((product) => {
-        // Check if product has free shipping (smartPrice or legacy)
-        if (typeof product.price === 'object' && 'shippingCost' in product.price) {
-          return (product.price as any).shippingCost === 0;
-        }
-        return false;
-      });
-    }
-
     if (quickFilters.topRated) {
       result = result.filter((product) => {
-        const rating = (product as any).rating || product.ratingCard?.rating || 0;
+        const rating = product.rating?.score || 0;
         return rating >= 4.5;
       });
     }
 
-    if (quickFilters.bestsellers) {
-      result = result.filter((product) => {
-        const ordersCount = (product as any).ordersCount || 0;
-        return ordersCount > 100;
-      });
-    }
+    // Note: freeShipping i bestsellers require Deal data, skip here (would need separate query)
 
     // Apply sorting
     switch (sortBy) {
       case 'newest':
         result.sort((a, b) => {
-          const aTime = a.metadata?.importedAt || a.metadata?.createdAt || 0;
-          const bTime = b.metadata?.importedAt || b.metadata?.createdAt || 0;
-          const aMs = typeof aTime === 'object' && 'seconds' in aTime ? aTime.seconds * 1000 : 0;
-          const bMs = typeof bTime === 'object' && 'seconds' in bTime ? bTime.seconds * 1000 : 0;
-          return bMs - aMs;
+          const aTime = new Date(a.createdAt || 0).getTime();
+          const bTime = new Date(b.createdAt || 0).getTime();
+          return bTime - aTime;
         });
         break;
       case 'rating':
         result.sort((a, b) => {
-          const aRating = (a as any).rating || a.ratingCard?.rating || 0;
-          const bRating = (b as any).rating || b.ratingCard?.rating || 0;
+          const aRating = a.rating?.score || 0;
+          const bRating = b.rating?.score || 0;
           return bRating - aRating;
         });
         break;

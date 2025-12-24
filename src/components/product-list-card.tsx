@@ -2,7 +2,7 @@
 // @ts-nocheck
 
 import { useState, useEffect } from 'react';
-import { Product } from '@/lib/types';
+import { ProductCore } from '@/lib/types';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
 
 interface ProductListCardProps {
-  product: Product;
+  product: ProductCore;
 }
 
 const safeText = (value: unknown): string => {
@@ -63,46 +63,29 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     formattedPrice: 'N/A',
   });
 
-  // Get title in current language
-  const titleText = typeof product.title === 'string' 
-    ? product.title 
-    : getText(product.title);
-  const displayTitle = titleText || product.name || 'Produkt';
+  // Get title in current language (ProductCore has multilingual title)
+  const displayTitle = typeof product.title === 'object'
+    ? (product.title.pl || product.title.en || product.title.de || 'Produkt')
+    : (product.title || 'Produkt');
   
-  // Description - use shortDescription or fallback
-  const descriptionObj = typeof product.shortDescription === 'object' 
-    ? getText(product.shortDescription)
-    : typeof product.description === 'string'
-      ? product.description
-      : '';
-  const description = safeText(descriptionObj).substring(0, 120);
+  // Description - ProductCore shortDescription is multilingual
+  const descriptionText = typeof product.shortDescription === 'object'
+    ? (product.shortDescription.pl || product.shortDescription.en || product.shortDescription.de || '')
+    : (product.shortDescription || '');
+  const description = safeText(descriptionText).substring(0, 120);
 
-  // Price handling
-  const getPrice = () => {
-    if (typeof product.price === 'number') return product.price;
-    if (typeof product.price === 'object' && 'amount' in product.price) {
-      return (product.price as any).amount;
-    }
-    return 0;
-  };
+  // Price from ProductCore.bestPrice
+  const price = product.bestPrice?.amount || 0;
 
-  const categoryLabel = product.mainCategorySlug || product.subCategorySlug || product.category || null;
-  const rating = (product as any).rating || (product.ratingCard?.average) || 0;
-  const ratingCount = (product as any).ratingCount || (product.ratingCard?.count) || 0;
+  const categoryLabel = product.mainCategorySlug || product.subCategorySlug || null;
+  const rating = product.rating?.score || 0;
+  const ratingCount = product.rating?.count || 0;
 
   // Check if product is new (created less than 7 days ago)
   const isNew = (() => {
     try {
-      const timestamp: any = product.metadata?.createdAt || product.metadata?.importedAt;
-      if (!timestamp) return false;
-      
-      const created = new Date(
-        typeof timestamp === 'object' && typeof timestamp.toDate === 'function'
-          ? timestamp.toDate()
-          : typeof timestamp === 'object' && typeof timestamp.seconds === 'number'
-            ? (timestamp.seconds * 1000) + ((timestamp.nanoseconds || 0) / 1e6)
-            : timestamp
-      );
+      if (!product.createdAt) return false;
+      const created = new Date(product.createdAt);
       const now = new Date();
       const diffDays = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
       return diffDays <= 7;
@@ -112,18 +95,19 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   })();
 
   useEffect(() => {
-    const timestamp = product.metadata?.createdAt || product.metadata?.importedAt;
-    const relTime = getRelativeTime(timestamp);
-
-    // Format price on client only (Intl.NumberFormat is browser-dependent)
-    const safePrice = getPrice();
-    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
+    const relTime = getRelativeTime(product.createdAt);
+    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(price);
 
     setProductData({
       relativeTime: relTime,
       formattedPrice: formatted,
     });
-  }, [product.metadata?.createdAt, product.metadata?.importedAt, product.price]);
+  }, [product.createdAt, price]);
+
+  // Get primary image from ProductCore gallery
+  const primaryImage = Array.isArray(product.images) && product.images.length > 0
+    ? product.images[0]
+    : '/placeholder.png';
 
   return (
     <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
@@ -131,7 +115,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
       <Link href={`${prefix}/products/${product.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
         <div className="relative w-40 h-32 bg-muted">
           <Image
-            src={typeof product.image === 'string' ? product.image : '/placeholder.png'}
+            src={primaryImage}
             alt={displayTitle}
             fill
             sizes="160px"
