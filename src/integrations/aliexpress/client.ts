@@ -715,15 +715,13 @@ export class AliExpressClient {
 export function createAliExpressClient(accountName?: string): AliExpressClient {
   const appKey = process.env.ALIEXPRESS_APP_KEY;
   const appSecret = process.env.ALIEXPRESS_APP_SECRET;
-  
+  // Do NOT hard-fail here: OAuth token may be available via getValidToken()
+  // If APP_KEY/APP_SECRET are missing, we will attempt OAuth and only fail
+  // if signature auth is required without credentials.
   if (!appKey || !appSecret) {
-    logger.error('AliExpress credentials not configured');
-    throw new Error(
-      'AliExpress API credentials not found. ' +
-      'Set ALIEXPRESS_APP_KEY and ALIEXPRESS_APP_SECRET environment variables.'
-    );
+    logger.warn('AliExpress APP_KEY/APP_SECRET not set – will attempt OAuth token authentication');
   }
-  
+
   const config: AliExpressClientConfig = {
     appKey,
     appSecret,

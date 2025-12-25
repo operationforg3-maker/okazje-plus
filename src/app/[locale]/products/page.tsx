@@ -219,6 +219,13 @@ function ProductsPageContent() {
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
 
+  // Derived quick filters for UI based on unifiedFilters
+  const quickFilters = {
+    freeShipping: !!unifiedFilters.promo?.freeShippingOnly,
+    topRated: (unifiedFilters.rating?.minStars || 0) >= 4.5,
+    bestsellers: sortBy === 'popularity',
+  };
+
   // Load saved filters for logged-in users
   useEffect(() => {
     if (!user?.uid) return;
@@ -252,8 +259,7 @@ function ProductsPageContent() {
     const newFilter: SavedFilter = {
       name: filterName,
       sortBy,
-      priceRange,
-      quickFilters,
+      filters: unifiedFilters,
       categoryId: selectedCategory?.id,
       subcategorySlug: selectedSubcategory || undefined,
     };
@@ -272,8 +278,7 @@ function ProductsPageContent() {
 
   const loadSavedFilter = (filter: SavedFilter) => {
     setSortBy(filter.sortBy);
-    setPriceRange(filter.priceRange);
-    setQuickFilters(filter.quickFilters);
+    setUnifiedFilters(filter.filters || {});
     
     if (filter.categoryId) {
       const cat = categories.find(c => c.id === filter.categoryId);
@@ -660,10 +665,17 @@ function ProductsPageContent() {
                       <Input
                         type="number"
                         placeholder="Min"
-                        value={priceRange[0]}
+                        value={unifiedFilters.priceRange?.min ?? 0}
                         onChange={(e) => {
                           const val = parseInt(e.target.value) || 0;
-                          setPriceRange([val, priceRange[1]]);
+                          setUnifiedFilters(prev => ({
+                            ...prev,
+                            priceRange: {
+                              min: val,
+                              max: prev.priceRange?.max ?? 10000,
+                              step: prev.priceRange?.step ?? 100,
+                            },
+                          }));
                         }}
                         className="h-8 w-20 text-xs"
                       />
@@ -671,10 +683,17 @@ function ProductsPageContent() {
                       <Input
                         type="number"
                         placeholder="Max"
-                        value={priceRange[1]}
+                        value={unifiedFilters.priceRange?.max ?? 10000}
                         onChange={(e) => {
                           const val = parseInt(e.target.value) || 10000;
-                          setPriceRange([priceRange[0], val]);
+                          setUnifiedFilters(prev => ({
+                            ...prev,
+                            priceRange: {
+                              min: prev.priceRange?.min ?? 0,
+                              max: val,
+                              step: prev.priceRange?.step ?? 100,
+                            },
+                          }));
                         }}
                         className="h-8 w-20 text-xs"
                       />
@@ -687,7 +706,10 @@ function ProductsPageContent() {
                     <Badge
                       variant={quickFilters.freeShipping ? 'default' : 'outline'}
                       className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
+                      onClick={() => setUnifiedFilters(prev => ({
+                        ...prev,
+                        promo: { ...prev.promo, freeShippingOnly: !prev.promo?.freeShippingOnly },
+                      }))}
                     >
                       <Truck className="h-3 w-3 mr-1" />
                       Darmowa dostawa
@@ -695,7 +717,10 @@ function ProductsPageContent() {
                     <Badge
                       variant={quickFilters.topRated ? 'default' : 'outline'}
                       className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setQuickFilters(prev => ({ ...prev, topRated: !prev.topRated }))}
+                      onClick={() => setUnifiedFilters(prev => ({
+                        ...prev,
+                        rating: quickFilters.topRated ? undefined : { ...(prev.rating || {}), minStars: 4.5 },
+                      }))}
                     >
                       <Star className="h-3 w-3 mr-1" />
                       Wysoko oceniane (4.5+)
@@ -703,7 +728,7 @@ function ProductsPageContent() {
                     <Badge
                       variant={quickFilters.bestsellers ? 'default' : 'outline'}
                       className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setQuickFilters(prev => ({ ...prev, bestsellers: !prev.bestsellers }))}
+                      onClick={() => setSortBy(quickFilters.bestsellers ? 'relevance' : 'popularity')}
                     >
                       <Flame className="h-3 w-3 mr-1" />
                       Bestsellery
