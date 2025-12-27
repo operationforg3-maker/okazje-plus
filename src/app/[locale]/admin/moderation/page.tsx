@@ -210,21 +210,24 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
       </div>
 
       <div className="flex gap-1 flex-wrap max-h-32 overflow-y-auto">
-        {items.map(item => (
-          <button
-            key={item.id}
-            onClick={() => toggle(item.id)}
-            className={
-              "text-xs px-2 py-1 rounded border transition-colors " + 
-              (selected[item.id] 
-                ? 'bg-primary text-primary-foreground border-primary' 
-                : 'bg-background hover:bg-accent')
-            }
-            title={item.title || item.name}
-          >
-            {selected[item.id] ? '✓' : ''} {(item.title || item.name).substring(0, 30)}...
-          </button>
-        ))}
+        {items.map(item => {
+          const displayName = (item.title || item.name || 'Unknown item').toString().substring(0, 30);
+          return (
+            <button
+              key={item.id}
+              onClick={() => toggle(item.id)}
+              className={
+                "text-xs px-2 py-1 rounded border transition-colors " + 
+                (selected[item.id] 
+                  ? 'bg-primary text-primary-foreground border-primary' 
+                  : 'bg-background hover:bg-accent')
+              }
+              title={item.title || item.name || 'Unknown item'}
+            >
+              {selected[item.id] ? '✓' : ''} {displayName}...
+            </button>
+          );
+        })}
       </div>
     </div>
   );
