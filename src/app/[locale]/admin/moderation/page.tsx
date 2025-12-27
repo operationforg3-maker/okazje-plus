@@ -211,7 +211,13 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
 
       <div className="flex gap-1 flex-wrap max-h-32 overflow-y-auto">
         {items.map(item => {
-          const displayName = (item.title || item.name || 'Unknown item').toString().substring(0, 30);
+          let titleText = 'Unknown item';
+          if (item.title) {
+            titleText = typeof item.title === 'string' ? item.title : JSON.stringify(item.title);
+          } else if (item.name) {
+            titleText = typeof item.name === 'string' ? item.name : JSON.stringify(item.name);
+          }
+          const displayName = titleText.substring(0, 30);
           return (
             <button
               key={item.id}
@@ -222,7 +228,7 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
                   ? 'bg-primary text-primary-foreground border-primary' 
                   : 'bg-background hover:bg-accent')
               }
-              title={item.title || item.name || 'Unknown item'}
+              title={titleText}
             >
               {selected[item.id] ? '✓' : ''} {displayName}...
             </button>
