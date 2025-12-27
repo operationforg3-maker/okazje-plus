@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Określ nazwę kolekcji
-    const collectionName = itemType === "deal" ? "deals" : "products";
+    // M6: Określ nazwę kolekcji (product -> product_cores)
+    const collectionName = itemType === "deal" ? "deals" : "product_cores";
     const itemRef = doc(db, collectionName, itemId);
 
     // Zaktualizuj status

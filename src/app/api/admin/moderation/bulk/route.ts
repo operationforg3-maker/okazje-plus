@@ -82,7 +82,8 @@ export async function POST(req: NextRequest) {
         const batch = adminDb.batch();
         for (const item of batchItems) {
           if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
-          const col = item.type === 'deal' ? 'deals' : 'products';
+          // M6: product -> product_cores
+          const col = item.type === 'deal' ? 'deals' : 'product_cores';
           const docRef = adminDb.collection(col).doc(item.id);
           batch.delete(docRef);
           processed++;
@@ -111,7 +112,8 @@ export async function POST(req: NextRequest) {
       const batch = adminDb.batch();
       for (const item of batchItems) {
         if (!item?.id || !['deal', 'product'].includes(item.type)) continue;
-        const col = item.type === 'deal' ? 'deals' : 'products';
+        // M6: product -> product_cores
+        const col = item.type === 'deal' ? 'deals' : 'product_cores';
         const docRef = adminDb.collection(col).doc(item.id);
         batch.update(docRef, { status: newStatus, updatedAt: ts });
         processed++;

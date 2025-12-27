@@ -28,16 +28,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
     }
 
-    const collectionName = type === "deal" ? "deals" : "products";
+    // M6: product -> product_cores, pending -> pending_approval
+    const collectionName = type === "deal" ? "deals" : "product_cores";
     
-    // Pobierz wszystkie dokumenty ze statusem draft lub pending
+    // Pobierz wszystkie dokumenty ze statusem draft lub pending_approval
     const [draftSnapshot, pendingSnapshot] = await Promise.all([
       adminDb.collection(collectionName)
         .where("status", "==", "draft")
         .select() // Pobierz tylko IDs, nie całe dokumenty
         .get(),
       adminDb.collection(collectionName)
-        .where("status", "==", "pending")
+        .where("status", "==", type === "product" ? "pending_approval" : "pending")
         .select()
         .get()
     ]);

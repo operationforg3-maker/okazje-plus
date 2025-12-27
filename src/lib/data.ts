@@ -311,18 +311,19 @@ export async function getPendingDeals(): Promise<Deal[]> {
 }
 
 export async function getPendingProducts(): Promise<Product[]> {
-  const productsRef = collection(db, "products");
+  // M6: Pobierz z product_cores zamiast products
+  const productCoresRef = collection(db, "product_cores");
   
-  // Pobierz draft i pending osobno, potem połącz
+  // Pobierz draft i pending_approval osobno, potem połącz
   const draftQuery = query(
-    productsRef,
+    productCoresRef,
     where("status", "==", "draft"),
     orderBy("createdAt", "desc"),
     limit(50)
   );
   const pendingQuery = query(
-    productsRef,
-    where("status", "==", "pending"),
+    productCoresRef,
+    where("status", "==", "pending_approval"), // M6: zmiana z "pending" na "pending_approval"
     orderBy("createdAt", "desc"),
     limit(50)
   );
@@ -332,14 +333,14 @@ export async function getPendingProducts(): Promise<Product[]> {
     getDocs(pendingQuery)
   ]);
   
-  const drafts = draftSnapshot.docs.map(docToProduct);
-  const pendings = pendingSnapshot.docs.map(docToProduct);
+  const drafts = draftSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+  const pendings = pendingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
   
   // Połącz i posortuj - użyj metadata.importedAt lub fallback na id
   const all = [...drafts, ...pendings];
   all.sort((a, b) => {
-    const dateA = new Date(a.metadata?.importedAt || 0).getTime();
-    const dateB = new Date(b.metadata?.importedAt || 0).getTime();
+    const dateA = new Date(a.metadata?.importedAt || a.createdAt || 0).getTime();
+    const dateB = new Date(b.metadata?.importedAt || b.createdAt || 0).getTime();
     return dateB - dateA;
   });
   
