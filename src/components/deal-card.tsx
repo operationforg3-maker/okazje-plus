@@ -29,6 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 
 interface DealCardProps {
   deal: Deal;
@@ -107,6 +108,7 @@ export default function DealCard({ deal }: DealCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
+  const { currency } = useCurrency();
   
   // Format prices using state to fix Intl.NumberFormat hydration mismatch
   const [priceData, setPriceData] = useState<{
@@ -132,46 +134,40 @@ export default function DealCard({ deal }: DealCardProps) {
   // Format prices on client only (using unified currency system)
   useEffect(() => {
     if (!isMounted) return;
-    
-    // Import unified currency system
-    import('@/lib/unified-currency').then(({ CurrencyManager }) => {
-      const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
-      
-      // Use unified currency for all formatting
-      // Default to PLN, but will respect user's selection via localStorage
-      const userCurrency = (typeof window !== 'undefined' ? localStorage.getItem('preferredCurrency') : null) as any || 'PLN';
-      const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
-      
-      let formattedOrig: string | null = null;
-      let calculatedDiscount: number | null = null;
-      let savings: string | null = null;
-      let shipping: string | null = null;
-      
-      if (typeof deal.originalPrice === 'number') {
-        formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
-        
-        if (deal.originalPrice > 0) {
-          calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
-        }
-        
-        if (deal.originalPrice > deal.price) {
-          savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
-        }
+    const userCurrency = currency || 'PLN';
+    const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+
+    const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
+
+    let formattedOrig: string | null = null;
+    let calculatedDiscount: number | null = null;
+    let savings: string | null = null;
+    let shipping: string | null = null;
+
+    if (typeof deal.originalPrice === 'number') {
+      formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
+
+      if (deal.originalPrice > 0) {
+        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
       }
-      
-      if (typeof deal.shippingCost === 'number' && deal.shippingCost > 0) {
-        shipping = CurrencyManager.formatPrice(deal.shippingCost, userCurrency);
+
+      if (deal.originalPrice > deal.price) {
+        savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
       }
-      
-      setPriceData({
-        formattedPrice: formatted,
-        formattedOriginal: formattedOrig,
-        formattedSavings: savings,
-        formattedShippingCost: shipping,
-        discount: calculatedDiscount,
-      });
-    }).catch(console.error);
-  }, [isMounted, deal.price, deal.originalPrice, deal.shippingCost]);
+    }
+
+    if (typeof deal.shippingCost === 'number' && deal.shippingCost > 0) {
+      shipping = CurrencyManager.formatPrice(deal.shippingCost, userCurrency);
+    }
+
+    setPriceData({
+      formattedPrice: formatted,
+      formattedOriginal: formattedOrig,
+      formattedSavings: savings,
+      formattedShippingCost: shipping,
+      discount: calculatedDiscount,
+    });
+  }, [isMounted, currency, deal.price, deal.originalPrice, deal.shippingCost]);
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   

@@ -10,6 +10,7 @@ import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles } from 'lucide-reac
 import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 
 interface DealListCardProps {
   deal: Deal;
@@ -91,6 +92,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const description = safeText(deal.description);
   const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
+  const { currency } = useCurrency();
 
   const isHot = deal.temperature >= 300;
 
@@ -111,37 +113,35 @@ export default function DealListCard({ deal }: DealListCardProps) {
     const relTime = getRelativeTime(deal.postedAt);
     
     // Format prices using unified currency system
-    import('@/lib/unified-currency').then(({ CurrencyManager }) => {
-      const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
-      const userCurrency = (typeof window !== 'undefined' ? localStorage.getItem('preferredCurrency') : null) as any || 'PLN';
-      const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
+    const userCurrency = currency || 'PLN';
+    const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+    const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
+    
+    let formattedOrig: string | null = null;
+    let calculatedDiscount: number | null = null;
+    let savings: string | null = null;
+    
+    if (typeof deal.originalPrice === 'number') {
+      formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
       
-      let formattedOrig: string | null = null;
-      let calculatedDiscount: number | null = null;
-      let savings: string | null = null;
-      
-      if (typeof deal.originalPrice === 'number') {
-        formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
-        
-        if (deal.originalPrice > 0) {
-          calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
-        }
-        
-        if (deal.originalPrice > deal.price) {
-          savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
-        }
+      if (deal.originalPrice > 0) {
+        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
       }
       
-      setDealData({
-        isNew: isNewDeal,
-        relativeTime: relTime,
-        formattedPrice: formatted,
-        formattedOriginal: formattedOrig,
-        formattedSavings: savings,
-        discount: calculatedDiscount,
-      });
-    }).catch(console.error);
-  }, [deal.postedAt, deal.price, deal.originalPrice]);
+      if (deal.originalPrice > deal.price) {
+        savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
+      }
+    }
+    
+    setDealData({
+      isNew: isNewDeal,
+      relativeTime: relTime,
+      formattedPrice: formatted,
+      formattedOriginal: formattedOrig,
+      formattedSavings: savings,
+      discount: calculatedDiscount,
+    });
+  }, [deal.postedAt, deal.price, deal.originalPrice, currency]);
 
   return (
     <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
