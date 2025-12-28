@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -13,6 +13,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCurrency } from '@/lib/unified-currency';
 
 interface ProductPriceHistoryChartProps {
   deals: any[];
@@ -24,12 +25,22 @@ interface ProductPriceHistoryChartProps {
  * ProductPriceHistoryChart - Visualizes price trends over last 30 days
  * Shows lowest price available each day
  * Omnibus Directive compliance
+ * Now respects user's selected currency preference
  */
 export function ProductPriceHistoryChart({
   deals,
-  title = 'Price History (30 Days)',
-  currency = 'USD',
+  title = 'Historia cen (30 dni)',
 }: ProductPriceHistoryChartProps) {
+  const { currency, formatPrice, isMounted } = useCurrency();
+  const [displayCurrency, setDisplayCurrency] = useState('PLN');
+
+  // Update display currency when user's preference changes
+  useEffect(() => {
+    if (isMounted) {
+      setDisplayCurrency(currency);
+    }
+  }, [currency, isMounted]);
+
   // Aggregate price history across all deals
   const chartData = useMemo(() => {
     const priceByDate: Record<string, number> = {};
@@ -73,11 +84,11 @@ export function ProductPriceHistoryChart({
       <Card>
         <CardHeader>
           <CardTitle>{title}</CardTitle>
-          <CardDescription>No price history available</CardDescription>
+          <CardDescription>Brak historii cen</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-64 text-gray-500">
-            <p>Not enough data to display price history</p>
+            <p>Brak wystarczających danych do wyświetlenia historii cen</p>
           </div>
         </CardContent>
       </Card>
@@ -94,32 +105,32 @@ export function ProductPriceHistoryChart({
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>
-          Lowest daily price - Last 30 days ({chartData.length} data points)
+          Najniższa cena dzienna - ostatnie 30 dni ({chartData.length} punktów danych) - waluta: {displayCurrency}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Statistics */}
         <div className="grid grid-cols-4 gap-4">
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Lowest Price</p>
+            <p className="text-xs text-gray-500">Najniższa cena</p>
             <p className="text-lg font-semibold text-green-600">
-              ${minPrice.toFixed(2)}
+              {isMounted ? formatPrice(minPrice) : `${minPrice.toFixed(2)} zł`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Highest Price</p>
+            <p className="text-xs text-gray-500">Najwyższa cena</p>
             <p className="text-lg font-semibold text-red-600">
-              ${maxPrice.toFixed(2)}
+              {isMounted ? formatPrice(maxPrice) : `${maxPrice.toFixed(2)} zł`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Average Price</p>
+            <p className="text-xs text-gray-500">Średnia cena</p>
             <p className="text-lg font-semibold">
-              ${avgPrice}
+              {isMounted ? formatPrice(Number(avgPrice)) : `${avgPrice} zł`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Change</p>
+            <p className="text-xs text-gray-500">Zmiana</p>
             <p className={`text-lg font-semibold ${parseFloat(priceChange) < 0 ? 'text-green-600' : 'text-red-600'}`}>
               {parseFloat(priceChange) < 0 ? '↓' : '↑'} {Math.abs(parseFloat(priceChange))}%
             </p>
@@ -143,7 +154,7 @@ export function ProductPriceHistoryChart({
                 interval={Math.floor(chartData.length / 6)}
               />
               <YAxis
-                label={{ value: `Price (${currency})`, angle: -90, position: 'insideLeft' }}
+                label={{ value: `Cena (${displayCurrency})`, angle: -90, position: 'insideLeft' }}
                 domain={['dataMin - 5', 'dataMax + 5']}
               />
               <Tooltip

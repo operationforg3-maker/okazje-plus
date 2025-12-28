@@ -1,5 +1,5 @@
 // W pliku: okazje-plus/src/index.ts
-// Updated: 2025-12-14 18:45 - Sync stageFetch.ts with debug logging
+// Updated: 2025-12-28 - Added scheduled price update for currency handling
 import {initializeApp} from "firebase-admin/app";
 import {
   getFirestore,
@@ -34,6 +34,9 @@ import {
   User,
   ProductRatingCard,
 } from "../../src/lib/types";
+
+// Import price update functions
+import { updatePricesDaily, manualPriceUpdate } from "./scheduled-price-update";
 
 // --- Typy pomocnicze dla danych wejściowych ---
 // Używamy Partial<T> aby pozwolić na niepełne dane z CSV

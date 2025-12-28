@@ -234,7 +234,7 @@ export function PriceAlertButton({
                 onChange={(e) => setTargetPrice(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Aktualna cena: {Number.isFinite(currentPrice) ? currentPrice.toFixed(2) : '—'} PLN
+                Aktualna cena: {Number.isFinite(currentPrice) ? currentPrice.toFixed(2) : '—'} zł
               </p>
             </div>
           ) : (

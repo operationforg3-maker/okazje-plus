@@ -30,6 +30,16 @@ jobs:
       - name: Install dependencies (app)
         run: npm ci
 
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Lint check
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm run test -- unified-currency.test.ts
+        continue-on-error: true
+
       - name: Build Next.js app
         run: npm run build
         env:

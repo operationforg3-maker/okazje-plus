@@ -952,6 +952,17 @@ export class SmartHarvester {
       linkedProductIds: [productId],
       dealType: 'sale',
       tags: product?.searchTags || [],
+      // M6 ADDITION: Store original currency and price for auto-price-updates (Cloud Function)
+      metadata: {
+        originalPriceUSD: sourceProduct.currency === 'USD' ? sourceProduct.price : undefined,
+        originalPriceCurrency: sourceProduct.currency,
+        exchangeRateAtImport: sourceProduct.currency === 'USD' 
+          ? (sourceProduct.price > 0 ? sourceProduct.price / sourceProduct.price : 1.0)
+          : undefined,
+        lastPriceUpdate: now,
+        importedAt: now,
+        source: source,
+      },
     };
 
     const docRef = await adminDb.collection('deals').add(deal);

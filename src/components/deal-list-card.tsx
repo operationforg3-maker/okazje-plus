@@ -101,7 +101,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
 
   const temperaturePercent = Math.min((deal.temperature / 500) * 100, 100);
 
-  // Initialize time-dependent values on client to fix hydration mismatch
+  // Initialize time-dependent values and format prices on client to fix hydration mismatch
   useEffect(() => {
     const posted = new Date(deal.postedAt);
     const now = new Date();
@@ -110,34 +110,37 @@ export default function DealListCard({ deal }: DealListCardProps) {
     
     const relTime = getRelativeTime(deal.postedAt);
     
-    // Format prices on client only (Intl.NumberFormat is browser-dependent)
-    const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
-    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(safePrice);
-    
-    let formattedOrig: string | null = null;
-    let calculatedDiscount: number | null = null;
-    let savings: string | null = null;
-    
-    if (typeof deal.originalPrice === 'number') {
-      formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
+    // Format prices using unified currency system
+    import('@/lib/unified-currency').then(({ CurrencyManager }) => {
+      const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+      const userCurrency = (typeof window !== 'undefined' ? localStorage.getItem('preferredCurrency') : null) as any || 'PLN';
+      const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
       
-      if (deal.originalPrice > 0) {
-        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
+      let formattedOrig: string | null = null;
+      let calculatedDiscount: number | null = null;
+      let savings: string | null = null;
+      
+      if (typeof deal.originalPrice === 'number') {
+        formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
+        
+        if (deal.originalPrice > 0) {
+          calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
+        }
+        
+        if (deal.originalPrice > deal.price) {
+          savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
+        }
       }
       
-      if (deal.originalPrice > deal.price) {
-        savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
-      }
-    }
-    
-    setDealData({
-      isNew: isNewDeal,
-      relativeTime: relTime,
-      formattedPrice: formatted,
-      formattedOriginal: formattedOrig,
-      formattedSavings: savings,
-      discount: calculatedDiscount,
-    });
+      setDealData({
+        isNew: isNewDeal,
+        relativeTime: relTime,
+        formattedPrice: formatted,
+        formattedOriginal: formattedOrig,
+        formattedSavings: savings,
+        discount: calculatedDiscount,
+      });
+    }).catch(console.error);
   }, [deal.postedAt, deal.price, deal.originalPrice]);
 
   return (
