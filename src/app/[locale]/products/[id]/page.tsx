@@ -84,14 +84,14 @@ async function getProductData(id: string) {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const data = await getProductData(params.id);
   
-  if (!data || !data.product) {
+  if (!data) {
     return {
       title: 'Produkt nie znaleziony',
       description: 'Szukany produkt nie istnieje w naszej bazie.',
     };
   }
   
-  const product = data.product;
+  const { product } = data;
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price ?? 0);
   const originalPrice = product.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice)

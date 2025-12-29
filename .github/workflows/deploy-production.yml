@@ -2,8 +2,9 @@ name: Deploy to Production
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["main"]
+  # Uncomment to enable automatic deploys on tag
+  # push:
+  #   tags: ["v*"]
 
 concurrency:
   group: deploy-production
@@ -28,6 +29,9 @@ jobs:
 
       - name: Install dependencies (app)
         run: npm ci
+
+      - name: TypeScript check
+        run: npm run typecheck
 
       - name: Lint check
         run: npm run lint
