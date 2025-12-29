@@ -91,7 +91,8 @@ describe('CurrencyManager', () => {
 
     it('should handle large amounts', () => {
       const result = CurrencyManager.formatPrice(999999.99, 'PLN');
-      expect(result).toMatch(/999[.,]999/);
+      // Polish locale uses space as thousands separator: "999 999,99 zł"
+      expect(result).toMatch(/999[\s.,]999/);
     });
   });
 
