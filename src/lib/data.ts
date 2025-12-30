@@ -566,30 +566,40 @@ export async function getProductsByCategory(
 }
 
 export async function searchProducts(searchTerm: string): Promise<Product[]> {
-  const productsRef = collection(db, "products");
-  const nameQuery = query(productsRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'));
-  // Use category slug fields from the new data model
-  const categoryQuery = query(productsRef, where('mainCategorySlug', '>=', searchTerm), where('mainCategorySlug', '<=', searchTerm + '\uf8ff'));
-  const subcategoryQuery = query(productsRef, where('subCategorySlug', '>=', searchTerm), where('subCategorySlug', '<=', searchTerm + '\uf8ff'));
-
-  const [nameSnapshot, categorySnapshot, subcategorySnapshot] = await Promise.all([
-    getDocs(nameQuery),
-    getDocs(categoryQuery),
-    getDocs(subcategoryQuery),
-  ]);
-
-  const results: { [id: string]: Product } = {};
-  nameSnapshot.forEach(doc => {
-    results[doc.id] = docToProduct(doc);
-  });
-  categorySnapshot.forEach(doc => {
-    results[doc.id] = docToProduct(doc);
-  });
-  subcategorySnapshot.forEach(doc => {
-    results[doc.id] = docToProduct(doc);
-  });
-
-  return Object.values(results).filter(p => p.status === 'approved');
+  // M6: Search in product_cores instead of legacy products collection
+  const productCoresRef = collection(db, "product_cores");
+  
+  // Search in title field (localized)
+  // For now, search the raw title field since title is a LocalizedText object
+  try {
+    // Create search constraints - match against all approved products with search term in searchTags
+    const constraints = [where('status', '==', 'approved')];
+    
+    // Note: Firestore doesn't support full-text search, so this is a simplified pattern match
+    // For better search, Typesense is the primary system
+    const q = query(productCoresRef, ...constraints, limit(100));
+    const snapshot = await getDocs(q);
+    
+    const results: { [id: string]: ProductCore } = {};
+    const searchTermLower = searchTerm.toLowerCase();
+    
+    snapshot.forEach(doc => {
+      const data = doc.data() as ProductCore;
+      const titleText = typeof data.title === 'object' ? (data.title.pl || '') : (data.title || '');
+      const searchTags = data.searchTags || [];
+      
+      // Simple client-side filtering: match search term in title or searchTags
+      if (titleText.toLowerCase().includes(searchTermLower) || 
+          searchTags.some(tag => tag.toLowerCase().includes(searchTermLower))) {
+        results[doc.id] = { id: doc.id, ...data };
+      }
+    });
+    
+    return Object.values(results) as unknown as Product[];
+  } catch (err) {
+    console.error('[searchProducts] Error searching in product_cores:', err);
+    return [];
+  }
 }
 
 export async function searchDeals(searchTerm: string): Promise<Deal[]> {

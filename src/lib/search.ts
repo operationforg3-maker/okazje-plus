@@ -1,5 +1,5 @@
 import typesenseClient from '@/lib/typesense';
-import { Product, Deal } from '@/lib/types';
+import { Product, Deal, ProductCore } from '@/lib/types';
 import { searchProducts as fallbackSearch } from '@/lib/data';
 
 export type ProductSearchOptions = {
@@ -14,10 +14,11 @@ export type ProductSearchOptions = {
 };
 
 // Pełnotekstowe wyszukiwanie produktów w Typesense z filtrowaniem po kategoriach
+// M6: Returns ProductCore objects (not legacy Product)
 export async function searchProductsTypesense(
   q: string,
   opts: ProductSearchOptions = {}
-): Promise<Product[]> {
+): Promise<ProductCore[]> {
   const { 
     mainCategorySlug, 
     subCategorySlug, 
@@ -93,8 +94,8 @@ export async function searchProductsTypesense(
         per_page: limit,
       }, {});
 
-    // Zakładamy, że dokumenty w indeksie zawierają pełne pola Product
-    const hits = (res.hits || []).map((h: any) => ({ id: h.document.id, ...h.document })) as Product[];
+    // M6: Typesense index contains ProductCore documents, return with id field
+    const hits = (res.hits || []).map((h: any) => ({ id: h.document.id, ...h.document })) as ProductCore[];
     return hits;
   } catch (err) {
     console.warn('Typesense search failed, falling back to Firestore search:', err);
