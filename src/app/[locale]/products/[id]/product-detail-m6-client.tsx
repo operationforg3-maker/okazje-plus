@@ -121,8 +121,10 @@ export default function ProductDetailM6Client({
     if (!isM6 || !Array.isArray(deals) || deals.length === 0) return null;
     try {
       return deals.reduce((best, current) => {
-        const bestTotal = (best.price?.amount || 0) + (best.shippingCost || best.shipping?.cost || 0);
-        const currentTotal = (current.price?.amount || 0) + (current.shippingCost || current.shipping?.cost || 0);
+        const bestShipping = 'shipping' in best ? best.shipping?.cost || 0 : (best as any).shippingCost || 0;
+        const currentShipping = 'shipping' in current ? current.shipping?.cost || 0 : (current as any).shippingCost || 0;
+        const bestTotal = (best.price?.amount || 0) + bestShipping;
+        const currentTotal = (current.price?.amount || 0) + currentShipping;
         return currentTotal < bestTotal ? current : best;
       }, deals[0]);
     } catch {
@@ -246,6 +248,8 @@ export default function ProductDetailM6Client({
               {isFavorited ? 'W ulubionych' : 'Dodaj do ulubionych'}
             </Button>
             <ShareButton
+              type="product"
+              itemId={productData.id}
               url={typeof window !== 'undefined' ? window.location.href : ''}
               title={title}
             />
