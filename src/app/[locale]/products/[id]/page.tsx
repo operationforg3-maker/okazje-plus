@@ -241,7 +241,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     : (productData.shortDescription?.pl || productData.fullDescription?.pl || '');
   
   // For M6: use bestPrice, for legacy: use price
-  const priceAmount = isM6 ? productCore.bestPrice.amount : product.price;
+  const priceAmount = isM6 ? productCore.bestPrice.amount : (product?.price || 0);
   
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -274,13 +274,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
       '@type': 'Offer',
       url: `https://okazje.plus/pl/products/${productData.id}`,
       priceCurrency: 'PLN',
-      price: product.price,
-      ...(product.originalPrice && { 
+      price: product?.price || 0,
+      ...(product?.originalPrice && { 
         priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       }),
-      availability: product.metadata?.stockStatus === 'in_stock' 
+      availability: product?.metadata?.stockStatus === 'in_stock' 
         ? 'https://schema.org/InStock'
-        : product.metadata?.stockStatus === 'low_stock'
+        : product?.metadata?.stockStatus === 'low_stock'
         ? 'https://schema.org/LimitedAvailability'
         : 'https://schema.org/OutOfStock',
       seller: {
