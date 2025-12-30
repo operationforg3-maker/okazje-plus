@@ -2699,7 +2699,7 @@ export async function getProductCoresByFilters(
   },
   sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'relevance' = 'relevance',
   limit_count: number = 50
-): Promise<any[]> {
+): Promise<ProductCore[]> {
   try {
     let q = query(collection(db, 'product_cores'), where('status', '==', 'approved'));
 
