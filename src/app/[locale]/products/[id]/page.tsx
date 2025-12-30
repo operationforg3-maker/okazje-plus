@@ -91,70 +91,84 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
   
-  const { product } = data;
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.price ?? 0);
-  const originalPrice = product.originalPrice 
+  const { product, productCore, isM6 } = data;
+  const productData = isM6 ? productCore : product;
+  const priceAmount = isM6 ? productCore.bestPrice.amount : product.price;
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(priceAmount ?? 0);
+  const originalPrice = !isM6 && product.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice)
     : null;
-  const discount = product.discountPercent ? Math.round(product.discountPercent * 100) : null;
+  const discount = !isM6 && product.discountPercent ? Math.round(product.discountPercent * 100) : null;
   
   // SEO title i description z AI lub fallback
-  const metaTitle = product.metaTitle || product.seo?.metaTitle || `${product.name} - ${price} | Okazje Plus`;
-  const ratingText = product.ratingCard?.count > 0 
-    ? `${product.ratingCard.count} ocen, średnia ${product.ratingCard.average.toFixed(1)}/5.0` 
+  const productName = isM6 ? (typeof productCore.title === 'object' ? (productCore.title.pl || productCore.title.en) : productCore.title) : product.name;
+  const metaTitle = !isM6 ? (product.metaTitle || product.seo?.metaTitle) : undefined;
+  const fallbackTitle = `${productName} - ${price} | Okazje Plus`;
+  const ratingScore = isM6 ? productCore.rating.score : product.ratingCard?.average;
+  const ratingCount = isM6 ? productCore.rating.count : product.ratingCard?.count;
+  const ratingText = ratingCount > 0 
+    ? `${ratingCount} ocen, średnia ${ratingScore.toFixed(1)}/5.0` 
     : 'Brak ocen';
-  const metaDescription = product.metaDescription || product.seo?.metaDescription || product.description || `Kup ${product.name} w najlepszej cenie ${price}. ${ratingText}`;
+  const productDesc = isM6 ? (typeof productCore.description === 'object' ? (productCore.description.pl || productCore.description.en) : '') : product.description;
+  const metaDescription = !isM6 ? (product.metaDescription || product.seo?.metaDescription) : undefined;
+  const fallbackDescription = `Kup ${productName} w najlepszej cenie ${price}. ${ratingText}`;
+  const finalTitle = metaTitle || fallbackTitle;
+  const finalDescription = metaDescription || productDesc || fallbackDescription;
   
   // Keywords z AI enrichment + SEO
   const keywords = [
-    ...(product.seoKeywords || []),
-    ...(product.seo?.keywords || []),
-    ...(product.ai?.enrichment?.keywords || []),
-    product.mainCategorySlug,
-    product.subCategorySlug,
-    product.subSubCategorySlug || '',
+    ...(!isM6 ? (product.seoKeywords || []) : []),
+    ...(!isM6 ? (product.seo?.keywords || []) : []),
+    ...(!isM6 ? (product.ai?.enrichment?.keywords || []) : (productCore.searchTags || [])),
+    productData.mainCategorySlug,
+    productData.subCategorySlug,
+    productData.subSubCategorySlug || '',
   ].filter(Boolean);
   
-  const canonicalUrl = `https://okazje.plus/pl/products/${product.id}`;
+  const canonicalUrl = `https://okazje.plus/pl/products/${productData.id}`;
+  
+  const productImage = isM6 ? productCore.images[0] : product.image;
+  const stockStatus = isM6 ? 'in stock' : (product.metadata?.stockStatus === 'in_stock' ? 'in stock' : 'out of stock');
+  const brandName = isM6 ? 'Various' : (product.metadata?.merchant || 'Generic');
   
   return {
-    title: metaTitle,
-    description: metaDescription.slice(0, 160),
+    title: finalTitle,
+    description: finalDescription.slice(0, 160),
     keywords: keywords.slice(0, 20).join(', '),
     authors: [{ name: 'Okazje Plus' }],
     openGraph: {
-      title: metaTitle,
-      description: metaDescription.slice(0, 160),
+      title: finalTitle,
+      description: finalDescription.slice(0, 160),
       url: canonicalUrl,
       siteName: 'Okazje Plus',
       locale: 'pl_PL',
       type: 'website',
       images: [
         {
-          url: product.image,
+          url: productImage,
           width: 1200,
           height: 630,
-          alt: product.name,
+          alt: productName,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: metaTitle,
-      description: metaDescription.slice(0, 160),
-      images: [product.image],
+      title: finalTitle,
+      description: finalDescription.slice(0, 160),
+      images: [productImage],
     },
     alternates: {
       canonical: canonicalUrl,
     },
     other: {
-      'product:price:amount': product.price.toString(),
+      'product:price:amount': priceAmount.toString(),
       'product:price:currency': 'PLN',
-      'product:availability': product.metadata?.stockStatus === 'in_stock' ? 'in stock' : 'out of stock',
+      'product:availability': stockStatus,
       'product:condition': 'new',
-      'product:brand': product.metadata?.merchant || 'Generic',
-      ...(originalPrice && { 'product:original_price:amount': product.originalPrice?.toString() }),
-      'og:price:amount': product.price.toString(),
+      'product:brand': brandName,
+      ...(originalPrice && { 'product:original_price:amount': originalPrice.replace(/[^0-9.,]/g, '') }),
+      'og:price:amount': priceAmount.toString(),
       'og:price:currency': 'PLN',
     },
   };
@@ -280,7 +294,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         '@type': 'ListItem',
         position: 3,
         name: productName,
-        item: `https://okazjeplus.pl/products/${product.id}`
+        item: `https://okazjeplus.pl/products/${productData.id}`
       }
     ]
   };
