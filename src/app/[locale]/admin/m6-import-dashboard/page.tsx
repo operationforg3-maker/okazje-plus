@@ -28,6 +28,173 @@ import {
   ListTree,
   Trash2,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+/**
+ * Bulk Refiner Panel Component
+ * Allows admin to refine all products in database by status
+ */
+function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
+  const [status, setStatus] = useState<string>('draft');
+  const [limit, setLimit] = useState<number>(100);
+  const [refinementType, setRefinementType] = useState<'full_enrichment' | 'specs_cleanup'>('full_enrichment');
+  const [preview, setPreview] = useState<{ totalProducts: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+
+  const fetchPreview = async () => {
+    if (!authToken) return;
+    setLoading(true);
+    try {
+      const url = status === 'all' 
+        ? '/api/admin/refiner/bulk'
+        : `/api/admin/refiner/bulk?status=${status}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      setPreview(data);
+    } catch (err) {
+      console.error('Preview failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startBulkRefinement = async () => {
+    if (!authToken) return alert('Brak tokenu autoryzacji');
+    if (!confirm(`⚠️ Rozpocząć refinement ${limit} produktów (status: ${status})? To może zająć kilka minut i zużyć quota AI.`)) return;
+
+    setRunning(true);
+    setJobId(null);
+    try {
+      const res = await fetch('/api/admin/refiner/bulk', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: status === 'all' ? undefined : status,
+          limit,
+          refinementType,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setJobId(data.jobId);
+        alert(`✅ Bulk refinement uruchomiony!\nJob ID: ${data.jobId}\n\nMonitoruj postęp w logach.`);
+      } else {
+        alert(`❌ Błąd: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`❌ Błąd: ${err?.message || err}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Status Filter */}
+        <div className="space-y-2">
+          <Label htmlFor="refiner-status">Status produktów</Label>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger id="refiner-status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie</SelectItem>
+              <SelectItem value="draft">Draft (nieprzetworzone)</SelectItem>
+              <SelectItem value="pending_approval">Pending Approval</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Limit */}
+        <div className="space-y-2">
+          <Label htmlFor="refiner-limit">Limit (maks produktów)</Label>
+          <Input
+            id="refiner-limit"
+            type="number"
+            min={1}
+            max={1000}
+            value={limit}
+            onChange={(e) => setLimit(parseInt(e.target.value) || 100)}
+          />
+        </div>
+
+        {/* Refinement Type */}
+        <div className="space-y-2">
+          <Label htmlFor="refiner-type">Typ refinementu</Label>
+          <Select value={refinementType} onValueChange={(v) => setRefinementType(v as any)}>
+            <SelectTrigger id="refiner-type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="full_enrichment">Full Enrichment (AI + specs)</SelectItem>
+              <SelectItem value="specs_cleanup">Specs Cleanup Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Preview & Actions */}
+      <div className="flex items-center gap-3">
+        <Button
+          onClick={fetchPreview}
+          disabled={loading}
+          variant="outline"
+          className="gap-2"
+        >
+          {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
+          Podgląd (count)
+        </Button>
+
+        <Button
+          onClick={startBulkRefinement}
+          disabled={running || !authToken}
+          className="gap-2 bg-purple-600 hover:bg-purple-700"
+        >
+          {running ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+          {running ? 'Uruchamianie...' : 'Uruchom Bulk Refiner'}
+        </Button>
+
+        {preview && (
+          <div className="text-sm text-slate-600">
+            Znaleziono: <span className="font-semibold text-slate-900">{preview.totalProducts}</span> produktów
+          </div>
+        )}
+      </div>
+
+      {/* Job ID Display */}
+      {jobId && (
+        <div className="p-3 bg-purple-50 border border-purple-200 rounded-md">
+          <p className="text-sm text-purple-800">
+            <span className="font-semibold">Job uruchomiony:</span> {jobId}
+          </p>
+          <p className="text-xs text-purple-600 mt-1">
+            Odśwież stronę za chwilę aby zobaczyć postęp w logach refinera
+          </p>
+        </div>
+      )}
+
+      {/* Info Box */}
+      <div className="p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800 space-y-1">
+        <p><strong>Full Enrichment:</strong> AI opisuje produkty (multilingual), normalizuje specs, liczy quality score</p>
+        <p><strong>Specs Cleanup:</strong> Tylko porządkuje specyfikacje bez wywołań AI (szybsze, tańsze)</p>
+        <p><strong>UWAGA:</strong> Bulk refinement może zużyć sporo quota API Gemini przy dużych limitach!</p>
+      </div>
+    </div>
+  );
+}
 
 interface HarvesterJob {
   id: string;
@@ -280,6 +447,19 @@ export default function M6ImportDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Bulk Refiner Panel */}
+        <Card className="bg-white border-0 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-purple-600" />
+              Bulk AI Refiner
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BulkRefinerPanel authToken={authToken} />
+          </CardContent>
+        </Card>
 
         {/* Danger Controls (Kill All / WIPE) */}
         <Card className="bg-white border-2 border-red-200">
