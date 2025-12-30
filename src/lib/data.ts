@@ -2788,10 +2788,10 @@ export async function getProductCoresByFilters(
       }
     });
 
-    return filtered.slice(0, limit_count);
+    return filtered.slice(0, limit_count) as ProductCore[];
   } catch (err) {
     console.error('Error filtering products:', err);
-    return [];
+    return [] as ProductCore[];
   }
 }
 
@@ -2857,7 +2857,8 @@ export async function getDealsByFilters(
       // Search term
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
-        const titleMatch = ((deal.title || '') as string).toLowerCase().includes(searchLower);
+        const titleText = typeof deal.title === 'object' ? (deal.title.pl || deal.title.en || '') : (deal.title || '');
+        const titleMatch = titleText.toLowerCase().includes(searchLower);
         if (!titleMatch) return false;
       }
 

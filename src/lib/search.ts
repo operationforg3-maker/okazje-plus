@@ -281,16 +281,16 @@ async function getFirestoreAutocompleteSuggestions(q: string, limit = 5): Promis
     // Filtruj produkty po nazwie lub opisie
     products
       .filter(p => 
-        p.name.toLowerCase().includes(normalizedQuery) || 
-        p.description?.toLowerCase().includes(normalizedQuery)
+        (typeof p.title === 'object' ? (p.title.pl || p.title.en || '') : p.title || '').toLowerCase().includes(normalizedQuery) || 
+        (typeof p.fullDescription === 'object' ? (p.fullDescription.pl || p.fullDescription.en || '') : p.fullDescription || '').toLowerCase().includes(normalizedQuery)
       )
       .slice(0, limit)
       .forEach(p => {
         out.push({
           type: 'product',
           id: p.id,
-          label: p.name,
-          subLabel: p.description,
+          label: (typeof p.title === 'object' ? (p.title.pl || p.title.en || '') : p.title) || 'Unknown',
+          subLabel: (typeof p.fullDescription === 'object' ? (p.fullDescription.pl || p.fullDescription.en || '') : p.fullDescription) || '',
         });
       });
 
