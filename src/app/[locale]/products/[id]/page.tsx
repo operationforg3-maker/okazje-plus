@@ -248,7 +248,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
     '@type': 'Product',
     name: productName,
     description: productDescription,
-    image: isM6 ? productCore.images[0] : product.image,
+    image: isM6 ? productCore.images[0] : (product?.image || ''),
     sku: productData.id,
     brand: {
       '@type': 'Brand',
@@ -285,13 +285,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
         : 'https://schema.org/OutOfStock',
       seller: {
         '@type': 'Organization',
-        name: product.metadata?.merchant || 'Various',
+        name: product?.metadata?.merchant || 'Various',
       },
     },
     aggregateRating: {
       '@type': 'AggregateRating',
-      ratingValue: isM6 ? productCore.rating.score : product.ratingCard.average,
-      reviewCount: isM6 ? productCore.rating.count : product.ratingCard.count,
+      ratingValue: isM6 ? productCore.rating.score : (product?.ratingCard?.average || 0),
+      reviewCount: isM6 ? productCore.rating.count : (product?.ratingCard?.count || 0),
       bestRating: 5,
       worstRating: 1,
     },
