@@ -148,8 +148,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const canonicalUrl = `https://okazje.plus/pl/products/${productData.id}`;
   
   const productImage = isM6 && productCore ? productCore.images[0] : product?.image || '';
-  const stockStatus = isM6 ? 'in stock' : (product?.metadata?.stockStatus === 'in_stock' ? 'in stock' : 'out of stock');
-  const brandName = isM6 ? 'Various' : (product?.metadata?.merchant || 'Generic');
+  const stockStatus = isM6 
+    ? 'in stock' 
+    : (product && product.metadata?.stockStatus === 'in_stock' ? 'in stock' : 'out of stock');
+  const brandName = isM6 
+    ? 'Various' 
+    : (product && product.metadata?.merchant ? product.metadata.merchant : 'Generic');
   
   return {
     title: finalTitle,
