@@ -2512,7 +2512,7 @@ export async function getRecommendedProductCores(count: number = 50): Promise<an
       limit(count * 2) // Fetch more to account for sorting on client
     );
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const products = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
     // Sort by price on client side to avoid requiring a complex index
     products.sort((a, b) => {
       const priceA = a.bestPrice?.amount || 0;
@@ -2533,7 +2533,7 @@ export async function getProductCoresByCategory(
   mainCategorySlug: string,
   subCategorySlug?: string,
   subSubCategorySlug?: string,
-  limit: number = 50
+    limitCount: number = 50
 ): Promise<any[]> {
   try {
     const ref = collection(db, "product_cores");
@@ -2551,11 +2551,11 @@ export async function getProductCoresByCategory(
     }
 
     // Fetch more to account for sorting on client side
-    constraints.push(limit(limit * 2));
+    constraints.push(limit(limitCount * 2));
 
     const q = query(ref, ...constraints);
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const products = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
     
     // Sort by price on client side to avoid requiring complex indexes
     products.sort((a, b) => {
