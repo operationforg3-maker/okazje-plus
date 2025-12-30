@@ -2832,31 +2832,32 @@ export async function getDealsByFilters(
 
     // Client-side filtering for complex conditions
     let filtered = deals.filter(d => {
+      const deal = d as Deal;
       // Price range
       if (filters.priceRange) {
-        const price = d.priceV2?.amount || d.price || 0;
+        const price = (deal as any).priceV2?.amount || deal.price || 0;
         if (price < filters.priceRange.min || price > filters.priceRange.max) return false;
       }
 
       // In stock
-      if (filters.inStockOnly && d.inStock === false) return false;
+      if (filters.inStockOnly && (deal as any).inStock === false) return false;
 
       // Discount
-      if (filters.discountOnly && !d.originalPrice) return false;
-      if (filters.minDiscount && d.originalPrice) {
-        const discount = ((d.originalPrice - (d.priceV2?.amount || d.price)) / d.originalPrice) * 100;
+      if (filters.discountOnly && !deal.originalPrice) return false;
+      if (filters.minDiscount && deal.originalPrice) {
+        const discount = ((deal.originalPrice - ((deal as any).priceV2?.amount || deal.price)) / deal.originalPrice) * 100;
         if (discount < filters.minDiscount) return false;
       }
 
       // Source filter
       if (filters.sources && filters.sources.length > 0) {
-        if (!filters.sources.includes(d.source)) return false;
+        if (!filters.sources.includes((deal as any).source)) return false;
       }
 
       // Search term
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
-        const titleMatch = (d.title || '').toLowerCase().includes(searchLower);
+        const titleMatch = (deal.title || '').toLowerCase().includes(searchLower);
         if (!titleMatch) return false;
       }
 
@@ -2865,26 +2866,28 @@ export async function getDealsByFilters(
 
     // Client-side sorting
     filtered.sort((a, b) => {
+      const da = a as Deal;
+      const db = b as Deal;
       switch (sortBy) {
         case 'price_asc':
-          return (a.priceV2?.amount || a.price || 0) - (b.priceV2?.amount || b.price || 0);
+          return ((da as any).priceV2?.amount || da.price || 0) - ((db as any).priceV2?.amount || db.price || 0);
         case 'price_desc':
-          return (b.priceV2?.amount || b.price || 0) - (a.priceV2?.amount || a.price || 0);
+          return ((db as any).priceV2?.amount || db.price || 0) - ((da as any).priceV2?.amount || da.price || 0);
         case 'rating_desc':
-          return (b.rating || 0) - (a.rating || 0);
+          return ((db as any).rating || 0) - ((da as any).rating || 0);
         case 'newest':
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          return new Date((db as any).createdAt || 0).getTime() - new Date((da as any).createdAt || 0).getTime();
         case 'discount_desc':
-          if (a.originalPrice && b.originalPrice) {
-            const aDiscount = ((a.originalPrice - (a.priceV2?.amount || a.price)) / a.originalPrice) * 100;
-            const bDiscount = ((b.originalPrice - (b.priceV2?.amount || b.price)) / b.originalPrice) * 100;
+          if (da.originalPrice && db.originalPrice) {
+            const aDiscount = ((da.originalPrice - ((da as any).priceV2?.amount || da.price)) / da.originalPrice) * 100;
+            const bDiscount = ((db.originalPrice - ((db as any).priceV2?.amount || db.price)) / db.originalPrice) * 100;
             return bDiscount - aDiscount;
           }
           return 0;
         case 'hot':
         default:
           // Hot deals: sort by temperature or votes
-          return (b.temperature || 0) - (a.temperature || 0);
+          return ((db as any).temperature || 0) - ((da as any).temperature || 0);
       }
     });
 
