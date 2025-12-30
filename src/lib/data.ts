@@ -2738,27 +2738,28 @@ export async function getProductCoresByFilters(
 
     // Client-side filtering for complex conditions
     let filtered = products.filter(p => {
+      const pc = p as ProductCore;
       // Price range
       if (filters.priceRange) {
-        const price = p.bestPrice?.amount || 0;
+        const price = pc.bestPrice?.amount || 0;
         if (price < filters.priceRange.min || price > filters.priceRange.max) return false;
       }
 
       // Rating
-      if (filters.minRating && (p.rating?.score || 0) < filters.minRating) return false;
+      if (filters.minRating && (pc.rating?.score || 0) < filters.minRating) return false;
 
       // Brand filter
       if (filters.brands && filters.brands.length > 0) {
         // Assuming brand might be in specs or metadata
-        const productBrand = p.metadata?.brand || '';
+        const productBrand = pc.metadata?.brand || '';
         if (!filters.brands.includes(productBrand)) return false;
       }
 
       // Search term (match against title, description, specs)
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
-        const titleMatch = (typeof p.title === 'object' ? p.title.pl : p.title || '').toLowerCase().includes(searchLower);
-        const descMatch = (typeof p.description === 'object' ? p.description.pl : p.description || '').toLowerCase().includes(searchLower);
+        const titleMatch = (typeof pc.title === 'object' ? pc.title.pl : pc.title || '').toLowerCase().includes(searchLower);
+        const descMatch = (typeof pc.description === 'object' ? pc.description.pl : pc.description || '').toLowerCase().includes(searchLower);
         if (!titleMatch && !descMatch) return false;
       }
 
@@ -2767,25 +2768,27 @@ export async function getProductCoresByFilters(
 
     // Client-side sorting
     filtered.sort((a, b) => {
+      const pa = a as ProductCore;
+      const pb = b as ProductCore;
       switch (sortBy) {
         case 'price_asc':
-          return (a.bestPrice?.amount || 0) - (b.bestPrice?.amount || 0);
+          return (pa.bestPrice?.amount || 0) - (pb.bestPrice?.amount || 0);
         case 'price_desc':
-          return (b.bestPrice?.amount || 0) - (a.bestPrice?.amount || 0);
+          return (pb.bestPrice?.amount || 0) - (pa.bestPrice?.amount || 0);
         case 'rating_desc':
-          return (b.rating?.score || 0) - (a.rating?.score || 0);
+          return (pb.rating?.score || 0) - (pa.rating?.score || 0);
         case 'newest':
-          return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+          return new Date(pb.updatedAt || 0).getTime() - new Date(pa.updatedAt || 0).getTime();
         case 'hot':
           // Assuming hot products have higher temperature or popularity metric
-          return (b.rating?.count || 0) - (a.rating?.count || 0);
+          return (pb.rating?.count || 0) - (pa.rating?.count || 0);
         case 'relevance':
         default:
           return 0;
       }
     });
 
-    return filtered.slice(0, limit_count);
+    return filtered.slice(0, limitCount);
   } catch (err) {
     console.error('Error filtering products:', err);
     return [];
