@@ -178,8 +178,12 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     }
   };
 
-  // Product URL
-  const productUrl = `${prefix}/products/${(product as any).slug || product.id}`;
+  // Product URL - ensure we have valid ID
+  const productId = product.id || (product as any)._id || (product as any).docId;
+  if (!productId) {
+    console.error('[ProductCard] Product missing ID:', product);
+  }
+  const productUrl = `${prefix}/products/${(product as any).slug || productId || ''}`;
 
   // Gallery setup
   const galleryImages = Array.isArray(product.gallery) && product.gallery.length > 0
