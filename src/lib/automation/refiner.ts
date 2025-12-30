@@ -489,7 +489,8 @@ export class AIRefiner {
    * Update job record
    */
   private async updateJobRecord(job: RefinerJob): Promise<void> {
-    const jobRef = adminDb.collection('refiner_jobs').doc(this.jobId);
+        const logMessage = `Starting DB refinement job: status=${status || 'all'}, limit=${limit}, type=${refinationType}`;
+        this.addLog('info', logMessage);
     try {
       await jobRef.set({
         status: job.status,

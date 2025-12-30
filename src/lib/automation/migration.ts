@@ -335,7 +335,7 @@ function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
       ? 'sale' 
       : (oldDeal.dealType as 'sale' | 'coupon' | 'cashback' | 'flash_deal' | 'regular' | undefined),
     couponCode: oldDeal.couponCode,
-    stockStatus: oldDeal.importMetadata?.stockStatus || 'in_stock',
+    stockStatus: (oldDeal.importMetadata?.stockStatus === 'unknown' ? 'in_stock' : oldDeal.importMetadata?.stockStatus) || 'in_stock',
     stockLevel: oldDeal.importMetadata?.stockLevel,
     expiryDate: oldDeal.expiryDate,
     isActive: oldDeal.status === 'approved',
@@ -347,13 +347,17 @@ function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
     updatedAt: oldDeal.updatedAt?.toISOString?.() || now,
     sourceProductId: oldDeal.externalOriginalId,
     sourceUrl: oldDeal.link,
-    priceHistory: oldDeal.importMetadata?.priceHistory || [
-      {
-        date: now.split('T')[0],
-        price: oldDeal.price || 0,
-        currency: 'USD',
-      },
-    ],
+      priceHistory: oldDeal.importMetadata?.priceHistory 
+        ? (oldDeal.importMetadata.priceHistory as any[]).map((entry: any) => ({
+            date: entry.date || entry.timestamp?.split('T')[0] || now.split('T')[0],
+            price: entry.price || 0,
+            currency: entry.currency || 'USD',
+          }))
+        : [{
+            date: now.split('T')[0],
+            price: oldDeal.price || 0,
+            currency: 'USD',
+          }],
   };
 
   return deal;
