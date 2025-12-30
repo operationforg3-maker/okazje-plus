@@ -86,7 +86,7 @@ export default function ProductDetailM6Client({
   // Extract data
   const title = typeof productData.title === 'object' 
     ? (productData.title.pl || productData.title.en || 'Produkt')
-    : (productData?.name || 'Produkt');
+    : ('title' in productData ? productData.title : 'Produkt');
     
   const description = typeof productData.description === 'string'
     ? productData.description
@@ -94,13 +94,13 @@ export default function ProductDetailM6Client({
 
   // Images - M6 has images array, legacy has single image
   const imageUrls = isM6 
-    ? productCore.images && Array.isArray(productCore.images) ? productCore.images : []
+    ? productCore?.images && Array.isArray(productCore.images) ? productCore.images : []
     : (product.gallery && product.gallery.length > 0 
         ? product.gallery.map(g => g.src) 
         : [product.image]);
 
   // Price - M6 has bestPrice, legacy has price
-  const priceAmount = isM6 ? productCore.bestPrice.amount : (product.price || 0);
+  const priceAmount = isM6 ? (productCore?.bestPrice?.amount || 0) : (product.price || 0);
   const price = formatPrice(priceAmount, 'PLN');
 
   // Rating
