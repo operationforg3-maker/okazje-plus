@@ -75,11 +75,20 @@ class CurrencyManager {
 
   /**
    * Get current exchange rates (with caching and automatic refresh)
+   * NOTE: Client-side fetching disabled due to CORS. Rates are updated server-side
+   * by Cloud Function (updatePricesDaily, scheduled 3 AM Europe/Warsaw).
+   * Client always uses fallback rates which are kept up-to-date.
    */
   static async getRates(): Promise<ExchangeRates> {
+    // Client-side: Always return fallback rates
+    // Server-side updates happen via Cloud Function
+    if (typeof window !== 'undefined') {
+      return { ...this.rates };
+    }
+
     const now = Date.now();
     
-    // If rates are fresh, return them
+    // Server-side: Fetch if rates are stale
     if (this.rates.source === 'api' && now - this.lastFetchTime < this.FETCH_INTERVAL) {
       return { ...this.rates };
     }
@@ -89,7 +98,7 @@ class CurrencyManager {
       return { ...this.rates };
     }
 
-    // Fetch fresh rates in background
+    // Fetch fresh rates in background (server-side only)
     this.isFetching = true;
     try {
       const freshRates = await this.fetchFromNBP();
@@ -250,7 +259,7 @@ export function useCurrency() {
    * Initialize on client side:
    * - Load saved preference from localStorage
    * - Setup event listener for currency changes
-   * - Fetch fresh exchange rates
+   * - Note: Exchange rates updated server-side via Cloud Function
    */
   useEffect(() => {
     setIsMounted(true);
@@ -262,9 +271,6 @@ export function useCurrency() {
     if (saved && ['PLN', 'USD', 'EUR', 'GBP'].includes(saved)) {
       setCurrencyState(saved);
     }
-
-    // Fetch fresh rates on mount
-    CurrencyManager.getRates().catch(console.error);
 
     // Listen for currency change events from CurrencySwitcher
     const handleCurrencyChange = (event: Event) => {
