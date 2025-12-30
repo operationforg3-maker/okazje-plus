@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 /**
  * Bulk Refiner Panel Component
@@ -44,6 +46,31 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+
+  // Auto-refresh logs when job is active
+  useEffect(() => {
+    if (!jobId || !authToken || !autoRefresh) return;
+
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch(`/api/admin/refiner-logs?jobId=${jobId}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const data = await res.json();
+        if (data.success) {
+          setLogs(data.logs || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch logs:', err);
+      }
+    };
+
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 5000); // Refresh every 5s
+    return () => clearInterval(interval);
+  }, [jobId, authToken, autoRefresh]);
 
   const fetchPreview = async () => {
     if (!authToken) return;
@@ -176,13 +203,63 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
 
       {/* Job ID Display */}
       {jobId && (
-        <div className="p-3 bg-purple-50 border border-purple-200 rounded-md">
-          <p className="text-sm text-purple-800">
-            <span className="font-semibold">Job uruchomiony:</span> {jobId}
-          </p>
-          <p className="text-xs text-purple-600 mt-1">
-            Odśwież stronę za chwilę aby zobaczyć postęp w logach refinera
-          </p>
+        <div className="space-y-3">
+          <div className="p-3 bg-purple-50 border border-purple-200 rounded-md">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-800">
+                  <span className="font-semibold">Job uruchomiony:</span> {jobId}
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  {autoRefresh ? '🔴 Live monitoring włączony (odświeżanie co 5s)' : 'Włącz auto-refresh aby monitorować postęp'}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant={autoRefresh ? "destructive" : "outline"}
+                onClick={() => setAutoRefresh(!autoRefresh)}
+                className="gap-2"
+              >
+                <RefreshCw className={cn("w-4 h-4", autoRefresh && "animate-spin")} />
+                {autoRefresh ? 'Stop' : 'Start Auto-Refresh'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Live Logs Display */}
+          {logs.length > 0 && (
+            <Card className="bg-slate-950 border-slate-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm text-slate-100 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Live Logs ({logs.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-64 w-full">
+                  <div className="space-y-1 font-mono text-xs">
+                    {logs.slice(0, 50).map((log, idx) => (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "p-2 rounded",
+                          log.status === 'success' && "text-green-400 bg-green-950/20",
+                          log.status === 'failed' && "text-red-400 bg-red-950/20",
+                          log.status === 'info' && "text-blue-400 bg-blue-950/20"
+                        )}
+                      >
+                        <span className="text-slate-500">[{new Date(log.timestamp).toLocaleTimeString('pl-PL')}]</span>
+                        {' '}
+                        <span className="text-slate-400">{log.productId || 'system'}:</span>
+                        {' '}
+                        {log.message}
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
