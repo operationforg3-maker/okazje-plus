@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
 
     const results = [];
     for (const profileDoc of profilesSnapshot.docs) {
-      const profile = { id: profileDoc.id, ...profileDoc.data() };
+      const profile = { id: profileDoc.id, ...profileDoc.data() } as { id: string; name?: string; [key: string]: unknown };
       
       try {
-        logger.info('Running sync for profile', { profileId: profile.id, name: profile.name });
+        logger.info('Running sync for profile', { profileId: profile.id, name: profile.name ?? profile.id });
         
         const result = await importFromAliExpress({
           profileId: profile.id,

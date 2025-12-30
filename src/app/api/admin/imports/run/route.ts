@@ -11,7 +11,7 @@ import { requireAdmin } from '@/lib/auth-server';
 export async function POST(request: NextRequest) {
   try {
     // Check admin authorization
-    const session = await requireAdmin(request);
+    const session = await requireAdmin();
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
