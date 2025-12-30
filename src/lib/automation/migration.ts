@@ -314,9 +314,9 @@ function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
       currency: oldDeal.importMetadata?.source?.includes('allegro') ? 'PLN' : 'USD',
     },
     originalPrice: oldDeal.originalPrice,
-    discount: oldDeal.discountPercent
+    discount: (oldDeal as any).discountPercent
       ? {
-          percentage: oldDeal.discountPercent,
+          percentage: (oldDeal as any).discountPercent,
         }
       : undefined,
     shipping: {
@@ -331,7 +331,9 @@ function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
     merchantName: oldDeal.merchant || oldDeal.importMetadata?.merchant,
     merchantRating: oldDeal.importMetadata?.sellerRating,
     title: oldDeal.title,
-    dealType: oldDeal.dealType,
+    dealType: oldDeal.dealType === 'freebie' || oldDeal.dealType === 'pricing-error' || oldDeal.dealType === 'bundle' 
+      ? 'sale' 
+      : (oldDeal.dealType as 'sale' | 'coupon' | 'cashback' | 'flash_deal' | 'regular' | undefined),
     couponCode: oldDeal.couponCode,
     stockStatus: oldDeal.importMetadata?.stockStatus || 'in_stock',
     stockLevel: oldDeal.importMetadata?.stockLevel,
