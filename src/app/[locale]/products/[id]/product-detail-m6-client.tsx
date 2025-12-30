@@ -433,8 +433,8 @@ export default function ProductDetailM6Client({
               {user ? (
                 <RatingInput
                   productId={productId}
-                  userRating={userRating}
-                  onRatingSubmit={fetchRatings}
+                  existingRating={userRating}
+                  onRatingSubmitted={fetchRatings}
                 />
               ) : (
                 <div className="text-center py-8">
