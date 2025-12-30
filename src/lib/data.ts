@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Category, Deal, Product, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
+import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
 import { sanitizeDealRecord, sanitizeProductRecord } from '@/lib/sanitizers';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
 const _warnedOnce = new Set<string>();
@@ -339,8 +339,8 @@ export async function getPendingProducts(): Promise<Product[]> {
   // Połącz i posortuj - użyj metadata.importedAt lub fallback na id
   const all = [...drafts, ...pendings];
   all.sort((a, b) => {
-    const dateA = new Date(a.metadata?.importedAt || a.createdAt || 0).getTime();
-    const dateB = new Date(b.metadata?.importedAt || b.createdAt || 0).getTime();
+     const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
+     const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
     return dateB - dateA;
   });
   
