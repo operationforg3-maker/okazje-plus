@@ -2406,7 +2406,7 @@ export async function getAllProductCores(
 ): Promise<any[]> {
   try {
     const ref = collection(db, "product_cores");
-      const constraints = [orderBy("updatedAt", "desc"), limit(limitCount)];
+      const constraints: any[] = [orderBy("updatedAt", "desc"), limit(limitCount)];
 
     if (status) {
       constraints.unshift(where("status", "==", status));
@@ -2414,7 +2414,7 @@ export async function getAllProductCores(
 
     const q = query(ref, ...constraints);
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
   } catch (err) {
     console.error("Error fetching product cores:", err);
     return [];
@@ -2482,7 +2482,7 @@ export async function searchProductCores(
     );
 
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const products = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
 
     // Client-side filtering
     const searchLower = searchText.toLowerCase();
