@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAuthSession, requireAdmin } from '@/lib/auth-server';
-import { adminDb } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
 
 /**
  * Delete a specific harvester job from history
@@ -25,8 +26,8 @@ export async function DELETE(
 
     const jobId = params.jobId;
 
-    // Delete the job document
-    await adminDb.collection('harvester_jobs').doc(jobId).delete();
+    // Delete the job document using Firestore client SDK
+    await deleteDoc(doc(db, 'harvester_jobs', jobId));
 
     return NextResponse.json(
       {
