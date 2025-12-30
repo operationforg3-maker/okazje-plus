@@ -92,34 +92,54 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   
   const { product, productCore, isM6 } = data;
-  const productData = isM6 ? productCore : product;
-  const priceAmount = isM6 ? productCore.bestPrice.amount : product.price;
+  
+  // Safe destructuring - check which mode we're in
+  if (isM6 && !productCore) {
+    return {
+      title: 'Błąd produktu',
+      description: 'Produkt M6 nie ma ProductCore',
+    };
+  }
+  
+  if (!isM6 && !product) {
+    return {
+      title: 'Błąd produktu',
+      description: 'Produkt legacy nie ma product data',
+    };
+  }
+  
+  const productData = isM6 ? productCore! : product!;
+  const priceAmount = isM6 ? productCore!.bestPrice.amount : product!.price;
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(priceAmount ?? 0);
-  const originalPrice = !isM6 && product.originalPrice 
+  const originalPrice = !isM6 && product?.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice)
     : null;
-  const discount = !isM6 && product.discountPercent ? Math.round(product.discountPercent * 100) : null;
+  const discount = !isM6 && product?.discountPercent ? Math.round(product.discountPercent * 100) : null;
   
   // SEO title i description z AI lub fallback
-  const productName = isM6 ? (typeof productCore.title === 'object' ? (productCore.title.pl || productCore.title.en) : productCore.title) : product.name;
-  const metaTitle = !isM6 ? (product.metaTitle || product.seo?.metaTitle) : undefined;
+  const productName = isM6 
+    ? (typeof productCore!.title === 'object' ? (productCore!.title.pl || productCore!.title.en) : productCore!.title) 
+    : product!.name;
+  const metaTitle = !isM6 && product ? (product.metaTitle || product.seo?.metaTitle) : undefined;
   const fallbackTitle = `${productName} - ${price} | Okazje Plus`;
-  const ratingScore = isM6 ? productCore.rating.score : product.ratingCard?.average;
-  const ratingCount = isM6 ? productCore.rating.count : product.ratingCard?.count;
+  const ratingScore = isM6 ? productCore!.rating.score : product!.ratingCard?.average || 0;
+  const ratingCount = isM6 ? productCore!.rating.count : product!.ratingCard?.count || 0;
   const ratingText = ratingCount > 0 
     ? `${ratingCount} ocen, średnia ${ratingScore.toFixed(1)}/5.0` 
     : 'Brak ocen';
-  const productDesc = isM6 ? (typeof productCore.description === 'object' ? (productCore.description.pl || productCore.description.en) : '') : product.description;
-  const metaDescription = !isM6 ? (product.metaDescription || product.seo?.metaDescription) : undefined;
+  const productDesc = isM6 
+    ? (typeof productCore!.description === 'object' ? (productCore!.description.pl || productCore!.description.en) : '') 
+    : product!.description;
+  const metaDescription = !isM6 && product ? (product.metaDescription || product.seo?.metaDescription) : undefined;
   const fallbackDescription = `Kup ${productName} w najlepszej cenie ${price}. ${ratingText}`;
   const finalTitle = metaTitle || fallbackTitle;
   const finalDescription = metaDescription || productDesc || fallbackDescription;
   
   // Keywords z AI enrichment + SEO
   const keywords = [
-    ...(!isM6 ? (product.seoKeywords || []) : []),
-    ...(!isM6 ? (product.seo?.keywords || []) : []),
-    ...(!isM6 ? (product.ai?.enrichment?.keywords || []) : (productCore.searchTags || [])),
+    ...(!isM6 && product ? (product.seoKeywords || []) : []),
+    ...(!isM6 && product ? (product.seo?.keywords || []) : []),
+    ...(!isM6 && product ? (product.ai?.enrichment?.keywords || []) : isM6 && productCore ? (productCore.searchTags || []) : []),
     productData.mainCategorySlug,
     productData.subCategorySlug,
     productData.subSubCategorySlug || '',
@@ -127,9 +147,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   const canonicalUrl = `https://okazje.plus/pl/products/${productData.id}`;
   
-  const productImage = isM6 ? productCore.images[0] : product.image;
-  const stockStatus = isM6 ? 'in stock' : (product.metadata?.stockStatus === 'in_stock' ? 'in stock' : 'out of stock');
-  const brandName = isM6 ? 'Various' : (product.metadata?.merchant || 'Generic');
+  const productImage = isM6 && productCore ? productCore.images[0] : product?.image || '';
+  const stockStatus = isM6 ? 'in stock' : (product?.metadata?.stockStatus === 'in_stock' ? 'in stock' : 'out of stock');
+  const brandName = isM6 ? 'Various' : (product?.metadata?.merchant || 'Generic');
   
   return {
     title: finalTitle,
