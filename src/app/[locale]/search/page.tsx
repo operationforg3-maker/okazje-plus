@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { searchProductsTypesense, searchDealsTypesense } from '@/lib/search';
 import ProductCard from '@/components/product-card';
 import DealCard from '@/components/deal-card';
-import { Product, Deal } from '@/lib/types';
+import { ProductCore, Deal } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,7 @@ interface SearchFilters {
 
 export default function SearchPage({ searchParams }: { searchParams: { q: string } }) {
   const t = useTranslations('search');
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductCore[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);

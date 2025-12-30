@@ -565,7 +565,7 @@ export async function getProductsByCategory(
   }
 }
 
-export async function searchProducts(searchTerm: string): Promise<Product[]> {
+export async function searchProducts(searchTerm: string): Promise<ProductCore[]> {
   // M6: Search in product_cores instead of legacy products collection
   const productCoresRef = collection(db, "product_cores");
   
@@ -595,7 +595,7 @@ export async function searchProducts(searchTerm: string): Promise<Product[]> {
       }
     });
     
-    return Object.values(results) as unknown as Product[];
+    return Object.values(results);
   } catch (err) {
     console.error('[searchProducts] Error searching in product_cores:', err);
     return [];
