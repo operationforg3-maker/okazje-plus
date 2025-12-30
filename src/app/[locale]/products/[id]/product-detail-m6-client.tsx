@@ -95,8 +95,8 @@ export default function ProductDetailM6Client({
   // Images - M6 has images array, legacy has single image
   const imageUrls = isM6 
     ? productCore?.images && Array.isArray(productCore.images) ? productCore.images : []
-    : (product?.gallery && product.gallery.length > 0 
-        ? product.gallery.map(g => g.src) 
+    : (product?.gallery && product?.gallery.length > 0 
+        ? product?.gallery.map(g => g.src) 
         : [product?.image || '']);
 
   // Price - M6 has bestPrice, legacy has price
@@ -104,13 +104,13 @@ export default function ProductDetailM6Client({
   const price = formatPrice(priceAmount, 'PLN');
 
   // Rating
-  const avgRating = isM6 ? productCore.rating.score : (product.ratingCard?.average || 0);
-  const ratingCount = isM6 ? productCore.rating.count : (product.ratingCard?.count || 0);
+  const avgRating = isM6 ? (productCore?.rating?.score || 0) : (product?.ratingCard?.average || 0);
+  const ratingCount = isM6 ? (productCore?.rating?.count || 0) : (product?.ratingCard?.count || 0);
 
   // Specs - M6 has specs, legacy might have metadata.specifications
   const specs = isM6 
-    ? productCore.specs 
-    : (product.metadata?.specifications?.reduce((acc: Record<string, string>, spec: any) => {
+    ? (productCore?.specs || {})
+    : (product?.metadata?.specifications?.reduce((acc: Record<string, string>, spec: any) => {
         const key = spec.key || spec.name || 'Unknown';
         acc[key] = spec.value;
         return acc;
@@ -276,7 +276,7 @@ export default function ProductDetailM6Client({
           </CardHeader>
           <CardContent>
             <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
-              <video controls className="w-full h-full" src={productCore.videoUrl} />
+              <video controls className="w-full h-full" src={productCore?.videoUrl} />
             </div>
           </CardContent>
         </Card>
@@ -292,7 +292,7 @@ export default function ProductDetailM6Client({
               </CardHeader>
               <CardContent>
                 <ul className="list-disc pl-5 space-y-1">
-                  {productCore.features.pl.map((f, idx) => (
+                  {productCore?.features?.pl?.map((f, idx) => (
                     <li key={idx} className="text-sm text-gray-700">{f}</li>
                   ))}
                 </ul>
@@ -310,7 +310,7 @@ export default function ProductDetailM6Client({
                     <div>
                       <h4 className="font-medium mb-2 text-green-700">Plusy</h4>
                       <ul className="list-disc pl-5 space-y-1">
-                        {productCore.pros.pl.map((p, idx) => (
+                        {productCore?.pros?.pl?.map((p, idx) => (
                           <li key={idx} className="text-sm text-gray-700">{p}</li>
                         ))}
                       </ul>
@@ -320,7 +320,7 @@ export default function ProductDetailM6Client({
                     <div>
                       <h4 className="font-medium mb-2 text-red-700">Minusy</h4>
                       <ul className="list-disc pl-5 space-y-1">
-                        {productCore.cons.pl.map((c, idx) => (
+                        {productCore?.cons?.pl?.map((c, idx) => (
                           <li key={idx} className="text-sm text-gray-700">{c}</li>
                         ))}
                       </ul>
