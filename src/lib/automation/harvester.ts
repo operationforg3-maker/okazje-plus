@@ -449,6 +449,10 @@ export class SmartHarvester {
       specs?: Record<string, string>;
       rating?: number;
       ratingCount?: number;
+      ean?: string;
+      gtin?: string;
+      upc?: string;
+      mpn?: string;
     }>
   > {
     switch (source) {

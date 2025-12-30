@@ -723,8 +723,8 @@ export function createAliExpressClient(accountName?: string): AliExpressClient {
   }
 
   const config: AliExpressClientConfig = {
-    appKey,
-    appSecret,
+    appKey: appKey || '',
+    appSecret: appSecret || '',
     apiEndpoint: process.env.ALIEXPRESS_API_ENDPOINT,
     rateLimitPerMinute: process.env.ALIEXPRESS_RATE_LIMIT 
       ? parseInt(process.env.ALIEXPRESS_RATE_LIMIT, 10) 
