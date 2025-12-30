@@ -76,7 +76,7 @@ export const updatePricesDaily = onSchedule(
     timeZone: 'Europe/Warsaw',
     region: 'europe-west1',
   },
-  async (event) => {
+  async (_event) => {
     const db = getFirestore();
     const startTime = Date.now();
 
@@ -164,21 +164,10 @@ export const updatePricesDaily = onSchedule(
         `[Price Update] Successfully updated ${updateCount} deals in ${duration}ms`
       );
 
-      return {
-        success: true,
-        updated: updateCount,
-        duration: duration,
-        rate: currentRate,
-      };
+      logger.info(`[Price Update] Price update completed: ${updateCount} deals updated in ${duration}ms, rate: ${currentRate}`);
     } catch (error) {
       const duration = Date.now() - startTime;
       logger.error('[Price Update] Failed:', error);
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        duration: duration,
-      };
     }
   }
 );
