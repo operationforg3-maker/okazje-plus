@@ -591,7 +591,7 @@ export async function searchProducts(searchTerm: string): Promise<ProductCore[]>
       // Simple client-side filtering: match search term in title or searchTags
       if (titleText.toLowerCase().includes(searchTermLower) || 
           searchTags.some(tag => tag.toLowerCase().includes(searchTermLower))) {
-        results[doc.id] = { id: doc.id, ...data };
+          results[doc.id] = { ...data, id: doc.id };
       }
     });
     
@@ -2402,11 +2402,11 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
  */
 export async function getAllProductCores(
   status?: string,
-  limit: number = 100
+    limitCount: number = 100
 ): Promise<any[]> {
   try {
     const ref = collection(db, "product_cores");
-    const constraints = [orderBy("updatedAt", "desc"), limit(limit)];
+      const constraints = [orderBy("updatedAt", "desc"), limit(limitCount)];
 
     if (status) {
       constraints.unshift(where("status", "==", status));
@@ -2468,7 +2468,7 @@ export async function getBestDealForProduct(productId: string): Promise<any | nu
  */
 export async function searchProductCores(
   searchText: string,
-  limit: number = 20
+    limitCount: number = 20
 ): Promise<any[]> {
   try {
     // For now, use simple substring search
@@ -2478,7 +2478,7 @@ export async function searchProductCores(
       ref,
       where("status", "==", "approved"),
       orderBy("updatedAt", "desc"),
-      limit(limit)
+        limit(limitCount)
     );
 
     const snap = await getDocs(q);
