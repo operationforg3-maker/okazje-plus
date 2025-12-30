@@ -257,7 +257,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
                 id: bestDeal?.id || product.id,
                 name: typeof product.title === 'object' ? (product.title.pl || product.title.en || 'Produkt') : (product.title as any) || 'Produkt',
                 image: Array.isArray(product.images) ? product.images[0] : '',
-                price: { amount: (bestTotalPrice ?? product.bestPrice?.amount || 0), currency: 'PLN' } as any,
+                price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
                 affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
               } as any, 1)}
               disabled={isInCart(bestDeal?.id || product.id)}
