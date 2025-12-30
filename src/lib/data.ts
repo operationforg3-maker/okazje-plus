@@ -2710,7 +2710,17 @@ export async function getProductCoresByFilters(
     q = query(collection(db, 'product_cores'), ...constraints, orderBy('updatedAt', 'desc'), limit(limit_count));
 
     const snapshot = await getDocs(q);
-    let products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let products = snapshot.docs.map(doc => {
+      const data = { id: doc.id, ...doc.data() };
+      if (!doc.id) {
+        console.error('[getProductCoresByFilters] Document without ID:', doc.ref.path);
+      }
+      return data;
+    });
+    
+    console.log(`[getProductCoresByFilters] Fetched ${products.length} products, first 3:`, 
+      products.slice(0, 3).map(p => ({ id: p.id, title: typeof p.title === 'object' ? p.title.pl : p.title }))
+    );
 
     // Client-side filtering for complex conditions
     let filtered = products.filter(p => {
