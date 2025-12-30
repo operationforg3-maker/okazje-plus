@@ -2788,7 +2788,7 @@ export async function getProductCoresByFilters(
       }
     });
 
-    return filtered.slice(0, limitCount);
+    return filtered.slice(0, limit_count);
   } catch (err) {
     console.error('Error filtering products:', err);
     return [];
@@ -2857,7 +2857,7 @@ export async function getDealsByFilters(
       // Search term
       if (filters.searchTerm) {
         const searchLower = filters.searchTerm.toLowerCase();
-        const titleMatch = (deal.title || '').toLowerCase().includes(searchLower);
+        const titleMatch = ((deal.title || '') as string).toLowerCase().includes(searchLower);
         if (!titleMatch) return false;
       }
 
