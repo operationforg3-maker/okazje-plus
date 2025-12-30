@@ -512,8 +512,8 @@ export class AIRefiner {
    */
   private addLog(
     productIdOrMessage: string,
-    statusOrLevel?: 'success' | 'failed' | 'info' | 'error' | 'warn',
-    messageOrDetails?: string | Record<string, any>
+    statusOrLevel?: 'success' | 'failed' | 'info' | 'error' | 'warn' | string,
+    messageOrDetails?: any
   ): void {
     // Support two signatures:
     // Old: addLog(productId, status, message)
