@@ -460,8 +460,8 @@ async function seedCategories() {
     categoriesCount++;
 
     for (const subCat of mainCat.subcategories) {
-      const englishSubSlug = slugify(subCat.aliexpressKeywords?.[0] || subCat.slug);
-      const englishSubName = toTitleCase((subCat.aliexpressKeywords?.[0] || englishSubSlug).replace(/-/g, ' '));
+      const englishSubSlug = slugify((subCat as any).aliexpressKeywords?.[0] || subCat.slug);
+      const englishSubName = toTitleCase(((subCat as any).aliexpressKeywords?.[0] || englishSubSlug).replace(/-/g, ' '));
       console.log(`  📂 Creating subcategory: ${subCat.name} (${subCat.slug} -> ${englishSubSlug})`);
       
       const subCatRef = mainCatRef.collection('subcategories').doc(englishSubSlug);
