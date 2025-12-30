@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
 import { sanitizeDealRecord, sanitizeProductRecord } from '@/lib/sanitizers';
@@ -2564,7 +2564,7 @@ export async function getProductCoresByCategory(
       return priceA - priceB;
     });
     
-    return products.slice(0, limit);
+    return products.slice(0, limitCount);
   } catch (err) {
     console.error("Error fetching products by category:", err);
     return [];
@@ -2733,7 +2733,7 @@ export async function getProductCoresByFilters(
     });
     
     console.log(`[getProductCoresByFilters] Fetched ${products.length} products, first 3:`, 
-      products.slice(0, 3).map(p => ({ id: p.id, title: typeof p.title === 'object' ? p.title.pl : p.title }))
+      products.slice(0, 3).map(p => ({ id: (p as ProductCore).id, title: typeof (p as ProductCore).title === 'object' ? (p as ProductCore).title.pl : (p as ProductCore).title }))
     );
 
     // Client-side filtering for complex conditions
