@@ -2603,10 +2603,10 @@ export async function updateProductBestPrice(productId: string): Promise<void> {
 /**
  * Get Harvester jobs
  */
-export async function getHarvesterJobs(limit: number = 20): Promise<any[]> {
+export async function getHarvesterJobs(limitCount: number = 20): Promise<any[]> {
   try {
     const ref = collection(db, "harvester_jobs");
-    const q = query(ref, orderBy("startedAt", "desc"), limit(limit));
+    const q = query(ref, orderBy("startedAt", "desc"), limit(limitCount));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
@@ -2618,10 +2618,10 @@ export async function getHarvesterJobs(limit: number = 20): Promise<any[]> {
 /**
  * Get Refiner jobs
  */
-export async function getRefinerJobs(limit: number = 20): Promise<any[]> {
+export async function getRefinerJobs(limitCount: number = 20): Promise<any[]> {
   try {
     const ref = collection(db, "refiner_jobs");
-    const q = query(ref, orderBy("startedAt", "desc"), limit(limit));
+    const q = query(ref, orderBy("startedAt", "desc"), limit(limitCount));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
