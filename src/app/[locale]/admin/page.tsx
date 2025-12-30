@@ -271,6 +271,10 @@ interface DashboardStats {
     completed24h: number;
     failed24h: number;
   };
+  harvester?: {
+    running: number;
+    created24h: number;
+  };
 }
 
 function AdminPage() {

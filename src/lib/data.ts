@@ -1906,7 +1906,11 @@ export async function getAdminDashboardStats() {
       users: usersGrowth
     },
     categories: categoriesStats,
-    imports: importsStats
+    imports: importsStats,
+    harvester: {
+      running: importsStats.running,
+      created24h: importsStats.completed24h
+    }
   };
 
   // Cache stats for 15 minutes (900 seconds)
