@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 300; // ISR: revalidate co 5 minut
 
 interface PageProps {
-  params: { id: string; locale: string };
+  params: Promise<{ id: string; locale: string }>;
 }
 
 // Server-side data fetching - używa M6 ProductCore + DealM6
@@ -82,7 +82,8 @@ async function getProductData(id: string) {
 
 // SEO: Generate metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const data = await getProductData(params.id);
+  const { id } = await params;
+  const data = await getProductData(id);
   
   if (!data) {
     return {
@@ -221,7 +222,8 @@ export async function generateStaticParams() {
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
-  const data = await getProductData(params.id);
+  const { id } = await params;
+  const data = await getProductData(id);
   
   if (!data) {
     notFound();

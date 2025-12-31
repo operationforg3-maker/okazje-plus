@@ -57,6 +57,12 @@ const getRelativeTime = (timestamp: any): string => {
 };
 
 export default function ProductListCard({ product }: ProductListCardProps) {
+  // Debug: sprawdź czy product.id istnieje
+  if (!product?.id) {
+    console.error('[ProductListCard] Product without ID:', product);
+    return null;
+  }
+
   const locale = useLocale();
   const prefix = locale ? `/${locale}` : '';
   const { getText } = useContentLanguage();
