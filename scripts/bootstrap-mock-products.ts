@@ -2,7 +2,18 @@ import { adminDb } from '@/lib/firebase-admin';
 import { ProductCore, DealM6 } from '@/lib/types';
 import { calculateIdentityHash } from '@/lib/automation/identity-matcher';
 
-const MOCK_PRODUCTS = [
+type MockProduct = {
+  title: string;
+  category: string;
+  price: number;
+  rating: number;
+  ratingCount: number;
+  image: string;
+  merchant: string;
+  specs: Record<string, string>;
+};
+
+const MOCK_PRODUCTS: MockProduct[] = [
   // Electronics / Smartphones
   {
     title: 'Xiaomi Redmi Note 13',

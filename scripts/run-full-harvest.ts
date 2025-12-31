@@ -40,7 +40,7 @@ async function runFullHarvest() {
   try {
     console.log('\n🤖 Running refiner on pending products...');
     const refinerJob = await refinePendingProducts();
-    console.log(`   → Refiner processed ${refinerJob.productsProcessed} products, errors=${refinerJob.errors.length}`);
+    console.log(`   → Refiner processed ${refinerJob.productsProcessed} products, failed=${refinerJob.productsFailed}`);
   } catch (e: any) {
     console.log(`   ⚠️ Refiner skipped: ${e?.message || e}`);
   }

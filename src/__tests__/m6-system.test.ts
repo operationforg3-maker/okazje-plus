@@ -306,7 +306,7 @@ describe('AIRefiner', () => {
     });
 
     it('should handle missing translations gracefully', () => {
-      const title = { pl: 'Telefon' };
+      const title: { pl: string; en?: string; de?: string } = { pl: 'Telefon' };
       const description = title.pl || title.en || 'Unknown product';
 
       expect(description).toBe('Telefon');
@@ -364,7 +364,7 @@ describe('API Authentication', () => {
   });
 
   it('should reject non-admin users', () => {
-    const userRole = 'user';
+    const userRole: string = 'user';
     const isAuthorized = userRole === 'admin';
 
     expect(isAuthorized).toBe(false);

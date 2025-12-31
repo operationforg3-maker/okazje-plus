@@ -100,7 +100,7 @@ describe('API Endpoints', () => {
     });
 
     it('should accept product IDs array', () => {
-      const body = {
+      const body: { productIds: string[]; refinationType: 'full_enrichment' | 'specs_cleanup' | 'description_generation' } = {
         productIds: ['prod_1', 'prod_2', 'prod_3'],
         refinationType: 'full_enrichment',
       };
@@ -116,7 +116,7 @@ describe('API Endpoints', () => {
     });
 
     it('should default to full_enrichment', () => {
-      const body = {
+      const body: { productIds: string[]; refinationType?: 'full_enrichment' | 'specs_cleanup' | 'description_generation' } = {
         productIds: ['prod_1'],
         // refinationType omitted - should default
       };
@@ -246,7 +246,7 @@ describe('API Endpoints', () => {
     });
 
     it('should accept code parameter', () => {
-      const body = {
+      const body: { code?: string; context?: 'harvester' | 'refiner' | 'general' } = {
         code: 'console.log("test")',
         context: 'harvester',
       };
@@ -263,7 +263,7 @@ describe('API Endpoints', () => {
     });
 
     it('should require code parameter', () => {
-      const body = {}; // missing code
+      const body: { code?: string; context?: 'harvester' | 'refiner' | 'general' } = {}; // missing code
       const hasCode = 'code' in body;
 
       expect(hasCode).toBe(false);
@@ -277,7 +277,7 @@ describe('API Endpoints', () => {
     });
 
     it('should default context to general', () => {
-      const body = { code: 'test' };
+      const body: { code?: string; context?: 'harvester' | 'refiner' | 'general' } = { code: 'test' };
       const context = body.context || 'general';
 
       expect(context).toBe('general');

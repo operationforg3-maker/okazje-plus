@@ -3,7 +3,7 @@
  * Uses actual harvester + refiner pipeline
  */
 import { SmartHarvester } from '@/lib/automation/harvester';
-import { RefinementEngine } from '@/lib/automation/refiner';
+import { refinePendingProducts } from '@/lib/automation/refiner';
 import { adminDb } from '@/lib/firebase-admin';
 
 async function realImportFlow() {
@@ -44,7 +44,7 @@ async function realImportFlow() {
   }
 
   // Step 2: Check what was created
-  console.log(`\n\n�� Step 2: Checking database state...\n`);
+  console.log(`\n\n-> Step 2: Checking database state...\n`);
   const productsSnap = await adminDb.collection('product_cores').where('status', '==', 'pending_approval').limit(5).get();
   const dealsSnap = await adminDb.collection('deals').where('status', '==', 'approved').limit(5).get();
 
@@ -55,9 +55,8 @@ async function realImportFlow() {
   if (productsSnap.size > 0) {
     console.log(`\n\n🤖 Step 3: Running Refiner on pending products...\n`);
     try {
-      const refiner = new RefinementEngine();
-      const refinedCount = await refiner.refinePendingProducts(5); // Refine top 5
-      console.log(`✅ Refined ${refinedCount} products`);
+      const refinerJob = await refinePendingProducts();
+      console.log(`✅ Refined ${refinerJob.productsSuccessful} products, failures=${refinerJob.productsFailed}`);
     } catch (e: any) {
       console.log(`⚠️ Refiner skipped: ${e.message}`);
     }
