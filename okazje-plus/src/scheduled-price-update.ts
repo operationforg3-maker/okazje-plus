@@ -9,7 +9,8 @@
  */
 
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { getFirestore, writeBatch } from 'firebase-admin/firestore';
+import { onCall } from 'firebase-functions/v2/https';
+import { getFirestore, WriteBatch } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 
 // Type definitions
@@ -74,7 +75,6 @@ export const updatePricesDaily = onSchedule(
   {
     schedule: 'every day 03:00',
     timeZone: 'Europe/Warsaw',
-    region: 'europe-west1',
   },
   async (_event) => {
     const db = getFirestore();
@@ -99,16 +99,11 @@ export const updatePricesDaily = onSchedule(
 
       if (dealsSnapshot.empty) {
         logger.info('[Price Update] No deals to update');
-        return {
-          success: true,
-          updated: 0,
-          duration: Date.now() - startTime,
-          rate: currentRate,
-        };
+        return;
       }
 
       // Step 3: Process updates in batches
-      const batch = writeBatch(db);
+      let batch: WriteBatch = db.batch();
       let updateCount = 0;
       const maxBatchSize = 500;
       let batchOps = 0;
@@ -148,6 +143,7 @@ export const updatePricesDaily = onSchedule(
             `[Price Update] Committed batch of ${batchOps} operations`
           );
           batchOps = 0;
+          batch = db.batch();
         }
       }
 
@@ -207,7 +203,7 @@ export const manualPriceUpdate = onCall(
         .where('metadata.originalPriceUSD', '>', 0)
         .get();
 
-      const batch = writeBatch(db);
+      const batch = db.batch();
       let updateCount = 0;
       const now = new Date().toISOString();
 
@@ -249,6 +245,3 @@ export const manualPriceUpdate = onCall(
     }
   }
 );
-
-// Import for callable function
-import { onCall } from 'firebase-functions/v2/https';
