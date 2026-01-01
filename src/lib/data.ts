@@ -2725,15 +2725,14 @@ export async function getProductCoresByFilters(
 
     const snapshot = await getDocs(q);
     let products = snapshot.docs.map(doc => {
-      const baseData = doc.data() as any;
-      // Ensure ID is always present - critical for navigation!
-      const data = { 
-        id: baseData.id || doc.id, // Use baseData.id if exists, fallback to doc.id
-        ...baseData 
+      // CRITICAL: doc.data() does NOT include 'id' field - must add it manually
+      const data = {
+        ...doc.data(),
+        id: doc.id  // Always use doc.id, never doc.data().id
       } as ProductCore;
       
-      if (!data.id) {
-        console.error('[getProductCoresByFilters] Document without usable ID:', doc.ref.path);
+      if (!doc.id) {
+        console.error('[getProductCoresByFilters] Firestore doc missing ID (should never happen):', doc.ref.path);
       }
       return data;
     });
