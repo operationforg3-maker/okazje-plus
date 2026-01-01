@@ -2368,11 +2368,30 @@ export async function getAiCommandHistory(limitCount: number = 20) {
  */
 export async function getProductCore(productId: string): Promise<any | null> {
   try {
+    if (!productId || productId.trim() === '') {
+      console.error('[getProductCore] Invalid product ID provided:', productId);
+      return null;
+    }
+    
     const docRef = doc(db, "product_cores", productId);
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+    
+    if (!docSnap.exists()) {
+      console.warn(`[getProductCore] Product core not found: ${productId}`);
+      return null;
+    }
+    
+    const product = { id: docSnap.id, ...docSnap.data() };
+    
+    // Validate that product has ID after mapping
+    if (!product.id) {
+      console.error('[getProductCore] Product created without ID:', product);
+      return null;
+    }
+    
+    return product;
   } catch (err) {
-    console.error("Error fetching product core:", err);
+    console.error("[getProductCore] Error fetching product core:", err);
     return null;
   }
 }

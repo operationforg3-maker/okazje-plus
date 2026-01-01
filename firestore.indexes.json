@@ -425,6 +425,16 @@
       ]
     },
     {
+      "collectionGroup": "product_cores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "mainCategorySlug", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "deals",
       "queryScope": "COLLECTION",
       "fields": [

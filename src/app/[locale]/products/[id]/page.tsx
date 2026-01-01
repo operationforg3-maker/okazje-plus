@@ -16,6 +16,12 @@ interface PageProps {
 
 // Server-side data fetching - używa M6 ProductCore + DealM6
 async function getProductData(id: string) {
+  // Walidacja ID - zapobiegaj próbom z pustym ID
+  if (!id || id.trim() === '') {
+    console.error('[getProductData] Invalid product ID:', id);
+    return null;
+  }
+
   // Try M6 first (ProductCore + Deals)
   const m6Data = await getProductWithDeals(id);
   

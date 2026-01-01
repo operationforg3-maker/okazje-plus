@@ -449,10 +449,12 @@ export default function ProductDetailM6Client({
         </TabsContent>
       </Tabs>
 
-      {/* Comments Section */}
-      <div className="mb-8">
-        <CommentSection collectionName="products" docId={productId} />
-      </div>
+      {/* Comments Section - tylko jeśli productId istnieje */}
+      {productId && (
+        <div className="mb-8">
+          <CommentSection collectionName="products" docId={productId} />
+        </div>
+      )}
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
