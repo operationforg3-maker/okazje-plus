@@ -2725,9 +2725,15 @@ export async function getProductCoresByFilters(
 
     const snapshot = await getDocs(q);
     let products = snapshot.docs.map(doc => {
-      const data = { id: doc.id, ...doc.data() };
-      if (!doc.id) {
-        console.error('[getProductCoresByFilters] Document without ID:', doc.ref.path);
+      const baseData = doc.data() as any;
+      // Ensure ID is always present - critical for navigation!
+      const data = { 
+        id: baseData.id || doc.id, // Use baseData.id if exists, fallback to doc.id
+        ...baseData 
+      } as ProductCore;
+      
+      if (!data.id) {
+        console.error('[getProductCoresByFilters] Document without usable ID:', doc.ref.path);
       }
       return data;
     });

@@ -57,16 +57,14 @@ const getRelativeTime = (timestamp: any): string => {
 };
 
 export default function ProductListCard({ product }: ProductListCardProps) {
-  // Debug: sprawdź czy product.id istnieje
-  if (!product?.id) {
-    console.error('[ProductListCard] Product without ID:', product);
-    return null;
-  }
-
   const locale = useLocale();
   const prefix = locale ? `/${locale}` : '';
+  
+  // Ensure product has ID for links (fallback: use identityHash if no ID)
+  const productId = product.id || (product as any).identityHash || 'unknown';
+  
   const { getText } = useContentLanguage();
-  const { isFavorited, isLoading: favLoading, toggleFavorite } = useFavorites(product.id, 'product');
+  const { isFavorited, isLoading: favLoading, toggleFavorite } = useFavorites(productId, 'product');
   const { addItem, isInCart } = useSmartCart();
   const [productData, setProductData] = useState({
     relativeTime: 'niedawno',
@@ -146,7 +144,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   return (
     <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
       {/* Image - Left */}
-      <Link href={`${prefix}/products/${product.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
+      <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
         <div className="relative w-40 h-32 bg-muted">
           <Image
             src={primaryImage}
@@ -169,7 +167,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
       <div className="flex flex-col flex-grow min-w-0 justify-between">
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <Link href={`${prefix}/products/${product.id}`} className="group/title">
+            <Link href={`${prefix}/products/${productId}`} className="group/title">
               <h3 className="font-headline text-xl font-semibold group-hover/title:text-primary transition-colors line-clamp-2">
                 {displayTitle}
               </h3>
@@ -250,7 +248,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             size="sm"
             className="whitespace-nowrap"
           >
-            <Link href={`${prefix}/products/${product.id}`}>
+            <Link href={`${prefix}/products/${productId}`}>
               <ShoppingCart className="h-4 w-4 mr-1" />
               Szczegóły
             </Link>
@@ -260,16 +258,16 @@ export default function ProductListCard({ product }: ProductListCardProps) {
               size="sm"
               variant="secondary"
               onClick={() => addItem({
-                id: bestDeal?.id || product.id,
+                id: bestDeal?.id || productId,
                 name: typeof product.title === 'object' ? (product.title.pl || product.title.en || 'Produkt') : (product.title as any) || 'Produkt',
                 image: Array.isArray(product.images) ? product.images[0] : '',
                 price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
                 affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
               } as any, 1)}
-              disabled={isInCart(bestDeal?.id || product.id)}
+              disabled={isInCart(bestDeal?.id || productId)}
             >
               <ShoppingCart className="h-4 w-4 mr-1" />
-              {isInCart(product.id) ? 'W koszyku' : 'Do koszyka'}
+              {isInCart(productId) ? 'W koszyku' : 'Do koszyka'}
             </Button>
             <Button
               size="sm"
@@ -285,7 +283,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
               size="sm"
               variant="ghost"
             >
-              <Link href={`${prefix}/products/${product.id}#price-comparison`}>
+              <Link href={`${prefix}/products/${productId}#price-comparison`}>
                 <Scale className="h-4 w-4 mr-1" />
                 Porównaj
               </Link>
