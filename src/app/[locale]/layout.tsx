@@ -86,24 +86,12 @@ export default async function LocaleLayout({
   
   return (
     <>
-      {/* Theme init script - MUST run before hydration */}
+      {/* Lang attribute script - runs on client */}
       <Script
-        id="theme-init"
-        strategy="beforeInteractive"
+        id="lang-init"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
-          __html: `
-            (function(){
-              try {
-                document.documentElement.lang = '${effectiveLocale}';
-                const storageKey = 'okp_theme';
-                const theme = localStorage.getItem(storageKey) || 'system';
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
-                document.documentElement.classList.toggle('dark', isDark);
-                document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-              } catch(e) {}
-            })();
-          `,
+          __html: `document.documentElement.lang = '${effectiveLocale}';`,
         }}
       />
 
@@ -111,7 +99,7 @@ export default async function LocaleLayout({
       <Script
         id="schema-website"
         type="application/ld+json"
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -136,7 +124,7 @@ export default async function LocaleLayout({
       <Script
         id="schema-organization"
         type="application/ld+json"
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
