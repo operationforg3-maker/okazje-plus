@@ -345,9 +345,9 @@ function AdminPage() {
         <div className="flex gap-2">
           <ExchangeRateAlert />
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/setup">
+            <Link href="/admin/settings">
               <Settings className="h-4 w-4 mr-2" />
-              Setup & Seeding
+              Ustawienia
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
@@ -361,7 +361,7 @@ function AdminPage() {
 
       {/* Quick Action Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/admin/deals">
+        <Link href="/admin/m6-import-dashboard">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-orange-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Okazje</CardTitle>
@@ -385,7 +385,7 @@ function AdminPage() {
           </Card>
         </Link>
 
-        <Link href="/admin/products">
+        <Link href="/admin/m6-import-dashboard">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Produkty</CardTitle>
@@ -430,16 +430,16 @@ function AdminPage() {
           </Card>
         </Link>
 
-        <Link href="/admin/forum/moderation">
+        <Link href="/admin/moderation">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Forum</CardTitle>
+              <CardTitle className="text-sm font-medium">Moderacja</CardTitle>
               <MessageSquare className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Aktywne</div>
+              <div className="text-2xl font-bold">Aktywna</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Moderacja wątków
+                Panel moderacji
               </p>
             </CardContent>
           </Card>
@@ -1044,18 +1044,11 @@ function AdminPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Link 
-              href="/admin/deals" 
+              href="/admin/m6-import-dashboard" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <Flame className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Okazje</span>
-            </Link>
-            <Link 
-              href="/admin/products" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <ShoppingCart className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Produkty</span>
+              <span className="text-sm font-medium text-center">M6 System</span>
             </Link>
             <Link 
               href="/admin/moderation" 
@@ -1072,11 +1065,11 @@ function AdminPage() {
               <span className="text-sm font-medium text-center">Użytkownicy</span>
             </Link>
             <Link 
-              href="/admin/categories" 
+              href="/admin/analytics" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
-              <Package className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Kategorie</span>
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <span className="text-sm font-medium text-center">Analityka</span>
             </Link>
             <Link 
               href="/admin/aliexpress-import" 
