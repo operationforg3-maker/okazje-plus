@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-server';
-import { db } from '@/lib/firebase';
-import { collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 
 /**
  * GET /api/admin/refiner-logs
@@ -36,30 +35,26 @@ export async function GET(request: NextRequest) {
     const limitParam = Math.min(500, parseInt(searchParams.get('limit') || '100'));
 
     // Query refiner_jobs to get logs
-    const jobsRef = collection(db, 'refiner_jobs');
+    const jobsRef = adminDb.collection('refiner_jobs');
     
-    let q;
+    let snapshot;
     if (jobId) {
-      // Get logs from specific job
-      q = query(
-        jobsRef,
-        where('id', '==', jobId),
-        limit(1)
-      );
+      // Get logs from specific job by document ID
+      const docSnap = await jobsRef.doc(jobId).get();
+      snapshot = docSnap.exists ? [docSnap] : [];
     } else {
       // Get logs from most recent jobs
-      q = query(
-        jobsRef,
-        orderBy('startedAt', 'desc'),
-        limit(5) // Get last 5 jobs
-      );
+      const querySnap = await jobsRef
+        .orderBy('startedAt', 'desc')
+        .limit(5)
+        .get();
+      snapshot = querySnap.docs;
     }
 
-    const snapshot = await getDocs(q);
     const logs: any[] = [];
 
     // Flatten logs from all matched jobs
-    snapshot.docs.forEach(doc => {
+    snapshot.forEach((doc: any) => {
       const job = doc.data();
       if (job.logs && Array.isArray(job.logs)) {
         job.logs.forEach((log: any) => {
