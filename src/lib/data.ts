@@ -1295,7 +1295,10 @@ export async function createDeal(data: Omit<Deal, 'id' | 'postedAt' | 'createdAt
   
   const dealId = docRef.id;
   
+  // Social media automation removed - was auto-queuing hot deals
   // Auto-queue hot deals to social media (if enabled and deal is approved)
+  // Commented out after removing social media features in audit 2026-01
+  /*
   if (data.status === 'approved' && data.temperature && data.temperature > 500) {
     try {
       const { autoQueueHotDeal } = await import('./social-automation');
@@ -1319,6 +1322,7 @@ export async function createDeal(data: Omit<Deal, 'id' | 'postedAt' | 'createdAt
       console.error('Failed to auto-queue hot deal to social media:', error);
     }
   }
+  */
   
   return dealId;
 }

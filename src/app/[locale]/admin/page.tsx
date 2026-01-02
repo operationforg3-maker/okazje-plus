@@ -843,7 +843,7 @@ function AdminPage() {
                 </CardDescription>
               </div>
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin/deals">
+                <Link href="/admin/m6-import-dashboard">
                   Zobacz wszystkie
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
@@ -901,7 +901,7 @@ function AdminPage() {
                 </CardDescription>
               </div>
               <Button asChild variant="outline" size="sm">
-                <Link href="/admin/products">
+                <Link href="/admin/m6-import-dashboard">
                   Zobacz wszystkie
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Link>
