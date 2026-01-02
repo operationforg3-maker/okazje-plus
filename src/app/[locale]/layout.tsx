@@ -72,8 +72,10 @@ export default async function RootLayout({
   const effectiveLocale = locale || 'pl';
   const messages = await getMessages();
   
+  // Użyj useEffect aby ustawić lang attribute dynamicznie
+  // to unika hydration mismatch z SSR
   return (
-    <html lang={effectiveLocale} suppressHydrationWarning>
+    <>
       <head>
                 {/* Instant theme init to avoid flash */}
                 <script
@@ -81,6 +83,9 @@ export default async function RootLayout({
                     __html: `
                       (function(){
                         try {
+                          // Set lang attribute
+                          document.documentElement.lang = '${effectiveLocale}';
+                          // Theme
                           const storageKey = 'okp_theme';
                           const theme = localStorage.getItem(storageKey) || 'system';
                           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -192,30 +197,25 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body 
-        suppressHydrationWarning
-        className={cn('min-h-screen bg-background font-body antialiased')}
-        style={{ WebkitOverflowScrolling: 'touch' }}>
-        <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
-          <AuthProvider>
-            <CurrencyProvider>
-              <SmartCartProvider>
-                <div className="flex flex-col min-h-screen w-full">
-                  <ConditionalNav>
-                    <main className="flex-1 w-full">
-                      {children}
-                    </main>
-                  </ConditionalNav>
-                  <ComparisonListener />
-                  <ExtensionWarningBanner />
-                  <CashbackWarningModal />
-                  <Toaster />
-                </div>
-              </SmartCartProvider>
-            </CurrencyProvider>
-          </AuthProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+      <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
+        <AuthProvider>
+          <CurrencyProvider>
+            <SmartCartProvider>
+              <div className="flex flex-col min-h-screen w-full">
+                <ConditionalNav>
+                  <main className="flex-1 w-full">
+                    {children}
+                  </main>
+                </ConditionalNav>
+                <ComparisonListener />
+                <ExtensionWarningBanner />
+                <CashbackWarningModal />
+                <Toaster />
+              </div>
+            </SmartCartProvider>
+          </CurrencyProvider>
+        </AuthProvider>
+      </NextIntlClientProvider>
+    </>
   );
 }

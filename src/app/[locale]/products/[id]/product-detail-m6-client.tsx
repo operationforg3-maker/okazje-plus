@@ -88,9 +88,10 @@ export default function ProductDetailM6Client({
     ? (productData.title.pl || productData.title.en || 'Produkt')
     : ('title' in productData ? productData.title : 'Produkt');
     
-  const description = typeof productData.description === 'string'
-    ? productData.description
-    : (productData?.shortDescription?.pl || productData?.fullDescription?.pl || (isM6 ? productCore?.description?.pl : product?.description) || '');
+  // Spójne rozwiązanie description z page.tsx metadata
+  const description = isM6 
+    ? (typeof productCore?.description === 'object' ? (productCore.description.pl || productCore.description.en || '') : (typeof productCore?.description === 'string' ? productCore.description : ''))
+    : (product?.description || '');
 
   // Images - M6 has images array, legacy has single image
   const imageUrls = isM6 
