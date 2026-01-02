@@ -5,24 +5,14 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
-  Flame,
-  ShoppingCart,
   Users,
   Layers,
   FileBarChart,
   Settings,
-  Upload,
-  Download,
-  Search,
-  MessageSquare,
   AlertTriangle,
   TrendingUp,
-  Database,
   Zap,
   ChevronRight,
-  Sparkles,
-  Combine,
-  Share2,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -54,53 +44,19 @@ const navStructure: (NavItem | NavGroup)[] = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Zawartość',
-    icon: Database,
-    items: [
-      { title: 'Okazje', href: '/admin/deals', icon: Flame },
-      { title: 'Produkty', href: '/admin/products', icon: ShoppingCart },
-      { title: 'Kategorie', href: '/admin/categories', icon: Layers },
-    ],
-  },
-  {
-    title: 'Import & Export',
-    icon: Upload,
-    items: [
-      { title: 'Import/Export Console', href: '/admin/import-export', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
-      { title: 'AliExpress Import', href: '/admin/aliexpress-import', icon: Search, badge: 'AI', badgeVariant: 'secondary' },
-      { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
-    ],
-  },
-  {
-    title: 'Legacy Tools (Archived)',
-    icon: Download,
-    items: [
-      { title: 'Allegro Import', href: '/admin/allegro-import', icon: Search },
-      { title: 'Amazon Import', href: '/admin/amazon-import', icon: Search },
-      { title: 'Convertiser Import', href: '/admin/convertiser-import', icon: Zap },
-      { title: 'eBay Import', href: '/admin/ebay-import', icon: Search },
-      { title: 'Bulk Import', href: '/admin/bulk-import', icon: Database },
-      { title: 'Batch Import', href: '/admin/batch-import', icon: Layers },
-      { title: 'Kombajn', href: '/admin/harvester', icon: Combine },
-      { title: 'Auto-Import Kombajn', href: '/admin/auto-import', icon: Sparkles },
-      { title: 'Smart Import', href: '/admin/smart-import', icon: Zap },
-      { title: 'Deals Import', href: '/admin/deals-import', icon: Flame },
-    ],
-  },
-  {
     title: 'Moderacja',
     icon: AlertTriangle,
     items: [
-      { title: 'Panel Moderacji', href: '/admin/moderation', icon: AlertTriangle, badge: '0' },
-      { title: 'Duplikaty', href: '/admin/duplicates', icon: Search },
+      { title: 'Panel Moderacji', href: '/admin/moderation', icon: AlertTriangle },
     ],
   },
   {
-    title: 'Użytkownicy',
-    icon: Users,
+    title: 'M6 System',
+    icon: Zap,
     items: [
-      { title: 'Lista użytkowników', href: '/admin/users', icon: Users },
-      { title: 'Pre-rejestracje', href: '/admin/pre-registrations', icon: Users },
+      { title: 'Import Dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp },
+      { title: 'Pipeline Visualizer', href: '/admin/m6-pipeline-visualizer', icon: Layers },
+      { title: 'UI Guide', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
     ],
   },
   {
@@ -112,26 +68,11 @@ const navStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
-    title: 'Marketing',
-    icon: Share2,
+    title: 'Użytkownicy',
+    icon: Users,
     items: [
-      { title: 'Social Media', href: '/admin/social-media', icon: Share2, badge: 'NEW', badgeVariant: 'default' },
-    ],
-  },
-  {
-    title: 'System',
-    icon: Database,
-    items: [
-      { title: 'Inwentarz Narzędzi', href: '/admin/tools-inventory', icon: FileBarChart, badge: 'NEW', badgeVariant: 'secondary' },
-    ],
-  },
-  {
-    title: 'M6 System',
-    icon: Zap,
-    items: [
-      { title: 'Import Dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp, badge: 'NEW', badgeVariant: 'default' },
-      { title: 'Pipeline Visualizer', href: '/admin/m6-pipeline-visualizer', icon: Layers, badge: 'NEW', badgeVariant: 'default' },
-      { title: 'UI Guide', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
+      { title: 'Lista użytkowników', href: '/admin/users', icon: Users },
+      { title: 'Pre-rejestracje', href: '/admin/pre-registrations', icon: Users },
     ],
   },
   {
@@ -139,8 +80,6 @@ const navStructure: (NavItem | NavGroup)[] = [
     icon: Settings,
     items: [
       { title: 'Ustawienia', href: '/admin/settings', icon: Settings },
-      { title: 'Setup & Seeding', href: '/admin/setup', icon: Database },
-      { title: 'Nawigacja', href: '/admin/navigation', icon: Layers },
     ],
   },
 ];
