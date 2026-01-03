@@ -1661,262 +1661,243 @@ export async function getUnreadNotificationsCount(userId: string): Promise<numbe
  * Cached for 15 minutes to reduce load
  */
 export async function getAdminDashboardStats() {
-  // Cache admin stats for 15 minutes
+  // Cache admin stats for 5 minutes
   const cacheKey = 'admin:dashboard:stats';
   const cached = await cacheGet(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const now = new Date();
-  const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-  // Podstawowe liczniki
-  const counts = await getCounts();
-
-  // Pending moderation
-  const pendingDealsQuery = query(
-    collection(db, 'deals'),
-    where('status', 'in', ['draft', 'pending'])
-  );
-  const pendingProductsQuery = query(
-    collection(db, 'products'),
-    where('status', 'in', ['draft', 'pending'])
-  );
-
-  const [pendingDealsCount, pendingProductsCount] = await Promise.all([
-    getCountFromServer(pendingDealsQuery),
-    getCountFromServer(pendingProductsQuery)
-  ]);
-
-  // Nowe w ostatnich 24h
-  const newDealsQuery = query(
-    collection(db, 'deals'),
-    where('createdAt', '>=', last24Hours.toISOString())
-  );
-  const newUsersQuery = query(
-    collection(db, 'users'),
-    where('createdAt', '>=', last24Hours.toISOString())
-  );
-
-  const [newDealsCount, newUsersCount] = await Promise.all([
-    getCountFromServer(newDealsQuery),
-    getCountFromServer(newUsersQuery)
-  ]);
-
-  // Aktywne w ostatnich 7 dniach (deals z komentarzami lub głosami)
-  const recentDealsQuery = query(
-    collection(db, 'deals'),
-    where('updatedAt', '>=', last7Days.toISOString()),
-    orderBy('updatedAt', 'desc'),
-    limit(100)
-  );
-  const recentDealsSnapshot = await getDocs(recentDealsQuery);
-  const recentDeals = recentDealsSnapshot.docs.map(docToDeal);
-
-  // Średnia temperatura z aktywnych deals
-  const avgTemperature = recentDeals.length > 0
-    ? Math.round(recentDeals.reduce((sum, deal) => sum + (deal.temperature || 0), 0) / recentDeals.length)
-    : 0;
-
-  // Top kategorie (z approved deals)
-  const allDealsQuery = query(
-    collection(db, 'deals'),
-    where('status', '==', 'approved'),
-    limit(500)
-  );
-  const allDealsSnapshot = await getDocs(allDealsQuery);
-  const allDeals = allDealsSnapshot.docs.map(docToDeal);
-
-  const categoryCount: Record<string, number> = {};
-  allDeals.forEach(deal => {
-    const cat = deal.mainCategorySlug || 'other';
-    categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-  });
-
-  const topCategories = Object.entries(categoryCount)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 5)
-    .map(([slug, count]) => ({ slug, count }));
-
-  // Analytics z Firestore (views, clicks)
-  const analyticsQuery = query(
-    collection(db, 'analytics'),
-    where('timestamp', '>=', last7Days.toISOString()),
-    limit(10000)
-  );
-  
-  let totalViews = 0;
-  let totalClicks = 0;
-  let totalShares = 0;
-  let todayViews = 0;
-  let todayClicks = 0;
-  let prev7DaysViews = 0;
-  let prev7DaysClicks = 0;
-  
   try {
-    const analyticsSnapshot = await getDocs(analyticsQuery);
-    const events = analyticsSnapshot.docs.map(doc => doc.data());
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // Podstawowe liczniki
+    const counts = await getCounts();
+
+    // Pending: prostsze zapytania bez compound indexes
+    let pendingDeals = 0;
+    let pendingProducts = 0;
     
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const prev7DaysStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    try {
+      // Deals pending
+      const pendingDealsSnap = await getDocs(
+        query(collection(db, 'deals'), where('status', '==', 'pending'))
+      );
+      pendingDeals = pendingDealsSnap.size;
+    } catch (e) {
+      console.warn('Pending deals query failed:', e);
+    }
+
+    try {
+      // Products pending
+      const pendingProductsSnap = await getDocs(
+        query(collection(db, 'products'), where('status', '==', 'pending'))
+      );
+      pendingProducts = pendingProductsSnap.size;
+    } catch (e) {
+      console.warn('Pending products query failed:', e);
+    }
+
+    // Nowe w ostatnich 24h
+    let newDeals24h = 0;
+    let newUsers24h = 0;
     
-    events.forEach((event: any) => {
-      const eventDate = new Date(event.timestamp);
+    try {
+      const newDealsSnap = await getDocs(
+        query(collection(db, 'deals'), where('createdAt', '>=', last24Hours))
+      );
+      newDeals24h = newDealsSnap.size;
+    } catch (e) {
+      console.warn('New deals 24h query failed:', e);
+    }
+
+    try {
+      const newUsersSnap = await getDocs(
+        query(collection(db, 'users'), where('createdAt', '>=', last24Hours))
+      );
+      newUsers24h = newUsersSnap.size;
+    } catch (e) {
+      console.warn('New users 24h query failed:', e);
+    }
+
+    // Top kategorie (statyczne, bez compound queries)
+    const topCategories: Array<{ slug: string; count: number }> = [];
+    
+    try {
+      const allDealsSnap = await getDocs(
+        query(collection(db, 'deals'), where('status', '==', 'approved'), limit(1000))
+      );
       
-      if (event.type === 'view') {
-        totalViews++;
-        if (eventDate >= todayStart) todayViews++;
-        if (eventDate >= prev7DaysStart && eventDate < last7Days) prev7DaysViews++;
+      const categoryCount: Record<string, number> = {};
+      allDealsSnap.docs.forEach(doc => {
+        const deal = doc.data() as Deal;
+        const cat = deal.mainCategorySlug || 'other';
+        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+      });
+
+      Object.entries(categoryCount)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .forEach(([slug, count]) => {
+          topCategories.push({ slug, count });
+        });
+    } catch (e) {
+      console.warn('Top categories query failed:', e);
+    }
+
+    // Średnia temperatura z recent deals
+    let avgTemperature = 0;
+    let recentActivityCount = 0;
+    
+    try {
+      const recentSnap = await getDocs(
+        query(collection(db, 'deals'), where('status', '==', 'approved'), limit(100))
+      );
+      
+      const deals = recentSnap.docs.map(doc => doc.data() as Deal);
+      recentActivityCount = deals.length;
+      
+      if (deals.length > 0) {
+        const tempSum = deals.reduce((sum, d) => sum + (d.temperature || 0), 0);
+        avgTemperature = Math.round(tempSum / deals.length);
       }
-      if (event.type === 'click') {
-        totalClicks++;
-        if (eventDate >= todayStart) todayClicks++;
-        if (eventDate >= prev7DaysStart && eventDate < last7Days) prev7DaysClicks++;
+    } catch (e) {
+      console.warn('Recent activity query failed:', e);
+    }
+
+    // Growth calculations (simplified - bez compound queries)
+    const dealsGrowth = await calculateGrowth('deals', 30).catch(() => 0);
+    const productsGrowth = await calculateGrowth('products', 30).catch(() => 0);
+    const usersGrowth = await calculateGrowth('users', 30).catch(() => 0);
+
+    // Analytics (graceful degradation)
+    let analyticsData = {
+      views: { total: 0, today: 0, trend: 0 },
+      clicks: { total: 0, today: 0, trend: 0 },
+      shares: { total: 0 },
+      conversionRate: 0
+    };
+
+    try {
+      const analyticsSnap = await getDocs(
+        query(collection(db, 'analytics'), limit(5000))
+      );
+      
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      let todayViews = 0;
+      let todayClicks = 0;
+
+      analyticsSnap.docs.forEach(doc => {
+        const event = doc.data();
+        if (event.type === 'view') {
+          analyticsData.views.total++;
+          const eventDate = event.timestamp instanceof Object && 'toDate' in event.timestamp
+            ? (event.timestamp as any).toDate()
+            : new Date(event.timestamp);
+          if (eventDate >= todayStart) todayViews++;
+        }
+        if (event.type === 'click') {
+          analyticsData.clicks.total++;
+          const eventDate = event.timestamp instanceof Object && 'toDate' in event.timestamp
+            ? (event.timestamp as any).toDate()
+            : new Date(event.timestamp);
+          if (eventDate >= todayStart) todayClicks++;
+        }
+        if (event.type === 'share') analyticsData.shares.total++;
+      });
+
+      analyticsData.views.today = todayViews;
+      analyticsData.clicks.today = todayClicks;
+      analyticsData.conversionRate = analyticsData.views.total > 0
+        ? Math.round((analyticsData.clicks.total / analyticsData.views.total) * 1000) / 10
+        : 0;
+    } catch (e) {
+      console.warn('Analytics query failed (using defaults):', e);
+    }
+
+    // Categories stats
+    let categoriesStats = { total: 0, main: 0, sub: 0, subSub: 0 };
+    try {
+      const catSnap = await getDocs(collection(db, 'categories'));
+      categoriesStats.main = catSnap.size;
+    } catch (e) {
+      console.warn('Categories stats query failed:', e);
+    }
+
+    // Harvester/Import stats
+    const importsStats = { running: 0, queued: 0, completed24h: 0, failed24h: 0 };
+    try {
+      const jobsSnap = await getDocs(collection(db, 'import_jobs'));
+      jobsSnap.docs.forEach(doc => {
+        const job = doc.data();
+        if (job.status === 'running') importsStats.running++;
+        if (job.status === 'queued') importsStats.queued++;
+        if (job.status === 'completed') importsStats.completed24h++;
+        if (job.status === 'failed') importsStats.failed24h++;
+      });
+    } catch (e) {
+      console.warn('Import jobs stats query failed:', e);
+    }
+
+    const stats = {
+      totals: counts,
+      pending: {
+        deals: pendingDeals,
+        products: pendingProducts,
+      },
+      new24h: {
+        deals: newDeals24h,
+        users: newUsers24h,
+      },
+      avgTemperature,
+      topCategories,
+      recentActivity: recentActivityCount,
+      analytics: analyticsData,
+      growth: {
+        deals: dealsGrowth,
+        products: productsGrowth,
+        users: usersGrowth
+      },
+      categories: categoriesStats,
+      imports: importsStats,
+      harvester: {
+        running: importsStats.running,
+        created24h: importsStats.completed24h
       }
-      if (event.type === 'share') {
-        totalShares++;
-      }
+    };
+
+    // Cache stats for 5 minutes (300 seconds) - shorter TTL for more fresh data
+    await cacheSet(cacheKey, stats, 300).catch(() => {
+      console.warn('Cache set failed, continuing without cache');
     });
+
+    return stats;
   } catch (error) {
-    console.warn('Analytics query failed:', error);
-    // Continue with zeros
-  }
-
-  // Oblicz trendy (porównanie z poprzednim tygodniem)
-  const viewsTrend = prev7DaysViews > 0 
-    ? Math.round(((totalViews - prev7DaysViews) / prev7DaysViews) * 100) 
-    : 0;
-  const clicksTrend = prev7DaysClicks > 0 
-    ? Math.round(((totalClicks - prev7DaysClicks) / prev7DaysClicks) * 100) 
-    : 0;
-
-  // Oblicz growth dla pozostałych metryk (na podstawie danych z ostatnich 30 dni)
-  const dealsGrowth = await calculateGrowth('deals', 30);
-  const productsGrowth = await calculateGrowth('products', 30);
-  const usersGrowth = await calculateGrowth('users', 30);
-
-  // Categories statistics
-  let categoriesStats = { total: 0, main: 0, sub: 0, subSub: 0 };
-  try {
-    const categoriesQuery = query(collection(db, 'categories'));
-    const categoriesSnapshot = await getDocs(categoriesQuery);
+    console.error('Error fetching admin dashboard stats:', error);
     
-    // Zliczamy dokumenty głównych kategorii
-    categoriesStats.main = categoriesSnapshot.size;
-    
-    // Dla podkategorii i pod-podkategorii musimy sprawdzić zagnieżdżone kolekcje
-    let totalSub = 0;
-    let totalSubSub = 0;
-    
-    for (const catDoc of categoriesSnapshot.docs) {
-      const catId = catDoc.id;
-      
-      // Podkategorie jako subcollection
-      const subCatsSnapshot = await getDocs(collection(db, 'categories', catId, 'subcategories'));
-      totalSub += subCatsSnapshot.size;
-      
-      // Pod-podkategorie dla każdej podkategorii (też w 'subcategories')
-      for (const subDoc of subCatsSnapshot.docs) {
-        const subId = subDoc.id;
-        const subSubSnapshot = await getDocs(collection(db, 'categories', catId, 'subcategories', subId, 'subcategories'));
-        totalSubSub += subSubSnapshot.size;
-      }
-    }
-    
-    categoriesStats.sub = totalSub;
-    categoriesStats.subSub = totalSubSub;
-    categoriesStats.total = categoriesStats.main + categoriesStats.sub + categoriesStats.subSub;
-  } catch (error) {
-    console.warn('Categories stats query failed:', error);
-  }
-
-  // Import jobs statistics
-  let importsStats = { running: 0, queued: 0, completed24h: 0, failed24h: 0 };
-  try {
-    const runningQuery = query(
-      collection(db, 'import_jobs'),
-      where('status', '==', 'running')
-    );
-    const queuedQuery = query(
-      collection(db, 'import_jobs'),
-      where('status', '==', 'queued')
-    );
-    const completed24hQuery = query(
-      collection(db, 'import_jobs'),
-      where('status', '==', 'completed'),
-      where('completedAt', '>=', last24Hours.toISOString())
-    );
-    const failed24hQuery = query(
-      collection(db, 'import_jobs'),
-      where('status', '==', 'failed'),
-      where('completedAt', '>=', last24Hours.toISOString())
-    );
-
-    const [runningCount, queuedCount, completed24hCount, failed24hCount] = await Promise.all([
-      getCountFromServer(runningQuery),
-      getCountFromServer(queuedQuery),
-      getCountFromServer(completed24hQuery),
-      getCountFromServer(failed24hQuery)
-    ]);
-
-    importsStats.running = runningCount.data().count;
-    importsStats.queued = queuedCount.data().count;
-    importsStats.completed24h = completed24hCount.data().count;
-    importsStats.failed24h = failed24hCount.data().count;
-  } catch (error) {
-    console.warn('Import jobs stats query failed:', error);
-  }
-
-  const stats = {
-    totals: counts,
-    pending: {
-      deals: pendingDealsCount.data().count,
-      products: pendingProductsCount.data().count,
-    },
-    new24h: {
-      deals: newDealsCount.data().count,
-      users: newUsersCount.data().count,
-    },
-    avgTemperature,
-    topCategories,
-    recentActivity: recentDeals.length,
-    analytics: {
-      views: {
-        total: totalViews,
-        today: todayViews,
-        trend: viewsTrend
+    // Return safe defaults instead of crashing
+    const counts = await getCounts().catch(() => ({ products: 0, deals: 0, users: 0 }));
+    return {
+      totals: counts,
+      pending: { deals: 0, products: 0 },
+      new24h: { deals: 0, users: 0 },
+      avgTemperature: 0,
+      topCategories: [],
+      recentActivity: 0,
+      analytics: {
+        views: { total: 0, today: 0, trend: 0 },
+        clicks: { total: 0, today: 0, trend: 0 },
+        shares: { total: 0 },
+        conversionRate: 0
       },
-      clicks: {
-        total: totalClicks,
-        today: todayClicks,
-        trend: clicksTrend
-      },
-      shares: {
-        total: totalShares
-      },
-      conversionRate: totalViews > 0 ? Math.round((totalClicks / totalViews) * 1000) / 10 : 0
-    },
-    growth: {
-      deals: dealsGrowth,
-      products: productsGrowth,
-      users: usersGrowth
-    },
-    categories: categoriesStats,
-    imports: importsStats,
-    harvester: {
-      running: importsStats.running,
-      created24h: importsStats.completed24h
-    }
-  };
-
-  // Cache stats for 15 minutes (900 seconds)
-  await cacheSet(cacheKey, stats, 900);
-
-  return stats;
+      growth: { deals: 0, products: 0, users: 0 },
+      categories: { total: 0, main: 0, sub: 0, subSub: 0 },
+      imports: { running: 0, queued: 0, completed24h: 0, failed24h: 0 },
+      harvester: { running: 0, created24h: 0 }
+    };
+  }
 }
 
 /**
