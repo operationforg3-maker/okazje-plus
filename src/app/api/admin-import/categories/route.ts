@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dryRunImportCategories, runImportCategories, CategoriesPayloadSchema } from "@/app/admin/categories-import/actions";
+import { dryRunImportCategories, runImportCategories, CategoriesPayloadSchema } from "../../../admin/categories-import/actions";
 import { requireRole } from "@/lib/auth-admin";
 
 export async function POST(req: NextRequest) {

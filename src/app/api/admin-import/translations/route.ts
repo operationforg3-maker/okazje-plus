@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { TranslationsPayloadSchema, dryRunTranslate, runTranslate } from "@/app/admin/translations/actions";
+import { TranslationsPayloadSchema, dryRunTranslate, runTranslate } from "../../../admin/translations/actions";
 import { requireRole } from "@/lib/auth-admin";
 
 export async function POST(req: NextRequest) {
