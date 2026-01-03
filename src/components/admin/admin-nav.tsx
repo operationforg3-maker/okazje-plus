@@ -72,22 +72,6 @@ const navStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
-    title: 'Legacy Tools (Archived)',
-    icon: Download,
-    items: [
-      { title: 'Allegro Import', href: '/admin/allegro-import', icon: Search },
-      { title: 'Amazon Import', href: '/admin/amazon-import', icon: Search },
-      { title: 'Convertiser Import', href: '/admin/convertiser-import', icon: Zap },
-      { title: 'eBay Import', href: '/admin/ebay-import', icon: Search },
-      { title: 'Bulk Import', href: '/admin/bulk-import', icon: Database },
-      { title: 'Batch Import', href: '/admin/batch-import', icon: Layers },
-      { title: 'Kombajn', href: '/admin/harvester', icon: Combine },
-      { title: 'Auto-Import Kombajn', href: '/admin/auto-import', icon: Sparkles },
-      { title: 'Smart Import', href: '/admin/smart-import', icon: Zap },
-      { title: 'Deals Import', href: '/admin/deals-import', icon: Flame },
-    ],
-  },
-  {
     title: 'Moderacja',
     icon: AlertTriangle,
     items: [
