@@ -4,6 +4,16 @@
       "collectionGroup": "deals",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "productCoreId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "price.amount", "order": "ASCENDING" },
+        { "fieldPath": "__name__", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "deals",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "temperature", "order": "DESCENDING" },
         { "fieldPath": "__name__", "order": "ASCENDING" }
