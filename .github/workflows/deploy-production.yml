@@ -70,8 +70,8 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> $GITHUB_ENV
           firebase experiments:enable webframeworks
 
-      - name: Deploy Hosting + Functions + Firestore Indexes
-        run: firebase deploy --only hosting,functions,firestore:indexes --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive
+      - name: Deploy Hosting + Functions
+        run: firebase deploy --only hosting,functions --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive
 
       - name: Cleanup key
         if: always()
