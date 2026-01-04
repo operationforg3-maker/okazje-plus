@@ -621,7 +621,7 @@ export async function searchDeals(searchTerm: string): Promise<Deal[]> {
 export async function getCounts(): Promise<{ products: number; deals: number; users: number }> {
   try {
     const [productsSnap, dealsSnap, usersSnap] = await Promise.all([
-      getCountFromServer(query(collection(db, 'products'), where('status', '==', 'approved'))),
+      getCountFromServer(query(collection(db, 'product_cores'), where('status', '==', 'approved'))),
       getCountFromServer(query(collection(db, 'deals'), where('status', '==', 'approved'))),
       getCountFromServer(collection(db, 'users')),
     ]);
@@ -1671,6 +1671,7 @@ export async function getAdminDashboardStats() {
   try {
     const now = new Date();
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const last24HoursIso = last24Hours.toISOString();
 
     // Podstawowe liczniki
     const counts = await getCounts();
@@ -1680,21 +1681,25 @@ export async function getAdminDashboardStats() {
     let pendingProducts = 0;
     
     try {
-      // Deals pending
-      const pendingDealsSnap = await getDocs(
-        query(collection(db, 'deals'), where('status', '==', 'pending'))
+      const pendingDealStatuses = ['pending', 'draft'];
+      const pendingSnapshots = await Promise.all(
+        pendingDealStatuses.map(status =>
+          getCountFromServer(query(collection(db, 'deals'), where('status', '==', status)))
+        )
       );
-      pendingDeals = pendingDealsSnap.size;
+      pendingDeals = pendingSnapshots.reduce((sum, snap) => sum + (snap?.data()?.count ?? 0), 0);
     } catch (e) {
       console.warn('Pending deals query failed:', e);
     }
 
     try {
-      // Products pending
-      const pendingProductsSnap = await getDocs(
-        query(collection(db, 'products'), where('status', '==', 'pending'))
+      const pendingProductStatuses = ['pending_approval', 'draft'];
+      const pendingProductSnaps = await Promise.all(
+        pendingProductStatuses.map(status =>
+          getCountFromServer(query(collection(db, 'product_cores'), where('status', '==', status)))
+        )
       );
-      pendingProducts = pendingProductsSnap.size;
+      pendingProducts = pendingProductSnaps.reduce((sum, snap) => sum + (snap?.data()?.count ?? 0), 0);
     } catch (e) {
       console.warn('Pending products query failed:', e);
     }
@@ -1705,7 +1710,7 @@ export async function getAdminDashboardStats() {
     
     try {
       const newDealsSnap = await getDocs(
-        query(collection(db, 'deals'), where('createdAt', '>=', last24Hours))
+        query(collection(db, 'deals'), where('createdAt', '>=', last24HoursIso))
       );
       newDeals24h = newDealsSnap.size;
     } catch (e) {
@@ -1768,7 +1773,7 @@ export async function getAdminDashboardStats() {
 
     // Growth calculations (simplified - bez compound queries)
     const dealsGrowth = await calculateGrowth('deals', 30).catch(() => 0);
-    const productsGrowth = await calculateGrowth('products', 30).catch(() => 0);
+    const productsGrowth = await calculateGrowth('product_cores', 30).catch(() => 0);
     const usersGrowth = await calculateGrowth('users', 30).catch(() => 0);
 
     // Analytics (graceful degradation)
