@@ -37,6 +37,11 @@ export function Navbar() {
     setIsMounted(true);
   }, []);
 
+  // Debug log
+  React.useEffect(() => {
+    console.log('[Navbar] Auth state:', { user: !!user, loading, isMounted, email: user?.email });
+  }, [user, loading, isMounted]);
+
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
