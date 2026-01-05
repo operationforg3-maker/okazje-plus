@@ -54,6 +54,16 @@ export function UserNav() {
     );
   }
 
+  // Fallback if user object is malformed
+  if (!user.email && !user.displayName) {
+    return (
+      <Button variant="outline" className="rounded-full gap-2">
+        <UserIcon className="h-4 w-4" />
+        <span>Profil</span>
+      </Button>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       <NotificationBell />
@@ -61,12 +71,12 @@ export function UserNav() {
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="relative h-10 w-10 rounded-full ring-1 ring-border/40 hover:ring-primary/60"
+            className="relative h-10 w-10 rounded-full p-0 ring-1 ring-border/40 hover:ring-primary/60 hover:bg-muted/50"
             aria-label="Menu użytkownika"
           >
             <Avatar className="h-10 w-10">
-              {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
-              <AvatarFallback className="bg-primary text-white">
+              {user?.photoURL && <AvatarImage src={user.photoURL} alt={user?.displayName || 'User'} />}
+              <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                 {user?.displayName ? user.displayName.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : 'U')}
               </AvatarFallback>
             </Avatar>
