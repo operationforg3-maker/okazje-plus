@@ -16,11 +16,12 @@ interface PageProps {
 
 // Server-side data fetching - używa M6 ProductCore + DealM6
 async function getProductData(id: string) {
-  // Walidacja ID - zapobiegaj próbom z pustym ID
-  if (!id || id.trim() === '') {
-    console.error('[getProductData] Invalid product ID:', id);
-    return null;
-  }
+  try {
+    // Walidacja ID - zapobiegaj próbom z pustym ID
+    if (!id || id.trim() === '') {
+      console.error('[getProductData] Invalid product ID:', id);
+      return null;
+    }
 
   // Try M6 first (ProductCore + Deals)
   const m6Data = await getProductWithDeals(id);
@@ -53,9 +54,16 @@ async function getProductData(id: string) {
       : Promise.resolve([]);
     
     // Fetch recent ratings (still using product ID)
-    const [resolvedRelated, recentRatings] = await Promise.all([
+    let recentRatings: ProductRating[] = [];
+    try {
+      recentRatings = await getProductRatings(id, 5);
+    } catch (err) {
+      console.error('[getProductData] Error fetching ratings for M6:', err);
+      recentRatings = [];
+    }
+    
+    const [resolvedRelated] = await Promise.all([
       relatedProducts,
-      getProductRatings(id, 5),
     ]);
     
     return { productCore, deals, relatedProducts: resolvedRelated, recentRatings, isM6: true };
@@ -80,23 +88,41 @@ async function getProductData(id: string) {
     discountPercent: productData.discountPercent ?? undefined,
   } as Product;
   
-  // Fetch related products from same subcategory
-  const relatedQuery = query(
-    collection(db, "products"),
-    where("subCategorySlug", "==", product.subCategorySlug),
-    where("status", "==", "approved"),
-    limit(4)
-  );
-  const relatedSnap = await getDocs(relatedQuery);
-  const relatedProducts = relatedSnap.docs
-    .map(doc => ({ id: doc.id, ...doc.data() } as Product))
-    .filter(p => p.id !== id)
-    .slice(0, 3);
+  // Fetch related products from same subcategory (only if subCategorySlug exists)
+  let relatedProducts: Product[] = [];
+  if (product.subCategorySlug) {
+    try {
+      const relatedQuery = query(
+        collection(db, "products"),
+        where("subCategorySlug", "==", product.subCategorySlug),
+        where("status", "==", "approved"),
+        limit(4)
+      );
+      const relatedSnap = await getDocs(relatedQuery);
+      relatedProducts = relatedSnap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Product))
+        .filter(p => p.id !== id)
+        .slice(0, 3);
+    } catch (err) {
+      console.error('[getProductData] Error fetching related products:', err);
+      relatedProducts = [];
+    }
+  }
   
   // Fetch recent ratings
-  const recentRatings = await getProductRatings(id, 5);
+  let recentRatings: ProductRating[] = [];
+  try {
+    recentRatings = await getProductRatings(id, 5);
+  } catch (err) {
+    console.error('[getProductData] Error fetching ratings for legacy product:', err);
+    recentRatings = [];
+  }
   
   return { product, relatedProducts, recentRatings, deals: [], isM6: false };
+  } catch (error) {
+    console.error('[getProductData] Unexpected error fetching product:', error);
+    return null;
+  }
 }
 
 // SEO: Generate metadata
