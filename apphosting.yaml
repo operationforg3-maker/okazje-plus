@@ -19,7 +19,7 @@ env:
     availability:
       - BUILD
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: okazje-plus
+    value: okazje-plus-backend
     availability:
       - BUILD
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
@@ -31,7 +31,7 @@ env:
     availability:
       - BUILD
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: 1:298894101105:web:20a99f74b145cdf3ee29d0
+    value: 1:298894101105:web:b8eec4c8d2cae659ee29d0
     availability:
       - BUILD
   
@@ -44,7 +44,7 @@ env:
   
   # Firebase Admin SDK configuration (server-side, Runtime)
   - variable: FIREBASE_WEBAPP_CONFIG
-    value: '{"apiKey":"AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4","authDomain":"okazje-plus.firebaseapp.com","projectId":"okazje-plus","storageBucket":"okazje-plus.firebasestorage.app","messagingSenderId":"298894101105","appId":"1:298894101105:web:20a99f74b145cdf3ee29d0"}'
+    value: '{"apiKey":"AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4","authDomain":"okazje-plus.firebaseapp.com","projectId":"okazje-plus-backend","storageBucket":"okazje-plus.firebasestorage.app","messagingSenderId":"298894101105","appId":"1:298894101105:web:b8eec4c8d2cae659ee29d0"}'
     availability:
       - RUNTIME
 
