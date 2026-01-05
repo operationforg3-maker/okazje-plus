@@ -33,48 +33,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    console.log('[AuthProvider] Setting up auth listener...');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUserObj: FirebaseUser | null) => {
+      console.log('[AuthProvider] Auth state changed:', { 
+        hasUser: !!firebaseUserObj, 
+        uid: firebaseUserObj?.uid,
+        email: firebaseUserObj?.email 
+      });
+      
       if (firebaseUserObj) {
-        const userRef = doc(db, 'users', firebaseUserObj.uid);
-        const docSnap = await getDoc(userRef);
+        try {
+          const userRef = doc(db, 'users', firebaseUserObj.uid);
+          console.log('[AuthProvider] Fetching user document...');
+          const docSnap = await getDoc(userRef);
 
-        if (docSnap.exists()) {
-          const existingData = docSnap.data() as Partial<User>;
-          const normalizedUser: User = {
-            uid: firebaseUserObj.uid,
-            email: existingData.email ?? firebaseUserObj.email ?? null,
-            displayName: existingData.displayName ?? firebaseUserObj.displayName ?? null,
-            photoURL: existingData.photoURL ?? firebaseUserObj.photoURL ?? null,
-            role: existingData.role ?? 'user',
-          };
+          if (docSnap.exists()) {
+            console.log('[AuthProvider] User document found');
+            const existingData = docSnap.data() as Partial<User>;
+            const normalizedUser: User = {
+              uid: firebaseUserObj.uid,
+              email: existingData.email ?? firebaseUserObj.email ?? null,
+              displayName: existingData.displayName ?? firebaseUserObj.displayName ?? null,
+              photoURL: existingData.photoURL ?? firebaseUserObj.photoURL ?? null,
+              role: existingData.role ?? 'user',
+            };
 
-          // Upewnij się, że w dokumencie użytkownika przechowywane jest pole uid oraz aktualne metadane
-          await setDoc(userRef, normalizedUser, { merge: true });
-          // Batch all setState calls into single update
-          setFirebaseUser(firebaseUserObj);
-          setUser(normalizedUser);
-        } else {
-          const newUser: User = {
-            uid: firebaseUserObj.uid,
-            email: firebaseUserObj.email,
-            displayName: firebaseUserObj.displayName,
-            photoURL: firebaseUserObj.photoURL,
-            role: 'user', 
-          };
-          await setDoc(userRef, newUser);
-          // Batch all setState calls into single update
-          setFirebaseUser(firebaseUserObj);
-          setUser(newUser);
+            console.log('[AuthProvider] Updating user document and state:', normalizedUser);
+            // Upewnij się, że w dokumencie użytkownika przechowywane jest pole uid oraz aktualne metadane
+            await setDoc(userRef, normalizedUser, { merge: true });
+            // Batch all setState calls into single update
+            setFirebaseUser(firebaseUserObj);
+            setUser(normalizedUser);
+          } else {
+            console.log('[AuthProvider] Creating new user document');
+            const newUser: User = {
+              uid: firebaseUserObj.uid,
+              email: firebaseUserObj.email,
+              displayName: firebaseUserObj.displayName,
+              photoURL: firebaseUserObj.photoURL,
+              role: 'user', 
+            };
+            await setDoc(userRef, newUser);
+            // Batch all setState calls into single update
+            setFirebaseUser(firebaseUserObj);
+            setUser(newUser);
+          }
+        } catch (error) {
+          console.error('[AuthProvider] Error fetching/creating user:', error);
         }
       } else {
+        console.log('[AuthProvider] No user, clearing state');
         // Batch all setState calls into single update
         setFirebaseUser(null);
         setUser(null);
       }
+      console.log('[AuthProvider] Setting loading to false');
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('[AuthProvider] Cleaning up auth listener');
+      unsubscribe();
+    };
   }, []);
 
   const contextValue = useMemo(() => {
