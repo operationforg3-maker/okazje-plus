@@ -30,7 +30,11 @@ async function getProductData(id: string) {
     
     if (m6Data) {
       console.log(`[getProductData] M6 data found for ${id}, have ${m6Data.deals.length} deals`);
-    const relatedProducts = productCore?.subCategorySlug
+      // M6 ProductCore found - return with deals
+      const { product: productCore, deals } = m6Data;
+
+      // Fetch related products from same subcategory (from ProductCore collection)
+      const relatedProducts = productCore?.subCategorySlug
       ? (() => {
           const relatedQuery = query(
             collection(db, "product_cores"),
