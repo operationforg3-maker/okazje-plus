@@ -9,9 +9,9 @@ export function ConditionalNav({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   
-  // Hide navbar/footer for guests on home page (coming soon)
-  // Only hide if auth is loaded and user is not logged in
-  const isHomePage = pathname === '/' || pathname === '/pl' || pathname === '/en' || pathname === '/de';
+  // Hide navbar/footer ONLY for guests on home page (coming soon)
+  // Keep navbar visible if: user is logged in OR still loading OR not on home page
+  const isHomePage = pathname === '/pl' || pathname === '/en' || pathname === '/de' || pathname === '/';
   const shouldHideNav = !loading && !user && isHomePage;
 
   if (shouldHideNav) {
