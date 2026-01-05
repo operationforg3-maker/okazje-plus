@@ -4,25 +4,30 @@ import { Specification } from '@/lib/schema';
 import { useMemo } from 'react';
 
 interface SpecificationsTableProps {
-  specifications: Specification[];
+  specifications?: Specification[]; // ProductCore.specificationsStructured
+  specs?: Record<string, string>; // ProductCore.specs (fallback)
   maxRows?: number;
   showCategories?: boolean;
 }
 
 export function SpecificationsTable({ 
   specifications, 
+  specs,
   maxRows,
   showCategories = false 
 }: SpecificationsTableProps) {
+  // Build specifications array from either structured or legacy format
+  const specsArray = specifications || (specs ? Object.entries(specs).map(([label, value]) => ({ label, value })) : []);
+  
   // Group specs by category if enabled
   const groupedSpecs = useMemo(() => {
     if (!showCategories) {
-      return { 'All': specifications };
+      return { 'All': specsArray };
     }
     
     const groups: Record<string, Specification[]> = {};
     
-    specifications.forEach(spec => {
+    specsArray.forEach(spec => {
       const category = spec.category || 'Other';
       if (!groups[category]) {
         groups[category] = [];
@@ -31,9 +36,9 @@ export function SpecificationsTable({
     });
     
     return groups;
-  }, [specifications, showCategories]);
+  }, [specsArray, showCategories]);
   
-  if (!specifications || specifications.length === 0) {
+  if (!specsArray || specsArray.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         Brak specyfikacji
@@ -42,8 +47,8 @@ export function SpecificationsTable({
   }
   
   const displaySpecs = maxRows 
-    ? specifications.slice(0, maxRows) 
-    : specifications;
+    ? specsArray.slice(0, maxRows) 
+    : specsArray;
   
   return (
     <div className="space-y-6">
@@ -75,9 +80,9 @@ export function SpecificationsTable({
         </div>
       ))}
       
-      {maxRows && specifications.length > maxRows && (
+      {maxRows && specsArray.length > maxRows && (
         <p className="text-sm text-muted-foreground text-center">
-          ...oraz {specifications.length - maxRows} więcej
+          ...oraz {specsArray.length - maxRows} więcej
         </p>
       )}
     </div>

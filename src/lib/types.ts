@@ -2391,6 +2391,59 @@ export interface ProductCore {
   aiRating?: number;
   confidence?: number; // 0-1 confidence in specs/data quality
   warnings?: string[]; // e.g., ["missing_specs", "low_rating_count"]
+  
+  // ============================================================================
+  // DEEP DATA EXTENSIONS (M6 Phase 2)
+  // Additional structured data for rich product presentation
+  // ============================================================================
+  
+  /**
+   * Structured specifications with categories and types
+   * Extends basic specs map with richer metadata
+   */
+  specificationsStructured?: Array<{
+    label: string;
+    value: string;
+    category?: 'Appearance' | 'Physical' | 'Material' | 'Technical' | string;
+    unit?: string; // e.g., 'GB', 'inches', 'kg'
+    order?: number;
+  }>;
+  
+  /**
+   * Gallery items with type indicators (for video support)
+   * Alternative to separate images + videoUrl fields
+   */
+  gallery?: Array<{
+    url: string;
+    type: 'IMAGE' | 'VIDEO';
+    thumbnail?: string; // For videos
+    alt?: string;
+    order?: number;
+  }>;
+  
+  /**
+   * Logistics information from best deal
+   * Aggregated from linkedDeals for quick display
+   */
+  logistics?: {
+    deliveryDays: number; // Typical delivery time
+    deliveryDaysMax?: number; // Maximum delivery time
+    isFreeShipping: boolean;
+    shippingCost: number; // In PLN (converted from source)
+    shippingCostUSD?: number; // Original USD amount
+  };
+  
+  /**
+   * Seller information from primary/best deal
+   * Aggregated from linkedDeals for quick display
+   */
+  seller?: {
+    name: string;
+    rating: number; // 0-5
+    followers?: number;
+    storeUrl?: string;
+    storeId?: string;
+  };
 }
 
 /**

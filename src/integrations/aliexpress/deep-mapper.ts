@@ -13,7 +13,8 @@
  * - Multi-language content generation
  */
 
-import { Product, ProductSchema, GalleryItem, Specification, Logistics, Seller, PriceHistoryEntry } from '@/lib/schema';
+import { ProductCoreDeepData, ProductCoreDeepDataSchema, GalleryItem, Specification, Logistics, Seller, PriceHistoryEntry } from '@/lib/schema';
+import { ProductCore } from '@/lib/types';
 import { logger } from '@/lib/logging';
 
 // ============================================================================
@@ -72,6 +73,7 @@ interface AliExpressProductDetail {
 /**
  * Extract and normalize specifications from attribute list
  * Filters out useless technical IDs and cleans up labels
+ * Returns structured specs array for ProductCore.specificationsStructured
  */
 function extractSpecifications(attributeList?: AliExpressAttribute[]): Specification[] {
   if (!attributeList || attributeList.length === 0) return [];
@@ -115,6 +117,7 @@ function extractSpecifications(attributeList?: AliExpressAttribute[]): Specifica
 /**
  * Build gallery array with images and video
  * Video is prepended to the start for prominence
+ * Returns GalleryItem[] for ProductCore.gallery field
  */
 function extractGallery(
   mainImageUrl?: string,
@@ -292,23 +295,27 @@ function sanitizeDescription(html: string): string {
 // ============================================================================
 
 /**
- * Map AliExpress API response to validated Product schema
+ * Map AliExpress API response to ProductCore Deep Data fields
  * 
- * This is the entry point for transforming raw API data into our clean schema.
- * Performs validation and returns either success or detailed errors.
+ * Returns partial ProductCore object with Deep Data extensions populated.
+ * This should be merged with existing ProductCore data or used to create new product.
+ * 
+ * @param apiProduct - Raw AliExpress API response
+ * @param options - Mapping options (locale, category)
+ * @returns Success with partial ProductCore data, or failure with errors
  */
-export async function mapAliExpressProductToSchema(
+export async function mapAliExpressToProductCoreDeepData(
   apiProduct: AliExpressProductDetail,
   options?: {
     locale?: 'pl' | 'en' | 'de';
     categorySlug?: string;
   }
-): Promise<{ success: true; product: Product } | { success: false; errors: string[] }> {
+): Promise<{ success: true; data: Partial<ProductCore> } | { success: false; errors: string[] }> {
   const locale = options?.locale || 'pl';
   
   try {
-    // Extract all components
-    const specifications = extractSpecifications(apiProduct.attributeList);
+    // Extract Deep Data components
+    const specificationsStructured = extractSpecifications(apiProduct.attributeList);
     const gallery = extractGallery(
       apiProduct.productMainImageUrl,
       apiProduct.productSmallImageUrls,
@@ -317,101 +324,63 @@ export async function mapAliExpressProductToSchema(
     const logistics = extractLogistics(apiProduct);
     const seller = extractSeller(apiProduct);
     
-    // Parse pricing (prefer app_sale_price as it's usually lower)
-    const currentPriceUSD = parseFloat(apiProduct.appSalePrice || apiProduct.salePrice || '0');
-    const originalPriceUSD = parseFloat(apiProduct.originalPrice || '0');
-    
-    // Convert to PLN (rough conversion, will be updated by currency service)
-    const currentPrice = currentPriceUSD * 4.0;
-    const originalPrice = originalPriceUSD > 0 ? originalPriceUSD * 4.0 : undefined;
-    
-    // Calculate discount
-    const discount = originalPrice && originalPrice > currentPrice
-      ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
-      : undefined;
-    
-    // Generate price history
-    const priceHistory = generatePriceHistory(currentPrice, originalPrice);
-    
-    // Get the lowest price from history (for Omnibus compliance)
-    const lowest30d = Math.min(...priceHistory.map(p => p.price));
-    
-    // Build multi-language content
-    const title = {
-      [locale]: apiProduct.productTitle || 'Untitled Product',
-      // TODO: Add translation service integration for other locales
-    };
-    
-    const description = {
-      [locale]: sanitizeDescription(apiProduct.productTitle || ''),
-      // TODO: Add translation service integration
-    };
-    
-    // Construct Product object
-    const productData: Partial<Product> = {
-      externalId: apiProduct.productId,
-      source: 'aliexpress',
-      sourceUrl: apiProduct.productUrl || '',
-      
-      title,
-      description,
-      
-      specifications,
+    // Build Deep Data object
+    const deepData: ProductCoreDeepData = {
+      specificationsStructured,
       gallery,
-      thumbnail: gallery[0]?.url,
-      
-      price: {
-        current: currentPrice,
-        original: originalPrice,
-        currency: 'PLN',
-        currencyUSD: currentPriceUSD,
-        discount,
-        lowest30d,
-      },
-      
       logistics,
       seller,
-      priceHistory,
-      
-      categorySlug: options?.categorySlug,
-      
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      importedAt: new Date().toISOString(),
-      
-      tags: [],
-      searchTags: [],
-      
-      views: 0,
-      clicks: 0,
-      conversions: 0,
     };
     
-    // Validate against schema
-    const result = ProductSchema.safeParse(productData);
+    // Validate Deep Data with Zod
+    const validationResult = ProductCoreDeepDataSchema.safeParse(deepData);
     
-    if (result.success) {
-      logger.info('Successfully mapped AliExpress product to schema', {
-        productId: apiProduct.productId,
-        specsCount: specifications.length,
-        galleryCount: gallery.length,
-        hasVideo: !!apiProduct.productVideoUrl,
-      });
-      
-      return { success: true, product: result.data };
-    } else {
-      const errors = result.error.issues.map(
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues.map(
         issue => `${issue.path.join('.')}: ${issue.message}`
       );
       
-      logger.error('Product validation failed', {
+      logger.error('Deep Data validation failed', {
         productId: apiProduct.productId,
         errors,
       });
       
       return { success: false, errors };
     }
+    
+    // Build partial ProductCore with Deep Data + existing fields
+    const productCorePartial: Partial<ProductCore> = {
+      // Deep Data extensions
+      ...validationResult.data,
+      
+      // Map to existing ProductCore fields for backward compatibility
+      images: gallery.filter(g => g.type === 'IMAGE').map(g => g.url),
+      videoUrl: gallery.find(g => g.type === 'VIDEO')?.url,
+      
+      // Convert structured specs to flat map for legacy specs field
+      specs: specificationsStructured.reduce((acc, spec) => {
+        acc[spec.label] = spec.value;
+        return acc;
+      }, {} as Record<string, string>),
+      
+      // Metadata
+      metadata: {
+        source: 'aliexpress',
+        originalId: apiProduct.productId,
+        importedAt: new Date().toISOString(),
+      },
+    };
+    
+    logger.info('Successfully mapped AliExpress product to ProductCore Deep Data', {
+      productId: apiProduct.productId,
+      specsCount: specificationsStructured.length,
+      galleryCount: gallery.length,
+      hasVideo: !!apiProduct.productVideoUrl,
+      hasLogistics: !!logistics,
+      hasSeller: !!seller,
+    });
+    
+    return { success: true, data: productCorePartial };
   } catch (error) {
     logger.error('Failed to map AliExpress product', {
       error: error instanceof Error ? error.message : String(error),
@@ -435,10 +404,10 @@ export async function mapAliExpressProductsBatch(
     locale?: 'pl' | 'en' | 'de';
     categorySlug?: string;
   }
-): Promise<Array<{ success: true; product: Product } | { success: false; errors: string[]; productId?: string }>> {
+): Promise<Array<{ success: true; data: Partial<ProductCore> } | { success: false; errors: string[]; productId?: string }>> {
   const results = await Promise.all(
     apiProducts.map(async (apiProduct) => {
-      const result = await mapAliExpressProductToSchema(apiProduct, options);
+      const result = await mapAliExpressToProductCoreDeepData(apiProduct, options);
       
       if (!result.success) {
         return {

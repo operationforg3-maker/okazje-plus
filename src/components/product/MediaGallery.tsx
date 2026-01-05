@@ -7,17 +7,25 @@ import { Play, Pause, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface MediaGalleryProps {
-  gallery: GalleryItem[];
+  gallery?: GalleryItem[]; // ProductCore.gallery
+  images?: string[]; // ProductCore.images (fallback)
+  videoUrl?: string; // ProductCore.videoUrl (fallback)
   productTitle?: string;
 }
 
-export function MediaGallery({ gallery, productTitle = 'Product' }: MediaGalleryProps) {
+export function MediaGallery({ gallery, images, videoUrl, productTitle = 'Product' }: MediaGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   
-  if (!gallery || gallery.length === 0) {
+  // Build gallery from either structured gallery or legacy images/videoUrl
+  const galleryItems = gallery || [
+    ...(videoUrl ? [{ url: videoUrl, type: 'VIDEO' as const, thumbnail: images?.[0], alt: 'Video' }] : []),
+    ...(images || []).map((url, i) => ({ url, type: 'IMAGE' as const, alt: `${productTitle} ${i + 1}` }))
+  ];
+  
+  if (!galleryItems || galleryItems.length === 0) {
     return (
       <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
         <p className="text-gray-400">Brak zdjęć</p>
@@ -25,7 +33,7 @@ export function MediaGallery({ gallery, productTitle = 'Product' }: MediaGallery
     );
   }
   
-  const activeItem = gallery[activeIndex];
+  const activeItem = galleryItems[activeIndex];
   const isVideo = activeItem?.type === 'VIDEO';
   
   return (
@@ -87,9 +95,9 @@ export function MediaGallery({ gallery, productTitle = 'Product' }: MediaGallery
       </div>
       
       {/* Thumbnail Strip */}
-      {gallery.length > 1 && (
+      {galleryItems.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {gallery.map((item, index) => (
+          {galleryItems.map((item, index) => (
             <button
               key={index}
               onClick={() => setActiveIndex(index)}
