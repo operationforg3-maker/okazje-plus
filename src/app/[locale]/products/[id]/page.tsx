@@ -33,49 +33,54 @@ async function getProductData(id: string) {
       // M6 ProductCore found - return with deals
       const { product: productCore, deals } = m6Data;
 
+      // Skip non-approved cores early to avoid leaking drafts
+      if (productCore?.status && productCore.status !== 'approved') {
+        return null;
+      }
+
       // Fetch related products from same subcategory (from ProductCore collection)
       const relatedProducts = productCore?.subCategorySlug
-      ? (() => {
-          const relatedQuery = query(
-            collection(db, "product_cores"),
-            where("subCategorySlug", "==", productCore.subCategorySlug),
-            where("status", "==", "approved"),
-            limit(4)
-          );
-          return getDocs(relatedQuery).then((relatedSnap) =>
-            relatedSnap.docs
-              .map(doc => ({ id: doc.id, ...doc.data() } as any))
-              .filter(p => p.id !== id)
-              .slice(0, 3)
-          );
-        })()
-      : Promise.resolve([]);
-    
-    // Fetch recent ratings (still using product ID)
-    let recentRatings: ProductRating[] = [];
-    try {
-      recentRatings = await getProductRatings(id, 5);
-    } catch (err) {
-      console.error('[getProductData] Error fetching ratings for M6:', err);
-      recentRatings = [];
+        ? (() => {
+            const relatedQuery = query(
+              collection(db, "product_cores"),
+              where("subCategorySlug", "==", productCore.subCategorySlug),
+              where("status", "==", "approved"),
+              limit(4)
+            );
+            return getDocs(relatedQuery).then((relatedSnap) =>
+              relatedSnap.docs
+                .map(doc => ({ id: doc.id, ...doc.data() } as any))
+                .filter(p => p.id !== id)
+                .slice(0, 3)
+            );
+          })()
+        : Promise.resolve([]);
+      
+      // Fetch recent ratings (still using product ID)
+      let recentRatings: ProductRating[] = [];
+      try {
+        recentRatings = await getProductRatings(id, 5);
+      } catch (err) {
+        console.error('[getProductData] Error fetching ratings for M6:', err);
+        recentRatings = [];
+      }
+      
+      const [resolvedRelated] = await Promise.all([
+        relatedProducts,
+      ]);
+      
+      return { productCore, deals, relatedProducts: resolvedRelated, recentRatings, isM6: true };
     }
     
-    const [resolvedRelated] = await Promise.all([
-      relatedProducts,
-    ]);
+    // Fallback to legacy Product if not found in ProductCore
+    console.log(`[getProductData] M6 data not found, trying legacy products for ${id}`);
+    const docRef = doc(db, "products", id);
+    const docSnap = await getDoc(docRef);
     
-    return { productCore, deals, relatedProducts: resolvedRelated, recentRatings, isM6: true };
-  }
-  
-  // Fallback to legacy Product if not found in ProductCore
-  console.log(`[getProductData] M6 data not found, trying legacy products for ${id}`);
-  const docRef = doc(db, "products", id);
-  const docSnap = await getDoc(docRef);
-  
-  if (!docSnap.exists()) {
-    console.warn(`[getProductData] Product not found in both M6 and legacy: ${id}`);
-    return null;
-  }
+    if (!docSnap.exists()) {
+      console.warn(`[getProductData] Product not found in both M6 and legacy: ${id}`);
+      return null;
+    }
   
   const productData = docSnap.data();
   const product = {
