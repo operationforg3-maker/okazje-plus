@@ -12,7 +12,6 @@ import { ComparisonListener } from '@/components/deal-comparison-tool';
 import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
 import { CashbackWarningModal } from '@/components/cashback-warning-modal';
 import { AnalyticsProvider } from '@/components/analytics/provider';
-import { getServerAuthSession } from '@/lib/auth-server';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazje-plus.web.app'),
@@ -83,8 +82,6 @@ export default async function LocaleLayout({
   const { locale } = await params;
   const effectiveLocale = locale || 'pl';
   const messages = await getMessages();
-  const session = await getServerAuthSession();
-  const isAdmin = session?.role === 'admin';
   
   return (
     <>
@@ -173,26 +170,17 @@ export default async function LocaleLayout({
         <AuthProvider>
           <CurrencyProvider>
             <SmartCartProvider>
-              {isAdmin ? (
-                <div className="flex flex-col min-h-screen w-full">
-                  <ConditionalNav>
-                    <main className="flex-1 w-full">
-                      {children}
-                    </main>
-                  </ConditionalNav>
-                  <ComparisonListener />
-                  <ExtensionWarningBanner />
-                  <CashbackWarningModal />
-                  <Toaster />
-                </div>
-              ) : (
-                <div className="min-h-screen w-full bg-background">
-                  <main className="w-full min-h-screen">
+              <div className="flex flex-col min-h-screen w-full">
+                <ConditionalNav>
+                  <main className="flex-1 w-full">
                     {children}
                   </main>
-                  <Toaster />
-                </div>
-              )}
+                </ConditionalNav>
+                <ComparisonListener />
+                <ExtensionWarningBanner />
+                <CashbackWarningModal />
+                <Toaster />
+              </div>
             </SmartCartProvider>
           </CurrencyProvider>
         </AuthProvider>
