@@ -544,13 +544,28 @@ export default function DealCard({ deal }: DealCardProps) {
         )}
         
         {/* Deep Data: Smart Badges (Auto-generated) */}
-        {deepDataBadges.length > 0 && (
+        {deepDataBadges && deepDataBadges.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {deepDataBadges.map((badge, idx) => (
-              <Badge key={idx} className={`${badge.color} text-white text-xs`}>
-                {badge.text}
-              </Badge>
-            ))}
+            {deepDataBadges.filter(badge => badge && badge.text).map((badge, idx) => {
+              // Map badge color to inline style
+              const getBadgeColor = (colorClass: string) => {
+                if (colorClass.includes('red')) return '#ef4444';
+                if (colorClass.includes('green')) return '#10b981';
+                if (colorClass.includes('blue')) return '#3b82f6';
+                if (colorClass.includes('purple')) return '#a855f7';
+                return '#6b7280';
+              };
+              
+              return (
+                <Badge 
+                  key={idx} 
+                  className="text-white text-xs"
+                  style={{ backgroundColor: getBadgeColor(badge.color) }}
+                >
+                  {String(badge.text)}
+                </Badge>
+              );
+            })}
           </div>
         )}
         
@@ -559,7 +574,7 @@ export default function DealCard({ deal }: DealCardProps) {
         </p>
         
         {/* Deep Data: Sparkline Price Trend */}
-        {deal.priceHistory && deal.priceHistory.length > 1 && (
+        {deal.priceHistory && Array.isArray(deal.priceHistory) && deal.priceHistory.length > 1 && (
           <div className="mt-2 flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Trend ceny:</span>
             <Sparkline data={deal.priceHistory} width={80} height={16} />

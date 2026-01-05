@@ -95,8 +95,8 @@ function extractSpecifications(attributeList?: AliExpressAttribute[]): Specifica
     if (seenLabels.has(label.toLowerCase())) continue;
     seenLabels.add(label.toLowerCase());
     
-    // Categorize specification
-    let category: string | undefined;
+    // Categorize specification (only valid categories)
+    let category: 'Appearance' | 'Physical' | 'Material' | 'Technical' | undefined;
     if (label.match(/color|colour|kolor/i)) category = 'Appearance';
     else if (label.match(/size|wymiar|rozmiar/i)) category = 'Physical';
     else if (label.match(/material|materiał/i)) category = 'Material';

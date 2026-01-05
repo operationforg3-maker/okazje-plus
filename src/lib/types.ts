@@ -2404,7 +2404,7 @@ export interface ProductCore {
   specificationsStructured?: Array<{
     label: string;
     value: string;
-    category?: 'Appearance' | 'Physical' | 'Material' | 'Technical' | string;
+    category?: 'Appearance' | 'Physical' | 'Material' | 'Technical';
     unit?: string; // e.g., 'GB', 'inches', 'kg'
     order?: number;
   }>;

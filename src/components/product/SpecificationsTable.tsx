@@ -17,7 +17,13 @@ export function SpecificationsTable({
   showCategories = false 
 }: SpecificationsTableProps) {
   // Build specifications array from either structured or legacy format
-  const specsArray = specifications || (specs ? Object.entries(specs).map(([label, value]) => ({ label, value })) : []);
+  const specsArray: Specification[] = specifications || (specs ? Object.entries(specs).map(([label, value]) => ({ 
+    label, 
+    value,
+    category: undefined,
+    unit: undefined,
+    order: undefined
+  })) : []);
   
   // Group specs by category if enabled
   const groupedSpecs = useMemo(() => {
