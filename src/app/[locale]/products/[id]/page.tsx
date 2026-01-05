@@ -28,24 +28,37 @@ async function getProductData(id: string) {
   if (m6Data) {
     // M6 ProductCore found - return with deals
     const { product: productCore, deals } = m6Data;
-    
+
+    // Skip non-approved cores early to avoid leaking drafts
+    if (productCore?.status && productCore.status !== 'approved') {
+      return null;
+    }
+
     // Fetch related products from same subcategory (from ProductCore collection)
-    const relatedQuery = query(
-      collection(db, "product_cores"),
-      where("subCategorySlug", "==", productCore.subCategorySlug),
-      where("status", "==", "approved"),
-      limit(4)
-    );
-    const relatedSnap = await getDocs(relatedQuery);
-    const relatedProducts = relatedSnap.docs
-      .map(doc => ({ id: doc.id, ...doc.data() } as any))
-      .filter(p => p.id !== id)
-      .slice(0, 3);
+    const relatedProducts = productCore?.subCategorySlug
+      ? (() => {
+          const relatedQuery = query(
+            collection(db, "product_cores"),
+            where("subCategorySlug", "==", productCore.subCategorySlug),
+            where("status", "==", "approved"),
+            limit(4)
+          );
+          return getDocs(relatedQuery).then((relatedSnap) =>
+            relatedSnap.docs
+              .map(doc => ({ id: doc.id, ...doc.data() } as any))
+              .filter(p => p.id !== id)
+              .slice(0, 3)
+          );
+        })()
+      : Promise.resolve([]);
     
     // Fetch recent ratings (still using product ID)
-    const recentRatings = await getProductRatings(id, 5);
+    const [resolvedRelated, recentRatings] = await Promise.all([
+      relatedProducts,
+      getProductRatings(id, 5),
+    ]);
     
-    return { productCore, deals, relatedProducts, recentRatings, isM6: true };
+    return { productCore, deals, relatedProducts: resolvedRelated, recentRatings, isM6: true };
   }
   
   // Fallback to legacy Product if not found in ProductCore
@@ -116,7 +129,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   
   const productData = isM6 ? productCore! : product!;
-  const priceAmount = isM6 ? productCore!.bestPrice.amount : product!.price;
+  const priceAmount = isM6 ? (productCore?.bestPrice?.amount ?? 0) : (product?.price ?? 0);
   const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(priceAmount ?? 0);
   const originalPrice = !isM6 && product?.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice)
@@ -129,14 +142,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : product!.name;
   const metaTitle = !isM6 && product ? (product.metaTitle || product.seo?.metaTitle) : undefined;
   const fallbackTitle = `${productName} - ${price} | Okazje Plus`;
-  const ratingScore = isM6 ? productCore!.rating.score : product!.ratingCard?.average || 0;
-  const ratingCount = isM6 ? productCore!.rating.count : product!.ratingCard?.count || 0;
+  const ratingScore = isM6 ? (productCore?.rating?.score ?? 0) : (product?.ratingCard?.average ?? 0);
+  const ratingCount = isM6 ? (productCore?.rating?.count ?? 0) : (product?.ratingCard?.count ?? 0);
   const ratingText = ratingCount > 0 
     ? `${ratingCount} ocen, średnia ${ratingScore.toFixed(1)}/5.0` 
     : 'Brak ocen';
   const productDesc = isM6 
-    ? (typeof productCore!.description === 'object' ? (productCore!.description.pl || productCore!.description.en) : '') 
-    : product!.description;
+    ? (typeof productCore?.description === 'object' ? (productCore.description.pl || productCore.description.en) : (typeof productCore?.description === 'string' ? productCore.description : '')) 
+    : (product?.description ?? '');
   const metaDescription = !isM6 && product ? (product.metaDescription || product.seo?.metaDescription) : undefined;
   const fallbackDescription = `Kup ${productName} w najlepszej cenie ${price}. ${ratingText}`;
   const finalTitle = metaTitle || fallbackTitle;
@@ -154,7 +167,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   const canonicalUrl = `https://okazje.plus/pl/products/${productData.id}`;
   
-  const productImage = isM6 && productCore ? productCore.images[0] : product?.image || '';
+  const productImage = isM6 && productCore ? (productCore.images?.[0] || '') : (product?.image || '');
   const stockStatus = isM6 
     ? 'in stock' 
     : (product && product.metadata?.stockStatus === 'in_stock' ? 'in stock' : 'out of stock');
@@ -205,24 +218,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-// Optional: Generate static params for popular products
+// Optional: Generate static params for approved ProductCore records (top 100 by freshness)
 export async function generateStaticParams() {
-  // Generuj dla top 100 produktów
-  const productsRef = collection(db, "products");
+  // Używamy kolekcji product_cores (M6), żeby nie polegać na legacy products ani dodatkowych indeksach
+  const coresRef = collection(db, "product_cores");
   const q = query(
-    productsRef,
+    coresRef,
     where("status", "==", "approved"),
-    orderBy("ratingCard.count", "desc"),
+    orderBy("updatedAt", "desc"),
     limit(100)
   );
-  
+
   try {
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-    }));
+    return snapshot.docs.map((doc) => ({ id: doc.id }));
   } catch (error) {
-    console.error('Error generating static params:', error);
+    console.error("Error generating static params:", error);
     return [];
   }
 }
@@ -240,23 +251,31 @@ export default async function ProductDetailPage({ params }: PageProps) {
   // Use productCore if M6, otherwise fallback to product
   const productData = isM6 ? productCore : product;
   
+  // Guard against missing productData (shouldn't happen but defensive programming)
+  if (!productData) {
+    notFound();
+  }
+  
   // JSON-LD structured data dla Google Rich Results
-  const productName = typeof productData.title === 'object' 
-    ? (productData.title.pl || productData.title.en || 'Produkt')
-    : (productData.name || 'Produkt');
-  const productDescription = typeof productData.description === 'string' 
-    ? productData.description 
-    : (productData.shortDescription?.pl || productData.fullDescription?.pl || '');
+  const productName = typeof (productData as any)?.title === 'object' 
+    ? ((productData as any).title.pl || (productData as any).title.en || 'Produkt')
+    : ((productData as any)?.title || (productData as any)?.name || 'Produkt');
+  const productDescription = typeof (productData as any)?.description === 'string' 
+    ? (productData as any).description 
+    : ((productData as any)?.shortDescription?.pl || (productData as any)?.fullDescription?.pl || '');
   
   // For M6: use bestPrice, for legacy: use price
-  const priceAmount = isM6 ? productCore.bestPrice.amount : (product?.price || 0);
+  const priceAmount = isM6 ? (productCore?.bestPrice?.amount ?? 0) : (product?.price ?? 0);
+  const priceCurrency = isM6 ? (productCore?.bestPrice?.currency ?? 'PLN') : 'PLN';
+  const safeDeals = Array.isArray(deals) ? deals.filter((deal) => deal?.price?.amount != null) : [];
+  const lowestDealPrice = safeDeals.length > 0 ? Math.min(...safeDeals.map((deal: any) => deal.price.amount)) : priceAmount;
   
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: productName,
     description: productDescription,
-    image: isM6 ? productCore.images[0] : (product?.image || ''),
+    image: isM6 ? (productCore?.images?.[0] || '') : (product?.image || ''),
     sku: productData.id,
     brand: {
       '@type': 'Brand',
@@ -265,17 +284,17 @@ export default async function ProductDetailPage({ params }: PageProps) {
     offers: isM6 ? {
       '@type': 'AggregateOffer',
       url: `https://okazje.plus/pl/products/${productData.id}`,
-      priceCurrency: 'PLN',
-      lowPrice: productCore.bestPrice.amount,
-      offerCount: deals.length,
-      offers: deals.slice(0, 5).map((deal: any) => ({
+      priceCurrency: priceCurrency,
+      lowPrice: lowestDealPrice,
+      offerCount: safeDeals.length,
+      offers: safeDeals.slice(0, 5).map((deal: any) => ({
         '@type': 'Offer',
-        price: deal.price.amount,
-        priceCurrency: deal.price.currency,
-        availability: deal.stockStatus === 'in_stock' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        price: deal?.price?.amount || 0,
+        priceCurrency: deal?.price?.currency || priceCurrency,
+        availability: deal?.stockStatus === 'in_stock' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
         seller: {
           '@type': 'Organization',
-          name: deal.merchantName || 'Merchant',
+          name: deal?.merchantName || 'Merchant',
         },
       })),
     } : {
@@ -298,8 +317,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
     },
     aggregateRating: {
       '@type': 'AggregateRating',
-      ratingValue: isM6 ? productCore.rating.score : (product?.ratingCard?.average || 0),
-      reviewCount: isM6 ? productCore.rating.count : (product?.ratingCard?.count || 0),
+      ratingValue: isM6 ? (productCore?.rating?.score ?? 0) : (product?.ratingCard?.average ?? 0),
+      reviewCount: isM6 ? (productCore?.rating?.count ?? 0) : (product?.ratingCard?.count ?? 0),
       bestRating: 5,
       worstRating: 1,
     },
