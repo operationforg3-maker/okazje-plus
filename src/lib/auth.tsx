@@ -41,8 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: firebaseUserObj?.email 
       });
       
-      if (firebaseUserObj) {
-        try {
+      try {
+        if (firebaseUserObj) {
           const userRef = doc(db, 'users', firebaseUserObj.uid);
           console.log('[AuthProvider] Fetching user document...');
           const docSnap = await getDoc(userRef);
@@ -78,17 +78,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setFirebaseUser(firebaseUserObj);
             setUser(newUser);
           }
-        } catch (error) {
-          console.error('[AuthProvider] Error fetching/creating user:', error);
+        } else {
+          console.log('[AuthProvider] No user, clearing state');
+          // Batch all setState calls into single update
+          setFirebaseUser(null);
+          setUser(null);
         }
-      } else {
-        console.log('[AuthProvider] No user, clearing state');
-        // Batch all setState calls into single update
+      } catch (error) {
+        console.error('[AuthProvider] Error in auth handler:', error);
+        // Even on error, we should complete loading
         setFirebaseUser(null);
         setUser(null);
+      } finally {
+        // ALWAYS set loading to false in finally block
+        console.log('[AuthProvider] Setting loading to false');
+        setLoading(false);
       }
-      console.log('[AuthProvider] Setting loading to false');
-      setLoading(false);
     });
 
     return () => {
