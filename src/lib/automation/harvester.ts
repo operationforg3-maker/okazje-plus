@@ -14,6 +14,7 @@ import {
   normalizeProductIdentifier,
 } from './identity-matcher';
 import { convertToPLN } from '@/lib/currency-exchange';
+import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
 
 /**
  * Raw product data from external APIs (before transformation)
@@ -700,7 +701,7 @@ export class SmartHarvester {
   }
 
   /**
-   * Create a new ProductCore document
+   * Create a new ProductCore document with Deep Data enrichment
    */
   private async createProductCore(
     sourceProduct: any,
@@ -736,7 +737,7 @@ export class SmartHarvester {
 
     // Try to auto-map category from product title when categoryInfo is missing/uncategorized
     let mappedCategory = categoryInfo;
-    let categoryMetadata: any = {}; // NEW: Store aliexpressCategoryIds & searchKeywords
+    let categoryMetadata: any = {}; // Store aliexpressCategoryIds & searchKeywords
     try {
       const needsMapping = !mappedCategory || !mappedCategory.mainCategorySlug || mappedCategory.mainCategorySlug === 'uncategorized';
       if (needsMapping) {
@@ -752,7 +753,7 @@ export class SmartHarvester {
         }
       }
 
-      // NEW: Fetch category metadata (aliexpressCategoryIds, searchKeywords) from Firestore
+      // Fetch category metadata (aliexpressCategoryIds, searchKeywords) from Firestore
       if (mappedCategory?.mainCategorySlug && mappedCategory.mainCategorySlug !== 'uncategorized') {
         try {
           const mainCatRef = adminDb.collection('categories').doc(mappedCategory.mainCategorySlug);
@@ -788,6 +789,48 @@ export class SmartHarvester {
       this.addLog('warn', 'Category auto-mapping failed', e);
     }
 
+    // ========================================================================
+    // DEEP DATA ENRICHMENT - Extract structured data from AliExpress
+    // ========================================================================
+    let deepData: Partial<ProductCore> = {};
+    
+    if (source === 'aliexpress' && sourceProduct.sourceProductId) {
+      try {
+        // Map RawProduct to AliExpress API format for deep mapper
+        const aliexpressApiFormat = {
+          productId: sourceProduct.sourceProductId,
+          productTitle: sourceProduct.title,
+          productUrl: sourceProduct.sourceUrl,
+          productMainImageUrl: sourceProduct.imageUrl,
+          productSmallImageUrls: sourceProduct.images || [],
+          productVideoUrl: sourceProduct.videoUrl,
+          appSalePrice: String(sourceProduct.price),
+          originalPrice: sourceProduct.originalPrice ? String(sourceProduct.originalPrice) : undefined,
+          salePrice: String(sourceProduct.price),
+          attributeList: [], // TODO: Pass real attributes if available from API
+          deliveryDays: sourceProduct.shippingDays,
+          isFreeShipping: sourceProduct.shippingCost === 0,
+          shippingFee: sourceProduct.shippingCost > 0 ? String(sourceProduct.shippingCost) : undefined,
+          shopName: sourceProduct.merchantName,
+          sellerScore: sourceProduct.merchantRating,
+        };
+        
+        const result = await mapAliExpressToProductCoreDeepData(aliexpressApiFormat, {
+          locale: 'pl',
+          categorySlug: mappedCategory?.subSubCategorySlug || mappedCategory?.subCategorySlug,
+        });
+        
+        if (result.success) {
+          deepData = result.data;
+          this.addLog('info', `Deep Data extracted: ${deepData.gallery?.length || 0} media, ${deepData.specificationsStructured?.length || 0} specs, logistics: ${!!deepData.logistics}, seller: ${!!deepData.seller}`);
+        } else {
+          this.addLog('warn', `Deep Data extraction failed: ${result.errors.join(', ')}`);
+        }
+      } catch (err) {
+        this.addLog('warn', 'Deep Data mapper error', err);
+      }
+    }
+
     const product: ProductCore = {
       id: '', // Will be set by Firestore
       identityHash,
@@ -806,6 +849,10 @@ export class SmartHarvester {
         en: '',
       },
       specs,
+      
+      // Deep Data fields (if extracted)
+      ...deepData,
+      
       mainCategorySlug: mappedCategory?.mainCategorySlug || 'uncategorized',
       subCategorySlug: mappedCategory?.subCategorySlug || 'uncategorized',
       subSubCategorySlug: mappedCategory?.subSubCategorySlug,

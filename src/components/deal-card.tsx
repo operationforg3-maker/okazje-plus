@@ -30,6 +30,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
+import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
 
 interface DealCardProps {
   deal: Deal;
@@ -214,6 +216,18 @@ export default function DealCard({ deal }: DealCardProps) {
     : 'from-yellow-500 to-green-500';
 
   const temperaturePercent = Math.min((temperature / 500) * 100, 100);
+  
+  // ========================================================================
+  // DEEP DATA SMART BADGES - Auto-generated contextual badges
+  // ========================================================================
+  const deepDataBadges = generateSmartBadges({
+    price: {
+      current: deal.price,
+      lowest30d: deal.lowestPriceIn30Days,
+    },
+    logistics: product?.logistics,
+    priceHistory: deal.priceHistory,
+  });
 
   const handleVote = async (action: 'up' | 'down') => {
     if (!user) {
@@ -524,9 +538,33 @@ export default function DealCard({ deal }: DealCardProps) {
           {dealTitle}
         </h3>
         
+        {/* Deep Data: Specs Teaser (Product.specificationsStructured) */}
+        {product?.specificationsStructured && product.specificationsStructured.length > 0 && (
+          <SpecsTeaserInline specifications={product.specificationsStructured} maxSpecs={2} />
+        )}
+        
+        {/* Deep Data: Smart Badges (Auto-generated) */}
+        {deepDataBadges.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {deepDataBadges.map((badge, idx) => (
+              <Badge key={idx} className={`${badge.color} text-white text-xs`}>
+                {badge.text}
+              </Badge>
+            ))}
+          </div>
+        )}
+        
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
           {dealDescription}
         </p>
+        
+        {/* Deep Data: Sparkline Price Trend */}
+        {deal.priceHistory && deal.priceHistory.length > 1 && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Trend ceny:</span>
+            <Sparkline data={deal.priceHistory} width={80} height={16} />
+          </div>
+        )}
 
         {/* Enhanced Metadata Row */}
         {(hasRealShipping || warrantyInfo.available || specifications.length > 0) && (
