@@ -23,19 +23,13 @@ async function getProductData(id: string) {
       return null;
     }
 
-  // Try M6 first (ProductCore + Deals)
-  const m6Data = await getProductWithDeals(id);
-  
-  if (m6Data) {
-    // M6 ProductCore found - return with deals
-    const { product: productCore, deals } = m6Data;
+    console.log(`[getProductData] Fetching product: ${id}`);
 
-    // Skip non-approved cores early to avoid leaking drafts
-    if (productCore?.status && productCore.status !== 'approved') {
-      return null;
-    }
-
-    // Fetch related products from same subcategory (from ProductCore collection)
+    // Try M6 first (ProductCore + Deals)
+    const m6Data = await getProductWithDeals(id);
+    
+    if (m6Data) {
+      console.log(`[getProductData] M6 data found for ${id}, have ${m6Data.deals.length} deals`);
     const relatedProducts = productCore?.subCategorySlug
       ? (() => {
           const relatedQuery = query(
@@ -70,10 +64,12 @@ async function getProductData(id: string) {
   }
   
   // Fallback to legacy Product if not found in ProductCore
+  console.log(`[getProductData] M6 data not found, trying legacy products for ${id}`);
   const docRef = doc(db, "products", id);
   const docSnap = await getDoc(docRef);
   
   if (!docSnap.exists()) {
+    console.warn(`[getProductData] Product not found in both M6 and legacy: ${id}`);
     return null;
   }
   
