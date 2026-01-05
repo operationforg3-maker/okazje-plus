@@ -54,15 +54,10 @@ export function UserNav() {
     );
   }
 
-  // Fallback if user object is malformed
-  if (!user.email && !user.displayName) {
-    return (
-      <Button variant="outline" className="rounded-full gap-2">
-        <UserIcon className="h-4 w-4" />
-        <span>Profil</span>
-      </Button>
-    );
-  }
+  // Always render avatar even if user object is incomplete
+  const userInitial = user?.displayName 
+    ? user.displayName.charAt(0).toUpperCase() 
+    : (user?.email ? user.email.charAt(0).toUpperCase() : 'U');
 
   return (
     <div className="flex items-center gap-2">
@@ -77,7 +72,7 @@ export function UserNav() {
             <Avatar className="h-10 w-10">
               {user?.photoURL && <AvatarImage src={user.photoURL} alt={user?.displayName || 'User'} />}
               <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-                {user?.displayName ? user.displayName.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : 'U')}
+                {userInitial}
               </AvatarFallback>
             </Avatar>
             {open && (
