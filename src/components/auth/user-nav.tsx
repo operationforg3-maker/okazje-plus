@@ -48,11 +48,13 @@ export function UserNav() {
 
   if (!user) {
     return (
-      <Button asChild>
+      <Button variant="outline" className="rounded-full" asChild>
         <Link href="/login">Zaloguj się</Link>
       </Button>
     );
   }
+
+  console.log('[UserNav] Rendering for user:', user.email);
 
   // Always render avatar even if user object is incomplete
   const userInitial = user?.displayName 

@@ -133,16 +133,10 @@ export function Navbar() {
                 <MiniCartBadge />
               </Link>
             </Button>
-            {!isMounted || loading ? (
+            {!isMounted ? (
               <Skeleton className="h-9 w-9 rounded-full" />
-            ) : user ? (
-              <UserNav />
             ) : (
-              <Button variant="outline" className="rounded-full" asChild>
-                <Link href={`${prefix}/login`}>
-                  Zaloguj się
-                </Link>
-              </Button>
+              <UserNav />
             )}
           </div>
         </div>
