@@ -31,7 +31,18 @@ export function UserNav() {
 
   useEffect(() => {
     setIsMounted(true);
+    console.log('[UserNav] Component mounted');
   }, []);
+
+  useEffect(() => {
+    console.log('[UserNav] Auth state changed:', { 
+      isMounted, 
+      loading, 
+      hasUser: !!user, 
+      userEmail: user?.email,
+      userRole: user?.role 
+    });
+  }, [isMounted, loading, user]);
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -39,14 +50,17 @@ export function UserNav() {
 
   // Don't render until mounted to avoid hydration mismatch
   if (!isMounted) {
+    console.log('[UserNav] Not mounted yet - showing skeleton');
     return <div className="h-10 w-24 rounded-md bg-muted animate-pulse" />;
   }
 
   if (loading) {
+    console.log('[UserNav] Loading - showing skeleton');
     return <div className="h-10 w-24 rounded-md bg-muted animate-pulse" />;
   }
 
   if (!user) {
+    console.log('[UserNav] No user - showing login button');
     return (
       <Button variant="outline" className="rounded-full" asChild>
         <Link href="/login">Zaloguj się</Link>
@@ -54,7 +68,7 @@ export function UserNav() {
     );
   }
 
-  console.log('[UserNav] Rendering for user:', user.email);
+  console.log('[UserNav] Rendering avatar for user:', user.email, 'role:', user.role);
 
   // Always render avatar even if user object is incomplete
   const userInitial = user?.displayName 

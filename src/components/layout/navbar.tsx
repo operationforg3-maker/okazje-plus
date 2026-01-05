@@ -39,7 +39,14 @@ export function Navbar() {
 
   // Debug log
   React.useEffect(() => {
-    console.log('[Navbar] Auth state:', { user: !!user, loading, isMounted, email: user?.email });
+    console.log('[Navbar] Auth state:', { 
+      user: !!user, 
+      loading, 
+      isMounted, 
+      email: user?.email,
+      role: user?.role,
+      userObj: user ? JSON.stringify(user) : 'null'
+    });
   }, [user, loading, isMounted]);
 
   const params = useParams();

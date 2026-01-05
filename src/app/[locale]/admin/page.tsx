@@ -285,27 +285,38 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('[AdminPage] Component mounted, fetching data...');
     async function fetchStats() {
       try {
+        console.log('[AdminPage] Fetching dashboard stats...');
         const [dashStats, dealsData, productsData] = await Promise.all([
           getAdminDashboardStats(),
           getHotDeals(5),
           getRecommendedProducts(5)
         ]);
+        console.log('[AdminPage] Data fetched successfully:', {
+          stats: dashStats?.totals,
+          deals: dealsData?.length,
+          products: productsData?.length
+        });
         setDashboardStats(dashStats);
         setStats(dashStats.totals);
         setHotDeals(dealsData);
         setTopProducts(productsData);
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('[AdminPage] Error fetching stats:', error);
       } finally {
+        console.log('[AdminPage] Setting loading to false');
         setLoading(false);
       }
     }
     fetchStats();
   }, []);
 
+  console.log('[AdminPage] Render - loading:', loading, 'hasStats:', !!stats);
+
   if (loading) {
+    console.log('[AdminPage] Showing loading skeleton');
     return (
       <div className="space-y-6">
         <div>
