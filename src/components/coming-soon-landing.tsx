@@ -43,7 +43,7 @@ export default function ComingSoonLanding() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6 overflow-hidden relative">
+    <div className="min-h-screen bg-white flex items-center justify-center p-6 overflow-hidden relative">
       {/* Subtle brand accent dots */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
         <div className="absolute top-20 left-1/4 w-2 h-2 rounded-full bg-primary" />
@@ -71,11 +71,11 @@ export default function ComingSoonLanding() {
 
         {/* Main headline & description */}
         <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-6xl font-headline font-bold text-foreground leading-tight">
+          <h1 className="text-4xl md:text-6xl font-headline font-bold text-gray-900 leading-tight">
             Najlepsze okazje<br />
             <span className="text-primary">w jednym miejscu</span>
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto">
             Przygotowujemy coś wyjątkowego dla łowców promocji
           </p>
         </div>
@@ -90,11 +90,11 @@ export default function ComingSoonLanding() {
         </div>
 
         {/* Newsletter signup */}
-        <div className="bg-card rounded-lg p-8 border border-border/50 space-y-4">
-          <h2 className="text-lg font-headline font-bold text-foreground text-center">
+        <div className="bg-gray-50 rounded-lg p-8 border border-gray-200 space-y-4">
+          <h2 className="text-lg font-headline font-bold text-gray-900 text-center">
             Bądź na bieżąco
           </h2>
-          <p className="text-sm text-muted-foreground text-center">
+          <p className="text-sm text-gray-600 text-center">
             Otrzymaj powiadomienie gdy startujemy
           </p>
           
@@ -124,7 +124,7 @@ export default function ComingSoonLanding() {
               </Button>
             </div>
             {error && (
-              <p className="text-sm text-destructive text-center">
+              <p className="text-sm text-red-600 text-center">
                 ⚠ {error}
               </p>
             )}
@@ -145,17 +145,17 @@ export default function ComingSoonLanding() {
           ].map((feature, index) => (
             <div
               key={index}
-              className="bg-card rounded-lg p-6 border border-border hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
+              className="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:border-primary/50 transition-all duration-300 hover:shadow-lg"
             >
               <div className="text-4xl mb-3">{feature.emoji}</div>
-              <p className="text-foreground font-medium">{feature.text}</p>
+              <p className="text-gray-900 font-medium">{feature.text}</p>
             </div>
           ))}
         </div>
 
         {/* Contact */}
-        <div className="text-center pt-8 border-t border-border">
-          <div className="inline-flex items-center gap-3 text-muted-foreground">
+        <div className="text-center pt-8 border-t border-gray-200">
+          <div className="inline-flex items-center gap-3 text-gray-600">
             <Mail className="w-5 h-5 text-primary" />
             <span className="text-base">Pytania?</span>
             <a
