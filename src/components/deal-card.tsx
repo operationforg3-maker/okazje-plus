@@ -539,11 +539,14 @@ export default function DealCard({ deal }: DealCardProps) {
         </h3>
         
         {/* Deep Data: Specs Teaser (Product.specificationsStructured) */}
+        {/* TEMPORARILY DISABLED FOR DEBUGGING
         {product?.specificationsStructured && product.specificationsStructured.length > 0 && (
           <SpecsTeaserInline specifications={product.specificationsStructured} maxSpecs={2} />
         )}
+        */}
         
         {/* Deep Data: Smart Badges (Auto-generated) */}
+        {/* TEMPORARILY DISABLED FOR DEBUGGING
         {deepDataBadges && deepDataBadges.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {deepDataBadges.filter(badge => badge && badge.text).map((badge, idx) => {
@@ -568,18 +571,21 @@ export default function DealCard({ deal }: DealCardProps) {
             })}
           </div>
         )}
+        */}
         
         <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
           {dealDescription}
         </p>
         
         {/* Deep Data: Sparkline Price Trend */}
+        {/* TEMPORARILY DISABLED FOR DEBUGGING
         {deal.priceHistory && Array.isArray(deal.priceHistory) && deal.priceHistory.length > 1 && (
           <div className="mt-2 flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Trend ceny:</span>
             <Sparkline data={deal.priceHistory} width={80} height={16} />
           </div>
         )}
+        */}
 
         {/* Enhanced Metadata Row */}
         {(hasRealShipping || warrantyInfo.available || specifications.length > 0) && (
