@@ -34,7 +34,7 @@ export default function ComingSoonLanding() {
           <div className="mb-12 flex justify-center animate-scale-in">
             <div className="relative">
               <div className="absolute inset-0 blur-2xl bg-gradient-to-r from-orange-400/30 to-amber-400/30 rounded-full" />
-              <div className="relative bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/50">
+              <div className="relative bg-white/90 backdrop-blur-xl rounded-3xl p-8 shadow-2xl">
                 <div className="relative w-72 h-28">
                   <Image
                     src="/Logotyp_okazjeplus.svg"
@@ -82,7 +82,7 @@ export default function ComingSoonLanding() {
               return (
                 <div
                   key={index}
-                  className="group bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-lg border border-white/50 transition-all duration-500 hover:scale-110 hover:shadow-2xl hover:bg-white/95 animate-fade-in-scale"
+                  className="group bg-white/85 backdrop-blur-xl rounded-3xl p-8 shadow-xl transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:bg-white/95 animate-fade-in-scale"
                   style={{ animationDelay: `${(index + 6) * 100}ms` }}
                 >
                   <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.color} mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
@@ -97,7 +97,7 @@ export default function ComingSoonLanding() {
 
           {/* CTA Section */}
           <div className="max-w-3xl mx-auto animate-fade-in-up animation-delay-800">
-            <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-2xl rounded-3xl p-10 shadow-2xl border border-white/60">
+            <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-2xl rounded-3xl p-10 shadow-2xl">
               <div className="text-center space-y-6">
                 <div className="inline-flex items-center gap-3 text-gray-700">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
