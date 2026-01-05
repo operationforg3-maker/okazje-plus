@@ -65,8 +65,10 @@ export function UserNav() {
             aria-label="Menu użytkownika"
           >
             <Avatar className="h-10 w-10">
-              {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
-              <AvatarFallback>{user.displayName ? user.displayName.charAt(0) : 'U'}</AvatarFallback>
+              {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />}
+              <AvatarFallback className="bg-primary text-white">
+                {user?.displayName ? user.displayName.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : 'U')}
+              </AvatarFallback>
             </Avatar>
             {open && (
               <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-primary shadow-md" />
