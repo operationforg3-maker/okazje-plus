@@ -30,8 +30,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
-import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
-import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
+// TEMPORARILY REMOVED FOR DEBUGGING React #418:
+// import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
+// import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
 
 interface DealCardProps {
   deal: Deal;
@@ -218,16 +219,17 @@ export default function DealCard({ deal }: DealCardProps) {
   const temperaturePercent = Math.min((temperature / 500) * 100, 100);
   
   // ========================================================================
-  // DEEP DATA SMART BADGES - Auto-generated contextual badges
+  // DEEP DATA SMART BADGES - TEMPORARILY DISABLED FOR DEBUGGING
   // ========================================================================
-  const deepDataBadges = generateSmartBadges({
-    price: {
-      current: deal.price,
-      lowest30d: deal.lowestPriceIn30Days,
-    },
-    logistics: product?.logistics,
-    priceHistory: deal.priceHistory,
-  });
+  // const deepDataBadges = generateSmartBadges({
+  //   price: {
+  //     current: deal.price,
+  //     lowest30d: deal.lowestPriceIn30Days,
+  //   },
+  //   logistics: product?.logistics,
+  //   priceHistory: deal.priceHistory,
+  // });
+  const deepDataBadges = []; // Empty array to prevent errors
 
   const handleVote = async (action: 'up' | 'down') => {
     if (!user) {
