@@ -15,6 +15,8 @@ interface AccountMenuPanelProps {
 }
 
 export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: AccountMenuPanelProps) {
+  console.log('[AccountMenuPanel] Rendering with user:', user?.email, 'loading:', loading);
+  
   if (loading) {
     return (
       <div className="rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm w-72">
@@ -33,14 +35,19 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
         <div className="space-y-4">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
-              {user.photoURL ? <AvatarImage src={user.photoURL} alt={user.displayName ?? "Użytkownik"} /> : null}
-              <AvatarFallback>{(user.displayName ?? user.email ?? "U").charAt(0).toUpperCase()}</AvatarFallback>
+              {user.photoURL && typeof user.photoURL === 'string' ? (
+                <AvatarImage src={user.photoURL} alt={user.displayName ?? "Użytkownik"} />
+              ) : null}
+              <AvatarFallback>
+                {typeof user.displayName === 'string' ? user.displayName.charAt(0).toUpperCase() : 
+                 typeof user.email === 'string' ? user.email.charAt(0).toUpperCase() : 'U'}
+              </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <p className="text-sm font-semibold leading-tight text-foreground">
-                {user.displayName ?? "Użytkownik"}
+                {typeof user.displayName === 'string' ? user.displayName : "Użytkownik"}
               </p>
-              {user.email ? (
+              {typeof user.email === 'string' ? (
                 <p className="text-xs text-muted-foreground line-clamp-1">{user.email}</p>
               ) : null}
             </div>
@@ -63,7 +70,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
               <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Ustawienia</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
-            {user.role === "admin" ? (
+            {typeof user.role === 'string' && user.role === "admin" ? (
               <Link href="/admin" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
                 <span className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" /> Panel admina</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />

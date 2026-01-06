@@ -23,6 +23,7 @@ import { auth } from '@/lib/firebase';
 import { NotificationBell } from './notification-bell';
 import { useState, useEffect } from 'react';
 import { AccountMenuPanel } from '@/components/layout/account-menu-panel';
+import ErrorBoundary from './error-boundary';
 
 export function UserNav() {
   const { user, loading } = useAuth();
@@ -78,41 +79,45 @@ export function UserNav() {
   console.log('[UserNav] User initial:', userInitial, 'photoURL:', user.photoURL);
 
   return (
-    <div className="flex items-center gap-2">
-      {/* TEMPORARILY DISABLED FOR DEBUGGING: <NotificationBell /> */}
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="relative h-10 w-10 rounded-full p-0 ring-1 ring-border/40 hover:ring-primary/60 hover:bg-muted/50"
-            aria-label="Menu użytkownika"
+    <ErrorBoundary>
+      <div className="flex items-center gap-2">
+        {/* TEMPORARILY DISABLED FOR DEBUGGING: <NotificationBell /> */}
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="relative h-10 w-10 rounded-full p-0 ring-1 ring-border/40 hover:ring-primary/60 hover:bg-muted/50"
+              aria-label="Menu użytkownika"
+            >
+              <Avatar className="h-10 w-10">
+                {user?.photoURL ? (
+                  <AvatarImage src={user.photoURL} alt={user?.displayName || 'User'} />
+                ) : null}
+                <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                  {userInitial}
+                </AvatarFallback>
+              </Avatar>
+              {open && (
+                <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-primary shadow-md" />
+              )}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="p-0 border border-border/60 bg-transparent shadow-none w-auto"
           >
-            <Avatar className="h-10 w-10">
-              {user?.photoURL ? (
-                <AvatarImage src={user.photoURL} alt={user?.displayName || 'User'} />
-              ) : null}
-              <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
-                {userInitial}
-              </AvatarFallback>
-            </Avatar>
-            {open && (
-              <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-primary shadow-md" />
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          sideOffset={8}
-          className="p-0 border border-border/60 bg-transparent shadow-none w-auto"
-        >
-          <AccountMenuPanel
-            user={user}
-            loading={loading}
-            onLogout={handleLogout}
-            onNavigate={() => setOpen(false)}
-          />
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+            <ErrorBoundary>
+              <AccountMenuPanel
+                user={user}
+                loading={loading}
+                onLogout={handleLogout}
+                onNavigate={() => setOpen(false)}
+              />
+            </ErrorBoundary>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </ErrorBoundary>
   );
 }
