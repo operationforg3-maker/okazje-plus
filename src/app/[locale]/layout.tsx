@@ -8,6 +8,7 @@ import { SmartCartProvider } from '@/lib/cart-context';
 import { CurrencyProvider } from '@/context/currency-context';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
+import ErrorBoundary from '@/components/auth/error-boundary';
 import { ComparisonListener } from '@/components/deal-comparison-tool';
 import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
 import { CashbackWarningModal } from '@/components/cashback-warning-modal';
@@ -167,23 +168,25 @@ export default async function LocaleLayout({
       />
 
       <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
-        <AuthProvider>
-          <CurrencyProvider>
-            <SmartCartProvider>
-              <div className="flex flex-col min-h-screen w-full">
-                <ConditionalNav>
-                  <main className="flex-1 w-full">
-                    {children}
-                  </main>
-                </ConditionalNav>
-                <ComparisonListener />
-                <ExtensionWarningBanner />
-                <CashbackWarningModal />
-                <Toaster />
-              </div>
-            </SmartCartProvider>
-          </CurrencyProvider>
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <CurrencyProvider>
+              <SmartCartProvider>
+                <div className="flex flex-col min-h-screen w-full">
+                  <ConditionalNav>
+                    <main className="flex-1 w-full">
+                      {children}
+                    </main>
+                  </ConditionalNav>
+                  <ComparisonListener />
+                  <ExtensionWarningBanner />
+                  <CashbackWarningModal />
+                  <Toaster />
+                </div>
+              </SmartCartProvider>
+            </CurrencyProvider>
+          </AuthProvider>
+        </ErrorBoundary>
       </NextIntlClientProvider>
     </>
   );
