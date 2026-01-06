@@ -45,9 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (firebaseUserObj) {
           const userRef = doc(db, 'users', firebaseUserObj.uid);
           console.log('[AuthProvider] Fetching user document...');
-          const docSnap = await getDoc(userRef);
+          
+          // Add timeout to prevent infinite hang
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Firestore timeout after 10s')), 10000)
+          );
+          
+          const docSnap = await Promise.race([
+            getDoc(userRef),
+            timeoutPromise
+          ]).catch((error) => {
+            console.error('[AuthProvider] Firestore getDoc error or timeout:', error);
+            return null;
+          }) as any; // Type assertion needed for Promise.race with timeout
 
-          if (docSnap.exists()) {
+          if (docSnap && docSnap.exists && typeof docSnap.exists === 'function' && docSnap.exists()) {
             console.log('[AuthProvider] User document found');
             const existingData = docSnap.data() as Partial<User>;
             const normalizedUser: User = {
@@ -60,12 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             console.log('[AuthProvider] Updating user document and state:', normalizedUser);
             // Upewnij się, że w dokumencie użytkownika przechowywane jest pole uid oraz aktualne metadane
-            await setDoc(userRef, normalizedUser, { merge: true });
+            // Use timeout for setDoc too
+            await Promise.race([
+              setDoc(userRef, normalizedUser, { merge: true }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('setDoc timeout')), 5000))
+            ]).catch(err => console.error('[AuthProvider] setDoc error:', err));
+            
             // Batch all setState calls into single update
             setFirebaseUser(firebaseUserObj);
             setUser(normalizedUser);
           } else {
-            console.log('[AuthProvider] Creating new user document');
+            console.log('[AuthProvider] Creating new user document or doc not found');
             const newUser: User = {
               uid: firebaseUserObj.uid,
               email: firebaseUserObj.email,
@@ -73,7 +90,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               photoURL: firebaseUserObj.photoURL,
               role: 'user', 
             };
-            await setDoc(userRef, newUser);
+            await Promise.race([
+              setDoc(userRef, newUser),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('setDoc timeout')), 5000))
+            ]).catch(err => console.error('[AuthProvider] setDoc error on new user:', err));
+            
             // Batch all setState calls into single update
             setFirebaseUser(firebaseUserObj);
             setUser(newUser);

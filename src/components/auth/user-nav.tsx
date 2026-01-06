@@ -71,12 +71,20 @@ export function UserNav() {
 
   console.log('[UserNav] Rendering avatar for user:', user.email, 'role:', user.role);
 
-  // Always render avatar even if user object is incomplete
-  const userInitial = user?.displayName 
-    ? user.displayName.charAt(0).toUpperCase() 
-    : (user?.email ? user.email.charAt(0).toUpperCase() : 'U');
+  // Always render avatar even if user object is incomplete - ENSURE STRING OUTPUT
+  let userInitial = 'U'; // Default fallback
+  try {
+    if (user?.displayName && typeof user.displayName === 'string' && user.displayName.length > 0) {
+      userInitial = user.displayName.charAt(0).toUpperCase();
+    } else if (user?.email && typeof user.email === 'string' && user.email.length > 0) {
+      userInitial = user.email.charAt(0).toUpperCase();
+    }
+  } catch (error) {
+    console.error('[UserNav] Error computing userInitial:', error);
+    userInitial = 'U';
+  }
 
-  console.log('[UserNav] User initial:', userInitial, 'photoURL:', user.photoURL);
+  console.log('[UserNav] User initial (validated string):', JSON.stringify(userInitial), 'photoURL:', user.photoURL);
 
   return (
     <ErrorBoundary>

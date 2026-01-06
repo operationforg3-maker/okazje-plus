@@ -11,8 +11,15 @@ export function ConditionalNav({ children }: { children: React.ReactNode }) {
   
   console.log('[ConditionalNav] Rendering with auth state:', { user: !!user, loading, pathname });
   
-  // Show navbar/footer EVERYWHERE now - coming soon page removed
-  // TODO: Restore conditional logic if coming soon page is re-enabled
+  // Coming soon page logic: hide navbar/footer for guests on home page
+  const isHomePage = pathname === '/' || pathname === '/pl' || pathname === '/en' || pathname === '/de';
+  const shouldHideNav = isHomePage && !user && !loading;
+  
+  if (shouldHideNav) {
+    console.log('[ConditionalNav] Hiding navbar for guest on home page');
+    return <main className="flex-1">{children}</main>;
+  }
+  
   return (
     <div className="relative flex min-h-screen flex-col">
       <Navbar />
