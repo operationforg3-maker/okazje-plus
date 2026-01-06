@@ -75,9 +75,11 @@ export function UserNav() {
     ? user.displayName.charAt(0).toUpperCase() 
     : (user?.email ? user.email.charAt(0).toUpperCase() : 'U');
 
+  console.log('[UserNav] User initial:', userInitial, 'photoURL:', user.photoURL);
+
   return (
     <div className="flex items-center gap-2">
-      <NotificationBell />
+      {/* TEMPORARILY DISABLED FOR DEBUGGING: <NotificationBell /> */}
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -86,7 +88,9 @@ export function UserNav() {
             aria-label="Menu użytkownika"
           >
             <Avatar className="h-10 w-10">
-              {user?.photoURL && <AvatarImage src={user.photoURL} alt={user?.displayName || 'User'} />}
+              {user?.photoURL ? (
+                <AvatarImage src={user.photoURL} alt={user?.displayName || 'User'} />
+              ) : null}
               <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
                 {userInitial}
               </AvatarFallback>
