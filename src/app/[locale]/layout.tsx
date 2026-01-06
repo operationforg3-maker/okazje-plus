@@ -9,6 +9,7 @@ import { CurrencyProvider } from '@/context/currency-context';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import ErrorBoundary from '@/components/auth/error-boundary';
+import ComingSoonLanding from '@/components/coming-soon-landing';
 import { ComparisonListener } from '@/components/deal-comparison-tool';
 import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
 import { CashbackWarningModal } from '@/components/cashback-warning-modal';
@@ -168,7 +169,7 @@ export default async function LocaleLayout({
       />
 
       <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
-        <ErrorBoundary>
+        <ErrorBoundary fallback={<ComingSoonLanding />}>
           <AuthProvider>
             <CurrencyProvider>
               <SmartCartProvider>

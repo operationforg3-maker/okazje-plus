@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode } from 'react';
-import { onAuthStateChanged, User as FirebaseUser, signOut, getIdToken } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, signOut, getIdToken, getIdTokenResult } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase'; 
 import { User } from '@/lib/types';
@@ -45,7 +45,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (firebaseUserObj) {
           const userRef = doc(db, 'users', firebaseUserObj.uid);
           console.log('[AuthProvider] Fetching user document...');
-          
+
+          // Fetch custom claims (e.g., admin role) to avoid missing admin menu
+          let claimRole: string | undefined;
+          try {
+            const tokenResult = await getIdTokenResult(firebaseUserObj);
+            claimRole = typeof tokenResult.claims?.role === 'string' ? (tokenResult.claims.role as string) : undefined;
+            if (claimRole) {
+              console.log('[AuthProvider] role from custom claims:', claimRole);
+            }
+          } catch (err) {
+            console.warn('[AuthProvider] Unable to read custom claims:', err);
+          }
+
           // Add timeout to prevent infinite hang
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Firestore timeout after 10s')), 10000)
@@ -67,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: existingData.email ?? firebaseUserObj.email ?? null,
               displayName: existingData.displayName ?? firebaseUserObj.displayName ?? null,
               photoURL: existingData.photoURL ?? firebaseUserObj.photoURL ?? null,
-              role: existingData.role ?? 'user',
+              role: (claimRole as User['role']) ?? (existingData.role as User['role']) ?? 'user',
             };
 
             console.log('[AuthProvider] Updating user document and state:', normalizedUser);
@@ -88,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: firebaseUserObj.email,
               displayName: firebaseUserObj.displayName,
               photoURL: firebaseUserObj.photoURL,
-              role: 'user', 
+              role: (claimRole as User['role']) ?? 'user', 
             };
             await Promise.race([
               setDoc(userRef, newUser),
