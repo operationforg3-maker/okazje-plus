@@ -6,6 +6,15 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase'; 
 import { User } from '@/lib/types';
 
+const normalizeRole = (val?: string | null): User['role'] => {
+  if (!val) return 'user';
+  const v = val.toLowerCase();
+  if (v === 'admin' || v === 'administrator') return 'admin';
+  if (v === 'moderator') return 'moderator';
+  if (v === 'specjalista' || v === 'specialist') return 'specjalista';
+  return 'user';
+};
+
 interface AuthContextType {
   user: User | null; 
   loading: boolean;
@@ -51,9 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
             const tokenResult = await getIdTokenResult(firebaseUserObj);
             claimRole = typeof tokenResult.claims?.role === 'string' ? (tokenResult.claims.role as string) : undefined;
-            if (claimRole) {
-              console.log('[AuthProvider] role from custom claims:', claimRole);
-            }
+            if (claimRole) console.log('[AuthProvider] role from custom claims (raw):', claimRole);
           } catch (err) {
             console.warn('[AuthProvider] Unable to read custom claims:', err);
           }
@@ -79,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: existingData.email ?? firebaseUserObj.email ?? null,
               displayName: existingData.displayName ?? firebaseUserObj.displayName ?? null,
               photoURL: existingData.photoURL ?? firebaseUserObj.photoURL ?? null,
-              role: (claimRole as User['role']) ?? (existingData.role as User['role']) ?? 'user',
+              role: normalizeRole(claimRole) ?? normalizeRole(existingData.role ?? undefined),
             };
 
             console.log('[AuthProvider] User loaded - role:', normalizedUser.role);
@@ -93,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: firebaseUserObj.email,
               displayName: firebaseUserObj.displayName,
               photoURL: firebaseUserObj.photoURL,
-              role: (claimRole as User['role']) ?? 'user', 
+              role: normalizeRole(claimRole), 
             };
             await Promise.race([
               setDoc(userRef, newUser),
