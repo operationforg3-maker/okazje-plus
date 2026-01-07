@@ -82,14 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role: (claimRole as User['role']) ?? (existingData.role as User['role']) ?? 'user',
             };
 
-            console.log('[AuthProvider] Updating user document and state:', normalizedUser);
-            // Upewnij się, że w dokumencie użytkownika przechowywane jest pole uid oraz aktualne metadane
-            // Use timeout for setDoc too
-            await Promise.race([
-              setDoc(userRef, normalizedUser, { merge: true }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('setDoc timeout')), 5000))
-            ]).catch(err => console.error('[AuthProvider] setDoc error:', err));
-            
+            console.log('[AuthProvider] User loaded - role:', normalizedUser.role);
             // Batch all setState calls into single update
             setFirebaseUser(firebaseUserObj);
             setUser(normalizedUser);
