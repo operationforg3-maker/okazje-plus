@@ -4,12 +4,15 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, LayoutDashboard, LogOut, Settings, User as UserIcon, Heart, Bell, Globe, Coins, Moon, Sun } from "lucide-react";
+import { ArrowRight, LayoutDashboard, LogOut, Settings, User as UserIcon, Heart, Bell, Globe, Coins, Moon, Sun, Check } from "lucide-react";
 import { User } from "@/lib/types";
-import { LanguageSwitcherMenu } from "@/components/locale-currency-switcher";
-import { CurrencySwitcher } from "@/components/currency-switcher";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { useLocale } from 'next-intl';
+import { usePathname } from 'next/navigation';
+import { Link as IntlLink } from '@/i18n/routing';
+import { getLanguageLabel, getLanguageFlag } from '@/hooks/use-content-language';
+import { SupportedLanguage } from '@/lib/i18n-content';
+import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 interface AccountMenuPanelProps {
   user: User | null;
@@ -20,6 +23,68 @@ interface AccountMenuPanelProps {
 
 export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: AccountMenuPanelProps) {
   console.log('[AccountMenuPanel] Rendering with user:', user?.email, 'loading:', loading);
+  
+  // Language switching
+  const [isMountedLang, setIsMountedLang] = useState(false);
+  const locale = useLocale() as SupportedLanguage;
+  const pathname = usePathname();
+  
+  useEffect(() => {
+    setIsMountedLang(true);
+  }, []);
+  
+  const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de)(\/|$)/, '/');
+  const basePath = pathnameWithoutLocale || '/';
+  const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de'];
+
+  // Currency switching
+  const [isMountedCurr, setIsMountedCurr] = useState(false);
+  const [currency, setCurrency] = useState('PLN');
+  
+  useEffect(() => {
+    setIsMountedCurr(true);
+    if (typeof window !== 'undefined') {
+      const savedCurrency = localStorage.getItem('preferredCurrency') || 'PLN';
+      setCurrency(savedCurrency);
+    }
+  }, []);
+
+  const switchCurrency = (newCurrency: string) => {
+    setCurrency(newCurrency);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preferredCurrency', newCurrency);
+      window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: newCurrency } }));
+    }
+  };
+
+  // Theme switching
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('okp_theme') as 'light' | 'dark' | null;
+      const initial: 'light' | 'dark' = stored === 'light' || stored === 'dark' ? stored : 'dark';
+      setTheme(initial);
+    }
+  }, []);
+
+  const cycleTheme = () => {
+    const next: 'light' | 'dark' = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('okp_theme', next);
+      const isDark = next === 'dark';
+      document.documentElement.classList.toggle('dark', isDark);
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    }
+  };
+  
+  const SUPPORTED_CURRENCIES = [
+    { code: 'PLN', symbol: 'zł', name: 'Polski złoty', flag: '🇵🇱' },
+    { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺' },
+    { code: 'USD', symbol: '$', name: 'Dolar amerykański', flag: '🇺🇸' },
+    { code: 'GBP', symbol: '£', name: 'Funt brytyjski', flag: '🇬🇧' },
+  ] as const;
   
   if (loading) {
     return (
@@ -81,21 +146,71 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
               </Link>
             ) : null}
             
-            {/* Separator */}
-            <div className="my-2 h-px bg-border/40" />
+            {/* Language Switcher - Horizontal */}
+            {isMountedLang && (
+              <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm gap-2">
+                <span className="flex items-center gap-2 flex-1">
+                  <Globe className="h-4 w-4" />
+                  <span className="font-medium min-w-fit">{getLanguageFlag(locale)} {getLanguageLabel(locale)}</span>
+                </span>
+                <div className="flex gap-1">
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <IntlLink
+                      key={lang}
+                      href={basePath}
+                      locale={lang}
+                      className={cn(
+                        "px-2 py-1 rounded text-xs font-medium transition-colors",
+                        locale === lang 
+                          ? "bg-primary/20 text-primary border border-primary/40" 
+                          : "hover:bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {lang.toUpperCase()}
+                    </IntlLink>
+                  ))}
+                </div>
+              </div>
+            )}
             
-            {/* Language, Currency, Theme Switchers */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex justify-center">
-                <LanguageSwitcherMenu />
+            {/* Currency Switcher - Horizontal */}
+            {isMountedCurr && (
+              <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm gap-2">
+                <span className="flex items-center gap-2 flex-1">
+                  <Coins className="h-4 w-4" />
+                  <span className="font-medium min-w-fit">{currency}</span>
+                </span>
+                <div className="flex gap-1">
+                  {SUPPORTED_CURRENCIES.map((curr) => (
+                    <button
+                      key={curr.code}
+                      onClick={() => switchCurrency(curr.code)}
+                      className={cn(
+                        "px-2 py-1 rounded text-xs font-medium transition-colors",
+                        currency === curr.code 
+                          ? "bg-primary/20 text-primary border border-primary/40" 
+                          : "hover:bg-muted text-muted-foreground"
+                      )}
+                      title={curr.name}
+                    >
+                      {curr.flag} {curr.code}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex justify-center">
-                <CurrencySwitcher />
-              </div>
-              <div className="flex justify-center">
-                <ThemeToggle size="sm" className="h-9 w-9" />
-              </div>
-            </div>
+            )}
+            
+            {/* Theme Toggle - Horizontal */}
+            <button
+              onClick={cycleTheme}
+              className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary w-full"
+            >
+              <span className="flex items-center gap-2">
+                {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                <span className="font-medium">{theme === 'light' ? 'Jasny' : 'Ciemny'} tryb</span>
+              </span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </button>
             
             {/* Separator */}
             <div className="my-2 h-px bg-border/40" />
