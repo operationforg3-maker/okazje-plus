@@ -4,17 +4,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 function loadServiceAccount() {
-  // Prefer runtime-provided JSON from environment (App Hosting Secret)
+  // Prefer runtime-provided JSON from environment (Secret Manager)
   const envJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (envJson) {
     try {
       const parsed = JSON.parse(envJson);
-      if (parsed && parsed.project_id) {
+      if (parsed?.project_id && parsed?.client_email && parsed?.private_key) {
         return parsed;
       }
-      console.warn('[firebase-admin] FIREBASE_SERVICE_ACCOUNT_JSON is present but missing project_id');
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON lacks required fields (project_id, client_email, private_key)');
     } catch (e: any) {
-      console.warn('[firebase-admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON, falling back:', e);
+      console.error('[firebase-admin] FIREBASE_SERVICE_ACCOUNT_JSON invalid', e);
+      throw e;
     }
   }
 
@@ -22,21 +23,31 @@ function loadServiceAccount() {
   if (fs.existsSync(serviceAccountPath)) {
     try {
       const raw = fs.readFileSync(serviceAccountPath, 'utf8');
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed?.project_id && parsed?.client_email && parsed?.private_key) {
+        return parsed;
+      }
+      throw new Error('serviceAccountKey.json missing required fields');
     } catch (error) {
-      console.warn('[firebase-admin] Failed to parse serviceAccountKey.json, falling back to ADC', error);
+      console.error('[firebase-admin] serviceAccountKey.json invalid', error);
+      throw error;
     }
   }
+
+  // Functions have ADC by default; but if nothing is provided explicitly, we rely on applicationDefault
   return null;
 }
 
 const existing = getApps();
 const app = existing.length
   ? existing[0]
-  : initializeApp(
-      loadServiceAccount()
-        ? { credential: cert(loadServiceAccount() as any) }
-        : { credential: applicationDefault() }
-    );
+  : (() => {
+      const sa = loadServiceAccount();
+      if (sa) {
+        return initializeApp({ credential: cert(sa as any) });
+      }
+      // Firebase Functions runtime supplies ADC automatically; allow that as last resort
+      return initializeApp({ credential: applicationDefault() });
+    })();
 
 export const db = getFirestore(app);
