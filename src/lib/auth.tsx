@@ -59,8 +59,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           let claimRole: string | undefined;
           try {
             const tokenResult = await getIdTokenResult(firebaseUserObj);
-            claimRole = typeof tokenResult.claims?.role === 'string' ? (tokenResult.claims.role as string) : undefined;
-            if (claimRole) console.log('[AuthProvider] role from custom claims (raw):', claimRole);
+            // Check for both 'role' and 'admin' custom claims
+            if (tokenResult.claims?.admin === true) {
+              claimRole = 'admin';
+              console.log('[AuthProvider] role from custom claims (admin=true):', claimRole);
+            } else if (typeof tokenResult.claims?.role === 'string') {
+              claimRole = tokenResult.claims.role as string;
+              console.log('[AuthProvider] role from custom claims (role field):', claimRole);
+            }
           } catch (err) {
             console.warn('[AuthProvider] Unable to read custom claims:', err);
           }
