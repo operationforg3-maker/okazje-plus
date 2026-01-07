@@ -30,9 +30,15 @@ if (!getApps().length) {
         });
       } else {
         console.warn('[firebase-admin] FIREBASE_SERVICE_ACCOUNT_JSON missing required fields');
+        if (isAppHosting) {
+          throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON brakuje wymaganych pól (project_id, client_email, private_key) - sprawdź Secret Manager');
+        }
       }
     } catch (e) {
-      console.warn('[firebase-admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON, falling back:', e);
+      console.warn('[firebase-admin] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON', e);
+      if (isAppHosting) {
+        throw e;
+      }
     }
   }
 
@@ -52,25 +58,22 @@ if (!getApps().length) {
           }),
         });
       } else {
-        console.warn('[firebase-admin] GOOGLE_APPLICATION_CREDENTIALS is present but missing required fields; falling back to applicationDefault()');
-        adminApp = initializeApp({
-          credential: applicationDefault(),
-        });
+        console.warn('[firebase-admin] GOOGLE_APPLICATION_CREDENTIALS is present but missing required fields');
+        if (isAppHosting) {
+          throw new Error('GOOGLE_APPLICATION_CREDENTIALS nie zawiera wymaganych pól - uzupełnij Secret/plik z pełnym JSON');
+        }
       }
     } catch (e) {
-      console.warn('[firebase-admin] Failed to parse GOOGLE_APPLICATION_CREDENTIALS file, falling back to applicationDefault():', e);
-      adminApp = initializeApp({
-        credential: applicationDefault(),
-      });
+      console.warn('[firebase-admin] Failed to parse GOOGLE_APPLICATION_CREDENTIALS file', e);
+      if (isAppHosting) {
+        throw e;
+      }
     }
   }
 
   if (!adminApp) {
     if (isAppHosting) {
-      // App Hosting / Cloud Run posiada ADC automatycznie
-      adminApp = initializeApp({
-        credential: applicationDefault(),
-      });
+      throw new Error('Brak poprawnych poświadczeń Firebase Admin na App Hosting. Ustaw Secret FIREBASE_SERVICE_ACCOUNT_JSON (pełny JSON) lub popraw GOOGLE_APPLICATION_CREDENTIALS.');
     } else if (hasServiceAccountFile) {
       try {
         const raw = readFileSync(serviceAccountPath, 'utf8');
