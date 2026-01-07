@@ -1,4 +1,4 @@
-import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
+import { getApps, initializeApp, cert, App, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue as FirestoreFieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import { readFileSync, existsSync } from 'fs';
@@ -37,27 +37,40 @@ if (!getApps().length) {
   }
 
   // Jeśli mamy jawne GOOGLE_APPLICATION_CREDENTIALS wskazujące na plik json użyj go w pierwszej kolejności
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS && existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+  if (!adminApp && process.env.GOOGLE_APPLICATION_CREDENTIALS && existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
     try {
       const raw = readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, 'utf8');
       const parsed = JSON.parse(raw);
-      console.log('[firebase-admin] Using GOOGLE_APPLICATION_CREDENTIALS file');
-      adminApp = initializeApp({
-        credential: cert({
-          projectId: parsed.project_id,
-          clientEmail: parsed.client_email,
-          privateKey: parsed.private_key,
-        }),
-      });
+      const hasRequiredFields = parsed?.project_id && parsed?.client_email && parsed?.private_key;
+      if (hasRequiredFields) {
+        console.log('[firebase-admin] Using GOOGLE_APPLICATION_CREDENTIALS file');
+        adminApp = initializeApp({
+          credential: cert({
+            projectId: parsed.project_id,
+            clientEmail: parsed.client_email,
+            privateKey: parsed.private_key,
+          }),
+        });
+      } else {
+        console.warn('[firebase-admin] GOOGLE_APPLICATION_CREDENTIALS is present but missing required fields; falling back to applicationDefault()');
+        adminApp = initializeApp({
+          credential: applicationDefault(),
+        });
+      }
     } catch (e) {
-      console.warn('[firebase-admin] Failed to parse GOOGLE_APPLICATION_CREDENTIALS file, falling back:', e);
+      console.warn('[firebase-admin] Failed to parse GOOGLE_APPLICATION_CREDENTIALS file, falling back to applicationDefault():', e);
+      adminApp = initializeApp({
+        credential: applicationDefault(),
+      });
     }
   }
 
   if (!adminApp) {
     if (isAppHosting) {
       // App Hosting / Cloud Run posiada ADC automatycznie
-      adminApp = initializeApp();
+      adminApp = initializeApp({
+        credential: applicationDefault(),
+      });
     } else if (hasServiceAccountFile) {
       try {
         const raw = readFileSync(serviceAccountPath, 'utf8');
@@ -76,12 +89,16 @@ if (!getApps().length) {
         });
       } catch (e) {
         console.warn('[firebase-admin] Failed to initialize with serviceAccountKey.json, fallback to ADC:', e);
-        adminApp = initializeApp();
+        adminApp = initializeApp({
+          credential: applicationDefault(),
+        });
       }
     } else {
       // Ostatnia próba: ADC lokalne (wymaga `gcloud auth application-default login`)
       console.warn('[firebase-admin] No service account file. Using Application Default Credentials. If UNAUTHENTICATED appears run: gcloud auth application-default login');
-      adminApp = initializeApp();
+      adminApp = initializeApp({
+        credential: applicationDefault(),
+      });
     }
   }
 } else {

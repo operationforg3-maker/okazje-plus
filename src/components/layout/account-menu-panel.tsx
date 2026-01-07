@@ -146,11 +146,16 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
               </Link>
             ) : null}
             
+            <button type="button" onClick={() => { onLogout(); onNavigate?.(); }} className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-destructive/60 hover:text-destructive">
+              <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> Wyloguj się</span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+
             {/* Separator */}
             <div className="my-2 h-px bg-border/40" />
-            
+
             {/* Language, Currency, Theme - Toggle Switchers */}
-            <div className="flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2 justify-start">
               {/* Language Switch */}
               {isMountedLang && (
                 <IntlLink
@@ -165,7 +170,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
                   {getLanguageFlag(locale)}
                 </IntlLink>
               )}
-              
+
               {/* Currency Switch */}
               {isMountedCurr && (
                 <button
@@ -183,7 +188,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
                   <Coins className="h-4 w-4" />
                 </button>
               )}
-              
+
               {/* Theme Switch */}
               <button
                 onClick={cycleTheme}
@@ -196,14 +201,6 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
                 {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
             </div>
-            
-            {/* Separator */}
-            <div className="my-2 h-px bg-border/40" />
-            
-            <button type="button" onClick={() => { onLogout(); onNavigate?.(); }} className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-destructive/60 hover:text-destructive">
-              <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> Wyloguj się</span>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-            </button>
           </div>
         </div>
       ) : (
