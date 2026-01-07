@@ -149,59 +149,49 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
             {/* Separator */}
             <div className="my-2 h-px bg-border/40" />
             
-            {/* Language, Currency, Theme - Compact Buttons */}
-            <div className="flex items-center gap-2">
-              {/* Language Switcher */}
+            {/* Language, Currency, Theme - Toggle Switchers */}
+            <div className="flex items-center gap-2 justify-between">
+              {/* Language Switch */}
               {isMountedLang && (
-                <div className="flex gap-1">
-                  {SUPPORTED_LANGUAGES.map((lang) => (
-                    <IntlLink
-                      key={lang}
-                      href={basePath}
-                      locale={lang}
-                      className={cn(
-                        "h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium transition-all border",
-                        locale === lang 
-                          ? "bg-primary text-primary-foreground border-primary shadow-md" 
-                          : "bg-background/70 border-border/40 hover:border-primary/60 text-muted-foreground hover:text-foreground"
-                      )}
-                      title={getLanguageLabel(lang)}
-                    >
-                      {lang.toUpperCase()}
-                    </IntlLink>
-                  ))}
-                </div>
+                <IntlLink
+                  href={basePath}
+                  locale={SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length]}
+                  className={cn(
+                    "h-9 w-9 rounded-full flex items-center justify-center text-sm font-medium transition-all border hover:shadow-md",
+                    "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
+                  )}
+                  title={`Zmień język na ${getLanguageLabel(SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length])}`}
+                >
+                  {getLanguageFlag(locale)}
+                </IntlLink>
               )}
               
-              {/* Currency Switcher */}
+              {/* Currency Switch */}
               {isMountedCurr && (
-                <div className="flex gap-1">
-                  {SUPPORTED_CURRENCIES.map((curr) => (
-                    <button
-                      key={curr.code}
-                      onClick={() => switchCurrency(curr.code)}
-                      className={cn(
-                        "h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium transition-all border",
-                        currency === curr.code 
-                          ? "bg-primary text-primary-foreground border-primary shadow-md" 
-                          : "bg-background/70 border-border/40 hover:border-primary/60 text-muted-foreground hover:text-foreground"
-                      )}
-                      title={curr.name}
-                    >
-                      {curr.code.charAt(0)}
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={() => {
+                    const currentIdx = SUPPORTED_CURRENCIES.findIndex(c => c.code === currency);
+                    const nextCurr = SUPPORTED_CURRENCIES[(currentIdx + 1) % SUPPORTED_CURRENCIES.length];
+                    switchCurrency(nextCurr.code);
+                  }}
+                  className={cn(
+                    "h-9 w-9 rounded-full flex items-center justify-center text-sm font-medium transition-all border hover:shadow-md",
+                    "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
+                  )}
+                  title={`Zmień walutę na ${SUPPORTED_CURRENCIES[(SUPPORTED_CURRENCIES.findIndex(c => c.code === currency) + 1) % SUPPORTED_CURRENCIES.length].name}`}
+                >
+                  <Coins className="h-4 w-4" />
+                </button>
               )}
               
-              {/* Theme Toggle */}
+              {/* Theme Switch */}
               <button
                 onClick={cycleTheme}
                 className={cn(
-                  "h-8 w-8 rounded-full flex items-center justify-center transition-all border",
-                  "bg-background/70 border-border/40 hover:border-primary/60 text-muted-foreground hover:text-foreground hover:shadow-md"
+                  "h-9 w-9 rounded-full flex items-center justify-center transition-all border hover:shadow-md",
+                  "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
                 )}
-                title={theme === 'light' ? 'Jasny tryb' : 'Ciemny tryb'}
+                title={`Zmień na ${theme === 'light' ? 'ciemny' : 'jasny'} tryb`}
               >
                 {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
