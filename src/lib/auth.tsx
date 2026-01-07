@@ -58,9 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.warn('[AuthProvider] Unable to read custom claims:', err);
           }
 
-          // Add timeout to prevent infinite hang
+          // Add timeout to prevent infinite hang (3s is enough for Firestore read)
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Firestore timeout after 10s')), 10000)
+            setTimeout(() => reject(new Error('Firestore timeout after 3s')), 3000)
           );
           
           const docSnap = await Promise.race([
@@ -82,13 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role: (claimRole as User['role']) ?? (existingData.role as User['role']) ?? 'user',
             };
 
-            console.log('[AuthProvider] Updating user document and state:', normalizedUser);
-            // Upewnij się, że w dokumencie użytkownika przechowywane jest pole uid oraz aktualne metadane
-            // Use timeout for setDoc too
-            await Promise.race([
-              setDoc(userRef, normalizedUser, { merge: true }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('setDoc timeout')), 5000))
-            ]).catch(err => console.error('[AuthProvider] setDoc error:', err));
+            console.log('[AuthProvider] User loaded, role:', normalizedUser.role);
+            // DON'T setDoc on every login - it's slow and unnecessary!
+            // Only create/update doc when user data actually changes
             
             // Batch all setState calls into single update
             setFirebaseUser(firebaseUserObj);
