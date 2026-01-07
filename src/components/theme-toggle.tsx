@@ -25,7 +25,7 @@ export function ThemeToggle({
   className,
   size = 'icon',
 }: { className?: string; size?: 'icon' | 'sm' | 'default' }) {
-  const [theme, setTheme] = useState<Theme>('system');
+  const [theme, setTheme] = useState<Theme>('dark');
   const t = useTranslations('common');
 
   // Initialize from storage
