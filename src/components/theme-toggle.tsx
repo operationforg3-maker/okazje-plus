@@ -2,20 +2,20 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Moon, Sun, Laptop } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 
 // Minimal theme manager without external deps
-// Persists in localStorage under 'okp_theme' as 'light' | 'dark' | 'system'
+// Persists in localStorage under 'okp_theme' as 'light' | 'dark'
+// No 'system' mode - only light and dark
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark';
 const STORAGE_KEY = 'okp_theme';
 
 function applyTheme(theme: Theme) {
   try {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+    const isDark = theme === 'dark';
     document.documentElement.classList.toggle('dark', isDark);
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
   } catch {}
@@ -32,37 +32,23 @@ export function ThemeToggle({
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-      const initial: Theme = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+      const initial: Theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
       setTheme(initial);
       applyTheme(initial);
     } catch {}
   }, []);
 
-  // React to system theme changes when in 'system'
-  useEffect(() => {
-    if (theme !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => applyTheme('system');
-    try {
-      mq.addEventListener('change', handler);
-    } catch {
-      // Safari
-      mq.addListener(handler);
-    }
-    return () => {
-      try { mq.removeEventListener('change', handler); } catch { mq.removeListener(handler); }
-    };
-  }, [theme]);
+  // No need for system listener anymore - just light/dark
 
   const cycle = () => {
-    const next: Theme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    const next: Theme = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
     try { localStorage.setItem(STORAGE_KEY, next); } catch {}
     applyTheme(next);
   };
 
   const label = useMemo(() => {
-    return theme === 'light' ? t('theme.light') : theme === 'dark' ? t('theme.dark') : t('theme.system');
+    return theme === 'light' ? t('theme.light') : t('theme.dark');
   }, [theme, t]);
 
   return (
@@ -72,11 +58,10 @@ export function ThemeToggle({
       className={cn('rounded-full', className)}
       onClick={cycle}
       aria-label={label}
-      title={`${label} (${t('theme.hint')})`}
+      title={label}
     >
       {theme === 'light' && <Sun className="h-5 w-5" />}
       {theme === 'dark' && <Moon className="h-5 w-5" />}
-      {theme === 'system' && <Laptop className="h-5 w-5" />}
     </Button>
   );
 }

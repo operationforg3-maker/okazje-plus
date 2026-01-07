@@ -24,9 +24,6 @@ import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { MiniCartBadge } from '@/components/smart-cart-widget';
-import { LanguageSwitcherMenu } from '@/components/locale-currency-switcher';
-import { CurrencySwitcher } from '@/components/currency-switcher';
-import { ThemeToggle } from '@/components/theme-toggle';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -125,9 +122,7 @@ export function Navbar() {
             <div className="hidden max-w-xl flex-1 sm:block">
               <AutocompleteSearch />
             </div>
-            <LanguageSwitcherMenu />
-            <CurrencySwitcher />
-            <ThemeToggle />
+            {/* Language, Currency, Theme moved to AccountMenuPanel */}
             {/* PRIMARY CTA: Add Deal - Now visible on md+ screens */}
             <Button asChild className="hidden md:inline-flex rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all">
               <Link href={`${prefix}/add-deal`}>

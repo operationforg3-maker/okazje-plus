@@ -4,8 +4,12 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, LayoutDashboard, LogOut, Settings, User as UserIcon, Heart, Bell } from "lucide-react";
+import { ArrowRight, LayoutDashboard, LogOut, Settings, User as UserIcon, Heart, Bell, Globe, Coins, Moon, Sun } from "lucide-react";
 import { User } from "@/lib/types";
+import { LanguageSwitcherMenu } from "@/components/locale-currency-switcher";
+import { CurrencySwitcher } from "@/components/currency-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 interface AccountMenuPanelProps {
   user: User | null;
@@ -76,6 +80,26 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </Link>
             ) : null}
+            
+            {/* Separator */}
+            <div className="my-2 h-px bg-border/40" />
+            
+            {/* Language, Currency, Theme Switchers */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="flex justify-center">
+                <LanguageSwitcherMenu />
+              </div>
+              <div className="flex justify-center">
+                <CurrencySwitcher />
+              </div>
+              <div className="flex justify-center">
+                <ThemeToggle size="sm" className="h-9 w-9" />
+              </div>
+            </div>
+            
+            {/* Separator */}
+            <div className="my-2 h-px bg-border/40" />
+            
             <button type="button" onClick={() => { onLogout(); onNavigate?.(); }} className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-destructive/60 hover:text-destructive">
               <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> Wyloguj się</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
