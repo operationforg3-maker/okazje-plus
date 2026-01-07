@@ -146,13 +146,13 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
               </Link>
             ) : null}
             
-            {/* Language Switcher - Horizontal */}
-            {isMountedLang && (
-              <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm gap-2">
-                <span className="flex items-center gap-2 flex-1">
-                  <Globe className="h-4 w-4" />
-                  <span className="font-medium min-w-fit">{getLanguageFlag(locale)} {getLanguageLabel(locale)}</span>
-                </span>
+            {/* Separator */}
+            <div className="my-2 h-px bg-border/40" />
+            
+            {/* Language, Currency, Theme - Compact Buttons */}
+            <div className="flex items-center gap-2">
+              {/* Language Switcher */}
+              {isMountedLang && (
                 <div className="flex gap-1">
                   {SUPPORTED_LANGUAGES.map((lang) => (
                     <IntlLink
@@ -160,57 +160,52 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
                       href={basePath}
                       locale={lang}
                       className={cn(
-                        "px-2 py-1 rounded text-xs font-medium transition-colors",
+                        "h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium transition-all border",
                         locale === lang 
-                          ? "bg-primary/20 text-primary border border-primary/40" 
-                          : "hover:bg-muted text-muted-foreground"
+                          ? "bg-primary text-primary-foreground border-primary shadow-md" 
+                          : "bg-background/70 border-border/40 hover:border-primary/60 text-muted-foreground hover:text-foreground"
                       )}
+                      title={getLanguageLabel(lang)}
                     >
                       {lang.toUpperCase()}
                     </IntlLink>
                   ))}
                 </div>
-              </div>
-            )}
-            
-            {/* Currency Switcher - Horizontal */}
-            {isMountedCurr && (
-              <div className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm gap-2">
-                <span className="flex items-center gap-2 flex-1">
-                  <Coins className="h-4 w-4" />
-                  <span className="font-medium min-w-fit">{currency}</span>
-                </span>
+              )}
+              
+              {/* Currency Switcher */}
+              {isMountedCurr && (
                 <div className="flex gap-1">
                   {SUPPORTED_CURRENCIES.map((curr) => (
                     <button
                       key={curr.code}
                       onClick={() => switchCurrency(curr.code)}
                       className={cn(
-                        "px-2 py-1 rounded text-xs font-medium transition-colors",
+                        "h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium transition-all border",
                         currency === curr.code 
-                          ? "bg-primary/20 text-primary border border-primary/40" 
-                          : "hover:bg-muted text-muted-foreground"
+                          ? "bg-primary text-primary-foreground border-primary shadow-md" 
+                          : "bg-background/70 border-border/40 hover:border-primary/60 text-muted-foreground hover:text-foreground"
                       )}
                       title={curr.name}
                     >
-                      {curr.flag} {curr.code}
+                      {curr.code.charAt(0)}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-            
-            {/* Theme Toggle - Horizontal */}
-            <button
-              onClick={cycleTheme}
-              className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary w-full"
-            >
-              <span className="flex items-center gap-2">
+              )}
+              
+              {/* Theme Toggle */}
+              <button
+                onClick={cycleTheme}
+                className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center transition-all border",
+                  "bg-background/70 border-border/40 hover:border-primary/60 text-muted-foreground hover:text-foreground hover:shadow-md"
+                )}
+                title={theme === 'light' ? 'Jasny tryb' : 'Ciemny tryb'}
+              >
                 {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                <span className="font-medium">{theme === 'light' ? 'Jasny' : 'Ciemny'} tryb</span>
-              </span>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-            </button>
+              </button>
+            </div>
             
             {/* Separator */}
             <div className="my-2 h-px bg-border/40" />
