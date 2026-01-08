@@ -1660,7 +1660,7 @@ export async function getUnreadNotificationsCount(userId: string): Promise<numbe
  * Pobiera statystyki dashboardu admina
  * Cached for 15 minutes to reduce load
  */
-export async function getAdminDashboardStats() {
+export async function getAdminDashboardStats(token?: string) {
   // Prefer server-side API to avoid client Firestore permissions and speed up with server caching
   const cacheKey = 'admin:dashboard:stats';
   const cached = await cacheGet(cacheKey);
@@ -1669,7 +1669,11 @@ export async function getAdminDashboardStats() {
   }
 
   try {
-    const res = await fetch('/api/admin/stats', { cache: 'no-store' });
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch('/api/admin/stats', { cache: 'no-store', headers });
     if (!res.ok) {
       throw new Error(`Stats API failed: ${res.status}`);
     }

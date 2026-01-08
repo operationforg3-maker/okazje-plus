@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   // Root layout MUSI zawierać html i body dla Next.js 15
   return (
-    <html suppressHydrationWarning>
+    <html lang="pl" suppressHydrationWarning>
       <head>
         {/* Theme init - musi być przed hydration */}
         <script

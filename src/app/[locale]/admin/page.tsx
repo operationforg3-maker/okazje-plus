@@ -24,6 +24,7 @@ import {
   Settings
 } from 'lucide-react';
 import { getCounts, getHotDeals, getRecommendedProducts, getAdminDashboardStats } from '@/lib/data';
+import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -283,6 +284,7 @@ function AdminPage() {
   const [hotDeals, setHotDeals] = useState<Deal[]>([]);
   const [topProducts, setTopProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getIdToken } = useAuth();
 
   useEffect(() => {
     const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
@@ -290,8 +292,9 @@ function AdminPage() {
     async function fetchStats() {
       try {
         DEBUG && console.log('[AdminPage] Fetching dashboard stats...');
+        const token = await getIdToken();
         const [dashStats, dealsData, productsData] = await Promise.all([
-          getAdminDashboardStats(),
+          getAdminDashboardStats(token || undefined),
           getHotDeals(5),
           getRecommendedProducts(5)
         ]);
