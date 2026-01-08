@@ -242,6 +242,30 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
 import { getPendingDeals, getPendingProducts, getRecentlyModerated } from '@/lib/data';
 import { Deal, Product } from '@/lib/types';
 
+interface ReportedComment {
+  id: string;
+  content: string;
+  reportCount: number;
+  createdAt: string;
+  userId: string;
+  parentId: string;
+  parentType: 'deal' | 'product';
+  parentTitle: string;
+  status?: string;
+}
+
+interface Report {
+  id: string;
+  reportedBy: string;
+  targetType: string;
+  targetId: string;
+  reportType: string;
+  description?: string;
+  status: string;
+  createdAt: string;
+  target?: any;
+}
+
 function ModerationPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -251,6 +275,12 @@ function ModerationPage() {
   const [rejectedItems, setRejectedItems] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [checkingClaims, setCheckingClaims] = useState(false);
+  
+  // New states for comments, reports, users
+  const [reportedComments, setReportedComments] = useState<ReportedComment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
 
   const handleFixAdminClaims = async () => {
     setCheckingClaims(true);
@@ -302,6 +332,101 @@ function ModerationPage() {
       });
     } finally {
       setCheckingClaims(false);
+    }
+  };
+
+  const fetchReportedComments = useCallback(async () => {
+    setLoadingComments(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/comments/moderate?limit=50', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReportedComments(data.comments || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch reported comments:', error);
+    } finally {
+      setLoadingComments(false);
+    }
+  }, []);
+
+  const fetchReports = useCallback(async () => {
+    setLoadingReports(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/reports?status=pending&limit=100', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReports(data.reports || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch reports:', error);
+    } finally {
+      setLoadingReports(false);
+    }
+  }, []);
+
+  const handleCommentModeration = async (
+    commentId: string,
+    parentType: 'deal' | 'product',
+    parentId: string,
+    action: 'approve' | 'reject' | 'delete' | 'mark-spam'
+  ) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/comments/moderate', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ commentId, parentType, parentId, action }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast({ title: 'Sukces', description: data.message || 'Komentarz zmoderowany' });
+        await fetchReportedComments();
+      } else {
+        toast({ title: 'Błąd', description: data.error || 'Nie udało się', variant: 'destructive' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const handleReportAction = async (reportId: string, action: 'approve' | 'reject' | 'delete-target' | 'ignore', notes?: string) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/reports', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reportId, action, moderatorNotes: notes }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast({ title: 'Sukces', description: data.message || 'Zgłoszenie obsłużone' });
+        await fetchReports();
+      } else {
+        toast({ title: 'Błąd', description: data.error || 'Nie udało się', variant: 'destructive' });
+      }
+    } catch (error: any) {
+      toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -467,6 +592,15 @@ function ModerationPage() {
           </TabsTrigger>
           <TabsTrigger value="products">
             Produkty ({pendingProducts.length})
+          </TabsTrigger>
+          <TabsTrigger value="comments">
+            Komentarze
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            Zgłoszenia
+          </TabsTrigger>
+          <TabsTrigger value="users">
+            Użytkownicy
           </TabsTrigger>
           <TabsTrigger value="approved">
             Zatwierdzone
@@ -634,6 +768,262 @@ function ModerationPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="comments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Komentarze zgłoszone do moderacji</CardTitle>
+              <CardDescription>
+                Komentarze oznaczone jako spam lub zgłoszone przez użytkowników
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
+                <Button onClick={fetchReportedComments} disabled={loadingComments}>
+                  {loadingComments ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Odśwież listę
+                </Button>
+              </div>
+
+              {loadingComments ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : reportedComments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Brak zgłoszonych komentarzy</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reportedComments.map((comment) => (
+                    <div key={comment.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="destructive">{comment.reportCount} zgłoszeń</Badge>
+                            <Badge variant="outline">{comment.parentType === 'deal' ? 'Okazja' : 'Produkt'}</Badge>
+                            {comment.status && <Badge variant="secondary">{comment.status}</Badge>}
+                          </div>
+                          <p className="text-sm font-medium mb-1">
+                            Pod: {comment.parentTitle || 'Nieznany tytuł'}
+                          </p>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {formatDate(comment.createdAt)}
+                          </p>
+                          <div className="bg-muted p-3 rounded">
+                            <p className="text-sm">{comment.content}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'approve')}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Zatwierdź
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'reject')}
+                        >
+                          Odrzuć
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            if (window.confirm('Czy na pewno chcesz usunąć ten komentarz?')) {
+                              handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'delete');
+                            }
+                          }}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Usuń
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="bg-red-950 text-red-50"
+                          onClick={() => {
+                            if (window.confirm('Oznacz jako spam? Autor straci 10 punktów reputacji.')) {
+                              handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'mark-spam');
+                            }
+                          }}
+                        >
+                          🚫 Spam
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Zgłoszenia użytkowników</CardTitle>
+              <CardDescription>
+                Treści zgłoszone przez użytkowników jako spam, duplikaty lub nieprawidłowe
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4">
+                <Button onClick={fetchReports} disabled={loadingReports}>
+                  {loadingReports ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Odśwież listę
+                </Button>
+              </div>
+
+              {loadingReports ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : reports.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Brak oczekujących zgłoszeń</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reports.map((report) => (
+                    <div key={report.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline">{report.reportType}</Badge>
+                            <Badge variant="secondary">{report.targetType}</Badge>
+                            <Badge>{report.status}</Badge>
+                          </div>
+                          {report.target && (
+                            <p className="text-sm font-medium mb-1">
+                              Zgłoszono: {report.target.title || report.target.name || report.targetId}
+                            </p>
+                          )}
+                          {report.description && (
+                            <p className="text-sm text-muted-foreground mb-2">{report.description}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Zgłoszone: {formatDate(report.createdAt)} przez {report.reportedBy}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handleReportAction(report.id, 'approve')}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Zaakceptuj
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            if (window.confirm('Czy na pewno chcesz usunąć zgłoszoną treść?')) {
+                              handleReportAction(report.id, 'delete-target', 'Confirmed by moderator');
+                            }
+                          }}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Usuń treść
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReportAction(report.id, 'reject', 'False report')}
+                        >
+                          Odrzuć zgłoszenie
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleReportAction(report.id, 'ignore', 'Ignored by moderator')}
+                        >
+                          Ignoruj
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Zarządzanie użytkownikami</CardTitle>
+              <CardDescription>
+                Banowanie, zawieszanie i zarządzanie rolami użytkowników
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">Dostępne akcje przez API:</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• <code>POST /api/admin/users/[userId]/moderate</code> - Ban/suspend/change role</li>
+                    <li>• <code>GET /api/admin/users/[userId]/moderate</code> - Historia moderacji</li>
+                  </ul>
+                </div>
+
+                <div className="border rounded p-4 space-y-3">
+                  <h4 className="font-semibold">Przykład: Ban użytkownika</h4>
+                  <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
+{`POST /api/admin/users/{userId}/moderate
+{
+  "action": "ban",
+  "reason": "Spam and offensive content"
+}`}
+                  </pre>
+                </div>
+
+                <div className="border rounded p-4 space-y-3">
+                  <h4 className="font-semibold">Przykład: Zawieś na 7 dni</h4>
+                  <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
+{`POST /api/admin/users/{userId}/moderate
+{
+  "action": "suspend",
+  "duration": 7,
+  "reason": "Repeated violations"
+}`}
+                  </pre>
+                </div>
+
+                <div className="border rounded p-4 space-y-3">
+                  <h4 className="font-semibold">Przykład: Zmień rolę na moderatora</h4>
+                  <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
+{`POST /api/admin/users/{userId}/moderate
+{
+  "action": "change-role",
+  "role": "moderator"
+}`}
+                  </pre>
+                </div>
+
+                <div className="bg-amber-50 border border-amber-200 rounded p-4">
+                  <p className="text-sm text-amber-800">
+                    <strong>Uwaga:</strong> Pełny UI do zarządzania użytkownikami będzie dodany w następnej iteracji.
+                    Obecnie wszystkie funkcje są dostępne przez API endpointy.
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

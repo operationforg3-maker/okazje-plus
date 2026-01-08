@@ -60,6 +60,25 @@ export async function POST(request: NextRequest) {
       updatedAt: Timestamp.now(),
     });
 
+    // Log moderation action
+    try {
+      const { getFirestore } = await import('firebase-admin/firestore');
+      const adminFirestore = getFirestore();
+      await adminFirestore.collection('moderation_log').add({
+        action,
+        targetType: itemType,
+        targetId: itemId,
+        moderatorId: decoded.uid,
+        moderatorEmail: decoded.email || 'unknown',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          previousStatus: (await getDoc(itemRef))?.data()?.status || 'unknown',
+        },
+      });
+    } catch (err: any) {
+      console.error('Failed to log moderation:', err);
+    }
+
     // Jeśli to deal i akcja to approval, spróbuj indeksować w Google
     if (itemType === "deal" && action === "approve") {
       try {

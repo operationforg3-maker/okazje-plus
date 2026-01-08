@@ -48,6 +48,26 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
+    // MODERATION
+    ////////////////////////////////
+    // Logi moderacji - tylko admini
+    match /moderation_log/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Tylko przez Admin SDK
+    }
+    
+    // Zgłoszenia (reports)
+    match /reports/{reportId} {
+      // Użytkownicy mogą tworzyć zgłoszenia
+      allow create: if isSignedIn() && request.resource.data.reportedBy == request.auth.uid;
+      // Użytkownik widzi tylko swoje zgłoszenia, admin/moderator wszystkie
+      allow read: if isAdmin() || (isSignedIn() && resource.data.reportedBy == request.auth.uid);
+      // Tylko admin/moderator może aktualizować (resolve/reject)
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
     // CATEGORIES
     ////////////////////////////////
     match /categories/{categoryId} {
