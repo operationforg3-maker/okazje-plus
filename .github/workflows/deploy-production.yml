@@ -70,8 +70,12 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> $GITHUB_ENV
           firebase experiments:enable webframeworks
 
+      - name: Remove stale frameworks function (ssrokazjeplus)
+        run: |
+          firebase functions:delete ssrokazjeplus --region europe-west4 --project ${{ secrets.FIREBASE_PROJECT_ID }} --force || true
+
       - name: Deploy Hosting + Functions
-        run: firebase deploy --only hosting,functions --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive
+        run: firebase deploy --only hosting,functions --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive --force
 
       - name: Cleanup key
         if: always()
