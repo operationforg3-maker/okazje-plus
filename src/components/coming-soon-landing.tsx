@@ -5,6 +5,7 @@ import { Mail, Sparkles, Check } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { LogoSVGWrapper } from './layout/logo-svg-wrapper';
 
 export default function ComingSoonLanding() {
   const [email, setEmail] = useState('');
@@ -58,15 +59,7 @@ export default function ComingSoonLanding() {
       <div className="max-w-2xl w-full relative z-10 space-y-8 animate-fade-in">
         {/* Logo */}
         <div className="flex justify-center">
-          <div className="relative w-72 h-24">
-            <Image
-              src="/Logotyp_okazjeplus.svg"
-              alt="Okazje Plus"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
+          <LogoSVGWrapper className="w-72 h-24" />
         </div>
 
         {/* Main headline & description */}

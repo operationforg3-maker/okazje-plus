@@ -24,6 +24,7 @@ import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { MiniCartBadge } from '@/components/smart-cart-widget';
+import { LogoSVGWrapper } from './logo-svg-wrapper';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -91,11 +92,7 @@ export function Navbar() {
                 alt="Okazje+"
                 className="h-8 w-8 flex-shrink-0 md:hidden"
               />
-              <img
-                src="/Logotyp_okazjeplus.svg"
-                alt="Okazje+"
-                className="hidden h-8 flex-shrink-0 md:block md:h-9 lg:h-10"
-              />
+              <LogoSVGWrapper className="hidden h-8 flex-shrink-0 md:block md:h-9 lg:h-10" />
             </div>
           </Link>
 

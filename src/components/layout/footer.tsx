@@ -3,6 +3,7 @@ import { ShoppingBag, Facebook, Instagram } from 'lucide-react';
 import { getUptimeMs } from '@/lib/uptime';
 import { buildInfo } from '@/lib/build-info';
 import { useState, useEffect } from 'react';
+import { LogoSVGWrapper } from './logo-svg-wrapper';
 
 export function Footer() {
   const [hydrated, setHydrated] = useState(false);
@@ -32,7 +33,7 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-3 lg:grid-cols-12">
           <div className="lg:col-span-4 rounded-lg p-6\">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/Logotyp_okazjeplus.svg" alt="Okazje+" className="h-10 md:h-12" />
+              <LogoSVGWrapper className="h-10 md:h-12" />
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
               Zaufana społeczność wyszukująca najlepsze okazje. Nowy wygląd, ta sama solidna baza ofert.
