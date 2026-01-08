@@ -168,7 +168,7 @@ export default async function LocaleLayout({
         }}
       />
 
-      <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
+      <NextIntlClientProvider locale={effectiveLocale} messages={messages} suppressHydrationWarning={true}>
         <ErrorBoundary fallback={<ComingSoonLanding />}>
           <AuthProvider>
             <CurrencyProvider>
