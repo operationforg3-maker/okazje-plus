@@ -87,15 +87,6 @@ export default async function LocaleLayout({
   
   return (
     <>
-      {/* Lang attribute script - runs on client */}
-      <Script
-        id="lang-init"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `document.documentElement.lang = '${effectiveLocale}';`,
-        }}
-      />
-
       {/* Structured Data - WebSite Schema */}
       <Script
         id="schema-website"
@@ -168,7 +159,7 @@ export default async function LocaleLayout({
         }}
       />
 
-      <NextIntlClientProvider locale={effectiveLocale} messages={messages} suppressHydrationWarning={true}>
+      <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
         <ErrorBoundary fallback={<ComingSoonLanding />}>
           <AuthProvider>
             <CurrencyProvider>
