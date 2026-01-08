@@ -107,18 +107,16 @@ export async function GET() {
     });
   } catch (error) {
     console.error('[Admin Stats API] Unexpected error:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Błąd serwera',
-        // Fallback with zero stats
-        totals: { products: 0, deals: 0, users: 0 },
-        pending: { deals: 0, products: 0 },
-        recent24h: { deals: 0, users: 0 },
-        totalSavings: 0,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      error: 'Błąd serwera',
+      details: (error as any)?.message || 'unknown',
+      // Fallback with zero stats
+      totals: { products: 0, deals: 0, users: 0 },
+      pending: { deals: 0, products: 0 },
+      recent24h: { deals: 0, users: 0 },
+      totalSavings: 0,
+    });
   }
 }
 

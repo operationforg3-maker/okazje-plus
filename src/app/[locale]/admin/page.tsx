@@ -309,6 +309,16 @@ function AdminPage() {
         setTopProducts(productsData);
       } catch (error) {
         DEBUG && console.error('[AdminPage] Error fetching stats:', error);
+        // Fallback to zeroed stats to keep UI stable when API fails
+        const fallback = {
+          totals: { deals: 0, products: 0, users: 0 },
+          pending: { deals: 0, products: 0 },
+          recent24h: { deals: 0, users: 0 },
+          totalSavings: 0,
+          timestamp: new Date().toISOString(),
+        };
+        setDashboardStats(fallback as any);
+        setStats(fallback.totals as any);
       } finally {
         DEBUG && console.log('[AdminPage] Setting loading to false');
         setLoading(false);
@@ -385,7 +395,7 @@ function AdminPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats?.deals || 0}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                {dashboardStats?.pending.deals || 0} oczekujących
+                {dashboardStats?.pending?.deals || 0} oczekujących
                 {(dashboardStats?.pending?.deals ?? 0) > 0 && (
                   <Badge variant="secondary" className="ml-1">!</Badge>
                 )}
@@ -393,7 +403,7 @@ function AdminPage() {
               {dashboardStats?.growth?.deals !== undefined && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
-                  +{dashboardStats.growth.deals} (24h)
+                  +{dashboardStats?.growth?.deals} (24h)
                 </p>
               )}
             </CardContent>
@@ -409,7 +419,7 @@ function AdminPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats?.products || 0}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                {dashboardStats?.pending.products || 0} oczekujących
+                {dashboardStats?.pending?.products || 0} oczekujących
                 {(dashboardStats?.pending?.products ?? 0) > 0 && (
                   <Badge variant="secondary" className="ml-1">!</Badge>
                 )}
@@ -417,7 +427,7 @@ function AdminPage() {
               {dashboardStats?.growth?.products !== undefined && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
-                  +{dashboardStats.growth.products} (24h)
+                  +{dashboardStats?.growth?.products} (24h)
                 </p>
               )}
             </CardContent>
@@ -438,7 +448,7 @@ function AdminPage() {
               {dashboardStats?.growth?.users !== undefined && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
-                  +{dashboardStats.growth.users} (24h)
+                  +{dashboardStats?.growth?.users} (24h)
                 </p>
               )}
             </CardContent>

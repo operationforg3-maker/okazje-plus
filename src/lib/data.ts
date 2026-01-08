@@ -1673,9 +1673,10 @@ export async function getAdminDashboardStats(token?: string) {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const res = await fetch('/api/admin/stats', { cache: 'no-store', headers });
+    const res = await fetch('/api/admin/stats', { cache: 'no-store', headers, credentials: 'include' });
     if (!res.ok) {
-      throw new Error(`Stats API failed: ${res.status}`);
+      const text = await res.text().catch(() => '');
+      throw new Error(`Stats API failed: ${res.status} ${text || ''}`.trim());
     }
     const data = await res.json();
     const totals = {
