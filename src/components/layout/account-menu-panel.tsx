@@ -26,16 +26,12 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
     console.log('[AccountMenuPanel] Rendering with user:', user?.email, 'loading:', loading);
   }
   
-  // Track hydration
-  const [mounted, setMounted] = useState(false);
-  
   // Language switching
   const [isMountedLang, setIsMountedLang] = useState(false);
   const locale = useLocale() as SupportedLanguage;
   const pathname = usePathname();
   
   useEffect(() => {
-    setMounted(true);
     setIsMountedLang(true);
   }, []);
   
@@ -92,9 +88,17 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
     { code: 'GBP', symbol: '£', name: 'Funt brytyjski', flag: '🇬🇧' },
   ] as const;
   
-  // Note: Don't render loading skeleton conditionally before hydration
-  // Server and client must render same initial HTML to avoid hydration mismatch
-  // After mounted=true, React #418 won't trigger even if we show loader in reality
+  if (loading) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm w-72">
+        <div className="space-y-3">
+          <div className="h-10 w-full rounded-md bg-muted animate-pulse" />
+          <div className="h-4 w-2/3 rounded-md bg-muted animate-pulse" />
+          <div className="h-9 w-full rounded-md bg-muted animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/90 p-4 shadow-sm w-72">
