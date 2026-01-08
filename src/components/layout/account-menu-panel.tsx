@@ -22,7 +22,9 @@ interface AccountMenuPanelProps {
 }
 
 export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: AccountMenuPanelProps) {
-  console.log('[AccountMenuPanel] Rendering with user:', user?.email, 'loading:', loading);
+  if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+    console.log('[AccountMenuPanel] Rendering with user:', user?.email, 'loading:', loading);
+  }
   
   // Language switching
   const [isMountedLang, setIsMountedLang] = useState(false);
