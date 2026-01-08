@@ -593,16 +593,16 @@ function AdminPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.products || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {dashboardStats?.growth.products !== undefined && (
+              {dashboardStats?.growth?.products !== undefined && (
                 <span className={`inline-flex items-center font-medium ${
-                  dashboardStats.growth.products >= 0 ? 'text-green-600' : 'text-red-600'
+                  (dashboardStats?.growth?.products ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  {dashboardStats.growth.products >= 0 ? (
+                  {(dashboardStats?.growth?.products ?? 0) >= 0 ? (
                     <TrendingUp className="h-3 w-3 mr-1" />
                   ) : (
                     <TrendingDown className="h-3 w-3 mr-1" />
                   )}
-                  {dashboardStats.growth.products >= 0 ? '+' : ''}{dashboardStats.growth.products}%
+                  {(dashboardStats?.growth?.products ?? 0) >= 0 ? '+' : ''}{dashboardStats?.growth?.products ?? 0}%
                 </span>
               )}
               {' '}od ostatniego miesiąca
@@ -690,10 +690,10 @@ function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-              {(dashboardStats?.pending.deals || 0) + (dashboardStats?.pending.products || 0)}
+              {(dashboardStats?.pending?.deals || 0) + (dashboardStats?.pending?.products || 0)}
             </div>
             <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
-              {dashboardStats?.pending.deals || 0} okazji, {dashboardStats?.pending.products || 0} produktów
+              {dashboardStats?.pending?.deals || 0} okazji, {dashboardStats?.pending?.products || 0} produktów
             </p>
             <Button asChild variant="link" size="sm" className="px-0 h-auto mt-2 text-amber-700 dark:text-amber-300">
               <Link href="/admin/moderation">
