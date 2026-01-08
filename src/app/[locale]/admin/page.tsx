@@ -285,16 +285,17 @@ function AdminPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[AdminPage] Component mounted, fetching data...');
+    const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
+    DEBUG && console.log('[AdminPage] Component mounted, fetching data...');
     async function fetchStats() {
       try {
-        console.log('[AdminPage] Fetching dashboard stats...');
+        DEBUG && console.log('[AdminPage] Fetching dashboard stats...');
         const [dashStats, dealsData, productsData] = await Promise.all([
           getAdminDashboardStats(),
           getHotDeals(5),
           getRecommendedProducts(5)
         ]);
-        console.log('[AdminPage] Data fetched successfully:', {
+        DEBUG && console.log('[AdminPage] Data fetched successfully:', {
           stats: dashStats?.totals,
           deals: dealsData?.length,
           products: productsData?.length
@@ -304,19 +305,19 @@ function AdminPage() {
         setHotDeals(dealsData);
         setTopProducts(productsData);
       } catch (error) {
-        console.error('[AdminPage] Error fetching stats:', error);
+        DEBUG && console.error('[AdminPage] Error fetching stats:', error);
       } finally {
-        console.log('[AdminPage] Setting loading to false');
+        DEBUG && console.log('[AdminPage] Setting loading to false');
         setLoading(false);
       }
     }
     fetchStats();
   }, []);
-
-  console.log('[AdminPage] Render - loading:', loading, 'hasStats:', !!stats);
+  const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
+  DEBUG && console.log('[AdminPage] Render - loading:', loading, 'hasStats:', !!stats);
 
   if (loading) {
-    console.log('[AdminPage] Showing loading skeleton');
+    DEBUG && console.log('[AdminPage] Showing loading skeleton');
     return (
       <div className="space-y-6">
         <div>

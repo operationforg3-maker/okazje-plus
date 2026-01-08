@@ -1661,7 +1661,7 @@ export async function getUnreadNotificationsCount(userId: string): Promise<numbe
  * Cached for 15 minutes to reduce load
  */
 export async function getAdminDashboardStats() {
-  // Cache admin stats for 5 minutes
+  // Prefer server-side API to avoid client Firestore permissions and speed up with server caching
   const cacheKey = 'admin:dashboard:stats';
   const cached = await cacheGet(cacheKey);
   if (cached) {
@@ -1669,239 +1669,46 @@ export async function getAdminDashboardStats() {
   }
 
   try {
-    const now = new Date();
-    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const last24HoursIso = last24Hours.toISOString();
-
-    // Podstawowe liczniki
-    const counts = await getCounts();
-
-    // Pending: prostsze zapytania bez compound indexes
-    let pendingDeals = 0;
-    let pendingProducts = 0;
-    
-    try {
-      const pendingDealStatuses = ['pending', 'draft'];
-      const pendingSnapshots = await Promise.all(
-        pendingDealStatuses.map(status =>
-          getCountFromServer(query(collection(db, 'deals'), where('status', '==', status)))
-        )
-      );
-      pendingDeals = pendingSnapshots.reduce((sum, snap) => sum + (snap?.data()?.count ?? 0), 0);
-    } catch (e) {
-      console.warn('Pending deals query failed:', e);
+    const res = await fetch('/api/admin/stats', { cache: 'no-store' });
+    if (!res.ok) {
+      throw new Error(`Stats API failed: ${res.status}`);
     }
-
-    try {
-      const pendingProductStatuses = ['pending_approval', 'draft'];
-      const pendingProductSnaps = await Promise.all(
-        pendingProductStatuses.map(status =>
-          getCountFromServer(query(collection(db, 'product_cores'), where('status', '==', status)))
-        )
-      );
-      pendingProducts = pendingProductSnaps.reduce((sum, snap) => sum + (snap?.data()?.count ?? 0), 0);
-    } catch (e) {
-      console.warn('Pending products query failed:', e);
-    }
-
-    // Nowe w ostatnich 24h
-    let newDeals24h = 0;
-    let newUsers24h = 0;
-    
-    try {
-      const newDealsSnap = await getDocs(
-        query(collection(db, 'deals'), where('createdAt', '>=', last24HoursIso))
-      );
-      newDeals24h = newDealsSnap.size;
-    } catch (e) {
-      console.warn('New deals 24h query failed:', e);
-    }
-
-    try {
-      const newUsersSnap = await getDocs(
-        query(collection(db, 'users'), where('createdAt', '>=', last24Hours))
-      );
-      newUsers24h = newUsersSnap.size;
-    } catch (e) {
-      console.warn('New users 24h query failed:', e);
-    }
-
-    // Top kategorie (statyczne, bez compound queries)
-    const topCategories: Array<{ slug: string; count: number }> = [];
-    
-    try {
-      const allDealsSnap = await getDocs(
-        query(collection(db, 'deals'), where('status', '==', 'approved'), limit(1000))
-      );
-      
-      const categoryCount: Record<string, number> = {};
-      allDealsSnap.docs.forEach(doc => {
-        const deal = doc.data() as Deal;
-        const cat = deal.mainCategorySlug || 'other';
-        categoryCount[cat] = (categoryCount[cat] || 0) + 1;
-      });
-
-      Object.entries(categoryCount)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-        .forEach(([slug, count]) => {
-          topCategories.push({ slug, count });
-        });
-    } catch (e) {
-      console.warn('Top categories query failed:', e);
-    }
-
-    // Średnia temperatura z recent deals
-    let avgTemperature = 0;
-    let recentActivityCount = 0;
-    
-    try {
-      const recentSnap = await getDocs(
-        query(collection(db, 'deals'), where('status', '==', 'approved'), limit(100))
-      );
-      
-      const deals = recentSnap.docs.map(doc => doc.data() as Deal);
-      recentActivityCount = deals.length;
-      
-      if (deals.length > 0) {
-        const tempSum = deals.reduce((sum, d) => sum + (d.temperature || 0), 0);
-        avgTemperature = Math.round(tempSum / deals.length);
-      }
-    } catch (e) {
-      console.warn('Recent activity query failed:', e);
-    }
-
-    // Growth calculations (simplified - bez compound queries)
-    const dealsGrowth = await calculateGrowth('deals', 30).catch(() => 0);
-    const productsGrowth = await calculateGrowth('product_cores', 30).catch(() => 0);
-    const usersGrowth = await calculateGrowth('users', 30).catch(() => 0);
-
-    // Analytics (graceful degradation)
-    let analyticsData = {
-      views: { total: 0, today: 0, trend: 0 },
-      clicks: { total: 0, today: 0, trend: 0 },
-      shares: { total: 0 },
-      conversionRate: 0
+    const data = await res.json();
+    const totals = {
+      deals: data?.totals?.deals ?? 0,
+      products: data?.totals?.products ?? 0,
+      users: data?.totals?.users ?? 0,
     };
 
-    try {
-      const analyticsSnap = await getDocs(
-        query(collection(db, 'analytics'), limit(5000))
-      );
-      
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      let todayViews = 0;
-      let todayClicks = 0;
-
-      analyticsSnap.docs.forEach(doc => {
-        const event = doc.data();
-        if (event.type === 'view') {
-          analyticsData.views.total++;
-          const eventDate = event.timestamp instanceof Object && 'toDate' in event.timestamp
-            ? (event.timestamp as any).toDate()
-            : new Date(event.timestamp);
-          if (eventDate >= todayStart) todayViews++;
-        }
-        if (event.type === 'click') {
-          analyticsData.clicks.total++;
-          const eventDate = event.timestamp instanceof Object && 'toDate' in event.timestamp
-            ? (event.timestamp as any).toDate()
-            : new Date(event.timestamp);
-          if (eventDate >= todayStart) todayClicks++;
-        }
-        if (event.type === 'share') analyticsData.shares.total++;
-      });
-
-      analyticsData.views.today = todayViews;
-      analyticsData.clicks.today = todayClicks;
-      analyticsData.conversionRate = analyticsData.views.total > 0
-        ? Math.round((analyticsData.clicks.total / analyticsData.views.total) * 1000) / 10
-        : 0;
-    } catch (e) {
-      console.warn('Analytics query failed (using defaults):', e);
-    }
-
-    // Categories stats
-    let categoriesStats = { total: 0, main: 0, sub: 0, subSub: 0 };
-    try {
-      const catSnap = await getDocs(collection(db, 'categories'));
-      categoriesStats.main = catSnap.size;
-    } catch (e) {
-      console.warn('Categories stats query failed:', e);
-    }
-
-    // Harvester/Import stats
-    const importsStats = { running: 0, queued: 0, completed24h: 0, failed24h: 0 };
-    try {
-      const jobsSnap = await getDocs(collection(db, 'import_jobs'));
-      jobsSnap.docs.forEach(doc => {
-        const job = doc.data();
-        if (job.status === 'running') importsStats.running++;
-        if (job.status === 'queued') importsStats.queued++;
-        if (job.status === 'completed') importsStats.completed24h++;
-        if (job.status === 'failed') importsStats.failed24h++;
-      });
-    } catch (e) {
-      console.warn('Import jobs stats query failed:', e);
-    }
-
-    const stats = {
-      totals: counts,
+    const dashboard = {
+      totals,
       pending: {
-        deals: pendingDeals,
-        products: pendingProducts,
+        deals: data?.pending?.deals ?? 0,
+        products: data?.pending?.products ?? 0,
       },
-      new24h: {
-        deals: newDeals24h,
-        users: newUsers24h,
+      recent24h: {
+        deals: data?.recent24h?.deals ?? 0,
+        users: data?.recent24h?.users ?? 0,
       },
-      avgTemperature,
-      topCategories,
-      recentActivity: recentActivityCount,
-      analytics: analyticsData,
-      growth: {
-        deals: dealsGrowth,
-        products: productsGrowth,
-        users: usersGrowth
-      },
-      categories: categoriesStats,
-      imports: importsStats,
-      harvester: {
-        running: importsStats.running,
-        created24h: importsStats.completed24h
-      }
+      totalSavings: data?.totalSavings ?? 0,
+      timestamp: data?.timestamp ?? new Date().toISOString(),
     };
 
-    // Cache stats for 5 minutes (300 seconds) - shorter TTL for more fresh data
-    await cacheSet(cacheKey, stats, 300).catch(() => {
-      console.warn('Cache set failed, continuing without cache');
-    });
-
-    return stats;
+    // Cache short-term (60s) to speed up repeated renders
+    await cacheSet(cacheKey, dashboard, 60);
+    return dashboard;
   } catch (error) {
-    console.error('Error fetching admin dashboard stats:', error);
-    
-    // Return safe defaults instead of crashing
-    const counts = await getCounts().catch(() => ({ products: 0, deals: 0, users: 0 }));
-    return {
-      totals: counts,
+    console.error('[getAdminDashboardStats] API error, falling back:', error);
+    // Minimal safe fallback
+    const fallback = {
+      totals: { deals: 0, products: 0, users: 0 },
       pending: { deals: 0, products: 0 },
-      new24h: { deals: 0, users: 0 },
-      avgTemperature: 0,
-      topCategories: [],
-      recentActivity: 0,
-      analytics: {
-        views: { total: 0, today: 0, trend: 0 },
-        clicks: { total: 0, today: 0, trend: 0 },
-        shares: { total: 0 },
-        conversionRate: 0
-      },
-      growth: { deals: 0, products: 0, users: 0 },
-      categories: { total: 0, main: 0, sub: 0, subSub: 0 },
-      imports: { running: 0, queued: 0, completed24h: 0, failed24h: 0 },
-      harvester: { running: 0, created24h: 0 }
+      recent24h: { deals: 0, users: 0 },
+      totalSavings: 0,
+      timestamp: new Date().toISOString(),
     };
+    await cacheSet(cacheKey, fallback, 30);
+    return fallback;
   }
 }
 

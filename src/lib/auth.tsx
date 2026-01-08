@@ -6,6 +6,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase'; 
 import { User } from '@/lib/types';
 
+const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
+
 const normalizeRole = (val?: string | null): User['role'] => {
   if (!val) return 'user';
   const v = val.toLowerCase();
@@ -42,9 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    console.log('[AuthProvider] Setting up auth listener...');
+    DEBUG && console.log('[AuthProvider] Setting up auth listener...');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUserObj: FirebaseUser | null) => {
-      console.log('[AuthProvider] Auth state changed:', { hasUser: !!firebaseUserObj });
+      DEBUG && console.log('[AuthProvider] Auth state changed:', { hasUser: !!firebaseUserObj });
       
       try {
         if (firebaseUserObj) {
@@ -62,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               claimRole = tokenResult.claims.role as string;
             }
           } catch (err) {
-            console.warn('[AuthProvider] Unable to read custom claims:', err);
+            DEBUG && console.warn('[AuthProvider] Unable to read custom claims:', err);
           }
 
           // 2) Natychmiastowo ustaw usera dla UI na bazie claimów (nie blokuj Firestore)
@@ -79,8 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // 3) Firestore w tle (z krótszym timeoutem) — synchronize role/profile, ale nie blokuj UI
           (async () => {
             try {
+              const timeoutMs = 2000; // krótszy timeout w produkcji
               const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Firestore timeout after 3s')), 3000)
+                setTimeout(() => reject(new Error(`Firestore timeout after ${timeoutMs}ms`)), timeoutMs)
               );
               const snap = (await Promise.race([getDoc(userRef), timeoutPromise])) as any;
               if (snap && typeof snap.exists === 'function' && snap.exists()) {
@@ -98,29 +101,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 ]);
               }
             } catch (err) {
-              console.warn('[AuthProvider] Background Firestore sync skipped:', err);
+              DEBUG && console.warn('[AuthProvider] Background Firestore sync skipped:', err);
             }
           })();
         } else {
-          console.log('[AuthProvider] No user, clearing state');
+          DEBUG && console.log('[AuthProvider] No user, clearing state');
           // Batch all setState calls into single update
           setFirebaseUser(null);
           setUser(null);
         }
       } catch (error) {
-        console.error('[AuthProvider] Error in auth handler:', error);
+        DEBUG && console.error('[AuthProvider] Error in auth handler:', error);
         // Even on error, we should complete loading
         setFirebaseUser(null);
         setUser(null);
       } finally {
         // ALWAYS set loading to false — UI nie czeka na Firestore
-        console.log('[AuthProvider] Setting loading to false');
+        DEBUG && console.log('[AuthProvider] Setting loading to false');
         setLoading(false);
       }
     });
 
     return () => {
-      console.log('[AuthProvider] Cleaning up auth listener');
+      DEBUG && console.log('[AuthProvider] Cleaning up auth listener');
       unsubscribe();
     };
   }, []);
@@ -133,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return null;
         }
         const token = await getIdToken(firebaseUser);
-        if (!tokenLogOnceRef.current) {
+        if (!tokenLogOnceRef.current && DEBUG) {
           console.debug('[AuthProvider] ID token fetched');
           tokenLogOnceRef.current = true;
         }
