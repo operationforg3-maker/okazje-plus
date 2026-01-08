@@ -304,7 +304,7 @@ function AdminPage() {
           products: productsData?.length
         });
         setDashboardStats(dashStats);
-        setStats(dashStats.totals);
+        setStats(dashStats?.totals || { deals: 0, products: 0, users: 0 });
         setHotDeals(dealsData);
         setTopProducts(productsData);
       } catch (error) {
