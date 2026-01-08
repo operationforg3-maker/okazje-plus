@@ -5,10 +5,7 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
-    ],
-    "frameworksBackend": {
-      "region": "europe-west4"
-    }
+    ]
   },
   "firestore": {
     "rules": "firestore.rules",
