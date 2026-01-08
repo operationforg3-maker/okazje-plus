@@ -44,16 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     console.log('[AuthProvider] Setting up auth listener...');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUserObj: FirebaseUser | null) => {
-      console.log('[AuthProvider] Auth state changed:', { 
-        hasUser: !!firebaseUserObj, 
-        uid: firebaseUserObj?.uid,
-        email: firebaseUserObj?.email 
-      });
+      console.log('[AuthProvider] Auth state changed:', { hasUser: !!firebaseUserObj });
       
       try {
         if (firebaseUserObj) {
           const userRef = doc(db, 'users', firebaseUserObj.uid);
-          console.log('[AuthProvider] Fetching user document...');
+          // 1) Spróbuj odczytać rolę z custom claims — to jest najszybsza ścieżka dla UI
 
           // Fetch custom claims (e.g., admin role) to avoid missing admin menu
           let claimRole: string | undefined;
@@ -62,61 +58,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Check for both 'role' and 'admin' custom claims
             if (tokenResult.claims?.admin === true) {
               claimRole = 'admin';
-              console.log('[AuthProvider] role from custom claims (admin=true):', claimRole);
             } else if (typeof tokenResult.claims?.role === 'string') {
               claimRole = tokenResult.claims.role as string;
-              console.log('[AuthProvider] role from custom claims (role field):', claimRole);
             }
           } catch (err) {
             console.warn('[AuthProvider] Unable to read custom claims:', err);
           }
 
-          // Add timeout to prevent infinite hang
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Firestore timeout after 10s')), 10000)
-          );
-          
-          const docSnap = await Promise.race([
-            getDoc(userRef),
-            timeoutPromise
-          ]).catch((error) => {
-            console.error('[AuthProvider] Firestore getDoc error or timeout:', error);
-            return null;
-          }) as any; // Type assertion needed for Promise.race with timeout
+          // 2) Natychmiastowo ustaw usera dla UI na bazie claimów (nie blokuj Firestore)
+          const initialUser: User = {
+            uid: firebaseUserObj.uid,
+            email: firebaseUserObj.email,
+            displayName: firebaseUserObj.displayName,
+            photoURL: firebaseUserObj.photoURL,
+            role: normalizeRole(claimRole),
+          };
+          setFirebaseUser(firebaseUserObj);
+          setUser(initialUser);
 
-          if (docSnap && docSnap.exists && typeof docSnap.exists === 'function' && docSnap.exists()) {
-            console.log('[AuthProvider] User document found');
-            const existingData = docSnap.data() as Partial<User>;
-            const normalizedUser: User = {
-              uid: firebaseUserObj.uid,
-              email: existingData.email ?? firebaseUserObj.email ?? null,
-              displayName: existingData.displayName ?? firebaseUserObj.displayName ?? null,
-              photoURL: existingData.photoURL ?? firebaseUserObj.photoURL ?? null,
-              role: normalizeRole(claimRole) ?? normalizeRole(existingData.role ?? undefined),
-            };
-
-            console.log('[AuthProvider] User loaded - role:', normalizedUser.role);
-            // Batch all setState calls into single update
-            setFirebaseUser(firebaseUserObj);
-            setUser(normalizedUser);
-          } else {
-            console.log('[AuthProvider] Creating new user document or doc not found');
-            const newUser: User = {
-              uid: firebaseUserObj.uid,
-              email: firebaseUserObj.email,
-              displayName: firebaseUserObj.displayName,
-              photoURL: firebaseUserObj.photoURL,
-              role: normalizeRole(claimRole), 
-            };
-            await Promise.race([
-              setDoc(userRef, newUser),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('setDoc timeout')), 5000))
-            ]).catch(err => console.error('[AuthProvider] setDoc error on new user:', err));
-            
-            // Batch all setState calls into single update
-            setFirebaseUser(firebaseUserObj);
-            setUser(newUser);
-          }
+          // 3) Firestore w tle (z krótszym timeoutem) — synchronize role/profile, ale nie blokuj UI
+          (async () => {
+            try {
+              const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Firestore timeout after 3s')), 3000)
+              );
+              const snap = (await Promise.race([getDoc(userRef), timeoutPromise])) as any;
+              if (snap && typeof snap.exists === 'function' && snap.exists()) {
+                const data = snap.data() as Partial<User>;
+                const roleFromDb = normalizeRole(data.role ?? undefined);
+                // Jeśli nie mieliśmy roli w claimach, zaktualizuj z DB
+                if (!claimRole && roleFromDb && roleFromDb !== initialUser.role) {
+                  setUser((prev) => (prev ? { ...prev, role: roleFromDb } : prev));
+                }
+              } else {
+                const newUser: User = initialUser;
+                await Promise.race([
+                  setDoc(userRef, newUser),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error('setDoc timeout')), 3000)),
+                ]);
+              }
+            } catch (err) {
+              console.warn('[AuthProvider] Background Firestore sync skipped:', err);
+            }
+          })();
         } else {
           console.log('[AuthProvider] No user, clearing state');
           // Batch all setState calls into single update
@@ -129,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setFirebaseUser(null);
         setUser(null);
       } finally {
-        // ALWAYS set loading to false in finally block
+        // ALWAYS set loading to false — UI nie czeka na Firestore
         console.log('[AuthProvider] Setting loading to false');
         setLoading(false);
       }

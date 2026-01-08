@@ -46,15 +46,23 @@ export async function getServerAuthSession(): Promise<ServerAuthSession | null> 
     
     // Verify token with Firebase Admin
     const decodedToken = await adminAuth.verifyIdToken(token);
-    
-    // Fetch user role from Firestore
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-    
+
+    // 1) Preferuj role z custom claims (szybko, bez Firestore)
+    const claimAdmin = (decodedToken as any).admin === true;
+    const claimRole = typeof (decodedToken as any).role === 'string' ? (decodedToken as any).role : undefined;
+    let role: ServerAuthSession['role'] = claimAdmin ? 'admin' : (claimRole ? (claimRole as any) : 'user');
+
+    // 2) Jeśli brak claimów, sięgnij do Firestore (fallback)
+    if (!claimAdmin && !claimRole) {
+      const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
+      const userData = userDoc.data();
+      role = (userData?.role as any) || 'user';
+    }
+
     return {
       uid: decodedToken.uid,
       email: decodedToken.email,
-      role: userData?.role || 'user',
+      role,
       emailVerified: decodedToken.email_verified || false,
     };
   } catch (error) {
