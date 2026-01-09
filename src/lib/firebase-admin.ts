@@ -111,9 +111,21 @@ if (!getApps().length) {
     } else {
       // Ostatnia próba: ADC lokalne (wymaga `gcloud auth application-default login`)
       console.warn('[firebase-admin] No service account file. Using Application Default Credentials. If UNAUTHENTICATED appears run: gcloud auth application-default login');
-      adminApp = initializeApp({
-        credential: applicationDefault(),
-      });
+      try {
+        adminApp = initializeApp({
+          credential: applicationDefault(),
+        });
+      } catch (e) {
+        // Next.js build time: can't use ADC. Use dummy fallback.
+        console.warn('[firebase-admin] ADC failed (likely Next.js build). Using dummy fallback:', e);
+        adminApp = initializeApp({
+          projectId: 'build-time-dummy',
+          credential: {
+            getAccessToken: async () => ({ access_token: 'build-dummy', expiry_date: Date.now() + 3600_000 }),
+            getProjectId: async () => 'build-time-dummy',
+          } as any,
+        });
+      }
     }
   }
 } else {
