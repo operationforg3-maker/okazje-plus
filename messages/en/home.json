@@ -2,11 +2,16 @@
   "title": "Okazje Plus",
   "tagline": "Discover the best deals from around the world",
   "badge": "Coming Soon",
-  "newsletter.title": "Stay Updated",
-  "newsletter.description": "Get notified about new deals and special offers",
-  "newsletter.placeholder": "Your email",
-  "newsletter.button": "Subscribe",
-  "newsletter.success": "Thank you for subscribing!",
-  "newsletter.error": "Something went wrong. Please try again.",
-  "description": "Product price comparison platform with AI-powered search and analysis of online store offers from around the world."
+  "newsletter": {
+    "title": "Stay Updated",
+    "description": "Get notified about new deals and special offers",
+    "placeholder": "Your email",
+    "button": "Subscribe",
+    "success": "Thank you for subscribing!",
+    "error": "Something went wrong. Please try again."
+  },
+  "description": "Product price comparison platform with AI-powered search and analysis of online store offers from around the world.",
+  "footer": {
+    "copyright": "© 2026 Okazje Plus. All rights reserved."
+  }
 }

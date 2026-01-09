@@ -2,11 +2,16 @@
   "title": "Okazje Plus",
   "tagline": "Odkryj najlepsze oferty z całego świata",
   "badge": "Wkrótce",
-  "newsletter.title": "Bądź na bieżąco",
-  "newsletter.description": "Otrzymaj powiadomienia o nowych ofertach i promocjach",
-  "newsletter.placeholder": "Twój email",
-  "newsletter.button": "Subskrybuj",
-  "newsletter.success": "Dziękuję za subskrypcję!",
-  "newsletter.error": "Coś poszło nie tak. Spróbuj ponownie.",
-  "description": "Platforma porównywania cen produktów z AI-powered wyszukiwaniem i analizą ofert ze sklepów online na całym świecie."
+  "newsletter": {
+    "title": "Bądź na bieżąco",
+    "description": "Otrzymaj powiadomienia o nowych ofertach i promocjach",
+    "placeholder": "Twój email",
+    "button": "Subskrybuj",
+    "success": "Dziękuję za subskrypcję!",
+    "error": "Coś poszło nie tak. Spróbuj ponownie."
+  },
+  "description": "Platforma porównywania cen produktów z AI-powered wyszukiwaniem i analizą ofert ze sklepów online na całym świecie.",
+  "footer": {
+    "copyright": "© 2026 Okazje Plus. Wszystkie prawa zastrzeżone."
+  }
 }

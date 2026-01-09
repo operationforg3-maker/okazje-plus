@@ -2,11 +2,16 @@
   "title": "Okazje Plus",
   "tagline": "Entdecken Sie die besten Angebote aus der ganzen Welt",
   "badge": "Demnächst",
-  "newsletter.title": "Bleiben Sie auf dem Laufenden",
-  "newsletter.description": "Erhalten Sie Benachrichtigungen über neue Angebote und spezielle Promotionen",
-  "newsletter.placeholder": "Ihre E-Mail",
-  "newsletter.button": "Abonnieren",
-  "newsletter.success": "Vielen Dank für Ihr Abonnement!",
-  "newsletter.error": "Etwas ist schief gelaufen. Bitte versuchen Sie es erneut.",
-  "description": "Produktpreisvergleichsplattform mit KI-gestützter Suche und Analyse von Online-Shop-Angeboten weltweit."
+  "newsletter": {
+    "title": "Bleiben Sie auf dem Laufenden",
+    "description": "Erhalten Sie Benachrichtigungen über neue Angebote und spezielle Promotionen",
+    "placeholder": "Ihre E-Mail",
+    "button": "Abonnieren",
+    "success": "Vielen Dank für Ihr Abonnement!",
+    "error": "Etwas ist schief gelaufen. Bitte versuchen Sie es erneut."
+  },
+  "description": "Produktpreisvergleichsplattform mit KI-gestützter Suche und Analyse von Online-Shop-Angeboten weltweit.",
+  "footer": {
+    "copyright": "© 2026 Okazje Plus. Alle Rechte vorbehalten."
+  }
 }
