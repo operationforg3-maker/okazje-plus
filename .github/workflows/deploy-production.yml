@@ -52,13 +52,14 @@ jobs:
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL || 'https://example.com' }}
           GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY || 'placeholder-key' }}
 
-      - name: Install dependencies (functions)
-        run: npm ci
-        working-directory: okazje-plus
+      # Skipping Cloud Functions build/deploy for minimal app
+      # - name: Install dependencies (functions)
+      #   run: npm ci
+      #   working-directory: okazje-plus
 
-      - name: Build Cloud Functions
-        run: npm run build
-        working-directory: okazje-plus
+      # - name: Build Cloud Functions
+      #   run: npm run build
+      #   working-directory: okazje-plus
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
@@ -74,8 +75,8 @@ jobs:
         run: |
           firebase functions:delete ssrokazjeplus --region europe-west4 --project ${{ secrets.FIREBASE_PROJECT_ID }} --force || true
 
-      - name: Deploy Hosting + Functions
-        run: firebase deploy --only hosting,functions --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive --force
+      - name: Deploy Hosting only
+        run: firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive --force
 
       - name: Cleanup key
         if: always()
