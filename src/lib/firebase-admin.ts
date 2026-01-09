@@ -15,6 +15,17 @@ if (!getApps().length) {
   const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
   const hasServiceAccountFile = existsSync(serviceAccountPath);
 
+  // CI / test fallback: provide dummy credentials to allow unit tests without real ADC
+  const isCiOrTest = process.env.CI === 'true' || process.env.NODE_ENV === 'test';
+  if (!adminApp && isCiOrTest && !isAppHosting) {
+    adminApp = initializeApp({
+      projectId: 'demo-test',
+      credential: {
+        getAccessToken: async () => ({ access_token: 'test-token', expiry_date: Date.now() + 3600_000 }),
+      } as any,
+    });
+  }
+
   // 1) Prefer explicit JSON provided via env (App Hosting Secret)
   if (!adminApp && process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     try {
