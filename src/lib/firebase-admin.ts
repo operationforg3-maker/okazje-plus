@@ -22,6 +22,7 @@ if (!getApps().length) {
       projectId: 'demo-test',
       credential: {
         getAccessToken: async () => ({ access_token: 'test-token', expiry_date: Date.now() + 3600_000 }),
+        getProjectId: async () => 'demo-test',
       } as any,
     });
   }
