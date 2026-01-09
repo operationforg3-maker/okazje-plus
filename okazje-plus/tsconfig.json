@@ -12,12 +12,12 @@
     "skipLibCheck": true,
     "baseUrl": "..",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src-legacy/*"]
     }
   },
   "compileOnSave": true,
   "include": [
     "src",
-    "../src/ai/flows/importerFlow"
+    "../src-legacy/ai/flows/importerFlow"
   ]
 }

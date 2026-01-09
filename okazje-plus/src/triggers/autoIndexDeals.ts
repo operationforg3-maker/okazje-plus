@@ -7,8 +7,8 @@
 
 import * as logger from 'firebase-functions/logger';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
-import { requestDealIndexing } from '../../../src/lib/google-indexing';
-import type { Deal } from '../../../src/lib/types';
+import { requestDealIndexing } from '../../../src-legacy/lib/google-indexing';
+import type { Deal } from '../../../src-legacy/lib/types';
 
 /**
  * Firestore trigger: onCreate for deals collection

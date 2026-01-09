@@ -33,7 +33,7 @@ import {
   Product,
   User,
   ProductRatingCard,
-} from "../../src/lib/types";
+} from "../../src-legacy/lib/types";
 
 // Import price update functions
 import { updatePricesDaily, manualPriceUpdate } from "./scheduled-price-update";

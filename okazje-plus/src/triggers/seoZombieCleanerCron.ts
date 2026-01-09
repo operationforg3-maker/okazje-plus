@@ -15,7 +15,7 @@
 import * as logger from 'firebase-functions/logger';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirestore } from 'firebase-admin/firestore';
-import { requestDealIndexing } from '../../../src/lib/google-indexing';
+import { requestDealIndexing } from '../../../src-legacy/lib/google-indexing';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const db = getFirestore();

@@ -17,7 +17,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
-import { convertToWebP, generateAltText, isWebP } from '../../../src/lib/image-optimizer';
+import { convertToWebP, generateAltText, isWebP } from '../../../src-legacy/lib/image-optimizer';
 
 const storage = getStorage();
 const db = getFirestore();

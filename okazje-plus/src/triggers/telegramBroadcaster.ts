@@ -11,7 +11,7 @@
 
 import * as logger from 'firebase-functions/logger';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
-import { broadcastHotDeal } from '../../../src/integrations/telegram';
+import { broadcastHotDeal } from '../../../src-legacy/integrations/telegram';
 
 interface Deal {
   id: string;
