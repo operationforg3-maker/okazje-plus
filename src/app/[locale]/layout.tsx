@@ -166,9 +166,7 @@ export default async function LocaleLayout({
               <SmartCartProvider>
                 <div className="flex flex-col min-h-screen w-full">
                   <ConditionalNav>
-                    <main className="flex-1 w-full">
                       {children}
-                    </main>
                   </ConditionalNav>
                   <ComparisonListener />
                   <ExtensionWarningBanner />
