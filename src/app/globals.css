@@ -1,59 +1,59 @@
 @import "tailwindcss";
 
 @theme {
-  /* Primary - Teal (#357D58) */
-  --color-primary: #357D58;
-  --color-primary-foreground: #ffffff;
-  
-  /* Accent - Orange (#FF6B35 / #ea5505 for plus badge) */
-  --color-accent: #FF6B35;
-  --color-accent-foreground: #ffffff;
-  
-  /* Secondary - Light Blue */
-  --color-secondary: #C5E0EC;
-  --color-secondary-foreground: #0f172a;
-  
+  /* Primary - Teal (#357D58 -> hsl 150/40%/35%) */
+  --color-primary: 150 40% 35%;
+  --color-primary-foreground: 0 0% 100%;
+
+  /* Accent - Orange (#FF6B35 -> hsl 16/100%/60%) */
+  --color-accent: 16 100% 60%;
+  --color-accent-foreground: 0 0% 100%;
+
+  /* Secondary - Light Blue (#C5E0EC -> hsl 201/49%/86%) */
+  --color-secondary: 201 49% 86%;
+  --color-secondary-foreground: 222 47% 11%;
+
   /* Muted */
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  
+  --color-muted: 210 40% 96%;
+  --color-muted-foreground: 215 20% 45%;
+
   /* Destructive */
-  --color-destructive: #ef4444;
-  --color-destructive-foreground: #ffffff;
-  
+  --color-destructive: 0 84% 60%;
+  --color-destructive-foreground: 0 0% 100%;
+
   /* Background & Borders */
-  --color-background: #faf8f5;
-  --color-foreground: #0a0a0a;
-  --color-card: #ffffff;
-  --color-card-foreground: #0a0a0a;
-  --color-border: #e2e8f0;
-  --color-input: #e2e8f0;
-  --color-ring: #357D58;
+  --color-background: 32 29% 96%;
+  --color-foreground: 222 47% 11%;
+  --color-card: 0 0% 100%;
+  --color-card-foreground: 222 47% 11%;
+  --color-border: 210 40% 90%;
+  --color-input: 210 40% 90%;
+  --color-ring: 150 40% 35%;
   
   --radius: 0.5rem;
 }
 
 .dark {
-  --color-primary: #4ade80;
-  --color-primary-foreground: #0f172a;
-  
-  --color-accent: #fb923c;
-  --color-accent-foreground: #ffffff;
-  
-  --color-secondary: #1e293b;
-  --color-secondary-foreground: #f8fafc;
-  
-  --color-muted: #1e293b;
-  --color-muted-foreground: #94a3b8;
-  
-  --color-destructive: #7f1d1d;
-  --color-destructive-foreground: #f8fafc;
-  
-  --color-background: #0a0a0a;
-  --color-foreground: #f8fafc;
-  --color-card: #1a1a1a;
-  --color-card-foreground: #f8fafc;
-  --color-border: #1e293b;
-  --color-input: #1e293b;
-  --color-ring: #4ade80;
+  --color-primary: 142 71% 45%;
+  --color-primary-foreground: 222 47% 11%;
+
+  --color-accent: 24 95% 53%;
+  --color-accent-foreground: 0 0% 100%;
+
+  --color-secondary: 215 25% 18%;
+  --color-secondary-foreground: 210 40% 98%;
+
+  --color-muted: 216 34% 17%;
+  --color-muted-foreground: 215 20% 65%;
+
+  --color-destructive: 356 75% 53%;
+  --color-destructive-foreground: 210 40% 98%;
+
+  --color-background: 222 47% 5%;
+  --color-foreground: 210 40% 98%;
+  --color-card: 222 47% 8%;
+  --color-card-foreground: 210 40% 98%;
+  --color-border: 215 25% 20%;
+  --color-input: 215 25% 20%;
+  --color-ring: 142 71% 45%;
 }
