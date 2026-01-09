@@ -1,7 +1,7 @@
 import type {NextConfig} from 'next';
-// Disabled next-intl for simplified coming-soon version
-// Legacy version uses: import createNextIntlPlugin from 'next-intl/plugin';
-// const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
+import createNextIntlPlugin from 'next-intl/plugin';
+
+const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 
 // Wersja aplikacji i skrót SHA osadzane podczas builda
 // Uwaga: NEXT_PUBLIC_* zostanie zinline'owane w bundle po stronie klienta
@@ -67,8 +67,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Simplified config without next-intl
-export default nextConfig;
-
-// Legacy with next-intl:
-// export default withNextIntl(nextConfig);
+export default withNextIntl(nextConfig);

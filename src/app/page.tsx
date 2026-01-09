@@ -1,5 +1,5 @@
-import ComingSoonLanding from '@/components/coming-soon-landing';
+import { redirect } from 'next/navigation';
 
-export default function HomePage() {
-  return <ComingSoonLanding />;
+export default function RootPage() {
+  redirect('/pl');
 }

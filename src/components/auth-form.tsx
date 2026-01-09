@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-interface AuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface AuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
+  defaultTab?: 'login' | 'register';
+}
 
-export default function AuthForm({ className, ...props }: AuthFormProps) {
+export default function AuthForm({ className, defaultTab = 'login', ...props }: AuthFormProps) {
+  const t = useTranslations('auth');
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string | null>(null);
   const [email, setEmail] = React.useState('');
@@ -31,14 +35,14 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
       });
 
       if (response.ok) {
-        setSuccess('Zalogowano pomyślnie! Przekierowuję...');
+        setSuccess(t('success.loggedIn'));
         setTimeout(() => window.location.href = '/', 2000);
       } else {
         const data = await response.json();
-        setError(data.error || 'Błąd logowania');
+        setError(data.error || t('error.loginFailed'));
       }
     } catch (error: any) {
-      setError(error.message || 'Błąd połączenia');
+      setError(error.message || t('error.loginFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -58,14 +62,14 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
       });
 
       if (response.ok) {
-        setSuccess('Konto utworzone! Zalogowuję...');
+        setSuccess(t('success.registered'));
         setTimeout(() => window.location.href = '/', 2000);
       } else {
         const data = await response.json();
-        setError(data.error || 'Błąd rejestracji');
+        setError(data.error || t('error.registerFailed'));
       }
     } catch (error: any) {
-      setError(error.message || 'Błąd połączenia');
+      setError(error.message || t('error.registerFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -75,30 +79,30 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
     <div className={cn('grid gap-6', className)} {...props}>
       {error && (
         <Alert variant="destructive">
-          <AlertTitle>Błąd</AlertTitle>
+          <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       {success && (
         <Alert className="border-green-500/50 text-green-600 dark:text-green-400">
-          <AlertTitle>Sukces!</AlertTitle>
+          <AlertTitle>Success!</AlertTitle>
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
       
-      <Tabs defaultValue="login" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="login">Logowanie</TabsTrigger>
-          <TabsTrigger value="register">Rejestracja</TabsTrigger>
+          <TabsTrigger value="login">{t('login.title')}</TabsTrigger>
+          <TabsTrigger value="register">{t('register.title')}</TabsTrigger>
         </TabsList>
         
         <TabsContent value="login">
           <form onSubmit={handleLogin} className="space-y-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="email-login">Email</Label>
+              <Label htmlFor="email-login">{t('email.label')}</Label>
               <Input
                 id="email-login"
-                placeholder="name@example.com"
+                placeholder={t('email.placeholder')}
                 type="email"
                 autoCapitalize="none"
                 autoComplete="email"
@@ -110,7 +114,7 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password-login">Hasło</Label>
+              <Label htmlFor="password-login">{t('password.label')}</Label>
               <Input
                 id="password-login"
                 type="password"
@@ -124,10 +128,10 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Logowanie...
+                  {t('button.login')}...
                 </span>
               ) : (
-                'Zaloguj się'
+                t('button.login')
               )}
             </Button>
           </form>
@@ -136,10 +140,10 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
         <TabsContent value="register">
           <form onSubmit={handleRegister} className="space-y-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="email-register">Email</Label>
+              <Label htmlFor="email-register">{t('email.label')}</Label>
               <Input
                 id="email-register"
-                placeholder="name@example.com"
+                placeholder={t('email.placeholder')}
                 type="email"
                 autoCapitalize="none"
                 autoComplete="email"
@@ -151,7 +155,7 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password-register">Hasło</Label>
+              <Label htmlFor="password-register">{t('password.label')}</Label>
               <Input
                 id="password-register"
                 type="password"
@@ -165,10 +169,10 @@ export default function AuthForm({ className, ...props }: AuthFormProps) {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Tworzenie...
+                  {t('button.register')}...
                 </span>
               ) : (
-                'Utwórz konto'
+                t('button.register')
               )}
             </Button>
           </form>

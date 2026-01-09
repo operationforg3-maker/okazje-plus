@@ -1,0 +1,20 @@
+{
+  "title": "Admin-Panel",
+  "nav.dashboard": "Dashboard",
+  "nav.products": "Produkte",
+  "nav.deals": "Angebote",
+  "nav.categories": "Kategorien",
+  "nav.users": "Benutzer",
+  "nav.moderation": "Moderation",
+  "nav.settings": "Einstellungen",
+  "dashboard.stats": "Statistiken",
+  "dashboard.recentDeals": "Aktuelle Angebote",
+  "dashboard.topProducts": "Beliebte Produkte",
+  "products.count": "Gesamtprodukte",
+  "deals.count": "Gesamtangebote",
+  "users.count": "Gesamtbenutzer",
+  "btn.approve": "Genehmigen",
+  "btn.reject": "Ablehnen",
+  "btn.delete": "Löschen",
+  "btn.edit": "Bearbeiten"
+}
