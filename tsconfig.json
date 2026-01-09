@@ -47,6 +47,10 @@
     ".next",
     "okazje-plus",
     "src-legacy",
-    "scripts"
+    "legacy",
+    "legacy/**",
+    "scripts",
+    "playwright.config.ts",
+    "jest.config.js"
   ]
 }
