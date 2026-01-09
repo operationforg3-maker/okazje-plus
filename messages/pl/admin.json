@@ -1,20 +1,32 @@
 {
   "title": "Panel Admina",
-  "nav.dashboard": "Dashboard",
-  "nav.products": "Produkty",
-  "nav.deals": "Oferty",
-  "nav.categories": "Kategorie",
-  "nav.users": "Użytkownicy",
-  "nav.moderation": "Moderacja",
-  "nav.settings": "Ustawienia",
-  "dashboard.stats": "Statystyki",
-  "dashboard.recentDeals": "Ostatnie oferty",
-  "dashboard.topProducts": "Popularne produkty",
-  "products.count": "Łączna liczba produktów",
-  "deals.count": "Łączna liczba ofert",
-  "users.count": "Łączna liczba użytkowników",
-  "btn.approve": "Zatwierdź",
-  "btn.reject": "Odrzuć",
-  "btn.delete": "Usuń",
-  "btn.edit": "Edytuj"
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Produkty",
+    "deals": "Oferty",
+    "categories": "Kategorie",
+    "users": "Użytkownicy",
+    "moderation": "Moderacja",
+    "settings": "Ustawienia"
+  },
+  "dashboard": {
+    "stats": "Statystyki",
+    "recentDeals": "Ostatnie oferty",
+    "topProducts": "Popularne produkty"
+  },
+  "products": {
+    "count": "Łączna liczba produktów"
+  },
+  "deals": {
+    "count": "Łączna liczba ofert"
+  },
+  "users": {
+    "count": "Łączna liczba użytkowników"
+  },
+  "btn": {
+    "approve": "Zatwierdź",
+    "reject": "Odrzuć",
+    "delete": "Usuń",
+    "edit": "Edytuj"
+  }
 }

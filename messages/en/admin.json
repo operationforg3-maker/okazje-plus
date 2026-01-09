@@ -1,20 +1,32 @@
 {
   "title": "Admin Panel",
-  "nav.dashboard": "Dashboard",
-  "nav.products": "Products",
-  "nav.deals": "Deals",
-  "nav.categories": "Categories",
-  "nav.users": "Users",
-  "nav.moderation": "Moderation",
-  "nav.settings": "Settings",
-  "dashboard.stats": "Statistics",
-  "dashboard.recentDeals": "Recent Deals",
-  "dashboard.topProducts": "Popular Products",
-  "products.count": "Total Products",
-  "deals.count": "Total Deals",
-  "users.count": "Total Users",
-  "btn.approve": "Approve",
-  "btn.reject": "Reject",
-  "btn.delete": "Delete",
-  "btn.edit": "Edit"
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "deals": "Deals",
+    "categories": "Categories",
+    "users": "Users",
+    "moderation": "Moderation",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "stats": "Statistics",
+    "recentDeals": "Recent Deals",
+    "topProducts": "Popular Products"
+  },
+  "products": {
+    "count": "Total Products"
+  },
+  "deals": {
+    "count": "Total Deals"
+  },
+  "users": {
+    "count": "Total Users"
+  },
+  "btn": {
+    "approve": "Approve",
+    "reject": "Reject",
+    "delete": "Delete",
+    "edit": "Edit"
+  }
 }
