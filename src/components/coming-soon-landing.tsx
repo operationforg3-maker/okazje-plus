@@ -2,6 +2,8 @@
 
 import { Mail, Sparkles } from 'lucide-react';
 import { useState } from 'react';
+import { Logo } from './logo';
+import { Button } from './ui/button';
 
 export default function ComingSoonLanding() {
   const [email, setEmail] = useState('');
@@ -40,98 +42,88 @@ export default function ComingSoonLanding() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-center p-6">
-      <div className="max-w-2xl w-full space-y-8">
-        {/* Logo/Brand */}
-        <div className="text-center space-y-4">
-          <h1 className="text-5xl md:text-7xl font-bold">
-            Okazje Plus
-          </h1>
-          <p className="text-xl md:text-2xl text-slate-300">
+      <div className="max-w-2xl w-full space-y-8 animate-in fade-in duration-700">
+        {/* Logo */}
+        <div className="flex justify-center animate-in slide-in-from-top duration-1000">
+          <Logo className="h-16 md:h-20" />
+        </div>
+
+        {/* Tagline */}
+        <div className="text-center space-y-3 animate-in slide-in-from-bottom duration-1000 delay-150">
+          <p className="text-xl md:text-2xl text-slate-300 font-medium">
             Najlepsze okazje w jednym miejscu
           </p>
         </div>
 
         {/* Coming Soon Badge */}
-        <div className="flex justify-center">
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 rounded-full">
-            <Sparkles className="w-5 h-5" />
+        <div className="flex justify-center animate-in zoom-in duration-700 delay-300">
+          <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#357D58] to-[#4ade80] rounded-full shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <Sparkles className="w-5 h-5 animate-pulse" />
             <span className="font-semibold text-lg">Już wkrótce</span>
-            <Sparkles className="w-5 h-5" />
+            <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
         </div>
 
         {/* Newsletter Form */}
-        <div className="bg-slate-800/50 rounded-lg p-8 border border-slate-700 space-y-4 backdrop-blur">
-          <h2 className="text-lg font-bold text-center">
+        <div className="bg-slate-800/50 rounded-xl p-8 border border-slate-700/50 space-y-4 backdrop-blur-sm shadow-2xl animate-in slide-in-from-bottom duration-1000 delay-500">
+          <h2 className="text-2xl font-bold text-center bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
             Bądź na bieżąco
           </h2>
           <p className="text-sm text-slate-300 text-center">
             Otrzymaj powiadomienie gdy startujemy
           </p>
           
-          <form onSubmit={handleSubscribe} className="space-y-3">
-            <div className="flex gap-2 flex-col sm:flex-row">
+          <form onSubmit={handleSubscribe} className="space-y-4 pt-2">
+            <div className="flex gap-3 flex-col sm:flex-row">
               <input
                 type="email"
                 placeholder="Twój email..."
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#357D58] focus:border-transparent transition-all duration-200 text-white placeholder-slate-400"
                 disabled={isLoading || submitted}
                 required
               />
-              <button
+              <Button
                 type="submit"
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 disabled={isLoading || submitted}
+                className="px-8 py-3 bg-gradient-to-r from-[#357D58] to-[#4ade80] hover:from-[#2d6a4a] hover:to-[#357D58] text-white font-semibold rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                {submitted ? '✓ Dziękujemy!' : 'Zapisz się'}
-              </button>
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Wysyłanie...
+                  </span>
+                ) : submitted ? (
+                  <span className="flex items-center gap-2">
+                    ✓ Zapisano
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    Zapisz się
+                  </span>
+                )}
+              </Button>
             </div>
             
             {error && (
-              <p className="text-sm text-red-400 text-center">
-                ⚠ {error}
+              <p className="text-sm text-red-400 text-center animate-in fade-in duration-300">
+                {error}
               </p>
             )}
             
             {submitted && (
-              <p className="text-sm text-green-400 text-center">
-                ✓ Sprawdź swoją skrzynkę email
+              <p className="text-sm text-green-400 text-center font-medium animate-in fade-in duration-300">
+                Dziękujemy! Skontaktujemy się wkrótce.
               </p>
             )}
           </form>
         </div>
 
-        {/* Features Preview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { emoji: '🔥', text: 'Gorące okazje' },
-            { emoji: '💰', text: 'Najlepsze ceny' },
-            { emoji: '✓', text: 'Sprawdzone źródła' },
-          ].map((feature, index) => (
-            <div
-              key={index}
-              className="bg-slate-800/50 rounded-lg p-6 border border-slate-700 text-center backdrop-blur"
-            >
-              <div className="text-4xl mb-3">{feature.emoji}</div>
-              <p className="font-medium">{feature.text}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Contact */}
-        <div className="text-center pt-8 border-t border-slate-700">
-          <div className="inline-flex items-center gap-3 text-slate-300">
-            <Mail className="w-5 h-5 text-blue-400" />
-            <span>Pytania?</span>
-            <a
-              href="mailto:business@okazjeplus.pl"
-              className="font-semibold text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              business@okazjeplus.pl
-            </a>
-          </div>
+        {/* Footer */}
+        <div className="text-center text-slate-400 text-sm animate-in fade-in duration-1000 delay-700">
+          <p>© 2026 Okazje Plus. Wszystkie prawa zastrzeżone.</p>
         </div>
       </div>
     </div>

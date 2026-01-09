@@ -1,37 +1,44 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #ffffff;
-  --color-foreground: #0a0a0a;
+  /* Primary - Teal (#357D58) */
+  --color-primary: #357D58;
+  --color-primary-foreground: #ffffff;
   
-  --color-primary: #0f172a;
-  --color-primary-foreground: #f8fafc;
+  /* Accent - Orange (#FF6B35 / #ea5505 for plus badge) */
+  --color-accent: #FF6B35;
+  --color-accent-foreground: #ffffff;
   
-  --color-secondary: #f1f5f9;
+  /* Secondary - Light Blue */
+  --color-secondary: #C5E0EC;
   --color-secondary-foreground: #0f172a;
   
+  /* Muted */
   --color-muted: #f1f5f9;
   --color-muted-foreground: #64748b;
   
-  --color-accent: #f1f5f9;
-  --color-accent-foreground: #0f172a;
-  
+  /* Destructive */
   --color-destructive: #ef4444;
-  --color-destructive-foreground: #f8fafc;
+  --color-destructive-foreground: #ffffff;
   
+  /* Background & Borders */
+  --color-background: #faf8f5;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
   --color-border: #e2e8f0;
   --color-input: #e2e8f0;
-  --color-ring: #0a0a0a;
+  --color-ring: #357D58;
   
   --radius: 0.5rem;
 }
 
 .dark {
-  --color-background: #0a0a0a;
-  --color-foreground: #f8fafc;
-  
-  --color-primary: #f8fafc;
+  --color-primary: #4ade80;
   --color-primary-foreground: #0f172a;
+  
+  --color-accent: #fb923c;
+  --color-accent-foreground: #ffffff;
   
   --color-secondary: #1e293b;
   --color-secondary-foreground: #f8fafc;
@@ -39,13 +46,14 @@
   --color-muted: #1e293b;
   --color-muted-foreground: #94a3b8;
   
-  --color-accent: #1e293b;
-  --color-accent-foreground: #f8fafc;
-  
   --color-destructive: #7f1d1d;
   --color-destructive-foreground: #f8fafc;
   
+  --color-background: #0a0a0a;
+  --color-foreground: #f8fafc;
+  --color-card: #1a1a1a;
+  --color-card-foreground: #f8fafc;
   --color-border: #1e293b;
   --color-input: #1e293b;
-  --color-ring: #cbd5e1;
+  --color-ring: #4ade80;
 }
