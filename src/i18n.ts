@@ -3,9 +3,9 @@ import { config } from '../i18n.config';
 import { messagesByLocale } from './lib/messages-loader';
 import type { Locale } from '../i18n.config';
 
-export default getRequestConfig(async ({ locale }: { locale: string }) => {
+export default getRequestConfig(async ({ locale }: { locale?: string }) => {
   // During static generation, locale might be undefined - provide defaults
-  const safeLocale = locale || config.defaultLocale;
+  const safeLocale = (locale || config.defaultLocale) as Locale;
 
   if (!config.locales.includes(safeLocale as Locale)) {
     throw new Error(`Invalid locale: ${safeLocale}`);
