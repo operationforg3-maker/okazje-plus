@@ -1,9 +1,16 @@
 # Okazje Plus — AI Coding Assistant Guide
 
-**Updated:** December 27, 2025 | **Status:** M6 Product-Centric Architecture Complete  
+**Updated:** January 9, 2026 | **Status:** M6 Complete + Moderation System + Currency Unification  
 **Architecture:** Product-comparison marketplace (Ceneo/PriceRunner style) with AI-powered harvesting & enrichment
 
 Productivity-first guide for this codebase. **Polish-first UI policy** — all user-facing text MUST be in Polish. Mirror existing patterns, avoid data model churn.
+
+## Recent Updates (Jan 2026)
+- ✅ **Moderation System**: Complete user/comment/report moderation (commit ecb6993)
+- ✅ **Currency Unification**: Single CurrencyManager with 40 tests, production ready (Phase 1-3)
+- ✅ **Admin Dashboard**: Server-side stats with caching, performance optimized
+- ✅ **Hydration Fixes**: Resolved React #418 warnings in ConditionalNav, AccountMenuPanel
+- ✅ **CI/Build**: Stable deployment with fallback credentials for ADC-less environments
 
 ## Big picture architecture
 - **Platform**: Product-comparison marketplace (M6, like Ceneo/PriceRunner) — Next.js 15 app router + Firebase (Auth/Firestore/Storage) + Vertex AI Genkit + optional Typesense search
@@ -16,11 +23,12 @@ Productivity-first guide for this codebase. **Polish-first UI policy** — all u
 - **Realtime features**: Optimistic UI updates (votes/comments) with rollback on error. Notifications via Cloud Function triggers (auto-comment-reply alerts). In-app notification polling every 30s.
 
 ## Authentication & security
-- **Dual Firebase config**: Server uses `FIREBASE_WEBAPP_CONFIG` (App Hosting runtime); client uses `NEXT_PUBLIC_*` env vars (embedded at build time)
+- **Dual Firebase config**: Server uses `FIREBASE_WEBAPP_CONFIG` (App Hosting runtime); client uses `NEXT_PUBLIC_*` env vars (embedded at build time). CI fallback uses dummy credentials when ADC unavailable.
 - **Client auth**: Context provider `src/lib/auth.tsx` (uses `onAuthStateChanged`). Access via `useAuth()` hook
 - **Server auth**: `src/lib/auth-server.ts` provides `getServerAuthSession()`, `requireAdmin()`, `requireModerator()` for API routes/server actions
 - **Firestore rules**: `firestore.rules` defines role-based access (admin/moderator/user). Keep in sync with `firestore.indexes.json`
-- **Admin checks**: Use `requireAdmin()` in server actions; check `session.role === 'admin'` in API routes
+- **Admin checks**: Use `requireAdmin()` in server actions; check `session.role === 'admin'` in API routes. Always add fallbacks for stats queries (e.g., `stats?.totals || 0`)
+- **Moderation system**: Complete user management at `/admin/users`, comment moderation, report handling. Uses role-based access with moderator permissions
 
 ## Data layer patterns
 - **ALWAYS use `src/lib/data.ts`**: Never query Firestore directly in components. Add new queries to this module. NEVER access collections from UI code.
@@ -65,6 +73,15 @@ Productivity-first guide for this codebase. **Polish-first UI policy** — all u
 - **Cloud Function triggers**: `notifyOnDealCommentReply`, `notifyOnProductCommentReply` (okazje-plus/src/index.ts); create notification on parent comment author reply
 - **Data layer**: `createNotification()`, `getNotifications()`, `getUnreadNotifications()`, `markNotificationAsRead()` in `src/lib/data.ts`
 - **When adding**: Use existing notification types; pass metadata for rich content; ensure email templates in Cloud Function match type
+
+## Moderation system (Jan 2026)
+- **User management**: Admin panel at `/admin/users` — view all users, filter by role, ban/unban, change roles
+- **Comment moderation**: Review/approve/reject comments; inline actions; bulk operations support
+- **Report handling**: User reports for spam/abuse; moderator queue with status tracking
+- **Permissions**: Admin has full access; moderator can approve/reject content but not change roles
+- **Data layer**: `getUsersForAdmin()`, `updateUserRole()`, `banUser()`, `getReportsForModerator()` in `src/lib/data.ts`
+- **Routes**: `/admin/users/[userId]` for user details; `/admin/moderation` for queue
+- **Pattern**: Always check `session.role` before moderation actions; use `requireModerator()` helper
 
 ## Cloud Functions (`okazje-plus/`)
 - **Location**: Separate Node.js package in `okazje-plus/` with own `package.json` and `tsconfig.json`
@@ -206,12 +223,19 @@ ALIEXPRESS_APP_KEY=xxx             # Marketplace integration
 | Import stuck at 0% | Job not processing | Run `node check-job-status.js <jobId>` |
 | Product duplicates | Identity mismatch | Check `IdentityMatch` collection for hash |
 | Polish text missing | Wrong translation file | Add key to `messages/pl/*.json` |
-| Price display inconsistent | Multiple currency systems | **See CURRENCY_ISSUES_REPORT.md** - needs unification |
-| Currency switch not working | Components ignore choice | Use `useCurrency()` hook, not hardcoded PLN |
+| Price display inconsistent | Not using unified system | Use `useCurrency()` hook, never hardcode PLN |
+| Currency switch not working | Components ignore choice | Use `useCurrency()` hook from `src/lib/unified-currency.ts` |
+| Hydration warning React #418 | Browser API before mount | Add `isMounted` check, return null/skeleton |
+| Admin stats undefined | Missing fallback | Use `stats?.totals?.field || 0` pattern |
+| Build fails in CI | ADC credentials missing | Dummy credentials auto-injected, check logs |
+| User role not updating | Cache or auth state | Refresh auth session with `getServerAuthSession()` |
 
 ## Before committing
 1. Keep all Firestore access in `data.ts`; reuse existing helpers (heat calculation, pagination, cache invalidation)
 2. Run quality gates: `npm run typecheck && npm run lint && npm run test && npm run build`
+7. Add null checks for any admin stats/dashboard queries (`stats?.field || 0`)
+8. Ensure components handle mount state if accessing browser APIs (use `isMounted` pattern)
+9. Test currency formatting with `useCurrency()` hook if touching price display
 3. Verify required env vars present (Firebase + Gemini minimum)
 4. Check Firestore indexes if adding new compound queries (`firestore.indexes.json`)
 5. Update cache invalidation if modifying data mutations
@@ -219,13 +243,8 @@ ALIEXPRESS_APP_KEY=xxx             # Marketplace integration
 
 ## Documentation
 - **Index**: `docs/INDEX.md` (comprehensive guide to all docs, updated Dec 2025)
-- **Quick start**: `docs/QUICK_START.md`
-- **Latest milestones**: 
-  - M6 (Dec 2025): `docs/milestones/M6_PRODUCT_CENTRIC_ARCHITECTURE.md` + `M6_EXECUTION_SUMMARY.md` (Product-centric model, smart harvester/refiner, identity matching)
-  - M5 (Nov 2025): `docs/milestones/M5_COMPLETION_SUMMARY.md` (notifications + price alerts + email integration)
-- **API guides**: `docs/api/*` (AliExpress, Allegro, Vertex AI)
-- **Testing**: `docs/testing/tests-quickstart.md`
-- **Troubleshooting**: `docs/troubleshooting/IMPORT_JOBS_NOT_WORKING.md`
+- **Currency system**: `COMPREHENSIVE_SUMMARY_PHASE1-3.md` (complete implementation), `CURRENCY_QUICK_REFERENCE.md` (API guide)
+- **Moderation**: `docs/moderation/MODERATION_SYSTEM.md` (user/comment/report handling)
 
 **Quick troubleshooting links**:
 - Import not working → `docs/troubleshooting/IMPORT_JOBS_NOT_WORKING.md`
@@ -233,6 +252,8 @@ ALIEXPRESS_APP_KEY=xxx             # Marketplace integration
 - Harvester setup → `docs/REFINER_QUICKSTART.md`
 - API integration → `docs/api/ALIEXPRESS_API_OVERVIEW.md`
 - Deploy issues → `docs/deployment/DEPLOY_STATUS.md`
+- Currency bugs → `CURRENCY_QUICK_REFERENCE.md`
+- Hydration errors → Check ConditionalNav/AccountMenuPanel for patterns
 
 When in doubt about patterns, check existing implementations in the same domain (e.g., deals vs products follow parallel structures).
 
@@ -245,4 +266,6 @@ When in doubt about patterns, check existing implementations in the same domain 
 - **Admin vs moderator**: `requireAdmin()` is strict (only admin role). Moderator role exists but has fewer permissions (see `firestore.rules`). Assign judiciously.
 - **Cloud Function cold starts**: Deploy is slow; test locally via `firebase emulators:start`. Functions file size matters (keep sharp, @sendgrid minimal).
 - **Next.js app router quirks**: No `next/router`; use URL params in `[id]` directories. Static generation not fully used; mostly dynamic due to real-time nature.
-- **Currency & pricing (RESOLVED - M6)**: ✅ **Phase 1-3 Complete (Dec 27, 2025)**. System now has unified CurrencyManager singleton with single source of truth. For price display use `useCurrency()` hook from `src/lib/unified-currency.ts`. All conversions based on PLN (internal base), with daily automatic updates via Cloud Function. See `COMPREHENSIVE_SUMMARY_PHASE1-3.md` for full details, `CURRENCY_TESTING_GUIDE.md` for testing approach. 23 unit tests + 17 E2E tests validate system. When in doubt: `const { formatPrice } = useCurrency();` then `formatPrice(pricePLN)`.
+- **Currency & pricing (RESOLVED - M6)**: ✅ **Phase 1-3 Complete (Dec 27, 2025)**. System now has unified CurrencyManager singleton with single source of truth. For price display use `useCurrency()` hook from `src/lib/unified-currency.ts`. All conversions based on PLN (internal base), with daily automatic updates via Cloud Function. See `COMPREHENSIVE_SUMMARY_PHASE1-3.md` for full details, `CURRENCY_QUICK_REFERENCE.md` for quick API reference. 23 unit tests + 17 E2E tests validate system. **Pattern:** `const { formatPrice } = useCurrency(); formatPrice(pricePLN)`. Never hardcode PLN.
+- **Hydration warnings**: ✅ Fixed React #418 errors. Use `isMounted` check in components that depend on localStorage/browser APIs. Pattern: `const { isMounted } = useCurrency(); if (!isMounted) return null;`. See ConditionalNav, AccountMenuPanel for examples.
+- **Admin dashboard performance**: Stats are server-side with caching. Always add null checks: `stats?.totals?.products || 0`. Dashboard loading now <500ms. Cache key pattern: `admin:stats:${period}:${category}`.

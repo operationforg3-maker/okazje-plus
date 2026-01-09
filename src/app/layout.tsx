@@ -1,23 +1,22 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
+import { Inter } from 'next/font/google';
 import './globals.css';
-import { cn } from '@/lib/utils';
+
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Okazje+',
+  title: 'Okazje Plus - Już Wkrótce',
+  description: 'Najlepsze okazje w jednym miejscu. Już wkrótce!',
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
-  // Root layout MUSI zawierać html i body dla Next.js 15
+}>) {
   return (
-    <html lang="pl" suppressHydrationWarning>
-      <body suppressHydrationWarning className={cn('min-h-screen bg-background font-body antialiased')} style={{ WebkitOverflowScrolling: 'touch' }}>
-        {children}
-      </body>
+    <html lang="pl">
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }
