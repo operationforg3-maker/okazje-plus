@@ -1,24 +1,34 @@
 {
-  "nav.home": "Startseite",
-  "nav.login": "Anmelden",
-  "nav.register": "Registrieren",
-  "nav.admin": "Admin-Panel",
-  "nav.language": "Sprache",
-  "theme.dark": "Dunkel",
-  "theme.light": "Hell",
-  "footer.copyright": "© 2026 Okazje Plus. Alle Rechte vorbehalten.",
-  "footer.privacy": "Datenschutz",
-  "footer.terms": "Nutzungsbedingungen",
-  "footer.contact": "Kontakt",
-  "button.submit": "Absenden",
-  "button.cancel": "Abbrechen",
-  "button.save": "Speichern",
-  "button.delete": "Löschen",
-  "button.edit": "Bearbeiten",
-  "button.back": "Zurück",
-  "button.next": "Weiter",
-  "error.required": "Dieses Feld ist erforderlich",
-  "error.email": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
-  "error.password": "Das Passwort muss mindestens 6 Zeichen lang sein",
+  "nav": {
+    "home": "Startseite",
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "admin": "Admin-Panel",
+    "language": "Sprache"
+  },
+  "theme": {
+    "dark": "Dunkel",
+    "light": "Hell"
+  },
+  "footer": {
+    "copyright": "© 2026 Okazje Plus. Alle Rechte vorbehalten.",
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen",
+    "contact": "Kontakt"
+  },
+  "button": {
+    "submit": "Absenden",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "back": "Zurück",
+    "next": "Weiter"
+  },
+  "error": {
+    "required": "Dieses Feld ist erforderlich",
+    "email": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+    "password": "Das Passwort muss mindestens 6 Zeichen lang sein"
+  },
   "loading": "Wird geladen..."
 }

@@ -1,24 +1,34 @@
 {
-  "nav.home": "Strona główna",
-  "nav.login": "Logowanie",
-  "nav.register": "Rejestracja",
-  "nav.admin": "Panel Admina",
-  "nav.language": "Język",
-  "theme.dark": "Ciemny",
-  "theme.light": "Jasny",
-  "footer.copyright": "© 2026 Okazje Plus. Wszystkie prawa zastrzeżone.",
-  "footer.privacy": "Polityka prywatności",
-  "footer.terms": "Warunki użytkownika",
-  "footer.contact": "Kontakt",
-  "button.submit": "Wyślij",
-  "button.cancel": "Anuluj",
-  "button.save": "Zapisz",
-  "button.delete": "Usuń",
-  "button.edit": "Edytuj",
-  "button.back": "Wróć",
-  "button.next": "Dalej",
-  "error.required": "To pole jest wymagane",
-  "error.email": "Podaj prawidłowy adres email",
-  "error.password": "Hasło musi mieć co najmniej 6 znaków",
+  "nav": {
+    "home": "Strona główna",
+    "login": "Logowanie",
+    "register": "Rejestracja",
+    "admin": "Panel Admina",
+    "language": "Język"
+  },
+  "theme": {
+    "dark": "Ciemny",
+    "light": "Jasny"
+  },
+  "footer": {
+    "copyright": "© 2026 Okazje Plus. Wszystkie prawa zastrzeżone.",
+    "privacy": "Polityka prywatności",
+    "terms": "Warunki użytkownika",
+    "contact": "Kontakt"
+  },
+  "button": {
+    "submit": "Wyślij",
+    "cancel": "Anuluj",
+    "save": "Zapisz",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "back": "Wróć",
+    "next": "Dalej"
+  },
+  "error": {
+    "required": "To pole jest wymagane",
+    "email": "Podaj prawidłowy adres email",
+    "password": "Hasło musi mieć co najmniej 6 znaków"
+  },
   "loading": "Ładowanie..."
 }
