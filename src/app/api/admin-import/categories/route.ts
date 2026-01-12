@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { dryRunImportCategories, runImportCategories, CategoriesPayloadSchema } from "../../../admin/categories-import/actions";
 import { requireRole } from "@/lib/auth-admin";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const auth = await requireRole(req, ["admin", "moderator"]);
   if (!auth.authorized) {
