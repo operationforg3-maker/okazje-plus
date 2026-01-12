@@ -325,8 +325,18 @@ export async function mapAliExpressToProductCoreDeepData(
     const seller = extractSeller(apiProduct);
     
     // Build Deep Data object
+    const normalizedSpecs: Specification[] = specificationsStructured
+      .map((spec, idx): Specification => ({
+        label: spec.label ?? spec.value ?? `Spec ${idx + 1}`,
+        value: spec.value ?? '',
+        category: spec.category,
+        unit: spec.unit,
+        order: spec.order,
+      }))
+      .filter((spec) => !!spec.label && !!spec.value);
+
     const deepData: ProductCoreDeepData = {
-      specificationsStructured,
+      specificationsStructured: normalizedSpecs,
       gallery,
       logistics,
       seller,
@@ -348,17 +358,27 @@ export async function mapAliExpressToProductCoreDeepData(
       return { success: false, errors };
     }
     
+    const { logistics: parsedLogistics, seller: parsedSeller } = validationResult.data;
+
+    const resolvedSpecs = normalizedSpecs as NonNullable<ProductCore["specificationsStructured"]>;
+    const resolvedGallery = (validationResult.data.gallery ?? gallery ?? []) as NonNullable<ProductCore["gallery"]>;
+    const resolvedLogistics = (parsedLogistics ?? logistics) as NonNullable<ProductCore["logistics"]> | undefined;
+    const resolvedSeller = (parsedSeller ?? seller) as NonNullable<ProductCore["seller"]> | undefined;
+
     // Build partial ProductCore with Deep Data + existing fields
     const productCorePartial: Partial<ProductCore> = {
       // Deep Data extensions
-      ...validationResult.data,
+      specificationsStructured: resolvedSpecs,
+      gallery: resolvedGallery,
+      logistics: resolvedLogistics,
+      seller: resolvedSeller,
       
       // Map to existing ProductCore fields for backward compatibility
-      images: gallery.filter(g => g.type === 'IMAGE').map(g => g.url),
-      videoUrl: gallery.find(g => g.type === 'VIDEO')?.url,
+      images: resolvedGallery.filter(g => g.type === 'IMAGE').map(g => g.url),
+      videoUrl: resolvedGallery.find(g => g.type === 'VIDEO')?.url,
       
       // Convert structured specs to flat map for legacy specs field
-      specs: specificationsStructured.reduce((acc, spec) => {
+      specs: resolvedSpecs.reduce((acc, spec) => {
         acc[spec.label] = spec.value;
         return acc;
       }, {} as Record<string, string>),

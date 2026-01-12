@@ -357,9 +357,17 @@ export default function ImportsPage() {
                         {run?.type === 'products' ? '📦 Produkty' : '🆕 Okazje'} · {run?.source} 
                         {run?.importerType && ` · ${run?.importerType === 'hot-products' ? '🔥' : '🔍'}`}
                       </div>
-                      <Badge variant={run?.status === "completed" ? "default" : run?.status === "failed" ? "destructive" : "outline"}>
-                        {statusLabel(run?.status || 'unknown')}
-                      </Badge>
+                      {(() => {
+                        const allowedStatuses = ["pending", "running", "completed", "failed", "cancelled"] as const;
+                        const status = allowedStatuses.includes(run?.status as any)
+                          ? (run?.status as (typeof allowedStatuses)[number])
+                          : "pending";
+                        return (
+                          <Badge variant={status === "completed" ? "default" : status === "failed" ? "destructive" : "outline"}>
+                            {statusLabel(status)}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     <div className="text-xs text-gray-500 mt-1 flex gap-3">
                       <span>{t("details.stats.fetched")}: {formatNumber(run?.stats?.fetched)}</span>

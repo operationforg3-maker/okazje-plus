@@ -61,8 +61,9 @@ export async function GET(request: NextRequest) {
     // Flatten logs from all matched jobs
     snapshot.docs.forEach(doc => {
       const job = doc.data();
-      if (job.logs && Array.isArray(job.logs)) {
-        job.logs.forEach((log: any) => {
+      const jobLogs = Array.isArray((job as any)?.logs) ? (job as any).logs : [];
+      if (job && typeof job === 'object' && jobLogs.length > 0) {
+        jobLogs.forEach((log: any) => {
           logs.push({
             jobId: doc.id,
             ...log,

@@ -5,7 +5,8 @@ import { requireRole } from "@/lib/auth-admin";
 export async function POST(req: NextRequest) {
   const auth = await requireRole(req, ["admin", "moderator"]);
   if (!auth.authorized) {
-    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+    const unauthorized = auth as { authorized: false; error: string; status: number };
+    return NextResponse.json({ ok: false, error: unauthorized.error }, { status: unauthorized.status });
   }
   try {
     const body = await req.json();

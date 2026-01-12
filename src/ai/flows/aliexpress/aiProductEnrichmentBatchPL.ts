@@ -77,7 +77,31 @@ export async function aiProductEnrichmentBatchPL(items: ProductEnrichmentInput[]
 }>> {
   logger.debug('AI batch enrichment', { count: items.length });
   try {
-    return await productEnrichmentBatchFlow(items as any);
+    const output = await productEnrichmentBatchFlow(items as any);
+    return output.map((item, idx) => {
+      const fallbackBase = items[idx]?.originalTitle?.trim() || `Produkt ${idx + 1}`;
+      const fallbackDesc = (items[idx]?.rawDescription || '').trim();
+      const baseShort = fallbackDesc ? fallbackDesc.slice(0, 120) : fallbackBase;
+      const baseLong = fallbackDesc || fallbackBase;
+      const fallbackKeywordsEN = fallbackBase.toLowerCase().split(/\s+/).slice(0, 3);
+
+      const safeFeatures = Array.isArray(item?.features) ? item.features.filter(Boolean) : [];
+      const safeKeywords = Array.isArray(item?.keywords) ? item.keywords.filter(Boolean) : [];
+      const safeKeywordsEN = Array.isArray(item?.keywordsEN) ? item.keywordsEN.filter(Boolean) : fallbackKeywordsEN;
+
+      const normalizedName = (item?.normalizedName || '').trim() || fallbackBase;
+      const shortDescription = (item?.shortDescription || '').trim() || baseShort;
+      const longDescription = (item?.longDescription || '').trim() || baseLong;
+
+      return {
+        normalizedName,
+        shortDescription,
+        longDescription,
+        features: safeFeatures,
+        keywords: safeKeywords,
+        keywordsEN: safeKeywordsEN,
+      };
+    });
   } catch (error) {
     logger.error('AI batch enrichment failed', { error });
     return items.map((i) => {

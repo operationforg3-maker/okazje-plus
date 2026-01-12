@@ -820,11 +820,13 @@ export class SmartHarvester {
           categorySlug: mappedCategory?.subSubCategorySlug || mappedCategory?.subCategorySlug,
         });
         
-        if (result.success) {
+        if (!result.success) {
+          const { errors } = result as { success: false; errors: string[] };
+          const safeErrors = errors ?? ['Deep Data extraction failed'];
+          this.addLog('warn', `Deep Data extraction failed: ${safeErrors.join(', ')}`);
+        } else {
           deepData = result.data;
           this.addLog('info', `Deep Data extracted: ${deepData.gallery?.length || 0} media, ${deepData.specificationsStructured?.length || 0} specs, logistics: ${!!deepData.logistics}, seller: ${!!deepData.seller}`);
-        } else {
-          this.addLog('warn', `Deep Data extraction failed: ${result.errors.join(', ')}`);
         }
       } catch (err) {
         this.addLog('warn', 'Deep Data mapper error', err);

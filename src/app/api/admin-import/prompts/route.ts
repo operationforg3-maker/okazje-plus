@@ -6,7 +6,8 @@ import { PromptConfig } from "@/lib/types";
 export async function GET(req: NextRequest) {
   const auth = await requireRole(req, ["admin", "moderator"]);
   if (!auth.authorized) {
-    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+    const unauthorized = auth as { authorized: false; error: string; status: number };
+    return NextResponse.json({ ok: false, error: unauthorized.error }, { status: unauthorized.status });
   }
   try {
     const snapshot = await adminDb.collection("admin_configs").where("type", "==", "prompt").get();
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const auth = await requireRole(req, ["admin", "moderator"]);
   if (!auth.authorized) {
-    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+    const unauthorized = auth as { authorized: false; error: string; status: number };
+    return NextResponse.json({ ok: false, error: unauthorized.error }, { status: unauthorized.status });
   }
   try {
     const body = await req.json();
@@ -47,7 +49,8 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const auth = await requireRole(req, ["admin", "moderator"]);
   if (!auth.authorized) {
-    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
+    const unauthorized = auth as { authorized: false; error: string; status: number };
+    return NextResponse.json({ ok: false, error: unauthorized.error }, { status: unauthorized.status });
   }
   try {
     const { searchParams } = new URL(req.url);

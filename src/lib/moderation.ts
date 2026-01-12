@@ -104,13 +104,19 @@ export async function generateModerationScore(
 
     const item = { id: itemSnap.id, ...itemSnap.data() } as Product | Deal;
 
+    const descriptionValue: string = typeof item.description === 'object'
+      ? (item.description.pl || item.description.en || '')
+      : (typeof item.description === 'string' ? item.description : '');
+
+    const trimmedDescription = descriptionValue.substring(0, 500);
+
     // Prepare prompt for AI scoring
     const prompt = `
 Analyze this ${itemType} for moderation and provide a quality/safety score.
 
 ${itemType === 'product' ? 'Product' : 'Deal'} Details:
 - Title: ${itemType === 'product' ? (item as Product).name : ((item as Deal).title?.pl || (item as Deal).title?.en || 'Bez tytułu')}
-- Description: ${(item.description && typeof item.description === 'object' ? (item.description.pl || item.description.en || '') : (item.description || '')).substring(0, 500)}
+- Description: ${trimmedDescription}
 - Price: ${itemType === 'product' ? (item as Product).price : (item as Deal).price}
 ${
   itemType === 'product'
