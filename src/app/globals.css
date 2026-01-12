@@ -829,5 +829,18 @@
   .action-btn:hover {
     color: hsl(var(--primary));
   }
+
+  /* Coming Soon - Hide navbar and footer */
+  html.coming-soon-fullscreen header {
+    display: none;
+  }
+
+  html.coming-soon-fullscreen footer {
+    display: none;
+  }
+
+  html.coming-soon-fullscreen main {
+    flex: 1;
+  }
 }
 

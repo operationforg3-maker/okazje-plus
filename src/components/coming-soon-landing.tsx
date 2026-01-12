@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Mail, Sparkles, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LogoSVGWrapper } from './layout/logo-svg-wrapper';
@@ -12,6 +12,15 @@ export default function ComingSoonLanding() {
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Hide navbar and footer by adding class to parent
+    const html = document.documentElement;
+    html.classList.add('coming-soon-fullscreen');
+    return () => {
+      html.classList.remove('coming-soon-fullscreen');
+    };
+  }, []);
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();

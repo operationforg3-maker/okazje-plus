@@ -39,30 +39,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  // Check if user is admin - only admins see the full app
-  const session = await getServerAuthSession();
-  const isAdmin = session?.role === 'admin';
-
-  // Show coming soon page for non-admin users
-  if (!isAdmin) {
-    return <ComingSoonLanding />;
-  }
-
-  // Admin users see the full homepage
-  const [hotDeals, topProducts, categories] = await Promise.all([
-    getHotDeals(12).catch(() => []),
-    getRecommendedProducts(12).catch(() => []),
-    getCategories().catch(() => []),
-  ]);
-
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Ładowanie...</div>}>
-      <HomeClient 
-        initialHotDeals={hotDeals}
-        initialTopProducts={topProducts}
-        categories={categories}
-      />
-    </Suspense>
-  );
+  // All users see coming soon page until launch
+  return <ComingSoonLanding />;
 }
 
