@@ -146,22 +146,83 @@ if (!getApps().length) {
   adminApp = getApps()[0];
 }
 
-// Configure Firestore with ignoreUndefinedProperties for better dev experience
-const adminDb = getFirestore(adminApp);
+// Lazy getters to avoid initialization during build
+let cachedDb: ReturnType<typeof getFirestore> | null = null;
+let cachedAuth: ReturnType<typeof getAuth> | null = null;
+let initialized = false;
 
-// Only set settings if not already configured
-try {
-  adminDb.settings({
-    ignoreUndefinedProperties: true,
-  });
-} catch (error: any) {
-  // Settings already configured, ignore
-  if (!error.message?.includes('already been initialized')) {
-    throw error;
+function ensureInitialized() {
+  if (initialized || !adminApp) return;
+  initialized = true;
+  
+  try {
+    cachedDb = getFirestore(adminApp);
+    // Only set settings if not already configured
+    try {
+      cachedDb.settings({
+        ignoreUndefinedProperties: true,
+      });
+    } catch (error: any) {
+      // Settings already configured, ignore
+      if (!error.message?.includes('already been initialized')) {
+        console.warn('[firebase-admin] Failed to configure Firestore settings:', error);
+      }
+    }
+  } catch (e) {
+    console.error('[firebase-admin] Failed to initialize Firestore:', e);
+    throw e;
+  }
+  
+  try {
+    cachedAuth = getAuth(adminApp);
+  } catch (e) {
+    console.error('[firebase-admin] Failed to initialize Auth:', e);
+    throw e;
   }
 }
 
-const adminAuth = getAuth(adminApp);
+// Create lazy proxies for backward compatibility
+class LazyDb {
+  collection(...args: any[]) { ensureInitialized(); return (cachedDb as any).collection(...args); }
+  doc(...args: any[]) { ensureInitialized(); return (cachedDb as any).doc(...args); }
+  collectionGroup(...args: any[]) { ensureInitialized(); return (cachedDb as any).collectionGroup(...args); }
+  batch() { ensureInitialized(); return (cachedDb as any).batch(); }
+  bulkWriter() { ensureInitialized(); return (cachedDb as any).bulkWriter(); }
+  runTransaction(updateFunction: any) { ensureInitialized(); return (cachedDb as any).runTransaction(updateFunction); }
+  setLogFunction(logFn: any) { ensureInitialized(); return (cachedDb as any).setLogFunction(logFn); }
+  settings(settings: any) { ensureInitialized(); return (cachedDb as any).settings(settings); }
+  listCollections() { ensureInitialized(); return (cachedDb as any).listCollections(); }
+  listDocuments() { ensureInitialized(); return (cachedDb as any).listDocuments(); }
+  getAll(...args: any[]) { ensureInitialized(); return (cachedDb as any).getAll(...args); }
+  recursiveDelete(ref: any) { ensureInitialized(); return (cachedDb as any).recursiveDelete(ref); }
+  toJSON() { ensureInitialized(); return (cachedDb as any).toJSON(); }
+}
+
+class LazyAuth {
+  getUser(uid: string) { ensureInitialized(); return (cachedAuth as any).getUser(uid); }
+  getUserByEmail(email: string) { ensureInitialized(); return (cachedAuth as any).getUserByEmail(email); }
+  getUserByPhoneNumber(phoneNumber: string) { ensureInitialized(); return (cachedAuth as any).getUserByPhoneNumber(phoneNumber); }
+  createUser(properties: any) { ensureInitialized(); return (cachedAuth as any).createUser(properties); }
+  updateUser(uid: string, properties: any) { ensureInitialized(); return (cachedAuth as any).updateUser(uid, properties); }
+  deleteUser(uid: string) { ensureInitialized(); return (cachedAuth as any).deleteUser(uid); }
+  listUsers(maxResults?: number, pageToken?: string) { ensureInitialized(); return (cachedAuth as any).listUsers(maxResults, pageToken); }
+  getSignUpUrl(settings: any) { ensureInitialized(); return (cachedAuth as any).getSignUpUrl(settings); }
+  createSessionCookie(idToken: string, options: any) { ensureInitialized(); return (cachedAuth as any).createSessionCookie(idToken, options); }
+  verifySessionCookie(sessionCookie: string, checkRevoked?: boolean) { ensureInitialized(); return (cachedAuth as any).verifySessionCookie(sessionCookie, checkRevoked); }
+  revokeRefreshTokens(uid: string) { ensureInitialized(); return (cachedAuth as any).revokeRefreshTokens(uid); }
+  verifyIdToken(idToken: string, checkRevoked?: boolean) { ensureInitialized(); return (cachedAuth as any).verifyIdToken(idToken, checkRevoked); }
+  setCustomUserClaims(uid: string, customUserClaims: any) { ensureInitialized(); return (cachedAuth as any).setCustomUserClaims(uid, customUserClaims); }
+  getTenant(tenantId: string) { ensureInitialized(); return (cachedAuth as any).getTenant(tenantId); }
+  createTenant(tenantOptions: any) { ensureInitialized(); return (cachedAuth as any).createTenant(tenantOptions); }
+  listTenants(maxResults?: number, pageToken?: string) { ensureInitialized(); return (cachedAuth as any).listTenants(maxResults, pageToken); }
+  updateTenant(tenantId: string, tenantOptions: any) { ensureInitialized(); return (cachedAuth as any).updateTenant(tenantId, tenantOptions); }
+  deleteTenant(tenantId: string) { ensureInitialized(); return (cachedAuth as any).deleteTenant(tenantId); }
+  createCustomToken(uid: string, additionalClaims?: any) { ensureInitialized(); return (cachedAuth as any).createCustomToken(uid, additionalClaims); }
+  verifyIdTokenAsync(idToken: string, checkRevoked?: boolean) { ensureInitialized(); return (cachedAuth as any).verifyIdTokenAsync(idToken, checkRevoked); }
+}
+
+const adminDb = new LazyDb() as any;
+const adminAuth = new LazyAuth() as any;
 
 // Export FieldValue for array operations
 export const FieldValue = FirestoreFieldValue;
