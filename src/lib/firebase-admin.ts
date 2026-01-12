@@ -7,17 +7,31 @@ import { join, resolve } from 'path';
 let adminApp: App | undefined;
 
 // Updated: 2025-12-03 - Fixed App Hosting Firestore permissions (datastore.user role added)
+// Updated: 2026-01-12 - Add Next.js build-time dummy credentials
 
 // Na App Hosting używamy domyślnych credentials (Application Default Credentials)
 // Lokalnie można opcjonalnie załadować serviceAccountKey.json jeśli istnieje
 if (!getApps().length) {
   const isAppHosting = !!process.env.K_SERVICE; // Cloud Run / App Hosting
+  const isBuildTime = process.env.NODE_ENV === 'production' && !process.env.FIREBASE_SERVICE_ACCOUNT_JSON && process.env.CI === 'true';
   const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
   const hasServiceAccountFile = existsSync(serviceAccountPath);
 
+  // Build-time fallback for Next.js CI build (no secrets available during page data collection)
+  if (isBuildTime && !adminApp) {
+    console.log('[firebase-admin] Using build-time dummy credentials (Next.js CI build)');
+    adminApp = initializeApp({
+      projectId: 'build-time-dummy',
+      credential: {
+        getAccessToken: async () => ({ access_token: 'build-dummy-token', expiry_date: Date.now() + 3600_000 }),
+        getProjectId: async () => 'build-time-dummy',
+      } as any,
+    });
+  }
+
   // CI / test fallback: provide dummy credentials to allow unit tests without real ADC
   const isCiOrTest = process.env.CI === 'true' || process.env.NODE_ENV === 'test';
-  if (!adminApp && isCiOrTest && !isAppHosting) {
+  if (!adminApp && isCiOrTest && !isAppHosting && !isBuildTime) {
     adminApp = initializeApp({
       projectId: 'demo-test',
       credential: {
