@@ -2,9 +2,9 @@ name: Deploy to Production
 
 on:
   workflow_dispatch:
-  # Uncomment to enable automatic deploys on tag
-  # push:
-  #   tags: ["v*"]
+  push:
+    branches:
+      - main
 
 concurrency:
   group: deploy-production
