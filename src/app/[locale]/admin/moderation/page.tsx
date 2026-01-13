@@ -241,7 +241,7 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
 
 import { getPendingDeals, getPendingProducts, getRecentlyModerated, getDealsForModeration, getProductCoresForModeration } from '@/lib/data';
 import { Deal, Product } from '@/lib/types';
-import { DealCard } from '@/components/deal-card';
+import DealCard from '@/components/deal-card';
 import ProductListCard from '@/components/product-list-card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
