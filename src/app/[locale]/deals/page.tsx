@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsByFilters } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
+import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib/offline-utils';
 import { Deal, Category, Product } from '@/lib/types';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
@@ -273,23 +274,47 @@ export default function DealsPage() {
     async function fetchData() {
       setIsLoading(true);
       try {
+        // Wait for online if needed
+        if (!isOnline()) {
+          console.warn('[DealsPage] App appears offline, waiting for connection...');
+          const online = await waitForOnline(5000);
+          if (!online) {
+            console.error('[DealsPage] Still offline after 5s, proceeding with fallback data');
+            setCategories([]);
+            setDeals([]);
+            setIsLoading(false);
+            return;
+          }
+        }
+        
         const [fetchedCategories, showcaseConfig, hotDeals] = await Promise.all([
-          showEmptyCategories ? getCategories() : getCategoriesWithContent('deals'),
-          getNavigationShowcase(),
-          getHotDeals(100), // Pobierz gorące okazje na start
+          retryWithBackoff(() => showEmptyCategories ? getCategories() : getCategoriesWithContent('deals'), 2, 500),
+          retryWithBackoff(() => getNavigationShowcase(), 1, 500),
+          retryWithBackoff(() => getHotDeals(100), 2, 500), // Pobierz gorące okazje na start
         ]);
         
-        setCategories(fetchedCategories);
-        setDeals(hotDeals); // Ustaw deals od razu
+        setCategories(fetchedCategories || []);
+        setDeals(hotDeals || []); // Ustaw deals od razu
         // NIE ustawiamy selectedCategory - pozostaw null aby pokazać wszystkie
 
         // Pobierz product of the day
         if (showcaseConfig?.productOfTheDayId) {
-          const product = await getProductById(showcaseConfig.productOfTheDayId);
-          setProductOfTheDay(product);
+          try {
+            const product = await retryWithBackoff(() => getProductById(showcaseConfig.productOfTheDayId), 1, 500);
+            setProductOfTheDay(product);
+          } catch (err) {
+            console.warn('[DealsPage] Failed to load product of the day:', err);
+          }
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('[DealsPage] Error fetching data:', error);
+        const msg = error instanceof Error ? error.message : String(error);
+        if (isOfflineError(error)) {
+          console.warn('[DealsPage] Offline error detected, showing empty state');
+        }
+        // Set empty fallback to avoid loading forever
+        setCategories([]);
+        setDeals([]);
       } finally {
         setIsLoading(false);
       }
@@ -303,27 +328,41 @@ export default function DealsPage() {
     async function fetchDeals() {
       setIsLoading(true);
       try {
+        // Wait for online if needed
+        if (!isOnline()) {
+          console.debug('[DealsPage] Waiting for online before fetching deals...');
+          const online = await waitForOnline(3000);
+          if (!online) {
+            if (!cancelled) setDeals([]);
+            return;
+          }
+        }
+        
         const q = searchTerm.trim();
         if (q.length > 1) {
           // Wyszukiwanie
-          const results = await searchDealsTypesense(q, {
+          const results = await retryWithBackoff(() => searchDealsTypesense(q, {
             mainCategorySlug: selectedCategory?.id,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
             limit: 100,
-          });
-          if (!cancelled) setDeals(results);
+          }), 1, 500);
+          if (!cancelled) setDeals(results || []);
         } else {
           // Użyj zunifiowanych filtrów do pobierania dealów
           const filterConfig = {
             ...unifiedFilters,
             categoryId: selectedCategory?.id || selectedCategory?.slug || unifiedFilters.categoryId,
           };
-          const filteredDeals = await getDealsByFilters(filterConfig, sortBy, 100);
-          if (!cancelled) setDeals(filteredDeals);
+          const filteredDeals = await retryWithBackoff(() => getDealsByFilters(filterConfig, sortBy, 100), 2, 500);
+          if (!cancelled) setDeals(filteredDeals || []);
         }
       } catch (error) {
-        console.error('Error fetching deals:', error);
+        console.error('[DealsPage] Error fetching deals:', error);
+        if (isOfflineError(error)) {
+          console.debug('[DealsPage] Offline error while fetching deals, showing empty');
+        }
+        if (!cancelled) setDeals([]);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
