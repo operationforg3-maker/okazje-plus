@@ -1,7 +1,7 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
-import { sanitizeDealRecord, sanitizeProductRecord } from '@/lib/sanitizers';
+import { sanitizeDealRecord, sanitizeProductRecord, sanitizeProductCoreRecord } from '@/lib/sanitizers';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
 const _warnedOnce = new Set<string>();
 function warnOnce(key: string, ...args: any[]) {
@@ -46,6 +46,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 
 const docToProduct = (snap: any): Product => sanitizeProductRecord(snap.data(), snap.id);
 const docToDeal = (snap: any): Deal => sanitizeDealRecord(snap.data(), snap.id);
+const docToProductCore = (snap: any): ProductCore => sanitizeProductCoreRecord(snap.data(), snap.id);
 
 export async function getHotDeals(count: number): Promise<Deal[]> {
   // Lazy import cache tylko na serwerze; dla klienta funkcja i tak zwykle nie będzie używana.
@@ -2541,14 +2542,8 @@ export async function getProductCoresByFilters(
     q = query(collection(db, 'product_cores'), ...constraints, orderBy('updatedAt', 'desc'), limit(limit_count));
 
     const snapshot = await getDocs(q);
-    // Always sanitize Firestore payloads to ensure string primitives (avoids React rendering errors)
-    let products = snapshot.docs.map(doc => {
-      const data = {
-        ...doc.data(),
-        id: doc.id
-      } as ProductCore;
-      return data;
-    });
+    // Always sanitize ProductCore from Firestore to ensure JSON-serializable data
+    let products: ProductCore[] = snapshot.docs.map(docToProductCore);
     
     console.log(`[getProductCoresByFilters] Fetched ${products.length} products, first 3:`, 
       products.slice(0, 3).map(p => ({ id: (p as ProductCore).id, title: typeof (p as ProductCore).title === 'object' ? (p as ProductCore).title.pl : (p as ProductCore).title }))

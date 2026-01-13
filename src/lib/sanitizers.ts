@@ -463,3 +463,90 @@ export const sanitizeDealRecord = (raw: any, id: string): Deal => ({
   id,
   ...sanitizeDealPayload(raw || {}),
 });
+
+/**
+ * Sanitize ProductCore from Firestore (M6)
+ * Ensures all fields are JSON-serializable primitives (strings, numbers, booleans, ISO dates)
+ * Converts Firestore Timestamps to ISO strings for React rendering safety
+ */
+export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => {
+  const sanitizeLocalizedText = (value: any): LocalizedText => {
+    if (!value || typeof value !== 'object') {
+      return { pl: '', en: '', de: '' };
+    }
+    return {
+      pl: ensureString((value as any).pl, ''),
+      en: ensureString((value as any).en, ''),
+      de: ensureOptionalString((value as any).de) || undefined,
+    } as LocalizedText;
+  };
+
+  const sanitizeSpecs = (raw: any): Record<string, string> | undefined => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+    const normalized: Record<string, string> = {};
+    for (const [key, value] of Object.entries(raw)) {
+      const strKey = ensureString(key, '');
+      const strVal = ensureString(value, '');
+      if (strKey && strVal) normalized[strKey] = strVal;
+    }
+    return Object.keys(normalized).length > 0 ? normalized : undefined;
+  };
+
+  const sanitizeRating = (raw: any): any => {
+    if (!raw || typeof raw !== 'object') return { score: 0, count: 0, provider: 'mixed' };
+    return {
+      score: ensureNumber(raw.score, 0),
+      count: ensureNumber(raw.count, 0),
+      provider: ensureString(raw.provider, 'mixed'),
+    };
+  };
+
+  const sanitizeImages = (raw: any): string[] => {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(img => ensureString(img, '')).filter(Boolean);
+  };
+
+  const sanitizeSearchTags = (raw: any): string[] => {
+    if (!Array.isArray(raw)) return [];
+    return raw.map(tag => ensureString(tag, '')).filter(Boolean);
+  };
+
+  const sanitizeBestPrice = (raw: any): any => {
+    if (!raw || typeof raw !== 'object') {
+      return { amount: 0, currency: 'PLN' };
+    }
+    return {
+      amount: ensureNumber(raw.amount, 0),
+      currency: ensureString(raw.currency, 'PLN'),
+    };
+  };
+
+  return {
+    id,
+    identityHash: ensureString((raw as any).identityHash, ''),
+    title: sanitizeLocalizedText((raw as any).title),
+    shortDescription: sanitizeLocalizedText((raw as any).shortDescription),
+    description: sanitizeLocalizedText((raw as any).description),
+    specs: sanitizeSpecs((raw as any).specs),
+    mainCategorySlug: ensureString((raw as any).mainCategorySlug, 'inne'),
+    subCategorySlug: ensureString((raw as any).subCategorySlug, 'inne'),
+    subSubCategorySlug: ensureOptionalString((raw as any).subSubCategorySlug),
+    images: sanitizeImages((raw as any).images),
+    reviewsSummary: sanitizeLocalizedText((raw as any).reviewsSummary),
+    rating: sanitizeRating((raw as any).rating),
+    bestPrice: sanitizeBestPrice((raw as any).bestPrice),
+    linkedDealIds: ensureStringArray((raw as any).linkedDealIds, 100),
+    searchTags: sanitizeSearchTags((raw as any).searchTags),
+    status: (raw as any).status === 'approved' ? 'approved' : 'draft',
+    createdAt: ensureString((raw as any).createdAt, new Date().toISOString()),
+    updatedAt: ensureString((raw as any).updatedAt, new Date().toISOString()),
+    createdBy: ensureOptionalString((raw as any).createdBy),
+    approvedBy: ensureOptionalString((raw as any).approvedBy),
+    metadata: typeof (raw as any).metadata === 'object' ? (raw as any).metadata : undefined,
+    aiQualityScore: ensureOptionalNumber((raw as any).aiQualityScore),
+    confidence: ensureOptionalNumber((raw as any).confidence),
+    warnings: ensureStringArray((raw as any).warnings, 50),
+    bestDealId: ensureOptionalString((raw as any).bestDealId),
+    bestTotalPrice: ensureOptionalNumber((raw as any).bestTotalPrice),
+  } as ProductCore;
+};
