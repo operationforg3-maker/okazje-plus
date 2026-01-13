@@ -286,44 +286,54 @@ export async function getHotDealsByCategory(mainCategorySlug: string, count: num
  */
 export async function getDealsForModeration(statusFilter?: string[], maxLimit = 200): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
+  const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
   
-  if (statusFilter && statusFilter.length > 0) {
-    // Filtruj po wybranych statusach
-    const queries = statusFilter.map(status => 
+  try {
+    if (statusFilter && statusFilter.length > 0) {
+      // Filtruj po wybranych statusach
+      const queries = statusFilter.map(status => 
+        query(
+          dealsRef,
+          where("status", "==", status),
+          orderBy("createdAt", "desc"),
+          limit(Math.ceil(maxLimit / statusFilter.length))
+        )
+      );
+      
+      const snapshots = await Promise.all(queries.map(q => getDocs(q)));
+      const deals = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
+      
+      DEBUG && console.log(`[getDealsForModeration] Filter: ${statusFilter.join(',')}, Found: ${deals.length}`);
+      
+      // Sortuj i ogranicz
+      deals.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
+      return deals.slice(0, maxLimit);
+    }
+    
+    // Pobierz WSZYSTKIE statusy
+    const statuses = ['approved', 'pending', 'draft', 'rejected'];
+    const queries = statuses.map(status => 
       query(
         dealsRef,
         where("status", "==", status),
         orderBy("createdAt", "desc"),
-        limit(Math.ceil(maxLimit / statusFilter.length))
+        limit(50) // 50 per status = 200 total max
       )
     );
     
     const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-    const deals = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
+    const all = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
     
-    // Sortuj i ogranicz
-    deals.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
-    return deals.slice(0, maxLimit);
+    DEBUG && console.log(`[getDealsForModeration] All statuses, Found: ${all.length}`);
+    
+    // Sortuj według daty utworzenia
+    all.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
+    
+    return all.slice(0, maxLimit);
+  } catch (error) {
+    console.error('[getDealsForModeration] Error:', error);
+    throw error;
   }
-  
-  // Pobierz WSZYSTKIE statusy
-  const statuses = ['approved', 'pending', 'draft', 'rejected'];
-  const queries = statuses.map(status => 
-    query(
-      dealsRef,
-      where("status", "==", status),
-      orderBy("createdAt", "desc"),
-      limit(50) // 50 per status = 200 total max
-    )
-  );
-  
-  const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-  const all = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
-  
-  // Sortuj według daty utworzenia
-  all.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
-  
-  return all.slice(0, maxLimit);
 }
 
 /**
@@ -341,56 +351,66 @@ export async function getPendingDeals(): Promise<Deal[]> {
  */
 export async function getProductCoresForModeration(statusFilter?: string[], maxLimit = 200): Promise<Product[]> {
   const productCoresRef = collection(db, "product_cores");
+  const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
   
-  if (statusFilter && statusFilter.length > 0) {
-    // Filtruj po wybranych statusach
-    const queries = statusFilter.map(status => 
+  try {
+    if (statusFilter && statusFilter.length > 0) {
+      // Filtruj po wybranych statusach
+      const queries = statusFilter.map(status => 
+        query(
+          productCoresRef,
+          where("status", "==", status),
+          orderBy("createdAt", "desc"),
+          limit(Math.ceil(maxLimit / statusFilter.length))
+        )
+      );
+      
+      const snapshots = await Promise.all(queries.map(q => getDocs(q)));
+      const products = snapshots.flatMap(snapshot => 
+        snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product))
+      );
+      
+      DEBUG && console.log(`[getProductCoresForModeration] Filter: ${statusFilter.join(',')}, Found: ${products.length}`);
+      
+      // Sortuj i ogranicz
+      products.sort((a, b) => {
+        const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
+        const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      return products.slice(0, maxLimit);
+    }
+    
+    // Pobierz WSZYSTKIE statusy M6
+    const statuses = ['approved', 'pending_approval', 'draft', 'rejected'];
+    const queries = statuses.map(status => 
       query(
         productCoresRef,
         where("status", "==", status),
         orderBy("createdAt", "desc"),
-        limit(Math.ceil(maxLimit / statusFilter.length))
+        limit(50) // 50 per status = 200 total max
       )
     );
     
     const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-    const products = snapshots.flatMap(snapshot => 
+    const all = snapshots.flatMap(snapshot => 
       snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product))
     );
     
-    // Sortuj i ogranicz
-    products.sort((a, b) => {
+    DEBUG && console.log(`[getProductCoresForModeration] All statuses, Found: ${all.length}`);
+    
+    // Sortuj według daty utworzenia/importu
+    all.sort((a, b) => {
       const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
       const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
       return dateB - dateA;
     });
-    return products.slice(0, maxLimit);
+    
+    return all.slice(0, maxLimit);
+  } catch (error) {
+    console.error('[getProductCoresForModeration] Error:', error);
+    throw error;
   }
-  
-  // Pobierz WSZYSTKIE statusy M6
-  const statuses = ['approved', 'pending_approval', 'draft', 'rejected'];
-  const queries = statuses.map(status => 
-    query(
-      productCoresRef,
-      where("status", "==", status),
-      orderBy("createdAt", "desc"),
-      limit(50) // 50 per status = 200 total max
-    )
-  );
-  
-  const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-  const all = snapshots.flatMap(snapshot => 
-    snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product))
-  );
-  
-  // Sortuj według daty utworzenia/importu
-  all.sort((a, b) => {
-    const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
-    const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
-    return dateB - dateA;
-  });
-  
-  return all.slice(0, maxLimit);
 }
 
 /**

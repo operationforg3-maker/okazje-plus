@@ -441,6 +441,8 @@ function ModerationPage() {
   const fetchModerationData = useCallback(async () => {
     setLoading(true);
     try {
+      console.log('[Moderation] Fetching data...')
+      
       // Pobierz z filtrami statusów - jeśli 'all', przekazujemy undefined aby pobrać wszystko
       const dealStatuses = dealStatusFilter === 'all' 
         ? undefined 
@@ -454,12 +456,16 @@ function ModerationPage() {
         ? ['pending_approval', 'draft']
         : [productStatusFilter];
       
+      console.log('[Moderation] Deal statuses:', dealStatuses, 'Product statuses:', productStatuses)
+      
       const [deals, products, approved, rejected] = await Promise.all([
         getDealsForModeration(dealStatuses, 200),
         getProductCoresForModeration(productStatuses, 200),
         getRecentlyModerated('approved', 7),
         getRecentlyModerated('rejected', 7),
       ]);
+      
+      console.log('[Moderation] Got deals:', deals.length, 'products:', products.length, 'approved:', approved.length, 'rejected:', rejected.length)
       
       setPendingDeals(deals);
       setPendingProducts(products);
