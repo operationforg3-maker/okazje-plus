@@ -239,8 +239,12 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
   );
 }
 
-import { getPendingDeals, getPendingProducts, getRecentlyModerated } from '@/lib/data';
+import { getPendingDeals, getPendingProducts, getRecentlyModerated, getDealsForModeration, getProductCoresForModeration } from '@/lib/data';
 import { Deal, Product } from '@/lib/types';
+import { DealCard } from '@/components/deal-card';
+import { ProductListCard } from '@/components/product-list-card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ReportedComment {
   id: string;
@@ -275,6 +279,10 @@ function ModerationPage() {
   const [rejectedItems, setRejectedItems] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [checkingClaims, setCheckingClaims] = useState(false);
+  
+  // Filtry statusów - domyślnie wszystkie
+  const [dealStatusFilter, setDealStatusFilter] = useState<string>('all');
+  const [productStatusFilter, setProductStatusFilter] = useState<string>('all');
   
   // New states for comments, reports, users
   const [reportedComments, setReportedComments] = useState<ReportedComment[]>([]);
@@ -433,9 +441,22 @@ function ModerationPage() {
   const fetchModerationData = useCallback(async () => {
     setLoading(true);
     try {
+      // Pobierz z filtrami statusów - jeśli 'all', przekazujemy undefined aby pobrać wszystko
+      const dealStatuses = dealStatusFilter === 'all' 
+        ? undefined 
+        : dealStatusFilter === 'pending' 
+        ? ['pending', 'draft'] 
+        : [dealStatusFilter];
+      
+      const productStatuses = productStatusFilter === 'all'
+        ? undefined
+        : productStatusFilter === 'pending'
+        ? ['pending_approval', 'draft']
+        : [productStatusFilter];
+      
       const [deals, products, approved, rejected] = await Promise.all([
-        getPendingDeals(),
-        getPendingProducts(),
+        getDealsForModeration(dealStatuses, 200),
+        getProductCoresForModeration(productStatuses, 200),
         getRecentlyModerated('approved', 7),
         getRecentlyModerated('rejected', 7),
       ]);
@@ -454,7 +475,7 @@ function ModerationPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, dealStatusFilter, productStatusFilter]);
 
   useEffect(() => {
     fetchModerationData();
@@ -611,13 +632,31 @@ function ModerationPage() {
         </TabsList>
 
         <TabsContent value="deals" className="space-y-4">
+          {/* Filtr statusów */}
+          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+            <span className="font-medium text-sm">Filtruj po statusie:</span>
+            <Select value={dealStatusFilter} onValueChange={setDealStatusFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Wybierz status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
+                <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
+                <SelectItem value="approved">✅ Approved</SelectItem>
+                <SelectItem value="draft">📝 Draft</SelectItem>
+                <SelectItem value="rejected">❌ Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="secondary">{pendingDeals.length} deali</Badge>
+          </div>
+          
           {/* Bulk actions bar (deals) */}
           <BulkModerationBar type="deal" items={pendingDeals} onAction={async () => fetchModerationData()} />
           <Card>
             <CardHeader>
-              <CardTitle>Okazje oczekujące na moderację</CardTitle>
+              <CardTitle>Okazje - wszystkie statusy</CardTitle>
               <CardDescription>
-                Nowe okazje dodane przez użytkowników
+                Moderacja okazji - wszystkie statusy (approved, pending, draft, rejected)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -635,11 +674,22 @@ function ModerationPage() {
               ) : (
                 <div className="space-y-3">
                   {pendingDeals.map((deal) => (
-                    <div key={deal.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                    <div key={deal.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                      {/* Podgląd karty po lewej stronie */}
+                      <div className="w-[300px] shrink-0">
+                        <DealCard deal={deal} locale="pl" />
+                      </div>
+                      
+                      {/* Metadane i akcje po prawej */}
+                      <div className="flex-1 min-w-0 space-y-3">
+                        <div className="flex items-center gap-2">
                           <h3 className="font-semibold truncate">{deal.title}</h3>
-                          <Badge variant="secondary">{deal.status}</Badge>
+                          <Badge variant={
+                            deal.status === 'approved' ? 'default' :
+                            deal.status === 'pending' ? 'secondary' :
+                            deal.status === 'draft' ? 'outline' :
+                            'destructive'
+                          }>{deal.status}</Badge>
                           {deal.source && (
                             <Badge variant="outline" className={
                               deal.source === 'api' || deal.source === 'ai' 
@@ -657,34 +707,57 @@ function ModerationPage() {
                           <span>•</span>
                           <span>{formatDate(deal.postedAt)}</span>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          disabled={processingId === deal.id}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Podgląd
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleModeration(deal.id, 'deal', 'reject')}
-                          disabled={processingId === deal.id}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Odrzuć
-                        </Button>
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => handleModeration(deal.id, 'deal', 'approve')}
-                          disabled={processingId === deal.id}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Zatwierdź
-                        </Button>
+                        
+                        {/* Akcje moderacji */}
+                        <div className="flex items-center gap-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                disabled={processingId === deal.id}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Podgląd pełny
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Podgląd Deal: {deal.title}</DialogTitle>
+                              </DialogHeader>
+                              <div className="mt-4">
+                                <DealCard deal={deal} locale="pl" />
+                                <div className="mt-4 p-4 bg-muted rounded-lg space-y-2 text-sm">
+                                  <div><strong>ID:</strong> {deal.id}</div>
+                                  <div><strong>Status:</strong> {deal.status}</div>
+                                  <div><strong>Źródło:</strong> {deal.source || 'manual'}</div>
+                                  <div><strong>Temperatura:</strong> {deal.temperature || 0}°</div>
+                                  <div><strong>Głosy:</strong> {deal.vote_count || 0}</div>
+                                  <div><strong>Komentarze:</strong> {deal.comment_count || 0}</div>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleModeration(deal.id, 'deal', 'reject')}
+                            disabled={processingId === deal.id}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Odrzuć
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleModeration(deal.id, 'deal', 'approve')}
+                            disabled={processingId === deal.id}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Zatwierdź
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -695,12 +768,31 @@ function ModerationPage() {
         </TabsContent>
 
         <TabsContent value="products" className="space-y-4">
+          {/* Filtr statusów produktów */}
+          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+            <span className="font-medium text-sm">Filtruj po statusie:</span>
+            <Select value={productStatusFilter} onValueChange={setProductStatusFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Wybierz status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
+                <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
+                <SelectItem value="approved">✅ Approved</SelectItem>
+                <SelectItem value="draft">📝 Draft</SelectItem>
+                <SelectItem value="pending_approval">⏰ Pending Approval</SelectItem>
+                <SelectItem value="rejected">❌ Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Badge variant="secondary">{pendingProducts.length} produktów</Badge>
+          </div>
+          
           <BulkModerationBar type="product" items={pendingProducts} onAction={async () => fetchModerationData()} />
           <Card>
             <CardHeader>
-              <CardTitle>Produkty oczekujące na moderację</CardTitle>
+              <CardTitle>Produkty (ProductCores) - wszystkie statusy</CardTitle>
               <CardDescription>
-                Nowe produkty dodane przez administratorów lub import
+                Moderacja produktów M6 - wszystkie statusy (approved, pending_approval, draft, rejected)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -718,11 +810,22 @@ function ModerationPage() {
               ) : (
                 <div className="space-y-3">
                   {pendingProducts.map((product) => (
-                    <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                    <div key={product.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                      {/* Podgląd karty ProductCore po lewej */}
+                      <div className="w-[300px] shrink-0">
+                        <ProductListCard product={product} locale="pl" />
+                      </div>
+                      
+                      {/* Metadane i akcje po prawej */}
+                      <div className="flex-1 min-w-0 space-y-3">
+                        <div className="flex items-center gap-2">
                           <h3 className="font-semibold truncate">{product.name}</h3>
-                          <Badge variant="secondary">{product.status}</Badge>
+                          <Badge variant={
+                            product.status === 'approved' ? 'default' :
+                            product.status === 'pending_approval' ? 'secondary' :
+                            product.status === 'draft' ? 'outline' :
+                            'destructive'
+                          }>{product.status}</Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>{product.category}</span>
@@ -734,35 +837,66 @@ function ModerationPage() {
                               ? `${product.price.amount.toFixed(2)} zł` 
                               : '—'}
                           </span>
+                          {product.metadata?.importedAt && (
+                            <>
+                              <span>•</span>
+                              <span>Import: {new Date(product.metadata.importedAt).toLocaleDateString('pl-PL')}</span>
+                            </>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          disabled={processingId === product.id}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Podgląd
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleModeration(product.id, 'product', 'reject')}
-                          disabled={processingId === product.id}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Odrzuć
-                        </Button>
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => handleModeration(product.id, 'product', 'approve')}
-                          disabled={processingId === product.id}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Zatwierdź
-                        </Button>
+                        
+                        {/* Akcje moderacji */}
+                        <div className="flex items-center gap-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                disabled={processingId === product.id}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                Podgląd pełny
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle>Podgląd ProductCore: {product.name}</DialogTitle>
+                              </DialogHeader>
+                              <div className="mt-4">
+                                <ProductListCard product={product} locale="pl" />
+                                <div className="mt-4 p-4 bg-muted rounded-lg space-y-2 text-sm">
+                                  <div><strong>ID:</strong> {product.id}</div>
+                                  <div><strong>Status:</strong> {product.status}</div>
+                                  <div><strong>Quality Score:</strong> {product.qualityScore || 0}/100</div>
+                                  <div><strong>Best Price:</strong> {product.bestPrice?.amount || '—'} zł</div>
+                                  <div><strong>Rating:</strong> {product.rating?.average || 0}/5 ({product.rating?.count || 0} ocen)</div>
+                                  {product.specs && (
+                                    <div><strong>Specs:</strong> {JSON.stringify(product.specs).substring(0, 200)}...</div>
+                                  )}
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleModeration(product.id, 'product', 'reject')}
+                            disabled={processingId === product.id}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Odrzuć
+                          </Button>
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleModeration(product.id, 'product', 'approve')}
+                            disabled={processingId === product.id}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Zatwierdź
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}

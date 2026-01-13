@@ -279,73 +279,125 @@ export async function getHotDealsByCategory(mainCategorySlug: string, count: num
 }
 
 // Funkcje do moderacji - pobieranie treści oczekujących
-export async function getPendingDeals(): Promise<Deal[]> {
+/**
+ * Pobiera deale dla moderacji - WSZYSTKIE statusy (approved, pending, draft, rejected)
+ * @param statusFilter - opcjonalny filtr statusu; jeśli undefined, pobiera wszystkie
+ * @param maxLimit - maksymalna liczba wyników
+ */
+export async function getDealsForModeration(statusFilter?: string[], maxLimit = 200): Promise<Deal[]> {
   const dealsRef = collection(db, "deals");
   
-  // Pobierz draft i pending osobno, potem połącz
-  const draftQuery = query(
-    dealsRef,
-    where("status", "==", "draft"),
-    orderBy("createdAt", "desc"),
-    limit(50)
+  if (statusFilter && statusFilter.length > 0) {
+    // Filtruj po wybranych statusach
+    const queries = statusFilter.map(status => 
+      query(
+        dealsRef,
+        where("status", "==", status),
+        orderBy("createdAt", "desc"),
+        limit(Math.ceil(maxLimit / statusFilter.length))
+      )
+    );
+    
+    const snapshots = await Promise.all(queries.map(q => getDocs(q)));
+    const deals = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
+    
+    // Sortuj i ogranicz
+    deals.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
+    return deals.slice(0, maxLimit);
+  }
+  
+  // Pobierz WSZYSTKIE statusy
+  const statuses = ['approved', 'pending', 'draft', 'rejected'];
+  const queries = statuses.map(status => 
+    query(
+      dealsRef,
+      where("status", "==", status),
+      orderBy("createdAt", "desc"),
+      limit(50) // 50 per status = 200 total max
+    )
   );
-  const pendingQuery = query(
-    dealsRef,
-    where("status", "==", "pending"),
-    orderBy("createdAt", "desc"),
-    limit(50)
-  );
   
-  const [draftSnapshot, pendingSnapshot] = await Promise.all([
-    getDocs(draftQuery),
-    getDocs(pendingQuery)
-  ]);
+  const snapshots = await Promise.all(queries.map(q => getDocs(q)));
+  const all = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
   
-  const drafts = draftSnapshot.docs.map(docToDeal);
-  const pendings = pendingSnapshot.docs.map(docToDeal);
-  
-  // Połącz i posortuj
-  const all = [...drafts, ...pendings];
+  // Sortuj według daty utworzenia
   all.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
   
-  return all.slice(0, 100);
+  return all.slice(0, maxLimit);
 }
 
-export async function getPendingProducts(): Promise<Product[]> {
-  // M6: Pobierz z product_cores zamiast products
+/**
+ * Backward compatibility: getPendingDeals używa getDealsForModeration z filtrem pending/draft
+ */
+export async function getPendingDeals(): Promise<Deal[]> {
+  return getDealsForModeration(['pending', 'draft'], 100);
+}
+
+/**
+ * Pobiera ProductCores dla moderacji - WSZYSTKIE statusy (approved, pending_approval, draft, rejected)
+ * M6: używa product_cores collection
+ * @param statusFilter - opcjonalny filtr statusu; jeśli undefined, pobiera wszystkie
+ * @param maxLimit - maksymalna liczba wyników
+ */
+export async function getProductCoresForModeration(statusFilter?: string[], maxLimit = 200): Promise<Product[]> {
   const productCoresRef = collection(db, "product_cores");
   
-  // Pobierz draft i pending_approval osobno, potem połącz
-  const draftQuery = query(
-    productCoresRef,
-    where("status", "==", "draft"),
-    orderBy("createdAt", "desc"),
-    limit(50)
+  if (statusFilter && statusFilter.length > 0) {
+    // Filtruj po wybranych statusach
+    const queries = statusFilter.map(status => 
+      query(
+        productCoresRef,
+        where("status", "==", status),
+        orderBy("createdAt", "desc"),
+        limit(Math.ceil(maxLimit / statusFilter.length))
+      )
+    );
+    
+    const snapshots = await Promise.all(queries.map(q => getDocs(q)));
+    const products = snapshots.flatMap(snapshot => 
+      snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product))
+    );
+    
+    // Sortuj i ogranicz
+    products.sort((a, b) => {
+      const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
+      const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+    return products.slice(0, maxLimit);
+  }
+  
+  // Pobierz WSZYSTKIE statusy M6
+  const statuses = ['approved', 'pending_approval', 'draft', 'rejected'];
+  const queries = statuses.map(status => 
+    query(
+      productCoresRef,
+      where("status", "==", status),
+      orderBy("createdAt", "desc"),
+      limit(50) // 50 per status = 200 total max
+    )
   );
-  const pendingQuery = query(
-    productCoresRef,
-    where("status", "==", "pending_approval"), // M6: zmiana z "pending" na "pending_approval"
-    orderBy("createdAt", "desc"),
-    limit(50)
+  
+  const snapshots = await Promise.all(queries.map(q => getDocs(q)));
+  const all = snapshots.flatMap(snapshot => 
+    snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product))
   );
   
-  const [draftSnapshot, pendingSnapshot] = await Promise.all([
-    getDocs(draftQuery),
-    getDocs(pendingQuery)
-  ]);
-  
-  const drafts = draftSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-  const pendings = pendingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-  
-  // Połącz i posortuj - użyj metadata.importedAt lub fallback na id
-  const all = [...drafts, ...pendings];
+  // Sortuj według daty utworzenia/importu
   all.sort((a, b) => {
-     const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
-     const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
+    const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
+    const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
     return dateB - dateA;
   });
   
-  return all.slice(0, 100);
+  return all.slice(0, maxLimit);
+}
+
+/**
+ * Backward compatibility: getPendingProducts używa getProductCoresForModeration z filtrem pending/draft
+ */
+export async function getPendingProducts(): Promise<Product[]> {
+  return getProductCoresForModeration(['pending_approval', 'draft'], 100);
 }
 
 export async function getRecentlyModerated(status: "approved" | "rejected", days: number = 7): Promise<(Deal | Product)[]> {

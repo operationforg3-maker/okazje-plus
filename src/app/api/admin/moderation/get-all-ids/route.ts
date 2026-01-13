@@ -31,22 +31,25 @@ export async function GET(request: NextRequest) {
     // M6: product -> product_cores, pending -> pending_approval
     const collectionName = type === "deal" ? "deals" : "product_cores";
     
-    // Pobierz wszystkie dokumenty ze statusem draft lub pending_approval
-    const [draftSnapshot, pendingSnapshot] = await Promise.all([
-      adminDb.collection(collectionName)
-        .where("status", "==", "draft")
-        .select() // Pobierz tylko IDs, nie całe dokumenty
-        .get(),
-      adminDb.collection(collectionName)
-        .where("status", "==", type === "product" ? "pending_approval" : "pending")
-        .select()
-        .get()
-    ]);
+    // Pobierz WSZYSTKIE statusy dla moderacji (approved, pending, draft, rejected)
+    const statuses = type === "product" 
+      ? ["draft", "pending_approval", "approved", "rejected"]
+      : ["draft", "pending", "approved", "rejected"];
+    
+    const snapshots = await Promise.all(
+      statuses.map(status =>
+        adminDb.collection(collectionName)
+          .where("status", "==", status)
+          .select() // Pobierz tylko IDs, nie całe dokumenty
+          .get()
+      )
+    );
 
     // Zbierz wszystkie IDs
     const ids: string[] = [];
-    draftSnapshot.docs.forEach(doc => ids.push(doc.id));
-    pendingSnapshot.docs.forEach(doc => ids.push(doc.id));
+    snapshots.forEach(snapshot => {
+      snapshot.docs.forEach(doc => ids.push(doc.id));
+    });
 
     // Usuń duplikaty (gdyby jakieś były)
     const uniqueIds = [...new Set(ids)];
