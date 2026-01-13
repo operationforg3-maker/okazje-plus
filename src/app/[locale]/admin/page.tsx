@@ -643,16 +643,16 @@ function AdminPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.users || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {dashboardStats?.growth.users !== undefined && (
+              {dashboardStats?.growth?.users !== undefined && (
                 <span className={`inline-flex items-center font-medium ${
-                  dashboardStats.growth.users >= 0 ? 'text-green-600' : 'text-red-600'
+                  (dashboardStats.growth?.users ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  {dashboardStats.growth.users >= 0 ? (
+                  {(dashboardStats.growth?.users ?? 0) >= 0 ? (
                     <TrendingUp className="h-3 w-3 mr-1" />
                   ) : (
                     <TrendingDown className="h-3 w-3 mr-1" />
                   )}
-                  {dashboardStats.growth.users >= 0 ? '+' : ''}{dashboardStats.growth.users}%
+                  {(dashboardStats.growth?.users ?? 0) >= 0 ? '+' : ''}{dashboardStats.growth?.users}%
                 </span>
               )}
               {' '}od ostatniego miesiąca
@@ -767,17 +767,17 @@ function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {dashboardStats?.analytics.views.total.toLocaleString() || 0}
+              {(dashboardStats?.analytics?.views?.total || 0).toLocaleString?.() || 0}
             </div>
             <div className="flex items-center text-sm text-muted-foreground mt-2">
               <span className={`font-medium ${
-                (dashboardStats?.analytics.views.trend || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                (dashboardStats?.analytics?.views?.trend ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                {(dashboardStats?.analytics.views.trend || 0) >= 0 ? '+' : ''}
-                {dashboardStats?.analytics.views.trend || 0}%
+                {(dashboardStats?.analytics?.views?.trend ?? 0) >= 0 ? '+' : ''}
+                {dashboardStats?.analytics?.views?.trend ?? 0}%
               </span>
               <span className="mx-2">•</span>
-              {dashboardStats?.analytics.views.today.toLocaleString() || 0} dzisiaj
+              {(dashboardStats?.analytics?.views?.today || 0).toLocaleString?.() || 0} dzisiaj
             </div>
           </CardContent>
         </Card>
@@ -792,17 +792,17 @@ function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {dashboardStats?.analytics.clicks.total.toLocaleString() || 0}
+              {(dashboardStats?.analytics?.clicks?.total || 0).toLocaleString?.() || 0}
             </div>
             <div className="flex items-center text-sm text-muted-foreground mt-2">
               <span className={`font-medium ${
-                (dashboardStats?.analytics.clicks.trend || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                (dashboardStats?.analytics?.clicks?.trend ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                {(dashboardStats?.analytics.clicks.trend || 0) >= 0 ? '+' : ''}
-                {dashboardStats?.analytics.clicks.trend || 0}%
+                {(dashboardStats?.analytics?.clicks?.trend ?? 0) >= 0 ? '+' : ''}
+                {dashboardStats?.analytics?.clicks?.trend ?? 0}%
               </span>
               <span className="mx-2">•</span>
-              {dashboardStats?.analytics.clicks.today.toLocaleString() || 0} dzisiaj
+              {(dashboardStats?.analytics?.clicks?.today || 0).toLocaleString?.() || 0} dzisiaj
             </div>
           </CardContent>
         </Card>
