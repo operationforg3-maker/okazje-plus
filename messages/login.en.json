@@ -1,6 +1,9 @@
 {
   "title": "Welcome back",
   "subtitle": "Sign in or create an account to discover the best deals.",
+  "noAccount": "Don't have an account yet?",
+  "signUp": "Sign up",
+  "forgotPassword": "Forgot password?",
   "termsText": "By clicking Continue, you agree to our",
   "termsLink": "Terms of Service",
   "and": "and",

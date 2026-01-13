@@ -1,6 +1,9 @@
 {
   "title": "Witaj z powrotem",
   "subtitle": "Zaloguj się lub utwórz konto, aby odkrywać najlepsze okazje.",
+  "noAccount": "Nie masz jeszcze konta?",
+  "signUp": "Zarejestruj się",
+  "forgotPassword": "Zapomniałeś hasła?",
   "termsText": "Klikając Kontynuuj, zgadzasz się z naszym",
   "termsLink": "Regulaminem",
   "and": "i",
