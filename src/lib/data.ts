@@ -2541,16 +2541,12 @@ export async function getProductCoresByFilters(
     q = query(collection(db, 'product_cores'), ...constraints, orderBy('updatedAt', 'desc'), limit(limit_count));
 
     const snapshot = await getDocs(q);
+    // Always sanitize Firestore payloads to ensure string primitives (avoids React rendering errors)
     let products = snapshot.docs.map(doc => {
-      // CRITICAL: doc.data() does NOT include 'id' field - must add it manually
       const data = {
         ...doc.data(),
-        id: doc.id  // Always use doc.id, never doc.data().id
+        id: doc.id
       } as ProductCore;
-      
-      if (!doc.id) {
-        console.error('[getProductCoresByFilters] Firestore doc missing ID (should never happen):', doc.ref.path);
-      }
       return data;
     });
     
@@ -2634,7 +2630,7 @@ export async function getDealsByFilters(
   },
   sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'discount_desc' = 'hot',
   limit_count: number = 50
-): Promise<any[]> {
+): Promise<Deal[]> {
   try {
     const constraints = [where('status', '==', 'approved')];
 
@@ -2650,7 +2646,8 @@ export async function getDealsByFilters(
     );
 
     const snapshot = await getDocs(q);
-    let deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Sanitize to normalize strings/numbers and attach id consistently
+    let deals: Deal[] = snapshot.docs.map(docToDeal);
 
     // Client-side filtering for complex conditions
     let filtered = deals.filter(d => {
@@ -2714,10 +2711,10 @@ export async function getDealsByFilters(
       }
     });
 
-    return filtered.slice(0, limit_count);
+    return filtered.slice(0, limit_count) as Deal[];
   } catch (err) {
     console.error('Error filtering deals:', err);
-    return [];
+    return [] as Deal[];
   }
 }
 
