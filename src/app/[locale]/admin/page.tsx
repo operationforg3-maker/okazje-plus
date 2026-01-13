@@ -618,16 +618,16 @@ function AdminPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.deals || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {dashboardStats?.growth.deals !== undefined && (
+              {dashboardStats?.growth?.deals !== undefined && (
                 <span className={`inline-flex items-center font-medium ${
-                  dashboardStats.growth.deals >= 0 ? 'text-green-600' : 'text-red-600'
+                  (dashboardStats.growth?.deals ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  {dashboardStats.growth.deals >= 0 ? (
+                  {(dashboardStats.growth?.deals ?? 0) >= 0 ? (
                     <TrendingUp className="h-3 w-3 mr-1" />
                   ) : (
                     <TrendingDown className="h-3 w-3 mr-1" />
                   )}
-                  {dashboardStats.growth.deals >= 0 ? '+' : ''}{dashboardStats.growth.deals}%
+                  {(dashboardStats.growth?.deals ?? 0) >= 0 ? '+' : ''}{dashboardStats.growth?.deals ?? 0}%
                 </span>
               )}
               {' '}od ostatniego miesiąca
