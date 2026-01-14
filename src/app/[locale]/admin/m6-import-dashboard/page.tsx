@@ -337,7 +337,18 @@ export default function M6ImportDashboard() {
 
   // Don't render anything until client is ready
   if (!mounted) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-center py-20">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-slate-600">Ładowanie panelu importu...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const loadJobs = async (token?: string) => {

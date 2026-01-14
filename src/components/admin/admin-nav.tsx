@@ -124,7 +124,7 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Ustawienia', href: '/admin/settings', icon: Settings },
       { title: 'Setup & Seeding', href: '/admin/setup', icon: Database },
-      { title: 'Nawigacja', href: '/admin/navigation', icon: Layers },
+      // { title: 'Nawigacja', href: '/admin/navigation', icon: Layers },
     ],
   },
 ];

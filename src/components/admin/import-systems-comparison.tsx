@@ -47,7 +47,7 @@ export function ImportSystemsComparison({ currentSystem, variant = 'full' }: Imp
       name: 'Bulk Import (AI Preview)',
       icon: Sparkles,
       color: 'purple',
-      route: '/admin/bulk-import',
+      // route: '/admin/bulk-import',
       description: 'AI-powered import z podglądem przed zatwierdzeniem',
       features: [
         { icon: CheckCircle, text: 'Średnie ilości (50-200 items)', color: 'text-green-600' },

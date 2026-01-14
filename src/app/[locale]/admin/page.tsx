@@ -1121,13 +1121,13 @@ function AdminPage() {
               <span className="text-2xl">🛒</span>
               <span className="text-sm font-medium text-center">AliExpress</span>
             </Link>
-            <Link 
+            {/* <Link 
               href="/admin/bulk-import" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <span className="text-2xl">📦</span>
               <span className="text-sm font-medium text-center">Bulk Import</span>
-            </Link>
+            </Link> */}
             <Link 
               href="/admin/analytics" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
@@ -1142,13 +1142,13 @@ function AdminPage() {
               <span className="text-2xl">⚙️</span>
               <span className="text-sm font-medium text-center">Ustawienia</span>
             </Link>
-            <Link 
+            {/* <Link 
               href="/admin/navigation" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <span className="text-2xl">🗺️</span>
               <span className="text-sm font-medium text-center">Nawigacja</span>
-            </Link>
+            </Link> */}
             <Link 
               href="/admin/duplicates" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-950 transition-colors"
