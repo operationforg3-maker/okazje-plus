@@ -47,7 +47,7 @@ export function ImportSystemsComparison({ currentSystem, variant = 'full' }: Imp
       name: 'Bulk Import (AI Preview)',
       icon: Sparkles,
       color: 'purple',
-      // route: '/admin/bulk-import',
+      route: undefined, // Not yet implemented
       description: 'AI-powered import z podglądem przed zatwierdzeniem',
       features: [
         { icon: CheckCircle, text: 'Średnie ilości (50-200 items)', color: 'text-green-600' },
@@ -82,7 +82,7 @@ export function ImportSystemsComparison({ currentSystem, variant = 'full' }: Imp
   const current = systems[currentSystem];
   // Filter out systems without a route (bulk-import not yet implemented)
   const others = Object.entries(systems).filter(
-    ([key]) => key !== currentSystem && systems[key as keyof typeof systems].route
+    ([key]) => key !== currentSystem && (systems[key as keyof typeof systems] as any).route !== undefined
   );
 
   if (variant === 'compact') {
@@ -96,16 +96,19 @@ export function ImportSystemsComparison({ currentSystem, variant = 'full' }: Imp
         <AlertDescription className="space-y-2">
           <p className="text-sm">{current.description}</p>
           <div className="flex flex-wrap gap-2">
-            {others.map(([key, sys]) => (
-              <a
-                key={key}
-                href={sys.route}
-                className="text-xs text-primary hover:underline flex items-center gap-1"
-              >
-                <sys.icon className="h-3 w-3" />
-                {sys.name}
-              </a>
-            ))}
+            {others.map(([key, sys]) => {
+              const sysData = sys as any;
+              return (
+                <a
+                  key={key}
+                  href={sysData.route || '#'}
+                  className="text-xs text-primary hover:underline flex items-center gap-1"
+                >
+                  <sysData.icon className="h-3 w-3" />
+                  {sysData.name}
+                </a>
+              );
+            })}
           </div>
         </AlertDescription>
       </Alert>
@@ -229,8 +232,8 @@ export function ImportSystemsComparison({ currentSystem, variant = 'full' }: Imp
       {/* Alternative Systems */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {others.map(([key, sys]) => {
-          const System = sys as typeof current;
-          return (
+          const System = sys as any;
+          return System.route ? (
             <a key={key} href={System.route} className="block">
               <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
                 <CardHeader>
@@ -245,14 +248,14 @@ export function ImportSystemsComparison({ currentSystem, variant = 'full' }: Imp
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-3">{System.description}</p>
                   <div className="space-y-1">
-                    {System.useCases.slice(0, 2).map((useCase, idx) => (
+                    {System.useCases.slice(0, 2).map((useCase: string, idx: number) => (
                       <div key={idx} className="text-xs text-muted-foreground">• {useCase}</div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             </a>
-          );
+          ) : null;
         })}
       </div>
     </div>
