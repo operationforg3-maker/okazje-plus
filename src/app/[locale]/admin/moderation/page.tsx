@@ -280,9 +280,9 @@ function ModerationPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [checkingClaims, setCheckingClaims] = useState(false);
   
-  // Filtry statusów - domyślnie wszystkie
-  const [dealStatusFilter, setDealStatusFilter] = useState<string>('all');
-  const [productStatusFilter, setProductStatusFilter] = useState<string>('all');
+  // Filtry statusów - domyślnie pending (spójność SSR/client, naprawia hydration)
+  const [dealStatusFilter, setDealStatusFilter] = useState<string>('pending');
+  const [productStatusFilter, setProductStatusFilter] = useState<string>('pending');
   
   // New states for comments, reports, users
   const [reportedComments, setReportedComments] = useState<ReportedComment[]>([]);
@@ -490,9 +490,22 @@ function ModerationPage() {
   const handleModeration = async (itemId: string, itemType: 'deal' | 'product', action: 'approve' | 'reject') => {
     setProcessingId(itemId);
     try {
+      // Pobierz token użytkownika z Firebase auth
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
+        setProcessingId(null);
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+
       const response = await fetch('/api/admin/moderation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ itemId, itemType, action }),
       });
 
@@ -680,14 +693,14 @@ function ModerationPage() {
               ) : (
                 <div className="space-y-3">
                   {pendingDeals.map((deal) => (
-                    <div key={deal.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
-                      {/* Podgląd karty po lewej stronie */}
-                      <div className="w-[300px] shrink-0">
+                    <div key={deal.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                      {/* Podgląd karty - responsive width */}
+                      <div className="w-full lg:w-[300px] lg:shrink-0">
                         <DealCard deal={deal} locale="pl" />
                       </div>
                       
                       {/* Metadane i akcje po prawej */}
-                      <div className="flex-1 min-w-0 space-y-3">
+                      <div className="flex-1 min-w-0 space-y-3 w-full">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold truncate">{deal.title}</h3>
                           <Badge variant={
@@ -706,16 +719,16 @@ function ModerationPage() {
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                           <span>{deal.category}</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span>Dodane przez {deal.postedBy || deal.createdBy || 'Użytkownik'}</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span>{formatDate(deal.postedAt)}</span>
                         </div>
                         
                         {/* Akcje moderacji */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button 
@@ -816,14 +829,14 @@ function ModerationPage() {
               ) : (
                 <div className="space-y-3">
                   {pendingProducts.map((product) => (
-                    <div key={product.id} className="flex items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
-                      {/* Podgląd karty ProductCore po lewej */}
-                      <div className="w-[300px] shrink-0">
+                    <div key={product.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                      {/* Podgląd karty ProductCore - responsive width */}
+                      <div className="w-full lg:w-[300px] lg:shrink-0">
                         <ProductListCard product={product} locale="pl" />
                       </div>
                       
                       {/* Metadane i akcje po prawej */}
-                      <div className="flex-1 min-w-0 space-y-3">
+                      <div className="flex-1 min-w-0 space-y-3 w-full">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold truncate">{product.name}</h3>
                           <Badge variant={
@@ -833,9 +846,9 @@ function ModerationPage() {
                             'destructive'
                           }>{product.status}</Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                           <span>{product.category}</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span className="font-semibold">
                             {Number.isFinite(product.price) 
                               ? `${parseFloat(product.price).toFixed(2)} zł`
@@ -845,14 +858,14 @@ function ModerationPage() {
                           </span>
                           {product.metadata?.importedAt && (
                             <>
-                              <span>•</span>
+                              <span className="hidden sm:inline">•</span>
                               <span>Import: {new Date(product.metadata.importedAt).toLocaleDateString('pl-PL')}</span>
                             </>
                           )}
                         </div>
                         
                         {/* Akcje moderacji */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button 

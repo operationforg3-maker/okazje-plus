@@ -22,6 +22,24 @@ const defaultClientConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || (isTestEnv ? '1:123456789012:web:testapp' : '1:000000000000:web:placeholder'),
 };
 
+// Fail-fast in production if public config is missing to avoid silent placeholder builds
+const assertValidPublicConfig = () => {
+  const hasPlaceholder = [
+    defaultClientConfig.apiKey,
+    defaultClientConfig.authDomain,
+    defaultClientConfig.projectId,
+    defaultClientConfig.storageBucket,
+    defaultClientConfig.messagingSenderId,
+    defaultClientConfig.appId,
+  ].some((v) => typeof v === 'string' && v.startsWith('placeholder'));
+
+  if (!isTestEnv && process.env.NODE_ENV === 'production' && hasPlaceholder) {
+    throw new Error('[firebase] Missing NEXT_PUBLIC_FIREBASE_* env vars – build would use placeholder credentials');
+  }
+};
+
+assertValidPublicConfig();
+
 // Na serwerze używamy konfiguracji z App Hosting, na kliencie z publicznych zmiennych
 // Podczas buildu (bez FIREBASE_WEBAPP_CONFIG) używamy konfiguracji klienta także na serwerze
 const firebaseConfig = isServer
