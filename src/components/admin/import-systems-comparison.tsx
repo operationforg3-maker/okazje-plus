@@ -80,7 +80,10 @@ export function ImportSystemsComparison({ currentSystem, variant = 'full' }: Imp
   };
 
   const current = systems[currentSystem];
-  const others = Object.entries(systems).filter(([key]) => key !== currentSystem);
+  // Filter out systems without a route (bulk-import not yet implemented)
+  const others = Object.entries(systems).filter(
+    ([key]) => key !== currentSystem && systems[key as keyof typeof systems].route
+  );
 
   if (variant === 'compact') {
     return (
