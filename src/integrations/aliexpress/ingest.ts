@@ -1,18 +1,14 @@
 // @ts-nocheck
 'use server';
-import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
-'use server';
-
-import { aiNormalizeTitlePL } from '../../ai/flows/aliexpress/aiNormalizeTitlePL';
 import { smartImportProduct } from '@/integrations/smart-importer';
-import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp, setDoc, getDocs, query, where, limit as qLimit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { ImportRun, ImportProfile, ImportError, Product, Deal } from '@/lib/types';
+import { ImportRun, ImportProfile, ImportError } from '@/lib/types';
 import { AliExpressClient } from './client';
-import { mapToProduct, mapToDeal, validateProduct, MapperConfig } from './mappers';
+import { mapAliExpressResponseToProduct } from './mappers';
 import { AliExpressSearchParams } from './types';
 import { logger, createImportLogger } from '@/lib/logging';
-import { queueProductForIndexing, queueDealForIndexing } from '@/search/typesenseQueue';
+import { ProductSchema, PriceHistoryEntrySchema } from '@/lib/schema';
 
 // AI orchestration (now handled by smartImportProduct)
 // import { aiDealQualityScore } from '@/ai/flows/aliexpress/aiDealQualityScore';
@@ -120,7 +116,6 @@ export async function runImport(
     });
     
     // Create AliExpress client
-    // TODO M2: Pass actual credentials from profile/vendor config
     const client = new AliExpressClient({
       appKey: process.env.ALIEXPRESS_APP_KEY || 'STUB',
       appSecret: process.env.ALIEXPRESS_APP_SECRET || 'STUB'
@@ -140,8 +135,6 @@ export async function runImport(
     // Fetch products from AliExpress
     importLogger.info('Fetching products from AliExpress', searchParams);
     
-    // TODO M2: Replace with actual API call when client is implemented
-    // For now, use stub data
     const searchResponse = await client.searchProducts(searchParams);
     const products = searchResponse.products || [];
     
@@ -149,216 +142,64 @@ export async function runImport(
     importLogger.info('Fetched products', { count: products.length });
     
     // Process each product
-    const mapperConfig: MapperConfig = {
-      targetMainCategory: profile.mapping.targetMainCategory,
-      targetSubCategory: profile.mapping.targetSubCategory,
-      targetSubSubCategory: profile.mapping.targetSubSubCategory,
-      priceMarkup: profile.mapping.priceMarkup,
-      defaultStatus: profile.mapping.defaultStatus,
-      importedBy: profile.createdBy
-    };
-    
     for (const aliProduct of products) {
       try {
-        // Validate product
-        const validation = validateProduct(aliProduct, profile.filters);
-        if (!validation.valid) {
-          importLogger.debug('Product validation failed', {
-            productId: aliProduct.item_id,
-            reason: validation.reason
-          });
-          result.stats.errors++;
+        // Fetch deep details for PL context and fail-fast on geo issues
+        const details = await client.getProductDetails({ productId: aliProduct.item_id });
+
+        // Fail-fast: API-level error or item unavailable/invalid shipping
+        const rootKey = Object.keys(details || {})[0];
+        const payload = rootKey ? details[rootKey]?.result || details[rootKey] : details;
+        const raw = payload?.products?.[0] || payload?.product || payload || {};
+        const shipDaysRaw = raw.ship_to_days || raw.deliveryDays;
+        const shipDays = typeof shipDaysRaw === 'string' ? parseInt(shipDaysRaw, 10) : shipDaysRaw;
+        if (!raw || payload?.resp_code && payload.resp_code !== 200) {
+          importLogger.warn('AliExpress details returned error - skipping', { item: aliProduct.item_id });
           result.stats.skipped++;
-          result.errors?.push({
-            code: 'VALIDATION',
-            message: validation.reason || 'Validation failed',
-            itemId: aliProduct.item_id,
-            timestamp: new Date().toISOString()
-          });
           continue;
         }
-        
-        // Map to internal types
-        const product = mapToProduct(aliProduct, mapperConfig);
-        const deal = mapToDeal(aliProduct, mapperConfig, profile.createdBy);
-        
-        // === SMART PRICING: Calculate total landed cost with shipping ===
-        let shippingCost = aliProduct.shipping?.cost || 0;
-        
-        // If shipping is not available from product, calculate it via API
-        if (!aliProduct.shipping?.cost) {
-          try {
-            shippingCost = await client.calculateShipping(aliProduct.item_id, 'PL');
-            importLogger.debug('Calculated shipping cost', {
-              productId: aliProduct.item_id,
-              shippingCost,
-            });
-          } catch (err) {
-            importLogger.warn('Failed to calculate shipping, using default', {
-              productId: aliProduct.item_id,
-              error: err instanceof Error ? err.message : String(err),
-            });
-            shippingCost = 0; // Fallback to no shipping cost
-          }
-        }
-        
-        const totalPrice = product.price + shippingCost;
-        
-        // === AI PROCESSING PIPELINE (M2) - Using Smart Import Orchestration ===
-        
-        // Smart Import: Unified AI processing (quality score + description + category)
-        importLogger.debug('Running Smart Import pipeline', {
-          productId: aliProduct.item_id,
-          totalPrice,
-          shippingCost,
-        });
-        
-        const smartResult = await smartImportProduct({
-          title: product.name,
-          description: product.description,
-          price: totalPrice,
-          originalPrice: product.originalPrice,
-          shippingCost: shippingCost,
-          rating: aliProduct.rating?.score,
-          soldCount: aliProduct.sales,
-          merchantRating: aliProduct.merchant?.rating,
-          merchant: aliProduct.merchant?.name,
-          source: 'aliexpress',
-          externalId: aliProduct.item_id,
-          importedBy: profile.createdBy,
-        });
-        
-        // Attach quality score and generated content to product metadata
-        if (!product.ai) product.ai = {};
-        
-        product.ai.quality = {
-          score: smartResult.qualityScore,
-          recommendation: smartResult.qualityRecommendation,
-          reasoning: smartResult.qualityReasoning,
-          scoredAt: new Date().toISOString(),
-        };
-        
-        // Attach generated content (polish description, marketing title)
-        if (smartResult.generatedContent) {
-          product.ai.generatedContent = {
-            marketingTitle: smartResult.generatedContent.marketingTitle,
-            shortDescription: smartResult.generatedContent.shortDescription,
-            htmlContent: smartResult.generatedContent.htmlContent,
-            generatedAt: new Date().toISOString(),
-          };
-          
-          // Apply generated content to product
-          product.name = smartResult.generatedContent.marketingTitle || product.name;
-          product.description = smartResult.generatedContent.shortDescription || product.description;
-          product.longDescription = smartResult.generatedContent.htmlContent || product.longDescription;
-        }
-        
-        // Skip low-quality products (score < 50 or explicit reject recommendation)
-        if (
-          smartResult.qualityRecommendation === 'reject' ||
-          smartResult.qualityScore < 50
-        ) {
-          importLogger.info('Product rejected by AI quality score', {
-            productId: aliProduct.item_id,
-            score: smartResult.qualityScore,
-            recommendation: smartResult.qualityRecommendation,
-          });
-          
+        if (!shipDays || Number.isNaN(shipDays) || shipDays <= 0) {
+          importLogger.info('Item unavailable for PL (ship_to_days invalid) - skipping', { item: aliProduct.item_id });
           result.stats.skipped++;
+          continue;
         }
-        
-        // Step 2: AI Category Suggestion (override with smart import result if high confidence)
-        importLogger.debug('Processing AI category suggestion', {
-          title: product.name,
-        });
-        
-        // Use smart import category result if high confidence
-        if (smartResult.category && smartResult.categoryConfidence >= 0.6) {
-          product.mainCategorySlug = smartResult.category.mainCategorySlug;
-          product.subCategorySlug = smartResult.category.subCategorySlug;
-          product.subSubCategorySlug = smartResult.category.subSubCategorySlug;
-          
-          product.ai.categoryMapping = {
-            suggestedPath: [
-              smartResult.category.mainCategorySlug,
-              smartResult.category.subCategorySlug,
-              smartResult.category.subSubCategorySlug,
-            ].filter(Boolean) as string[],
-            confidence: smartResult.categoryConfidence,
-            reasoning: smartResult.categoryReasoning,
-          };
-          
-          importLogger.info('Used Smart Import category suggestion', {
-            productId: aliProduct.item_id,
-            confidence: smartResult.categoryConfidence,
-            category: `${product.mainCategorySlug}/${product.subCategorySlug}/${product.subSubCategorySlug}`,
-          });
-        } else {
-          // Low confidence - keep manual mapping from profile but log suggestion
-          importLogger.warn('Low confidence AI category suggestion - using manual mapping', {
-            aiConfidence: smartResult.categoryConfidence,
-            manualMapping: mapperConfig.targetMainCategory,
-          });
-        }
-        
-        importLogger.info('Smart Import pipeline complete', {
-          productId: aliProduct.item_id,
-          qualityScore: smartResult.qualityScore,
-          normalizedName: product.name,
-          category: `${product.mainCategorySlug}/${product.subCategorySlug}/${product.subSubCategorySlug}`,
-          processingTimeMs: smartResult.processingTimeMs,
-        });
 
-        
-        // Check for duplicates
-        // TODO M2: Implement proper deduplication
-        const isDuplicate = await checkDuplicate(aliProduct.item_id);
-        
-        if (isDuplicate) {
-          result.stats.duplicates++;
-          result.stats.skipped++;
-          importLogger.debug('Duplicate detected', { productId: aliProduct.item_id });
-          
-          if (profile.deduplicationStrategy === 'skip') {
-            continue;
-          }
-          // TODO M2: Implement 'update' strategy
-        }
-        
-        // Store (or simulate in dry-run)
+        // Map to Universal Product Schema
+        const universal = mapAliExpressResponseToProduct({ ...raw });
+
+        // Upsert by externalId + source
+        const existingQ = query(
+          collection(db, 'products'),
+          where('externalId', '==', universal.externalId),
+          where('source', '==', 'aliexpress'),
+          qLimit(1)
+        );
+        const existingSnap = await getDocs(existingQ);
+
         if (dryRun) {
-          // Dry run - just count what would happen
-          if (isDuplicate) {
-            result.stats.wouldUpdate!++;
-          } else {
-            result.stats.wouldCreate!++;
-          }
-        } else {
-          // Actually create the records
-          const productRef = await addDoc(collection(db, 'products'), {
-            ...product,
-            createdAt: serverTimestamp()
+          if (!existingSnap.empty) result.stats.wouldUpdate!++; else result.stats.wouldCreate!++;
+          continue;
+        }
+
+        if (existingSnap.empty) {
+          await addDoc(collection(db, 'products'), {
+            ...universal,
+            createdAt: serverTimestamp(),
           });
-          
           result.stats.created!++;
-          
-          importLogger.info('Created product', { productId: productRef.id });
-          
-          // Queue for Typesense indexing
-          await queueProductForIndexing(productRef.id);
-          
-          // Create deal if applicable
-          if (deal) {
-            const dealRef = await addDoc(collection(db, 'deals'), {
-              ...deal,
-              createdAt: serverTimestamp()
-            });
-            
-            result.stats.created!++;
-            importLogger.info('Created deal', { dealId: dealRef.id });
-            
-            await queueDealForIndexing(dealRef.id);
-          }
+        } else {
+          const docRef = existingSnap.docs[0].ref;
+          // Preserve manually edited fields by not overwriting title/description
+          const toUpdate: any = {
+            price: universal.price,
+            logistics: universal.logistics,
+            updatedAt: serverTimestamp(),
+          };
+          // Append price history entry
+          const newEntry = PriceHistoryEntrySchema.parse({ date: new Date().toISOString(), price: universal.price!.current, currency: 'PLN' });
+          toUpdate.priceHistory = [ ...(existingSnap.docs[0].data().priceHistory || []), newEntry ];
+          await updateDoc(docRef, toUpdate);
+          result.stats.updated!++;
         }
       } catch (error) {
         result.stats.errors++;
@@ -443,25 +284,8 @@ export async function runImport(
 }
 
 /**
- * Check if a product with this original ID already exists
- * 
- * TODO M2: Implement actual duplicate detection
- * - Query Firestore for existing products with same originalId
- * - Use embedding-based similarity for soft duplicates
+ * Duplicate check no longer needed (upsert by externalId handled in-place)
  */
-async function checkDuplicate(originalId: string): Promise<boolean> {
-  // TODO M2: Implement duplicate check
-  // const productsRef = collection(db, 'products');
-  // const q = query(
-  //   productsRef,
-  //   where('metadata.originalId', '==', originalId),
-  //   where('metadata.source', '==', 'aliexpress')
-  // );
-  // const snapshot = await getDocs(q);
-  // return !snapshot.empty;
-  
-  return false; // Stub - assume no duplicates
-}
 
 /**
  * Get import run status

@@ -456,9 +456,47 @@ export class AliExpressClient {
     params: AliExpressProductDetailsParams
   ): Promise<AliExpressProductDetailsResponse> {
     logger.info('Getting product details', { productId: params.productId });
-    
+
+    // Enforce Polish buyer context and deep fields
+    const baseParams: Record<string, any> = {
+      // Geo/currency/language context
+      ship_to_country: 'PL',
+      target_currency: 'PLN',
+      target_language: 'PL',
+      // Mandatory deep fields
+      fields: [
+        'product_id',
+        'product_title',
+        'product_video_url',
+        'product_main_image_url',
+        'all_images',
+        'product_props',
+        'target_sale_price',
+        'original_price',
+        'discount',
+        'ship_to_days',
+        'evaluate_rate',
+        'promotion_link',
+        'app_sale_price',
+      ].join(','),
+    };
+
     try {
-      return await this.request<AliExpressProductDetailsResponse>('/product/details', params);
+      // Prefer OAuth endpoint if available; fallback to TOP API method
+      if (this.token) {
+        const body = {
+          product_id: params.productId,
+          ...baseParams,
+        };
+        return await this.request<AliExpressProductDetailsResponse>('/product/details', body);
+      }
+
+      // TOP API fallback method name for product details
+      const topParams = {
+        product_id: params.productId,
+        ...baseParams,
+      };
+      return await this.request<AliExpressProductDetailsResponse>('aliexpress.affiliate.productdetail.get', topParams);
     } catch (error) {
       logger.error('Product details fetch failed', { error });
       throw error;
