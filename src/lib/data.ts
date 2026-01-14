@@ -1764,12 +1764,23 @@ export async function getAdminDashboardStats(token?: string) {
         deals: data?.pending?.deals ?? 0,
         products: data?.pending?.products ?? 0,
       },
-      recent24h: {
+      new24h: {
         deals: data?.recent24h?.deals ?? 0,
         users: data?.recent24h?.users ?? 0,
       },
-      totalSavings: data?.totalSavings ?? 0,
-      timestamp: data?.timestamp ?? new Date().toISOString(),
+      avgTemperature: 0,
+      topCategories: [],
+      recentActivity: 0,
+      analytics: {
+        views: { total: 0, today: 0, trend: 0 },
+        clicks: { total: 0, today: 0, trend: 0 },
+        shares: { total: 0 },
+        conversionRate: 0,
+      },
+      growth: { deals: 0, products: 0, users: 0 },
+      categories: { total: 0, main: 0, sub: 0, subSub: 0 },
+      imports: { running: 0, queued: 0, completed24h: 0, failed24h: 0 },
+      harvester: { running: 0, created24h: 0 },
     };
 
     // Cache short-term (60s) to speed up repeated renders
@@ -1777,13 +1788,24 @@ export async function getAdminDashboardStats(token?: string) {
     return dashboard;
   } catch (error) {
     console.error('[getAdminDashboardStats] API error, falling back:', error);
-    // Minimal safe fallback
+    // Minimal safe fallback matching DashboardStats interface
     const fallback = {
       totals: { deals: 0, products: 0, users: 0 },
       pending: { deals: 0, products: 0 },
-      recent24h: { deals: 0, users: 0 },
-      totalSavings: 0,
-      timestamp: new Date().toISOString(),
+      new24h: { deals: 0, users: 0 },
+      avgTemperature: 0,
+      topCategories: [],
+      recentActivity: 0,
+      analytics: {
+        views: { total: 0, today: 0, trend: 0 },
+        clicks: { total: 0, today: 0, trend: 0 },
+        shares: { total: 0 },
+        conversionRate: 0,
+      },
+      growth: { deals: 0, products: 0, users: 0 },
+      categories: { total: 0, main: 0, sub: 0, subSub: 0 },
+      imports: { running: 0, queued: 0, completed24h: 0, failed24h: 0 },
+      harvester: { running: 0, created24h: 0 },
     };
     await cacheSet(cacheKey, fallback, 30);
     return fallback;
