@@ -202,17 +202,20 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     // Bezpieczne obliczenie galerii na kliencie
     let computedImages: Array<{ id: string; src: string; alt: string }> = [];
     
+    // dealTitle jest już computed string, użyj go
+    const titleString = typeof dealTitle === 'string' ? dealTitle : 'Deal';
+    
     if (deal.gallery && deal.gallery.length > 0) {
-      computedImages = deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }));
+      computedImages = deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: titleString }));
     } else if (productData && typeof productData === 'object') {
       const productImg = (productData as any).image || (productData as any)?.metadata?.images?.[0];
       if (productImg) {
-        computedImages = [{ id: '0', src: productImg, alt: deal.title }];
+        computedImages = [{ id: '0', src: productImg, alt: titleString }];
       }
     }
     
     if (computedImages.length === 0) {
-      computedImages = [{ id: '0', src: deal.image, alt: deal.title }];
+      computedImages = [{ id: '0', src: deal.image, alt: titleString }];
     }
     
     setImages(computedImages);
