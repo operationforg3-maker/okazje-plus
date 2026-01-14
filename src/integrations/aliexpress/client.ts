@@ -478,6 +478,9 @@ export class AliExpressClient {
         'evaluate_rate',
         'promotion_link',
         'app_sale_price',
+        'store_info',
+        'ships_from_countries',
+        'sku_list',
       ].join(','),
     };
 
@@ -501,6 +504,24 @@ export class AliExpressClient {
       logger.error('Product details fetch failed', { error });
       throw error;
     }
+  }
+
+  /**
+   * Fetch deep product details with PL context (M6)
+   * Returns the first product payload or null when unavailable
+   */
+  async getDetails(productId: string) {
+    console.log(`[AliExpress M6] Fetching details for ${productId} with PL context...`);
+
+    const response = await this.getProductDetails({ productId });
+
+    const product = (response as any)?.resp_result?.result?.products?.product?.[0];
+    if (!product) {
+      console.warn(`[AliExpress M6] No data found for ${productId}`);
+      return null;
+    }
+
+    return product;
   }
 
   /**
