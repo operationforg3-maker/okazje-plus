@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Star, ExternalLink, Package, TrendingUp } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 
 interface ProductPreviewDialogProps {
   open: boolean;
@@ -43,12 +44,15 @@ export function ProductPreviewDialog({
 }: ProductPreviewDialogProps) {
   const [selectedImage, setSelectedImage] = useState(0);
   const images = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
-  
-  const priceInPLN = Number.isFinite(product.price) ? (product.price * 4).toFixed(2) : '—'; // Approx conversion
+  const { formatPrice } = useCurrency();
+  const sourceCurrency = (product.currency as any) || 'USD';
+  const pricePLN = Number.isFinite(product.price)
+    ? CurrencyManager.convertToPLN(product.price, sourceCurrency)
+    : null;
   const originalPriceValue = product.originalPrice;
-  const originalPriceInPLN =
+  const originalPricePLN =
     originalPriceValue !== undefined && Number.isFinite(originalPriceValue)
-      ? (originalPriceValue * 4).toFixed(2)
+      ? CurrencyManager.convertToPLN(originalPriceValue, sourceCurrency)
       : null;
 
   return (
@@ -102,7 +106,7 @@ export function ProductPreviewDialog({
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>{images.length} zdjęć</span>
               <Badge variant="secondary">
-                {product.currency || 'USD'}
+                {sourceCurrency}
               </Badge>
             </div>
           </div>
@@ -123,11 +127,11 @@ export function ProductPreviewDialog({
             {/* Price */}
             <div className="flex items-baseline gap-3">
               <div className="text-3xl font-bold text-primary">
-                {priceInPLN} PLN
+                {pricePLN !== null ? formatPrice(pricePLN) : '—'}
               </div>
-              {originalPriceInPLN && (
+              {originalPricePLN && (
                 <div className="text-lg text-muted-foreground line-through">
-                  {originalPriceInPLN} PLN
+                  {formatPrice(originalPricePLN)}
                 </div>
               )}
               {product.discount && product.discount > 0 && (
@@ -138,7 +142,7 @@ export function ProductPreviewDialog({
             </div>
 
             <div className="text-sm text-muted-foreground">
-              ≈ ${product.price} {product.currency || 'USD'}
+              Cena źródłowa: {Number.isFinite(product.price) ? `${product.price.toFixed(2)} ${CurrencyManager.getSymbol(sourceCurrency)}` : '—'}
             </div>
 
             {/* Stats */}

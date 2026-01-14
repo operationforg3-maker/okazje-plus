@@ -144,9 +144,9 @@ export default function DealListCard({ deal }: DealListCardProps) {
   }, [deal.postedAt, deal.price, deal.originalPrice, currency]);
 
   return (
-    <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 rounded-lg border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
   <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
-        <div className="relative w-40 h-32 bg-muted">
+        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted">
           <Image
             src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
             alt={safeText(deal.title) || 'Okazja'}

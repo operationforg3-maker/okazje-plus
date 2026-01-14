@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
+import { useCurrency } from '@/lib/unified-currency';
 
 interface ProductListCardProps {
   product: ProductCore;
@@ -66,6 +67,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   const { getText } = useContentLanguage();
   const { isFavorited, isLoading: favLoading, toggleFavorite } = useFavorites(productId, 'product');
   const { addItem, isInCart } = useSmartCart();
+  const { formatPrice } = useCurrency();
   const [productData, setProductData] = useState({
     relativeTime: 'niedawno',
     formattedPrice: 'N/A',
@@ -106,13 +108,13 @@ export default function ProductListCard({ product }: ProductListCardProps) {
 
   useEffect(() => {
     const relTime = getRelativeTime(product.createdAt);
-    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(bestTotalPrice ?? price);
+    const formatted = formatPrice(bestTotalPrice ?? price);
 
     setProductData({
       relativeTime: relTime,
       formattedPrice: formatted,
     });
-  }, [product.createdAt, price, bestTotalPrice]);
+  }, [product.createdAt, price, bestTotalPrice, formatPrice]);
 
   // Fetch best deal for this product to get accurate affiliate link and total price
   useEffect(() => {
@@ -142,10 +144,10 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     : '/placeholder.png';
 
   return (
-    <div className="group flex bg-card p-5 rounded-lg border items-stretch gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 rounded-lg border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
       {/* Image - Left */}
       <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
-        <div className="relative w-40 h-32 bg-muted">
+        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted">
           <Image
             src={primaryImage}
             alt={displayTitle}

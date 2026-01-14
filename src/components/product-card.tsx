@@ -29,7 +29,7 @@ import AdminEditButton from '@/components/admin/admin-edit-button';
 import ProductEditDialog from '@/components/admin/product-edit-dialog';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
-import { useCurrency } from '@/context/currency-context';
+import { useCurrency } from '@/lib/unified-currency';
 import { 
   getPriceAmount, 
   getTotalPrice, 

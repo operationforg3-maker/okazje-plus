@@ -2595,14 +2595,7 @@ export async function getProductCoresByFilters(
   limit_count: number = 50
 ): Promise<ProductCore[]> {
   try {
-    let q = query(collection(db, 'product_cores'), where('status', '==', 'approved'));
-
-    // Apply category filter
-    if (filters.categoryId) {
-      q = query(q, where('mainCategorySlug', '==', filters.categoryId));
-    }
-
-    // Build base query
+    // Build base query constraints
     let constraints = [where('status', '==', 'approved')];
     
     if (filters.categoryId) {
@@ -2611,7 +2604,7 @@ export async function getProductCoresByFilters(
 
     // Firestore can't filter on nested fields like bestPrice.amount directly in where,
     // so we fetch all and filter in-memory (alternative: use Firestore Lite or index)
-    q = query(collection(db, 'product_cores'), ...constraints, orderBy('updatedAt', 'desc'), limit(limit_count));
+    const q = query(collection(db, 'product_cores'), ...constraints, orderBy('updatedAt', 'desc'), limit(limit_count));
 
     const snapshot = await getDocs(q);
     // Always sanitize ProductCore from Firestore to ensure JSON-serializable data

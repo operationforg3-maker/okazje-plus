@@ -16,6 +16,7 @@ import {
 import { getProductWithDeals } from '@/lib/data';
 import { PriceComparisonTable } from './price-comparison-table';
 import { ProductPriceHistoryChart } from './product-price-history-chart';
+import { useCurrency } from '@/lib/unified-currency';
 import { SpecsTable } from './specs-table';
 
 interface ProductDetailPageProps {
@@ -36,6 +37,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     loadProduct();
@@ -183,11 +185,11 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                   <p className="text-sm text-gray-600">Total Price</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-green-600">
-                      ${totalPrice.toFixed(2)}
+                      {formatPrice(totalPrice)}
                     </span>
                     {bestDeal.originalPrice && (
                       <span className="text-xl text-gray-500 line-through">
-                        ${bestDeal.originalPrice.toFixed(2)}
+                        {formatPrice(bestDeal.originalPrice)}
                       </span>
                     )}
                   </div>
@@ -196,12 +198,12 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                   <div className="pt-3 border-t border-green-200 space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span>Product Price:</span>
-                      <span className="font-medium">${(bestDeal.price?.amount || 0).toFixed(2)}</span>
+                      <span className="font-medium">{formatPrice(bestDeal.price?.amount || 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Shipping:</span>
                       <span className="font-medium">
-                        {bestDeal.shipping?.cost === 0 ? 'FREE' : `$${bestDeal.shipping?.cost?.toFixed(2)}`}
+                        {bestDeal.shipping?.cost === 0 ? 'FREE' : formatPrice(bestDeal.shipping?.cost || 0)}
                       </span>
                     </div>
                   </div>

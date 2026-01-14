@@ -10,6 +10,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { CurrencyManager, useCurrency } from "@/lib/unified-currency";
 
 interface PipelineStage {
   id: string;
@@ -282,6 +283,7 @@ export function DealComparisonGrid({
   }>;
   highlightLowest?: boolean;
 }) {
+  const { formatPrice } = useCurrency();
   const lowestPrice = Math.min(...deals.map((d) => d.price + d.shipping));
 
   return (
@@ -313,13 +315,27 @@ export function DealComparisonGrid({
                 <div>
                   <p className="text-xs text-slate-600">Cena</p>
                   <p className="font-semibold text-blue-600">
-                    {deal.price.toFixed(2)} {deal.currency}
+                    {formatPrice(
+                      deal.currency === 'PLN'
+                        ? deal.price
+                        : CurrencyManager.convertToPLN(
+                            deal.price,
+                            deal.currency as any
+                          )
+                    )}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-600">Shipping</p>
                   <p className="font-semibold text-amber-600">
-                    {deal.shipping.toFixed(2)} {deal.currency}
+                    {formatPrice(
+                      deal.currency === 'PLN'
+                        ? deal.shipping
+                        : CurrencyManager.convertToPLN(
+                            deal.shipping,
+                            deal.currency as any
+                          )
+                    )}
                   </p>
                 </div>
               </div>
@@ -327,7 +343,14 @@ export function DealComparisonGrid({
               <div className="pt-2 border-t">
                 <p className="text-xs text-slate-600">Razem</p>
                 <p className={`text-lg font-bold ${isLowest ? "text-green-600" : "text-slate-900"}`}>
-                  {total.toFixed(2)} {deal.currency}
+                  {formatPrice(
+                    deal.currency === 'PLN'
+                      ? total
+                      : CurrencyManager.convertToPLN(
+                          total,
+                          deal.currency as any
+                        )
+                  )}
                 </p>
               </div>
 

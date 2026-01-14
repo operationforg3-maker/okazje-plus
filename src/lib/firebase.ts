@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore, Firestore } from "firebase/firestore";
 import { getFunctions, Functions } from "firebase/functions";
 
 const isServer = typeof window === 'undefined';
@@ -51,39 +51,16 @@ auth = getAuth(app);
 db = getFirestore(app);
 functions = getFunctions(app, 'europe-west1'); // Region zgodny z App Hosting
 
-// Enable Firestore persistence on client-side (browser)
-if (typeof window !== 'undefined' && !isTestEnv) {
-  // Disable persistence during build/hydration to prevent errors
-  if (typeof document !== 'undefined' && document.readyState === 'loading') {
-    // Page is still loading - wait before enabling persistence
-    const enablePersistenceWhenReady = () => {
-      enableIndexedDbPersistence(db).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          // Multiple tabs open - persistence not available
-          console.warn('[firebase] Persistence unavailable (multiple tabs?)');
-        } else if (err.code !== 'unimplemented') {
-          // Suppress 'unimplemented' error in environments without IndexedDB
-          console.debug('[firebase] Persistence error:', err.message);
-        }
-      });
-      document.removeEventListener('DOMContentLoaded', enablePersistenceWhenReady);
-    };
-    
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', enablePersistenceWhenReady);
-    } else {
-      enablePersistenceWhenReady();
-    }
-  } else if (typeof document !== 'undefined') {
-    // DOM ready - enable immediately
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('[firebase] Persistence unavailable (multiple tabs?)');
-      } else if (err.code !== 'unimplemented') {
-        console.debug('[firebase] Persistence error:', err.message);
-      }
-    });
-  }
-}
+// Persistence is disabled during development due to issues with deprecated enableIndexedDbPersistence
+// The newer FirestoreSettings.cache approach will be used when Firebase SDK fully migrates
+// if (typeof window !== 'undefined' && !isTestEnv) {
+//   enableIndexedDbPersistence(db).catch((err) => {
+//     if (err.code === 'failed-precondition') {
+//       console.warn('[firebase] Persistence unavailable (multiple tabs?)');
+//     } else if (err.code !== 'unimplemented') {
+//       console.debug('[firebase] Persistence error:', err.message);
+//     }
+//   });
+// }
 
 export { app, auth, db, functions };

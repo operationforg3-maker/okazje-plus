@@ -520,8 +520,8 @@ export default function DealCard({ deal }: DealCardProps) {
         />
       )}
       
-      <div className="flex-grow space-y-3 p-4 sm:p-5">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex-grow space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-5">
+        <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             {categoryLabel && (
               <Badge variant="secondary" className="flex items-center gap-1">
@@ -536,7 +536,7 @@ export default function DealCard({ deal }: DealCardProps) {
           </div>
         </div>
 
-        <h3 className="font-headline text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
+        <h3 className="font-headline text-sm sm:text-base md:text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
           {dealTitle}
         </h3>
         
@@ -575,7 +575,7 @@ export default function DealCard({ deal }: DealCardProps) {
         )}
         */}
         
-        <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+        <p className="mt-2 text-xs sm:text-sm text-muted-foreground line-clamp-2">
           {dealDescription}
         </p>
         
@@ -595,7 +595,7 @@ export default function DealCard({ deal }: DealCardProps) {
             {hasRealShipping && shippingInfo.cost > 0 && (
               <Badge variant="outline" className="text-xs">
                 <Truck className="w-3 h-3 mr-1" />
-                Dostawa: {shippingInfo.cost} PLN
+                Dostawa: {CurrencyManager.formatPrice(shippingInfo.cost, currency || 'PLN')}
               </Badge>
             )}
             {hasRealShipping && shippingInfo.estimatedDays && (
@@ -742,7 +742,7 @@ export default function DealCard({ deal }: DealCardProps) {
           )}
           {deal.cashback && (
             <span className="font-semibold text-green-600">
-              Cashback: {deal.cashback.amount ? `${deal.cashback.amount} PLN` : `${deal.cashback.percentage}%`}
+              Cashback: {typeof deal.cashback.amount === 'number' && deal.cashback.amount > 0 ? CurrencyManager.formatPrice(deal.cashback.amount, currency || 'PLN') : `${deal.cashback.percentage}%`}
               {deal.cashback.provider && ` (${safeText(deal.cashback.provider)})`}
             </span>
           )}
@@ -808,9 +808,9 @@ export default function DealCard({ deal }: DealCardProps) {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
-          {priceData.formattedOriginal && <span className="text-sm text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
+          {priceData.formattedOriginal && <span className="text-xs sm:text-sm text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
           {typeof priceData.discount === 'number' && priceData.discount > 0 && (
             <Badge variant="destructive">-{priceData.discount}%</Badge>
           )}
@@ -876,8 +876,8 @@ export default function DealCard({ deal }: DealCardProps) {
         </div>
       </div>
       
-      <div className="flex items-center justify-between gap-2 border-t bg-muted/30 p-3">
-        <div className="flex items-center gap-1">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-t bg-muted/30 p-2 sm:p-3">
+        <div className="flex items-center gap-1 justify-center sm:justify-start">
           <Button 
             variant={userVote === 1 ? "default" : "outline"} 
             size="sm" 
@@ -906,7 +906,7 @@ export default function DealCard({ deal }: DealCardProps) {
           </Button>
         </div>
         
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 justify-center sm:justify-end">
           <Button 
             variant={isFavorited ? "default" : "outline"} 
             size="sm" 

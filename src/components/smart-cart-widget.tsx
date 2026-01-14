@@ -14,7 +14,8 @@
 
 import { useSmartCart } from '@/lib/cart-context';
 import { useContentLanguage } from '@/hooks/use-content-language';
-import { getPriceAmount, getTotalPrice, formatPrice, isFreeShipping } from '@/lib/i18n-utils';
+import { getPriceAmount, getTotalPrice, isFreeShipping } from '@/lib/i18n-utils';
+import { useCurrency } from '@/lib/unified-currency';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,7 @@ import { Input } from '@/components/ui/input';
 export function SmartCartWidget() {
   const { items, itemCount, totalAmount, totalWithShipping, removeItem, updateQuantity, clearCart, finalizeCart, shareCart } = useSmartCart();
   const { getText } = useContentLanguage();
+  const { formatPrice } = useCurrency();
   
   // Batch finalize state
   const [finalizeState, setFinalizeState] = useState({
@@ -255,20 +257,20 @@ export function SmartCartWidget() {
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Suma produktów:</span>
-            <span className="font-medium">{Number.isFinite(totalAmount) ? totalAmount.toFixed(2) : '—'} PLN</span>
+            <span className="font-medium">{Number.isFinite(totalAmount) ? formatPrice(totalAmount) : '—'}</span>
           </div>
           
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Wysyłka:</span>
             <span className="font-medium">
-              {Number.isFinite(totalWithShipping - totalAmount) ? (totalWithShipping - totalAmount).toFixed(2) : '—'} PLN
+              {Number.isFinite(totalWithShipping - totalAmount) ? formatPrice(totalWithShipping - totalAmount) : '—'}
             </span>
           </div>
           
           <div className="border-t pt-3 flex justify-between">
             <span className="font-semibold text-lg">Razem do zapłaty:</span>
             <span className="font-bold text-xl text-primary">
-              {Number.isFinite(totalWithShipping) ? totalWithShipping.toFixed(2) : '—'} PLN
+              {Number.isFinite(totalWithShipping) ? formatPrice(totalWithShipping) : '—'}
             </span>
           </div>
         </div>

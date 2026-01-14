@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useCurrency } from '@/lib/unified-currency';
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ export function PriceComparisonTable({
 }: PriceComparisonTableProps) {
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { formatPrice } = useCurrency();
 
   useEffect(() => {
     loadDeals();
@@ -115,11 +117,11 @@ export function PriceComparisonTable({
                   {/* Product Price */}
                   <TableCell className="text-right">
                     <span className="font-semibold">
-                      {productPrice.toFixed(2)} zł
+                      {formatPrice(productPrice)}
                     </span>
                     {deal.originalPrice && (
                       <p className="text-xs text-gray-500 line-through">
-                        {deal.originalPrice.toFixed(2)} zł
+                        {formatPrice(deal.originalPrice)}
                       </p>
                     )}
                   </TableCell>
@@ -131,14 +133,14 @@ export function PriceComparisonTable({
                         DARMOWA
                       </Badge>
                     ) : (
-                      <span>{shippingCost.toFixed(2)} zł</span>
+                      <span>{formatPrice(shippingCost)}</span>
                     )}
                   </TableCell>
 
                   {/* Total Price (Highlighted) */}
                   <TableCell className="text-right">
                     <div className="text-lg font-bold text-green-600">
-                      {totalPrice.toFixed(2)} zł
+                      {formatPrice(totalPrice)}
                     </div>
                   </TableCell>
 

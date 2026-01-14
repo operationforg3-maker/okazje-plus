@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Deal } from '@/lib/types';
@@ -128,9 +129,11 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const [activeTab, setActiveTab] = useState<'discussion' | 'specifications'>('discussion');
 
-  // Format prices on client to fix Intl.NumberFormat hydration mismatch
+  const { currency } = useCurrency();
+  // Format prices on client using unified currency
   useEffect(() => {
-    const formatted = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
+    const userCurrency = currency || 'PLN';
+    const formatted = CurrencyManager.formatPrice(deal.price, userCurrency);
     
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
@@ -138,19 +141,19 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
     let minOrder: string | null = null;
     
     if (typeof deal.originalPrice === 'number') {
-      formattedOrig = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice);
+      formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
       
       if (deal.originalPrice > 0) {
         calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
       }
       
       if (deal.originalPrice > deal.price) {
-        savings = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice - deal.price);
+        savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
       }
     }
     
     if (typeof deal.minOrderValue === 'number') {
-      minOrder = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.minOrderValue);
+      minOrder = CurrencyManager.formatPrice(deal.minOrderValue, userCurrency);
     }
     
     setPriceData({
@@ -160,7 +163,7 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
       formattedMinOrder: minOrder,
       discount: calculatedDiscount,
     });
-  }, [deal.price, deal.originalPrice, deal.minOrderValue]);
+  }, [deal.price, deal.originalPrice, deal.minOrderValue, currency]);
 
   // Update countdown every minute
   useEffect(() => {

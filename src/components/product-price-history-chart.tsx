@@ -13,7 +13,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useCurrency } from '@/lib/unified-currency';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 
 interface ProductPriceHistoryChartProps {
   deals: any[];
@@ -114,19 +114,19 @@ export function ProductPriceHistoryChart({
           <div className="border rounded-lg p-3">
             <p className="text-xs text-gray-500">Najniższa cena</p>
             <p className="text-lg font-semibold text-green-600">
-              {isMounted ? formatPrice(minPrice) : `${minPrice.toFixed(2)} zł`}
+              {isMounted ? formatPrice(minPrice) : `${minPrice.toFixed(2)} ${CurrencyManager.getSymbol(currency as any)}`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-gray-500">Najwyższa cena</p>
             <p className="text-lg font-semibold text-red-600">
-              {isMounted ? formatPrice(maxPrice) : `${maxPrice.toFixed(2)} zł`}
+              {isMounted ? formatPrice(maxPrice) : `${maxPrice.toFixed(2)} ${CurrencyManager.getSymbol(currency as any)}`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
             <p className="text-xs text-gray-500">Średnia cena</p>
             <p className="text-lg font-semibold">
-              {isMounted ? formatPrice(Number(avgPrice)) : `${avgPrice} zł`}
+              {isMounted ? formatPrice(Number(avgPrice)) : `${avgPrice} ${CurrencyManager.getSymbol(currency as any)}`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
@@ -163,7 +163,7 @@ export function ProductPriceHistoryChart({
                   border: '1px solid #ccc',
                   borderRadius: '4px',
                 }}
-                formatter={(value) => `$${(value as number).toFixed(2)}`}
+                formatter={(value) => (isMounted ? formatPrice(Number(value)) : `${Number(value).toFixed(2)} ${CurrencyManager.getSymbol(currency as any)}`)}
               />
               <Area
                 type="monotone"

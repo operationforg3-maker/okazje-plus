@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
 import { Category, ProductCore, Deal } from '@/lib/types';
+import { useCurrency } from '@/lib/unified-currency';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -68,6 +69,7 @@ function ProductsPageContent() {
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [showEmptyCategories, setShowEmptyCategories] = useState(false);
+  const { formatPrice } = useCurrency();
 
   // Wczytaj kategorie i ustaw z URL
   useEffect(() => {
@@ -207,10 +209,7 @@ function ProductsPageContent() {
     loadMoreThreshold: 500,
   });
 
-  const priceFormatter = new Intl.NumberFormat('pl-PL', {
-    style: 'currency',
-    currency: 'PLN',
-  });
+  // Unified currency formatting handled via useCurrency()
 
   const gridWrapperClass = cardDensity === 'compact'
     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
@@ -864,7 +863,7 @@ function ProductsPageContent() {
                       <div className={gridWrapperClass}>
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
-                            <ProductCardBoundary product={product} viewMode={viewMode} />
+                            <ProductListCard product={product} />
                           </div>
                         ))}
                       </div>
@@ -939,7 +938,9 @@ function ProductsPageContent() {
                       </h4>
                       <div className="flex items-center justify-between">
                         <span className="text-2xl font-bold text-primary">
-                          {priceFormatter.format(dealOfTheDay.price)}
+                          {formatPrice(typeof (dealOfTheDay as any).price === 'number'
+                            ? (dealOfTheDay as any).price
+                            : ((dealOfTheDay as any).price?.amount || 0))}
                         </span>
                         <Badge variant="secondary">
                           <Flame className="mr-1 h-3 w-3" />
