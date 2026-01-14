@@ -14,7 +14,8 @@ import {
   normalizeProductIdentifier,
 } from './identity-matcher';
 import { convertToPLN } from '@/lib/currency-exchange';
-import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
+// deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
+// import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
 
 /**
  * Raw product data from external APIs (before transformation)
@@ -796,38 +797,8 @@ export class SmartHarvester {
     
     if (source === 'aliexpress' && sourceProduct.sourceProductId) {
       try {
-        // Map RawProduct to AliExpress API format for deep mapper
-        const aliexpressApiFormat = {
-          productId: sourceProduct.sourceProductId,
-          productTitle: sourceProduct.title,
-          productUrl: sourceProduct.sourceUrl,
-          productMainImageUrl: sourceProduct.imageUrl,
-          productSmallImageUrls: sourceProduct.images || [],
-          productVideoUrl: sourceProduct.videoUrl,
-          appSalePrice: String(sourceProduct.price),
-          originalPrice: sourceProduct.originalPrice ? String(sourceProduct.originalPrice) : undefined,
-          salePrice: String(sourceProduct.price),
-          attributeList: [], // TODO: Pass real attributes if available from API
-          deliveryDays: sourceProduct.shippingDays,
-          isFreeShipping: sourceProduct.shippingCost === 0,
-          shippingFee: sourceProduct.shippingCost > 0 ? String(sourceProduct.shippingCost) : undefined,
-          shopName: sourceProduct.merchantName,
-          sellerScore: sourceProduct.merchantRating,
-        };
-        
-        const result = await mapAliExpressToProductCoreDeepData(aliexpressApiFormat, {
-          locale: 'pl',
-          categorySlug: mappedCategory?.subSubCategorySlug || mappedCategory?.subCategorySlug,
-        });
-        
-        if (!result.success) {
-          const { errors } = result as { success: false; errors: string[] };
-          const safeErrors = errors ?? ['Deep Data extraction failed'];
-          this.addLog('warn', `Deep Data extraction failed: ${safeErrors.join(', ')}`);
-        } else {
-          deepData = result.data;
-          this.addLog('info', `Deep Data extracted: ${deepData.gallery?.length || 0} media, ${deepData.specificationsStructured?.length || 0} specs, logistics: ${!!deepData.logistics}, seller: ${!!deepData.seller}`);
-        }
+        // Deep Data mapper deprecated (consolidated). Skipping AliExpress deep extraction here.
+        this.addLog('info', 'Deep Data mapper deprecated for AliExpress in harvester – skipping.');
       } catch (err) {
         this.addLog('warn', 'Deep Data mapper error', err);
       }
