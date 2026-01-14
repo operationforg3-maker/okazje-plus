@@ -467,8 +467,8 @@ export default function ProductDetailM6Client({
                     {productCore?.identityHash && (
                       <div><span className="font-medium">Identity Hash:</span> <code className="bg-muted px-2 py-1 rounded text-xs">{productCore.identityHash.substring(0, 32)}...</code></div>
                     )}
-                    {productCore?.qualityScore && (
-                      <div><span className="font-medium">Quality Score:</span> <Badge variant={productCore.qualityScore >= 80 ? 'default' : 'secondary'}>{productCore.qualityScore}/100</Badge></div>
+                    {productCore?.aiQualityScore && (
+                      <div><span className="font-medium">Quality Score:</span> <Badge variant={productCore.aiQualityScore >= 80 ? 'default' : 'secondary'}>{productCore.aiQualityScore}/100</Badge></div>
                     )}
                     {productCore?.createdAt && (
                       <div><span className="font-medium">Utworzono:</span> {new Date(productCore.createdAt).toLocaleString('pl-PL')}</div>
@@ -529,41 +529,25 @@ export default function ProductDetailM6Client({
                         <div className="text-2xl font-bold text-primary">{productCore.rating.count || 0}</div>
                         <div className="text-xs text-muted-foreground">Liczba ocen</div>
                       </div>
-                      {productCore.rating.distribution && (
-                        <>
-                          <div className="p-3 bg-muted rounded">
-                            <div className="text-2xl font-bold text-green-600">{productCore.rating.distribution['5'] || 0}</div>
-                            <div className="text-xs text-muted-foreground">5★</div>
-                          </div>
-                          <div className="p-3 bg-muted rounded">
-                            <div className="text-2xl font-bold text-red-600">{productCore.rating.distribution['1'] || 0}</div>
-                            <div className="text-xs text-muted-foreground">1★</div>
-                          </div>
-                        </>
-                      )}
+                      <div className="p-3 bg-muted rounded">
+                        <div className="text-2xl font-bold text-blue-600">{productCore.rating.provider || 'mixed'}</div>
+                        <div className="text-xs text-muted-foreground">Źródło ocen</div>
+                      </div>
                     </div>
                   </div>
                 )}
 
-                {/* Source Links */}
-                {productCore?.sourceLinks && productCore.sourceLinks.length > 0 && (
+                {/* Source Info (from metadata) */}
+                {productCore?.metadata?.source && (
                   <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Linki źródłowe ({productCore.sourceLinks.length})</h3>
-                    <div className="space-y-2">
-                      {productCore.sourceLinks.map((link: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-3 p-2 bg-muted rounded text-sm">
-                          <Badge>{link.source || 'unknown'}</Badge>
-                          <a 
-                            href={link.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-primary hover:underline truncate flex-1"
-                          >
-                            {link.url}
-                          </a>
-                          <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        </div>
-                      ))}
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Źródło produktu</h3>
+                    <div className="p-3 bg-muted rounded">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline">{productCore.metadata.source}</Badge>
+                        {productCore.metadata.originalId && (
+                          <span className="text-sm text-muted-foreground">ID: {productCore.metadata.originalId}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
