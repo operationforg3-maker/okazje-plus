@@ -517,39 +517,30 @@ export class SmartHarvester {
       this.addLog('info', `Found ${response.products.length} products from AliExpress`);
       
       // Transform to RawProduct format (already in PLN from API)
-      return response.products.map((p: any) => {
-        const sourcePrice = p.price?.current || 0;
-        const sourceCurrency = p.price?.currency || 'PLN';
-        const sourceOriginalPrice = p.price?.original || undefined;
-        
-        // M6: API returns PLN directly, no conversion needed
-        this.addLog('info', `Product price: ${sourcePrice} ${sourceCurrency}`);
-        
-        return {
-          title: p.title || p.product_title || '',
-          imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '',
-          price: sourcePrice,
-          originalPrice: sourceOriginalPrice, // Price before discount
-          currency: sourceCurrency, // Should be PLN from API
-          shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
-          shippingDays: 7, // Default estimate
-          sourceProductId: String(p.item_id || p.product_id || ''),
-          sourceUrl: p.product_url || '',
-          videoUrl: p.product_video_url || p.video_url || undefined,
-          merchantName: 'AliExpress',
-          merchantRating: 4.0,
-          specs: extractDimensionsFromTitle(p.title || ''),
-          rating: p.rating?.score || 0,
-          ratingCount: p.rating?.count || 0,
-          images: Array.isArray(p.image_urls) ? p.image_urls : [], // Full gallery
-          variants: Array.isArray(p.variants) ? p.variants : undefined, // Product variants (colors, sizes)
-          // Product identifiers (for robust deduplication & SEO)
-          sku: p.sku || undefined,
-          ean: p.ean || p.barcode || undefined,
-          gtin: p.gtin || undefined,
-          upc: p.upc || undefined,
-          mpn: p.mpn || p.manufacturer_part_number || undefined,
-        };
+      return response.products.map((p: any) => ({
+        title: p.title || p.product_title || '',
+        imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '',
+        price: p.price?.current || 0,
+        originalPrice: p.price?.original || undefined, // Price before discount
+        currency: p.price?.currency || 'PLN', // Should be PLN from API
+        shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
+        shippingDays: 7, // Default estimate
+        sourceProductId: String(p.item_id || p.product_id || ''),
+        sourceUrl: p.product_url || '',
+        videoUrl: p.product_video_url || p.video_url || undefined,
+        merchantName: 'AliExpress',
+        merchantRating: 4.0,
+        specs: extractDimensionsFromTitle(p.title || ''),
+        rating: p.rating?.score || 0,
+        ratingCount: p.rating?.count || 0,
+        images: Array.isArray(p.image_urls) ? p.image_urls : [], // Full gallery
+        variants: Array.isArray(p.variants) ? p.variants : undefined, // Product variants (colors, sizes)
+        // Product identifiers (for robust deduplication & SEO)
+        sku: p.sku || undefined,
+        ean: p.ean || p.barcode || undefined,
+        gtin: p.gtin || undefined,
+        upc: p.upc || undefined,
+        mpn: p.mpn || p.manufacturer_part_number || undefined,
       }));
     } catch (error) {
       this.addLog('error', `AliExpress API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
