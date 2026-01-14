@@ -864,7 +864,7 @@ export class SmartHarvester {
         store: {
           name: sourceProduct.merchantName || source,
           rating: sourceProduct.merchantRating,
-          url: sourceProduct.storeUrl || sourceProduct.sourceUrl,
+          url: sourceProduct.sourceUrl,
         },
         shipping: {
           cost: sourceProduct.shippingCost,
@@ -1002,7 +1002,7 @@ export class SmartHarvester {
         store: {
           name: sourceProduct.merchantName || source,
           rating: sourceProduct.merchantRating,
-          url: sourceProduct.storeUrl || sourceProduct.sourceUrl,
+          url: sourceProduct.sourceUrl,
         },
         shipping: {
           cost: sourceProduct.shippingCost,

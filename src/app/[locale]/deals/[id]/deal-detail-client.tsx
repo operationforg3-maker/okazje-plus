@@ -194,12 +194,16 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
 
   const temperaturePercent = Math.min((temperature / 500) * 100, 100);
 
-  // Galeria - użyj deal.gallery, a w razie braku ProductCore.images
+  // Galeria - użyj deal.gallery, a w razie braku ProductCore.image lub dedukuj z metadata
+  const productImages = (productData as any)?.images && Array.isArray((productData as any).images) 
+    ? (productData as any).images 
+    : [(productData as any)?.image || (productData as any)?.metadata?.images?.[0]].filter(Boolean);
+    
   const images = deal.gallery && deal.gallery.length > 0 
     ? deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }))
-    : (productData?.images || []).map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }))
-      .concat((!productData?.images?.length && deal.image) ? [{ id: '0', src: deal.image, alt: deal.title }] : [])
-      .slice(0, Math.max(deal.gallery?.length || 0, (productData?.images || []).length || 1));
+    : productImages.length > 0
+      ? productImages.map((url: string, idx: number) => ({ id: idx.toString(), src: url, alt: deal.title }))
+      : [{ id: '0', src: deal.image, alt: deal.title }];
 
   const specifications = (deal.metadata as any)?.specifications 
     || (productData as any)?.metadata?.specifications
