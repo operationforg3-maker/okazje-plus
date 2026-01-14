@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Deal } from '@/lib/types';
+import { Deal, Product } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -95,11 +95,13 @@ function getTimeRemaining(expiryDate: string) {
 
 interface Props {
   deal: Deal;
+  product?: Product | null;
   relatedDeals: Deal[];
 }
 
-export default function DealDetailClient({ deal, relatedDeals }: Props) {
+export default function DealDetailClient({ deal, product, relatedDeals }: Props) {
   const { getText } = useContentLanguage();
+  const productData = product || null;
   const dealTitle = typeof deal.title === 'object' ? getText(deal.title) : deal.title;
   const dealDescription = typeof deal.description === 'object' ? getText(deal.description) : deal.description;
   const { user } = useAuth();
@@ -192,12 +194,17 @@ export default function DealDetailClient({ deal, relatedDeals }: Props) {
 
   const temperaturePercent = Math.min((temperature / 500) * 100, 100);
 
-  // Galeria - użyj deal.gallery jeśli istnieje
+  // Galeria - użyj deal.gallery, a w razie braku ProductCore.images
   const images = deal.gallery && deal.gallery.length > 0 
     ? deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }))
-    : [{ id: '0', src: deal.image, alt: deal.title }];
+    : (productData?.images || []).map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }))
+      .concat((!productData?.images?.length && deal.image) ? [{ id: '0', src: deal.image, alt: deal.title }] : [])
+      .slice(0, Math.max(deal.gallery?.length || 0, (productData?.images || []).length || 1));
 
-  const specifications = (deal.metadata as any)?.specifications || [];
+  const specifications = (deal.metadata as any)?.specifications 
+    || (productData as any)?.metadata?.specifications
+    || (productData as any)?.specs
+    || [];
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);

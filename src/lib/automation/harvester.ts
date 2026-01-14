@@ -860,6 +860,18 @@ export class SmartHarvester {
         aliexpressCategoryIds: categoryMetadata.aliexpressCategoryIds || [],
         // Product identifiers (critical for deduplication & SEO)
         ...normalizedIdentifiers,
+        // Spójne metadane dla kart Product/Deal
+        store: {
+          name: sourceProduct.merchantName || source,
+          rating: sourceProduct.merchantRating,
+          url: sourceProduct.storeUrl || sourceProduct.sourceUrl,
+        },
+        shipping: {
+          cost: sourceProduct.shippingCost,
+          days: sourceProduct.shippingDays,
+          shipsFrom: (sourceProduct as any).shipsFrom,
+        },
+        specifications: specs,
       } as any,
     };
 
@@ -986,6 +998,18 @@ export class SmartHarvester {
         lastPriceUpdate: now,
         importedAt: now,
         source: source,
+        // Spójne metadane z ProductCore
+        store: {
+          name: sourceProduct.merchantName || source,
+          rating: sourceProduct.merchantRating,
+          url: sourceProduct.storeUrl || sourceProduct.sourceUrl,
+        },
+        shipping: {
+          cost: sourceProduct.shippingCost,
+          days: sourceProduct.shippingDays,
+          shipsFrom: (sourceProduct as any).shipsFrom,
+        },
+        specifications: (product as any)?.specs || sourceProduct.specs,
       },
     };
 

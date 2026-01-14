@@ -36,6 +36,7 @@ import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 
 interface DealCardProps {
   deal: Deal;
+  product?: Product | null;
 }
 
 const safeText = (value: unknown, fallback = ''): string => {
@@ -89,10 +90,9 @@ function getRelativeTime(when: any): string {
   return `${Math.floor(diffDays / 30)} mies. temu`;
 }
 
-export default function DealCard({ deal }: DealCardProps) {
-  // TODO: pobierz powiązany produkt jeśli istnieje (np. z cache lub props)
-  // Przykład: const product = useProductById(deal.linkedProductIds?.[0]);
-  const product = null as Product | null; // placeholder, typ jawnie Product | null
+export default function DealCard({ deal, product }: DealCardProps) {
+  // Używaj przekazanego ProductCore jeśli dostępny (spójność z ProductCard)
+  const resolvedProduct = product || null;
   const params = useParams();
   const [isMounted, setIsMounted] = useState(false);
   const localeFromParams = (params?.locale as string) || 'pl';
@@ -171,8 +171,13 @@ export default function DealCard({ deal }: DealCardProps) {
       discount: calculatedDiscount,
     });
   }, [isMounted, currency, deal.price, deal.originalPrice, deal.shippingCost]);
-  const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
+  const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug || resolvedProduct?.subCategorySlug || resolvedProduct?.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
+
+  const coverImage = typeof deal.image === 'string' && deal.image ? deal.image : resolvedProduct?.images?.[0];
+  const gallery = Array.isArray(deal.gallery) && deal.gallery.length > 0
+    ? deal.gallery
+    : (resolvedProduct?.images || (coverImage ? [coverImage] : []));
   
   // Get localized deal title and description - use safe defaults to prevent hydration mismatch
   // Handle both LocalizedText and legacy string formats
@@ -191,10 +196,18 @@ export default function DealCard({ deal }: DealCardProps) {
   // 🚀 ENHANCED METADATA FROM AUTO-IMPORT
   // ========================================
   
-  const metadata = deal.metadata || {};
+  const metadata = {
+    ...(resolvedProduct?.metadata || {}),
+    ...(deal.metadata || {}),
+  };
+
+  const specsFromObject = (resolvedProduct as any)?.specs
+    ? Object.entries((resolvedProduct as any).specs).map(([label, value]) => ({ label, value }))
+    : [];
+
   const variants = (metadata as any).variants || [];
-  const specifications = (metadata as any).specifications || [];
-  const shippingInfo = (metadata as any).shipping || {};
+  const specifications = (metadata as any).specifications || specsFromObject;
+  const shippingInfo = (metadata as any).shipping || (resolvedProduct as any)?.shipping || {};
   const warrantyInfo = (metadata as any).warranty || {};
   const tags = (metadata as any).tags || [];
   const commission = (metadata as any).commission;
@@ -391,13 +404,13 @@ export default function DealCard({ deal }: DealCardProps) {
     >
       <div className="relative overflow-hidden aspect-square bg-muted">
         {/* Pasek ocen produktu jeśli powiązany */}
-        {product && product.ratingSources && (
+        {resolvedProduct && resolvedProduct.ratingSources && (
           <div className="absolute left-1.5 top-1.5 z-10">
-            <RatingBar users={product.ratingSources.users} editorial={product.ratingSources.editorial} external={product.ratingSources.external} />
+            <RatingBar users={resolvedProduct.ratingSources.users} editorial={resolvedProduct.ratingSources.editorial} external={resolvedProduct.ratingSources.external} />
           </div>
         )}
         <Image
-          src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
+          src={coverImage || '/placeholder.png'}
           alt={dealTitle || 'Okazja'}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -542,8 +555,8 @@ export default function DealCard({ deal }: DealCardProps) {
         
         {/* Deep Data: Specs Teaser (Product.specificationsStructured) */}
         {/* TEMPORARILY DISABLED FOR DEBUGGING
-        {product?.specificationsStructured && product.specificationsStructured.length > 0 && (
-          <SpecsTeaserInline specifications={product.specificationsStructured} maxSpecs={2} />
+        {resolvedProduct?.specificationsStructured && resolvedProduct.specificationsStructured.length > 0 && (
+          <SpecsTeaserInline specifications={resolvedProduct.specificationsStructured} maxSpecs={2} />
         )}
         */}
         

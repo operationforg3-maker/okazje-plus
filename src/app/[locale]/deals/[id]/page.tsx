@@ -109,7 +109,7 @@ async function getDealData(id: string) {
       .filter(Boolean) as Deal[];
   }
 
-  return { deal, relatedDeals };
+  return { deal, relatedDeals, product };
 }
 
 // SEO: Generate metadata
@@ -209,7 +209,7 @@ export default async function DealDetailPage({ params }: PageProps) {
     notFound();
   }
   
-  const { deal, relatedDeals } = data;
+  const { deal, relatedDeals, product } = data;
   
   // JSON-LD structured data dla Google Rich Results
   const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || 'Okazja';
@@ -298,6 +298,7 @@ export default async function DealDetailPage({ params }: PageProps) {
       {/* Client component z interaktywnym UI */}
       <DealDetailClient 
         deal={deal}
+        product={product}
         relatedDeals={relatedDeals}
       />
     </>
