@@ -516,42 +516,21 @@ export class SmartHarvester {
       
       this.addLog('info', `Found ${response.products.length} products from AliExpress`);
       
-      // Transform to RawProduct format with USD→PLN conversion
-      return Promise.all(response.products.map(async (p: any) => {
+      // Transform to RawProduct format (already in PLN from API)
+      return response.products.map((p: any) => {
         const sourcePrice = p.price?.current || 0;
-        const sourceCurrency = p.price?.currency || 'USD';
-        
-        // M6 FIX: Convert to PLN if in USD
-        let priceInPLN = sourcePrice;
-        if (sourceCurrency === 'USD') {
-          try {
-            priceInPLN = await convertToPLN(sourcePrice, 'USD');
-            this.addLog('info', `Price conversion: ${sourcePrice} USD → ${priceInPLN} PLN`);
-          } catch (error) {
-            this.addLog('warn', `Price conversion failed for ${sourcePrice} ${sourceCurrency}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            // Fallback: use 4.0 exchange rate
-            priceInPLN = Math.round(sourcePrice * 4.0 * 100) / 100;
-            this.addLog('warn', `Using fallback rate: ${sourcePrice} USD → ${priceInPLN} PLN`);
-          }
-        }
-        
-        // Same for original price
+        const sourceCurrency = p.price?.currency || 'PLN';
         const sourceOriginalPrice = p.price?.original || undefined;
-        let originalPriceInPLN = sourceOriginalPrice;
-        if (sourceOriginalPrice && sourceCurrency === 'USD') {
-          try {
-            originalPriceInPLN = await convertToPLN(sourceOriginalPrice, 'USD');
-          } catch {
-            originalPriceInPLN = Math.round(sourceOriginalPrice * 4.0 * 100) / 100;
-          }
-        }
+        
+        // M6: API returns PLN directly, no conversion needed
+        this.addLog('info', `Product price: ${sourcePrice} ${sourceCurrency}`);
         
         return {
           title: p.title || p.product_title || '',
           imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '',
-          price: priceInPLN,
-          originalPrice: originalPriceInPLN, // Price before discount
-          currency: 'PLN', // Always PLN after conversion
+          price: sourcePrice,
+          originalPrice: sourceOriginalPrice, // Price before discount
+          currency: sourceCurrency, // Should be PLN from API
           shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
           shippingDays: 7, // Default estimate
           sourceProductId: String(p.item_id || p.product_id || ''),

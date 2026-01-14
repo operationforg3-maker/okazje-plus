@@ -350,7 +350,7 @@ export class AliExpressClient {
           price: {
             current: parseFloat(p.target_sale_price || p.sale_price || '0'),
             original: parseFloat(p.target_original_price || p.original_price || '0'),
-            currency: 'USD', // Always USD
+            currency: 'PLN', // M6: Always PLN from API
           },
           product_url: p.promotion_link || p.product_detail_url,
           discount_percent: p.discount ? parseFloat(p.discount) : undefined,
@@ -409,8 +409,9 @@ export class AliExpressClient {
         keywords: params.q,
         page_no: params.page || 1,
         page_size: Math.min(params.limit || 20, 50), // TOP API max 50
-        target_currency: 'USD', // ALWAYS USD for price stability
-        target_language: 'EN',   // English as source of truth
+        target_currency: 'PLN', // M6: Polish context for accurate prices
+        target_language: 'PL',  // M6: Polish language
+        ship_to_country: 'PL',  // M6: Force Polish availability
         sort: params.sort || 'LAST_VOLUME_DESC', // Default: Best-selling products (commercial feed strategy)
       };
       
@@ -572,7 +573,7 @@ export class AliExpressClient {
         logger.warn('Logistics API returned error, assuming free shipping', { responseData });
         return {
           shippingCost: 0,
-          currency: 'USD',
+          currency: 'PLN',
           isFreeShipping: true,
           estimatedDays: 14,
           shippingMethod: 'Standard Shipping',
@@ -585,7 +586,7 @@ export class AliExpressClient {
         logger.info('No shipping options found, assuming free shipping');
         return {
           shippingCost: 0,
-          currency: 'USD',
+          currency: 'PLN',
           isFreeShipping: true,
           estimatedDays: 14,
           shippingMethod: 'Standard Shipping',
@@ -614,7 +615,7 @@ export class AliExpressClient {
       
       return {
         shippingCost: cheapestShipping.cost,
-        currency: 'USD',
+        currency: 'PLN',
         isFreeShipping: cheapestShipping.cost === 0,
         estimatedDays: cheapestShipping.days,
         shippingMethod: cheapestShipping.method,
@@ -625,7 +626,7 @@ export class AliExpressClient {
       // Graceful degradation - assume free shipping on error
       return {
         shippingCost: 0,
-        currency: 'USD',
+        currency: 'PLN',
         isFreeShipping: true,
         estimatedDays: 14,
         shippingMethod: 'Standard Shipping',
