@@ -144,15 +144,15 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     : '/placeholder.png';
 
   return (
-    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 rounded-lg border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-      {/* Image - Left */}
-      <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
-        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted">
+    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 rounded-lg border items-stretch gap-3 sm:gap-4 w-full max-w-full overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+      {/* Image - Top on mobile, left on desktop */}
+      <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-md w-full sm:w-40">
+        <div className="relative w-full aspect-[4/3] sm:aspect-square sm:h-40 bg-muted">
           <Image
             src={primaryImage}
             alt={displayTitle}
             fill
-            sizes="160px"
+            sizes="(max-width: 640px) 100vw, 160px"
             className="object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </div>
@@ -169,8 +169,8 @@ export default function ProductListCard({ product }: ProductListCardProps) {
       <div className="flex flex-col flex-grow min-w-0 justify-between">
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <Link href={`${prefix}/products/${productId}`} className="group/title">
-              <h3 className="font-headline text-xl font-semibold group-hover/title:text-primary transition-colors line-clamp-2">
+            <Link href={`${prefix}/products/${productId}`} className="group/title flex-1 min-w-0">
+              <h3 className="font-headline text-base sm:text-lg md:text-xl font-semibold group-hover/title:text-primary transition-colors line-clamp-2 break-words">
                 {displayTitle}
               </h3>
             </Link>
@@ -189,7 +189,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             )}
           </div>
 
-          <p className="text-sm text-muted-foreground line-clamp-2">
+          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 break-words">
             {description}
           </p>
 
@@ -222,19 +222,19 @@ export default function ProductListCard({ product }: ProductListCardProps) {
         </div>
       </div>
 
-      {/* Actions - Right */}
-      <div className="flex flex-col items-center justify-between gap-3 pl-4 border-l">
+      {/* Actions - Bottom on mobile, right on desktop */}
+      <div className="flex flex-col items-stretch sm:items-center justify-between gap-3 sm:pl-4 sm:border-l w-full sm:w-auto">
         <div className="text-right text-xs text-muted-foreground flex flex-col items-center gap-1">
           {ratingCount > 0 && (
             <span className="text-xs">{ratingCount} opinii</span>
           )}
         </div>
-        <div className="flex flex-col gap-2 w-full">
+        <div className="flex flex-col gap-2 w-full sm:min-w-[200px]">
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="whitespace-nowrap"
+            className="w-full whitespace-nowrap"
           >
             <a
               href={(bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl || '#')}
@@ -248,14 +248,14 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           <Button
             asChild
             size="sm"
-            className="whitespace-nowrap"
+            className="w-full whitespace-nowrap"
           >
             <Link href={`${prefix}/products/${productId}`}>
               <ShoppingCart className="h-4 w-4 mr-1" />
               Szczegóły
             </Link>
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full">
             <Button
               size="sm"
               variant="secondary"
@@ -267,27 +267,33 @@ export default function ProductListCard({ product }: ProductListCardProps) {
                 affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
               } as any, 1)}
               disabled={isInCart(bestDeal?.id || productId)}
+              className="flex-1 text-xs sm:text-sm"
             >
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              {isInCart(productId) ? 'W koszyku' : 'Do koszyka'}
+              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">{isInCart(productId) ? 'W koszyku' : 'Do koszyka'}</span>
+              <span className="sm:hidden">Koszyk</span>
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => toggleFavorite()}
               disabled={favLoading}
+              className="flex-1 text-xs sm:text-sm"
             >
-              <Heart className={`h-4 w-4 mr-1 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-              {isFavorited ? 'Ulubione' : 'Do ulubionych'}
+              <Heart className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+              <span className="hidden sm:inline">{isFavorited ? 'Ulubione' : 'Ulubione'}</span>
+              <span className="sm:hidden">❤️</span>
             </Button>
             <Button
               asChild
               size="sm"
               variant="ghost"
+              className="flex-1 text-xs sm:text-sm"
             >
               <Link href={`${prefix}/products/${productId}#price-comparison`}>
-                <Scale className="h-4 w-4 mr-1" />
-                Porównaj
+                <Scale className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                <span className="hidden sm:inline">Porównaj</span>
+                <span className="sm:hidden">⚖️</span>
               </Link>
             </Button>
           </div>

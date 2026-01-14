@@ -251,7 +251,7 @@ export default function ProductDetailM6Client({
             <ShareButton
               type="product"
               itemId={productData.id}
-              url={typeof window !== 'undefined' ? window.location.href : ''}
+              url="" // Empty string jako default - ShareButton sam pobierze window.location.href po mount na client
               title={title}
             />
             {/* Porównaj (scroll do tabeli) */}
@@ -355,13 +355,14 @@ export default function ProductDetailM6Client({
         </div>
       )}
 
-      {/* Tabs - Description, Specs, Reviews */}
+      {/* Tabs - Description, Specs, Reviews, All Data */}
       <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="mb-8">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="description">Opis</TabsTrigger>
           <TabsTrigger value="specs">Specyfikacja</TabsTrigger>
           <TabsTrigger value="reviews">Opinie ({ratingCount})</TabsTrigger>
           <TabsTrigger value="rate">Oceń</TabsTrigger>
+          <TabsTrigger value="alldata">Wszystkie dane</TabsTrigger>
         </TabsList>
 
         <TabsContent value="description" className="mt-6">
@@ -445,6 +446,206 @@ export default function ProductDetailM6Client({
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="alldata" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Wszystkie dane produktu z bazy</CardTitle>
+              <CardDescription>Kompletne informacje techniczne i metadane</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Basic Info */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 border-b pb-2">Podstawowe informacje</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <div><span className="font-medium">ID produktu:</span> <code className="bg-muted px-2 py-1 rounded">{productId}</code></div>
+                    <div><span className="font-medium">Status:</span> <Badge>{productData.status || 'unknown'}</Badge></div>
+                    {productCore?.identityHash && (
+                      <div><span className="font-medium">Identity Hash:</span> <code className="bg-muted px-2 py-1 rounded text-xs">{productCore.identityHash.substring(0, 32)}...</code></div>
+                    )}
+                    {productCore?.qualityScore && (
+                      <div><span className="font-medium">Quality Score:</span> <Badge variant={productCore.qualityScore >= 80 ? 'default' : 'secondary'}>{productCore.qualityScore}/100</Badge></div>
+                    )}
+                    {productCore?.createdAt && (
+                      <div><span className="font-medium">Utworzono:</span> {new Date(productCore.createdAt).toLocaleString('pl-PL')}</div>
+                    )}
+                    {productCore?.updatedAt && (
+                      <div><span className="font-medium">Zaktualizowano:</span> {new Date(productCore.updatedAt).toLocaleString('pl-PL')}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Categories */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 border-b pb-2">Kategorie</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {productData.mainCategorySlug && <Badge variant="outline">Main: {productData.mainCategorySlug}</Badge>}
+                    {productData.subCategorySlug && <Badge variant="outline">Sub: {productData.subCategorySlug}</Badge>}
+                    {productData.subSubCategorySlug && <Badge variant="outline">SubSub: {productData.subSubCategorySlug}</Badge>}
+                  </div>
+                </div>
+
+                {/* Search Tags */}
+                {productCore?.searchTags && productCore.searchTags.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Tagi wyszukiwania ({productCore.searchTags.length})</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {productCore.searchTags.map((tag: string, idx: number) => (
+                        <Badge key={idx} variant="secondary">{tag}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Specs - ALL fields */}
+                {specs && Object.keys(specs).length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Specyfikacja techniczna ({Object.keys(specs).length} pól)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      {Object.entries(specs).map(([key, value]) => (
+                        <div key={key} className="flex gap-2 border-b border-muted pb-1">
+                          <span className="font-medium min-w-[120px]">{key}:</span>
+                          <span className="text-muted-foreground break-words">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rating Details */}
+                {productCore?.rating && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Szczegóły oceny</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                      <div className="p-3 bg-muted rounded">
+                        <div className="text-2xl font-bold text-primary">{productCore.rating.score?.toFixed(2) || 0}</div>
+                        <div className="text-xs text-muted-foreground">Średnia ocena</div>
+                      </div>
+                      <div className="p-3 bg-muted rounded">
+                        <div className="text-2xl font-bold text-primary">{productCore.rating.count || 0}</div>
+                        <div className="text-xs text-muted-foreground">Liczba ocen</div>
+                      </div>
+                      {productCore.rating.distribution && (
+                        <>
+                          <div className="p-3 bg-muted rounded">
+                            <div className="text-2xl font-bold text-green-600">{productCore.rating.distribution['5'] || 0}</div>
+                            <div className="text-xs text-muted-foreground">5★</div>
+                          </div>
+                          <div className="p-3 bg-muted rounded">
+                            <div className="text-2xl font-bold text-red-600">{productCore.rating.distribution['1'] || 0}</div>
+                            <div className="text-xs text-muted-foreground">1★</div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Source Links */}
+                {productCore?.sourceLinks && productCore.sourceLinks.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Linki źródłowe ({productCore.sourceLinks.length})</h3>
+                    <div className="space-y-2">
+                      {productCore.sourceLinks.map((link: any, idx: number) => (
+                        <div key={idx} className="flex items-center gap-3 p-2 bg-muted rounded text-sm">
+                          <Badge>{link.source || 'unknown'}</Badge>
+                          <a 
+                            href={link.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-primary hover:underline truncate flex-1"
+                          >
+                            {link.url}
+                          </a>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Images Gallery */}
+                {imageUrls && imageUrls.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Galeria zdjęć ({imageUrls.length})</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {imageUrls.map((url: string, idx: number) => (
+                        <div key={idx} className="relative aspect-square bg-muted rounded overflow-hidden">
+                          <Image src={url} alt={`${title} - zdjęcie ${idx + 1}`} fill className="object-contain" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Metadata (import info) */}
+                {productCore?.metadata && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Metadane importu</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                      {productCore.metadata.source && (
+                        <div><span className="font-medium">Źródło:</span> <Badge variant="outline">{productCore.metadata.source}</Badge></div>
+                      )}
+                      {productCore.metadata.importedAt && (
+                        <div><span className="font-medium">Data importu:</span> {new Date(productCore.metadata.importedAt).toLocaleString('pl-PL')}</div>
+                      )}
+                      {productCore.metadata.originalId && (
+                        <div><span className="font-medium">ID źródłowe:</span> <code className="bg-muted px-2 py-1 rounded text-xs">{productCore.metadata.originalId}</code></div>
+                      )}
+                      {productCore.metadata.enrichedAt && (
+                        <div><span className="font-medium">Wzbogacono:</span> {new Date(productCore.metadata.enrichedAt).toLocaleString('pl-PL')}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* All Descriptions (multilingual) */}
+                {productCore?.description && typeof productCore.description === 'object' && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Opisy w różnych językach</h3>
+                    <Tabs defaultValue="pl" className="w-full">
+                      <TabsList>
+                        {productCore.description.pl && <TabsTrigger value="pl">Polski</TabsTrigger>}
+                        {productCore.description.en && <TabsTrigger value="en">English</TabsTrigger>}
+                        {productCore.description.de && <TabsTrigger value="de">Deutsch</TabsTrigger>}
+                      </TabsList>
+                      {productCore.description.pl && (
+                        <TabsContent value="pl" className="mt-4">
+                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
+                            {productCore.description.pl}
+                          </div>
+                        </TabsContent>
+                      )}
+                      {productCore.description.en && (
+                        <TabsContent value="en" className="mt-4">
+                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
+                            {productCore.description.en}
+                          </div>
+                        </TabsContent>
+                      )}
+                      {productCore.description.de && (
+                        <TabsContent value="de" className="mt-4">
+                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
+                            {productCore.description.de}
+                          </div>
+                        </TabsContent>
+                      )}
+                    </Tabs>
+                  </div>
+                )}
+
+                {/* Raw JSON dump dla debugowania */}
+                <details className="border rounded p-4">
+                  <summary className="font-semibold cursor-pointer">Raw JSON (dla programistów)</summary>
+                  <pre className="mt-3 p-3 bg-muted rounded text-xs overflow-x-auto">
+                    {JSON.stringify(productData, null, 2)}
+                  </pre>
+                </details>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
