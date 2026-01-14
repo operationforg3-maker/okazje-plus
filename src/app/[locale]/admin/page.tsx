@@ -310,15 +310,26 @@ function AdminPage() {
       } catch (error) {
         DEBUG && console.error('[AdminPage] Error fetching stats:', error);
         // Fallback to zeroed stats to keep UI stable when API fails
-        const fallback = {
+        const fallback: DashboardStats = {
           totals: { deals: 0, products: 0, users: 0 },
           pending: { deals: 0, products: 0 },
-          recent24h: { deals: 0, users: 0 },
-          totalSavings: 0,
-          timestamp: new Date().toISOString(),
+          new24h: { deals: 0, users: 0 },
+          avgTemperature: 0,
+          topCategories: [],
+          recentActivity: 0,
+          analytics: {
+            views: { total: 0, today: 0, trend: 0 },
+            clicks: { total: 0, today: 0, trend: 0 },
+            shares: { total: 0 },
+            conversionRate: 0,
+          },
+          growth: { deals: 0, products: 0, users: 0 },
+          categories: { total: 0, main: 0, sub: 0, subSub: 0 },
+          imports: { running: 0, queued: 0, completed24h: 0, failed24h: 0 },
+          harvester: { running: 0, created24h: 0 },
         };
-        setDashboardStats(fallback as any);
-        setStats(fallback.totals as any);
+        setDashboardStats(fallback);
+        setStats(fallback.totals);
       } finally {
         DEBUG && console.log('[AdminPage] Setting loading to false');
         setLoading(false);
@@ -393,14 +404,14 @@ function AdminPage() {
               <Flame className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.deals || 0}</div>
+              <div className="text-2xl font-bold">{stats?.deals ?? 0}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                {dashboardStats?.pending?.deals || 0} oczekujących
+                {dashboardStats?.pending?.deals ?? 0} oczekujących
                 {(dashboardStats?.pending?.deals ?? 0) > 0 && (
                   <Badge variant="secondary" className="ml-1">!</Badge>
                 )}
               </p>
-              {dashboardStats?.growth?.deals !== undefined && (
+              {(dashboardStats?.growth?.deals ?? 0) > 0 && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
                   +{dashboardStats?.growth?.deals} (24h)
@@ -417,14 +428,14 @@ function AdminPage() {
               <ShoppingCart className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.products || 0}</div>
+              <div className="text-2xl font-bold">{stats?.products ?? 0}</div>
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                {dashboardStats?.pending?.products || 0} oczekujących
+                {dashboardStats?.pending?.products ?? 0} oczekujących
                 {(dashboardStats?.pending?.products ?? 0) > 0 && (
                   <Badge variant="secondary" className="ml-1">!</Badge>
                 )}
               </p>
-              {dashboardStats?.growth?.products !== undefined && (
+              {(dashboardStats?.growth?.products ?? 0) > 0 && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
                   +{dashboardStats?.growth?.products} (24h)
@@ -441,11 +452,11 @@ function AdminPage() {
               <Users className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.users || 0}</div>
+              <div className="text-2xl font-bold">{stats?.users ?? 0}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Aktywni użytkownicy
               </p>
-              {dashboardStats?.growth?.users !== undefined && (
+              {(dashboardStats?.growth?.users ?? 0) > 0 && (
                 <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
                   +{dashboardStats?.growth?.users} (24h)
@@ -480,19 +491,19 @@ function AdminPage() {
             <Package className="h-4 w-4 text-cyan-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats?.categories?.total || 0}</div>
+            <div className="text-2xl font-bold">{dashboardStats?.categories?.total ?? 0}</div>
             <div className="mt-3 space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Główne:</span>
-                <span className="font-medium">{dashboardStats?.categories?.main || 0}</span>
+                <span className="font-medium">{dashboardStats?.categories?.main ?? 0}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Podkategorie:</span>
-                <span className="font-medium">{dashboardStats?.categories?.sub || 0}</span>
+                <span className="font-medium">{dashboardStats?.categories?.sub ?? 0}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Sub-sub:</span>
-                <span className="font-medium">{dashboardStats?.categories?.subSub || 0}</span>
+                <span className="font-medium">{dashboardStats?.categories?.subSub ?? 0}</span>
               </div>
             </div>
           </CardContent>
