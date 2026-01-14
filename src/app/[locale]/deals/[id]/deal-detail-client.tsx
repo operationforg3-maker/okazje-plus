@@ -194,21 +194,36 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
 
   const temperaturePercent = Math.min((temperature / 500) * 100, 100);
 
-  // Galeria - użyj deal.gallery, a w razie braku ProductCore.image lub dedukuj z metadata
-  const productImages = (productData as any)?.images && Array.isArray((productData as any).images) 
-    ? (productData as any).images 
-    : [(productData as any)?.image || (productData as any)?.metadata?.images?.[0]].filter(Boolean);
-    
-  const images = deal.gallery && deal.gallery.length > 0 
-    ? deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }))
-    : productImages.length > 0
-      ? productImages.map((url: string, idx: number) => ({ id: idx.toString(), src: url, alt: deal.title }))
-      : [{ id: '0', src: deal.image, alt: deal.title }];
+  // Galeria i specyfikacje — oblicz na kliencie tylko aby uniknąć hydration mismatch
+  const [images, setImages] = useState<Array<{ id: string; src: string; alt: string }> | null>(null);
+  const [specifications, setSpecifications] = useState<any[]>([]);
 
-  const specifications = (deal.metadata as any)?.specifications 
-    || (productData as any)?.metadata?.specifications
-    || (productData as any)?.specs
-    || [];
+  useEffect(() => {
+    // Bezpieczne obliczenie galerii na kliencie
+    let computedImages: Array<{ id: string; src: string; alt: string }> = [];
+    
+    if (deal.gallery && deal.gallery.length > 0) {
+      computedImages = deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: deal.title }));
+    } else if (productData && typeof productData === 'object') {
+      const productImg = (productData as any).image || (productData as any)?.metadata?.images?.[0];
+      if (productImg) {
+        computedImages = [{ id: '0', src: productImg, alt: deal.title }];
+      }
+    }
+    
+    if (computedImages.length === 0) {
+      computedImages = [{ id: '0', src: deal.image, alt: deal.title }];
+    }
+    
+    setImages(computedImages);
+
+    // Specyfikacje
+    const specs = (deal.metadata as any)?.specifications 
+      || (productData as any)?.metadata?.specifications
+      || (productData as any)?.specs
+      || [];
+    setSpecifications(specs);
+  }, [deal, productData]);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -350,16 +365,22 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
         <div className="relative">
           <div className="sticky top-8 space-y-4">
             <div className="relative aspect-[4/3] bg-card rounded-xl shadow-lg overflow-hidden border">
-              <Image
-                src={images[currentImageIndex].src}
-                alt={dealTitle}
-                fill
-                className="object-contain p-4 md:p-8"
-                priority
-              />
+              {images && images.length > 0 ? (
+                <Image
+                  src={images[currentImageIndex].src}
+                  alt={dealTitle}
+                  fill
+                  className="object-contain p-4 md:p-8"
+                  priority
+                />
+              ) : (
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <Package className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
               
               {/* Gallery navigation */}
-              {images.length > 1 && (
+              {images && images.length > 1 && (
                 <>
                   <Button
                     size="icon"
@@ -430,7 +451,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
             </div>
 
             {/* Thumbnail gallery */}
-            {images.length > 1 && (
+            {images && images.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {images.map((img, idx) => (
                   <button
