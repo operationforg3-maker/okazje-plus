@@ -9,8 +9,9 @@ import { describe, it, expect, beforeAll } from '@jest/globals';
 const ADMIN_TOKEN = process.env.TEST_ADMIN_TOKEN || 'mock-admin-token';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9002';
 
-// Skip moderation tests in CI - they require a running API server
-const describeOrSkip = process.env.CI ? describe.skip : describe;
+// Skip moderation tests - they require a running API server
+// To run: start dev server (npm run dev) and run with ENABLE_INTEGRATION_TESTS=true
+const describeOrSkip = process.env.ENABLE_INTEGRATION_TESTS ? describe : describe.skip;
 
 describeOrSkip('Moderation System', () => {
   describe('User Moderation', () => {
