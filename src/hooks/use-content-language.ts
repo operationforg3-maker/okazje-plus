@@ -1,13 +1,16 @@
 'use client';
 
 /**
- * React Hook for Content Language Detection and Management (M4 Enhanced)
+ * React Hook for Content Language Detection and Management (M4 Enhanced + M6 URL sync)
  * 
  * Detects user's preferred language and provides utilities for i18n content
  * with intelligent fallback chain for LocalizedText objects
+ * 
+ * M6: Now syncs with next-intl locale from URL params
  */
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { SupportedLanguage } from '@/lib/i18n-content';
 import { LocalizedText, getLocalizedText } from '@/lib/i18n-utils';
 
@@ -53,21 +56,28 @@ function setStoredLanguage(lang: SupportedLanguage): void {
 }
 
 /**
- * Hook for managing content language (M4 Enhanced)
+ * Hook for managing content language (M6 Enhanced - URL sync)
+ * 
+ * Priority: 1. URL locale (/[locale]/...), 2. Stored preference, 3. Browser, 4. Default
  */
 export function useContentLanguage() {
-  const [language, setLanguageState] = useState<SupportedLanguage>(DEFAULT_LANGUAGE);
+  const params = useParams();
+  const urlLocale = params?.locale as SupportedLanguage | undefined;
+  
+  const [language, setLanguageState] = useState<SupportedLanguage>(
+    urlLocale || DEFAULT_LANGUAGE
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Priority: 1. Stored preference, 2. Browser language, 3. Default
+    // Priority: 1. URL locale (highest), 2. Stored preference, 3. Browser language, 4. Default
     const stored = getStoredLanguage();
     const detected = detectBrowserLanguage();
     
-    const initialLang = stored || detected;
-    setLanguageState(initialLang);
+    const finalLang = urlLocale || stored || detected;
+    setLanguageState(finalLang);
     setIsLoading(false);
-  }, []);
+  }, [urlLocale]);
 
   const setLanguage = (lang: SupportedLanguage) => {
     setLanguageState(lang);

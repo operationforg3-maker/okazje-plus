@@ -76,14 +76,10 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? null);
 
   // Get title in current language (ProductCore has multilingual title)
-  const displayTitle = typeof product.title === 'object'
-    ? (product.title.pl || product.title.en || product.title.de || 'Produkt')
-    : (product.title || 'Produkt');
+  const displayTitle = getText(product.title) || 'Produkt';
   
   // Description - ProductCore shortDescription is multilingual
-  const descriptionText = typeof product.shortDescription === 'object'
-    ? (product.shortDescription.pl || product.shortDescription.en || product.shortDescription.de || '')
-    : (product.shortDescription || '');
+  const descriptionText = getText(product.shortDescription) || '';
   const description = safeText(descriptionText).substring(0, 120);
 
   // Price from ProductCore.bestPrice (fallback)
@@ -261,7 +257,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
               variant="secondary"
               onClick={() => addItem({
                 id: bestDeal?.id || productId,
-                name: typeof product.title === 'object' ? (product.title.pl || product.title.en || 'Produkt') : (product.title as any) || 'Produkt',
+                name: getText(product.title) || 'Produkt',
                 image: Array.isArray(product.images) ? product.images[0] : '',
                 price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
                 affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),

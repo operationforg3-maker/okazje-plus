@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ProductCore, DealM6, ProductRating, Product } from '@/lib/types';
@@ -53,6 +54,8 @@ export default function ProductDetailM6Client({
   isM6 
 }: Props) {
   const { user } = useAuth();
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
   const [userRating, setUserRating] = useState<ProductRating | null>(null);
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'rate'>('description');
@@ -83,14 +86,20 @@ export default function ProductDetailM6Client({
     return <div className="page-container py-12 text-center">Loading...</div>;
   }
 
-  // Extract data
-  const title = typeof productData.title === 'object' 
-    ? (productData.title.pl || productData.title.en || 'Produkt')
-    : ('title' in productData ? productData.title : 'Produkt');
-    
-  // Spójne rozwiązanie description z page.tsx metadata
+  // Helper: get text in current locale
+  const getLocalizedText = (field: any, fallback: string = ''): string => {
+    if (!field) return fallback;
+    if (typeof field === 'string') return field;
+    if (typeof field === 'object') {
+      return field[locale] || field.pl || field.en || field.de || fallback;
+    }
+    return fallback;
+  };
+
+  // Extract data with locale support
+  const title = getLocalizedText(productData.title, 'Produkt');
   const description = isM6 
-    ? (typeof productCore?.description === 'object' ? (productCore.description.pl || productCore.description.en || '') : (typeof productCore?.description === 'string' ? productCore.description : ''))
+    ? getLocalizedText(productCore?.description, '')
     : (product?.description || '');
 
   // Images - M6 has images array, legacy has single image
@@ -137,7 +146,7 @@ export default function ProductDetailM6Client({
   const asLegacyProduct = (): Product => {
     return {
       id: productId,
-      name: typeof productData.title === 'object' ? (productData.title.pl || productData.title.en || 'Produkt') : (productData as any).name || 'Produkt',
+      name: getLocalizedText(productData.title, 'Produkt'),
       image: imageUrls?.[0] || (product as any)?.image || '',
       price: { amount: priceAmount, currency: 'PLN' } as any,
       affiliateUrl: bestDeal?.affiliateLink || (bestDeal as any)?.sourceUrl || (productData as any)?.affiliateUrl,
