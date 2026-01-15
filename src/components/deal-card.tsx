@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 // TEMPORARILY REMOVED FOR DEBUGGING React #418:
 // import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 // import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
@@ -534,18 +535,17 @@ export default function DealCard({ deal, product }: DealCardProps) {
       )}
       
       <div className="flex-grow space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-5">
-        <div className="flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            {categoryLabel && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Tag className="h-3 w-3 md:h-4 md:w-4" aria-hidden />
-                {categoryLabel}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
+        {/* Category Breadcrumb - 3 levels with translations */}
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <CategoryBreadcrumb
+            mainCategorySlug={deal.mainCategorySlug}
+            subCategorySlug={deal.subCategorySlug}
+            subSubCategorySlug={deal.subSubCategorySlug}
+            className="flex-grow"
+          />
+          <div className="flex items-center gap-1 flex-shrink-0">
             <Clock className="h-3 w-3 md:h-4 md:w-4" />
-            <span>{relativeTime}</span>
+            <span className="text-[10px] sm:text-xs">{relativeTime}</span>
           </div>
         </div>
 

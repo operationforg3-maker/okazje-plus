@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { 
   ChevronRight, 
   ExternalLink, 
@@ -341,25 +342,24 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
 
   return (
     <div className="page-container py-4 md:py-8 lg:py-12">
-      {/* Breadcrumbs */}
-      <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
-        <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>
-        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-        <Link href="/deals" className="hover:text-primary transition-colors whitespace-nowrap">Okazje</Link>
-        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-        <Link href={`/deals?category=${deal.mainCategorySlug}`} className="hover:text-primary transition-colors whitespace-nowrap">
-          {deal.mainCategorySlug}
-        </Link>
-        {deal.subCategorySlug && (
-          <>
-            <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-            <Link href={`/deals?category=${deal.mainCategorySlug}&sub=${deal.subCategorySlug}`} className="hover:text-primary transition-colors whitespace-nowrap">
-              {deal.subCategorySlug}
-            </Link>
-          </>
-        )}
-        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-        <span className="font-medium text-foreground truncate max-w-[200px]">{dealTitle}</span>
+      {/* Breadcrumbs - Navigation + Categories */}
+      <div className="mb-4 md:mb-6 space-y-2">
+        {/* Main navigation breadcrumb */}
+        <div className="flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
+          <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>
+          <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+          <Link href="/deals" className="hover:text-primary transition-colors whitespace-nowrap">Okazje</Link>
+          <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+          <span className="font-medium text-foreground truncate max-w-[200px]">{dealTitle}</span>
+        </div>
+
+        {/* Category breadcrumb with 3 levels + translations */}
+        <CategoryBreadcrumb
+          mainCategorySlug={deal.mainCategorySlug}
+          subCategorySlug={deal.subCategorySlug}
+          subSubCategorySlug={deal.subSubCategorySlug}
+          className="pl-0"
+        />
       </div>
 
       {/* Main Deal Section */}
