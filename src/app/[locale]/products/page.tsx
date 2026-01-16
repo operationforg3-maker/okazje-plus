@@ -154,6 +154,8 @@ function ProductsPageContent() {
           const filterConfig = {
             ...unifiedFilters,
             categoryId: selectedCategory?.id || selectedCategory?.slug || unifiedFilters.categoryId,
+            subCategorySlug: selectedSubcategory || undefined,
+            subSubCategorySlug: selectedSubSubcategory || undefined,
           };
           const filteredProducts = await getProductCoresByFilters(filterConfig, sortBy, 100);
           if (!cancelled) setProducts(filteredProducts);

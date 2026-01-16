@@ -2610,6 +2610,8 @@ export async function getProductCoresByFilters(
     inStockOnly?: boolean;
     discountOnly?: boolean;
     categoryId?: string;
+    subCategorySlug?: string;
+    subSubCategorySlug?: string;
     brands?: string[];
     searchTerm?: string;
   },
@@ -2620,7 +2622,15 @@ export async function getProductCoresByFilters(
     // Build base query constraints
     let constraints = [where('status', '==', 'approved')];
     
-    if (filters.categoryId) {
+    // Hierarchical category filtering
+    if (filters.subSubCategorySlug) {
+      // Most specific: filter by sub-subcategory
+      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+    } else if (filters.subCategorySlug) {
+      // Filter by subcategory (includes all sub-subcategories)
+      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+    } else if (filters.categoryId) {
+      // Filter by main category (includes all subcategories and sub-subcategories)
       constraints.push(where('mainCategorySlug', '==', filters.categoryId));
     }
 
@@ -2707,6 +2717,8 @@ export async function getDealsByFilters(
     discountOnly?: boolean;
     minDiscount?: number;
     categoryId?: string;
+    subCategorySlug?: string;
+    subSubCategorySlug?: string;
     sources?: Array<'aliexpress' | 'amazon' | 'allegro'>;
     searchTerm?: string;
   },
@@ -2716,7 +2728,15 @@ export async function getDealsByFilters(
   try {
     const constraints = [where('status', '==', 'approved')];
 
-    if (filters.categoryId) {
+    // Hierarchical category filtering
+    if (filters.subSubCategorySlug) {
+      // Most specific: filter by sub-subcategory
+      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+    } else if (filters.subCategorySlug) {
+      // Filter by subcategory (includes all sub-subcategories)
+      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+    } else if (filters.categoryId) {
+      // Filter by main category (includes all subcategories and sub-subcategories)
       constraints.push(where('mainCategorySlug', '==', filters.categoryId));
     }
 
@@ -2734,6 +2754,29 @@ export async function getDealsByFilters(
     // Client-side filtering for complex conditions
     let filtered = deals.filter(d => {
       const deal = d as Deal;
+      
+      // M6 Migration: Handle deals that may have old category structure
+      // If mainCategorySlug is missing, try to parse from legacy 'category' field
+      let mainCat = deal.mainCategorySlug;
+      let subCat = deal.subCategorySlug;
+      let subSubCat = deal.subSubCategorySlug;
+      
+      if ((!mainCat || mainCat === 'uncategorized') && (deal as any).category) {
+        const parts = ((deal as any).category as string).split('/');
+        mainCat = parts[0] || 'uncategorized';
+        subCat = parts[1] || 'uncategorized';
+        subSubCat = parts[2] || undefined;
+      }
+      
+      // M6 Category filtering (hierarchical fallback for client-side)
+      if (filters.subSubCategorySlug) {
+        if (subSubCat !== filters.subSubCategorySlug) return false;
+      } else if (filters.subCategorySlug) {
+        if (subCat !== filters.subCategorySlug) return false;
+      } else if (filters.categoryId) {
+        if (mainCat !== filters.categoryId) return false;
+      }
+      
       // Price range
       if (filters.priceRange) {
         const price = (deal as any).priceV2?.amount || deal.price || 0;

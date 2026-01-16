@@ -353,6 +353,8 @@ export default function DealsPage() {
           const filterConfig = {
             ...unifiedFilters,
             categoryId: selectedCategory?.id || selectedCategory?.slug || unifiedFilters.categoryId,
+            subCategorySlug: selectedSubcategory || undefined,
+            subSubCategorySlug: selectedSubSubcategory || undefined,
           };
           const filteredDeals = await retryWithBackoff(() => getDealsByFilters(filterConfig, sortBy, 100), 2, 500);
           if (!cancelled) setDeals(filteredDeals || []);

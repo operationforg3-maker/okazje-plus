@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Zap, Copy, Trash2, Activity, Settings } from "lucide-react";
+import { AlertCircle, Zap, Copy, Trash2, Activity, Settings, Wrench } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
 import { JobsMonitor } from "@/components/admin/jobs-monitor";
@@ -33,6 +33,8 @@ export default function ImportExportPage() {
   const [result, setResult] = useState<any>(null);
   const [sessions, setSessions] = useState<ImportSession[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [migrationResult, setMigrationResult] = useState<any>(null);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   // Config produkty
   const [batchSize, setBatchSize] = useState(500);
@@ -68,6 +70,31 @@ export default function ImportExportPage() {
     };
     setSessions((prev) => [session, ...prev]);
     return session;
+  };
+
+  const runDealCategoryMigration = async () => {
+    setIsMigrating(true);
+    setMigrationResult(null);
+    try {
+      const token = await getAuthToken();
+      const res = await fetch("/api/admin/migrate-deal-categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setMigrationResult(data);
+      if (data.success) {
+        toast.success(`✅ Fixed ${data.fixed} deals, ${data.missing} missing`);
+      } else {
+        toast.error(`❌ Migration error: ${data.error}`);
+      }
+    } catch (e: any) {
+      console.error('Migration error:', e);
+      setMigrationResult({ error: e?.message || "Failed" });
+      toast.error("Migration error");
+    } finally {
+      setIsMigrating(false);
+    }
   };
 
   const runDryRun = async () => {
@@ -249,7 +276,7 @@ export default function ImportExportPage() {
       </div>
 
       <Tabs defaultValue="import" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="import" className="gap-2">
             <Copy className="h-4 w-4" />
             Import JSON
@@ -261,6 +288,10 @@ export default function ImportExportPage() {
           <TabsTrigger value="queue" className="gap-2">
             <Settings className="h-4 w-4" />
             Job Queue
+          </TabsTrigger>
+          <TabsTrigger value="tools" className="gap-2">
+            <Wrench className="h-4 w-4" />
+            Narzędzia M6
           </TabsTrigger>
         </TabsList>
 
@@ -468,6 +499,53 @@ export default function ImportExportPage() {
             </CardHeader>
             <CardContent>
               <JobQueueManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tools" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5" />
+                Migracja Kategorii Dealów (M6)
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Przypisz kategorie do starych dealów, które ich nie mają
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+                ℹ️ Ta migracja znajduje deale bez mainCategorySlug i przypisuje je z ProductCore
+              </p>
+              
+              <Button 
+                onClick={runDealCategoryMigration}
+                disabled={isMigrating}
+                size="lg"
+                className="w-full"
+              >
+                {isMigrating ? "Migruje..." : "🚀 Uruchom migrację kategorii"}
+              </Button>
+
+              {migrationResult && (
+                <div className={`mt-4 p-4 rounded border ${migrationResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  {migrationResult.success ? (
+                    <>
+                      <p className="font-semibold text-green-900">✅ Migracja zakończona!</p>
+                      <p className="text-sm text-green-800 mt-1">Naprawiono: {migrationResult.fixed} dealów</p>
+                      {migrationResult.missing > 0 && (
+                        <p className="text-sm text-amber-800 mt-1">Błędy: {migrationResult.missing} dealów</p>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-semibold text-red-900">❌ Błąd</p>
+                      <p className="text-sm text-red-800 mt-1">{migrationResult.error}</p>
+                    </>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
