@@ -151,12 +151,13 @@ export function CategoryBreadcrumb({
       {subSubCategorySlug && (
         <>
           <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-          <span
-            className="truncate"
+          <Link
+            href={`/${locale}/categories/${mainCategorySlug}/${subCategorySlug}/${subSubCategorySlug}`}
+            className="hover:text-foreground transition-colors truncate"
             title={getText(labels.subsub)}
           >
             {getText(labels.subsub) || subSubCategorySlug}
-          </span>
+          </Link>
         </>
       )}
     </nav>
