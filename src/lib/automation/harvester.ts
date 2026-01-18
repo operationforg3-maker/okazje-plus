@@ -1031,10 +1031,6 @@ export class SmartHarvester {
       } else if (typeof deal.price === 'number') {
         // Legacy format: number
         priceAmount = deal.price;
-      } else if (deal.priceV2?.amount !== undefined) {
-        // Fallback to priceV2 if available
-        priceAmount = deal.priceV2.amount;
-        priceCurrency = deal.priceV2.currency || 'PLN';
       }
       
       const shippingCost = (deal.shipping?.cost as any) || 0;

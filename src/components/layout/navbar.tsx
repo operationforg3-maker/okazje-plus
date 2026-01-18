@@ -34,7 +34,7 @@ export function Navbar() {
   const [cartMenuOpen, setCartMenuOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
   const { user, loading } = useAuth();
-  const { items: comparisonItems } = useComparison();
+  const { addToComparison } = useComparison();
   const cartMenuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
