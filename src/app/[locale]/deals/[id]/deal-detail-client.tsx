@@ -134,9 +134,22 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
 
   const { currency } = useCurrency();
   // Format prices on client using unified currency
+  // M6: Support both legacy (deal.price = number) and new (deal.price = {amount, currency}) formats
   useEffect(() => {
     const userCurrency = currency || 'PLN';
-    const formatted = CurrencyManager.formatPrice(deal.price, userCurrency);
+    
+    // M6 compatibility: Extract price from either structure
+    let priceAmount = 0;
+    if (typeof deal.price === 'number') {
+      priceAmount = deal.price; // Legacy format
+    } else if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
+      priceAmount = deal.price.amount; // M6 format: price.amount
+    } else if (deal.legacyPrice !== undefined) {
+      priceAmount = deal.legacyPrice; // Fallback to legacyPrice field
+    }
+    
+    const safePrice = Number(priceAmount) || 0;
+    const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
     
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
@@ -147,11 +160,11 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
       formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
       
       if (deal.originalPrice > 0) {
-        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
+        calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
       }
       
-      if (deal.originalPrice > deal.price) {
-        savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
+      if (deal.originalPrice > safePrice) {
+        savings = CurrencyManager.formatPrice(deal.originalPrice - safePrice, userCurrency);
       }
     }
     

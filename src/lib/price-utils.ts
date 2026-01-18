@@ -178,3 +178,34 @@ export function createSmartPrice(
     lastUpdated: new Date().toISOString(),
   };
 }
+
+/**
+ * M6 Deal Compatibility: Extract price amount from deal
+ * Supports both legacy (deal.price = number) and M6 (deal.price = {amount, currency}) formats
+ */
+export function extractDealPriceAmount(deal: any): number {
+  if (!deal) return 0;
+
+  // M6 format: price.amount
+  if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
+    return Number(deal.price.amount) || 0;
+  }
+
+  // Legacy format: price is number
+  if (typeof deal.price === 'number') {
+    return deal.price;
+  }
+
+  // Fallback: legacyPrice field
+  if (typeof deal.legacyPrice === 'number') {
+    return deal.legacyPrice;
+  }
+
+  // Last resort: try to parse as string
+  if (typeof deal.price === 'string') {
+    const parsed = parseFloat(deal.price);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+}

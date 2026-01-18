@@ -143,12 +143,13 @@ export function matchesSavedSearch(deal: any, search: SavedSearch): boolean {
     }
   }
 
-  // Price filters
-  if (filters.minPrice !== undefined && deal.price < filters.minPrice) {
+  // Price filters (M6 compatible: handle both deal.price number and deal.price.amount)
+  const dealPrice = extractDealPriceAmount(deal);
+  if (filters.minPrice !== undefined && dealPrice < filters.minPrice) {
     return false;
   }
 
-  if (filters.maxPrice !== undefined && deal.price > filters.maxPrice) {
+  if (filters.maxPrice !== undefined && dealPrice > filters.maxPrice) {
     return false;
   }
 

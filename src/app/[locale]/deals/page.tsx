@@ -400,7 +400,10 @@ export default function DealsPage() {
         }
         if (quickFilters.verified && !deal.merchant) return false;
 
-        if (deal.price < priceRange[0] || deal.price > priceRange[1]) return false;
+        // M6 compatible: extract price from both legacy and M6 formats
+        const { extractDealPriceAmount } = await import('@/lib/price-utils');
+        const dealPrice = extractDealPriceAmount(deal);
+        if (dealPrice < priceRange[0] || dealPrice > priceRange[1]) return false;
 
         return true;
       })
@@ -410,14 +413,23 @@ export default function DealsPage() {
             return b.temperature - a.temperature;
           case 'newest':
             return toTimestamp((b as any).postedAt) - toTimestamp((a as any).postedAt);
-          case 'price_asc':
-            return a.price - b.price;
-          case 'price_desc':
-            return b.price - a.price;
-          case 'discount':
-            const discountA = a.originalPrice ? ((a.originalPrice - a.price) / a.originalPrice) * 100 : 0;
-            const discountB = b.originalPrice ? ((b.originalPrice - b.price) / b.originalPrice) * 100 : 0;
+          case 'price_asc': {
+            const priceA = extractDealPriceAmount(a);
+            const priceB = extractDealPriceAmount(b);
+            return priceA - priceB;
+          }
+          case 'price_desc': {
+            const priceA = extractDealPriceAmount(a);
+            const priceB = extractDealPriceAmount(b);
+            return priceB - priceA;
+          }
+          case 'discount': {
+            const priceA = extractDealPriceAmount(a);
+            const priceB = extractDealPriceAmount(b);
+            const discountA = a.originalPrice ? ((a.originalPrice - priceA) / a.originalPrice) * 100 : 0;
+            const discountB = b.originalPrice ? ((b.originalPrice - priceB) / b.originalPrice) * 100 : 0;
             return discountB - discountA;
+          }
           default:
             return 0;
         }

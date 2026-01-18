@@ -107,6 +107,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const temperaturePercent = Math.min((deal.temperature / 500) * 100, 100);
 
   // Initialize time-dependent values and format prices on client to fix hydration mismatch
+  // M6: Support both legacy (deal.price = number) and new (deal.price = {amount, currency}) formats
   useEffect(() => {
     const posted = new Date(deal.postedAt);
     const now = new Date();
@@ -117,7 +118,18 @@ export default function DealListCard({ deal }: DealListCardProps) {
     
     // Format prices using unified currency system
     const userCurrency = currency || 'PLN';
-    const safePrice = typeof deal.price === 'number' ? deal.price : Number(deal.price) || 0;
+    
+    // M6 compatibility: Extract price from either structure
+    let priceAmount = 0;
+    if (typeof deal.price === 'number') {
+      priceAmount = deal.price; // Legacy format
+    } else if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
+      priceAmount = deal.price.amount; // M6 format: price.amount
+    } else if (deal.legacyPrice !== undefined) {
+      priceAmount = deal.legacyPrice; // Fallback to legacyPrice field
+    }
+    
+    const safePrice = Number(priceAmount) || 0;
     const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
     
     let formattedOrig: string | null = null;
@@ -128,11 +140,11 @@ export default function DealListCard({ deal }: DealListCardProps) {
       formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
       
       if (deal.originalPrice > 0) {
-        calculatedDiscount = Math.round(100 - (deal.price / deal.originalPrice) * 100);
+        calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
       }
       
-      if (deal.originalPrice > deal.price) {
-        savings = CurrencyManager.formatPrice(deal.originalPrice - deal.price, userCurrency);
+      if (deal.originalPrice > safePrice) {
+        savings = CurrencyManager.formatPrice(deal.originalPrice - safePrice, userCurrency);
       }
     }
     
