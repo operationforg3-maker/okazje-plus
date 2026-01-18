@@ -184,6 +184,7 @@ export class SmartHarvester {
     
     // For tree mode, use categories; otherwise use the query parameter
     const queries = (isTreeMode && categories && categories.length > 0) ? categories : [query];
+    const processedCategoriesLog: HarvesterJob['processedCategories'] = [];
     
     this.addLog('info', `Starting harvest job: source=${source}, mode=${isTreeMode ? 'category-tree' : 'single'}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
 
@@ -199,6 +200,9 @@ export class SmartHarvester {
       dealsCreated: 0,
       duplicatesSkipped: 0,
       errors: [],
+      currentCategory: queries[0] || '',
+      totalCategories: queries.length,
+      processedCategories: [],
       startedAt: jobStartTime,
       lastUpdatedAt: jobStartTime,
       logs: this.logs,
@@ -216,6 +220,27 @@ export class SmartHarvester {
       // Iterate through all provided queries/categories
       for (const currentQuery of queries) {
         this.addLog('info', `Processing query/category: ${currentQuery}`);
+        let categoryProductsCreated = 0; // Local counter for this category
+
+        // Update current category in status
+        await this.updateJobRecord({
+           id: this.jobId,
+           status: 'running',
+           source,
+           query: queries.join(', '),
+           maxResults,
+           productsFound,
+           productsCreated,
+           dealsCreated,
+           duplicatesSkipped,
+           errors,
+           currentCategory: currentQuery,
+           totalCategories: queries.length,
+           processedCategories: processedCategoriesLog,
+           startedAt: jobStartTime,
+           lastUpdatedAt: new Date().toISOString(),
+           logs: this.logs,
+        });
         
         try {
           // Step 1: Fetch products from source API
@@ -310,6 +335,7 @@ export class SmartHarvester {
                   categoryInfo
                 );
                 productsCreated++;
+                categoryProductsCreated++;
 
                 // Create associated deal
                 const dealId = await this.createDeal(
@@ -345,6 +371,9 @@ export class SmartHarvester {
                   dealsCreated,
                   duplicatesSkipped,
                   errors,
+                  currentCategory: currentQuery,
+                  totalCategories: queries.length,
+                  processedCategories: processedCategoriesLog,
                   startedAt: jobStartTime,
                   lastUpdatedAt: new Date().toISOString(),
                   logs: this.logs,
@@ -375,6 +404,33 @@ export class SmartHarvester {
             timestamp: new Date().toISOString(),
           });
         }
+        
+        // Log finished category
+        processedCategoriesLog.push({
+          category: currentQuery,
+          count: categoryProductsCreated,
+          status: 'ok' // If we caught an error above, we could set 'error', but generally we continued
+        });
+        
+        // Force update after category finish
+        await this.updateJobRecord({
+           id: this.jobId,
+           status: 'running',
+           source,
+           query: queries.join(', '),
+           maxResults,
+           productsFound,
+           productsCreated,
+           dealsCreated,
+           duplicatesSkipped,
+           errors,
+           currentCategory: currentQuery,
+           totalCategories: queries.length,
+           processedCategories: processedCategoriesLog,
+           startedAt: jobStartTime,
+           lastUpdatedAt: new Date().toISOString(),
+           logs: this.logs,
+        });
       }
 
       // Step 3: Update job record
@@ -390,6 +446,9 @@ export class SmartHarvester {
         dealsCreated,
         duplicatesSkipped,
         errors,
+        currentCategory: queries[queries.length - 1] || '',
+        totalCategories: queries.length,
+        processedCategories: processedCategoriesLog,
         startedAt: jobStartTime,
         completedAt: jobEndTime,
         lastUpdatedAt: jobEndTime,
@@ -1105,6 +1164,9 @@ export class SmartHarvester {
       dealsCreated: job.dealsCreated,
       duplicatesSkipped: job.duplicatesSkipped,
       errors: job.errors || [],
+      processedCategories: job.processedCategories || [],
+      currentCategory: job.currentCategory || null,
+      totalCategories: job.totalCategories || 0,
       startedAt: job.startedAt,
       completedAt: job.completedAt || null,
       lastUpdatedAt: job.lastUpdatedAt,

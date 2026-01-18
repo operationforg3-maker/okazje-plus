@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
 import { HarvesterJob } from '@/lib/types';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/harvester-jobs
  * 

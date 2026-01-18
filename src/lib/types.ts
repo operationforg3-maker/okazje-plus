@@ -2453,6 +2453,15 @@ export interface HarvesterJob {
   query: string; // Search term or category ID
   maxResults: number;
   
+  // Progress Tracking (M6 Enhanced Control)
+  currentCategory?: string;
+  totalCategories?: number;
+  processedCategories?: Array<{
+    category: string;
+    count: number;
+    status: 'ok' | 'error';
+  }>;
+
   // Results
   productsFound: number;
   productsCreated: number;

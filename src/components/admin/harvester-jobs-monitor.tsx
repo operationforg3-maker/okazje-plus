@@ -5,24 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, CheckCircle, Clock, Loader2, Trash2, Zap } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { AlertCircle, CheckCircle, Clock, Loader2, Trash2, Zap, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth';
-
-interface HarvesterJob {
-  id: string;
-  source: string;
-  query: string;
-  maxResults: number;
-  status: 'running' | 'completed' | 'failed' | 'paused';
-  productsFound: number;
-  productsCreated: number;
-  dealsCreated: number;
-  duplicatesSkipped: number;
-  startedAt: string;
-  completedAt?: string;
-  logs: any[];
-}
+import type { HarvesterJob } from '@/lib/types';
 
 interface HarvesterJobsMonitorProps {
   onConsoleLog?: (message: string, type?: 'info' | 'success' | 'error' | 'warning') => void;
@@ -353,6 +340,7 @@ export function HarvesterJobsMonitor({ onConsoleLog }: HarvesterJobsMonitorProps
 }
 
 function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
   const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
     running: { color: 'bg-blue-100 text-blue-900', icon: Loader2, label: '⏳ W trakcie' },
     completed: { color: 'bg-green-100 text-green-900', icon: CheckCircle, label: '✅ Ukończone' },
@@ -363,6 +351,11 @@ function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) 
   const config = statusConfig[job.status] || statusConfig.failed;
   const Icon = config.icon;
 
+  const totalCats = job.totalCategories || 0;
+  const processedCats = job.processedCategories || [];
+  const progress = totalCats > 0 ? Math.round((processedCats.length / totalCats) * 100) : 0;
+  const currentCat = job.currentCategory || '';
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -370,7 +363,7 @@ function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) 
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <CardTitle className="text-base">
-                {job.source.toUpperCase()} — {job.query}
+                {job.source.toUpperCase()} — {job.query.substring(0, 50)}{job.query.length > 50 ? '...' : ''}
               </CardTitle>
               <Badge className={config.color}>
                 {job.status === 'running' && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
@@ -378,7 +371,7 @@ function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) 
               </Badge>
             </div>
             <CardDescription className="text-xs mt-1">
-              Limit: {job.maxResults} produktów
+              Limit: {job.maxResults} | ID: {job.id.substring(0, 8)}
             </CardDescription>
           </div>
           <Button
@@ -393,6 +386,22 @@ function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) 
       </CardHeader>
 
       <CardContent>
+        {/* Progress Section */}
+        {totalCats > 0 && (
+          <div className="mb-4 space-y-2">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Postęp kategorii: {processedCats.length} / {totalCats}</span>
+              <span>{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" />
+            {job.status === 'running' && currentCat && (
+              <p className="text-xs text-blue-600 font-medium animate-pulse mt-1">
+                Obecnie: {currentCat}
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-4 gap-4 text-sm">
           <div>
             <p className="text-muted-foreground text-xs">Znalezione</p>
@@ -411,6 +420,39 @@ function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) 
             <p className="text-lg font-semibold text-amber-600">{job.duplicatesSkipped}</p>
           </div>
         </div>
+
+        {/* Collapsible Details */}
+        {processedCats.length > 0 && (
+          <div className="mt-4 border-t pt-2">
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               className="w-full flex justify-between h-8 text-xs text-muted-foreground"
+               onClick={() => setExpanded(!expanded)}
+             >
+               <span>Szczegóły kategorii ({processedCats.length})</span>
+               {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+             </Button>
+             
+             {expanded && (
+               <div className="mt-2 text-xs space-y-1 max-h-40 overflow-y-auto bg-slate-50 dark:bg-slate-900 p-2 rounded border">
+                 {processedCats.map((cat: any, i: number) => (
+                   <div key={i} className="flex justify-between items-center border-b last:border-0 pb-1 border-slate-100 dark:border-slate-800">
+                     <span className="truncate flex-1 mr-2" title={cat.category}>{cat.category}</span>
+                     <div className="flex items-center gap-2">
+                       <span className="font-mono">{cat.count} prod.</span>
+                       {cat.status === 'ok' ? (
+                         <CheckCircle className="h-3 w-3 text-green-500" />
+                       ) : (
+                         <AlertCircle className="h-3 w-3 text-red-500" />
+                       )}
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             )}
+          </div>
+        )}
 
         <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
