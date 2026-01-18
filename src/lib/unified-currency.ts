@@ -175,12 +175,25 @@ class CurrencyManager {
    * Convert amount from source currency to PLN
    * Used primarily during import/harvesting
    */
-  static convertToPLN(amount: number, sourceCurrency: Currency): number {
-    if (sourceCurrency === 'PLN') {
+  static convertToPLN(amount: number, sourceCurrency: Currency | string): number {
+    // Basic validation
+    if (!amount || isNaN(amount)) return 0;
+    
+    // Normalize currency code
+    const currency = (sourceCurrency || 'PLN').toUpperCase() as Currency;
+
+    if (currency === 'PLN') {
       return amount;
     }
 
-    const rate = this.rates[sourceCurrency];
+    const rate = this.rates[currency];
+    
+    // Safety check for unknown currencies
+    if (!rate) {
+      console.warn(`[Currency] Unknown currency code: ${currency}, falling back to 1:1`);
+      return amount;
+    }
+
     const converted = amount * rate;
 
     // Round to 2 decimal places

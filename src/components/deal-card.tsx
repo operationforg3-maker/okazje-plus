@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { extractPriceInfo, getDiscountPercent } from '@/lib/i18n-utils';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 // TEMPORARILY REMOVED FOR DEBUGGING React #418:
 // import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
@@ -149,22 +150,17 @@ export default function DealCard({ deal, product }: DealCardProps) {
     if (!isMounted) return;
     const userCurrency = currency || 'PLN';
     
-    // M6 compatibility: Extract price from either structure
-    let priceAmount = 0;
-    let sourceCurrency: any = 'PLN';
-
-    if (typeof deal.price === 'number') {
-      priceAmount = deal.price; // Legacy format
-    } else if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
-      priceAmount = deal.price.amount; // M6 format: price.amount
-      sourceCurrency = (deal.price.currency || 'PLN').toUpperCase();
-    } else if (deal.legacyPrice !== undefined) {
-      priceAmount = deal.legacyPrice; // Fallback to legacyPrice field
-    }
+    // M6 compatibility: Robust extraction using shared utility
+    // Price logic: (deal.price {amount, currency}) -> (legacy deal.price number) -> (deal.legacyPrice)
+    const { amount: priceAmount, currency: extractedCurrency } = extractPriceInfo(deal.price, deal.legacyPrice);
     
-    // Safety check for supported currencies
+    // Normalize source currency
+    let sourceCurrency: any = (extractedCurrency || 'PLN').toUpperCase();
+    
+    // Safety check for supported currencies (redundant if using CurrencyManager.convertToPLN which does this check, but good for explicit typing)
     if (!['PLN', 'USD', 'EUR', 'GBP'].includes(sourceCurrency)) {
-      sourceCurrency = 'PLN';
+      // If unknown currency, try to keep it for logging, but convertToPLN handles it gracefully
+      // For now, let's keep it as is to allow CurrencyManager to warn
     }
     
     const safePrice = Number(priceAmount) || 0;

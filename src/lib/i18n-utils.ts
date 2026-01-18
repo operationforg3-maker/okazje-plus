@@ -364,3 +364,39 @@ export function getLocalizedCategoryName(
   return category.name;
 }
 
+/**
+ * Robustly extract price and currency from various legacy and M6 formats.
+ * Handles: objects {amount, currency}, numbers, strings, and legacy callbacks.
+ */
+export function extractPriceInfo(price: any, legacyPrice?: number): { amount: number; currency: string } {
+  // 1. Handle M6 Object format { amount, currency }
+  if (price && typeof price === 'object' && 'amount' in price) {
+    const amount = Number(price.amount) || 0;
+    const currency = typeof price.currency === 'string' 
+      ? (price.currency || 'PLN').toUpperCase() 
+      : 'PLN';
+    return { amount, currency };
+  }
+  
+  // 2. Handle simple number (implied PLN)
+  if (typeof price === 'number') {
+    return { amount: price, currency: 'PLN' };
+  }
+  
+  // 3. Handle string number (implied PLN)
+  if (typeof price === 'string') {
+    // Basic cleanup: replace comma with dot, remove non-numeric chars except dot/minus
+    // Note: This is a loose heuristic. '1 200,00' -> '1200.00'
+    const cleanSync = price.replace(/\s/g, '').replace(',', '.');
+    const parsed = parseFloat(cleanSync);
+    if (!isNaN(parsed)) return { amount: parsed, currency: 'PLN' };
+  }
+  
+  // 4. Handle Legacy Price fallback
+  if (typeof legacyPrice === 'number') {
+    return { amount: legacyPrice, currency: 'PLN' };
+  }
+  
+  return { amount: 0, currency: 'PLN' };
+}
+

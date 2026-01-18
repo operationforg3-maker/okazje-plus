@@ -34,7 +34,8 @@ import {
   getPriceAmount, 
   getTotalPrice, 
   isFreeShipping,
-  getDiscountPercent 
+  getDiscountPercent,
+  extractPriceInfo 
 } from '@/lib/i18n-utils';
 import { cn } from '@/lib/utils';
 import { useComparison } from '@/components/deal-comparison-tool';
@@ -99,18 +100,22 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
       // M6 ProductCore
       const pc = product as any;
       if (pc.bestPrice) {
-        rawPrice = typeof pc.bestPrice === 'number' ? pc.bestPrice : (pc.bestPrice.amount || 0);
-        sourceCurrency = pc.bestPrice.currency || 'PLN';
+        // Robust extraction for ProductCore bestPrice
+        const { amount, currency } = extractPriceInfo(pc.bestPrice);
+        rawPrice = amount;
+        sourceCurrency = currency;
       }
       // ProductCore doesn't typically store originalPrice/shipping in top-level bestPrice
     } else {
       // Legacy Product / Hybrid
-      rawPrice = product.price ? getPriceAmount(product.price) : 0;
+      // Use extractPriceInfo for potential M6-style price object in legacy field
+      const { amount, currency } = extractPriceInfo(product.price);
+      rawPrice = amount;
+      sourceCurrency = currency;
       
-      // Try to detect currency from legacy price object if available
+      // Try to detect other fields from legacy price object if available
       if (typeof product.price === 'object' && product.price !== null) {
         const p = product.price as any;
-        if (p.currency) sourceCurrency = p.currency;
         if (p.originalPrice) rawOriginalPrice = p.originalPrice;
         if (p.shippingCost) rawShipping = p.shippingCost;
       }

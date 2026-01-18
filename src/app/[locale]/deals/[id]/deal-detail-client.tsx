@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { extractPriceInfo, isFreeShipping } from '@/lib/i18n-utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
@@ -138,24 +139,10 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
   useEffect(() => {
     const userCurrency = currency || 'PLN';
     
-    // M6 compatibility: Extract price from either structure
-    let priceAmount = 0;
-    let sourceCurrency: any = 'PLN';
+    // M6 compatibility: Robust extraction
+    const { amount: priceAmount, currency: extractedCurrency } = extractPriceInfo(deal.price, deal.legacyPrice);
+    const sourceCurrency = (extractedCurrency || 'PLN').toUpperCase() as any;
 
-    if (typeof deal.price === 'number') {
-      priceAmount = deal.price; // Legacy format
-    } else if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
-      priceAmount = deal.price.amount; // M6 format: price.amount
-      sourceCurrency = (deal.price.currency || 'PLN').toUpperCase();
-    } else if (deal.legacyPrice !== undefined) {
-      priceAmount = deal.legacyPrice; // Fallback to legacyPrice field
-    }
-
-    // Safety check for supported currencies
-    if (!['PLN', 'USD', 'EUR', 'GBP'].includes(sourceCurrency)) {
-      sourceCurrency = 'PLN';
-    }
-    
     const safePrice = Number(priceAmount) || 0;
     
     // Ensure we work with PLN for CurrencyManager

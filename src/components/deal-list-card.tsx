@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { extractPriceInfo } from '@/lib/i18n-utils';
 
 interface DealListCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -119,24 +120,10 @@ export default function DealListCard({ deal }: DealListCardProps) {
     // Format prices using unified currency system
     const userCurrency = currency || 'PLN';
     
-    // M6 compatibility: Extract price from either structure
-    let priceAmount = 0;
-    let sourceCurrency: any = 'PLN';
+    // M6 compatibility: Robust extraction
+    const { amount: priceAmount, currency: extractedCurrency } = extractPriceInfo(deal.price, deal.legacyPrice);
+    const sourceCurrency = (extractedCurrency || 'PLN').toUpperCase() as any;
 
-    if (typeof deal.price === 'number') {
-      priceAmount = deal.price; // Legacy format
-    } else if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
-      priceAmount = deal.price.amount; // M6 format: price.amount
-      sourceCurrency = (deal.price.currency || 'PLN').toUpperCase();
-    } else if (deal.legacyPrice !== undefined) {
-      priceAmount = deal.legacyPrice; // Fallback to legacyPrice field
-    }
-
-    // Safety check for supported currencies
-    if (!['PLN', 'USD', 'EUR', 'GBP'].includes(sourceCurrency)) {
-      sourceCurrency = 'PLN';
-    }
-    
     const safePrice = Number(priceAmount) || 0;
     
     // Ensure we work with PLN for CurrencyManager
