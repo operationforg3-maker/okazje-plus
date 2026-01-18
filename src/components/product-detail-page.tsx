@@ -16,7 +16,7 @@ import {
 import { getProductWithDeals } from '@/lib/data';
 import { PriceComparisonTable } from './price-comparison-table';
 import { ProductPriceHistoryChart } from './product-price-history-chart';
-import { useCurrency } from '@/lib/unified-currency';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { SpecsTable } from './specs-table';
 
 interface ProductDetailPageProps {
@@ -92,6 +92,13 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   const totalPrice = bestDeal
     ? (bestDeal.price?.amount || 0) + (bestDeal.shipping?.cost || 0)
     : (product.bestPrice?.amount || 0);
+
+  // Currency Fix Helpers
+  const bestCurrency = bestDeal?.price?.currency || product.bestPrice?.currency || 'PLN';
+  const totalPricePLN = CurrencyManager.convertToPLN(totalPrice, bestCurrency);
+  const bestOriginalPLN = bestDeal?.originalPrice ? CurrencyManager.convertToPLN(bestDeal.originalPrice, bestCurrency) : 0;
+  const bestProductPricePLN = bestDeal ? CurrencyManager.convertToPLN(bestDeal.price?.amount || 0, bestCurrency) : 0;
+  const bestShippingPLN = bestDeal ? CurrencyManager.convertToPLN(bestDeal.shipping?.cost || 0, bestCurrency) : 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
@@ -186,11 +193,11 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                     <p className="text-sm text-gray-600">{t('productDetail.simple.totalPrice')}</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-green-600">
-                      {formatPrice(totalPrice)}
+                      {formatPrice(totalPricePLN)}
                     </span>
                     {bestDeal.originalPrice && (
                       <span className="text-xl text-gray-500 line-through">
-                        {formatPrice(bestDeal.originalPrice)}
+                        {formatPrice(bestOriginalPLN)}
                       </span>
                     )}
                   </div>
@@ -199,12 +206,12 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                   <div className="pt-3 border-t border-green-200 space-y-1 text-sm">
                     <div className="flex justify-between">
                       <span>{t('productDetail.simple.productPrice')}:</span>
-                      <span className="font-medium">{formatPrice(bestDeal.price?.amount || 0)}</span>
+                      <span className="font-medium">{formatPrice(bestProductPricePLN)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>{t('productDetail.simple.shipping')}:</span>
                       <span className="font-medium">
-                        {bestDeal.shipping?.cost === 0 ? t('productDetail.simple.freeShipping') : formatPrice(bestDeal.shipping?.cost || 0)}
+                        {bestDeal.shipping?.cost === 0 ? t('productDetail.simple.freeShipping') : formatPrice(bestShippingPLN)}
                       </span>
                     </div>
                   </div>

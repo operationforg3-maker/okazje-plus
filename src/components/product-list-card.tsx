@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
-import { useCurrency } from '@/lib/unified-currency';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { useCategoryName } from '@/hooks/use-category-name';
 
 interface ProductListCardProps {
@@ -106,14 +106,30 @@ export default function ProductListCard({ product }: ProductListCardProps) {
 
   useEffect(() => {
     const relTime = getRelativeTime(product.createdAt);
-    const priceToDisplay = bestTotalPrice ?? product?.bestPrice?.amount ?? price;
-    const formatted = formatPrice(priceToDisplay);
+    
+    // Determine raw price and source currency
+    let rawPrice = bestTotalPrice ?? product?.bestPrice?.amount ?? price;
+    let sourceCurrency = 'PLN';
+
+    // If we have a specific best deal, use its currency
+    if (bestDeal && bestDeal.price?.currency) {
+      sourceCurrency = bestDeal.price.currency;
+    } else if (product?.bestPrice?.currency) {
+      // Fallback to ProductCore best price currency
+      sourceCurrency = product.bestPrice.currency;
+    }
+
+    // Convert to PLN Base (CurrencyManager expects Source -> Base)
+    const priceInPLN = CurrencyManager.convertToPLN(rawPrice, sourceCurrency);
+
+    // Format (hook formatPrice assumes input is in Base Currency PLN)
+    const formatted = formatPrice(priceInPLN);
 
     setProductData({
       relativeTime: relTime,
       formattedPrice: formatted,
     });
-  }, [product.createdAt, price, bestTotalPrice, product?.bestPrice?.amount, formatPrice]);
+  }, [product.createdAt, price, bestTotalPrice, product?.bestPrice?.amount, product?.bestPrice?.currency, bestDeal, formatPrice]);
 
   // Fetch best deal for this product to get accurate affiliate link and total price
   useEffect(() => {
