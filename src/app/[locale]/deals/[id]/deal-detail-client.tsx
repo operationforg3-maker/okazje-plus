@@ -95,7 +95,7 @@ function getTimeRemaining(expiryDate: string) {
 }
 
 interface Props {
-  deal: Deal;
+  deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
   product?: Product | null;
   relatedDeals: Deal[];
 }

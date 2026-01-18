@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { FEATURES } from '@/lib/config';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
+import { extractDealPriceAmount } from '@/lib/price-utils';
 // Umożliwiamy nawigację przez query params z mega‑menu (mainCategory, subCategory, sort, q)
 
 type ViewMode = 'list' | 'grid';
@@ -401,7 +402,6 @@ export default function DealsPage() {
         if (quickFilters.verified && !deal.merchant) return false;
 
         // M6 compatible: extract price from both legacy and M6 formats
-        const { extractDealPriceAmount } = await import('@/lib/price-utils');
         const dealPrice = extractDealPriceAmount(deal);
         if (dealPrice < priceRange[0] || dealPrice > priceRange[1]) return false;
 

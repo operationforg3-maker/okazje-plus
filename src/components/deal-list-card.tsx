@@ -15,7 +15,7 @@ import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 
 interface DealListCardProps {
-  deal: Deal;
+  deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
 }
 
 const safeText = (value: unknown, fallback = ''): string => {

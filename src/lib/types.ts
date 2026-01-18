@@ -409,6 +409,8 @@ export interface DealLegacy {
   description: LocalizedText;            // Deal description in multiple languages
   
   price: number;
+  // M6+: Alternative price format (from Harvester/M6)
+  legacyPrice?: number; // Fallback for M6 compatibility
   originalPrice?: number;
   link: string;
   image: string;

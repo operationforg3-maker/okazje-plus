@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { extractDealPriceAmount } from './price-utils';
 
 /**
  * Saved Search / Smart Filter Types

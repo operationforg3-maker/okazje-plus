@@ -38,7 +38,7 @@ import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 // import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
 
 interface DealCardProps {
-  deal: Deal;
+  deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
   product?: Product | null;
 }
 

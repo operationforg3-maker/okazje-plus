@@ -195,6 +195,8 @@ export interface AliExpressProductDetailsParams {
   productId: string;
   includeReviews?: boolean;
   includeVariants?: boolean;
+  // M6+: Specify destination country for warehouse/shipping info
+  shipToCountry?: string;
 }
 
 /**
