@@ -164,6 +164,8 @@ export function Navbar() {
                 size="icon" 
                 className="relative rounded-full"
                 onClick={() => setCartMenuOpen(!cartMenuOpen)}
+                data-testid="cart-button"
+                aria-label="Otwórz koszyk"
               >
                 <ShoppingBag className="h-5 w-5" />
                 <MiniCartBadge />
@@ -185,16 +187,22 @@ export function Navbar() {
                       ) : (
                         <div className="space-y-3">
                           {items.slice(0, 3).map((item) => {
-                            const price = getPriceAmount(item.product.price);
-                            const total = getTotalPrice(item.product.price);
-                            const shippingCost = Math.max(total - price, 0);
-                            const title = (item.product as any).title?.pl || (item.product as any).name || 'Produkt';
-                            const imageUrl = (item.product as any).image || (item.product as any).imageUrl || '/placeholder.png';
-                            const freeShip = isFreeShipping(item.product.price);
+                            const priceSource = item.product ? item.product.price : item.deal?.price;
+                            const price = getPriceAmount(priceSource);
+                            const total = getTotalPrice(priceSource);
+                            const shippingCost = Math.max((total ?? 0) - (price ?? 0), 0);
+                            const title = item.product
+                              ? ((item.product as any).title?.pl || (item.product as any).name || 'Produkt')
+                              : ((item.deal as any)?.title?.pl || (item.deal as any)?.title || 'Okazja');
+                            const imageUrl = item.product
+                              ? ((item.product as any).image || (item.product as any).imageUrl || '/placeholder.png')
+                              : (((item.deal as any)?.image || (item.deal as any)?.imageUrl) || '/placeholder.png');
+                            const freeShip = isFreeShipping(priceSource);
+                            const keyId = (item.product as any)?.id ?? (item.deal as any)?.id;
                             return (
-                              <div key={(item.product as any).id} className="flex items-center gap-3">
+                              <div key={keyId} className="flex items-center gap-3">
                                 <div className="relative h-12 w-12 flex-shrink-0">
-                                  <Image src={imageUrl} alt={title} fill className="object-cover rounded" />
+                                  <Image src={imageUrl} alt={title} fill sizes="48px" className="object-cover rounded" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{title}</p>
@@ -208,7 +216,12 @@ export function Navbar() {
                                     )}
                                   </div>
                                 </div>
-                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem(((item.product as any)?.id ?? (item.deal as any)?.id))}>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive"
+                                  onClick={() => removeItem(((item.product as any)?.id ?? (item.deal as any)?.id))}
+                                >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>

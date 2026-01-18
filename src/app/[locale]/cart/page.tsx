@@ -161,24 +161,33 @@ export default function CartPage() {
         
         {/* Cart Items List */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map(({ product, quantity, addedAt }) => {
-            const displayTitle = getText(product.title) || product.name;
-            const itemPrice = getTotalPrice(product.price);
+          {items.map(({ product, deal, quantity, addedAt }) => {
+            // Support both Product and Deal items
+            const item = product || deal;
+            if (!item) return null;
+            
+            const displayTitle = getText((item as any).title) || (item as any).name || 'Produkt';
+            const itemPrice = getTotalPrice((item as any).price);
             const itemTotal = itemPrice * quantity;
-            const currency = typeof product.price === 'object' && 'currency' in product.price 
-              ? product.price.currency 
+            const currency = typeof (item as any).price === 'object' && 'currency' in (item as any).price 
+              ? (item as any).price.currency 
               : 'PLN';
+            const itemId = (item as any).id;
+            const itemImage = (item as any).image || (item as any).imageUrl || '/placeholder.png';
+            const itemSlug = (item as any).slug || itemId;
+            const categorySlug = (item as any).mainCategorySlug || 'inne';
 
             return (
-              <Card key={product.id}>
+              <Card key={itemId}>
                 <CardContent className="p-4">
                   <div className="flex gap-4">
                     {/* Product Image */}
                     <div className="relative w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
                       <Image
-                        src={product.image || '/placeholder.png'}
+                        src={itemImage}
                         alt={displayTitle}
                         fill
+                        sizes="96px"
                         className="object-contain p-2"
                       />
                     </div>
@@ -186,7 +195,7 @@ export default function CartPage() {
                     {/* Product Info */}
                     <div className="flex-1 min-w-0">
                       <Link 
-                        href={`${prefix}/products/${(product as any).slug || product.id}`}
+                        href={product ? `${prefix}/products/${itemSlug}` : `${prefix}/deals/${itemSlug}`}
                         className="font-semibold text-base hover:text-primary transition-colors line-clamp-2"
                       >
                         {displayTitle}
@@ -194,7 +203,7 @@ export default function CartPage() {
                       
                       <div className="flex items-center gap-2 mt-2">
                         <Badge variant="secondary" className="text-xs">
-                          {product.mainCategorySlug}
+                          {categorySlug}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
                           Dodano: {new Date(addedAt).toLocaleDateString('pl-PL', { timeZone: 'UTC' })}
@@ -219,7 +228,7 @@ export default function CartPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => updateQuantity(product.id, Math.max(1, quantity - 1))}
+                          onClick={() => updateQuantity(itemId, Math.max(1, quantity - 1))}
                           disabled={quantity <= 1}
                         >
                           <Minus className="w-4 h-4" />
@@ -229,7 +238,7 @@ export default function CartPage() {
                           value={quantity}
                           onChange={(e) => {
                             const val = parseInt(e.target.value) || 1;
-                            updateQuantity(product.id, Math.max(1, Math.min(99, val)));
+                            updateQuantity(itemId, Math.max(1, Math.min(99, val)));
                           }}
                           className="w-16 h-8 text-center border-0 p-0"
                           min={1}
@@ -239,7 +248,7 @@ export default function CartPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => updateQuantity(product.id, Math.min(99, quantity + 1))}
+                          onClick={() => updateQuantity(itemId, Math.min(99, quantity + 1))}
                           disabled={quantity >= 99}
                         >
                           <Plus className="w-4 h-4" />
@@ -263,7 +272,7 @@ export default function CartPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          removeItem(product.id);
+                          removeItem(itemId);
                           toast.success(t('toast.removed'));
                         }}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
