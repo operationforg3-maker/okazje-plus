@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
+import { useCategoryName } from '@/hooks/use-category-name';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
@@ -101,6 +102,11 @@ export default function DealCard({ deal, product }: DealCardProps) {
   const prefix = `/${locale}`;
   const { getText } = useContentLanguage();
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
+  const { mainName: categoryLabel } = useCategoryName(
+    deal.mainCategorySlug || resolvedProduct?.mainCategorySlug,
+    deal.subCategorySlug || resolvedProduct?.subCategorySlug,
+    deal.subSubCategorySlug || resolvedProduct?.subSubCategorySlug
+  );
   const { addToComparison } = useComparison();
   const { user } = useAuth();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
@@ -172,7 +178,6 @@ export default function DealCard({ deal, product }: DealCardProps) {
       discount: calculatedDiscount,
     });
   }, [isMounted, currency, deal.price, deal.originalPrice, deal.shippingCost]);
-  const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug || resolvedProduct?.subCategorySlug || resolvedProduct?.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
 
   const coverImage = typeof deal.image === 'string' && deal.image ? deal.image : resolvedProduct?.images?.[0];

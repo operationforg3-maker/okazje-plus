@@ -14,6 +14,7 @@ import { useContentLanguage } from '@/hooks/use-content-language';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { useCurrency } from '@/lib/unified-currency';
+import { useCategoryName } from '@/hooks/use-category-name';
 
 interface ProductListCardProps {
   product: ProductCore;
@@ -69,6 +70,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   const { isFavorited, isLoading: favLoading, toggleFavorite } = useFavorites(productId, 'product');
   const { addItem, isInCart } = useSmartCart();
   const { formatPrice } = useCurrency();
+  const { mainName: categoryLabel } = useCategoryName(product.mainCategorySlug, product.subCategorySlug, product.subSubCategorySlug);
   const [productData, setProductData] = useState({
     relativeTime: 'niedawno',
     formattedPrice: 'N/A',
@@ -86,7 +88,6 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   // Price from ProductCore.bestPrice (fallback)
   const price = product.bestPrice?.amount || 0;
 
-  const categoryLabel = product.mainCategorySlug || product.subCategorySlug || null;
   const rating = product.rating?.score || 0;
   const ratingCount = product.rating?.count || 0;
 

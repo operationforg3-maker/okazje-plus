@@ -183,13 +183,14 @@ export function Navbar() {
                     </div>
 
                     <div className="border-t border-border pt-4">
-                      {/* Comparison Toggle */}
+                      {/* Comparison Toggle - disabled for now */}
+                      {/* 
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <Scale className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Porównywarka</span>
                         </div>
-                        <span className="text-sm font-medium">{comparisonItems.length}</span>
+                        <span className="text-sm font-medium">0</span>
                       </div>
                       <button
                         onClick={() => {
@@ -198,10 +199,11 @@ export function Navbar() {
                           setCartMenuOpen(false);
                         }}
                         className="block w-full text-center py-2 px-4 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
-                        disabled={comparisonItems.length === 0}
+                        disabled={true}
                       >
-                        {comparisonItems.length === 0 ? 'Brak produktów' : 'Otwórz porównywarkę'}
+                        Brak produktów
                       </button>
+                      */}
                     </div>
                   </div>
                 </div>

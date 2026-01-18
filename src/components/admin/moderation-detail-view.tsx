@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCategoryName } from '@/hooks/use-category-name';
 
 interface ModerationDetailViewProps {
   item: any;
@@ -28,6 +29,13 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
     pricing: true,
     metadata: true,
   });
+
+  // Load category names
+  const { mainName, subName, subSubName } = useCategoryName(
+    item.mainCategorySlug,
+    item.subCategorySlug,
+    item.subSubCategorySlug
+  );
 
   const toggleSection = (section: string) => {
     setExpandedSections(p => ({ ...p, [section]: !p[section] }));
@@ -142,8 +150,8 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
             <FieldRow label="In Stock" value={item.inStock} />
             <FieldRow label="Source ID" value={item.sourceId} />
             <FieldRow label="Source" value={item.source} />
-            <FieldRow label="Category" value={item.category || item.mainCategorySlug} />
-            <FieldRow label="Sub Category" value={item.subCategorySlug} />
+            <FieldRow label="Category" value={mainName ? `${mainName} (${item.mainCategorySlug})` : (item.category || item.mainCategorySlug)} />
+            <FieldRow label="Sub Category" value={subName ? `${subName} (${item.subCategorySlug})` : item.subCategorySlug} />
             <FieldRow label="Campaign" value={item.campaign} />
             <FieldRow label="Affiliate URL" value={item.affiliateUrl} />
           </div>
@@ -245,9 +253,9 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
         {/* Source Links & Categories */}
         <Section title="🔗 Źródła i Kategorie" id="specs">
           <div className="space-y-1">
-            <FieldRow label="Main Category Slug" value={item.mainCategorySlug} />
-            <FieldRow label="Sub Category Slug" value={item.subCategorySlug} />
-            <FieldRow label="Sub Sub Category Slug" value={item.subSubCategorySlug} />
+            <FieldRow label="Main Category Slug" value={mainName ? `${mainName} (${item.mainCategorySlug})` : item.mainCategorySlug} />
+            <FieldRow label="Sub Category Slug" value={subName ? `${subName} (${item.subCategorySlug})` : item.subCategorySlug} />
+            <FieldRow label="Sub Sub Category Slug" value={subSubName ? `${subSubName} (${item.subSubCategorySlug})` : item.subSubCategorySlug} />
             <FieldRow 
               label="Source Links" 
               value={item.sourceLinks?.map((l: any) => `${l.source}: ${l.url}`).join(', ')} 

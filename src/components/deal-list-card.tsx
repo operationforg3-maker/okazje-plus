@@ -3,6 +3,7 @@ import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import type { Deal } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
+import { useCategoryName } from '@/hooks/use-category-name';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
@@ -72,6 +73,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
+  const { mainName: categoryLabel } = useCategoryName(deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [dealData, setDealData] = useState<{
     isNew: boolean;
@@ -90,7 +92,6 @@ export default function DealListCard({ deal }: DealListCardProps) {
   });
   
   const description = safeText(deal.description);
-  const categoryLabel = safeText(deal.subCategorySlug || deal.mainCategorySlug);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   const { currency } = useCurrency();
 
