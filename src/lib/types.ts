@@ -408,7 +408,8 @@ export interface DealLegacy {
   title: LocalizedText;                  // Deal title in multiple languages
   description: LocalizedText;            // Deal description in multiple languages
   
-  price: number;
+  // M6 compatibility: Allow object format
+  price: number | { amount: number; currency: string };
   // M6+: Alternative price format (from Harvester/M6)
   legacyPrice?: number; // Fallback for M6 compatibility
   originalPrice?: number;

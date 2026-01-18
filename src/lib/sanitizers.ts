@@ -77,6 +77,17 @@ const ensureOptionalNumber = (value: unknown): number | undefined => {
   return parsed === null ? undefined : parsed;
 };
 
+const ensurePrice = (value: unknown): number | { amount: number; currency: string } => {
+  // Handle M6 price object { amount, currency }
+  if (value && typeof value === 'object' && 'amount' in value) {
+    const amount = ensureNumber((value as any).amount, 0);
+    const currency = ensureString((value as any).currency, 'PLN');
+    return { amount, currency };
+  }
+  // Handle legacy number
+  return ensureNumber(value, 0);
+};
+
 const ensureBoolean = (value: unknown, fallback = false): boolean => {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value !== 0;
@@ -439,7 +450,7 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
   return {
     title: ensureString(raw.title, 'Oferta'),
     description: ensureString(raw.description, ''),
-    price: ensureNumber(raw.price, 0),
+    price: ensurePrice(raw.price),
     originalPrice: ensureOptionalNumber(raw.originalPrice),
     link: ensureString(raw.link, FALLBACK_URL) || FALLBACK_URL,
     image: ensureString(raw.image, FALLBACK_IMAGE) || FALLBACK_IMAGE,
