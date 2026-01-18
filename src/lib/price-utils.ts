@@ -84,7 +84,10 @@ export function isFreeShipping(price: number | SmartPrice | undefined): boolean 
 export function getDiscountPercent(price: number | SmartPrice | undefined): number {
   if (!price) return 0;
   if (typeof price === 'number') return 0;
-  return price.discountPercent || 0;
+  if (typeof price === 'object' && price !== null && 'discountPercent' in price) {
+    return (price as SmartPrice).discountPercent || 0;
+  }
+  return 0;
 }
 
 /**

@@ -30,7 +30,7 @@ export function RealTimeStats() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/admin/stats', {
+        const response = await fetch('/api/public/stats', {
           cache: 'no-store',
         });
 

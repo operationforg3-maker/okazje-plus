@@ -228,8 +228,9 @@ export function createSmartPrice(
  * @param price SmartPrice object or legacy number
  * @returns Price amount as number
  */
-export function getPriceAmount(price: SmartPrice | number): number {
-  return typeof price === 'number' ? price : price.amount;
+export function getPriceAmount(price: SmartPrice | number | undefined | null): number {
+  if (!price) return 0;
+  return typeof price === 'number' ? price : (price.amount || 0);
 }
 
 /**
@@ -238,7 +239,8 @@ export function getPriceAmount(price: SmartPrice | number): number {
  * @param price SmartPrice object or legacy number
  * @returns Total price as number
  */
-export function getTotalPrice(price: SmartPrice | number): number {
+export function getTotalPrice(price: SmartPrice | number | undefined | null): number {
+  if (!price) return 0;
   if (typeof price === 'number') {
     return price;
   }
@@ -262,9 +264,10 @@ export function getTotalPrice(price: SmartPrice | number): number {
  * @returns Discount percentage or undefined
  */
 export function getDiscountPercent(
-  price: SmartPrice | number,
+  price: SmartPrice | number | undefined | null,
   originalPrice?: number
 ): number | undefined {
+  if (!price) return undefined;
   if (typeof price === 'number') {
     if (originalPrice && originalPrice > price) {
       return Math.round(((originalPrice - price) / originalPrice) * 100);
@@ -272,7 +275,12 @@ export function getDiscountPercent(
     return undefined;
   }
   
-  return price.discountPercent;
+  // Safely access discountPercent from SmartPrice object
+  if (typeof price === 'object' && price !== null && 'discountPercent' in price) {
+    return (price as SmartPrice).discountPercent;
+  }
+  
+  return undefined;
 }
 
 /**
@@ -298,7 +306,8 @@ export function formatPrice(price: SmartPrice | number, currency: string = 'PLN'
  * @param price SmartPrice object or number (number assumed free shipping)
  * @returns True if shipping is free
  */
-export function isFreeShipping(price: SmartPrice | number): boolean {
+export function isFreeShipping(price: SmartPrice | number | undefined | null): boolean {
+  if (!price) return false;
   if (typeof price === 'number') return true; // Legacy assumes free shipping
   return price.freeShipping || price.shippingCost === 0;
 }

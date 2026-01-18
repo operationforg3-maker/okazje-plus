@@ -2668,7 +2668,9 @@ export async function getProductCoresByFilters(
   sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'relevance' = 'relevance',
   limit_count: number = 50
 ): Promise<ProductCore[]> {
+  console.log('[getProductCoresByFilters] FUNCTION CALLED - filters:', JSON.stringify(filters), 'sortBy:', sortBy, 'limit:', limit_count);
   try {
+    console.log('[getProductCoresByFilters] Creating base constraints...');
     // Build base query constraints
     let constraints = [where('status', '==', 'approved')];
     
@@ -2688,13 +2690,16 @@ export async function getProductCoresByFilters(
 
     // Firestore can't filter on nested fields like bestPrice.amount directly in where,
     // so we fetch all and filter in-memory (alternative: use Firestore Lite or index)
+    console.log('[getProductCoresByFilters] Creating Firestore query with', constraints.length, 'constraints...');
     const q = query(collection(db, 'product_cores'), ...constraints, limit(limit_count));
 
+    console.log('[getProductCoresByFilters] Executing getDocs...');
     const snapshot = await getDocs(q);
+    console.log('[getProductCoresByFilters] Got snapshot, size:', snapshot.size);
     // Always sanitize ProductCore from Firestore to ensure JSON-serializable data
     let products: ProductCore[] = snapshot.docs.map(docToProductCore);
     
-    console.log(`[getProductCoresByFilters] Fetched ${products.length} products from DB`);
+    console.log(`[getProductCoresByFilters] Fetched ${products.length} products from DB, mapped to ProductCore`);
 
 
     // Client-side filtering for complex conditions

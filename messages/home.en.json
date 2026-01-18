@@ -35,6 +35,13 @@
     "viewAll": "Browse catalog",
     "empty": "The best products will appear here soon!"
   },
+  "browseCategories": {
+    "viewSubcategories": "View subcategories",
+    "subcategoryCount": "{count, plural, one {# subcategory} other {# subcategories}}",
+    "browseAll": "Browse all",
+    "allCategories": "All categories",
+    "moreCategories": "+{count} more categories"
+  },
   "benefits": {
     "badge": "Join the community",
     "title": "Why register?",

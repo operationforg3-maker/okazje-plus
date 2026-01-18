@@ -3,7 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
-import { Menu, ShoppingBag } from 'lucide-react';
+import { Menu, ShoppingBag, Scale } from 'lucide-react';
+import { useComparison } from '@/components/deal-comparison-tool';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 import {
@@ -30,12 +31,32 @@ import { LogoSVGWrapper } from './logo-svg-wrapper';
 export function Navbar() {
   const t = useTranslations('nav');
   const [isOpen, setIsOpen] = React.useState(false);
+  const [cartMenuOpen, setCartMenuOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
   const { user, loading } = useAuth();
+  const { items: comparisonItems } = useComparison();
+  const cartMenuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Close cart menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (cartMenuRef.current && !cartMenuRef.current.contains(event.target as Node)) {
+        setCartMenuOpen(false);
+      }
+    };
+
+    if (cartMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [cartMenuOpen]);
 
   // Debug log
   React.useEffect(() => {
@@ -130,12 +151,62 @@ export function Navbar() {
                 + {t('addDeal')}
               </Link>
             </Button>
-            <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
-              <Link href={`${prefix}/cart`}>
+            {/* Cart & Comparison Menu */}
+            <div className="relative" ref={cartMenuRef}>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative rounded-full"
+                onClick={() => setCartMenuOpen(!cartMenuOpen)}
+              >
                 <ShoppingBag className="h-5 w-5" />
                 <MiniCartBadge />
-              </Link>
-            </Button>
+              </Button>
+
+              {cartMenuOpen && isMounted && (
+                <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50">
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg mb-3">Twoje zakupy</h3>
+                    
+                    {/* Cart Preview */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-muted-foreground">Koszyk</span>
+                      </div>
+                      <Link
+                        href={`${prefix}/cart`}
+                        className="block w-full text-center py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                        onClick={() => setCartMenuOpen(false)}
+                      >
+                        Przejdź do koszyka
+                      </Link>
+                    </div>
+
+                    <div className="border-t border-border pt-4">
+                      {/* Comparison Toggle */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Scale className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Porównywarka</span>
+                        </div>
+                        <span className="text-sm font-medium">{comparisonItems.length}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const event = new CustomEvent('toggleComparison');
+                          window.dispatchEvent(event);
+                          setCartMenuOpen(false);
+                        }}
+                        className="block w-full text-center py-2 px-4 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
+                        disabled={comparisonItems.length === 0}
+                      >
+                        {comparisonItems.length === 0 ? 'Brak produktów' : 'Otwórz porównywarkę'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
             {!isMounted ? (
               <Skeleton className="h-9 w-9 rounded-full" />
             ) : (

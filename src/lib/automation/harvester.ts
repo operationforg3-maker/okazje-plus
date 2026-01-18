@@ -319,6 +319,9 @@ export class SmartHarvester {
                 );
                 dealsCreated++;
 
+                // Update product's best price (M6: CRITICAL - was missing for new products!)
+                await this.updateProductBestPrice(productId);
+
                 // Record identity match for future lookups
                 await this.recordIdentityMatch(
                   identityHash,
@@ -895,11 +898,16 @@ export class SmartHarvester {
     const deal: any = {
       // M6 fields
       productCoreId: productId,  // M6: Link to ProductCore
+      price: {
+        amount: sourceProduct.price,
+        currency: sourceProduct.currency || 'PLN',
+      },
+      // Legacy fields for compatibility
       priceV2: {
         amount: sourceProduct.price,
         currency: sourceProduct.currency || 'PLN',
       },
-      price: sourceProduct.price, // legacy pole wymagane przez UI
+      legacyPrice: sourceProduct.price, // for old code
       originalPrice: sourceProduct.originalPrice ?? sourceProduct.price,
       shipping: {
         cost: sourceProduct.shippingCost || 0,
@@ -992,31 +1000,60 @@ export class SmartHarvester {
    */
   private async updateProductBestPrice(productId: string): Promise<void> {
     if (!productId || typeof productId !== 'string') return;
-    // Fetch all deals for this product
+    // Fetch all deals for this product (don't filter by isActive - might not exist)
     const dealsSnapshot = await adminDb
       .collection('deals')
       .where('productCoreId', '==', productId)
-      .where('isActive', '==', true)
       .get();
 
-    if (dealsSnapshot.empty) return;
+    if (dealsSnapshot.empty) {
+      this.addLog('warn', `No deals found for product ${productId}, setting bestPrice to 0`);
+      return;
+    }
 
     // Find the best (lowest) total price (product price + shipping)
     let bestPrice = Infinity;
     let bestCurrency = 'PLN';
     let bestDealId: string | null = null;
+    let validDealsCount = 0;
 
     for (const dealDoc of dealsSnapshot.docs) {
       const deal = dealDoc.data() as DealM6;
-      const totalPrice = (deal.price?.amount || 0) + ((deal.shipping?.cost as any) || 0);
+      
+      // Support both M6 format {amount, currency} and legacy format (number)
+      let priceAmount = 0;
+      let priceCurrency = 'PLN';
+      
+      if (deal.price?.amount !== undefined) {
+        // M6 format: {amount, currency}
+        priceAmount = deal.price.amount;
+        priceCurrency = deal.price.currency || 'PLN';
+      } else if (typeof deal.price === 'number') {
+        // Legacy format: number
+        priceAmount = deal.price;
+      } else if (deal.priceV2?.amount !== undefined) {
+        // Fallback to priceV2 if available
+        priceAmount = deal.priceV2.amount;
+        priceCurrency = deal.priceV2.currency || 'PLN';
+      }
+      
+      const shippingCost = (deal.shipping?.cost as any) || 0;
+      const totalPrice = priceAmount + shippingCost;
+      
+      // Skip deals with 0 price
+      if (totalPrice <= 0) continue;
+      
+      validDealsCount++;
       
       // TODO: Normalize currency to PLN for comparison
       if (totalPrice < bestPrice) {
         bestPrice = totalPrice;
-        bestCurrency = deal.price.currency;
+        bestCurrency = priceCurrency;
         bestDealId = dealDoc.id;
       }
     }
+
+    this.addLog('info', `Product ${productId}: ${dealsSnapshot.size} deals total, ${validDealsCount} valid, best price: ${bestPrice !== Infinity ? bestPrice : 0}`);
 
     // Update product with new best price (M6: bestPrice is {amount, currency})
     const productRef = adminDb.collection('product_cores').doc(productId);

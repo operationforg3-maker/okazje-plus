@@ -35,6 +35,13 @@
     "viewAll": "Katalog ansehen",
     "empty": "Die besten Produkte erscheinen hier bald!"
   },
+  "browseCategories": {
+    "viewSubcategories": "Unterkategorien anzeigen",
+    "subcategoryCount": "{count, plural, one {# Unterkategorie} other {# Unterkategorien}}",
+    "browseAll": "Alle durchsuchen",
+    "allCategories": "Alle Kategorien",
+    "moreCategories": "+{count} weitere Kategorien"
+  },
   "benefits": {
     "badge": "Tritt der Community bei",
     "title": "Warum registrieren?",

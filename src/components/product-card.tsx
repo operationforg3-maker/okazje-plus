@@ -59,33 +59,68 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const { currency } = useCurrency();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Format prices using state to fix hydration mismatch (SAME PATTERN AS DEALCARD)
+  const [priceData, setPriceData] = useState<{
+    formattedPrice: string | null;
+    formattedOriginal: string | null;
+    formattedShipping: string | null;
+    discount: number | null;
+  }>({
+    formattedPrice: null,
+    formattedOriginal: null,
+    formattedShipping: null,
+    discount: null,
+  });
 
   // Hydration safety - sync locale on mount
   useEffect(() => {
+    setIsMounted(true);
     setLocale(localeFromParams);
   }, [localeFromParams]);
+
+  // Format prices on client only (using unified currency system) - SAME PATTERN AS DEALCARD
+  useEffect(() => {
+    if (!isMounted) return;
+    const userCurrency = currency || 'PLN';
+    
+    // Get price values
+    const isPC = !!(product as any).bestPrice;
+    const price = isPC ? (product as any).bestPrice?.amount : (product.price ? getPriceAmount(product.price) : 0);
+    const total = isPC ? (product as any).bestPrice?.amount : (product.price ? getTotalPrice(product.price) : 0);
+    const shipping = isPC ? 0 : (typeof product.price === 'object' && 'shippingCost' in product.price ? product.price.shippingCost || 0 : 0);
+    const originalPrice = typeof product.price === 'object' && 'originalPrice' in product.price ? product.price.originalPrice : 0;
+
+    const formatted = CurrencyManager.formatPrice(total, userCurrency);
+    let formattedOrig: string | null = null;
+    let calculatedDiscount: number | null = null;
+    let formattedShip: string | null = null;
+
+    if (originalPrice > 0) {
+      formattedOrig = CurrencyManager.formatPrice(originalPrice, userCurrency);
+      if (originalPrice > total) {
+        calculatedDiscount = Math.round(100 - (total / originalPrice) * 100);
+      }
+    }
+
+    if (shipping > 0) {
+      formattedShip = CurrencyManager.formatPrice(shipping, userCurrency);
+    }
+
+    setPriceData({
+      formattedPrice: formatted,
+      formattedOriginal: formattedOrig,
+      formattedShipping: formattedShip,
+      discount: calculatedDiscount,
+    });
+  }, [isMounted, currency, product.price, (product as any).bestPrice]);
 
   const titleText = typeof product.title === 'string' 
     ? product.title 
     : getText(product.title);
   const displayTitle = titleText || product.name || 'Produkt';
-  
-  // Smart Pricing - detect ProductCore vs legacy Product
-  const isProductCore = !!(product as any).bestPrice;
-  const bestPrice = isProductCore ? (product as any).bestPrice?.amount : null;
-  const bestPriceCurrency = isProductCore ? (product as any).bestPrice?.currency : productCurrency;
-  
-  // Smart Pricing with total landed cost
-  const itemPrice = bestPrice || getPriceAmount(product.price);
-  const shippingCost = typeof product.price === 'object' && 'shippingCost' in product.price 
-    ? product.price.shippingCost || 0
-    : 0;
-  const totalPrice = bestPrice || getTotalPrice(product.price);
-  const discountPercent = getDiscountPercent(product.price);
-  const hasFreeShipping = isFreeShipping(product.price);
-  const hasPriceGuarantee = typeof product.price === 'object' && 
-    'lowestPrice30Days' in product.price && 
-    product.price.lowestPrice30Days !== undefined;
   
   // Currency detection
   const productCurrency = typeof product.price === 'object' && 'currency' in product.price 
@@ -149,12 +184,12 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     }
   }, [hasTrackedView, product.id, user?.uid]);
 
-  const { currency } = useCurrency();
   const totalUSD = (product.price?.baseAmount || 0) + (product.price?.shippingCostUSD || 0);
 
   const originalAmount = typeof product.price === 'object' && 'originalAmount' in product.price
     ? (product.price as any).originalAmount
     : null;
+  const discountPercent = product.price ? getDiscountPercent(product.price) : 0;
   const hasDiscount = Boolean(discountPercent && Number.isFinite(discountPercent) && discountPercent > 0);
 
   const handleDetailClick = () => {
@@ -239,14 +274,14 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           
           {/* Trust Badges Overlay (Top-left) */}
           <div className="absolute top-3 left-3 flex flex-col space-sm z-10">
-            {hasFreeShipping && (
+            {priceData.formattedShipping === null && (
               <Badge className="bg-emerald-500 text-white badge-trust">
                 <Truck className="w-3 h-3 mr-1" />
                 Darmowa dostawa
               </Badge>
             )}
             
-            {hasPriceGuarantee && (
+            {false && (
               <Badge className="bg-blue-500 text-white badge-trust">
                 <ShieldCheck className="w-3 h-3 mr-1" />
                 Gwarancja ceny
@@ -537,37 +572,40 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             {/* Main Price - BIG & BOLD */}
             <div className="flex items-baseline space-sm mb-2">
               <span className="text-4xl font-black text-primary">
-                {CurrencyManager.formatPrice(totalPrice, bestPriceCurrency || currency)}
+                {priceData.formattedPrice || 'N/A'}
               </span>
-              <span className="text-base text-secondary font-semibold">
-                z dostawą
-              </span>
+              {priceData.formattedOriginal && (
+                <span className="text-base text-secondary line-through">
+                  {priceData.formattedOriginal}
+                </span>
+              )}
+              {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                <Badge variant="destructive" className="ml-2">
+                  -{priceData.discount}%
+                </Badge>
+              )}
             </div>
 
             {/* Price Breakdown (Item + Shipping) */}
-            {!hasFreeShipping && shippingCost > 0 && (
+            {priceData.formattedShipping && (
               <div className="text-sm text-secondary space-y-1 mt-2">
                 <div className="flex justify-between">
-                  <span className="font-medium">Produkt:</span>
-                  <span className="font-semibold">{CurrencyManager.formatPrice(itemPrice, bestPriceCurrency || currency)}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="font-medium">Dostawa:</span>
-                  <span className="font-semibold">{CurrencyManager.formatPrice(shippingCost, bestPriceCurrency || currency)}</span>
+                  <span className="font-semibold">{priceData.formattedShipping}</span>
                 </div>
               </div>
             )}
 
             {/* Free Shipping Callout */}
-            {hasFreeShipping && (
+            {priceData.formattedShipping === null && (
               <div className="flex items-center space-sm text-emerald-600 dark:text-emerald-400 text-base font-bold mt-2">
                 <Check className="w-4 h-4" />
                 <span>Dostawa gratis!</span>
               </div>
             )}
 
-            {/* Price Guarantee Info */}
-            {hasPriceGuarantee && typeof product.price === 'object' && product.price.lowestPrice30Days && (
+            {/* Price Guarantee Info - disabled for now */}
+            {false && typeof product.price === 'object' && product.price.lowestPrice30Days && (
               <div className="flex items-center space-sm text-blue-600 dark:text-blue-400 text-sm mt-2.5 font-medium">
                 <Info className="w-4 h-4" />
                 <span>

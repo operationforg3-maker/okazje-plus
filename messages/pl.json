@@ -75,6 +75,13 @@
     "books": "Książki",
     "other": "Inne"
   },
+  "browseCategories": {
+    "viewSubcategories": "Zobacz podkategorie",
+    "subcategoryCount": "{count, plural, one {# podkategoria} other {# podkategorii}}",
+    "browseAll": "Przeglądaj wszystkie",
+    "allCategories": "Wszystkie kategorie",
+    "moreCategories": "+{count} więcej kategorii"
+  },
   "deal": {
     "temperature": "Temperatura",
     "comments": "Komentarze",
