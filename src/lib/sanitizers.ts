@@ -25,6 +25,30 @@ const DEAL_SOURCES: readonly NonNullable<Deal['source']>[] = [
 const ensureString = (value: unknown, fallback = ''): string => {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  // Handle Firestore Timestamp object (both Client SDK and Admin SDK)
+  // Client SDK: has 'toDate' method
+  // Admin SDK: is instance of admin.firestore.Timestamp (has _seconds, _nanoseconds)
+  if (value && typeof value === 'object') {
+    // Try Client SDK Timestamp first
+    if ('toDate' in value && typeof (value as any).toDate === 'function') {
+      try {
+        return (value as any).toDate().toISOString();
+      } catch (e) {
+        // Fallthrough to next check
+      }
+    }
+    // Try Admin SDK Timestamp (has _seconds and _nanoseconds)
+    if ('_seconds' in value && typeof (value as any)._seconds === 'number') {
+      try {
+        const seconds = (value as any)._seconds;
+        const nanos = (value as any)._nanoseconds || 0;
+        const date = new Date(seconds * 1000 + nanos / 1000000);
+        return date.toISOString();
+      } catch (e) {
+        // Fallthrough
+      }
+    }
+  }
   return fallback;
 };
 

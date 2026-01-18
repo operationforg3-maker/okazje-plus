@@ -2458,7 +2458,15 @@ export async function getRecommendedProductCores(count: number = 50): Promise<an
       limit(count * 2) // Fetch more to account for sorting on client
     );
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductCore));
+    const products = snap.docs.map(d => {
+      const data = d.data() as any;
+      return {
+        ...data,
+        id: d.id,
+        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+      } as ProductCore;
+    });
     // Sort by price on client side to avoid requiring a complex index
     products.sort((a, b) => {
       const priceA = a.bestPrice?.amount || 0;
@@ -2501,7 +2509,15 @@ export async function getProductCoresByCategory(
 
     const q = query(ref, ...constraints);
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductCore));
+    const products = snap.docs.map(d => {
+      const data = d.data() as any;
+      return {
+        ...data,
+        id: d.id,
+        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+      } as ProductCore;
+    });
     
     // Sort by price on client side to avoid requiring complex indexes
     products.sort((a, b) => {
@@ -2656,6 +2672,8 @@ export async function getProductCoresByFilters(
     // Build base query constraints
     let constraints = [where('status', '==', 'approved')];
     
+    console.log('[getProductCoresByFilters] Starting with filters:', { categoryId: filters.categoryId, subCategorySlug: filters.subCategorySlug });
+    
     // Hierarchical category filtering
     if (filters.subSubCategorySlug) {
       // Most specific: filter by sub-subcategory
@@ -2670,15 +2688,14 @@ export async function getProductCoresByFilters(
 
     // Firestore can't filter on nested fields like bestPrice.amount directly in where,
     // so we fetch all and filter in-memory (alternative: use Firestore Lite or index)
-    const q = query(collection(db, 'product_cores'), ...constraints, orderBy('updatedAt', 'desc'), limit(limit_count));
+    const q = query(collection(db, 'product_cores'), ...constraints, limit(limit_count));
 
     const snapshot = await getDocs(q);
     // Always sanitize ProductCore from Firestore to ensure JSON-serializable data
     let products: ProductCore[] = snapshot.docs.map(docToProductCore);
     
-    console.log(`[getProductCoresByFilters] Fetched ${products.length} products, first 3:`, 
-      products.slice(0, 3).map(p => ({ id: (p as ProductCore).id, title: typeof (p as ProductCore).title === 'object' ? (p as ProductCore).title.pl : (p as ProductCore).title }))
-    );
+    console.log(`[getProductCoresByFilters] Fetched ${products.length} products from DB`);
+
 
     // Client-side filtering for complex conditions
     let filtered = products.filter(p => {
