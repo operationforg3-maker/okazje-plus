@@ -208,7 +208,7 @@ export function Navbar() {
                                     )}
                                   </div>
                                 </div>
-                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem((item.product as any).id)}>
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem(((item.product as any)?.id ?? (item.deal as any)?.id))}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>

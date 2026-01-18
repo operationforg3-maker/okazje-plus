@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useFavorites } from '@/hooks/use-favorites';
+import { useSmartCart } from '@/lib/cart-context';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
@@ -119,6 +120,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   const { currency } = useCurrency();
+  const { addDeal } = useSmartCart();
   
   // Format prices using state to fix Intl.NumberFormat hydration mismatch
   const [priceData, setPriceData] = useState<{
@@ -980,6 +982,25 @@ export default function DealCard({ deal, product }: DealCardProps) {
             aria-label="Dodaj do porównania"
           >
             <Scale className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              try {
+                addDeal(deal, 1);
+                toast.success('Dodano okazję do koszyka');
+              } catch (err) {
+                console.error('addDeal failed', err);
+                toast.error('Nie udało się dodać do koszyka');
+              }
+            }}
+            aria-label="Dodaj do koszyka"
+            className="gap-1"
+          >
+            Do koszyka
           </Button>
           {deal.metadata?.isExpired ? (
             <ExpiredDealBadge 

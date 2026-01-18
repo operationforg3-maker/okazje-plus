@@ -174,11 +174,13 @@ export function SmartCartWidget() {
       {/* Cart Items */}
       <div className="space-y-4">
         {items.map(item => {
-          const price = getPriceAmount(item.product.price);
-          const totalPrice = getTotalPrice(item.product.price);
-          const freeShipping = isFreeShipping(item.product.price);
-          // Backward compatibility: old products have 'name' (string), new have 'title' (LocalizedText)
-          const title = item.product.title ? getText(item.product.title) : (item.product.name || 'Produkt');
+          const priceSource = item.product ? item.product.price : item.deal!.price;
+          const price = getPriceAmount(priceSource);
+          const totalPrice = getTotalPrice(priceSource);
+          const freeShipping = isFreeShipping(priceSource);
+          const title = item.product
+            ? (item.product.title ? getText(item.product.title) : (item.product.name || 'Produkt'))
+            : (typeof (item.deal as any)?.title === 'object' ? getText((item.deal as any).title) : ((item.deal as any)?.title || 'Okazja'));
 
           return (
             <Card key={item.product.id} className="p-4">
@@ -186,7 +188,7 @@ export function SmartCartWidget() {
                 {/* Product Image */}
                 <div className="relative h-20 w-20 flex-shrink-0">
                   <Image
-                    src={item.product.image}
+                    src={(item.product as any)?.image || (item.product as any)?.imageUrl || (item.deal as any)?.image || (item.deal as any)?.imageUrl || '/placeholder.png'}
                     alt={title}
                     fill
                     className="object-cover rounded"
@@ -220,7 +222,7 @@ export function SmartCartWidget() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                      onClick={() => updateQuantity((item.product?.id ?? item.deal?.id)!, item.quantity - 1)}
                       disabled={item.quantity <= 1}
                     >
                       <Minus className="h-4 w-4" />
@@ -231,7 +233,7 @@ export function SmartCartWidget() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                      onClick={() => updateQuantity((item.product?.id ?? item.deal?.id)!, item.quantity + 1)}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -239,7 +241,7 @@ export function SmartCartWidget() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeItem(item.product.id)}
+                      onClick={() => removeItem((item.product?.id ?? item.deal?.id)!)}
                       className="ml-auto text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />

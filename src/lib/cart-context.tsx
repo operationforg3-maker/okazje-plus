@@ -14,14 +14,15 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
-import { Product, SmartPrice } from '@/lib/types';
+import { Product, SmartPrice, Deal } from '@/lib/types';
 import { getPriceAmount, getTotalPrice } from '@/lib/i18n-utils';
 import { logger } from '@/lib/logging';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface CartItem {
-  product: Product;
+  product?: Product; // legacy/product items
+  deal?: Deal;       // new: allow adding deals directly
   quantity: number;
   addedAt: string;
   notes?: string;
@@ -33,11 +34,12 @@ interface CartContextValue {
   totalAmount: number;
   totalWithShipping: number;
   addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  updateNotes: (productId: string, notes: string) => void;
+  addDeal: (deal: Deal, quantity?: number) => void;
+  removeItem: (id: string) => void; // accepts product.id or deal.id
+  updateQuantity: (id: string, quantity: number) => void; // product.id or deal.id
+  updateNotes: (id: string, notes: string) => void;
   clearCart: () => void;
-  isInCart: (productId: string) => boolean;
+  isInCart: (id: string) => boolean;
   shareCart: () => Promise<{ shareUrl: string; shareId: string } | null>;
   finalizeCart: () => Promise<{ links: Array<{ product: Product; affiliateLink: string }> }>;
   isLoading: boolean;
@@ -153,7 +155,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    */
   const addItem = (product: Product, quantity: number = 1) => {
     setItems(prev => {
-      const existingIndex = prev.findIndex(item => item.product.id === product.id);
+      const existingIndex = prev.findIndex(item => item.product?.id === product.id);
       
       if (existingIndex >= 0) {
         // Update quantity if already in cart
@@ -176,12 +178,37 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   };
 
   /**
+   * Add deal to cart
+   */
+  const addDeal = (deal: Deal, quantity: number = 1) => {
+    setItems(prev => {
+      const existingIndex = prev.findIndex(item => item.deal?.id === deal.id);
+      
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex].quantity += quantity;
+        logger.info(`Updated cart deal quantity: ${deal.title}`, {
+          newQuantity: updated[existingIndex].quantity,
+        });
+        return updated;
+      } else {
+        logger.info(`Added deal to cart: ${deal.title}`);
+        return [...prev, {
+          deal,
+          quantity,
+          addedAt: new Date().toISOString(),
+        }];
+      }
+    });
+  };
+
+  /**
    * Remove item from cart
    */
-  const removeItem = (productId: string) => {
+  const removeItem = (id: string) => {
     setItems(prev => {
-      const filtered = prev.filter(item => item.product.id !== productId);
-      logger.info(`Removed item from cart: ${productId}`);
+      const filtered = prev.filter(item => (item.product?.id ?? item.deal?.id) !== id ? true : false);
+      logger.info(`Removed item from cart: ${id}`);
       return filtered;
     });
   };
@@ -189,19 +216,19 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   /**
    * Update item quantity
    */
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
-      removeItem(productId);
+      removeItem(id);
       return;
     }
     
     setItems(prev => {
       const updated = prev.map(item => 
-        item.product.id === productId 
+        (item.product?.id === id || item.deal?.id === id)
           ? { ...item, quantity }
           : item
       );
-      logger.info(`Updated quantity for ${productId}: ${quantity}`);
+      logger.info(`Updated quantity for ${id}: ${quantity}`);
       return updated;
     });
   };
@@ -209,10 +236,10 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   /**
    * Update item notes
    */
-  const updateNotes = (productId: string, notes: string) => {
+  const updateNotes = (id: string, notes: string) => {
     setItems(prev => {
       const updated = prev.map(item => 
-        item.product.id === productId 
+        (item.product?.id === id || item.deal?.id === id)
           ? { ...item, notes }
           : item
       );
@@ -231,8 +258,8 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
   /**
    * Check if product is in cart
    */
-  const isInCart = (productId: string): boolean => {
-    return items.some(item => item.product.id === productId);
+  const isInCart = (id: string): boolean => {
+    return items.some(item => (item.product?.id === id || item.deal?.id === id));
   };
 
   /**
@@ -244,7 +271,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    * Calculate total amount (products only, no shipping)
    */
   const totalAmount = items.reduce((sum, item) => {
-    const price = getPriceAmount(item.product.price);
+    const price = item.product ? getPriceAmount(item.product.price) : getPriceAmount(item.deal!.price);
     return sum + (price * item.quantity);
   }, 0);
 
@@ -252,7 +279,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    * Calculate total with shipping (total landed cost)
    */
   const totalWithShipping = items.reduce((sum, item) => {
-    const totalPrice = getTotalPrice(item.product.price);
+    const totalPrice = item.product ? getTotalPrice(item.product.price) : getTotalPrice(item.deal!.price);
     return sum + (totalPrice * item.quantity);
   }, 0);
 
@@ -312,7 +339,8 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: items.map(item => ({
-            productId: item.product.id,
+            productId: item.product?.id,
+            dealId: item.deal?.id,
             quantity: item.quantity,
           })),
         }),
@@ -334,10 +362,24 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
       
       // Fallback: return existing affiliate URLs
       return {
-        links: items.map(item => ({
-          product: item.product,
-          affiliateLink: item.product.affiliateUrl,
-        })),
+        links: items.map(item => {
+          if (item.product) {
+            return {
+              product: item.product as Product,
+              affiliateLink: (item.product as any).affiliateUrl || '',
+            };
+          }
+          const d = item.deal as any;
+          const minimalProduct = {
+            id: d?.id,
+            name: typeof d?.title === 'object' ? d?.title?.pl : (d?.title || 'Okazja'),
+            image: d?.image || d?.imageUrl || '/placeholder.png',
+          } as Product;
+          return {
+            product: minimalProduct,
+            affiliateLink: (d?.affiliateLink || d?.dealUrl || d?.sourceUrl || ''),
+          };
+        }),
       };
     }
   };
@@ -356,6 +398,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
     shareCart,
     finalizeCart,
     isLoading,
+    addDeal,
   };
 
   return (

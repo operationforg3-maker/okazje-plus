@@ -7,7 +7,8 @@ import { useCategoryName } from '@/hooks/use-category-name';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
-import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles } from 'lucide-react';
+import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart } from 'lucide-react';
+import { useSmartCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import DealEditDialog from '@/components/admin/deal-edit-dialog';
@@ -96,6 +97,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const { currency } = useCurrency();
 
   const isHot = deal.temperature >= 300;
+  const { addDeal } = useSmartCart();
 
   const temperatureColor = deal.temperature >= 500 ? 'from-red-500 to-orange-500' 
     : deal.temperature >= 300 ? 'from-orange-500 to-amber-500'
@@ -268,6 +270,17 @@ export default function DealListCard({ deal }: DealListCardProps) {
           <Link href={typeof deal.link === 'string' ? deal.link : '#'} target="_blank" rel="noopener noreferrer">
             Idź do okazji
           </Link>
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          className="w-full gap-1"
+          onClick={() => {
+            try { addDeal(deal, 1); } catch {}
+          }}
+        >
+          <ShoppingCart className="h-4 w-4" />
+          Dodaj do koszyka
         </Button>
       </div>
     </div>
