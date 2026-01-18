@@ -383,7 +383,7 @@ export default function DealsPage() {
         }
         if (quickFilters.freeShipping && deal.shippingCost !== 0) return false;
         if (quickFilters.bigDiscount && deal.originalPrice) {
-          const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
+          const discount = ((deal.originalPrice - (typeof deal.price === 'object' ? deal.price.amount : deal.price)) / deal.originalPrice) * 100;
           if (discount < 50) return false;
         }
         if (quickFilters.today) {
@@ -453,13 +453,17 @@ export default function DealsPage() {
     total: filteredAndSortedDeals.length,
     avgDiscount: filteredAndSortedDeals.reduce((acc, deal) => {
       if (!deal.originalPrice) return acc;
-      const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
+      const currentPrice = typeof deal.price === 'object' ? deal.price.amount : deal.price;
+      const discount = ((deal.originalPrice - currentPrice) / deal.originalPrice) * 100;
       return acc + discount;
     }, 0) / filteredAndSortedDeals.length || 0,
     bestDeal: filteredAndSortedDeals.reduce((best, deal) => {
       if (!deal.originalPrice) return best;
-      const discount = ((deal.originalPrice - deal.price) / deal.originalPrice) * 100;
-      const bestDiscount = best?.originalPrice ? ((best.originalPrice - best.price) / best.originalPrice) * 100 : 0;
+      const currentPrice = typeof deal.price === 'object' ? deal.price.amount : deal.price;
+      const discount = ((deal.originalPrice - currentPrice) / deal.originalPrice) * 100;
+      
+      const bestPrice = best && (typeof best.price === 'object' ? best.price.amount : best.price);
+      const bestDiscount = best?.originalPrice && bestPrice ? ((best.originalPrice - bestPrice) / best.originalPrice) * 100 : 0;
       return discount > bestDiscount ? deal : best;
     }, filteredAndSortedDeals[0]),
   };

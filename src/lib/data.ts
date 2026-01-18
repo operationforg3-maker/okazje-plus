@@ -1373,8 +1373,9 @@ export async function createDeal(data: Omit<Deal, 'id' | 'postedAt' | 'createdAt
   if (data.status === 'approved' && data.temperature && data.temperature > 500) {
     try {
       const { autoQueueHotDeal } = await import('./social-automation');
-      const discount = data.originalPrice && data.price 
-        ? Math.round(((data.originalPrice - data.price) / data.originalPrice) * 100)
+      const currentPrice = typeof data.price === 'object' ? data.price.amount : data.price;
+      const discount = data.originalPrice && currentPrice
+        ? Math.round(((data.originalPrice - currentPrice) / data.originalPrice) * 100)
         : undefined;
       
       await autoQueueHotDeal(dealId, {

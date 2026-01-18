@@ -67,7 +67,7 @@ export function DealForm({ deal, onSuccess, onCancel }: DealFormProps) {
           titleEn: typeof deal.title === 'object' ? deal.title.en : undefined,
           description: typeof deal.description === 'object' ? deal.description.pl : (deal as any).description,
           descriptionEn: typeof deal.description === 'object' ? deal.description.en : undefined,
-          price: deal.price,
+          price: typeof deal.price === 'object' ? (deal.price as any).amount : deal.price,
           originalPrice: deal.originalPrice,
           link: deal.link,
           image: deal.image,

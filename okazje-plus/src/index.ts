@@ -1328,8 +1328,9 @@ export const checkSavedSearches = onDocumentCreated(
  */
 function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
   // Price range
-  if (filters.minPrice && deal.price < filters.minPrice) return false;
-  if (filters.maxPrice && deal.price > filters.maxPrice) return false;
+  const priceVal = typeof deal.price === 'object' ? deal.price.amount : deal.price;
+  if (filters.minPrice && priceVal < filters.minPrice) return false;
+  if (filters.maxPrice && priceVal > filters.maxPrice) return false;
 
   // Temperature
   if (

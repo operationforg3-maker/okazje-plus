@@ -223,7 +223,10 @@ function convertProductToCore(product: Product, deals: DealLegacy[]): ProductCor
 
   // Calculate best price
   const prices = linkedDeals
-    .map((d) => (d.price || 0) + (d.shippingCost || 0))
+    .map((d) => {
+      const p = typeof d.price === 'object' ? (d.price as any).amount : d.price || 0;
+      return p + (d.shippingCost || 0);
+    })
     .filter((p) => p > 0);
   const bestPrice =
     prices.length > 0 ? Math.min(...prices) : product.price || 0;
@@ -310,7 +313,7 @@ function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
     id: oldDeal.id,
     productId,
     price: {
-      amount: oldDeal.price || 0,
+      amount: typeof oldDeal.price === 'object' ? (oldDeal.price as any).amount : oldDeal.price || 0,
       currency: oldDeal.importMetadata?.source?.includes('allegro') ? 'PLN' : 'USD',
     },
     originalPrice: oldDeal.originalPrice,

@@ -934,7 +934,10 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
         subcategory={deal.subCategorySlug}
         subsubcategory={deal.subSubCategorySlug}
         tags={deal.tags}
-        priceRange={deal.price ? [deal.price * 0.7, deal.price * 1.3] : undefined}
+        priceRange={(() => {
+          const p = typeof deal.price === 'object' ? deal.price.amount : (deal.price || 0);
+          return p ? [p * 0.7, p * 1.3] : undefined;
+        })()}
         excludeItemId={deal.id}
         maxItems={8}
       />

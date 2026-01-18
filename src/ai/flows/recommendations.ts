@@ -166,7 +166,10 @@ export const similarDealsFlow = ai.defineFlow(
       score += (commonTags / Math.max(sourceTags.length, 1)) * 0.3;
 
       // Price similarity
-      const priceRatio = Math.min((deal as any).price, sourceDeal.price || 0) / Math.max((deal as any).price, sourceDeal.price || 1);
+      const getVal = (v: any) => typeof v === 'object' ? v.amount : v || 0;
+      const dPrice = getVal((deal as any).price);
+      const sPrice = getVal(sourceDeal.price);
+      const priceRatio = Math.min(dPrice, sPrice) / Math.max(dPrice, sPrice || 1);
       score += priceRatio * 0.2;
 
       return {

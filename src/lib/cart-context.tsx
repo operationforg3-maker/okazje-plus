@@ -271,7 +271,13 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    * Calculate total amount (products only, no shipping)
    */
   const totalAmount = items.reduce((sum, item) => {
-    const price = item.product ? getPriceAmount(item.product.price) : getPriceAmount(item.deal!.price);
+    let price = 0;
+    if (item.product) {
+      price = getPriceAmount(item.product.price);
+    } else if (item.deal) {
+      const p = item.deal.price;
+      price = typeof p === 'object' ? p.amount : (p || 0);
+    }
     return sum + (price * item.quantity);
   }, 0);
 
@@ -279,7 +285,15 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    * Calculate total with shipping (total landed cost)
    */
   const totalWithShipping = items.reduce((sum, item) => {
-    const totalPrice = item.product ? getTotalPrice(item.product.price) : getTotalPrice(item.deal!.price);
+    let totalPrice = 0;
+    if (item.product) {
+      totalPrice = getTotalPrice(item.product.price);
+    } else if (item.deal) {
+      const p = item.deal.price;
+      const priceVal = typeof p === 'object' ? p.amount : (p || 0);
+      const shipping = item.deal.shippingCost || 0;
+      totalPrice = priceVal + shipping;
+    }
     return sum + (totalPrice * item.quantity);
   }, 0);
 

@@ -92,7 +92,8 @@ export function SimilarItemsCarousel({
         const [minPrice, maxPrice] = priceRange;
         similarItems = similarItems.filter(item => {
           const deal = item as Deal;
-          const price = deal.price || 0;
+          const rawP = deal.price;
+          const price = typeof rawP === 'object' ? (rawP as any).amount : rawP || 0;
           return price >= minPrice && price <= maxPrice;
         });
       }

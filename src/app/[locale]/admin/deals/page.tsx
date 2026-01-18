@@ -120,7 +120,7 @@ export default function AdminDealsPage() {
     if (statusFilter !== 'high-discount') return deals;
     return deals.filter(d => {
       const orig = d.originalPrice || 0;
-      const price = d.price || 0;
+      const price = typeof d.price === 'object' ? (d.price as any).amount : d.price || 0;
       if (!orig || !price || price >= orig) return false;
       const rate = (orig - price) / orig;
       return rate >= 0.4; // 40%+
@@ -398,7 +398,10 @@ export default function AdminDealsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {Number.isFinite(deal.price) ? deal.price.toFixed(2) : '—'} zł
+                      {(() => {
+                        const val = typeof deal.price === 'object' ? (deal.price as any).amount : deal.price;
+                        return Number.isFinite(val) ? (val as number).toFixed(2) : '—';
+                      })()} zł
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {Number.isFinite(deal.originalPrice) ? (deal.originalPrice as number).toFixed(2) : 'N/A'} zł

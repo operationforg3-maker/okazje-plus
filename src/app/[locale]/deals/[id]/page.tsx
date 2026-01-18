@@ -140,12 +140,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   const { deal } = data;
   const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || deal.title?.en || 'Okazja';
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.price);
+  
+  const getP = (v: any) => typeof v === 'object' ? v.amount : v;
+  const pVal = getP(deal.price);
+  
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(pVal);
   const originalPrice = deal.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice)
     : null;
   const discount = deal.originalPrice && deal.originalPrice > 0
-    ? Math.round(((deal.originalPrice - deal.price) / deal.originalPrice) * 100)
+    ? Math.round(((deal.originalPrice - pVal) / deal.originalPrice) * 100)
     : null;
   
   const metaTitle = `${dealTitle} - ${price}${discount ? ` (-${discount}%)` : ''} | Okazje Plus`;
