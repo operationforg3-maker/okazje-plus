@@ -12,13 +12,14 @@ interface SellerInfoProps {
 export function SellerInfo({ seller, compact = false }: SellerInfoProps) {
   if (!seller) return null;
   
-  const { name, rating, followers, storeUrl } = seller;
+  const { name, rating, score, followers, storeUrl, positiveRate } = seller;
   
   // Render stars
   const renderStars = () => {
     const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
+    const starRating = rating ?? score ?? 0; // M6+: Use score as fallback
+    const fullStars = Math.floor(starRating);
+    const hasHalfStar = starRating % 1 >= 0.5;
     
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
@@ -41,13 +42,15 @@ export function SellerInfo({ seller, compact = false }: SellerInfoProps) {
   
   // Compact version for cards
   if (compact) {
+    const starRating = rating ?? score ?? 0;
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span className="font-medium text-gray-900">{name}</span>
         <div className="flex items-center gap-0.5">
           {renderStars()}
         </div>
-        <span>({rating.toFixed(1)})</span>
+        <span>({starRating.toFixed(1)})</span>
+        {positiveRate && <span className="text-xs text-green-600">• {positiveRate}</span>}
       </div>
     );
   }
@@ -84,10 +87,19 @@ export function SellerInfo({ seller, compact = false }: SellerInfoProps) {
               {renderStars()}
             </div>
             <span className="text-sm font-medium">
-              {rating.toFixed(1)} / 5.0
+              {(rating ?? score ?? 0).toFixed(1)} / 5.0
             </span>
           </div>
         </div>
+        
+        {/* M6+: Positive Rate - Trust Badge */}
+        {positiveRate && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <p className="text-sm font-semibold text-green-700">
+              ✓ {positiveRate} pozytywnych opinii
+            </p>
+          </div>
+        )}
         
         {/* Followers */}
         {followers !== undefined && followers > 0 && (

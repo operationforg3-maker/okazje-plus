@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Star, ShoppingCart, Heart, Share2, ExternalLink } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Share2, ExternalLink, Zap, Globe } from 'lucide-react';
 import { useCurrency } from '@/lib/unified-currency';
 import Link from 'next/link';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
@@ -20,6 +20,29 @@ import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 interface ProductDetailDeepDataProps {
   productCore: ProductCore;
   deals: DealM6[];
+}
+
+// M6+: Warehouse badge component
+function WarehouseBadge({ warehouses }: { warehouses?: string[] }) {
+  if (!warehouses || warehouses.length === 0) return null;
+  const hasPLWarehouse = warehouses.includes('PL');
+  
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {hasPLWarehouse && (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-200">
+          <Zap className="h-3 w-3 mr-1" />
+          Wysyłka z Polski
+        </Badge>
+      )}
+      {warehouses.length > 0 && (
+        <Badge variant="outline">
+          <Globe className="h-3 w-3 mr-1" />
+          {warehouses.join(', ')}
+        </Badge>
+      )}
+    </div>
+  );
 }
 
 export default function ProductDetailDeepData({ productCore, deals }: ProductDetailDeepDataProps) {
@@ -200,9 +223,21 @@ export default function ProductDetailDeepData({ productCore, deals }: ProductDet
             <LogisticsBadge logistics={productCore.logistics} compact={false} />
           )}
           
-          {/* Seller Info */}
+          {/* M6+: Warehouse Info - Fast Shipping Badge */}
+          <WarehouseBadge warehouses={productCore.warehouses} />
+          
+          {/* Seller Info (M6+: includes positiveRate) */}
           {productCore.seller && (
-            <SellerInfo seller={productCore.seller} compact={false} />
+            <Card>
+              <CardContent className="pt-6">
+                <SellerInfo seller={productCore.seller} compact={false} />
+                {productCore.seller.positiveRate && (
+                  <Badge className="mt-3 bg-blue-100 text-blue-800" variant="secondary">
+                    {productCore.seller.positiveRate} pozytywnych opinii
+                  </Badge>
+                )}
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
@@ -274,11 +309,29 @@ export default function ProductDetailDeepData({ productCore, deals }: ProductDet
               <CardTitle>Specyfikacja techniczna</CardTitle>
             </CardHeader>
             <CardContent>
-              <SpecificationsTable 
-                specifications={productCore.specificationsStructured}
-                specs={productCore.specs}
-                showCategories={true}
-              />
+              <div className="space-y-8">
+                {/* M6+: Simple attributes (from product_props) - displayed first */}
+                {productCore.attributes && productCore.attributes.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm">Atrybuty produktu</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {productCore.attributes.map((attr, idx) => (
+                        <div key={idx} className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+                          <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">{attr.name}</p>
+                          <p className="font-semibold text-sm mt-1">{attr.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Structured specifications table */}
+                <SpecificationsTable 
+                  specifications={productCore.specificationsStructured}
+                  specs={productCore.specs}
+                  showCategories={true}
+                />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

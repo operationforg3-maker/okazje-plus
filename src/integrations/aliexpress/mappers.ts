@@ -32,16 +32,80 @@ function parseProps(raw: any): Array<z.infer<typeof SpecificationSchema>> {
     for (const p of props) {
       const label = p.attrName || p.name || p.key || p.label;
       const value = p.attrValue || p.value || p.val;
-      if (label && value) out.push({ label: String(label), value: String(value) });
+      // M6+: Filter out junk keys (IDs, empty values)
+      if (label && value && !String(label).toLowerCase().startsWith('id_')) {
+        out.push({ label: String(label), value: String(value) });
+      }
     }
   } else if (typeof props === 'string') {
     // "Key: Value; Key2: Value2"
     props.split(/;|\n/).forEach((pair: string) => {
       const [k, v] = pair.split(/:\s*/);
-      if (k && v) out.push({ label: k.trim(), value: v.trim() });
+      if (k && v && !k.toLowerCase().startsWith('id_')) {
+        out.push({ label: k.trim(), value: v.trim() });
+      }
     });
   }
   return out;
+}
+
+// M6+: Parse attributes (alternative simple key-value format)
+function parseAttributes(raw: any): Array<{ name: string; value: string }> {
+  const props = raw.product_props || raw.attribute_list || raw.attributeList;
+  const out: Array<{ name: string; value: string }> = [];
+  if (!props) return out;
+  if (Array.isArray(props)) {
+    for (const p of props) {
+      const name = p.attrName || p.name || p.key || p.label;
+      const value = p.attrValue || p.value || p.val;
+      if (name && value && !String(name).toLowerCase().startsWith('id_')) {
+        out.push({ name: String(name), value: String(value) });
+      }
+    }
+  }
+  return out;
+}
+
+// M6+: Parse seller info from store_info
+function parseSeller(raw: any): any {
+  const storeInfo = raw.store_info || raw.storeInfo;
+  if (!storeInfo) return undefined;
+  
+  return {
+    name: storeInfo.store_name || storeInfo.storeName || 'Unknown Store',
+    score: storeInfo.store_score || storeInfo.score || storeInfo.rating,
+    positiveRate: storeInfo.positive_rate || storeInfo.positiveRate,
+    storeId: String(storeInfo.store_id || storeInfo.storeId || ''),
+    storeUrl: storeInfo.store_url || storeInfo.storeUrl,
+  };
+}
+
+// M6+: Parse warehouses from ships_from_countries
+function parseWarehouses(raw: any): string[] {
+  const countries = raw.ships_from_countries || raw.shipsFromCountries;
+  if (!countries) return [];
+  if (typeof countries === 'string') {
+    return countries.split(/[,;\s]+/).filter(Boolean).map(c => c.trim().toUpperCase());
+  }
+  if (Array.isArray(countries)) {
+    return countries.filter(Boolean).map(c => String(c).trim().toUpperCase());
+  }
+  return [];
+}
+
+// M6+: Find best price from SKU list (often lower than main price)
+function findBestPriceFromSKU(raw: any): number | null {
+  const skuList = raw.sku_list || raw.skuList;
+  if (!Array.isArray(skuList) || skuList.length === 0) return null;
+  
+  let minPrice = Infinity;
+  for (const sku of skuList) {
+    const price = parseFloat(String(sku.sku_price || sku.price || '0'));
+    if (price > 0 && price < minPrice) {
+      minPrice = price;
+    }
+  }
+  return minPrice === Infinity ? null : minPrice;
 }
 
 export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
@@ -52,7 +116,10 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
   const video = raw.product_video_url || raw.productVideoUrl;
   const shipDaysRaw = raw.ship_to_days || raw.deliveryDays;
   const shipDays = typeof shipDaysRaw === 'string' ? parseInt(shipDaysRaw, 10) : shipDaysRaw;
-  const currentPLNFloat = parseFloat(String(raw.target_sale_price ?? raw.sale_price ?? '0')) || 0;
+  
+  // M6+: Prefer SKU list price if available (often lower)
+  const skuBestPrice = findBestPriceFromSKU(raw);
+  const currentPLNFloat = skuBestPrice || parseFloat(String(raw.target_sale_price ?? raw.sale_price ?? '0')) || 0;
   const originalPLNFloat = parseFloat(String(raw.original_price ?? raw.target_original_price ?? '0')) || 0;
 
   // Convert to integer grosze as required
@@ -73,6 +140,10 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
   }
 
   const specifications = parseProps(raw);
+  const attributes = parseAttributes(raw); // M6+: Alternative attributes format
+  const seller = parseSeller(raw); // M6+: Seller trust data
+  const warehouses = parseWarehouses(raw); // M6+: Warehouse locations
+  const hasPLWarehouse = warehouses.includes('PL'); // M6+: Fast shipping flag
 
   const nowIso = new Date().toISOString();
   const priceHistory: z.infer<typeof PriceHistoryEntrySchema>[] = [
@@ -84,7 +155,9 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
     source: 'aliexpress',
     sourceUrl: detailsUrl,
     title: { pl: title },
+    videoUrl: video || undefined, // M6+: Direct video URL
     specifications,
+    attributes, // M6+: Simple key-value attributes
     gallery,
     thumbnail: main,
     price: {
@@ -95,9 +168,11 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
     },
     logistics: shipDays ? {
       deliveryDays: shipDays,
-      isFreeShipping: false,
+      isFreeShipping: hasPLWarehouse || false, // M6+: PL warehouse = often free
       shippingCost: 0,
     } : undefined,
+    seller, // M6+: Seller info
+    warehouses, // M6+: ['PL', 'CZ', 'CN']
     priceHistory,
     status: 'draft',
     importedAt: nowIso,

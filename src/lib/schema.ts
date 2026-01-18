@@ -60,7 +60,9 @@ export type Logistics = z.infer<typeof LogisticsSchema>;
 
 export const SellerSchema = z.object({
   name: z.string().min(1, 'Seller name is required'),
-  rating: z.number().min(0).max(5, 'Rating must be between 0 and 5'),
+  rating: z.number().min(0).max(5, 'Rating must be between 0 and 5').optional(), // M6+: Made optional for safety
+  score: z.number().min(0).max(5).optional(), // M6+: Alternative field name
+  positiveRate: z.string().optional(), // M6+: "98.5%" format for trust badge
   followers: z.number().int().min(0).optional(),
   storeUrl: z.string().url().optional(),
   storeId: z.string().optional(),
@@ -116,7 +118,16 @@ export const ProductSchema = z.object({
   title: z.record(z.string()).optional(), // Multi-language
   description: z.record(z.string()).optional(), // Multi-language
   
+  // M6+ Enhanced: Video support
+  videoUrl: z.string().url().optional(), // Direct .mp4 link for product video
+  
+  // M6+ Enhanced: Dual spec format (legacy + structured)
   specifications: z.array(SpecificationSchema).optional(),
+  attributes: z.array(z.object({
+    name: z.string(),
+    value: z.string(),
+  })).default([]), // M6+: Technical attributes (alternative to specifications)
+  
   gallery: z.array(GalleryItemSchema).optional(),
   thumbnail: z.string().url().optional(),
   
@@ -131,6 +142,7 @@ export const ProductSchema = z.object({
   
   logistics: LogisticsSchema.optional(),
   seller: SellerSchema.optional(),
+  warehouses: z.array(z.string()).default([]), // M6+: ['PL', 'CZ', 'CN'] - warehouse locations
   priceHistory: z.array(PriceHistoryEntrySchema).optional(),
   
   categorySlug: z.string().optional(),

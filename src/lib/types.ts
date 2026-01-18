@@ -2317,7 +2317,21 @@ export interface ProductCore {
     followers?: number;
     storeUrl?: string;
     storeId?: string;
+    positiveRate?: string; // M6+: "98.5%" format for trust badge
   };
+  
+  /**
+   * M6+: Simple key-value attributes from product_props
+   * Alternative format to specifications (flatter, better for display)
+   */
+  attributes?: Array<{ name: string; value: string }>;
+  
+  /**
+   * M6+: Available warehouse locations (e.g., ['PL', 'CZ', 'CN'])
+   * Extracted from ships_from_countries for logistics display
+   * Enables "Fast Shipping from Poland" badge
+   */
+  warehouses?: string[];
 }
 
 /**

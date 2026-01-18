@@ -458,30 +458,34 @@ export class AliExpressClient {
   ): Promise<AliExpressProductDetailsResponse> {
     logger.info('Getting product details', { productId: params.productId });
 
-    // Enforce Polish buyer context and deep fields
+    // Enforce Polish buyer context and deep fields (M6+ Enhanced)
     const baseParams: Record<string, any> = {
-      // Geo/currency/language context
-      ship_to_country: 'PL',
+      // Geo/currency/language context (CRITICAL for PL availability)
+      ship_to_country: params.shipToCountry || 'PL',
       target_currency: 'PLN',
       target_language: 'PL',
-      // Mandatory deep fields
+      // Mandatory deep fields (M6+ complete set)
       fields: [
         'product_id',
         'product_title',
-        'product_video_url',
+        'product_video_url',          // M6+: Video URL for conversion boost
         'product_main_image_url',
         'all_images',
-        'product_props',
+        'product_small_image_urls',   // Additional gallery images
+        'product_props',              // M6+: Technical attributes
         'target_sale_price',
         'original_price',
         'discount',
         'ship_to_days',
         'evaluate_rate',
+        'volume',                     // Sales volume
         'promotion_link',
         'app_sale_price',
-        'store_info',
-        'ships_from_countries',
-        'sku_list',
+        'store_info',                 // M6+: Seller trust data
+        'ships_from_countries',       // M6+: Warehouse locations (PL detection)
+        'sku_list',                   // M6+: Variant pricing for real price ranges
+        'second_level_image_url',     // Additional images
+        'first_level_image_url',      // Additional images
       ].join(','),
     };
 
