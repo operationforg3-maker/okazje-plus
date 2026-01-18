@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useCurrency } from '@/lib/unified-currency';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { useTranslations } from 'next-intl';
 import {
   Table,
@@ -94,8 +94,12 @@ export function PriceComparisonTable({
           </TableHeader>
           <TableBody>
             {deals.map((deal) => {
-              const productPrice = deal.price?.amount || 0;
-              const shippingCost = deal.shipping?.cost || 0;
+              // Convert to PLN (Base)
+              const sourceCurrency = deal.price?.currency || 'PLN';
+              const productPrice = CurrencyManager.convertToPLN(deal.price?.amount || 0, sourceCurrency);
+              const shippingCost = CurrencyManager.convertToPLN(deal.shipping?.cost || 0, sourceCurrency);
+              const originalPriceInPLN = deal.originalPrice ? CurrencyManager.convertToPLN(deal.originalPrice, sourceCurrency) : 0;
+              
               const totalPrice = productPrice + shippingCost;
               const isBestDeal = deal.id === bestDealId;
 
@@ -123,7 +127,7 @@ export function PriceComparisonTable({
                     </span>
                     {deal.originalPrice && (
                       <p className="text-xs text-gray-500 line-through">
-                        {formatPrice(deal.originalPrice)}
+                        {formatPrice(originalPriceInPLN)}
                       </p>
                     )}
                   </TableCell>
