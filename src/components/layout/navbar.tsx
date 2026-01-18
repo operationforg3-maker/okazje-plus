@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
-import { Menu, ShoppingBag, Scale } from 'lucide-react';
+import { Menu, ShoppingBag, Scale, Trash2 } from 'lucide-react';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
@@ -27,6 +27,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
 import { MiniCartBadge } from '@/components/smart-cart-widget';
 import { LogoSVGWrapper } from './logo-svg-wrapper';
+import { useSmartCart } from '@/lib/cart-context';
+import { useCurrency } from '@/lib/unified-currency';
+import { getPriceAmount, getTotalPrice, isFreeShipping } from '@/lib/i18n-utils';
+import Image from 'next/image';
 
 export function Navbar() {
   const t = useTranslations('nav');
@@ -36,6 +40,8 @@ export function Navbar() {
   const { user, loading } = useAuth();
   const { addToComparison } = useComparison();
   const cartMenuRef = React.useRef<HTMLDivElement>(null);
+  const { items, itemCount, totalAmount, totalWithShipping, removeItem } = useSmartCart();
+  const { formatPrice } = useCurrency();
 
   React.useEffect(() => {
     setIsMounted(true);
@@ -172,14 +178,65 @@ export function Navbar() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm text-muted-foreground">Koszyk</span>
+                        <span className="text-xs">{itemCount} szt.</span>
                       </div>
-                      <Link
-                        href={`${prefix}/cart`}
-                        className="block w-full text-center py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-                        onClick={() => setCartMenuOpen(false)}
-                      >
-                        Przejdź do koszyka
-                      </Link>
+                      {items.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Twój koszyk jest pusty.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {items.slice(0, 3).map((item) => {
+                            const price = getPriceAmount(item.product.price);
+                            const total = getTotalPrice(item.product.price);
+                            const shippingCost = Math.max(total - price, 0);
+                            const title = (item.product as any).title?.pl || (item.product as any).name || 'Produkt';
+                            const imageUrl = (item.product as any).image || (item.product as any).imageUrl || '/placeholder.png';
+                            const freeShip = isFreeShipping(item.product.price);
+                            return (
+                              <div key={(item.product as any).id} className="flex items-center gap-3">
+                                <div className="relative h-12 w-12 flex-shrink-0">
+                                  <Image src={imageUrl} alt={title} fill className="object-cover rounded" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{title}</p>
+                                  <p className="text-xs text-muted-foreground">Ilość: {item.quantity}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-sm font-semibold">{formatPrice(price)}</span>
+                                    {freeShip ? (
+                                      <span className="text-xs text-green-600">Darmowa wysyłka</span>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">+ wysyłka {formatPrice(shippingCost)}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => removeItem((item.product as any).id)}>
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            );
+                          })}
+                          {items.length > 3 && (
+                            <p className="text-xs text-muted-foreground">+ {items.length - 3} więcej pozycji</p>
+                          )}
+                          <div className="pt-2 border-t">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Suma:</span>
+                              <span className="font-semibold">{Number.isFinite(totalWithShipping) ? formatPrice(totalWithShipping) : '—'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-3 flex gap-2">
+                        <Link
+                          href={`${prefix}/cart`}
+                          className="flex-1 text-center py-2 px-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                          onClick={() => setCartMenuOpen(false)}
+                        >
+                          Przejdź do koszyka
+                        </Link>
+                        <Button variant="outline" className="px-3" onClick={() => setCartMenuOpen(false)}>
+                          Zamknij
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="border-t border-border pt-4">
