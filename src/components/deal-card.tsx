@@ -151,16 +151,28 @@ export default function DealCard({ deal, product }: DealCardProps) {
     
     // M6 compatibility: Extract price from either structure
     let priceAmount = 0;
+    let sourceCurrency: any = 'PLN';
+
     if (typeof deal.price === 'number') {
       priceAmount = deal.price; // Legacy format
     } else if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
       priceAmount = deal.price.amount; // M6 format: price.amount
+      sourceCurrency = (deal.price.currency || 'PLN').toUpperCase();
     } else if (deal.legacyPrice !== undefined) {
       priceAmount = deal.legacyPrice; // Fallback to legacyPrice field
     }
     
+    // Safety check for supported currencies
+    if (!['PLN', 'USD', 'EUR', 'GBP'].includes(sourceCurrency)) {
+      sourceCurrency = 'PLN';
+    }
+    
     const safePrice = Number(priceAmount) || 0;
-    const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
+    
+    // Ensure we work with PLN for CurrencyManager
+    // If source is not PLN, we must convert TO PLN first
+    const priceInPLN = CurrencyManager.convertToPLN(safePrice, sourceCurrency);
+    const formatted = CurrencyManager.formatPrice(priceInPLN, userCurrency);
 
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
@@ -168,19 +180,22 @@ export default function DealCard({ deal, product }: DealCardProps) {
     let shipping: string | null = null;
 
     if (typeof deal.originalPrice === 'number') {
-      formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
+      const origInPLN = CurrencyManager.convertToPLN(deal.originalPrice, sourceCurrency);
+      formattedOrig = CurrencyManager.formatPrice(origInPLN, userCurrency);
 
       if (deal.originalPrice > 0) {
         calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
       }
 
       if (deal.originalPrice > safePrice) {
-        savings = CurrencyManager.formatPrice(deal.originalPrice - safePrice, userCurrency);
+        const savingsInPLN = origInPLN - priceInPLN;
+        savings = CurrencyManager.formatPrice(savingsInPLN, userCurrency);
       }
     }
 
     if (typeof deal.shippingCost === 'number' && deal.shippingCost > 0) {
-      shipping = CurrencyManager.formatPrice(deal.shippingCost, userCurrency);
+      const shippingInPLN = CurrencyManager.convertToPLN(deal.shippingCost, sourceCurrency);
+      shipping = CurrencyManager.formatPrice(shippingInPLN, userCurrency);
     }
 
     setPriceData({

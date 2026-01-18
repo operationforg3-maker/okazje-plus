@@ -140,16 +140,27 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     
     // M6 compatibility: Extract price from either structure
     let priceAmount = 0;
+    let sourceCurrency: any = 'PLN';
+
     if (typeof deal.price === 'number') {
       priceAmount = deal.price; // Legacy format
     } else if (deal.price && typeof deal.price === 'object' && 'amount' in deal.price) {
       priceAmount = deal.price.amount; // M6 format: price.amount
+      sourceCurrency = (deal.price.currency || 'PLN').toUpperCase();
     } else if (deal.legacyPrice !== undefined) {
       priceAmount = deal.legacyPrice; // Fallback to legacyPrice field
     }
+
+    // Safety check for supported currencies
+    if (!['PLN', 'USD', 'EUR', 'GBP'].includes(sourceCurrency)) {
+      sourceCurrency = 'PLN';
+    }
     
     const safePrice = Number(priceAmount) || 0;
-    const formatted = CurrencyManager.formatPrice(safePrice, userCurrency);
+    
+    // Ensure we work with PLN for CurrencyManager
+    const priceInPLN = CurrencyManager.convertToPLN(safePrice, sourceCurrency);
+    const formatted = CurrencyManager.formatPrice(priceInPLN, userCurrency);
     
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
@@ -157,19 +168,22 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     let minOrder: string | null = null;
     
     if (typeof deal.originalPrice === 'number') {
-      formattedOrig = CurrencyManager.formatPrice(deal.originalPrice, userCurrency);
+      const origInPLN = CurrencyManager.convertToPLN(deal.originalPrice, sourceCurrency);
+      formattedOrig = CurrencyManager.formatPrice(origInPLN, userCurrency);
       
       if (deal.originalPrice > 0) {
         calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
       }
       
       if (deal.originalPrice > safePrice) {
-        savings = CurrencyManager.formatPrice(deal.originalPrice - safePrice, userCurrency);
+        const savingsInPLN = origInPLN - priceInPLN;
+        savings = CurrencyManager.formatPrice(savingsInPLN, userCurrency);
       }
     }
     
     if (typeof deal.minOrderValue === 'number') {
-      minOrder = CurrencyManager.formatPrice(deal.minOrderValue, userCurrency);
+      const minOrderInPLN = CurrencyManager.convertToPLN(deal.minOrderValue, sourceCurrency);
+      minOrder = CurrencyManager.formatPrice(minOrderInPLN, userCurrency);
     }
     
     setPriceData({
