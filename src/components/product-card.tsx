@@ -81,32 +81,61 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     setLocale(localeFromParams);
   }, [localeFromParams]);
 
-  // Format prices on client only (using unified currency system) - SAME PATTERN AS DEALCARD
+  // Format prices on client only (using unified currency system) - M6 Currency Aware
   useEffect(() => {
     if (!isMounted) return;
     const userCurrency = currency || 'PLN';
     
-    // Get price values
+    // Detect data model (ProductCore M6 vs Legacy Product)
     const isPC = !!(product as any).bestPrice;
-    const price = isPC ? (product as any).bestPrice?.amount : (product.price ? getPriceAmount(product.price) : 0);
-    const total = isPC ? (product as any).bestPrice?.amount : (product.price ? getTotalPrice(product.price) : 0);
-    const shipping = isPC ? 0 : (typeof product.price === 'object' && 'shippingCost' in product.price ? product.price.shippingCost || 0 : 0);
-    const originalPrice = typeof product.price === 'object' && 'originalPrice' in product.price ? product.price.originalPrice : 0;
+    
+    // Extract base values and source currency
+    let rawPrice = 0;
+    let rawOriginalPrice = 0;
+    let rawShipping = 0;
+    let sourceCurrency = 'PLN';
 
-    const formatted = CurrencyManager.formatPrice(total, userCurrency);
+    if (isPC) {
+      // M6 ProductCore
+      const pc = product as any;
+      if (pc.bestPrice) {
+        rawPrice = typeof pc.bestPrice === 'number' ? pc.bestPrice : (pc.bestPrice.amount || 0);
+        sourceCurrency = pc.bestPrice.currency || 'PLN';
+      }
+      // ProductCore doesn't typically store originalPrice/shipping in top-level bestPrice
+    } else {
+      // Legacy Product / Hybrid
+      rawPrice = product.price ? getPriceAmount(product.price) : 0;
+      
+      // Try to detect currency from legacy price object if available
+      if (typeof product.price === 'object' && product.price !== null) {
+        const p = product.price as any;
+        if (p.currency) sourceCurrency = p.currency;
+        if (p.originalPrice) rawOriginalPrice = p.originalPrice;
+        if (p.shippingCost) rawShipping = p.shippingCost;
+      }
+    }
+
+    // Convert to PLN (Base) then to User Currency
+    const priceInPLN = CurrencyManager.convertToPLN(rawPrice, sourceCurrency);
+    const originalInPLN = CurrencyManager.convertToPLN(rawOriginalPrice, sourceCurrency);
+    const shippingInPLN = CurrencyManager.convertToPLN(rawShipping, sourceCurrency);
+
+    // Format for display
+    const formatted = CurrencyManager.formatPrice(priceInPLN, userCurrency);
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
     let formattedShip: string | null = null;
 
-    if (originalPrice > 0) {
-      formattedOrig = CurrencyManager.formatPrice(originalPrice, userCurrency);
-      if (originalPrice > total) {
-        calculatedDiscount = Math.round(100 - (total / originalPrice) * 100);
+    if (rawOriginalPrice > 0) {
+      formattedOrig = CurrencyManager.formatPrice(originalInPLN, userCurrency);
+      if (originalInPLN > priceInPLN) {
+        calculatedDiscount = Math.round(100 - (priceInPLN / originalInPLN) * 100);
       }
     }
 
-    if (shipping > 0) {
-      formattedShip = CurrencyManager.formatPrice(shipping, userCurrency);
+    if (rawShipping > 0) {
+      formattedShip = CurrencyManager.formatPrice(shippingInPLN, userCurrency);
     }
 
     setPriceData({
