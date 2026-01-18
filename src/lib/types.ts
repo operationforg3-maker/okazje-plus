@@ -23,6 +23,10 @@ export interface Subcategory {
   color?: string;
   translations?: Record<string, { name: string; description?: string }>;
   subcategories?: SubSubcategory[];
+  id?: string;
+  sortOrder?: number;
+  image?: string;
+  highlight?: boolean;
 }
 
 export interface SubSubcategory {
@@ -36,6 +40,9 @@ export interface SubSubcategory {
   aliexpressCategoryIds?: string[]; // AliExpress category IDs dla hot-products mode
   exampleProducts?: Array<{ name: string; category: string }>; // przykładowe produkty z tej kategorii
   searchKeywords?: string[]; // słowa kluczowe do wyszukiwania (AI-generated)
+  id?: string;
+  sortOrder?: number;
+  image?: string;
 }
 
 export interface CategoryPromo {
@@ -62,139 +69,6 @@ export interface CategoryTile {
   link?: string;
   subtitle?: string;
   title?: string; // alias for name used in legacy UI
-}
-// Nowe interfejsy dla zagnieżdżonych kategorii
-
-// Sub-subkategoria (poziom 3)
-export interface SubSubcategory {
-  name: string;
-  slug: string; // unikalny w ramach podkategorii
-  id?: string;
-  icon?: string;
-  description?: string;
-  translations?: Record<string, { name: string; description?: string }>;
-  sortOrder?: number;
-  image?: string;
-}
-
-// Podkategoria (poziom 2)
-export interface Subcategory {
-  name: string;
-  slug: string; // unikalny w ramach kategorii nadrzędnej
-  id?: string; // identyfikator dokumentu, jeśli przechowywany w osobnej kolekcji
-  icon?: string;
-  description?: string;
-  translations?: Record<string, { name: string; description?: string }>;
-  sortOrder?: number;
-  image?: string;
-  highlight?: boolean;
-  // ...pozostałe typy i nowy model Product/Deal...
-  /** Wymagane członkostwo/subskrypcja (np. Amazon Prime, Club) */
-  requiresMembership?: string;
-  
-  /** Warunki dodatkowe (np. "tylko dla nowych użytkowników", "w aplikacji mobilnej") */
-  conditions?: string[];
-  
-  /** Galeria dodatkowych zdjęć */
-  gallery?: string[];
-  
-  /** Weryfikacja okazji - czy została potwierdzona przez moderatorów/społeczność */
-  verified?: boolean;
-  verifiedAt?: string;
-  verifiedBy?: string;
-  
-  /** Tagi dla łatwiejszego wyszukiwania */
-  tags?: string[];
-  
-  /** Ocena jakości okazji przez AI */
-  aiQuality?: {
-    score: number; // 0-100
-    recommendation: 'approve' | 'review' | 'reject';
-    reasoning: string;
-    factors?: {
-      priceQuality: number;
-      discountLegitimacy: number;
-      merchantTrust: number;
-      expiryValidity: number;
-      contentQuality: number;
-    };
-    scoredAt: string;
-  };
-  
-  /** Metadata importu dla śledzenia pochodzenia */
-  importMetadata?: {
-    source: string;
-    importedAt: string;
-    originalUrl?: string;
-    scrapedData?: Record<string, any>;
-    
-    // Advanced API fields
-    promotionId?: string;
-    commissionRate?: number;
-    evaluateCount?: number;
-    evaluateRate?: string;
-    sellerRating?: number;
-    returnPolicy?: string;
-    hotProduct?: boolean;
-    flashDeal?: boolean;
-    platformProductType?: string;
-    stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
-    stockLevel?: number;
-    specifications?: Array<{key: string; value: string}>;
-    productVideoUrl?: string;
-    warehouse?: string;
-    deliveryTime?: string;
-    shippingMethod?: string;
-  };
-  
-  /** Alias dla importMetadata dla zachowania spójności z Product */
-  metadata?: {
-    source?: string;
-    importedAt?: string;
-    originalUrl?: string;
-    scrapedData?: Record<string, any>;
-    originalId?: string; // Original product ID from source
-    promotionId?: string;
-    commissionRate?: number;
-    evaluateCount?: number;
-    evaluateRate?: string;
-    sellerRating?: number;
-    aliexpressCategoryIds?: string[]; // NEW: For hot-products mode
-    returnPolicy?: string;
-    hotProduct?: boolean;
-    flashDeal?: boolean;
-    platformProductType?: string;
-    stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock' | 'unknown';
-    stockLevel?: number;
-    specifications?: Array<{key: string; value: string}>;
-    productVideoUrl?: string;
-    warehouse?: string;
-    deliveryTime?: string;
-    shippingMethod?: string;
-    orders?: number;
-    flashSale?: {
-      active: boolean;
-      appSalePrice?: number;
-      originalPrice?: number;
-    };
-    stockAlert?: {
-      lowStock: boolean;
-      available?: number;
-      total?: number;
-    };
-    dealTags?: string[];
-    shippingDetails?: {
-      method?: string;
-      deliveryTime?: string;
-      fromCountry?: string;
-      free?: boolean;
-      cost?: number;
-    };
-    merchantRating?: number;
-    certifications?: string[];
-    videoUrl?: string;
-    [key: string]: any; // Allow additional metadata fields
-  };
 }
 
 // ============================================

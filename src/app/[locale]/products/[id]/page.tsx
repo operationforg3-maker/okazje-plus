@@ -49,8 +49,17 @@ async function getProductData(id: string) {
             );
             return getDocs(relatedQuery).then((relatedSnap) =>
               relatedSnap.docs
-                .map(doc => ({ id: doc.id, ...doc.data() } as any))
-                .filter(p => p.id !== id)
+                .map(doc => {
+                  const data = doc.data() as any;
+                  return {
+                    id: doc.id,
+                    ...data,
+                    // Convert Firestore timestamps to ISO strings
+                    createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
+                    updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
+                  };
+                })
+                .filter(p => p.id !== id && p.id) // Filter out empty IDs
                 .slice(0, 3)
             );
           })()

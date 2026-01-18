@@ -1,0 +1,22 @@
+{
+  "openMenu": "Open menu",
+  "home": "Home",
+  "deals": "Deals",
+  "products": "Products",
+  "forum": "Forum",
+  "addDeal": "Add deal",
+  "seasonalHits": "Seasonal hits",
+  "hottest": "Hottest",
+  "newest": "Newest",
+  "trending": "Trending",
+  "profile": "Profile",
+  "favorites": "Favorites",
+  "notifications": "Notifications",
+  "settings": "Settings",
+  "admin": "Admin panel",
+  "logout": "Log out",
+  "login": "Log in",
+  "changeLanguage": "Change language",
+  "changeCurrency": "Change currency",
+  "changeTheme": "Change theme"
+}

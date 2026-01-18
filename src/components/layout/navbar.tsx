@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import { Menu, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -27,6 +28,7 @@ import { MiniCartBadge } from '@/components/smart-cart-widget';
 import { LogoSVGWrapper } from './logo-svg-wrapper';
 
 export function Navbar() {
+  const t = useTranslations('nav');
   const [isOpen, setIsOpen] = React.useState(false);
   const [isMounted, setIsMounted] = React.useState(false);
   const { user, loading } = useAuth();
@@ -62,7 +64,7 @@ export function Navbar() {
             <SheetTrigger asChild className="md:hidden">
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Otwórz menu</span>
+                <span className="sr-only">{t('openMenu')}</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="bg-background/95">
@@ -75,11 +77,11 @@ export function Navbar() {
                 </SheetTitle>
               </SheetHeader>
               <div className="flex flex-col space-y-4 py-6 text-lg font-medium">
-                <Link href={`${prefix}/`} onClick={() => setIsOpen(false)}>Strona główna</Link>
-                <Link href={`${prefix}/deals`} onClick={() => setIsOpen(false)}>Okazje</Link>
-                <Link href={`${prefix}/products`} onClick={() => setIsOpen(false)}>Produkty</Link>
-                <Link href={`${prefix}/forum`} onClick={() => setIsOpen(false)}>Forum</Link>
-                <Link href={`${prefix}/add-deal`} onClick={() => setIsOpen(false)} className="text-primary">Dodaj okazję</Link>
+                <Link href={`${prefix}/`} onClick={() => setIsOpen(false)}>{t('home')}</Link>
+                <Link href={`${prefix}/deals`} onClick={() => setIsOpen(false)}>{t('deals')}</Link>
+                <Link href={`${prefix}/products`} onClick={() => setIsOpen(false)}>{t('products')}</Link>
+                <Link href={`${prefix}/forum`} onClick={() => setIsOpen(false)}>{t('forum')}</Link>
+                <Link href={`${prefix}/add-deal`} onClick={() => setIsOpen(false)} className="text-primary">{t('addDeal')}</Link>
               </div>
             </SheetContent>
           </Sheet>
@@ -100,19 +102,19 @@ export function Navbar() {
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList className="gap-2">
               <NavigationMenuItem>
-                <Link href={`${prefix}/deals`} passHref>
-                  <NavigationMenuLink className={`${navigationMenuTriggerStyle()} rounded-full px-4 py-2`}>Okazje</NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink asChild className={`${navigationMenuTriggerStyle()} rounded-full px-4 py-2`}>
+                  <Link href={`${prefix}/deals`}>{t('deals')}</Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href={`${prefix}/products`} passHref>
-                  <NavigationMenuLink className={`${navigationMenuTriggerStyle()} rounded-full px-4 py-2`}>Produkty</NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink asChild className={`${navigationMenuTriggerStyle()} rounded-full px-4 py-2`}>
+                  <Link href={`${prefix}/products`}>{t('products')}</Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href={`${prefix}/forum`} passHref>
-                  <NavigationMenuLink className={`${navigationMenuTriggerStyle()} rounded-full px-4 py-2`}>Forum</NavigationMenuLink>
-                </Link>
+                <NavigationMenuLink asChild className={`${navigationMenuTriggerStyle()} rounded-full px-4 py-2`}>
+                  <Link href={`${prefix}/forum`}>{t('forum')}</Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
@@ -125,7 +127,7 @@ export function Navbar() {
             {/* PRIMARY CTA: Add Deal - Now visible on md+ screens */}
             <Button asChild className="hidden md:inline-flex rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all">
               <Link href={`${prefix}/add-deal`}>
-                + Dodaj Okazję
+                + {t('addDeal')}
               </Link>
             </Button>
             <Button variant="ghost" size="icon" className="relative rounded-full" asChild>
@@ -144,11 +146,11 @@ export function Navbar() {
 
         {/* Secondary quick links (mobile-friendly scroll) */}
         <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
-          <span className="rounded-full px-3 py-1 font-medium text-foreground/70">Sezonowe hity</span>
-          <Link href={`${prefix}/deals?sort=hot`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Najgorętsze</Link>
-          <Link href={`${prefix}/deals?sort=new`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Najnowsze</Link>
-          <Link href={`${prefix}/products?sort=trending`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Trendy</Link>
-          <Link href={`${prefix}/forum`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">Forum</Link>
+          <span className="rounded-full px-3 py-1 font-medium text-foreground/70">{t('seasonalHits')}</span>
+          <Link href={`${prefix}/deals?sort=hot`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('hottest')}</Link>
+          <Link href={`${prefix}/deals?sort=new`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('newest')}</Link>
+          <Link href={`${prefix}/products?sort=trending`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('trending')}</Link>
+          <Link href={`${prefix}/forum`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('forum')}</Link>
         </div>
       </div>
     </header>

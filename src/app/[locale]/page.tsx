@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
 import { Suspense } from 'react';
 import HomeClient from './home-client';
-import ComingSoonLanding from '@/components/coming-soon-landing';
 import { getHotDeals, getRecommendedProducts, getCategories } from '@/lib/data';
 import { getServerAuthSession } from '@/lib/auth-server';
 
@@ -39,7 +38,20 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  // All users see coming soon page until launch
-  return <ComingSoonLanding />;
+  // Load data for home page
+  const [hotDeals, topProducts, categories, session] = await Promise.all([
+    getHotDeals(20),
+    getRecommendedProducts(12),
+    getCategories(),
+    getServerAuthSession(),
+  ]);
+
+  return (
+    <HomeClient 
+      initialHotDeals={hotDeals}
+      initialTopProducts={topProducts}
+      categories={categories}
+    />
+  );
 }
 

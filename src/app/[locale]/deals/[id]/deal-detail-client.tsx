@@ -227,7 +227,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
       || (productData as any)?.specs
       || [];
     setSpecifications(specs);
-  }, [deal, productData]);
+  }, [deal, productData, dealTitle]);
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
@@ -358,6 +358,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
           mainCategorySlug={deal.mainCategorySlug}
           subCategorySlug={deal.subCategorySlug}
           subSubCategorySlug={deal.subSubCategorySlug}
+          contextType="deals"
           className="pl-0"
         />
       </div>

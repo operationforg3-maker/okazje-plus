@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useCurrency } from '@/lib/unified-currency';
+import { useTranslations } from 'next-intl';
 import {
   Table,
   TableBody,
@@ -29,6 +30,7 @@ export function PriceComparisonTable({
   productId,
   onBuyClick,
 }: PriceComparisonTableProps) {
+  const t = useTranslations('products');
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { formatPrice } = useCurrency();
@@ -50,13 +52,13 @@ export function PriceComparisonTable({
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center p-8">Ładowanie ofert...</div>;
+    return <div className="flex items-center justify-center p-8">{t('productDetail.priceComparison.loading')}</div>;
   }
 
   if (deals.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
-        <p>Brak ofert dla tego produktu</p>
+        <p>{t('productDetail.priceComparison.empty')}</p>
       </div>
     );
   }
@@ -73,21 +75,21 @@ export function PriceComparisonTable({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Porównanie cen</h3>
-        <span className="text-sm text-gray-500">{deals.length} sklep{deals.length !== 1 ? 'ów' : ''}</span>
+        <h3 className="text-lg font-semibold">{t('productDetail.priceComparison.title')}</h3>
+        <span className="text-sm text-gray-500">{t('productDetail.priceComparison.storesCount', { count: deals.length })}</span>
       </div>
 
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50">
-              <TableHead>Sklep</TableHead>
-              <TableHead className="text-right">Cena</TableHead>
-              <TableHead className="text-right">Dostawa</TableHead>
-              <TableHead className="text-right">Razem</TableHead>
-              <TableHead>Dostawa</TableHead>
-              <TableHead>Ocena</TableHead>
-              <TableHead className="text-right">Akcja</TableHead>
+              <TableHead>{t('productDetail.priceComparison.store')}</TableHead>
+              <TableHead className="text-right">{t('productDetail.priceComparison.price')}</TableHead>
+              <TableHead className="text-right">{t('productDetail.priceComparison.shipping')}</TableHead>
+              <TableHead className="text-right">{t('productDetail.priceComparison.total')}</TableHead>
+              <TableHead>{t('productDetail.priceComparison.delivery')}</TableHead>
+              <TableHead>{t('productDetail.priceComparison.rating')}</TableHead>
+              <TableHead className="text-right">{t('productDetail.priceComparison.action')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -107,7 +109,7 @@ export function PriceComparisonTable({
                     <div className="flex items-center gap-2">
                       {isBestDeal && (
                         <Badge variant="default" className="text-xs">
-                          Best Price
+                          {t('productDetail.priceComparison.bestPriceBadge')}
                         </Badge>
                       )}
                       <span className="font-medium capitalize">{deal.source}</span>
@@ -130,7 +132,7 @@ export function PriceComparisonTable({
                   <TableCell className="text-right">
                     {shippingCost === 0 ? (
                       <Badge variant="secondary" className="text-green-700 bg-green-100">
-                        DARMOWA
+                        {t('productDetail.priceComparison.freeShipping')}
                       </Badge>
                     ) : (
                       <span>{formatPrice(shippingCost)}</span>
@@ -148,10 +150,10 @@ export function PriceComparisonTable({
                   <TableCell>
                     {deal.shipping?.timeDays ? (
                       <span className="text-sm">
-                        {deal.shipping.timeDays} {deal.shipping.timeDays === 1 ? 'dzień' : 'dni'}
+                        {t('productDetail.priceComparison.deliveryDays', { count: deal.shipping.timeDays })}
                       </span>
                     ) : (
-                      <span className="text-gray-400 text-sm">—</span>
+                      <span className="text-gray-400 text-sm">{t('productDetail.priceComparison.deliveryDash')}</span>
                     )}
                   </TableCell>
 
@@ -183,7 +185,7 @@ export function PriceComparisonTable({
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2"
                       >
-                        Kup
+                        {t('productDetail.priceComparison.buy')}
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </Button>
@@ -201,7 +203,7 @@ export function PriceComparisonTable({
           <div className="flex items-center gap-3">
             <TrendingDown className="w-5 h-5 text-green-600" />
             <p className="text-sm text-green-800">
-              Najniższa cena: oszczędzasz względem innych sklepów. Możliwa darmowa dostawa.
+              {t('productDetail.priceComparison.lowestInfo')}
             </p>
           </div>
         </div>

@@ -28,6 +28,20 @@ function ensureLocalizedText(value: any, fallback: string): LocalizedText {
 }
 
 function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
+  // Helper to convert Firestore timestamps to ISO strings
+  const toIsoString = (value: any) => {
+    if (!value) return value;
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return new Date(value).toISOString();
+    if (value.toDate && typeof value.toDate === 'function') {
+      return value.toDate().toISOString();
+    }
+    if (value.seconds) {
+      return new Date(value.seconds * 1000).toISOString();
+    }
+    return value;
+  };
+
   const priceAmount = typeof raw?.price === 'number' ? raw.price : raw?.price?.amount ?? raw?.priceV2?.amount ?? 0;
   const image = raw?.image || product?.images?.[0];
   if (!image) return null;
@@ -48,7 +62,7 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
     image,
     imageHint: raw?.imageHint || image,
     postedBy: raw?.postedBy || 'system',
-    postedAt: raw?.postedAt || raw?.createdAt || new Date().toISOString(),
+    postedAt: toIsoString(raw?.postedAt) || toIsoString(raw?.createdAt) || new Date().toISOString(),
     voteCount: raw?.voteCount ?? 0,
     temperature: raw?.temperature ?? 0,
     commentsCount: raw?.commentsCount ?? 0,
@@ -61,8 +75,8 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
     shippingCost: raw?.shippingCost ?? raw?.shipping?.cost ?? 0,
     status: raw?.status || 'approved',
     createdBy: raw?.createdBy,
-    createdAt: raw?.createdAt,
-    updatedAt: raw?.updatedAt,
+    createdAt: toIsoString(raw?.createdAt),
+    updatedAt: toIsoString(raw?.updatedAt),
     linkedProductIds: raw?.linkedProductIds || (product?.id ? [product.id] : []),
     externalOriginalId: raw?.externalOriginalId || raw?.sourceProductId,
     source: raw?.source || 'manual',
@@ -72,14 +86,14 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
     cashback: raw?.cashback,
     minOrderValue: raw?.minOrderValue,
     stockAlert: raw?.stockAlert,
-    expiryDate: raw?.expiryDate,
+    expiryDate: toIsoString(raw?.expiryDate),
     availableQuantity: raw?.availableQuantity,
     limitPerUser: raw?.limitPerUser,
     requiresMembership: raw?.requiresMembership,
     conditions: raw?.conditions || [],
     gallery: raw?.gallery || product?.images || [image],
     verified: raw?.verified,
-    verifiedAt: raw?.verifiedAt,
+    verifiedAt: toIsoString(raw?.verifiedAt),
     verifiedBy: raw?.verifiedBy,
     tags: raw?.tags || product?.searchTags || [],
     aiQuality: raw?.aiQuality,
@@ -114,7 +128,8 @@ async function getDealData(id: string) {
 
 // SEO: Generate metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const data = await getDealData(params.id);
+  const resolvedParams = await params;
+  const data = await getDealData(resolvedParams.id);
   
   if (!data) {
     return {
@@ -203,7 +218,8 @@ export async function generateStaticParams() {
 }
 
 export default async function DealDetailPage({ params }: PageProps) {
-  const data = await getDealData(params.id);
+  const resolvedParams = await params;
+  const data = await getDealData(resolvedParams.id);
   
   if (!data) {
     notFound();

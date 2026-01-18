@@ -30,7 +30,21 @@
     "profile": "Profile",
     "login": "Log in",
     "logout": "Log out",
-    "admin": "Admin Panel"
+    "admin": "Admin Panel",
+    "addDeal": "Add Deal",
+    "openMenu": "Open menu",
+    "seasonalHits": "Seasonal hits",
+    "hottest": "Hottest",
+    "newest": "Newest",
+    "trending": "Trending",
+    "favorites": "Favorites",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "changeLanguage": "Change language",
+    "changeCurrency": "Change currency",
+    "changeTheme": "Change theme",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode"
   },
   "product": {
     "price": "Price",

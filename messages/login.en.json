@@ -7,5 +7,41 @@
   "termsText": "By clicking Continue, you agree to our",
   "termsLink": "Terms of Service",
   "and": "and",
-  "privacyLink": "Privacy Policy"
+  "privacyLink": "Privacy Policy",
+  "brand": {
+    "kicker": "Price-comparison marketplace",
+    "title": "Sign in with the Okazje Plus identity",
+    "subtitle": "One account for price comparisons, price alerts, and saved searches.",
+    "points": {
+      "quality": "Curated deals and verified reviews",
+      "secure": "Secure login and account protection",
+      "fast": "Fast access to the latest deals"
+    },
+    "footer": "Okazje Plus — smart shopping in one place"
+  },
+  "tabs": {
+    "login": "Log in",
+    "register": "Register"
+  },
+  "labels": {
+    "email": "Email",
+    "password": "Password"
+  },
+  "placeholders": {
+    "email": "name@example.com",
+    "password": "Password"
+  },
+  "buttons": {
+    "login": "Sign in",
+    "register": "Create account"
+  },
+  "social": {
+    "continueWith": "Or continue with",
+    "continueGoogle": "Continue with Google",
+    "google": "Google",
+    "github": "GitHub"
+  },
+  "errors": {
+    "title": "Error"
+  }
 }

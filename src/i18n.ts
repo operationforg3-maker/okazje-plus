@@ -17,6 +17,7 @@ const namespaces = [
   'admin',
   'adminImports',
   'common',
+  'nav',
 ];
 
 async function loadMessagesForLocale(locale: string) {

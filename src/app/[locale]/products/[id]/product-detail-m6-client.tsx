@@ -35,6 +35,9 @@ import ShareButton from '@/components/share-button';
 import { formatPrice } from '@/lib/i18n-utils';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
+import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
+import { useCurrency } from '@/lib/unified-currency';
+import { useTranslations } from 'next-intl';
 
 interface Props {
   productCore?: ProductCore;
@@ -53,6 +56,7 @@ export default function ProductDetailM6Client({
   recentRatings: initialRatings,
   isM6 
 }: Props) {
+  const t = useTranslations('products');
   const { user } = useAuth();
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
@@ -60,10 +64,15 @@ export default function ProductDetailM6Client({
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'rate'>('description');
   const { addItem, isInCart } = useSmartCart();
+  const { currency } = useCurrency();
 
   // Use productCore if M6, otherwise use product
   const productData = isM6 ? productCore : product;
   const productId = productData?.id || '';
+
+  const mainCategorySlug = isM6 ? productCore?.mainCategorySlug : product?.mainCategorySlug;
+  const subCategorySlug = isM6 ? productCore?.subCategorySlug : product?.subCategorySlug;
+  const subSubCategorySlug = isM6 ? productCore?.subSubCategorySlug : product?.subSubCategorySlug;
   
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(productId, 'product');
 
@@ -113,6 +122,9 @@ export default function ProductDetailM6Client({
   const priceAmount = isM6 ? (productCore?.bestPrice?.amount || 0) : (product?.price || 0);
   const price = formatPrice(priceAmount, 'PLN');
 
+  // Re-render when currency changes for reactive UI
+  const formattedPriceWithCurrency = formatPrice(priceAmount);
+
   // Rating
   const avgRating = isM6 ? (productCore?.rating?.score || 0) : (product?.ratingCard?.average || 0);
   const ratingCount = isM6 ? (productCore?.rating?.count || 0) : (product?.ratingCard?.count || 0);
@@ -158,15 +170,28 @@ export default function ProductDetailM6Client({
     <div className="page-container py-4 md:py-8 lg:py-12">
       {/* Breadcrumbs */}
       <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
-        <Link href="/" className="hover:text-foreground transition-colors">
+        <Link href={`/${locale}`} className="hover:text-foreground transition-colors whitespace-nowrap">
           Strona główna
         </Link>
         <ChevronRight className="w-4 h-4 flex-shrink-0" />
-        <Link href="/products" className="hover:text-foreground transition-colors">
+        <Link href={`/${locale}/products`} className="hover:text-foreground transition-colors whitespace-nowrap">
           Produkty
         </Link>
+        {mainCategorySlug && (
+          <>
+            <ChevronRight className="w-4 h-4 flex-shrink-0" />
+            <CategoryBreadcrumb
+              mainCategorySlug={mainCategorySlug}
+              subCategorySlug={subCategorySlug}
+              subSubCategorySlug={subSubCategorySlug}
+              contextType="products"
+            />
+          </>
+        )}
         <ChevronRight className="w-4 h-4 flex-shrink-0" />
-        <span className="text-foreground font-medium truncate">{title}</span>
+        <span className="text-foreground font-medium truncate max-w-[220px]">
+          {title}
+        </span>
       </div>
 
       {/* Hero Section - Gallery + Price Widget */}
@@ -204,21 +229,21 @@ export default function ProductDetailM6Client({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-green-600" />
-                Najlepsza cena
+                {t('productDetail.priceComparison.bestPriceBadge')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-4xl font-bold text-green-600 mb-4">
-                {price}
+                {formattedPriceWithCurrency}
               </div>
               {isM6 && deals.length > 0 && (
                 <div className="space-y-2 text-sm text-gray-600">
                   <p className="flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    {deals.length} {deals.length === 1 ? 'oferta' : 'oferty'} dostępnych
+                    {t('productDetail.m6.dealsAvailable', { count: deals.length })}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Porównaj ceny od różnych sprzedawców poniżej
+                    {t('productDetail.m6.compareHint')}
                   </p>
                 </div>
               )}
@@ -232,7 +257,7 @@ export default function ProductDetailM6Client({
               <Button asChild size="lg" className="flex-1">
                 <a href={bestDeal.affiliateLink || (bestDeal as any).sourceUrl} target="_blank" rel="noopener noreferrer">
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  Kup teraz
+                  {t('productDetail.simple.buyNow')}
                 </a>
               </Button>
             )}
@@ -245,7 +270,7 @@ export default function ProductDetailM6Client({
               disabled={isInCart(productId)}
             >
               <ShoppingCart className="w-5 h-5 mr-2" />
-              {isInCart(productId) ? 'W koszyku' : 'Do koszyka'}
+              {isInCart(productId) ? t('card.inCart') : t('card.toCart')}
             </Button>
             <Button
               onClick={() => toggleFavorite()}
@@ -255,7 +280,7 @@ export default function ProductDetailM6Client({
               disabled={isFavoriteLoading}
             >
               <Heart className={`w-5 h-5 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-              {isFavorited ? 'W ulubionych' : 'Dodaj do ulubionych'}
+              {isFavorited ? t('card.favoriteRemove') : t('card.favoriteAdd')}
             </Button>
             <ShareButton
               type="product"
@@ -274,7 +299,7 @@ export default function ProductDetailM6Client({
                 }}
               >
                 <Scale className="w-5 h-5 mr-2" />
-                Porównaj
+                {t('card.compare')}
               </Button>
             )}
           </div>
@@ -285,8 +310,8 @@ export default function ProductDetailM6Client({
       {isM6 && productCore?.videoUrl && (
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Wideo produktu</CardTitle>
-            <CardDescription>Materiał wideo źródłowy (AliExpress)</CardDescription>
+            <CardTitle>{t('productDetail.m6.videoTitle')}</CardTitle>
+            <CardDescription>{t('productDetail.m6.videoDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
@@ -656,9 +681,9 @@ export default function ProductDetailM6Client({
         <div>
           <h2 className="text-2xl font-bold mb-6">Podobne produkty</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedProducts.map((relatedProduct) => (
+            {relatedProducts.filter(p => p.id).map((relatedProduct, index) => (
               <Link
-                key={relatedProduct.id}
+                key={relatedProduct.id || `related-${index}`}
                 href={`/products/${relatedProduct.id}`}
                 className="group"
               >

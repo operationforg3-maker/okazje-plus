@@ -3,6 +3,7 @@
   "subtitle": "Beste Produkte von AliExpress",
   "filters": {
     "search": "Produkte suchen...",
+    "title": "Kategorien & Filter",
     "sort": "Sortieren",
     "sortOptions": {
       "popular": "Am beliebtesten",
@@ -13,17 +14,37 @@
     },
     "category": "Kategorie",
     "priceRange": "Preisspanne",
+    "min": "Min",
+    "max": "Max",
     "quickFilters": {
       "freeShipping": "Kostenloser Versand",
       "highRating": "Hohe Bewertung",
+      "topRated": "Top bewertet (4.5+)",
       "newArrivals": "Neuankömmlinge",
-      "onSale": "Im Angebot"
+      "onSale": "Im Angebot",
+      "bestsellers": "Bestseller"
     },
-    "clearAll": "Filter löschen"
+    "clearAll": "Filter löschen",
+    "savedLabel": "Gespeicherte Filter:",
+    "saveFilter": "Aktuelle Filter speichern"
   },
   "viewMode": {
     "list": "Liste",
     "grid": "Raster"
+  },
+  "density": {
+    "standard": "Standard",
+    "compact": "Kompakt"
+  },
+  "categories": {
+    "title": "Kategorien",
+    "showAll": "Alle anzeigen",
+    "hideEmpty": "Leere ausblenden",
+    "allProducts": "Alle Produkte"
+  },
+  "breadcrumbs": {
+    "home": "Startseite",
+    "catalog": "Produktkatalog"
   },
   "empty": {
     "title": "Keine Produkte",
@@ -31,5 +52,86 @@
     "cta": "Zurück zu allen Produkten"
   },
   "loading": "Produkte werden geladen...",
-  "addToCart": "In den Warenkorb"
+  "loadingMore": "Weitere Produkte werden geladen...",
+  "addToCart": "In den Warenkorb",
+  "list": {
+    "titleWithCount": "Produkte ({count})"
+  },
+  "showing": "Alle {count} Produkte angezeigt",
+  "card": {
+    "new": "Neu",
+    "price": "Preis",
+    "go": "Öffnen",
+    "offer": "Angebot",
+    "details": "Details",
+    "info": "Info",
+    "cart": "Warenkorb",
+    "inCart": "Im Warenkorb",
+    "toCart": "Zum Warenkorb",
+    "favorite": "Favoriten",
+    "favoriteAdd": "Zu Favoriten hinzufügen",
+    "favoriteRemove": "Aus Favoriten entfernen",
+    "compare": "Vergleichen",
+    "compareTitle": "Preise vergleichen"
+  },
+  "productDetail": {
+    "m6": {
+      "dealsAvailable": "{count, plural, one {# Angebot verfügbar} other {# Angebote verfügbar}}",
+      "compareHint": "Preise verschiedener Verkäufer unten vergleichen",
+      "videoTitle": "Produktvideo",
+      "videoDesc": "Quellvideo (AliExpress)"
+    },
+    "simple": {
+      "loading": "Produkt wird geladen...",
+      "notFound": "Produkt nicht gefunden",
+      "error": "Produkt konnte nicht geladen werden",
+      "reviews": "{count, plural, one {# Bewertung} other {# Bewertungen}}",
+      "verified": "Verifiziert",
+      "bestPriceAt": "Bestes Angebot bei",
+      "totalPrice": "Gesamt",
+      "productPrice": "Produktpreis",
+      "shipping": "Versand",
+      "freeShipping": "KOSTENLOS",
+      "estimatedDelivery": "Lieferung in {days, plural, one {# Tag} other {# Tagen}}",
+      "buyNow": "Jetzt kaufen",
+      "whatUsersSay": "Was Nutzer sagen",
+      "overview": "Überblick",
+      "details": "Details"
+    },
+    "priceComparison": {
+      "title": "Preisvergleich",
+      "storesCount": "{count, plural, one {# Shop} other {# Shops}}",
+      "store": "Shop",
+      "price": "Preis",
+      "shipping": "Versand",
+      "total": "Gesamt",
+      "delivery": "Lieferung",
+      "rating": "Bewertung",
+      "action": "Aktion",
+      "bestPriceBadge": "Bester Preis",
+      "freeShipping": "KOSTENLOS",
+      "deliveryDays": "{count, plural, one {# Tag} other {# Tagen}}",
+      "deliveryDash": "—",
+      "buy": "Kaufen",
+      "lowestInfo": "Niedrigster Preis: Spare gegenüber anderen Shops. Kostenloser Versand möglich.",
+      "loading": "Angebote werden geladen...",
+      "empty": "Keine Angebote für dieses Produkt"
+    },
+    "priceHistory": {
+      "title": "Preishistorie (30 Tage)",
+      "noDataTitle": "Keine Preishistorie",
+      "noDataDescription": "Nicht genügend Daten für die Preishistorie",
+      "description": "Tiefster Tagespreis - letzte 30 Tage ({points} Datenpunkte) - Währung: {currency}",
+      "stats": {
+        "min": "Niedrigster Preis",
+        "max": "Höchster Preis",
+        "avg": "Durchschnittspreis",
+        "change": "Änderung"
+      },
+      "axisLabel": "Preis ({currency})",
+      "omnibusTitle": "Omnibus-Richtlinie",
+      "omnibusText": "Das Diagramm zeigt den niedrigsten Preis der letzten 30 Tage zur Wahrung der Preistransparenz und EU-Compliance.",
+      "price": "Preis"
+    }
+  }
 }

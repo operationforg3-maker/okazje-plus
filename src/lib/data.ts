@@ -206,14 +206,15 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       if (cached) return cached as Product[];
     }
 
-    const productsRef = collection(db, "products");
+    // Try M6 ProductCores first (they have bestPrice and deals)
+    const coresRef = collection(db, "product_cores");
     const q = query(
-      productsRef,
+      coresRef,
       where("status", "==", "approved"),
       limit(count)
     );
     const querySnapshot = await getDocs(q);
-    const products = querySnapshot.docs.map(docToProduct);
+    const products = querySnapshot.docs.map(docToProductCore) as any as Product[];
     
     if (cacheSetFn) {
       await cacheSetFn(cacheKey, products, 600);
@@ -367,7 +368,7 @@ export async function getProductCoresForModeration(statusFilter?: string[], maxL
       
       const snapshots = await Promise.all(queries.map(q => getDocs(q)));
       const products = snapshots.flatMap(snapshot => 
-        snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product))
+        snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product))
       );
       
       DEBUG && console.log(`[getProductCoresForModeration] Filter: ${statusFilter.join(',')}, Found: ${products.length}`);
@@ -394,7 +395,7 @@ export async function getProductCoresForModeration(statusFilter?: string[], maxL
     
     const snapshots = await Promise.all(queries.map(q => getDocs(q)));
     const all = snapshots.flatMap(snapshot => 
-      snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product))
+      snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product))
     );
     
     DEBUG && console.log(`[getProductCoresForModeration] All statuses, Found: ${all.length}`);
@@ -782,7 +783,7 @@ export async function getComments(collectionName: "products" | "deals", docId: s
   const commentsColRef = collection(db, collectionName, docId, "comments");
   const q = query(commentsColRef, orderBy("createdAt", "desc"), limit(limitCount));
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment));
+  return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Comment));
 }
 
 /**
@@ -949,7 +950,7 @@ export async function getProductRatings(productId: string, limitCount: number = 
     const ratingsRef = collection(db, "products", productId, "ratings");
     const q = query(ratingsRef, orderBy("createdAt", "desc"), limit(limitCount));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProductRating));
+    return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ProductRating));
 }
 
 export async function searchProductsForLinking(searchText: string): Promise<Product[]> {
@@ -2029,7 +2030,7 @@ export async function getAllSecretPages() {
     orderBy("createdAt", "desc")
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 }
 
 /**
@@ -2274,7 +2275,15 @@ export async function getProductCore(productId: string): Promise<any | null> {
       return null;
     }
     
-    const product = { id: docSnap.id, ...docSnap.data() };
+    // Spread data first, then force docSnap.id to prevent empty 'id' field in data from overwriting
+    const data = docSnap.data();
+    const product = {
+      ...data,
+      id: docSnap.id,
+      // Convert Firestore timestamps to ISO strings for client serialization
+      createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
+      updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
+    };
     
     // Validate that product has ID after mapping
     if (!product.id) {
@@ -2300,7 +2309,16 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
     const dealsRef = collection(db, "deals");
     const q = query(dealsRef, where("productCoreId", "==", productId), where("status", "==", "approved"));
     const dealsSnap = await getDocs(q);
-    const deals = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const deals = dealsSnap.docs.map(d => {
+      const data = d.data();
+      return {
+        ...data,
+        id: d.id,
+        // Convert timestamps
+        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+      };
+    });
 
     return { product, deals };
   } catch (err) {
@@ -2326,7 +2344,15 @@ export async function getAllProductCores(
 
     const q = query(ref, ...constraints);
     const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
+      return snap.docs.map(d => {
+        const data = d.data();
+        return {
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+        } as ProductCore;
+      });
   } catch (err) {
     console.error("Error fetching product cores:", err);
     return [];
@@ -2346,7 +2372,15 @@ export async function getDealsForProduct(productId: string): Promise<any[]> {
       orderBy("price.amount", "asc") // Sort by price ascending (best deals first)
     );
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => {
+      const data = d.data();
+      return {
+        ...data,
+        id: d.id,
+        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+      };
+    });
   } catch (err) {
     console.error("Error fetching deals for product:", err);
     return [];
@@ -2394,7 +2428,7 @@ export async function searchProductCores(
     );
 
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
+    const products = snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductCore));
 
     // Client-side filtering
     const searchLower = searchText.toLowerCase();
@@ -2424,7 +2458,7 @@ export async function getRecommendedProductCores(count: number = 50): Promise<an
       limit(count * 2) // Fetch more to account for sorting on client
     );
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
+    const products = snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductCore));
     // Sort by price on client side to avoid requiring a complex index
     products.sort((a, b) => {
       const priceA = a.bestPrice?.amount || 0;
@@ -2467,7 +2501,7 @@ export async function getProductCoresByCategory(
 
     const q = query(ref, ...constraints);
     const snap = await getDocs(q);
-    const products = snap.docs.map(d => ({ id: d.id, ...d.data() } as ProductCore));
+    const products = snap.docs.map(d => ({ ...d.data(), id: d.id } as ProductCore));
     
     // Sort by price on client side to avoid requiring complex indexes
     products.sort((a, b) => {
@@ -2520,7 +2554,7 @@ export async function getHarvesterJobs(limitCount: number = 20): Promise<any[]> 
     const ref = collection(db, "harvester_jobs");
     const q = query(ref, orderBy("startedAt", "desc"), limit(limitCount));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id }));
   } catch (err) {
     console.error("Error fetching harvester jobs:", err);
     return [];
@@ -2535,7 +2569,7 @@ export async function getRefinerJobs(limitCount: number = 20): Promise<any[]> {
     const ref = collection(db, "refiner_jobs");
     const q = query(ref, orderBy("startedAt", "desc"), limit(limitCount));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ ...d.data(), id: d.id }));
   } catch (err) {
     console.error("Error fetching refiner jobs:", err);
     return [];

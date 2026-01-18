@@ -1,31 +1,39 @@
 import { LRUCache } from 'lru-cache';
 
-// Lazy-load ioredis at runtime only when REDIS_URL is configured.
-// This avoids bundling Node-only modules (net/dns/tls) into the client/server build.
+// Initialize Redis client only on server-side
 let redis: any = null;
-if (process.env.REDIS_URL) {
-  try {
-    // Require at runtime so bundlers don't try to resolve node-only deps during client builds.
-  // Load ioredis via an indirection so bundlers don't statically analyze the 'ioredis' import
-  const ioredisName = 'ioredis';
-  const RedisModule = require(ioredisName);
-    const RedisCtor = RedisModule?.default ?? RedisModule;
-    redis = new RedisCtor(process.env.REDIS_URL);
-    // prevent unhandled error events from crashing processes
-    redis.on('error', (err: any) => {
-      console.warn('Redis client error:', err);
-    });
-  } catch (e) {
-    console.warn('Failed to initialize Redis client, falling back to LRU:', e);
-    redis = null;
+let redisInitPromise: Promise<void> | null = null;
+
+// Lazy init redis only when needed (avoids webpack bundling node modules)
+async function initRedis() {
+  if (redis || redisInitPromise) return;
+  if (typeof window !== 'undefined') return; // Client-side bail
+  if (!process.env.REDIS_URL) {
+    console.info('REDIS_URL not set — using in-memory LRU cache as fallback.');
+    return;
   }
-} else {
-  console.info('REDIS_URL not set — using in-memory LRU cache as fallback. For production set REDIS_URL to enable shared caching and rate-limiter.');
+
+  redisInitPromise = (async () => {
+    try {
+      // Dynamic import only on server-side at runtime
+      const Redis = (await import('ioredis')).default;
+      redis = new Redis(process.env.REDIS_URL!);
+      redis.on('error', (err: any) => {
+        console.warn('Redis client error:', err);
+      });
+    } catch (e) {
+      console.warn('Failed to initialize Redis client, falling back to LRU:', e);
+      redis = null;
+    }
+  })();
+
+  await redisInitPromise;
 }
 
 const lru = new LRUCache<string, any>({ max: 50, ttl: 1000 * 30 }); // Ultra-minimal cache for 256MB Cloud Run
 
 export async function cacheGet(key: string): Promise<any | null> {
+  await initRedis();
   if (redis) {
     try {
       const v = await redis.get(key);
@@ -39,6 +47,7 @@ export async function cacheGet(key: string): Promise<any | null> {
 }
 
 export async function cacheSet(key: string, value: any, ttlSeconds = 60): Promise<void> {
+  await initRedis();
   if (redis) {
     try {
       await redis.set(key, JSON.stringify(value), 'EX', Math.max(1, Math.floor(ttlSeconds)));
@@ -53,6 +62,7 @@ export async function cacheSet(key: string, value: any, ttlSeconds = 60): Promis
 }
 
 export async function cacheDel(key: string): Promise<void> {
+  await initRedis();
   if (redis) {
     try {
       await redis.del(key);

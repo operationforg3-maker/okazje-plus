@@ -1,0 +1,22 @@
+{
+  "openMenu": "Menü öffnen",
+  "home": "Startseite",
+  "deals": "Angebote",
+  "products": "Produkte",
+  "forum": "Forum",
+  "addDeal": "Angebot hinzufügen",
+  "seasonalHits": "Saisonale Hits",
+  "hottest": "Am heißesten",
+  "newest": "Neueste",
+  "trending": "Trends",
+  "profile": "Profil",
+  "favorites": "Favoriten",
+  "notifications": "Benachrichtigungen",
+  "settings": "Einstellungen",
+  "admin": "Admin-Panel",
+  "logout": "Abmelden",
+  "login": "Anmelden",
+  "changeLanguage": "Sprache ändern",
+  "changeCurrency": "Währung ändern",
+  "changeTheme": "Thema ändern"
+}

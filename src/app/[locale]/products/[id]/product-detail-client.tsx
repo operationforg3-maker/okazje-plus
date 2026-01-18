@@ -56,6 +56,7 @@ import { SpecCardGrid } from '@/components/spec-card-grid';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
+import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 
 interface Props {
   product: Product;
@@ -151,16 +152,15 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
         <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>
         <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
         <Link href="/products" className="hover:text-primary transition-colors whitespace-nowrap">Produkty</Link>
-        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-        <Link href={`/products?category=${product.mainCategorySlug}`} className="hover:text-primary transition-colors whitespace-nowrap">
-          {product.mainCategorySlug}
-        </Link>
-        {product.subCategorySlug && (
+        {product.mainCategorySlug && (
           <>
             <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-            <Link href={`/products?category=${product.mainCategorySlug}&sub=${product.subCategorySlug}`} className="hover:text-primary transition-colors whitespace-nowrap">
-              {product.subCategorySlug}
-            </Link>
+            <CategoryBreadcrumb
+              mainCategorySlug={product.mainCategorySlug}
+              subCategorySlug={product.subCategorySlug}
+              subSubCategorySlug={product.subSubCategorySlug}
+              contextType="products"
+            />
           </>
         )}
         <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />

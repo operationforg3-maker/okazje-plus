@@ -44,17 +44,7 @@ interface Props {
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
   const router = useRouter();
   const t = useTranslations('home');
-  const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Hydration guard: prevent SSR/CSR mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
-  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

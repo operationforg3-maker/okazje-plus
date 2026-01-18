@@ -29,11 +29,10 @@ import AdminEditButton from '@/components/admin/admin-edit-button';
 import ProductEditDialog from '@/components/admin/product-edit-dialog';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
-import { useCurrency } from '@/lib/unified-currency';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { 
   getPriceAmount, 
   getTotalPrice, 
-  formatPrice, 
   isFreeShipping,
   getDiscountPercent 
 } from '@/lib/i18n-utils';
@@ -71,12 +70,17 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     : getText(product.title);
   const displayTitle = titleText || product.name || 'Produkt';
   
+  // Smart Pricing - detect ProductCore vs legacy Product
+  const isProductCore = !!(product as any).bestPrice;
+  const bestPrice = isProductCore ? (product as any).bestPrice?.amount : null;
+  const bestPriceCurrency = isProductCore ? (product as any).bestPrice?.currency : productCurrency;
+  
   // Smart Pricing with total landed cost
-  const itemPrice = getPriceAmount(product.price);
+  const itemPrice = bestPrice || getPriceAmount(product.price);
   const shippingCost = typeof product.price === 'object' && 'shippingCost' in product.price 
     ? product.price.shippingCost || 0
     : 0;
-  const totalPrice = getTotalPrice(product.price);
+  const totalPrice = bestPrice || getTotalPrice(product.price);
   const discountPercent = getDiscountPercent(product.price);
   const hasFreeShipping = isFreeShipping(product.price);
   const hasPriceGuarantee = typeof product.price === 'object' && 
@@ -84,7 +88,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     product.price.lowestPrice30Days !== undefined;
   
   // Currency detection
-  const currency = typeof product.price === 'object' && 'currency' in product.price 
+  const productCurrency = typeof product.price === 'object' && 'currency' in product.price 
     ? product.price.currency 
     : 'PLN';
 
@@ -145,7 +149,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     }
   }, [hasTrackedView, product.id, user?.uid]);
 
-  const { formatPrice } = useCurrency();
+  const { currency } = useCurrency();
   const totalUSD = (product.price?.baseAmount || 0) + (product.price?.shippingCostUSD || 0);
 
   const originalAmount = typeof product.price === 'object' && 'originalAmount' in product.price
@@ -512,7 +516,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
                 )}
                 {originalAmount && (
                   <span className="line-through text-base font-medium">
-                    {formatPrice(originalAmount, currency)}
+                    {CurrencyManager.formatPrice(originalAmount, currency)}
                   </span>
                 )}
               </div>
@@ -533,7 +537,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             {/* Main Price - BIG & BOLD */}
             <div className="flex items-baseline space-sm mb-2">
               <span className="text-4xl font-black text-primary">
-                {formatPrice(totalPrice, currency)}
+                {CurrencyManager.formatPrice(totalPrice, bestPriceCurrency || currency)}
               </span>
               <span className="text-base text-secondary font-semibold">
                 z dostawą
@@ -545,11 +549,11 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               <div className="text-sm text-secondary space-y-1 mt-2">
                 <div className="flex justify-between">
                   <span className="font-medium">Produkt:</span>
-                  <span className="font-semibold">{formatPrice(itemPrice, currency)}</span>
+                  <span className="font-semibold">{CurrencyManager.formatPrice(itemPrice, bestPriceCurrency || currency)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="font-medium">Dostawa:</span>
-                  <span className="font-semibold">{formatPrice(shippingCost, currency)}</span>
+                  <span className="font-semibold">{CurrencyManager.formatPrice(shippingCost, bestPriceCurrency || currency)}</span>
                 </div>
               </div>
             )}
@@ -567,7 +571,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               <div className="flex items-center space-sm text-blue-600 dark:text-blue-400 text-sm mt-2.5 font-medium">
                 <Info className="w-4 h-4" />
                 <span>
-                  Najniższa cena z 30 dni: {formatPrice(product.price.lowestPrice30Days, currency)}
+                  Najniższa cena z 30 dni: {CurrencyManager.formatPrice(product.price.lowestPrice30Days, currency)}
                 </span>
               </div>
             )}

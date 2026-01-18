@@ -7,5 +7,41 @@
   "termsText": "Klikając Kontynuuj, zgadzasz się z naszym",
   "termsLink": "Regulaminem",
   "and": "i",
-  "privacyLink": "Polityką Prywatności"
+  "privacyLink": "Polityką Prywatności",
+  "brand": {
+    "kicker": "Marketplace porównujący ceny",
+    "title": "Loguj się w naszej tożsamości marki Okazje Plus",
+    "subtitle": "Jedno konto do porównywania ofert, alertów cenowych i zapisanych wyszukiwań.",
+    "points": {
+      "quality": "Sprawdzona jakość ofert i recenzji",
+      "secure": "Bezpieczne logowanie i ochrona konta",
+      "fast": "Szybki dostęp do najnowszych okazji"
+    },
+    "footer": "Okazje Plus — inteligentny wybór w jednym miejscu"
+  },
+  "tabs": {
+    "login": "Logowanie",
+    "register": "Rejestracja"
+  },
+  "labels": {
+    "email": "Email",
+    "password": "Hasło"
+  },
+  "placeholders": {
+    "email": "name@example.com",
+    "password": "Hasło"
+  },
+  "buttons": {
+    "login": "Zaloguj się",
+    "register": "Utwórz konto"
+  },
+  "social": {
+    "continueWith": "Lub kontynuuj z",
+    "continueGoogle": "Kontynuuj z Google",
+    "google": "Google",
+    "github": "GitHub"
+  },
+  "errors": {
+    "title": "Błąd"
+  }
 }

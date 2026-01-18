@@ -1,8 +1,47 @@
 {
   "title": "Willkommen zurück",
   "subtitle": "Melden Sie sich an oder erstellen Sie ein Konto, um die besten Angebote zu entdecken.",
+  "noAccount": "Sie haben noch kein Konto?",
+  "signUp": "Registrieren",
+  "forgotPassword": "Passwort vergessen?",
   "termsText": "Mit dem Klicken auf Fortfahren stimmen Sie unseren",
   "termsLink": "Nutzungsbedingungen",
   "and": "und",
-  "privacyLink": "Datenschutzrichtlinien"
+  "privacyLink": "Datenschutzrichtlinien",
+  "brand": {
+    "kicker": "Preisvergleichs-Marktplatz",
+    "title": "Melden Sie sich mit der Okazje Plus Identität an",
+    "subtitle": "Ein Konto für Preisvergleiche, Preisalarme und gespeicherte Suchen.",
+    "points": {
+      "quality": "Kuratiere Angebote und verifizierte Bewertungen",
+      "secure": "Sicheres Login und Kontoschutz",
+      "fast": "Schneller Zugriff auf die neuesten Angebote"
+    },
+    "footer": "Okazje Plus — smartes Einkaufen an einem Ort"
+  },
+  "tabs": {
+    "login": "Anmelden",
+    "register": "Registrieren"
+  },
+  "labels": {
+    "email": "E-Mail",
+    "password": "Passwort"
+  },
+  "placeholders": {
+    "email": "name@example.com",
+    "password": "Passwort"
+  },
+  "buttons": {
+    "login": "Anmelden",
+    "register": "Konto erstellen"
+  },
+  "social": {
+    "continueWith": "Oder fortfahren mit",
+    "continueGoogle": "Mit Google fortfahren",
+    "google": "Google",
+    "github": "GitHub"
+  },
+  "errors": {
+    "title": "Fehler"
+  }
 }

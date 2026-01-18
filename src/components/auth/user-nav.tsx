@@ -35,6 +35,15 @@ export function UserNav() {
     if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
       console.log('[UserNav] Component mounted');
     }
+    
+    // Check if we should keep dropdown open after language change
+    if (typeof window !== 'undefined' && sessionStorage.getItem('keepDropdownOpen')) {
+      sessionStorage.removeItem('keepDropdownOpen');
+      setOpen(true);
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.log('[UserNav] Reopening dropdown after language change');
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -74,7 +83,7 @@ export function UserNav() {
     }
     return (
       <Button variant="outline" className="rounded-full" asChild>
-        <Link href="/login">Zaloguj się</Link>
+        <Link href="/login">Login</Link>
       </Button>
     );
   }

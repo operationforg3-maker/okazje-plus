@@ -3,6 +3,7 @@
   "subtitle": "Best products from AliExpress",
   "filters": {
     "search": "Search products...",
+    "title": "Categories & filters",
     "sort": "Sort",
     "sortOptions": {
       "popular": "Most Popular",
@@ -13,17 +14,37 @@
     },
     "category": "Category",
     "priceRange": "Price Range",
+    "min": "Min",
+    "max": "Max",
     "quickFilters": {
       "freeShipping": "Free Shipping",
       "highRating": "High Rating",
+      "topRated": "Top rated (4.5+)",
       "newArrivals": "New Arrivals",
-      "onSale": "On Sale"
+      "onSale": "On Sale",
+      "bestsellers": "Bestsellers"
     },
-    "clearAll": "Clear Filters"
+    "clearAll": "Clear Filters",
+    "savedLabel": "Saved filters:",
+    "saveFilter": "Save current filters"
   },
   "viewMode": {
     "list": "List",
     "grid": "Grid"
+  },
+  "density": {
+    "standard": "Standard",
+    "compact": "Compact"
+  },
+  "categories": {
+    "title": "Categories",
+    "showAll": "Show all",
+    "hideEmpty": "Hide empty",
+    "allProducts": "All products"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "catalog": "Product catalog"
   },
   "empty": {
     "title": "No Products",
@@ -31,5 +52,86 @@
     "cta": "Back to All Products"
   },
   "loading": "Loading products...",
-  "addToCart": "Add to Cart"
+  "loadingMore": "Loading more products...",
+  "addToCart": "Add to Cart",
+  "list": {
+    "titleWithCount": "Products ({count})"
+  },
+  "showing": "Showing all {count} products",
+  "card": {
+    "new": "New",
+    "price": "Price",
+    "go": "Go",
+    "offer": "Offer",
+    "details": "Details",
+    "info": "Info",
+    "cart": "Cart",
+    "inCart": "In cart",
+    "toCart": "Add to cart",
+    "favorite": "Favorites",
+    "favoriteAdd": "Add to favorites",
+    "favoriteRemove": "Remove from favorites",
+    "compare": "Compare",
+    "compareTitle": "Compare prices"
+  },
+  "productDetail": {
+    "m6": {
+      "dealsAvailable": "{count, plural, one {# offer available} other {# offers available}}",
+      "compareHint": "Compare prices from different sellers below",
+      "videoTitle": "Product video",
+      "videoDesc": "Source video (AliExpress)"
+    },
+    "simple": {
+      "loading": "Loading product...",
+      "notFound": "Product not found",
+      "error": "Failed to load product",
+      "reviews": "{count, plural, one {# review} other {# reviews}}",
+      "verified": "Verified",
+      "bestPriceAt": "Best offer at",
+      "totalPrice": "Total",
+      "productPrice": "Product price",
+      "shipping": "Shipping",
+      "freeShipping": "FREE",
+      "estimatedDelivery": "Estimated delivery: {days, plural, one {# day} other {# days}}",
+      "buyNow": "Buy Now",
+      "whatUsersSay": "What users say",
+      "overview": "Overview",
+      "details": "Details"
+    },
+    "priceComparison": {
+      "title": "Price comparison",
+      "storesCount": "{count, plural, one {# store} other {# stores}}",
+      "store": "Store",
+      "price": "Price",
+      "shipping": "Shipping",
+      "total": "Total",
+      "delivery": "Delivery",
+      "rating": "Rating",
+      "action": "Action",
+      "bestPriceBadge": "Best price",
+      "freeShipping": "FREE",
+      "deliveryDays": "{count, plural, one {# day} other {# days}}",
+      "deliveryDash": "—",
+      "buy": "Buy",
+      "lowestInfo": "Lowest price: save compared to other stores. Free delivery may be available.",
+      "loading": "Loading offers...",
+      "empty": "No offers for this product"
+    },
+    "priceHistory": {
+      "title": "Price history (30 days)",
+      "noDataTitle": "No price history",
+      "noDataDescription": "Not enough data to display price history",
+      "description": "Lowest daily price - last 30 days ({points} data points) - currency: {currency}",
+      "stats": {
+        "min": "Lowest price",
+        "max": "Highest price",
+        "avg": "Average price",
+        "change": "Change"
+      },
+      "axisLabel": "Price ({currency})",
+      "omnibusTitle": "Omnibus Directive",
+      "omnibusText": "The chart shows the lowest price in the last 30 days to ensure transparency and EU compliance.",
+      "price": "Price"
+    }
+  }
 }

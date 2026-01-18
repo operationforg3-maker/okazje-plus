@@ -23,7 +23,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
 import { useAuth } from '@/lib/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -49,6 +50,7 @@ interface SavedFilter {
 function ProductsPageContent() {
   const searchParams = useSearchParams();
   const t = useTranslations('products');
+  const locale = useLocale();
   const { user } = useAuth();
   const mainCategoryParam = searchParams.get('mainCategory');
   const subCategoryParam = searchParams.get('subCategory');
@@ -70,6 +72,7 @@ function ProductsPageContent() {
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [showEmptyCategories, setShowEmptyCategories] = useState(false);
   const { formatPrice } = useCurrency();
+  const lang = (locale as SupportedLanguage) || 'pl';
 
   // Wczytaj kategorie i ustaw z URL
   useEffect(() => {
@@ -388,14 +391,14 @@ function ProductsPageContent() {
   const SidebarContent = () => (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-headline text-lg font-semibold">Kategorie</h2>
+        <h2 className="font-headline text-lg font-semibold">{t('categories.title')}</h2>
         <Button
           variant="outline"
           size="sm"
           onClick={() => setShowEmptyCategories(!showEmptyCategories)}
           className="text-xs"
         >
-          {showEmptyCategories ? 'Ukryj puste' : 'Pokaż wszystkie'}
+          {showEmptyCategories ? t('categories.hideEmpty') : t('categories.showAll')}
         </Button>
       </div>
       <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
@@ -417,7 +420,7 @@ function ProductsPageContent() {
             )}
           >
             <Package className="h-5 w-5" />
-            <span className="font-medium flex-1">Wszystkie produkty</span>
+            <span className="font-medium flex-1">{t('categories.allProducts')}</span>
             <ChevronRight className={cn(
               "h-4 w-4 transition-transform",
               !selectedCategory ? "rotate-90" : "group-hover:translate-x-1"
@@ -447,7 +450,7 @@ function ProductsPageContent() {
                 )}
               >
                 {category.icon && <span className="text-xl">{category.icon}</span>}
-                <span className="font-medium flex-1">{category.name}</span>
+                <span className="font-medium flex-1">{getLocalizedCategoryName(category, lang)}</span>
                 <ChevronRight className={cn(
                   "h-4 w-4 transition-transform",
                   isActive ? "rotate-90" : "group-hover:translate-x-1"
@@ -479,7 +482,7 @@ function ProductsPageContent() {
                           )}
                         >
                           {sub.icon && <span className="text-base">{sub.icon}</span>}
-                          <span className="flex-1 truncate">{sub.name}</span>
+                          <span className="flex-1 truncate">{getLocalizedCategoryName(sub as any, lang)}</span>
                           {(sub.subcategories && sub.subcategories.length > 0) && (
                             <ChevronRight className={cn(
                               "h-3 w-3 transition-transform flex-shrink-0",
@@ -516,7 +519,7 @@ function ProductsPageContent() {
                                   )}
                                 >
                                   {subsub.icon && <span className="text-sm">{subsub.icon}</span>}
-                                  <span className="flex-1 truncate">{subsub.name}</span>
+                                  <span className="flex-1 truncate">{getLocalizedCategoryName(subsub as any, lang)}</span>
                                 </button>
                               );
                             })}
@@ -541,14 +544,14 @@ function ProductsPageContent() {
         <div className="page-container py-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-primary transition-colors">
-              Strona główna
+              {t('breadcrumbs.home')}
             </Link>
             <ChevronRight className="h-4 w-4" />
-            <span className="font-medium text-foreground">Katalog produktów</span>
+            <span className="font-medium text-foreground">{t('breadcrumbs.catalog')}</span>
             {selectedCategory && (
               <>
                 <ChevronRight className="h-4 w-4" />
-                <span className="font-medium text-foreground">{selectedCategory.name}</span>
+                <span className="font-medium text-foreground">{getLocalizedCategoryName(selectedCategory, lang)}</span>
               </>
             )}
             {selectedSubcategory && (
@@ -571,7 +574,7 @@ function ProductsPageContent() {
                 <SheetTrigger asChild>
                   <Button variant="outline" className="w-full">
                     <Filter className="mr-2 h-4 w-4" />
-                    Kategorie i filtry
+                    {t('filters.title')}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[80vw] p-0 flex flex-col">
@@ -629,7 +632,7 @@ function ProductsPageContent() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Szukaj w produktach..."
+                    placeholder={t('filters.search')}
                     className="pl-9"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -648,24 +651,24 @@ function ProductsPageContent() {
                     <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
                       <SelectTrigger className="w-[200px]">
                         <TrendingUp className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Sortuj" />
+                        <SelectValue placeholder={t('filters.sort')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="recommended">Polecane</SelectItem>
-                        <SelectItem value="newest">Najnowsze</SelectItem>
-                        <SelectItem value="rating">Najwyżej oceniane</SelectItem>
-                        <SelectItem value="price_asc">Cena: rosnąco</SelectItem>
-                        <SelectItem value="price_desc">Cena: malejąco</SelectItem>
+                        <SelectItem value="recommended">{t('filters.sortOptions.popular')}</SelectItem>
+                        <SelectItem value="newest">{t('filters.sortOptions.newest')}</SelectItem>
+                        <SelectItem value="rating">{t('filters.sortOptions.rating')}</SelectItem>
+                        <SelectItem value="price_asc">{t('filters.sortOptions.price_asc')}</SelectItem>
+                        <SelectItem value="price_desc">{t('filters.sortOptions.price_desc')}</SelectItem>
                       </SelectContent>
                     </Select>
 
                     {/* Zakres ceny */}
                     <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg bg-muted/40">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">Cena:</span>
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">{t('filters.priceRange')}</span>
                       <Input
                         type="number"
-                        placeholder="Min"
+                        placeholder={t('filters.min')}
                         value={unifiedFilters.priceRange?.min ?? 0}
                         onChange={(e) => {
                           const val = parseInt(e.target.value) || 0;
@@ -683,7 +686,7 @@ function ProductsPageContent() {
                       <span className="text-muted-foreground">-</span>
                       <Input
                         type="number"
-                        placeholder="Max"
+                        placeholder={t('filters.max')}
                         value={unifiedFilters.priceRange?.max ?? 10000}
                         onChange={(e) => {
                           const val = parseInt(e.target.value) || 10000;
@@ -698,7 +701,7 @@ function ProductsPageContent() {
                         }}
                         className="h-8 w-20 text-xs"
                       />
-                      <span className="text-sm">zł</span>
+                      <span className="text-sm">PLN</span>
                     </div>
                   </div>
 
@@ -713,7 +716,7 @@ function ProductsPageContent() {
                       }))}
                     >
                       <Truck className="h-3 w-3 mr-1" />
-                      Darmowa dostawa
+                      {t('filters.quickFilters.freeShipping')}
                     </Badge>
                     <Badge
                       variant={quickFilters.topRated ? 'default' : 'outline'}
@@ -724,7 +727,7 @@ function ProductsPageContent() {
                       }))}
                     >
                       <Star className="h-3 w-3 mr-1" />
-                      Wysoko oceniane (4.5+)
+                      {t('filters.quickFilters.topRated')}
                     </Badge>
                     <Badge
                       variant={quickFilters.bestsellers ? 'default' : 'outline'}
@@ -732,7 +735,7 @@ function ProductsPageContent() {
                       onClick={() => setSortBy(quickFilters.bestsellers ? 'relevance' : 'popularity')}
                     >
                       <Flame className="h-3 w-3 mr-1" />
-                      Bestsellery
+                      {t('filters.quickFilters.bestsellers')}
                     </Badge>
                   </div>
 
@@ -741,7 +744,7 @@ function ProductsPageContent() {
                     <div className="flex flex-wrap gap-2 pt-2 border-t">
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Bookmark className="h-3 w-3" />
-                        Zapisane filtry:
+                        {t('filters.savedLabel')}
                       </span>
                       {savedFilters.map((filter) => (
                         <Badge
@@ -773,7 +776,7 @@ function ProductsPageContent() {
                       className="w-full sm:w-auto"
                     >
                       <Save className="h-4 w-4 mr-2" />
-                      Zapisz obecne filtry
+                      {t('filters.saveFilter')}
                     </Button>
                   )}
                 </CardContent>
@@ -783,7 +786,7 @@ function ProductsPageContent() {
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-headline text-base font-semibold">
-                    Produkty ({products.length})
+                    {t('list.titleWithCount', { count: products.length })}
                   </h3>
 
                   <div className="flex items-center gap-2">
@@ -804,7 +807,7 @@ function ProductsPageContent() {
                         onClick={() => setViewMode('grid')}
                       >
                         <LayoutGrid className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Kafelki</span>
+                        <span className="hidden sm:inline">{t('viewMode.grid')}</span>
                       </Button>
                       <Button
                         variant={viewMode === 'list' ? 'default' : 'ghost'}
@@ -813,7 +816,7 @@ function ProductsPageContent() {
                         onClick={() => setViewMode('list')}
                       >
                         <List className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Lista</span>
+                        <span className="hidden sm:inline">{t('viewMode.list')}</span>
                       </Button>
                     </div>
 
@@ -825,7 +828,7 @@ function ProductsPageContent() {
                         className="h-8 px-3"
                         onClick={() => setCardDensity('comfortable')}
                       >
-                        Standard
+                        {t('density.standard')}
                       </Button>
                       <Button
                         variant={cardDensity === 'compact' ? 'default' : 'ghost'}
@@ -833,7 +836,7 @@ function ProductsPageContent() {
                         className="h-8 px-3"
                         onClick={() => setCardDensity('compact')}
                       >
-                        Kompakt
+                        {t('density.compact')}
                       </Button>
                     </div>
                   </div>
@@ -877,7 +880,7 @@ function ProductsPageContent() {
                         {isLoadingMore && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Loader2 className="h-5 w-5 animate-spin" />
-                            <span>Ładowanie kolejnych produktów...</span>
+                            <span>{t('loadingMore')}</span>
                           </div>
                         )}
                       </div>
@@ -886,13 +889,13 @@ function ProductsPageContent() {
                     {/* Status info */}
                     {!hasMore && displayedProducts.length > 0 && (
                       <div className="mt-6 text-center text-sm text-muted-foreground">
-                        <p>Pokazano wszystkie {filteredProducts.length} produktów</p>
+                        <p>{t('showing', { count: filteredProducts.length })}</p>
                       </div>
                     )}
                   </>
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-muted-foreground">Brak produktów w tej kategorii</p>
+                    <p className="text-muted-foreground">{t('empty.inCategory')}</p>
                   </div>
                 )}
               </div>

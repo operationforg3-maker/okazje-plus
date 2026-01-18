@@ -3,6 +3,7 @@
   "subtitle": "Najlepsze produkty z AliExpress",
   "filters": {
     "search": "Szukaj produktów...",
+    "title": "Kategorie i filtry",
     "sort": "Sortuj",
     "sortOptions": {
       "popular": "Najpopularniejsze",
@@ -13,17 +14,37 @@
     },
     "category": "Kategoria",
     "priceRange": "Zakres cen",
+    "min": "Min",
+    "max": "Max",
     "quickFilters": {
       "freeShipping": "Darmowa dostawa",
       "highRating": "Wysokie oceny",
+      "topRated": "Wysoko oceniane (4.5+)",
       "newArrivals": "Nowości",
-      "onSale": "Promocja"
+      "onSale": "Promocja",
+      "bestsellers": "Bestsellery"
     },
-    "clearAll": "Wyczyść filtry"
+    "clearAll": "Wyczyść filtry",
+    "savedLabel": "Zapisane filtry:",
+    "saveFilter": "Zapisz obecne filtry"
   },
   "viewMode": {
     "list": "Lista",
     "grid": "Siatka"
+  },
+  "density": {
+    "standard": "Standard",
+    "compact": "Kompakt"
+  },
+  "categories": {
+    "title": "Kategorie",
+    "showAll": "Pokaż wszystkie",
+    "hideEmpty": "Ukryj puste",
+    "allProducts": "Wszystkie produkty"
+  },
+  "breadcrumbs": {
+    "home": "Strona główna",
+    "catalog": "Katalog produktów"
   },
   "empty": {
     "title": "Brak produktów",
@@ -31,5 +52,86 @@
     "cta": "Wróć do wszystkich produktów"
   },
   "loading": "Ładowanie produktów...",
-  "addToCart": "Dodaj do koszyka"
+  "loadingMore": "Ładowanie kolejnych produktów...",
+  "addToCart": "Dodaj do koszyka",
+  "list": {
+    "titleWithCount": "Produkty ({count})"
+  },
+  "showing": "Pokazano wszystkie {count} produktów",
+  "card": {
+    "new": "Nowość",
+    "price": "Cena",
+    "go": "Przejdź",
+    "offer": "Oferta",
+    "details": "Szczegóły",
+    "info": "Info",
+    "cart": "Koszyk",
+    "inCart": "W koszyku",
+    "toCart": "Do koszyka",
+    "favorite": "Ulubione",
+    "favoriteAdd": "Dodaj do ulubionych",
+    "favoriteRemove": "Usuń z ulubionych",
+    "compare": "Porównaj",
+    "compareTitle": "Porównaj ceny"
+  },
+  "productDetail": {
+    "m6": {
+      "dealsAvailable": "{count, plural, one {# oferta dostępna} few {# oferty dostępne} many {# ofert dostępnych} other {# ofert dostępnych}}",
+      "compareHint": "Porównaj ceny od różnych sprzedawców poniżej",
+      "videoTitle": "Wideo produktu",
+      "videoDesc": "Materiał wideo źródłowy (AliExpress)"
+    },
+    "simple": {
+      "loading": "Ładowanie produktu...",
+      "notFound": "Nie znaleziono produktu",
+      "error": "Nie udało się wczytać produktu",
+      "reviews": "{count, plural, one {# opinia} few {# opinie} many {# opinii} other {# opinii}}",
+      "verified": "Zatwierdzony",
+      "bestPriceAt": "Najlepsza oferta w",
+      "totalPrice": "Razem",
+      "productPrice": "Cena produktu",
+      "shipping": "Dostawa",
+      "freeShipping": "DARMOWA",
+      "estimatedDelivery": "Dostawa w {days, plural, one {# dzień} few {# dni} many {# dni} other {# dni}}",
+      "buyNow": "Kup teraz",
+      "whatUsersSay": "Co mówią użytkownicy",
+      "overview": "Opis skrócony",
+      "details": "Szczegóły"
+    },
+    "priceComparison": {
+      "title": "Porównanie cen",
+      "storesCount": "{count, plural, one {# sklep} few {# sklepy} many {# sklepów} other {# sklepów}}",
+      "store": "Sklep",
+      "price": "Cena",
+      "shipping": "Dostawa",
+      "total": "Razem",
+      "delivery": "Dostawa",
+      "rating": "Ocena",
+      "action": "Akcja",
+      "bestPriceBadge": "Najlepsza cena",
+      "freeShipping": "DARMOWA",
+      "deliveryDays": "{count, plural, one {# dzień} few {# dni} many {# dni} other {# dni}}",
+      "deliveryDash": "—",
+      "buy": "Kup",
+      "lowestInfo": "Najniższa cena: oszczędzasz względem innych sklepów. Możliwa darmowa dostawa.",
+      "loading": "Ładowanie ofert...",
+      "empty": "Brak ofert dla tego produktu"
+    },
+    "priceHistory": {
+      "title": "Historia cen (30 dni)",
+      "noDataTitle": "Brak historii cen",
+      "noDataDescription": "Brak wystarczających danych do wyświetlenia historii cen",
+      "description": "Najniższa cena dzienna - ostatnie 30 dni ({points} punktów danych) - waluta: {currency}",
+      "stats": {
+        "min": "Najniższa cena",
+        "max": "Najwyższa cena",
+        "avg": "Średnia cena",
+        "change": "Zmiana"
+      },
+      "axisLabel": "Cena ({currency})",
+      "omnibusTitle": "Dyrektywa Omnibus",
+      "omnibusText": "Wykres pokazuje najniższą cenę z ostatnich 30 dni, co zapewnia przejrzystość cen zgodnie z regulacjami UE.",
+      "price": "Cena"
+    }
+  }
 }

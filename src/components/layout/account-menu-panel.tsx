@@ -6,13 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, LayoutDashboard, LogOut, Settings, User as UserIcon, Heart, Bell, Globe, Coins, Moon, Sun, Check } from "lucide-react";
 import { User } from "@/lib/types";
-import { useLocale } from 'next-intl';
-import { usePathname } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import { usePathname, useRouter } from 'next/navigation';
 import { Link as IntlLink } from '@/i18n/routing';
 import { getLanguageLabel, getLanguageFlag } from '@/hooks/use-content-language';
 import { SupportedLanguage } from '@/lib/i18n-content';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
 interface AccountMenuPanelProps {
   user: User | null;
@@ -22,6 +29,9 @@ interface AccountMenuPanelProps {
 }
 
 export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: AccountMenuPanelProps) {
+  const t = useTranslations('nav');
+  const router = useRouter();
+  
   if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
     console.log('[AccountMenuPanel] Rendering with user:', user?.email, 'loading:', loading);
   }
@@ -38,6 +48,13 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
   const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de)(\/|$)/, '/');
   const basePath = pathnameWithoutLocale || '/';
   const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de'];
+  
+  const switchLanguage = () => {
+    const currentIdx = SUPPORTED_LANGUAGES.indexOf(locale);
+    const nextLocale = SUPPORTED_LANGUAGES[(currentIdx + 1) % SUPPORTED_LANGUAGES.length];
+    // Use window.location to prevent dropdown closing animation
+    window.location.href = `/${nextLocale}${basePath}`;
+  };
 
   // Currency switching
   const [isMountedCurr, setIsMountedCurr] = useState(false);
@@ -126,79 +143,89 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
 
           <div className="space-y-2">
             <Link href="/profile" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
-              <span className="flex items-center gap-2"><UserIcon className="h-4 w-4" /> Profil</span>
+              <span className="flex items-center gap-2"><UserIcon className="h-4 w-4" /> {t('profile')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             <Link href="/profile?tab=favorites" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
-              <span className="flex items-center gap-2"><Heart className="h-4 w-4" /> Ulubione</span>
+              <span className="flex items-center gap-2"><Heart className="h-4 w-4" /> {t('favorites')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             <Link href="/profile?tab=notifications" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
-              <span className="flex items-center gap-2"><Bell className="h-4 w-4" /> Powiadomienia</span>
+              <span className="flex items-center gap-2"><Bell className="h-4 w-4" /> {t('notifications')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             <Link href="/profile/settings" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
-              <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> Ustawienia</span>
+              <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> {t('settings')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             {typeof user.role === 'string' && user.role === "admin" ? (
               <Link href="/admin" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
-                <span className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" /> Panel admina</span>
+                <span className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" /> {t('admin')}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </Link>
             ) : null}
             
             <button type="button" onClick={() => { onLogout(); onNavigate?.(); }} className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-destructive/60 hover:text-destructive">
-              <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> Wyloguj się</span>
+              <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> {t('logout')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </button>
 
             {/* Separator */}
             <div className="my-2 h-px bg-border/40" />
 
-            {/* Language, Currency, Theme - Toggle Switchers */}
+            {/* Language, Currency, Theme - Switch/Toggle Buttons */}
             <div className="flex items-center gap-2 justify-start">
-              {/* Language Switch */}
+              {/* Language Switch (literowy kod) */}
               {isMountedLang && (
-                <IntlLink
-                  href={basePath}
-                  locale={SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length]}
+                <Link
+                  href={`/${SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length]}${basePath}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Keep dropdown open after language change by setting sessionStorage flag
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('keepDropdownOpen', 'true');
+                    }
+                  }}
                   className={cn(
-                    "h-9 w-9 rounded-full flex items-center justify-center text-sm font-medium transition-all border hover:shadow-md",
+                    "h-9 px-3 rounded-full flex items-center justify-center text-xs font-bold uppercase transition-all border hover:shadow-md",
                     "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
                   )}
-                  title={`Zmień język na ${getLanguageLabel(SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length])}`}
+                  title={t('changeLanguage')}
                 >
-                  {getLanguageFlag(locale)}
-                </IntlLink>
+                  {locale}
+                </Link>
               )}
 
-              {/* Currency Switch */}
+              {/* Currency Switch (kod waluty) */}
               {isMountedCurr && (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     const currentIdx = SUPPORTED_CURRENCIES.findIndex(c => c.code === currency);
                     const nextCurr = SUPPORTED_CURRENCIES[(currentIdx + 1) % SUPPORTED_CURRENCIES.length];
                     switchCurrency(nextCurr.code);
                   }}
                   className={cn(
-                    "h-9 w-9 rounded-full flex items-center justify-center text-sm font-medium transition-all border hover:shadow-md",
+                    "h-9 px-3 rounded-full flex items-center justify-center text-xs font-semibold transition-all border hover:shadow-md",
                     "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
                   )}
-                  title={`Zmień walutę na ${SUPPORTED_CURRENCIES[(SUPPORTED_CURRENCIES.findIndex(c => c.code === currency) + 1) % SUPPORTED_CURRENCIES.length].name}`}
+                  title={t('changeCurrency')}
                 >
-                  <Coins className="h-4 w-4" />
+                  {currency}
                 </button>
               )}
 
-              {/* Theme Switch */}
+              {/* Theme Switch (ikona) */}
               <button
-                onClick={cycleTheme}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cycleTheme();
+                }}
                 className={cn(
                   "h-9 w-9 rounded-full flex items-center justify-center transition-all border hover:shadow-md",
                   "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
                 )}
-                title={`Zmień na ${theme === 'light' ? 'ciemny' : 'jasny'} tryb`}
+                title={t('changeTheme')}
               >
                 {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
@@ -208,12 +235,12 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Zaloguj się, aby zapisywać okazje i śledzić ulubione kategorie.
+            {t('login')}
           </p>
           <Button asChild className="w-full" onClick={onNavigate}>
             <Link href="/login" className="flex items-center justify-center gap-2">
               <UserIcon className="h-4 w-4" />
-              Zaloguj się
+              {t('login')}
             </Link>
           </Button>
         </div>

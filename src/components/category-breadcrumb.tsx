@@ -12,6 +12,7 @@ interface CategoryBreadcrumbProps {
   subCategorySlug?: string;
   subSubCategorySlug?: string;
   className?: string;
+  contextType?: 'products' | 'deals';
 }
 
 interface CategoryLabel {
@@ -29,9 +30,13 @@ export function CategoryBreadcrumb({
   subCategorySlug,
   subSubCategorySlug,
   className = '',
+  contextType = 'deals',
 }: CategoryBreadcrumbProps) {
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
+  
+  // Determine route prefix based on context
+  const routePrefix = contextType === 'products' ? 'products' : 'deals';
   
   const [labels, setLabels] = useState<{
     main?: CategoryLabel;
@@ -120,13 +125,14 @@ export function CategoryBreadcrumb({
   };
 
   return (
-    <nav
+    <div
       className={`flex items-center gap-1 text-xs sm:text-sm text-muted-foreground ${className}`}
+      role="navigation"
       aria-label="Category breadcrumb"
     >
       {/* Main category */}
       <Link
-        href={`/${locale}/categories/${mainCategorySlug}`}
+        href={`/${locale}/${routePrefix}?category=${mainCategorySlug}`}
         className="hover:text-foreground transition-colors truncate"
         title={getText(labels.main)}
       >
@@ -138,7 +144,7 @@ export function CategoryBreadcrumb({
         <>
           <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
           <Link
-            href={`/${locale}/categories/${mainCategorySlug}/${subCategorySlug}`}
+            href={`/${locale}/${routePrefix}?category=${mainCategorySlug}&sub=${subCategorySlug}`}
             className="hover:text-foreground transition-colors truncate"
             title={getText(labels.sub)}
           >
@@ -152,7 +158,7 @@ export function CategoryBreadcrumb({
         <>
           <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
           <Link
-            href={`/${locale}/categories/${mainCategorySlug}/${subCategorySlug}/${subSubCategorySlug}`}
+            href={`/${locale}/${routePrefix}?category=${mainCategorySlug}&sub=${subCategorySlug}&subsub=${subSubCategorySlug}`}
             className="hover:text-foreground transition-colors truncate"
             title={getText(labels.subsub)}
           >
@@ -160,6 +166,6 @@ export function CategoryBreadcrumb({
           </Link>
         </>
       )}
-    </nav>
+    </div>
   );
 }

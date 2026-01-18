@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { ModerationDetailView } from '@/components/admin/moderation-detail-view';
 import { 
   CheckSquare, 
   Clock,
@@ -239,8 +240,8 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
   );
 }
 
-import { getPendingDeals, getPendingProducts, getRecentlyModerated, getDealsForModeration, getProductCoresForModeration } from '@/lib/data';
-import { Deal, Product } from '@/lib/types';
+import { getPendingDeals, getPendingProducts, getRecentlyModerated, getDealsForModeration, getProductCoresForModeration, getCategories } from '@/lib/data';
+import { Deal, Product, Category } from '@/lib/types';
 import DealCard from '@/components/deal-card';
 import ProductListCard from '@/components/product-list-card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -283,6 +284,13 @@ function ModerationPage() {
   // Filtry statusów - domyślnie pending (spójność SSR/client, naprawia hydration)
   const [dealStatusFilter, setDealStatusFilter] = useState<string>('pending');
   const [productStatusFilter, setProductStatusFilter] = useState<string>('pending');
+  
+  // Filtry kategorii
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [selectedMainCategory, setSelectedMainCategory] = useState<string>('');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState<string>('');
   
   // New states for comments, reports, users
   const [reportedComments, setReportedComments] = useState<ReportedComment[]>([]);
@@ -383,6 +391,18 @@ function ModerationPage() {
     }
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    setLoadingCategories(true);
+    try {
+      const cats = await getCategories();
+      setCategories(cats || []);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  }, []);
+
   const handleCommentModeration = async (
     commentId: string,
     parentType: 'deal' | 'product',
@@ -458,7 +478,7 @@ function ModerationPage() {
       
       console.log('[Moderation] Deal statuses:', dealStatuses, 'Product statuses:', productStatuses)
       
-      const [deals, products, approved, rejected] = await Promise.all([
+      let [deals, products, approved, rejected] = await Promise.all([
         getDealsForModeration(dealStatuses, 200),
         getProductCoresForModeration(productStatuses, 200),
         getRecentlyModerated('approved', 7),
@@ -466,6 +486,22 @@ function ModerationPage() {
       ]);
       
       console.log('[Moderation] Got deals:', deals.length, 'products:', products.length, 'approved:', approved.length, 'rejected:', rejected.length)
+      
+      // Filtruj po kategoriach jeśli wybrana
+      if (selectedMainCategory) {
+        deals = deals.filter(d => d.mainCategorySlug === selectedMainCategory);
+        products = products.filter(p => p.mainCategorySlug === selectedMainCategory);
+      }
+      
+      if (selectedSubCategory) {
+        deals = deals.filter(d => d.subCategorySlug === selectedSubCategory);
+        products = products.filter(p => p.subCategorySlug === selectedSubCategory);
+      }
+      
+      if (selectedSubSubCategory) {
+        deals = deals.filter(d => d.subSubCategorySlug === selectedSubSubCategory);
+        products = products.filter(p => p.subSubCategorySlug === selectedSubSubCategory);
+      }
       
       setPendingDeals(deals);
       setPendingProducts(products);
@@ -481,11 +517,15 @@ function ModerationPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, dealStatusFilter, productStatusFilter]);
+  }, [toast, dealStatusFilter, productStatusFilter, selectedMainCategory, selectedSubCategory, selectedSubSubCategory]);
 
   useEffect(() => {
     fetchModerationData();
   }, [fetchModerationData]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   const handleModeration = async (itemId: string, itemType: 'deal' | 'product', action: 'approve' | 'reject') => {
     setProcessingId(itemId);
@@ -651,22 +691,86 @@ function ModerationPage() {
         </TabsList>
 
         <TabsContent value="deals" className="space-y-4">
-          {/* Filtr statusów */}
-          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-            <span className="font-medium text-sm">Filtruj po statusie:</span>
-            <Select value={dealStatusFilter} onValueChange={setDealStatusFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Wybierz status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
-                <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
-                <SelectItem value="approved">✅ Approved</SelectItem>
-                <SelectItem value="draft">📝 Draft</SelectItem>
-                <SelectItem value="rejected">❌ Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Badge variant="secondary">{pendingDeals.length} deali</Badge>
+          {/* Filtry statusów i kategorii */}
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="font-medium text-sm">Filtruj po statusie:</span>
+              <Select value={dealStatusFilter} onValueChange={setDealStatusFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Wybierz status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
+                  <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
+                  <SelectItem value="approved">✅ Approved</SelectItem>
+                  <SelectItem value="draft">📝 Draft</SelectItem>
+                  <SelectItem value="rejected">❌ Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Badge variant="secondary">{pendingDeals.length} deali</Badge>
+            </div>
+
+            {/* Filtry kategorii */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="font-medium text-sm">Filtruj po kategorii:</span>
+              <Select value={selectedMainCategory || 'all'} onValueChange={(val) => {
+                setSelectedMainCategory(val === 'all' ? '' : val);
+                setSelectedSubCategory('');
+                setSelectedSubSubCategory('');
+              }}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Kategoria główna" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Wszystkie kategorie</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {selectedMainCategory && (
+                <>
+                  <Select value={selectedSubCategory || 'all'} onValueChange={(val) => {
+                    setSelectedSubCategory(val === 'all' ? '' : val);
+                    setSelectedSubSubCategory('');
+                  }}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Podkategoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Wszystkie podkategorie</SelectItem>
+                      {categories.find(c => c.slug === selectedMainCategory)?.subcategories?.map((sub) => (
+                        <SelectItem key={sub.slug} value={sub.slug}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {selectedSubCategory && (
+                    <Select value={selectedSubSubCategory || 'all'} onValueChange={(val) => setSelectedSubSubCategory(val === 'all' ? '' : val)}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Pod-podkategoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Wszystkie pod-podkategorie</SelectItem>
+                        {categories
+                          .find(c => c.slug === selectedMainCategory)
+                          ?.subcategories?.find(s => s.slug === selectedSubCategory)
+                          ?.subcategories?.map((subsub) => (
+                            <SelectItem key={subsub.slug} value={subsub.slug}>
+                              {subsub.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           
           {/* Bulk actions bar (deals) */}
@@ -740,20 +844,12 @@ function ModerationPage() {
                                 Podgląd pełny
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Podgląd Deal: {deal.title}</DialogTitle>
+                            <DialogContent className="w-full max-w-4xl h-screen md:h-auto max-h-[90vh] overflow-hidden flex flex-col">
+                              <DialogHeader className="flex-shrink-0 overflow-hidden">
+                                <DialogTitle className="truncate">Moderacja Deal: {deal.title}</DialogTitle>
                               </DialogHeader>
-                              <div className="mt-4">
-                                <DealCard deal={deal} locale="pl" />
-                                <div className="mt-4 p-4 bg-muted rounded-lg space-y-2 text-sm">
-                                  <div><strong>ID:</strong> {deal.id}</div>
-                                  <div><strong>Status:</strong> {deal.status}</div>
-                                  <div><strong>Źródło:</strong> {deal.source || 'manual'}</div>
-                                  <div><strong>Temperatura:</strong> {deal.temperature || 0}°</div>
-                                  <div><strong>Głosy:</strong> {deal.vote_count || 0}</div>
-                                  <div><strong>Komentarze:</strong> {deal.comment_count || 0}</div>
-                                </div>
+                              <div className="flex-1 overflow-y-auto">
+                                <ModerationDetailView item={deal} itemType="deal" />
                               </div>
                             </DialogContent>
                           </Dialog>
@@ -787,23 +883,87 @@ function ModerationPage() {
         </TabsContent>
 
         <TabsContent value="products" className="space-y-4">
-          {/* Filtr statusów produktów */}
-          <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-            <span className="font-medium text-sm">Filtruj po statusie:</span>
-            <Select value={productStatusFilter} onValueChange={setProductStatusFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Wybierz status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
-                <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
-                <SelectItem value="approved">✅ Approved</SelectItem>
-                <SelectItem value="draft">📝 Draft</SelectItem>
-                <SelectItem value="pending_approval">⏰ Pending Approval</SelectItem>
-                <SelectItem value="rejected">❌ Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-            <Badge variant="secondary">{pendingProducts.length} produktów</Badge>
+          {/* Filtry statusów i kategorii produktów */}
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="font-medium text-sm">Filtruj po statusie:</span>
+              <Select value={productStatusFilter} onValueChange={setProductStatusFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Wybierz status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
+                  <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
+                  <SelectItem value="approved">✅ Approved</SelectItem>
+                  <SelectItem value="draft">📝 Draft</SelectItem>
+                  <SelectItem value="pending_approval">⏰ Pending Approval</SelectItem>
+                  <SelectItem value="rejected">❌ Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Badge variant="secondary">{pendingProducts.length} produktów</Badge>
+            </div>
+
+            {/* Filtry kategorii */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="font-medium text-sm">Filtruj po kategorii:</span>
+              <Select value={selectedMainCategory || 'all'} onValueChange={(val) => {
+                setSelectedMainCategory(val === 'all' ? '' : val);
+                setSelectedSubCategory('');
+                setSelectedSubSubCategory('');
+              }}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Kategoria główna" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Wszystkie kategorie</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.slug} value={cat.slug}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {selectedMainCategory && (
+                <>
+                  <Select value={selectedSubCategory || 'all'} onValueChange={(val) => {
+                    setSelectedSubCategory(val === 'all' ? '' : val);
+                    setSelectedSubSubCategory('');
+                  }}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Podkategoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Wszystkie podkategorie</SelectItem>
+                      {categories.find(c => c.slug === selectedMainCategory)?.subcategories?.map((sub) => (
+                        <SelectItem key={sub.slug} value={sub.slug}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {selectedSubCategory && (
+                    <Select value={selectedSubSubCategory || 'all'} onValueChange={(val) => setSelectedSubSubCategory(val === 'all' ? '' : val)}>
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Pod-podkategoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Wszystkie pod-podkategorie</SelectItem>
+                        {categories
+                          .find(c => c.slug === selectedMainCategory)
+                          ?.subcategories?.find(s => s.slug === selectedSubCategory)
+                          ?.subcategories?.map((subsub) => (
+                            <SelectItem key={subsub.slug} value={subsub.slug}>
+                              {subsub.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           
           <BulkModerationBar type="product" items={pendingProducts} onAction={async () => fetchModerationData()} />
@@ -877,22 +1037,12 @@ function ModerationPage() {
                                 Podgląd pełny
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Podgląd ProductCore: {product.name}</DialogTitle>
+                            <DialogContent className="w-full max-w-4xl h-screen md:h-auto max-h-[90vh] overflow-hidden flex flex-col">
+                              <DialogHeader className="flex-shrink-0 overflow-hidden">
+                                <DialogTitle className="truncate">Moderacja ProductCore: {product.name || product.title?.pl}</DialogTitle>
                               </DialogHeader>
-                              <div className="mt-4">
-                                <ProductListCard product={product} locale="pl" />
-                                <div className="mt-4 p-4 bg-muted rounded-lg space-y-2 text-sm">
-                                  <div><strong>ID:</strong> {product.id}</div>
-                                  <div><strong>Status:</strong> {product.status}</div>
-                                  <div><strong>Quality Score:</strong> {product.qualityScore || 0}/100</div>
-                                  <div><strong>Best Price:</strong> {product.bestPrice?.amount || '—'} zł</div>
-                                  <div><strong>Rating:</strong> {product.rating?.average || 0}/5 ({product.rating?.count || 0} ocen)</div>
-                                  {product.specs && (
-                                    <div><strong>Specs:</strong> {JSON.stringify(product.specs).substring(0, 200)}...</div>
-                                  )}
-                                </div>
+                              <div className="flex-1 overflow-y-auto">
+                                <ModerationDetailView item={product} itemType="product" />
                               </div>
                             </DialogContent>
                           </Dialog>

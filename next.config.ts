@@ -65,6 +65,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Exclude ioredis from client bundle (server-only)
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        ioredis: false,
+        dns: false,
+        net: false,
+        tls: false,
+        fs: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default withNextIntl(nextConfig);

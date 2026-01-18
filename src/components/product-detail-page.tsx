@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +12,6 @@ import {
   Heart,
   TrendingUp,
   CheckCircle,
-  AlertCircle,
 } from 'lucide-react';
 import { getProductWithDeals } from '@/lib/data';
 import { PriceComparisonTable } from './price-comparison-table';
@@ -32,6 +32,7 @@ interface ProductDetailPageProps {
  * Reviews summary
  */
 export function ProductDetailPage({ productId }: ProductDetailPageProps) {
+  const t = useTranslations('products');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,13 +50,13 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
     try {
       const result = await getProductWithDeals(productId);
       if (!result) {
-        setError('Product not found');
+        setError(t('productDetail.simple.notFound'));
         return;
       }
       setData(result);
     } catch (err) {
       console.error('Error loading product:', err);
-      setError('Failed to load product');
+      setError(t('productDetail.simple.error'));
     } finally {
       setLoading(false);
     }
@@ -64,7 +65,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-500">Loading product...</p>
+        <p className="text-gray-500">{t('productDetail.simple.loading')}</p>
       </div>
     );
   }
@@ -72,7 +73,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   if (error || !data) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-500">{error || 'Product not found'}</p>
+        <p className="text-red-500">{error || t('productDetail.simple.notFound')}</p>
       </div>
     );
   }
@@ -156,7 +157,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                   {product.rating?.score?.toFixed(1) || 'N/A'}
                 </span>
                 <span className="text-gray-500">
-                  ({product.rating?.count || 0} reviews)
+                  ({t('productDetail.simple.reviews', { count: product.rating?.count || 0 })})
                 </span>
               </div>
 
@@ -164,7 +165,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
               {product.status === 'approved' && (
                 <Badge className="bg-green-100 text-green-800">
                   <CheckCircle className="w-4 h-4 mr-1" />
-                  Verified
+                  {t('productDetail.simple.verified')}
                 </Badge>
               )}
             </div>
@@ -175,14 +176,14 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
             <Card className="border-2 border-green-200 bg-green-50">
               <CardContent className="pt-6 space-y-4">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Best Price at</p>
+                  <p className="text-sm text-gray-600 mb-1">{t('productDetail.simple.bestPriceAt')}</p>
                   <p className="text-lg font-semibold capitalize">
                     {bestDeal.source}
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Total Price</p>
+                    <p className="text-sm text-gray-600">{t('productDetail.simple.totalPrice')}</p>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-green-600">
                       {formatPrice(totalPrice)}
@@ -197,13 +198,13 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                   {/* Price Breakdown */}
                   <div className="pt-3 border-t border-green-200 space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span>Product Price:</span>
+                      <span>{t('productDetail.simple.productPrice')}:</span>
                       <span className="font-medium">{formatPrice(bestDeal.price?.amount || 0)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Shipping:</span>
+                      <span>{t('productDetail.simple.shipping')}:</span>
                       <span className="font-medium">
-                        {bestDeal.shipping?.cost === 0 ? 'FREE' : formatPrice(bestDeal.shipping?.cost || 0)}
+                        {bestDeal.shipping?.cost === 0 ? t('productDetail.simple.freeShipping') : formatPrice(bestDeal.shipping?.cost || 0)}
                       </span>
                     </div>
                   </div>
@@ -214,7 +215,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                   <div className="bg-white rounded p-3">
                     <p className="text-sm">
                       <TrendingUp className="w-4 h-4 inline mr-2" />
-                      Estimated delivery: <strong>{bestDeal.shipping.timeDays} days</strong>
+                      {t('productDetail.simple.estimatedDelivery', { days: bestDeal.shipping.timeDays })}
                     </p>
                   </div>
                 )}
@@ -228,7 +229,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                       rel="noopener noreferrer"
                     >
                       <ShoppingCart className="w-5 h-5 mr-2" />
-                      Buy Now
+                      {t('productDetail.simple.buyNow')}
                     </a>
                   </Button>
                   <Button
@@ -253,7 +254,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
           {product.reviewsSummary && (
             <Card>
               <CardContent className="pt-6">
-                <h3 className="font-semibold mb-3">What Users Say</h3>
+                <h3 className="font-semibold mb-3">{t('productDetail.simple.whatUsersSay')}</h3>
                 <p className="text-gray-700 text-sm leading-relaxed">
                   {product.reviewsSummary.pl || product.reviewsSummary.en}
                 </p>
@@ -285,7 +286,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
       {/* SHORT DESCRIPTION */}
       {product.shortDescription && (
         <section className="bg-gray-50 rounded-lg p-8">
-          <h2 className="text-2xl font-bold mb-4">Overview</h2>
+              <h2 className="text-2xl font-bold mb-4">{t('productDetail.simple.overview')}</h2>
           <p className="text-gray-700 leading-relaxed">
             {product.shortDescription.pl || product.shortDescription.en}
           </p>
@@ -295,7 +296,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
       {/* FULL DESCRIPTION */}
       {product.fullDescription && (
         <section className="prose max-w-none">
-          <h2 className="text-2xl font-bold mb-4">Details</h2>
+              <h2 className="text-2xl font-bold mb-4">{t('productDetail.simple.details')}</h2>
           <div className="text-gray-700">
             {product.fullDescription.pl || product.fullDescription.en}
           </div>

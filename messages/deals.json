@@ -51,5 +51,16 @@
   "sidebar": {
     "categories": "Kategorie",
     "allDeals": "Wszystkie"
+  },
+  "card": {
+    "price": "Cena",
+    "shippingWith": "+ dostawa: {cost}",
+    "favorite": "Ulubione",
+    "favoriteAdd": "Dodaj do ulubionych",
+    "favoriteRemove": "Usuń z ulubionych",
+    "alert": "Alert",
+    "compare": "Porównaj",
+    "compareTitle": "Dodaj do porównania",
+    "go": "Przejdź"
   }
 }

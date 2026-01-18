@@ -15,6 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Star, ShoppingCart, Heart, Share2, ExternalLink } from 'lucide-react';
 import { useCurrency } from '@/lib/unified-currency';
 import Link from 'next/link';
+import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 
 interface ProductDetailDeepDataProps {
   productCore: ProductCore;
@@ -38,16 +39,21 @@ export default function ProductDetailDeepData({ productCore, deals }: ProductDet
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Breadcrumbs */}
-      <div className="mb-6 text-sm text-muted-foreground">
+      <div className="mb-6 flex items-center space-x-2 text-sm text-muted-foreground">
         <Link href="/" className="hover:text-foreground">Home</Link>
-        {' / '}
-        <Link href={`/deals?category=${productCore.mainCategorySlug}`} className="hover:text-foreground">
-          {productCore.mainCategorySlug}
-        </Link>
-        {' / '}
-        <Link href={`/deals?category=${productCore.subCategorySlug}`} className="hover:text-foreground">
-          {productCore.subCategorySlug}
-        </Link>
+        <span>/</span>
+        <Link href="/products" className="hover:text-foreground">Products</Link>
+        {productCore.mainCategorySlug && (
+          <>
+            <span>/</span>
+            <CategoryBreadcrumb
+              mainCategorySlug={productCore.mainCategorySlug}
+              subCategorySlug={productCore.subCategorySlug}
+              subSubCategorySlug={productCore.subSubCategorySlug}
+              contextType="products"
+            />
+          </>
+        )}
       </div>
       
       <div className="grid md:grid-cols-2 gap-8 mb-8">

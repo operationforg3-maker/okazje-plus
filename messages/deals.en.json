@@ -40,5 +40,16 @@
   "sidebar": {
     "categories": "Categories",
     "allDeals": "All"
+  },
+  "card": {
+    "price": "Price",
+    "shippingWith": "+ shipping: {cost}",
+    "favorite": "Favorites",
+    "favoriteAdd": "Add to favorites",
+    "favoriteRemove": "Remove from favorites",
+    "alert": "Alert",
+    "compare": "Compare",
+    "compareTitle": "Add to comparison",
+    "go": "Go"
   }
 }

@@ -398,10 +398,18 @@ export default function DealCard({ deal, product }: DealCardProps) {
 
 
   return (
-    <Link 
-      href={`${prefix}/deals/${deal.id}`} 
-      onClick={handleDetailClick}
-      className="card-interactive group flex h-full flex-col overflow-hidden"
+    <div 
+      className="card-interactive group flex h-full flex-col overflow-hidden cursor-pointer"
+      onClick={() => {
+        window.location.href = `${prefix}/deals/${deal.id}`;
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          window.location.href = `${prefix}/deals/${deal.id}`;
+        }
+      }}
+      role="link"
+      tabIndex={0}
     >
       <div className="relative overflow-hidden aspect-square bg-muted">
         {/* Pasek ocen produktu jeśli powiązany */}
@@ -983,6 +991,6 @@ export default function DealCard({ deal, product }: DealCardProps) {
           )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

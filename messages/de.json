@@ -30,7 +30,21 @@
     "profile": "Profil",
     "login": "Anmelden",
     "logout": "Abmelden",
-    "admin": "Admin-Panel"
+    "admin": "Admin-Panel",
+    "addDeal": "Angebot hinzufügen",
+    "openMenu": "Menü öffnen",
+    "seasonalHits": "Saisonale Hits",
+    "hottest": "Heißeste",
+    "newest": "Neueste",
+    "trending": "Trending",
+    "favorites": "Favoriten",
+    "notifications": "Benachrichtigungen",
+    "settings": "Einstellungen",
+    "changeLanguage": "Sprache ändern",
+    "changeCurrency": "Währung ändern",
+    "changeTheme": "Design ändern",
+    "lightMode": "Heller Modus",
+    "darkMode": "Dunkler Modus"
   },
   "product": {
     "price": "Preis",

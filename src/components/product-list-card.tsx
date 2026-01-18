@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, ShoppingCart, ExternalLink, Clock, Tag, Heart, Scale } from 'lucide-react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -59,6 +59,7 @@ const getRelativeTime = (timestamp: any): string => {
 
 export default function ProductListCard({ product }: ProductListCardProps) {
   const locale = useLocale();
+  const t = useTranslations('products');
   const prefix = locale ? `/${locale}` : '';
   
   // Ensure product has ID for links (fallback: use identityHash if no ID)
@@ -73,7 +74,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     formattedPrice: 'N/A',
   });
   const [bestDeal, setBestDeal] = useState<any | null>(null);
-  const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? null);
+  const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? product?.bestPrice?.amount ?? null);
 
   // Get title in current language (ProductCore has multilingual title)
   const displayTitle = getText(product.title) || 'Produkt';
@@ -104,13 +105,14 @@ export default function ProductListCard({ product }: ProductListCardProps) {
 
   useEffect(() => {
     const relTime = getRelativeTime(product.createdAt);
-    const formatted = formatPrice(bestTotalPrice ?? price);
+    const priceToDisplay = bestTotalPrice ?? product?.bestPrice?.amount ?? price;
+    const formatted = formatPrice(priceToDisplay);
 
     setProductData({
       relativeTime: relTime,
       formattedPrice: formatted,
     });
-  }, [product.createdAt, price, bestTotalPrice, formatPrice]);
+  }, [product.createdAt, price, bestTotalPrice, product?.bestPrice?.amount, formatPrice]);
 
   // Fetch best deal for this product to get accurate affiliate link and total price
   useEffect(() => {
@@ -121,11 +123,8 @@ export default function ProductListCard({ product }: ProductListCardProps) {
         const deal = await getBestDealForProduct(product.id);
         if (!cancelled) {
           setBestDeal(deal);
-          // Jeśli produkt ma już bestTotalPrice, użyj go. W przeciwnym wypadku policz z dealu.
-          if (product?.bestTotalPrice && product.bestTotalPrice > 0) {
-            setBestTotalPrice(product.bestTotalPrice);
-          } else {
-            const total = (deal?.price?.amount || 0) + (deal?.shipping?.cost || 0);
+          if (deal && deal.price?.amount) {
+            const total = (deal.price.amount || 0) + (deal.shipping?.cost || 0);
             if (total > 0) setBestTotalPrice(total);
           }
         }
@@ -155,7 +154,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
         <div className="absolute left-2 top-2 flex flex-col gap-1">
           {isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg text-xs">
-              Nowość
+              {t('card.new', { default: 'Nowość' } as any)}
             </Badge>
           )}
         </div>
@@ -211,88 +210,89 @@ export default function ProductListCard({ product }: ProductListCardProps) {
         </div>
 
         {/* Price info */}
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <p className="text-2xl font-bold text-primary">{productData.formattedPrice}</p>
-          </div>
+        <div className="flex items-center justify-between mt-2 mb-3 p-2 bg-primary/10 rounded-lg border border-primary/20">
+          <span className="text-xs text-muted-foreground">{t('card.price', { default: 'Cena' } as any)}</span>
+          <p className="text-lg sm:text-xl font-bold text-primary">{productData.formattedPrice}</p>
         </div>
-      </div>
 
-      {/* Actions - Bottom on mobile, right on desktop */}
-      <div className="flex flex-col items-stretch sm:items-center justify-between gap-3 sm:pl-4 sm:border-l w-full sm:w-auto">
-        <div className="text-right text-xs text-muted-foreground flex flex-col items-center gap-1">
-          {ratingCount > 0 && (
-            <span className="text-xs">{ratingCount} opinii</span>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 w-full sm:min-w-[200px]">
+        {/* Action buttons - responsive layout */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Go To Offer - primary button */}
           <Button
             asChild
-            variant="outline"
             size="sm"
-            className="w-full whitespace-nowrap"
+            className="flex-1 h-8 sm:h-9 text-xs sm:text-sm"
           >
             <a
               href={(bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl || '#')}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <ExternalLink className="h-4 w-4 mr-1" />
-              Przejdź do oferty
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">{t('card.go')}</span>
+              <span className="sm:hidden">{t('card.offer')}</span>
             </a>
           </Button>
+
+          {/* Details */}
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="flex-1 h-8 sm:h-9 text-xs sm:text-sm"
+          >
+            <Link href={`${prefix}/products/${productId}`}>
+              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="hidden sm:inline">{t('card.details')}</span>
+              <span className="sm:hidden">{t('card.info')}</span>
+            </Link>
+          </Button>
+
+          {/* Add To Cart - icon only on mobile */}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => addItem({
+              id: bestDeal?.id || productId,
+              name: getText(product.title) || 'Produkt',
+              image: Array.isArray(product.images) ? product.images[0] : '',
+              price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
+              affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
+            } as any, 1)}
+            disabled={isInCart(bestDeal?.id || productId)}
+            className="h-8 sm:h-9 px-2 sm:px-3"
+            title={isInCart(productId) ? t('card.inCart') : t('card.toCart')}
+          >
+            <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline ml-1 text-xs">{isInCart(productId) ? t('card.inCart') : t('card.cart')}</span>
+          </Button>
+
+          {/* Favorite - icon only on mobile */}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => toggleFavorite()}
+            disabled={favLoading}
+            className="h-8 sm:h-9 px-2 sm:px-3"
+            title={isFavorited ? t('card.favoriteRemove') : t('card.favoriteAdd')}
+          >
+            <Heart className={`h-3 w-3 sm:h-4 sm:w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+            <span className="hidden sm:inline ml-1 text-xs">{t('card.favorite')}</span>
+          </Button>
+
+          {/* Compare - icon only on mobile */}
           <Button
             asChild
             size="sm"
-            className="w-full whitespace-nowrap"
+            variant="ghost"
+            className="h-8 sm:h-9 px-2 sm:px-3"
+            title={t('card.compareTitle')}
           >
-            <Link href={`${prefix}/products/${productId}`}>
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              Szczegóły
+            <Link href={`${prefix}/products/${productId}#price-comparison`}>
+              <Scale className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline ml-1 text-xs">{t('card.compare')}</span>
             </Link>
           </Button>
-          <div className="flex flex-wrap items-center gap-2 w-full">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => addItem({
-                id: bestDeal?.id || productId,
-                name: getText(product.title) || 'Produkt',
-                image: Array.isArray(product.images) ? product.images[0] : '',
-                price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
-                affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
-              } as any, 1)}
-              disabled={isInCart(bestDeal?.id || productId)}
-              className="flex-1 text-xs sm:text-sm"
-            >
-              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <span className="hidden sm:inline">{isInCart(productId) ? 'W koszyku' : 'Do koszyka'}</span>
-              <span className="sm:hidden">Koszyk</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => toggleFavorite()}
-              disabled={favLoading}
-              className="flex-1 text-xs sm:text-sm"
-            >
-              <Heart className={`h-3 w-3 sm:h-4 sm:w-4 mr-1 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-              <span className="hidden sm:inline">{isFavorited ? 'Ulubione' : 'Ulubione'}</span>
-              <span className="sm:hidden">❤️</span>
-            </Button>
-            <Button
-              asChild
-              size="sm"
-              variant="ghost"
-              className="flex-1 text-xs sm:text-sm"
-            >
-              <Link href={`${prefix}/products/${productId}#price-comparison`}>
-                <Scale className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                <span className="hidden sm:inline">Porównaj</span>
-                <span className="sm:hidden">⚖️</span>
-              </Link>
-            </Button>
-          </div>
         </div>
       </div>
     </div>

@@ -40,5 +40,16 @@
   "sidebar": {
     "categories": "Kategorien",
     "allDeals": "Alle"
+  },
+  "card": {
+    "price": "Preis",
+    "shippingWith": "+ Versand: {cost}",
+    "favorite": "Favoriten",
+    "favoriteAdd": "Zu Favoriten hinzufügen",
+    "favoriteRemove": "Aus Favoriten entfernen",
+    "alert": "Alarm",
+    "compare": "Vergleichen",
+    "compareTitle": "Zur Vergleichsliste hinzufügen",
+    "go": "Zum Angebot"
   }
 }

@@ -12,6 +12,7 @@ import {
   Area,
   AreaChart,
 } from 'recharts';
+import { useLocale, useTranslations } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 
@@ -29,8 +30,10 @@ interface ProductPriceHistoryChartProps {
  */
 export function ProductPriceHistoryChart({
   deals,
-  title = 'Historia cen (30 dni)',
+  title,
 }: ProductPriceHistoryChartProps) {
+  const t = useTranslations('products');
+  const locale = useLocale();
   const { currency, formatPrice, isMounted } = useCurrency();
   const [displayCurrency, setDisplayCurrency] = useState('PLN');
 
@@ -67,7 +70,7 @@ export function ProductPriceHistoryChart({
       .map(([date, price]) => ({
         date,
         price: Math.round(price * 100) / 100, // Round to 2 decimals
-        displayDate: formatDateForChart(date),
+        displayDate: formatDateForChart(date, locale),
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -77,18 +80,18 @@ export function ProductPriceHistoryChart({
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0];
 
     return data.filter(d => d.date >= thirtyDaysAgoStr);
-  }, [deals]);
+  }, [deals, locale]);
 
   if (chartData.length === 0) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>Brak historii cen</CardDescription>
+          <CardTitle>{title ?? t('productDetail.priceHistory.title')}</CardTitle>
+          <CardDescription>{t('productDetail.priceHistory.noDataTitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-64 text-gray-500">
-            <p>Brak wystarczających danych do wyświetlenia historii cen</p>
+            <p>{t('productDetail.priceHistory.noDataDescription')}</p>
           </div>
         </CardContent>
       </Card>
@@ -103,34 +106,34 @@ export function ProductPriceHistoryChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle>{title ?? t('productDetail.priceHistory.title')}</CardTitle>
         <CardDescription>
-          Najniższa cena dzienna - ostatnie 30 dni ({chartData.length} punktów danych) - waluta: {displayCurrency}
+          {t('productDetail.priceHistory.description', { points: chartData.length, currency: displayCurrency })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Statistics */}
         <div className="grid grid-cols-4 gap-4">
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Najniższa cena</p>
+            <p className="text-xs text-gray-500">{t('productDetail.priceHistory.stats.min')}</p>
             <p className="text-lg font-semibold text-green-600">
               {isMounted ? formatPrice(minPrice) : `${minPrice.toFixed(2)} ${CurrencyManager.getSymbol(currency as any)}`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Najwyższa cena</p>
+            <p className="text-xs text-gray-500">{t('productDetail.priceHistory.stats.max')}</p>
             <p className="text-lg font-semibold text-red-600">
               {isMounted ? formatPrice(maxPrice) : `${maxPrice.toFixed(2)} ${CurrencyManager.getSymbol(currency as any)}`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Średnia cena</p>
+            <p className="text-xs text-gray-500">{t('productDetail.priceHistory.stats.avg')}</p>
             <p className="text-lg font-semibold">
               {isMounted ? formatPrice(Number(avgPrice)) : `${avgPrice} ${CurrencyManager.getSymbol(currency as any)}`}
             </p>
           </div>
           <div className="border rounded-lg p-3">
-            <p className="text-xs text-gray-500">Zmiana</p>
+            <p className="text-xs text-gray-500">{t('productDetail.priceHistory.stats.change')}</p>
             <p className={`text-lg font-semibold ${parseFloat(priceChange) < 0 ? 'text-green-600' : 'text-red-600'}`}>
               {parseFloat(priceChange) < 0 ? '↓' : '↑'} {Math.abs(parseFloat(priceChange))}%
             </p>
@@ -154,7 +157,7 @@ export function ProductPriceHistoryChart({
                 interval={Math.floor(chartData.length / 6)}
               />
               <YAxis
-                label={{ value: `Cena (${displayCurrency})`, angle: -90, position: 'insideLeft' }}
+                label={{ value: t('productDetail.priceHistory.axisLabel', { currency: displayCurrency }), angle: -90, position: 'insideLeft' }}
                 domain={['dataMin - 5', 'dataMax + 5']}
               />
               <Tooltip
@@ -171,7 +174,7 @@ export function ProductPriceHistoryChart({
                 stroke="#3b82f6"
                 fillOpacity={1}
                 fill="url(#colorPrice)"
-                name="Price"
+                name={t('productDetail.priceHistory.price')}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -180,8 +183,7 @@ export function ProductPriceHistoryChart({
         {/* Omnibus Note */}
         <div className="bg-blue-50 border border-blue-200 rounded p-3">
           <p className="text-xs text-blue-800">
-            <strong>Omnibus Directive:</strong> The chart shows the lowest price available each day over the last 30 days.
-            This ensures price transparency and compliance with EU regulations.
+            <strong>{t('productDetail.priceHistory.omnibusTitle')}:</strong> {t('productDetail.priceHistory.omnibusText')}
           </p>
         </div>
       </CardContent>
@@ -189,7 +191,7 @@ export function ProductPriceHistoryChart({
   );
 }
 
-function formatDateForChart(dateStr: string): string {
+function formatDateForChart(dateStr: string, locale: string): string {
   const date = new Date(dateStr + 'T00:00:00Z');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(date);
 }
