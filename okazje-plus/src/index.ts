@@ -1550,11 +1550,14 @@ function generateWeeklyDigestHTML(
    * @param {number} price - Price to format
    * @return {string} Formatted price string
    */
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat("pl-PL", {
+  const formatPrice = (price: number | { amount: number } | null | undefined) => {
+    if (price === null || price === undefined) return "";
+    const amount = typeof price === 'object' ? price.amount : price;
+    return new Intl.NumberFormat("pl-PL", {
       style: "currency",
       currency: "PLN",
-    }).format(price);
+    }).format(amount);
+  };
 
   /**
    * Generate HTML for single deal
