@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState } from 'react';
 import { searchProductsTypesense, searchDealsTypesense } from '@/lib/search';
 import ProductListCard from '@/components/product-list-card';
+import ProductCard from '@/components/product-card';
 import DealCard from '@/components/deal-card';
 import { ProductCore, Deal } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -291,7 +292,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
                 <h2 className="font-headline text-2xl font-bold mb-4">🛍️ Produkty</h2>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {products.map((product) => (
-                    <ProductListCard key={product.id} product={product} />
+                    <ProductCard key={product.id} product={product as any} viewMode="grid" />
                   ))}
                 </div>
               </div>
@@ -314,7 +315,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {products.map((product) => (
-                  <ProductListCard key={product.id} product={product} />
+                  <ProductCard key={product.id} product={product as any} viewMode="grid" />
                 ))}
               </div>
             )}

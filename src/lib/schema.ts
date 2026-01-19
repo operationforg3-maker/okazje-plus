@@ -155,6 +155,10 @@ export const ProductSchema = z.object({
   tags: z.array(z.string()).optional(),
   searchTags: z.array(z.string()).optional(),
   
+  marketing: z.object({
+    ordersCount: z.number().int().default(0),
+  }).optional(),
+  
   views: z.number().int().min(0).optional(),
   clicks: z.number().int().min(0).optional(),
   conversions: z.number().int().min(0).optional(),

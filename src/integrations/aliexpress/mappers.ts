@@ -145,6 +145,10 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
   const warehouses = parseWarehouses(raw); // M6+: Warehouse locations
   const hasPLWarehouse = warehouses.includes('PL'); // M6+: Fast shipping flag
 
+  // M6+: Marketing data (sales volume)
+  const ordersCount = raw.lastest_volume ? parseInt(String(raw.lastest_volume), 10) : (raw.orders_count ? parseInt(String(raw.orders_count), 10) : 0);
+  const marketing = { ordersCount: isNaN(ordersCount) ? 0 : ordersCount };
+
   const nowIso = new Date().toISOString();
   const priceHistory: z.infer<typeof PriceHistoryEntrySchema>[] = [
     { date: nowIso, price: currentCents, currency: 'PLN' },
@@ -173,6 +177,7 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
     } : undefined,
     seller, // M6+: Seller info
     warehouses, // M6+: ['PL', 'CZ', 'CN']
+    marketing, // M6+: Social Proof (Orders count)
     priceHistory,
     status: 'draft',
     importedAt: nowIso,

@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Star, ShoppingCart, ExternalLink, Clock, Tag, Heart, Scale } from 'lucide-react';
+import { Star, ShoppingCart, ExternalLink, Clock, Tag, Heart, Scale, Flame } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
@@ -156,10 +156,10 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     : '/placeholder.png';
 
   return (
-    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 rounded-lg border items-stretch gap-3 sm:gap-4 w-full max-w-full overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 rounded-lg border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
       {/* Image - Top on mobile, left on desktop */}
-      <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-md w-full sm:w-40">
-        <div className="relative w-full aspect-[4/3] sm:aspect-square sm:h-40 bg-muted">
+      <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
+        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted">
           <Image
             src={primaryImage}
             alt={displayTitle}
@@ -175,6 +175,18 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             </Badge>
           )}
         </div>
+        
+        {/* Social Proof Badge (Top-Right) */}
+        {((product as any)?.marketing?.ordersCount || 0) > 10 && (
+          <div className="absolute right-2 top-2 z-10">
+            <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
+               <Flame className="w-3 h-3" />
+               <span className="font-medium">
+                 {((product as any)?.marketing?.ordersCount)} kupiło
+               </span>
+            </div>
+          </div>
+        )}
       </Link>
 
       {/* Content - Middle */}
@@ -226,91 +238,70 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           )}
         </div>
 
-        {/* Price info */}
-        <div className="flex items-center justify-between mt-2 mb-3 p-2 bg-primary/10 rounded-lg border border-primary/20">
-          <span className="text-xs text-muted-foreground">{t('card.price', { default: 'Cena' } as any)}</span>
-          <p className="text-lg sm:text-xl font-bold text-primary">{productData.formattedPrice}</p>
+        {/* Price info - Matching DealListCard style (Bottom Left of Middle) */}
+        <div className="flex items-center justify-between mt-2">
+           <div className="flex items-baseline gap-2 flex-wrap">
+            <p className="text-2xl font-bold text-primary">{productData.formattedPrice}</p>
+            
+            {/* We don't have original price easily available in ProductCore top-level usually, but if we did */}
+            {(product as any)?.bestPrice?.originalAmount && (product as any).bestPrice.originalAmount > (product as any).bestPrice.amount && (
+               <p className="text-base text-muted-foreground line-through">
+                 {formatPrice(CurrencyManager.convertToPLN((product as any).bestPrice.originalAmount, (product as any).bestPrice.currency || 'PLN'))}
+               </p>
+            )}
+           </div>
         </div>
+      </div>
 
-        {/* Action buttons - responsive layout */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          {/* Go To Offer - primary button */}
-          <Button
+      {/* Action Buttons - Right Column (Matches DealListCard 3-col layout) */}
+      <div className="flex flex-col items-center justify-center gap-3 pl-4 border-l sm:min-w-[160px]">
+        {/* Primary Action - Go To Offer */}
+        <Button
             asChild
-            size="sm"
-            className="flex-1 h-8 sm:h-9 text-xs sm:text-sm"
+            size="lg"
+            className="w-full whitespace-nowrap bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-sm"
           >
             <a
               href={(bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl || '#')}
               target="_blank"
               rel="noopener noreferrer"
             >
-              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <span className="hidden sm:inline">{t('card.go')}</span>
-              <span className="sm:hidden">{t('card.offer')}</span>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              {t('card.go')}
             </a>
           </Button>
 
-          {/* Details */}
+          {/* Secondary Action - Details */}
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="flex-1 h-8 sm:h-9 text-xs sm:text-sm"
+            className="w-full gap-1"
           >
             <Link href={`${prefix}/products/${productId}`}>
-              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <span className="hidden sm:inline">{t('card.details')}</span>
-              <span className="sm:hidden">{t('card.info')}</span>
+              <ShoppingCart className="h-4 w-4 mr-1" />
+              {t('card.details')}
             </Link>
           </Button>
-
-          {/* Add To Cart - icon only on mobile */}
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => addItem({
-              id: bestDeal?.id || productId,
-              name: getText(product.title) || 'Produkt',
-              image: Array.isArray(product.images) ? product.images[0] : '',
-              price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
-              affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
-            } as any, 1)}
-            disabled={isInCart(bestDeal?.id || productId)}
-            className="h-8 sm:h-9 px-2 sm:px-3"
-            title={isInCart(productId) ? t('card.inCart') : t('card.toCart')}
-          >
-            <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline ml-1 text-xs">{isInCart(productId) ? t('card.inCart') : t('card.cart')}</span>
-          </Button>
-
-          {/* Favorite - icon only on mobile */}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => toggleFavorite()}
-            disabled={favLoading}
-            className="h-8 sm:h-9 px-2 sm:px-3"
-            title={isFavorited ? t('card.favoriteRemove') : t('card.favoriteAdd')}
-          >
-            <Heart className={`h-3 w-3 sm:h-4 sm:w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-            <span className="hidden sm:inline ml-1 text-xs">{t('card.favorite')}</span>
-          </Button>
-
-          {/* Compare - icon only on mobile */}
-          <Button
-            asChild
+          
+          {/* Quick Cart Action */}
+           <Button
             size="sm"
             variant="ghost"
-            className="h-8 sm:h-9 px-2 sm:px-3"
-            title={t('card.compareTitle')}
+            className="w-full gap-1 text-muted-foreground hover:text-primary"
+            onClick={(e) => {
+              e.preventDefault();
+              addItem({
+                id: bestDeal?.id || productId,
+                name: getText(product.title) || 'Produkt',
+                image: Array.isArray(product.images) ? product.images[0] : '',
+                price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
+                affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
+              } as any, 1);
+            }}
           >
-            <Link href={`${prefix}/products/${productId}#price-comparison`}>
-              <Scale className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline ml-1 text-xs">{t('card.compare')}</span>
-            </Link>
+            <span className="text-xs">+ {t('card.cart', {default: 'Do koszyka'})}</span>
           </Button>
-        </div>
       </div>
     </div>
   );

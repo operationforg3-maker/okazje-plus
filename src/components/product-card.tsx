@@ -2,12 +2,13 @@
 "use client";
 
 import { ProductGallery } from './product-gallery';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
-  TrendingDown, Award, Clock, Check, Plus, Eye, Scale
+  TrendingDown, Award, Clock, Check, Plus, Eye, Scale, Flame, TrendingUp, Sparkles
 } from 'lucide-react';
 import { RatingBar } from './rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
@@ -31,11 +32,8 @@ import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { 
-  getPriceAmount, 
-  getTotalPrice, 
-  isFreeShipping,
-  getDiscountPercent,
-  extractPriceInfo 
+  extractPriceInfo, 
+  getDiscountPercent 
 } from '@/lib/i18n-utils';
 import { cn } from '@/lib/utils';
 import { useComparison } from '@/components/deal-comparison-tool';
@@ -46,6 +44,13 @@ interface ProductCardProps {
   viewMode?: 'list' | 'grid';
 }
 
+const safeText = (value: unknown, fallback = ''): string => {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return fallback;
+};
+
 export default function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: ProductCardProps) {
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
@@ -53,7 +58,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   const prefix = `/${locale}`;
   const { getText } = useContentLanguage();
   const { addItem, isInCart } = useSmartCart();
-  const { isFavorited, isLoading, toggleFavorite } = useFavorites(product.id, 'product');
+  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(product.id, 'product');
   const { user } = useAuth();
   const { count: commentsCount } = useCommentsCount('products', product.id);
   const { addToComparison } = useComparison();
@@ -63,57 +68,50 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   const { currency } = useCurrency();
   const [isMounted, setIsMounted] = useState(false);
 
-  // Format prices using state to fix hydration mismatch (SAME PATTERN AS DEALCARD)
+  // Format prices using state to fix hydration mismatch
   const [priceData, setPriceData] = useState<{
     formattedPrice: string | null;
     formattedOriginal: string | null;
     formattedShipping: string | null;
     discount: number | null;
+    savings: string | null;
   }>({
     formattedPrice: null,
     formattedOriginal: null,
     formattedShipping: null,
     discount: null,
+    savings: null,
   });
 
-  // Hydration safety - sync locale on mount
+  // Hydration safety
   useEffect(() => {
     setIsMounted(true);
     setLocale(localeFromParams);
   }, [localeFromParams]);
 
-  // Format prices on client only (using unified currency system) - M6 Currency Aware
+  // Price formatting
   useEffect(() => {
     if (!isMounted) return;
     const userCurrency = currency || 'PLN';
     
-    // Detect data model (ProductCore M6 vs Legacy Product)
     const isPC = !!(product as any).bestPrice;
-    
-    // Extract base values and source currency
     let rawPrice = 0;
     let rawOriginalPrice = 0;
     let rawShipping = 0;
     let sourceCurrency = 'PLN';
 
     if (isPC) {
-      // M6 ProductCore
       const pc = product as any;
       if (pc.bestPrice) {
-        // Robust extraction for ProductCore bestPrice
         const { amount, currency } = extractPriceInfo(pc.bestPrice);
         rawPrice = amount;
         sourceCurrency = currency;
       }
-      // ProductCore doesn't typically store originalPrice/shipping in top-level bestPrice
     } else {
-      // Legacy Product / Hybrid
-      // Use extractPriceInfo for potential M6-style price object in legacy field
       const { amount, currency } = extractPriceInfo(product.price);
       rawPrice = amount;
       sourceCurrency = currency;
       
-      // Try to detect other fields from legacy price object if available
       if (typeof product.price === 'object' && product.price !== null) {
         const p = product.price as any;
         if (p.originalPrice) rawOriginalPrice = p.originalPrice;
@@ -121,21 +119,21 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
       }
     }
 
-    // Convert to PLN (Base) then to User Currency
     const priceInPLN = CurrencyManager.convertToPLN(rawPrice, sourceCurrency);
     const originalInPLN = CurrencyManager.convertToPLN(rawOriginalPrice, sourceCurrency);
     const shippingInPLN = CurrencyManager.convertToPLN(rawShipping, sourceCurrency);
 
-    // Format for display
     const formatted = CurrencyManager.formatPrice(priceInPLN, userCurrency);
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
     let formattedShip: string | null = null;
+    let savings: string | null = null;
 
     if (rawOriginalPrice > 0) {
       formattedOrig = CurrencyManager.formatPrice(originalInPLN, userCurrency);
       if (originalInPLN > priceInPLN) {
         calculatedDiscount = Math.round(100 - (priceInPLN / originalInPLN) * 100);
+        savings = CurrencyManager.formatPrice(originalInPLN - priceInPLN, userCurrency);
       }
     }
 
@@ -148,6 +146,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
       formattedOriginal: formattedOrig,
       formattedShipping: formattedShip,
       discount: calculatedDiscount,
+      savings,
     });
   }, [isMounted, currency, product.price, (product as any).bestPrice]);
 
@@ -156,61 +155,30 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     : getText(product.title);
   const displayTitle = titleText || product.name || 'Produkt';
   
-  // Currency detection
-  const productCurrency = typeof product.price === 'object' && 'currency' in product.price 
-    ? product.price.currency 
-    : 'PLN';
-
-  // Rating data with safeguards
+  // Rating & Stats
   const productRating = (product as any).rating || 0;
   const merchantRating = (product as any).merchantRating || 0;
   const ratingCount = (product as any).ratingCount || 0;
   const ordersCount = (product as any).ordersCount || 0;
 
-  // Trust indicators
-  const isVerifiedMerchant = merchantRating >= 95;
-  const isBestseller = ordersCount > 1000;
-  const hasFastShipping = (product as any).shippingMethod === 'express' || ((product as any).estimatedDeliveryDays && (product as any).estimatedDeliveryDays <= 7);
-  
-  // AI Quality Score
-  const aiScore = product.aiContent?.score || 0;
-  const isAIRecommended = aiScore > 80;
-  
-  // Hot Deal indicator
-  const isHotDeal = product.meta?.isHotDeal || false;
-  const salesVolume = product.meta?.salesVolume || 0;
-  const inCart = isInCart(product.id);
-
+  // Metadata
   const metadata = product.metadata || {};
   const variants = (metadata as any).variants || [];
   const specifications = (metadata as any).specifications || [];
   const shippingInfo = (metadata as any).shipping || {};
-  const packageInfo = (metadata as any).package || {};
   const warrantyInfo = (metadata as any).warranty || {};
   const tags = (metadata as any).tags || [];
   const commission = (metadata as any).commission;
-  const stats = (metadata as any).stats || {};
-  const source = metadata.source || 'manual';
+  const packageInfo = (metadata as any).package || {};
 
-  const shippingOrigin = (shippingInfo.origin || shippingInfo.warehouse || (product as any).warehouse || (product as any).shippingFrom || '') as string;
-  const normalizedOrigin = typeof shippingOrigin === 'string' ? shippingOrigin.toLowerCase() : '';
-  const shipsFromEU = normalizedOrigin
-    ? ['poland','polska','germany','deutsch','spain','france','italy','europe','eu','netherlands','czech','austria','belgium','sweden','portugal','lithuania','latvia'].some((hint) => normalizedOrigin.includes(hint))
-    : false;
-  const originBadgeLabel = shippingOrigin || (shipsFromEU ? 'Magazyn EU' : '');
-  
-  const isHotDealTag = tags.includes('hot_deal');
+  const isHotDeal = product.meta?.isHotDeal || tags.includes('hot_deal');
   const isBestsellerTag = tags.includes('bestseller');
   const isNewArrival = tags.includes('new_arrival');
-  const isPolishMarket = tags.includes('polish_market');
-  const hasRealShipping = shippingInfo.cost !== undefined;
   const hasVariants = variants.length > 0;
-  const hasSpecs = specifications.length > 0;
+  const inCart = isInCart(product.id);
+  const hasRealShipping = shippingInfo.cost !== undefined;
 
-  // ========================================
-  // 💡 ANALYTICS & LIFECYCLE
-  // ========================================
-  
+  // View tracking
   useEffect(() => {
     if (!hasTrackedView) {
       void trackFirestoreView('product', product.id, user?.uid);
@@ -218,24 +186,12 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     }
   }, [hasTrackedView, product.id, user?.uid]);
 
-  const totalUSD = (product.price?.baseAmount || 0) + (product.price?.shippingCostUSD || 0);
-
-  const originalAmount = typeof product.price === 'object' && 'originalAmount' in product.price
-    ? (product.price as any).originalAmount
-    : null;
-  const discountPercent = product.price ? getDiscountPercent(product.price) : 0;
-  const hasDiscount = Boolean(discountPercent && Number.isFinite(discountPercent) && discountPercent > 0);
-
   const handleDetailClick = () => {
     void trackFirestoreClick('product', product.id, user?.uid);
   };
 
-  const handleAffiliateClick = () => {
-    void trackFirestoreClick('product', product.id, user?.uid);
-  };
-
-  const handleShare = () => {
-    void trackFirestoreShare('product', product.id, user?.uid);
+  const handleShare = (platform?: string) => {
+    void trackFirestoreShare('product', product.id, user?.uid, platform);
   };
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -244,584 +200,373 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     setIsAddingToCart(true);
     try {
       addItem(product, 1);
-      // Visual feedback delay
       await new Promise(resolve => setTimeout(resolve, 500));
     } finally {
       setIsAddingToCart(false);
     }
   };
 
-  // Product URL - ensure we have valid ID
+  // Product URL
   const productId = product.id || (product as any)._id || (product as any).docId;
-  if (!productId) {
-    console.error('[ProductCard] Product missing ID:', {
-      product,
-      keys: Object.keys(product),
-      id: product.id,
-      hasId: 'id' in product,
-    });
-  }
   const productUrl = `${prefix}/products/${(product as any).slug || productId || 'missing-id'}`;
   
-  if (!productId || productId === 'missing-id') {
-    console.warn('[ProductCard] Invalid product URL generated:', productUrl, 'for product:', product);
+  // Resolve images from Product (gallery/image) or ProductCore (images)
+  const rawGallery = Array.isArray(product.gallery) ? product.gallery : [];
+  const coreImages = Array.isArray((product as any).images) ? (product as any).images : [];
+  
+  // Combine all potential sources
+  let allImages: { src: string }[] = [];
+  
+  if (rawGallery.length > 0) {
+    allImages = rawGallery.map(img => ({
+      src: typeof img === 'string' ? img : img.src,
+    }));
+  } else if (coreImages.length > 0) {
+    allImages = coreImages.map((img: string) => ({ src: img }));
+  } else if (typeof product.image === 'string' && product.image) {
+    allImages = [{ src: product.image }];
   }
 
-  // Gallery setup
-  const galleryImages = Array.isArray(product.gallery) && product.gallery.length > 0
-    ? product.gallery.map(img => ({
-        src: typeof img === 'string' ? img : img.src,
-      }))
-    : [];
-  // Elementy JSX (tytuł, cena, dostawa) renderowane poniżej, nie w galleryImages
-  // ========================================
-  
-  return (
-    <>
-      <div className={cn(
-        "card-interactive group relative overflow-hidden bg-surface border-2 border-default hover:border-primary/50 rounded-lg shadow-md hover:shadow-lg transition-all-base",
-        viewMode === 'list' ? "flex flex-row space-lg p-card" : "flex flex-col"
-      )}>
-        
-        {/* Admin Edit Button (Top-right overlay) */}
-        {user?.role === 'admin' && (
-          <div className="absolute top-2 right-2 z-20">
-            <AdminEditButton
-              onClick={() => setEditDialogOpen(true)}
-              variant="ghost"
-              size="sm"
-              className="bg-surface/95 backdrop-blur-sm hover:bg-surface-hover border border-default"
-            />
-          </div>
-        )}
+  const primaryImageSrc = allImages.length > 0 ? allImages[0].src : '/placeholder.png';
+  const galleryImages = allImages;
 
-        {/* Product Gallery */}
+  // --------------------------------------------------------------------------
+  // LIST VIEW (Legacy Layout Preserved)
+  // --------------------------------------------------------------------------
+  if (viewMode === 'list') {
+    return (
+      <div className="group relative overflow-hidden rounded-lg transition-all duration-300 flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg hover:-translate-y-0.5">
         <Link 
           href={productUrl} 
           onClick={handleDetailClick} 
-          className={cn(
-            "relative block",
-            viewMode === 'list' ? "w-48 flex-shrink-0" : "w-full"
-          )}
+          className="relative overflow-hidden bg-muted block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-md"
         >
           <ProductGallery images={galleryImages} />
-          
-          {/* Trust Badges Overlay (Top-left) */}
-          <div className="absolute top-3 left-3 flex flex-col space-sm z-10">
+          {/* Trust Badges Overlay */}
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
             {priceData.formattedShipping === null && (
-              <Badge className="bg-emerald-500 text-white badge-trust">
+              <Badge className="bg-emerald-500 text-white text-[10px] h-5 px-1.5">
                 <Truck className="w-3 h-3 mr-1" />
-                Darmowa dostawa
+                Free
               </Badge>
             )}
-            
-            {false && (
-              <Badge className="bg-blue-500 text-white badge-trust">
-                <ShieldCheck className="w-3 h-3 mr-1" />
-                Gwarancja ceny
-              </Badge>
-            )}
-            
-            {hasFastShipping && (
-              <Badge className="bg-amber-500 text-white badge-trust">
-                <Zap className="w-3 h-3 mr-1" />
-                Szybka dostawa
-              </Badge>
-            )}
-
-            {shipsFromEU && (
-              <Badge className="bg-emerald-600 text-white badge-trust">
-                <Truck className="w-3 h-3 mr-1" />
-                Wysyłka z Europy
-              </Badge>
-            )}
-
-            {!shipsFromEU && originBadgeLabel && (
-              <Badge variant="secondary" className="badge-trust">
-                <Package className="w-3 h-3 mr-1" />
-                {originBadgeLabel}
-              </Badge>
-            )}
-            
-            {isVerifiedMerchant && (
-              <Badge className="bg-indigo-500 text-white badge-trust">
-                <Award className="w-3 h-3 mr-1" />
-                Zweryfikowany
-              </Badge>
-            )}
-            
-            {/* AI Quality Badge */}
-            {isAIRecommended && (
-              <Badge className="bg-purple-500 text-white badge-trust">
-                <Zap className="w-3 h-3 mr-1" />
-                AI Rekomenduje
-              </Badge>
-            )}
-            
-            {/* Hot Deal Badge */}
-            {isHotDeal && (
-              <Badge className="bg-red-500 text-white badge-trust animate-pulse">
-                <Zap className="w-3 h-3 mr-1" />
-                HOT DEAL
+            {ordersCount > 100 && (
+              <Badge className="bg-red-600/90 text-white text-[10px] h-5 px-1.5">
+                <Flame className="w-3 h-3 mr-1" />
+                {ordersCount > 1000 ? `${(ordersCount/1000).toFixed(1)}k` : ordersCount} kup.
               </Badge>
             )}
           </div>
-
-          {/* Discount Badge (Top-right corner) */}
-          {discountPercent && discountPercent > 0 && (
-            <div className="absolute top-3 right-3 z-10">
-              <Badge className="badge-hot badge-trust text-base font-bold px-3 py-1.5">
-                <TrendingDown className="w-4 h-4 mr-1" />
-                -{discountPercent}%
-              </Badge>
-            </div>
-          )}
         </Link>
 
-        {/* Content Area */}
-        <div className={cn(
-          "flex flex-1",
-          viewMode === 'list' ? "flex-row gap-6 py-2" : "flex-col space-y-4 p-5"
-        )}>
-          
-          {/* Left Column: Info */}
-          <div className={cn(
-            "flex flex-col",
-            viewMode === 'list' ? "flex-1 space-y-3" : "space-y-4"
-          )}>
-          
-          {/* Title (AI-Curated Clean Title) */}
-          <Link href={productUrl} onClick={handleDetailClick}>
-            <h3 className={cn(
-              "text-base font-semibold text-primary hover:text-primary transition-colors leading-snug",
-              viewMode === 'list' ? "line-clamp-2 text-lg" : "line-clamp-2"
-            )}>
-              {product.title?.pl || product.title?.en || product.title?.de || product.name || 'Produkt'}
-            </h3>
-          </Link>
-
-          {/* Enhanced Tags Row */}
-          {(isHotDeal || isBestsellerTag || isNewArrival || hasVariants || hasRealShipping) && (
-            <div className="flex flex-wrap space-sm">
-              {isHotDeal && (
-                <Badge variant="destructive" className="text-xs font-semibold px-2.5 py-0.5">
-                  <Flame className="w-3 h-3 mr-1" />
-                  Hot Deal
-                </Badge>
-              )}
-              {isBestsellerTag && (
-                <Badge variant="default" className="text-xs font-semibold px-2.5 py-0.5">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  Bestseller
-                </Badge>
-              )}
-              {isNewArrival && (
-                <Badge variant="secondary" className="text-xs font-semibold px-2.5 py-0.5">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Nowość
-                </Badge>
-              )}
-              {hasVariants && (
-                <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5">
-                  {variants.length} wariantów
-                </Badge>
-              )}
-              {hasRealShipping && shippingInfo.cost > 0 && (
-                <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5">
-                  <Truck className="w-3 h-3 mr-1" />
-                  {shippingInfo.cost} PLN
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Rating & Social Proof */}
-          {productRating > 0 && (
-            <div className="flex items-center space-md flex-wrap">
-              <div className="flex items-center space-sm">
-                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                <span className="text-base font-bold text-primary">
-                  {Number.isFinite(productRating) ? productRating.toFixed(1) : '—'}
-                </span>
-              </div>
-              
-              {ratingCount > 0 && (
-                <span className="text-sm text-secondary font-medium">
-                  ({ratingCount.toLocaleString()} ocen)
-                </span>
-              )}
-
-              {ordersCount > 0 && (
-                <>
-                  <span className="text-tertiary">•</span>
-                  <span className="text-sm text-secondary font-medium">
-                    {ordersCount.toLocaleString()} zamówień
-                  </span>
-                </>
-              )}
-
-              {commentsCount > 0 && (
-                <>
-                  <span className="text-tertiary">•</span>
-                  <span className="text-sm text-secondary flex items-center space-sm font-medium">
-                    <MessageSquare className="w-4 h-4" />
-                    {commentsCount} opinii
-                  </span>
-                </>
-              )}
-              
-              {/* Sales Volume (from AliExpress) */}
-              {salesVolume > 0 && (
-                <>
-                  <span className="text-tertiary">•</span>
-                  <span className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center space-sm font-semibold">
-                    <TrendingDown className="w-4 h-4" />
-                    {salesVolume.toLocaleString()} sprzedanych
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Enhanced Metadata Chips */}
-          {showFullDetails && (hasSpecs || warrantyInfo.available || packageInfo.weight) && (
-            <div className="flex flex-wrap gap-2 text-xs">
-              {hasSpecs && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="cursor-help">
-                        <Info className="w-3 h-3 mr-1" />
-                        {specifications.length} specyfikacji
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <div className="space-y-1 text-xs">
-                        {specifications.slice(0, 3).map((spec: any, idx: number) => (
-                          <div key={idx}>
-                            <span className="font-medium">{spec.name}:</span> {spec.value}
-                          </div>
-                        ))}
-                        {specifications.length > 3 && (
-                          <div className="text-muted-foreground">+{specifications.length - 3} więcej...</div>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              {warrantyInfo.available && (
-                <Badge variant="outline">
-                  <ShieldCheck className="w-3 h-3 mr-1" />
-                  Gwarancja
-                </Badge>
-              )}
-              {packageInfo.weight && (
-                <Badge variant="outline">
-                  <Package className="w-3 h-3 mr-1" />
-                  {packageInfo.weight}kg
-                </Badge>
-              )}
-              {shippingInfo.estimatedDays && (
-                <Badge variant="outline">
-                  <Clock className="w-3 h-3 mr-1" />
-                  ~{shippingInfo.estimatedDays} dni
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Commission Badge (for affiliates/admins) */}
-          {showFullDetails && commission && user?.role === 'admin' && (
-            <Badge variant="secondary" className="text-xs">
-              💰 Prowizja: {commission}%
-            </Badge>
-          )}
-
-          {viewMode !== 'list' && (
-            <>
-              {/* Feature badges to highlight available actions */}
-              <div className="flex flex-wrap gap-2 text-[11px]">
-                <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
-              <Scale className="w-3 h-3" />
-              Porównaj
-            </Badge>
-            <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
-              <ShoppingCart className="w-3 h-3" />
-              Wspólny koszyk
-            </Badge>
-            <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
-              <Heart className="w-3 h-3" />
-              Ulubione
-            </Badge>
-                <Badge variant="outline" className="gap-1 border-strong bg-surface-hover">
-                  <MessageSquare className="w-3 h-3" />
-                  Opinie
-                </Badge>
-              </div>
-            </>
-          )}
-          
-          </div>
-          
-          {/* Right Column: Price & Actions */}
-          <div className={cn(
-            "flex flex-col",
-            viewMode === 'list' ? "w-96 flex-shrink-0 space-y-3 justify-between" : "space-y-4"
-          )}>
-
-          {/* ========================================
-              💎 TOTAL LANDED COST (Trust-First Hero)
-              ======================================== */}
-          <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-md p-comfortable border-2 border-primary/30 shadow-sm">
-
-            <div className="flex flex-wrap items-center justify-between space-md text-sm text-secondary mb-4">
-              <div className="flex items-center space-sm">
-                {hasDiscount && (
-                  <Badge className="badge-hot badge-trust px-3 py-1.5 text-sm font-bold">
-                    <TrendingDown className="w-4 h-4 mr-1" />
-                    -{discountPercent}%
-                  </Badge>
-                )}
-                {originalAmount && (
-                  <span className="line-through text-base font-medium">
-                    {CurrencyManager.formatPrice(originalAmount, currency)}
-                  </span>
-                )}
-              </div>
-
-              {shipsFromEU ? (
-                <div className="flex items-center space-sm text-emerald-700 dark:text-emerald-400 font-bold text-sm">
-                  <Truck className="w-4 h-4" />
-                  Wysyłka z Europy
-                </div>
-              ) : originBadgeLabel ? (
-                <div className="flex items-center space-sm font-semibold text-sm">
-                  <Package className="w-4 h-4" />
-                  {originBadgeLabel}
-                </div>
-              ) : null}
-            </div>
+        {/* Info Column */}
+        <div className="flex flex-1 flex-col justify-between gap-2 min-w-0">
+          <div>
+            <Link href={productUrl} onClick={handleDetailClick}>
+              <h3 className="text-lg font-semibold text-primary hover:text-primary transition-colors leading-tight line-clamp-2">
+                {displayTitle}
+              </h3>
+            </Link>
             
-            {/* Main Price - BIG & BOLD */}
-            <div className="flex items-baseline space-sm mb-2">
-              <span className="text-4xl font-black text-primary">
-                {priceData.formattedPrice || 'N/A'}
-              </span>
-              {priceData.formattedOriginal && (
-                <span className="text-base text-secondary line-through">
-                  {priceData.formattedOriginal}
+            {/* Rating */}
+            {productRating > 0 && (
+              <div className="flex items-center gap-1 mt-1 text-sm">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="font-bold">{productRating.toFixed(1)}</span>
+                <span className="text-muted-foreground">({ratingCount})</span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 mt-2">
+               {isHotDeal && <Badge variant="destructive" className="text-[10px]">Hot Deal</Badge>}
+               {hasVariants && <Badge variant="outline" className="text-[10px]">{variants.length} wariantów</Badge>}
+            </div>
+          </div>
+        </div>
+
+        {/* Actions Column */}
+        <div className="flex flex-col w-full sm:w-48 flex-shrink-0 gap-3 justify-between">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-red-600">
+                  {priceData.formattedPrice || 'N/A'}
                 </span>
-              )}
-              {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-                <Badge variant="destructive" className="ml-2">
-                  -{priceData.discount}%
-                </Badge>
+                {priceData.formattedOriginal && (
+                  <span className="text-sm text-muted-foreground line-through">
+                    {priceData.formattedOriginal}
+                  </span>
+                )}
+              </div>
+              {priceData.savings && (
+                <div className="text-xs text-green-600 font-semibold mt-1">
+                  Oszczędzasz {priceData.savings}
+                </div>
               )}
             </div>
 
-            {/* Price Breakdown (Item + Shipping) */}
-            {priceData.formattedShipping && (
-              <div className="text-sm text-secondary space-y-1 mt-2">
-                <div className="flex justify-between">
-                  <span className="font-medium">Dostawa:</span>
-                  <span className="font-semibold">{priceData.formattedShipping}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Free Shipping Callout */}
-            {priceData.formattedShipping === null && (
-              <div className="flex items-center space-sm text-emerald-600 dark:text-emerald-400 text-base font-bold mt-2">
-                <Check className="w-4 h-4" />
-                <span>Dostawa gratis!</span>
-              </div>
-            )}
-
-            {/* Price Guarantee Info - disabled for now */}
-            {false && typeof product.price === 'object' && product.price.lowestPrice30Days && (
-              <div className="flex items-center space-sm text-blue-600 dark:text-blue-400 text-sm mt-2.5 font-medium">
-                <Info className="w-4 h-4" />
-                <span>
-                  Najniższa cena z 30 dni: {CurrencyManager.formatPrice(product.price.lowestPrice30Days, currency)}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons Row */}
-          <div className={cn(
-            "flex flex-col gap-2",
-            viewMode === 'list' ? "mt-auto" : "mt-auto pt-2"
-          )}>
-            
-            {/* PRIMARY: Buy Now Button (Direct Affiliate) */}
-            <Button
-              asChild
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold text-sm h-10 shadow-md hover:shadow-lg transition-all"
-            >
-              <a 
-                href={product.affiliateUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  trackFirestoreClick(product.id, 'product', 'buy_now_button');
-                }}
-              >
-                🚀 Kup teraz
-                <ExternalLink className="w-3 h-3 ml-2" />
-              </a>
-            </Button>
-
-            <div className={cn(
-              "flex items-center gap-2",
-              viewMode === 'list' ? "" : ""
-            )}>
-              {/* SECONDARY: Add to Shared Cart Button */}
-              <Button
-                onClick={handleAddToCart}
-                disabled={isAddingToCart || inCart}
-                className={cn(
-                  "flex-1 font-semibold transition-all h-9 text-xs",
-                  inCart 
-                    ? "bg-green-500 hover:bg-green-600 text-white" 
-                    : "bg-primary hover:bg-primary/90"
-                )}
-                size="default"
-              >
-                {isAddingToCart ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent mr-2" />
-                    Dodawanie...
-                  </>
-                ) : inCart ? (
-                  <>
-                    <Check className="w-3 h-3 mr-2" />
-                    W koszyku
-                  </>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-3 h-3 mr-2" />
-                    Do koszyka
-                  </>
-                )}
+            <div className="flex flex-col gap-2 mt-auto">
+              <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-9 text-xs shadow-sm">
+                <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer">
+                  Kup teraz <ExternalLink className="w-3 h-3 ml-2" />
+                </a>
               </Button>
-
-              {viewMode !== 'list' && (
-                /* Compare Button */
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    addToComparison({ ...product, type: 'product' });
-                  }}
-                  className="px-2 h-9 border-2 border-strong hover:bg-surface-hover bg-surface"
-                >
-                  <Scale className="w-3 h-3 mr-1" />
-                  Porównaj
+              <div className="flex gap-2">
+                <Button onClick={handleAddToCart} disabled={isAddingToCart || inCart} className={cn("flex-1 h-8 text-xs", inCart ? "bg-green-500 hover:bg-green-600" : "")}>
+                  {inCart ? <Check className="w-3 h-3" /> : <ShoppingCart className="w-3 h-3" />}
                 </Button>
-              )}
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.preventDefault(); addToComparison({...product, type: 'product'}); }}>
+                  <Scale className="w-3 h-3" />
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.preventDefault(); toggleFavorite(); }}>
+                  <Heart className={cn("w-3 h-3", isFavorited && "fill-red-500 text-red-500")} />
+                </Button>
+              </div>
             </div>
-
-            {/* Favorite Button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      toggleFavorite();
-                    }}
-                    disabled={isLoading}
-                    className={cn(
-                      "px-3 btn-icon-hover border-2 border-strong hover:bg-surface-hover bg-surface",
-                      isFavorited && "bg-red-50 dark:bg-red-900/50 border-red-300 dark:border-red-500"
-                    )}
-                  >
-                    <Heart 
-                      className={cn(
-                        "w-4 h-4 btn-favorite",
-                        isFavorited && "btn-favorite-active"
-                      )} 
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
-            {viewMode !== 'list' && (
-              <ShareButton
-                type="product"
-                itemId={product.id}
-                url={`${typeof window !== 'undefined' ? window.location.origin : ''}${productUrl}`}
-                title={displayTitle}
-                onShared={handleShare}
-              />
-            )}
-          </div>
-          
-          </div>
-          
-          {viewMode !== 'list' && (
-            <>
-              {/* Comments Count */}
-              {commentsCount > 0 && (
-                <Link 
-                  href={`${productUrl}#comments`}
-                  onClick={handleDetailClick}
-                  className="flex items-center space-sm text-sm text-secondary hover:text-primary transition-colors-fast"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{commentsCount} {commentsCount === 1 ? 'komentarz' : 'komentarzy'}</span>
-                </Link>
-              )}
-
-              {/* Merchant Trust Badge (Bottom) */}
-              {merchantRating > 0 && (
-                <div className="flex items-center gap-2 pt-2 border-t border-subtle">
-                  <div className="flex items-center gap-1">
-                    <ShieldCheck className={cn(
-                      "w-4 h-4",
-                      isVerifiedMerchant ? "text-green-500" : "text-gray-400"
-                    )} />
-                    <span className="text-xs text-secondary">
-                      Sprzedawca: {Number.isFinite(merchantRating) ? merchantRating.toFixed(0) : '—'}%
-                    </span>
-                  </div>
-                  {isBestseller && (
-                    <>
-                      <span className="text-tertiary">•</span>
-                      <Badge variant="secondary" className="text-xs">
-                        <TrendingDown className="w-3 h-3 mr-1" />
-                        Bestseller
-                      </Badge>
-                    </>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-
         </div>
       </div>
+    );
+  }
 
-      {/* Edit Dialog for Admin */}
-      {/* {user?.role === 'admin' && (
-        <ProductEditDialog
-          product={product}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-        />
-      )} */}
-    </>
+  // --------------------------------------------------------------------------
+  // GRID VIEW (Copied & Adapted from DealCard)
+  // --------------------------------------------------------------------------
+  return (
+    <div 
+      className="card-interactive group flex h-full flex-col overflow-hidden cursor-pointer"
+      onClick={() => {
+        window.location.href = productUrl;
+      }}
+      role="link"
+      tabIndex={0}
+    >
+      <div className="relative overflow-hidden aspect-square bg-muted">
+        {/* Gallery / Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={primaryImageSrc}
+            alt={displayTitle || 'Produkt'}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-contain transition-transform-base group-hover:scale-105 p-4"
+          />
+        </div>
+
+        {/* Favorite Button (Left Top) */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white transition-all-fast z-10 btn-icon-hover"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite();
+          }}
+          disabled={isFavoriteLoading}
+        >
+          <Heart
+            className={`h-4 w-4 md:h-5 md:w-5 btn-favorite ${
+              isFavorited ? 'btn-favorite-active' : ''
+            }`}
+          />
+        </Button>
+
+        {/* Badges Column (Right Top) */}
+        <div className="absolute right-2 top-2 flex flex-col space-sm z-10 gap-1 items-end">
+          {/* Social Proof */}
+          {ordersCount > 10 && (
+            <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
+               <Flame className="w-3 h-3" />
+               <span className="font-medium">
+                 {ordersCount > 1000 ? `${(ordersCount/1000).toFixed(1)}k` : ordersCount} kup.
+               </span>
+            </div>
+          )}
+          
+          {/* Hot Deal */}
+          {isHotDeal && (
+            <Badge variant="destructive" className="shadow-md">
+              <Zap className="mr-1 h-3 w-3" />
+              Hot Deal
+            </Badge>
+          )}
+
+          {/* Discount */}
+          {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+            <Badge className="badge-hot badge-trust text-sm font-bold shadow-md">
+              <TrendingDown className="w-3 h-3 mr-1" />
+              -{priceData.discount}%
+            </Badge>
+          )}
+
+          {isBestsellerTag && (
+            <Badge className="bg-purple-500 text-white shadow-md">
+              <TrendingUp className="mr-1 h-3 w-3" />
+              Bestseller
+            </Badge>
+          )}
+          
+          {isNewArrival && (
+            <Badge className="bg-blue-500 text-white shadow-md">
+              <Sparkles className="mr-1 h-3 w-3" />
+              Nowość
+            </Badge>
+          )}
+
+          {priceData.formattedShipping === null && (
+            <Badge className="bg-emerald-500 text-white badge-trust shadow-md">
+              <Truck className="mr-1 h-3 w-3" />
+              Free
+            </Badge>
+          )}
+        </div>
+
+        {/* Admin Edit */}
+        {user?.role === 'admin' && (
+          <div className="absolute right-2 bottom-2 z-10">
+            <AdminEditButton
+              onClick={() => setEditDialogOpen(true)}
+              className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Content Body */}
+      <div className="flex-grow space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-5 min-w-0">
+        
+        {/* Rating Row (Instead of Breadcrumb/Time in DealCard) */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+          <div className="flex items-center gap-1">
+             {productRating > 0 ? (
+               <>
+                 <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                 <span className="font-semibold text-foreground">{productRating.toFixed(1)}</span>
+                 <span>({ratingCount})</span>
+               </>
+             ) : (
+               <span>Brak ocen</span>
+             )}
+          </div>
+          {merchantRating > 0 && (
+            <div className="flex items-center gap-1" title="Ocena sprzedawcy">
+              <ShieldCheck className="w-3 h-3 text-green-600" />
+              <span>{merchantRating.toFixed(0)}%</span>
+            </div>
+          )}
+        </div>
+
+        <h3 className="font-headline text-sm sm:text-base md:text-lg font-semibold leading-tight transition-colors group-hover:text-primary line-clamp-2">
+          {displayTitle}
+        </h3>
+
+        {/* Price Row (Big) */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
+          <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
+            {priceData.formattedPrice || 'N/A'}
+          </span>
+          {priceData.formattedOriginal && (
+             <span className="text-xs sm:text-sm text-muted-foreground line-through">
+               {priceData.formattedOriginal}
+             </span>
+          )}
+          {priceData.savings && (
+            <span className="ml-auto text-xs font-semibold text-green-600">
+              Oszczędzasz {priceData.savings}
+            </span>
+          )}
+        </div>
+
+        {/* Info/Tags Row */}
+        <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs text-muted-foreground mt-2">
+           {packageInfo?.weight && (
+             <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+               <Package className="w-3 h-3 mr-1" />
+               {packageInfo.weight}kg
+             </Badge>
+           )}
+           {hasVariants && (
+             <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+               {variants.length} wariantów
+             </Badge>
+           )}
+           {warrantyInfo?.available && (
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                <ShieldCheck className="w-3 h-3 mr-1" />
+                Gwarancja
+              </Badge>
+           )}
+        </div>
+
+      </div>
+
+      {/* Footer Actions (Matching DealCard style) */}
+      <div className="flex flex-col gap-2 border-t bg-muted/30 p-2 sm:p-3">
+        {/* Main Action: Buy Now */}
+        <Button
+          asChild
+          className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold text-sm h-9 shadow-sm hover:shadow-md transition-all"
+        >
+          <a 
+            href={product.affiliateUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              e.stopPropagation();
+              trackFirestoreClick(product.id, 'product', 'buy_now_button');
+            }}
+          >
+            🚀 Kup teraz
+            <ExternalLink className="w-3 h-3 ml-2" />
+          </a>
+        </Button>
+
+        {/* Secondary Actions Row */}
+        <div className="flex gap-2">
+          <Button
+            onClick={handleAddToCart}
+            disabled={isAddingToCart || inCart}
+            variant={inCart ? "default" : "outline"}
+            className={cn(
+              "flex-1 font-semibold transition-all h-8 text-xs border-input bg-background hover:bg-accent hover:text-accent-foreground",
+              inCart && "bg-green-600 hover:bg-green-700 text-white border-green-600"
+            )}
+            size="sm"
+          >
+            {isAddingToCart ? (
+               <span className="flex items-center"><div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent mr-2" /> Dodaję</span>
+            ) : inCart ? (
+               <span className="flex items-center"><Check className="w-3 h-3 mr-1" /> W koszyku</span>
+            ) : (
+               <span className="flex items-center"><ShoppingCart className="w-3 h-3 mr-1" /> Do koszyka</span>
+            )}
+          </Button>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-8 px-2"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addToComparison({...product, type: 'product'});
+            }}
+            title="Porównaj"
+          >
+            <Scale className="w-3.5 h-3.5" />
+          </Button>
+
+          <ShareButton 
+            type="product" 
+            itemId={product.id} 
+            title={displayTitle} 
+            url={`${typeof window !== 'undefined' ? window.location.origin : ''}${productUrl}`}
+            variant="outline" 
+            size="sm"
+            className="h-8 w-8 px-0" 
+            onShared={(platform) => handleShare(platform)} 
+          />
+        </div>
+      </div>
+    </div>
   );
 }

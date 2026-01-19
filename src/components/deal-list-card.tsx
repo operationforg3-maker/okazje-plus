@@ -177,6 +177,15 @@ export default function DealListCard({ deal }: DealListCardProps) {
               Hot
             </Badge>
           )}
+          {/* Social Proof Badge (List Mode) */}
+          {((deal as any)?.marketing?.ordersCount || 0) > 10 && (
+              <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm w-fit">
+                <Flame className="w-3 h-3" />
+                <span className="font-medium whitespace-nowrap">
+                  {((deal as any)?.marketing?.ordersCount)} kupiło
+                </span>
+              </div>
+          )}
           {dealData.isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg text-xs">
               <Sparkles className="mr-1 h-3 w-3" />

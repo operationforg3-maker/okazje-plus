@@ -22,7 +22,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SortSelect } from '@/components/sort-select';
 import { useAuth } from '@/lib/auth';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useTranslations, useLocale } from 'next-intl';
@@ -53,6 +55,7 @@ interface SavedFilter {
 
 export default function DealsPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const t = useTranslations('deals');
   const locale = useLocale();
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -71,7 +74,17 @@ export default function DealsPage() {
     rating: undefined,
     availability: 'all',
   });
-  const [sortBy, setSortBy] = useState<SortBy>('hot');
+  
+  // Sort from URL
+  const sortBy = (searchParams.get('sort') as SortBy) || 'hot';
+  const router = useRouter();
+  
+  const setSortBy = (val: SortBy) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('sort', val);
+      router.push(`${window.location.pathname}?${params.toString()}`);
+  };
+  
   const [typeFilter, setTypeFilter] = useState<DealTypeFilter>('all');
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(10000);
@@ -921,43 +934,7 @@ export default function DealsPage() {
 
                   {/* Sortowanie */}
                   <div className="flex flex-col sm:flex-row gap-2">
-                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-                      <SelectTrigger className="w-full sm:w-[200px]">
-                        <SelectValue placeholder="Sortuj według" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hottest">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="h-4 w-4" />
-                            Najgorętsze
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="newest">
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Najnowsze
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="price_asc">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4" />
-                            Cena: rosnąco
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="price_desc">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4" />
-                            Cena: malejąco
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="discount">
-                          <div className="flex items-center gap-2">
-                            <Tag className="h-4 w-4" />
-                            Największa zniżka
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SortSelect />
 
                     {/* Zakres ceny */}
                     <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg bg-muted/40">

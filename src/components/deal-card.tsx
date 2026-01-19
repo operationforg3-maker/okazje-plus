@@ -471,7 +471,16 @@ export default function DealCard({ deal, product }: DealCardProps) {
             }`}
           />
         </Button>
-        <div className="absolute right-2 top-2 flex flex-col space-sm z-10">
+        <div className="absolute right-2 top-2 flex flex-col space-sm z-10 gap-1">
+          {/* Social Proof Badge */}
+          {((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount || 0) > 10 && (
+            <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
+               <Flame className="w-3 h-3" />
+               <span className="font-medium">
+                 {((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount)} kupiło
+               </span>
+            </div>
+          )}
           {isHot && (
             <Badge className="badge-hot badge-trust">
               <Flame className="mr-1 h-3 w-3 md:h-4 md:w-4" />

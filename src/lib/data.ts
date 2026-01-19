@@ -1116,7 +1116,8 @@ export async function getCategoriesWithContent(
   // Funkcja pomocnicza do sprawdzenia czy kategoria ma kontentu
   const getCategoryContentCount = async (value: string, fieldName: string = 'mainCategorySlug'): Promise<number> => {
     try {
-      const collection_name = contentType === 'deals' ? 'deals' : 'products';
+      // M6 Migration: Use 'product_cores' for products content check
+      const collection_name = contentType === 'deals' ? 'deals' : 'product_cores';
       const dealsRef = collection(db, collection_name);
       const q = query(
         dealsRef,
@@ -2687,7 +2688,7 @@ export async function getProductCoresByFilters(
     brands?: string[];
     searchTerm?: string;
   },
-  sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'relevance' = 'relevance',
+  sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'relevance' | 'popularity' = 'relevance',
   limit_count: number = 50
 ): Promise<ProductCore[]> {
   console.log('[getProductCoresByFilters] FUNCTION CALLED - filters:', JSON.stringify(filters), 'sortBy:', sortBy, 'limit:', limit_count);
@@ -2767,6 +2768,8 @@ export async function getProductCoresByFilters(
           return (pb.rating?.score || 0) - (pa.rating?.score || 0);
         case 'newest':
           return new Date(pb.updatedAt || 0).getTime() - new Date(pa.updatedAt || 0).getTime();
+        case 'popularity':
+          return ((pb as any).marketing?.ordersCount || 0) - ((pa as any).marketing?.ordersCount || 0);
         case 'hot':
           // Assuming hot products have higher temperature or popularity metric
           return (pb.rating?.count || 0) - (pa.rating?.count || 0);
@@ -2800,7 +2803,7 @@ export async function getDealsByFilters(
     sources?: Array<'aliexpress' | 'amazon' | 'allegro'>;
     searchTerm?: string;
   },
-  sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'discount_desc' = 'hot',
+  sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'discount_desc' | 'popularity' = 'hot',
   limit_count: number = 50
 ): Promise<Deal[]> {
   try {
@@ -2907,6 +2910,8 @@ export async function getDealsByFilters(
             return bDiscount - aDiscount;
           }
           return 0;
+        case 'popularity':
+          return ((db as any).marketing?.ordersCount || 0) - ((da as any).marketing?.ordersCount || 0);
         case 'hot':
         default:
           // Hot deals: sort by temperature or votes

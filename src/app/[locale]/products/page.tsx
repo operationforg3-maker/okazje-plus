@@ -8,6 +8,7 @@ import { getRecommendedProductCores, getProductCoresByCategory, getCategories, g
 import { searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
 import ProductListCard from '@/components/product-list-card';
+import ProductCard from '@/components/product-card';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -860,7 +861,7 @@ function ProductsPageContent() {
                       <div className={listWrapperClass}>
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
-                            <ProductListCard product={product} />
+                            <ProductCard product={product as any} viewMode="list" />
                           </div>
                         ))}
                       </div>
@@ -868,7 +869,7 @@ function ProductsPageContent() {
                       <div className={gridWrapperClass}>
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
-                            <ProductListCard product={product} />
+                            <ProductCard product={product as any} viewMode="grid" />
                           </div>
                         ))}
                       </div>

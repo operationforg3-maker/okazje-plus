@@ -10,7 +10,7 @@ export type ProductSearchOptions = {
   maxPrice?: number;
   minRating?: number;
   limit?: number;
-  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'rating';
+  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'popularity' | 'newest';
 };
 
 // Pełnotekstowe wyszukiwanie produktów w Typesense z filtrowaniem po kategoriach
@@ -77,6 +77,12 @@ export async function searchProductsTypesense(
       break;
     case 'rating':
       sort_by = 'ratingCard.average:desc';
+      break;
+    case 'popularity':
+      sort_by = 'marketing.ordersCount:desc';
+      break;
+    case 'newest':
+      sort_by = 'createdAt:desc';
       break;
     default:
       sort_by = '_text_match:desc'; // relevance
