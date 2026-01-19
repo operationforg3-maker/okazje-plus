@@ -11,7 +11,6 @@ import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart } fro
 import { useSmartCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
-import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo } from '@/lib/i18n-utils';
 
@@ -197,11 +196,11 @@ export default function DealListCard({ deal }: DealListCardProps) {
       </Link>
       
       {/* Edit Dialog */}
-      <DealEditDialog
+      {/* <DealEditDialog
         deal={deal}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
-      />
+      /> */}
       
       <div className="flex flex-col flex-grow min-w-0 justify-between">
         <div className="space-y-2">

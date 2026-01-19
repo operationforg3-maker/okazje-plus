@@ -104,7 +104,9 @@ export async function POST(req: NextRequest) {
     // ===== RESUME QUEUED IMPORT_JOBS =====
     const importResults = await Promise.allSettled(
       importJobsToResume.map(async (importJob: any) => {
-        logger.info('Resuming queued import_job', { jobId: importJob.id, type: importJob.type, importerType: importJob.importerType });
+        logger.info('Resuming queued import_job - SKIPPED (Legacy System moved)', { jobId: importJob.id, type: importJob.type, importerType: importJob.importerType });
+        return { status: 'skipped', reason: 'Legacy import system archived' };
+        /* 
         // Timeout wrapper to avoid hanging on dynamic import
         const timeout1 = new Promise((_, reject) => setTimeout(() => reject(new Error('processImportJob import timeout (20s)')), 20000));
         const mod1 = await Promise.race([import('@/app/api/admin/import/start/route'), timeout1]) as any;
@@ -114,7 +116,8 @@ export async function POST(req: NextRequest) {
           importJob.type, 
           importJob.maxItemsPerSubcategory,
           importJob.importerType || 'keyword-search' // Default to keyword-search for old jobs
-        );
+        ); 
+        */
       })
     );
 

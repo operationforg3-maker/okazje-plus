@@ -73,20 +73,84 @@ export async function GET() {
     }
 
     // Engagement proxy with fallback
+    // REMOVED expensive loop for totalSavings as it is not used in the dashboard
     let totalSavings = 0;
-    try {
-      const dealsSnapshot = await adminDb.collection('deals')
-        .select('vote_count')
-        .get();
-      totalSavings = dealsSnapshot.docs.reduce((sum, doc) => {
-        const votes = (doc.data() as any).vote_count || 0;
-        return sum + votes * 10;
-      }, 0);
-    } catch (err) {
-      console.warn('[Admin Stats API] Total savings error:', err);
-      totalSavings = 0;
-    }
 
+    // Categories Calculation (Main, Sub, SubSub)
+    let categoriesMain = 0;
+    let categoriesSub = 0;
+    let categoriesSubSub = 0;
+    let categoriesTotal = 0;
+    
+    try {
+       // 1. Get Main Categories (L1)
+       const mainCatsSnap = await adminDb.collection('categories').get();
+       categoriesMain = mainCatsSnap.size;
+
+       // 2. Get All Subcategories (L2 + L3) - Collection Group
+       const totalSubGroupSnap = await adminDb.collectionGroup('subcategories').count().get();
+       const totalSubGroup = totalSubGroupSnap.data().count;
+
+       // 3. Get Level 2 (direct children of Main)
+       // Iterate only the main categories (approx 15-20 docs)
+       const lvl2Counts = await Promise.all(
+          mainCatsSnap.docs.map(doc => doc.ref.collection('subcategories').count().get())
+       );
+       categoriesSub = lvl2Counts.reduce((acc, snap) => acc + snap.data().count, 0);
+
+       // 4. Calculate Level 3 and Total
+       // Level 3 = (All Subcategories) - (Level 2)
+       categoriesSubSub = Math.max(0, totalSubGroup - categoriesSub);
+       categoriesTotal = categoriesMain + totalSubGroup;
+
+    } catch(e) {
+       console.warn('[Admin Stats API] Categories count detailed error:', e);
+    }
+    
+    // Harvester Stats
+    let harvesterRunning = 0;
+    let harvesterCreated24h = 0;
+    try {
+       const [runningSnap, createdSnap] = await Promise.all([
+          adminDb.collection('harvester_jobs').where('status', '==', 'running').count().get(),
+          adminDb.collection('harvester_jobs').where('startedAt', '>=', last24Hours.toISOString()).count().get()
+       ]);
+       harvesterRunning = runningSnap.data().count;
+       harvesterCreated24h = createdSnap.data().count;
+    } catch(e) {
+       console.warn('[Admin Stats API] Harvester stats error:', e);
+    }
+    
+    // Analytics (Views/Clicks) - All Time & Today
+    // User requested "Google Analytics" style stats matches -> All Time totals
+    let viewsTotal = 0;
+    let viewsToday = 0;
+    let clicksTotal = 0;
+    let clicksToday = 0;
+    
+    try {
+        const todayStartTs = new Date(now.setHours(0,0,0,0)).toISOString();
+        
+        // Parallel queries
+        const [viewsTotalSnap, viewsTodaySnap, clicksTotalSnap, clicksTodaySnap] = await Promise.all([
+             // Total = All time (no date filter)
+             adminDb.collection('analytics').where('type', '==', 'view').count().get(),
+             adminDb.collection('analytics').where('type', '==', 'view').where('timestamp', '>=', todayStartTs).count().get(),
+             
+             // Total = All time
+             adminDb.collection('analytics').where('type', '==', 'click').count().get(),
+             adminDb.collection('analytics').where('type', '==', 'click').where('timestamp', '>=', todayStartTs).count().get()
+        ]);
+        
+        viewsTotal = viewsTotalSnap.data().count;
+        viewsToday = viewsTodaySnap.data().count;
+        clicksTotal = clicksTotalSnap.data().count;
+        clicksToday = clicksTodaySnap.data().count;
+
+    } catch(e) {
+        console.warn('[Admin Stats API] Analytics stats error:', e);
+    }
+    
     return NextResponse.json({
       success: true,
       totals: {
@@ -101,6 +165,20 @@ export async function GET() {
       recent24h: {
         deals: newDeals24h.data().count,
         users: newUsers24h.data().count,
+      },
+      categories: {
+          total: categoriesTotal,
+          main: categoriesMain,
+          sub: categoriesSub,
+          subSub: categoriesSubSub
+      },
+      harvester: {
+          running: harvesterRunning,
+          created24h: harvesterCreated24h
+      },
+      analytics: {
+          views: { total: viewsTotal, today: viewsToday },
+          clicks: { total: clicksTotal, today: clicksToday }
       },
       totalSavings,
       timestamp: new Date().toISOString(),

@@ -1114,13 +1114,13 @@ export async function getCategoriesWithContent(
   const allCategories = await getCategories();
   
   // Funkcja pomocnicza do sprawdzenia czy kategoria ma kontentu
-  const getCategoryContentCount = async (categoryId: string): Promise<number> => {
+  const getCategoryContentCount = async (value: string, fieldName: string = 'mainCategorySlug'): Promise<number> => {
     try {
       const collection_name = contentType === 'deals' ? 'deals' : 'products';
       const dealsRef = collection(db, collection_name);
       const q = query(
         dealsRef,
-        where('mainCategorySlug', '==', categoryId),
+        where(fieldName, '==', value),
         where('status', '==', 'approved'),
         limit(1) // Wystarczy wiedza czy istnieje choć jeden
       );
@@ -1134,7 +1134,7 @@ export async function getCategoriesWithContent(
   // Filtruj kategorie - zostawiaj tylko te, które mają kontentu
   const filteredCategories = await Promise.all(
     allCategories.map(async (category) => {
-      const hasContent = await getCategoryContentCount(category.id!);
+      const hasContent = await getCategoryContentCount(category.id!, 'mainCategorySlug');
       
       if (!hasContent && (!category.subcategories || category.subcategories.length === 0)) {
         return null; // Usuń kategorię bez treści i bez podkategorii
@@ -1144,7 +1144,7 @@ export async function getCategoriesWithContent(
       if (category.subcategories) {
         const filteredSubcategories = await Promise.all(
           category.subcategories.map(async (subcategory) => {
-            const subHasContent = await getCategoryContentCount(subcategory.slug! || subcategory.id!);
+            const subHasContent = await getCategoryContentCount(subcategory.slug! || subcategory.id!, 'subCategorySlug');
             
             if (!subHasContent && (!subcategory.subcategories || subcategory.subcategories.length === 0)) {
               return null; // Usuń podkategorię bez treści i bez pod-podkategorii
@@ -1154,7 +1154,7 @@ export async function getCategoriesWithContent(
             if (subcategory.subcategories) {
               const filteredSubSubcategories = await Promise.all(
                 subcategory.subcategories.map(async (subsubcategory) => {
-                  const subsubHasContent = await getCategoryContentCount(subsubcategory.slug! || subsubcategory.id!);
+                  const subsubHasContent = await getCategoryContentCount(subsubcategory.slug! || subsubcategory.id!, 'subSubCategorySlug');
                   return subsubHasContent > 0 ? subsubcategory : null;
                 })
               );
@@ -1774,15 +1774,36 @@ export async function getAdminDashboardStats(token?: string) {
       topCategories: [],
       recentActivity: 0,
       analytics: {
-        views: { total: 0, today: 0, trend: 0 },
-        clicks: { total: 0, today: 0, trend: 0 },
+        views: { 
+          total: data?.analytics?.views?.total ?? 0, 
+          today: data?.analytics?.views?.today ?? 0, 
+          trend: 0 
+        },
+        clicks: { 
+          total: data?.analytics?.clicks?.total ?? 0, 
+          today: data?.analytics?.clicks?.today ?? 0, 
+          trend: 0 
+        },
         shares: { total: 0 },
         conversionRate: 0,
       },
       growth: { deals: 0, products: 0, users: 0 },
-      categories: { total: 0, main: 0, sub: 0, subSub: 0 },
-      imports: { running: 0, queued: 0, completed24h: 0, failed24h: 0 },
-      harvester: { running: 0, created24h: 0 },
+      categories: { 
+        total: data?.categories?.total ?? 0, 
+        main: data?.categories?.total ?? 0, // Assumption: all in 'categories' are main for now
+        sub: 0, 
+        subSub: 0 
+      },
+      imports: { 
+        running: data?.imports?.running ?? 0, 
+        queued: data?.imports?.queued ?? 0, 
+        completed24h: data?.imports?.completed24h ?? 0, 
+        failed24h: data?.imports?.failed24h ?? 0 
+      },
+      harvester: { 
+        running: data?.harvester?.running ?? 0, 
+        created24h: data?.harvester?.created24h ?? 0 
+      },
     };
 
     // Cache short-term (60s) to speed up repeated renders

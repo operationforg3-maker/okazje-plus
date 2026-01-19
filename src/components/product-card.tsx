@@ -26,7 +26,7 @@ import { useAuth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
 import { trackFirestoreView, trackFirestoreClick, trackFirestoreShare } from '@/lib/analytics';
 import AdminEditButton from '@/components/admin/admin-edit-button';
-import ProductEditDialog from '@/components/admin/product-edit-dialog';
+// import ProductEditDialog from '@/components/admin/product-edit-dialog';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
@@ -815,13 +815,13 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
       </div>
 
       {/* Edit Dialog for Admin */}
-      {user?.role === 'admin' && (
+      {/* {user?.role === 'admin' && (
         <ProductEditDialog
           product={product}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
         />
-      )}
+      )} */}
     </>
   );
 }

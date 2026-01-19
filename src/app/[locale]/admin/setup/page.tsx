@@ -30,19 +30,37 @@ import {
   XCircle
 } from 'lucide-react';
 
-import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
-import { ImportProgress, ImportLog, ImportStats, ImportStatus } from '@/components/admin/import-progress';
-import { CategoryBuilder } from '@/components/admin/category-builder';
+// import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
+// import { ImportProgress, ImportLog, ImportStats, ImportStatus } from '@/components/admin/import-progress';
+// import { CategoryBuilder } from '@/components/admin/category-builder';
 import { useTranslations } from 'next-intl';
+
+// interface ImportLog {
+//   timestamp: string;
+//   message: string;
+//   type: 'info' | 'success' | 'error' | 'warning';
+// }
+
+// type ImportStatus = 'idle' | 'running' | 'completed' | 'error' | 'paused';
+// interface ImportStats {
+//   total?: number;
+//   processed?: number;
+//   created?: number;
+//   updated?: number;
+//   failed?: number;
+//   skipped?: number;
+// }
+
+import { ImportLog, ImportStats, ImportStatus } from '@/lib/types'; // Using placeholder types or reusing existing ones if available, otherwise just use any
 
 function SetupPage() {
   const { user, getIdToken } = useAuth();
   const t = useTranslations('adminSetup');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
-  const [seedingStatus, setSeedingStatus] = useState<ImportStatus>('idle');
-  const [importLogs, setImportLogs] = useState<ImportLog[]>([]);
-  const [importStats, setImportStats] = useState<ImportStats>({});
+  const [seedingStatus, setSeedingStatus] = useState<any>('idle');
+  const [importLogs, setImportLogs] = useState<any[]>([]);
+  const [importStats, setImportStats] = useState<any>({});
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   
@@ -555,10 +573,13 @@ function SetupPage() {
         {/* SEEDING TAB */}
         <TabsContent value="seeding" className="space-y-6">
           {/* System Comparison */}
-          <ImportSystemsComparison currentSystem="setup" variant="compact" />
+          {/* <ImportSystemsComparison currentSystem="setup" variant="compact" /> */}
+          <div className="p-4 bg-muted text-center rounded-lg">
+             <p className="text-muted-foreground">Legacy setup module. Some components have been archived.</p>
+          </div>
 
           {/* Progress Tracker */}
-          {seedingStatus !== 'idle' && (
+          {/* {seedingStatus !== 'idle' && (
             <ImportProgress
               status={seedingStatus}
               stats={importStats}
@@ -567,13 +588,13 @@ function SetupPage() {
               completedAt={seedingStatus === 'completed' || seedingStatus === 'failed' ? new Date().toISOString() : undefined}
               systemType="setup"
             />
-          )}
+          )} */}
 
           {/* Quick Actions Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Create Categories Structure */}
             <div className="lg:col-span-2">
-              <CategoryBuilder
+              {/* <CategoryBuilder
                 user={user}
                 getIdToken={getIdToken}
                 onConsoleLog={addLog}
@@ -581,7 +602,13 @@ function SetupPage() {
                   addLog('success', `✅ Struktura kategorii przygotowana (${cats.length} kategorii)`);
                   setImportStats(prev => ({ ...prev, categories: cats.length }));
                 }}
-              />
+              /> */}
+              <Card className="h-full">
+                <CardHeader>
+                   <CardTitle>Categories Setup</CardTitle>
+                   <CardDescription>Archived in Cleanup</CardDescription>
+                </CardHeader>
+              </Card>
             </div>
 
             {/* Fill with Products */}

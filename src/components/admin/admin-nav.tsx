@@ -54,24 +54,6 @@ const navStructure: (NavItem | NavGroup)[] = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Zawartość',
-    icon: Database,
-    items: [
-      { title: 'Okazje', href: '/admin/deals', icon: Flame },
-      { title: 'Produkty', href: '/admin/products', icon: ShoppingCart },
-      { title: 'Kategorie', href: '/admin/categories', icon: Layers },
-    ],
-  },
-  {
-    title: 'Import & Export',
-    icon: Upload,
-    items: [
-      { title: 'Import/Export Console', href: '/admin/import-export', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
-      { title: 'AliExpress Import', href: '/admin/aliexpress-import', icon: Search, badge: 'AI', badgeVariant: 'secondary' },
-      { title: 'Import Monitor', href: '/admin/imports', icon: TrendingUp },
-    ],
-  },
-  {
     title: 'Moderacja',
     icon: AlertTriangle,
     items: [
@@ -100,13 +82,6 @@ const navStructure: (NavItem | NavGroup)[] = [
     icon: Share2,
     items: [
       { title: 'Social Media', href: '/admin/social-media', icon: Share2, badge: 'NEW', badgeVariant: 'default' },
-    ],
-  },
-  {
-    title: 'System',
-    icon: Database,
-    items: [
-      { title: 'Inwentarz Narzędzi', href: '/admin/tools-inventory', icon: FileBarChart, badge: 'NEW', badgeVariant: 'secondary' },
     ],
   },
   {

@@ -23,7 +23,7 @@ import {
   CheckCircle,
   Settings
 } from 'lucide-react';
-import { getCounts, getHotDeals, getRecommendedProducts, getAdminDashboardStats } from '@/lib/data';
+import { getCounts, getHotDeals, getAdminDashboardStats } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -31,194 +31,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
 import TestsTab from '@/components/admin/tests-tab';
-import { ImportManager } from '@/components/admin/import-manager';
 import { ExchangeRateAlert } from '@/components/admin/exchange-rate-alert';
-
-// AI Console Component
-function AiConsole() {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');
-
-  const handleFillCatalog = async () => {
-    if (!confirm('To wypełni bazę kategoriami i produktami z AliExpress. Kontynuować?')) return;
-    
-    setLoading(true);
-    setResult('🚀 Rozpoczynam wypełnianie katalogu...\n\nTo może zająć kilka minut. Proszę czekać...');
-    
-    try {
-      const res = await fetch('/api/admin/ai/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'fillCategoriesWithProducts' })
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
-        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
-        return;
-      }
-      
-      const data = await res.json();
-      setResult(data.result || '✅ Zakończono!');
-    } catch (e: any) {
-      setResult(`❌ Błąd połączenia: ${e.message || 'Sprawdź połączenie z internetem'}`);
-      console.error('Fetch error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleWipeDatabase = async () => {
-    if (!confirm('⚠️ UWAGA! To usunie WSZYSTKIE produkty i deale. Czy na pewno?')) return;
-    if (!confirm('To jest nieodwracalne. Ostatnia szansa - kontynuować?')) return;
-    
-    setLoading(true);
-    setResult('🗑️ Czyszczenie bazy danych...\n\nUsuwam produkty i deale...');
-    
-    try {
-      const res = await fetch('/api/admin/ai/wipe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
-        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.message || 'Nieznany błąd serwera'}`);
-        return;
-      }
-      
-      const data = await res.json();
-      const summaryLines = [
-        data.message,
-        '',
-        `ProductCore: ${data.deletedProductCores ?? 0}`,
-        `Products (legacy): ${data.deletedProducts ?? 0}`,
-        `Deals: ${data.deletedDeals ?? 0}`,
-        `Categories: ${data.deletedCategories ?? 0}`,
-        `Subcategories: ${data.deletedSubcategories ?? 0}`,
-        `Identity matches: ${data.deletedIdentityMatches ?? 0}`,
-        `Harvester jobs: ${data.deletedHarvesterJobs ?? 0}`,
-      ].filter(Boolean).join('\n');
-      setResult(summaryLines || '✅ Baza danych wyczyszczona');
-    } catch (e: any) {
-      setResult(`❌ Błąd połączenia: ${e.message}`);
-      console.error('Fetch error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFetchDeals = async () => {
-    if (!confirm('To pobierze deale (promocje >50% zniżki) z AliExpress API. Kontynuować?')) return;
-    
-    setLoading(true);
-    setResult('🔥 Pobieram deale z AliExpress...\n\nSzukam promocji >50% zniżki...');
-    
-    try {
-      const res = await fetch('/api/admin/ai/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'fillCategoriesWithDeals' })
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Błąd połączenia' }));
-        setResult(`❌ Błąd ${res.status}: ${errorData.error || errorData.result || 'Nieznany błąd serwera'}`);
-        return;
-      }
-      
-      const data = await res.json();
-      setResult(data.result || '✅ Deale pobrane z AliExpress!');
-    } catch (e: any) {
-      setResult(`❌ Błąd połączenia: ${e.message}`);
-      console.error('Fetch error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Command Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button
-          onClick={handleFillCatalog}
-          disabled={loading}
-          className="group relative p-6 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
-        >
-          <div className="flex flex-col items-center gap-3">
-            <span className="text-4xl">🚀</span>
-            <span className="text-lg font-bold">Wypełnij Katalog</span>
-            <span className="text-sm text-blue-100 text-center">
-              {loading ? '⏳ Przetwarzam...' : 'Produkty z AliExpress API'}
-            </span>
-          </div>
-          <div className="absolute top-2 right-2">
-            <span className="bg-white/20 text-xs px-2 py-1 rounded-full">~300 produktów</span>
-          </div>
-        </button>
-        
-        <button
-          onClick={handleFetchDeals}
-          disabled={loading}
-          className="group relative p-6 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-xl hover:from-orange-600 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
-        >
-          <div className="flex flex-col items-center gap-3">
-            <span className="text-4xl">🔥</span>
-            <span className="text-lg font-bold">Pobierz Deale</span>
-            <span className="text-sm text-orange-100 text-center">
-              {loading ? '⏳ Pobieram...' : 'Promocje {\'>\'}50% zniżki'}
-            </span>
-          </div>
-          <div className="absolute top-2 right-2">
-            <span className="bg-white/20 text-xs px-2 py-1 rounded-full">~100 deali</span>
-          </div>
-        </button>
-        
-        <button
-          onClick={handleWipeDatabase}
-          disabled={loading}
-          className="group relative p-6 bg-gradient-to-br from-gray-600 to-gray-800 text-white rounded-xl hover:from-red-600 hover:to-red-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
-        >
-          <div className="flex flex-col items-center gap-3">
-            <span className="text-4xl">🗑️</span>
-            <span className="text-lg font-bold">Wyczyść Bazę</span>
-            <span className="text-sm text-gray-200 text-center">
-              {loading ? '⏳ Czyszczę...' : 'Reset całej bazy'}
-            </span>
-          </div>
-          <div className="absolute top-2 right-2">
-            <span className="bg-red-500/50 text-xs px-2 py-1 rounded-full">⚠️ Ostrożnie</span>
-          </div>
-        </button>
-      </div>
-
-      {/* Result Display */}
-      {result && (
-        <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-inner">
-          <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-            <span className="text-2xl">✨</span>
-            Wynik operacji:
-          </h3>
-          <pre className="whitespace-pre-wrap text-sm bg-surface p-4 rounded-lg border font-mono">
-            {result}
-          </pre>
-        </div>
-      )}
-      
-      <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-        <h3 className="font-medium mb-2">ℹ️ Jak to działa:</h3>
-        <ul className="text-sm space-y-1 list-disc list-inside">
-          <li><strong>Wypełnij Katalog:</strong> Tworzy strukturę kategorii (jak Pepper.pl) i pobiera produkty z AliExpress API</li>
-          <li><strong>Pobierz Deale:</strong> Agreguje gorące okazje (promocje {'>'} 50% zniżki) z AliExpress dla każdej kategorii</li>
-          <li><strong>Wyczyść Bazę:</strong> Usuwa wszystkie produkty i deale (przydatne przed re-seedowaniem)</li>
-          <li>⚠️ <strong>Ważne:</strong> To agregator - produkty i deale pochodzą z AliExpress, nie są generowane sztucznie</li>
-          <li>Proces może zająć kilka minut w zależności od ilości kategorii</li>
-        </ul>
-      </div>
-    </div>
-  );
-}
 
 interface Stats {
   products: number;
@@ -282,7 +95,6 @@ function AdminPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [hotDeals, setHotDeals] = useState<Deal[]>([]);
-  const [topProducts, setTopProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { getIdToken } = useAuth();
 
@@ -293,20 +105,17 @@ function AdminPage() {
       try {
         DEBUG && console.log('[AdminPage] Fetching dashboard stats...');
         const token = await getIdToken();
-        const [dashStats, dealsData, productsData] = await Promise.all([
+        const [dashStats, dealsData] = await Promise.all([
           getAdminDashboardStats(token || undefined),
-          getHotDeals(5),
-          getRecommendedProducts(5)
+          getHotDeals(5)
         ]);
         DEBUG && console.log('[AdminPage] Data fetched successfully:', {
           stats: dashStats?.totals,
-          deals: dealsData?.length,
-          products: productsData?.length
+          deals: dealsData?.length
         });
         setDashboardStats(dashStats);
         setStats(dashStats?.totals || { deals: 0, products: 0, users: 0 });
         setHotDeals(dealsData);
-        setTopProducts(productsData);
       } catch (error) {
         DEBUG && console.error('[AdminPage] Error fetching stats:', error);
         // Fallback to zeroed stats to keep UI stable when API fails
@@ -397,8 +206,7 @@ function AdminPage() {
 
       {/* Quick Action Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Link href="/admin/deals">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-orange-500">
+          <Card className="border-l-4 border-l-orange-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Okazje</CardTitle>
               <Flame className="h-4 w-4 text-orange-500" />
@@ -419,10 +227,8 @@ function AdminPage() {
               )}
             </CardContent>
           </Card>
-        </Link>
 
-        <Link href="/admin/products">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-blue-500">
+          <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Produkty</CardTitle>
               <ShoppingCart className="h-4 w-4 text-blue-500" />
@@ -443,7 +249,6 @@ function AdminPage() {
               )}
             </CardContent>
           </Card>
-        </Link>
 
         <Link href="/admin/users">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-purple-500">
@@ -498,11 +303,11 @@ function AdminPage() {
                 <span className="font-medium">{dashboardStats?.categories?.main ?? 0}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Podkategorie:</span>
+                <span className="text-muted-foreground">Podkategorie (L2):</span>
                 <span className="font-medium">{dashboardStats?.categories?.sub ?? 0}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Sub-sub:</span>
+                <span className="text-muted-foreground">Pod-podkategorie (L3):</span>
                 <span className="font-medium">{dashboardStats?.categories?.subSub ?? 0}</span>
               </div>
             </div>
@@ -535,37 +340,6 @@ function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Imports Status Card */}
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Importy (legacy)</CardTitle>
-            <Activity className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(dashboardStats?.imports?.running || 0) + (dashboardStats?.imports?.queued || 0)}
-            </div>
-            <div className="mt-3 space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Aktywne:</span>
-                <span className="font-medium text-blue-600">{dashboardStats?.imports?.running || 0}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">W kolejce:</span>
-                <span className="font-medium text-amber-600">{dashboardStats?.imports?.queued || 0}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Ukończone (24h):</span>
-                <span className="font-medium text-green-600">{dashboardStats?.imports?.completed24h || 0}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Błędy (24h):</span>
-                <span className="font-medium text-red-600">{dashboardStats?.imports?.failed24h || 0}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Average Temperature Card */}
         <Card className="border-l-4 border-l-rose-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -594,101 +368,7 @@ function AdminPage() {
         </Card>
       </div>
 
-      {/* Main Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Produkty</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.products || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {dashboardStats?.growth?.products !== undefined && (
-                <span className={`inline-flex items-center font-medium ${
-                  (dashboardStats?.growth?.products ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {(dashboardStats?.growth?.products ?? 0) >= 0 ? (
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3 mr-1" />
-                  )}
-                  {(dashboardStats?.growth?.products ?? 0) >= 0 ? '+' : ''}{dashboardStats?.growth?.products ?? 0}%
-                </span>
-              )}
-              {' '}od ostatniego miesiąca
-            </p>
-          </CardContent>
-        </Card>
 
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Okazje</CardTitle>
-            <Flame className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.deals || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {dashboardStats?.growth?.deals !== undefined && (
-                <span className={`inline-flex items-center font-medium ${
-                  (dashboardStats.growth?.deals ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {(dashboardStats.growth?.deals ?? 0) >= 0 ? (
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3 mr-1" />
-                  )}
-                  {(dashboardStats.growth?.deals ?? 0) >= 0 ? '+' : ''}{dashboardStats.growth?.deals ?? 0}%
-                </span>
-              )}
-              {' '}od ostatniego miesiąca
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Użytkownicy</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.users || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {dashboardStats?.growth?.users !== undefined && (
-                <span className={`inline-flex items-center font-medium ${
-                  (dashboardStats.growth?.users ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {(dashboardStats.growth?.users ?? 0) >= 0 ? (
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3 mr-1" />
-                  )}
-                  {(dashboardStats.growth?.users ?? 0) >= 0 ? '+' : ''}{dashboardStats.growth?.users}%
-                </span>
-              )}
-              {' '}od ostatniego miesiąca
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Średnia temperatura</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {dashboardStats?.avgTemperature || 0}°
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <span className="text-orange-600 inline-flex items-center font-medium">
-                <Activity className="h-3 w-3 mr-1" />
-                ostatnie 7 dni aktywności
-              </span>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Secondary Stats Row - Moderation & Activity */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -774,7 +454,7 @@ function AdminPage() {
               <Eye className="h-4 w-4 text-primary" />
               Wyświetlenia
             </CardTitle>
-            <CardDescription>Ostatnie 7 dni</CardDescription>
+            <CardDescription>Całkowite (All time)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -799,7 +479,7 @@ function AdminPage() {
               <MessageSquare className="h-4 w-4 text-primary" />
               Kliknięcia
             </CardTitle>
-            <CardDescription>W linki zewnętrzne (ostatnie 7 dni)</CardDescription>
+            <CardDescription>W linki zewnętrzne (Całkowite)</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -840,177 +520,17 @@ function AdminPage() {
       </div>
 
       {/* Tabs for detailed views */}
-      <Tabs defaultValue="hot-deals" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="hot-deals">
-            <Flame className="h-4 w-4 mr-2" />
-            Gorące okazje
-          </TabsTrigger>
-          <TabsTrigger value="top-products">
-            <Package className="h-4 w-4 mr-2" />
-            Top produkty
-          </TabsTrigger>
-          <TabsTrigger value="moderation">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            Do moderacji
-          </TabsTrigger>
+      <Tabs defaultValue="activity" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="activity">
             <Activity className="h-4 w-4 mr-2" />
             Aktywność
-          </TabsTrigger>
-          <TabsTrigger value="ai">
-            <span className="flex items-center gap-2">
-              🤖 AI Tools
-            </span>
           </TabsTrigger>
           <TabsTrigger value="tests">
             <CheckCircle className="h-4 w-4 mr-2" />
             Testy
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="hot-deals" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Najgorętsze okazje</CardTitle>
-                <CardDescription>
-                  Ranking według temperatury
-                </CardDescription>
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/deals">
-                  Zobacz wszystkie
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {hotDeals.length > 0 ? (
-                <div className="space-y-4">
-                  {hotDeals.map((deal, i) => (
-                    <Link
-                      key={deal.id}
-                      href={`/deals/${deal.id}`}
-                      className="flex items-center justify-between border-b pb-3 last:border-0 hover:bg-muted/50 -mx-2 px-2 py-2 rounded transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="font-semibold text-muted-foreground w-6">#{i + 1}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{deal.title?.pl || deal.title?.en || 'Bez tytułu'}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {deal.mainCategorySlug} {deal.subCategorySlug && `→ ${deal.subCategorySlug}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="destructive" className="font-bold">
-                          {deal.temperature}°
-                        </Badge>
-                        <div className="text-sm text-muted-foreground">
-                          {deal.commentsCount || 0} <MessageSquare className="h-3 w-3 inline" />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  Brak gorących okazji
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="tests" className="space-y-4">
-          <TestsTab />
-        </TabsContent>
-
-        <TabsContent value="top-products" className="space-y-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Najwyżej oceniane produkty</CardTitle>
-                <CardDescription>
-                  Ranking według średniej oceny
-                </CardDescription>
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/admin/products">
-                  Zobacz wszystkie
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {topProducts.length > 0 ? (
-                <div className="space-y-4">
-                  {topProducts.map((product, i) => (
-                    <Link
-                      key={product.id}
-                      href={`/products/${product.id}`}
-                      className="flex items-center justify-between border-b pb-3 last:border-0 hover:bg-muted/50 -mx-2 px-2 py-2 rounded transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="font-semibold text-muted-foreground w-6">#{i + 1}</div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {product.mainCategorySlug} {product.subCategorySlug && `→ ${product.subCategorySlug}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {product.ratingCard && (
-                          <Badge variant="secondary" className="font-bold">
-                            ⭐ {product.ratingCard.average.toFixed(1)}
-                          </Badge>
-                        )}
-                        <div className="text-sm text-muted-foreground">
-                          {product.ratingCard?.count || 0} ocen
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  Brak produktów z ocenami
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="moderation" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-orange-500" />
-                Czeka na moderację
-              </CardTitle>
-              <CardDescription>
-                Nowe okazje wymagające zatwierdzenia
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-center py-12">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-50" />
-                  <p className="text-muted-foreground">
-                    Wszystko sprawdzone! Brak elementów czekających na moderację.
-                  </p>
-                  <Button asChild variant="outline" className="mt-4" size="sm">
-                    <Link href="/admin/moderation">
-                      Przejdź do moderacji
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="activity" className="space-y-4">
           <Card>
@@ -1051,23 +571,10 @@ function AdminPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ai" className="space-y-4">
-          <AiConsole />
+        <TabsContent value="tests" className="space-y-4">
+          <TestsTab />
         </TabsContent>
       </Tabs>
-
-      {/* Batch Import Manager */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Batch Import System</CardTitle>
-          <CardDescription>
-            Zarządzanie importami produktów i okazji z możliwością wstrzymania, wznowienia i rollback
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ImportManager />
-        </CardContent>
-      </Card>
 
       {/* Quick Actions */}
       <Card>
@@ -1079,20 +586,6 @@ function AdminPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <Link 
-              href="/admin/deals" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <Flame className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Okazje</span>
-            </Link>
-            <Link 
-              href="/admin/products" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <ShoppingCart className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Produkty</span>
-            </Link>
             <Link 
               href="/admin/moderation" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
@@ -1108,27 +601,6 @@ function AdminPage() {
               <span className="text-sm font-medium text-center">Użytkownicy</span>
             </Link>
             <Link 
-              href="/admin/categories" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <Package className="h-8 w-8 text-primary" />
-              <span className="text-sm font-medium text-center">Kategorie</span>
-            </Link>
-            <Link 
-              href="/admin/aliexpress-import" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
-            >
-              <span className="text-2xl">🛒</span>
-              <span className="text-sm font-medium text-center">AliExpress</span>
-            </Link>
-            {/* <Link 
-              href="/admin/bulk-import" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <span className="text-2xl">📦</span>
-              <span className="text-sm font-medium text-center">Bulk Import</span>
-            </Link> */}
-            <Link 
               href="/admin/analytics" 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
@@ -1141,20 +613,6 @@ function AdminPage() {
             >
               <span className="text-2xl">⚙️</span>
               <span className="text-sm font-medium text-center">Ustawienia</span>
-            </Link>
-            {/* <Link 
-              href="/admin/navigation" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
-            >
-              <span className="text-2xl">🗺️</span>
-              <span className="text-sm font-medium text-center">Nawigacja</span>
-            </Link> */}
-            <Link 
-              href="/admin/duplicates" 
-              className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-950 transition-colors"
-            >
-              <span className="text-2xl">🔍</span>
-              <span className="text-sm font-medium text-center">Duplikaty</span>
             </Link>
           </div>
         </CardContent>

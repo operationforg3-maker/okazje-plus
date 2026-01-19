@@ -22,7 +22,7 @@ import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare
 import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
 import AdminEditButton from '@/components/admin/admin-edit-button';
-import DealEditDialog from '@/components/admin/deal-edit-dialog';
+// import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import {
@@ -563,13 +563,13 @@ export default function DealCard({ deal, product }: DealCardProps) {
       </div>
       
       {/* Edit Dialog (Admin only) */}
-      {user?.role === 'admin' && (
+      {/* {user?.role === 'admin' && (
         <DealEditDialog
           deal={deal}
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
         />
-      )}
+      )} */}
       
       <div className="flex-grow space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-5">
         {/* Category Breadcrumb - 3 levels with translations */}

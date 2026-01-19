@@ -42,6 +42,7 @@
   "exclude": [
     "node_modules",
     ".next",
-    "okazje-plus"
+    "okazje-plus",
+    "src/legacy"
   ]
 }

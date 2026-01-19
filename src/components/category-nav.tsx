@@ -131,7 +131,7 @@ export default function CategoryNav({
                       <span className="truncate">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
                     </button>
                   ) : (
-                    <Link href={`${basePath}?category=${category.slug || category.id}`}>
+                    <Link href={`${basePath}?mainCategory=${category.slug || category.id}`}>
                       {category.icon ? (
                         <span className="mr-2">{category.icon}</span>
                       ) : (
@@ -189,7 +189,7 @@ export default function CategoryNav({
                                 <span className="truncate">{getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}</span>
                               </button>
                             ) : (
-                              <Link href={`${basePath}?category=${category.slug || category.id}&sub=${subcategory.slug}`}>
+                              <Link href={`${basePath}?mainCategory=${category.slug || category.id}&subCategory=${subcategory.slug}`}>
                                 {subcategory.icon ? (
                                   <span className="mr-2 text-xs">{subcategory.icon}</span>
                                 ) : (
@@ -222,7 +222,7 @@ export default function CategoryNav({
                                       <span className="truncate">{getLocalizedCategoryName(subSubcategory as any, locale as SupportedLanguage)}</span>
                                     </button>
                                   ) : (
-                                    <Link href={`${basePath}?category=${category.slug || category.id}&sub=${subcategory.slug}&subsub=${subSubcategory.slug}`}>
+                                    <Link href={`${basePath}?mainCategory=${category.slug || category.id}&subCategory=${subcategory.slug}&subSubCategory=${subSubcategory.slug}`}>
                                       <span className="mr-2 text-xs">{subSubcategory.icon || '•'}</span>
                                       <span className="truncate">{getLocalizedCategoryName(subSubcategory as any, locale as SupportedLanguage)}</span>
                                     </Link>

@@ -2,12 +2,9 @@
 
 import { useAuth } from '@/lib/auth';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CategoryBuilder } from '@/components/admin/category-builder';
-import { ProductImporter } from '@/components/admin/product-importer';
 import { AIEnhancer } from '@/components/admin/ai-enhancer';
-import { ImportConsole, ConsoleLine } from '@/components/admin/import-console';
 import { withAuth } from '@/components/auth/withAuth';
 import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -17,6 +14,13 @@ import { ScheduleManager } from '@/components/admin/schedule-manager';
 import { LinkVerifier } from '@/components/admin/link-verifier';
 import { FirebaseIndexManager } from '@/components/admin/firebase-index-manager';
 import { DatabaseCleaner } from '@/components/admin/database-cleaner';
+
+interface ConsoleLine {
+  id: string;
+  message: string;
+  type: 'info' | 'success' | 'error' | 'warning';
+  timestamp: string;
+}
 
 function HarvesterPage() {
   const { user, getIdToken } = useAuth();
@@ -96,26 +100,15 @@ function HarvesterPage() {
             </TabsList>
 
             <TabsContent value="categories" className="space-y-4">
-              <CategoryBuilder
-                user={user}
-                getIdToken={getIdToken}
-                onConsoleLog={addLog}
-                onCategoriesCreated={cats => {
-                  addLog(`✅ Struktura kategorii przygotowana (${cats.length} kategorii)`, 'success');
-                }}
-              />
+              <div className="p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                Ten moduł został zarchiwizowany.
+              </div>
             </TabsContent>
 
             <TabsContent value="import" className="space-y-4">
-              <ProductImporter
-                onConsoleLog={addLog}
-                onImportStarted={() => {
-                  addLog('🔄 Sesja importu rozpoczęta', 'info');
-                }}
-                onImportCompleted={stats => {
-                  addLog(`📊 Statystyka: ${stats.created} utworzono, ${stats.skipped} pominięto`, 'success');
-                }}
-              />
+              <div className="p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
+                Ten moduł został zarchiwizowany.
+              </div>
             </TabsContent>
 
             <TabsContent value="enhance" className="space-y-4">
@@ -152,9 +145,9 @@ function HarvesterPage() {
           </Tabs>
         </div>
 
-        {/* Console Sidebar */}
-        <div>
-          <ImportConsole lines={consoleLogs} onClear={clearLogs} />
+        {/* Console Sidebar - Archived */}
+        <div className="hidden">
+           {/* Console removed */}
         </div>
       </div>
 
