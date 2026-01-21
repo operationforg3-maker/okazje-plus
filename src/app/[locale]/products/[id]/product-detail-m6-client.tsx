@@ -38,6 +38,7 @@ import { useSmartCart } from '@/lib/cart-context';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCurrency } from '@/lib/unified-currency';
 import { useTranslations } from 'next-intl';
+import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 
 interface Props {
   productCore?: ProductCore;
@@ -202,9 +203,16 @@ export default function ProductDetailM6Client({
         {/* Price Widget & Actions */}
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
-              {title}
-            </h1>
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                {title}
+              </h1>
+              <AdminQuickActions 
+                productId={productId} 
+                itemType="product"
+                className="mt-1"
+              />
+            </div>
             
             {/* Rating */}
             <div className="flex items-center gap-2 mb-4">

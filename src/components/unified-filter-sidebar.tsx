@@ -20,6 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { useTranslations } from 'next-intl';
+import { useCurrency } from '@/lib/unified-currency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -59,6 +61,8 @@ export function UnifiedFilterSidebar({
   onClose,
   isMobile = false,
 }: UnifiedFilterSidebarProps) {
+  const t = useTranslations('filters');
+  const { formatPrice } = useCurrency();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(['price', 'sort', 'rating'])
   );
@@ -147,7 +151,7 @@ export function UnifiedFilterSidebar({
     <div className={cn('space-y-4', isMobile && 'p-4')}>
       {/* Header with close and reset buttons */}
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-lg">Filtry</h3>
+        <h3 className="font-semibold text-lg">{t('title')}</h3>
         <div className="flex gap-2">
           {hasActiveFilters && (
             <Button
@@ -157,7 +161,7 @@ export function UnifiedFilterSidebar({
               className="h-8 gap-1"
             >
               <RotateCcw className="w-4 h-4" />
-              Wyczyść
+              {t('clear')}
             </Button>
           )}
           {isMobile && onClose && (
@@ -173,7 +177,7 @@ export function UnifiedFilterSidebar({
           {/* SORT */}
           <Collapsible open={isExpanded('sort')} onOpenChange={() => toggleSection('sort')}>
             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-medium hover:bg-accent rounded-md px-2">
-              <span>Sortowanie</span>
+              <span>{t('sort')}</span>
               <ChevronDown className={cn('w-4 h-4 transition', isExpanded('sort') && 'rotate-180')} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-2">
@@ -184,7 +188,7 @@ export function UnifiedFilterSidebar({
                 <SelectContent>
                   {Object.entries(SORT_OPTIONS).map(([key, option]) => (
                     <SelectItem key={key} value={key}>
-                      {option.label}
+                      {t(`sortOptions.${key}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -195,7 +199,7 @@ export function UnifiedFilterSidebar({
           {/* PRICE RANGE */}
           <Collapsible open={isExpanded('price')} onOpenChange={() => toggleSection('price')}>
             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-medium hover:bg-accent rounded-md px-2">
-              <span>Cena</span>
+              <span>{t('price')}</span>
               <ChevronDown className={cn('w-4 h-4 transition', isExpanded('price') && 'rotate-180')} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-3">
@@ -210,14 +214,14 @@ export function UnifiedFilterSidebar({
                 onValueChange={handlePriceChange}
                 className="w-full"
               />
-              <div className="flex gap-2 text-sm">
+              <div className="flex gap-2 text-sm justify-between">
                 <div>
-                  <Label className="text-xs text-muted-foreground">Min</Label>
-                  <span className="font-semibold">{filters.priceRange?.min || 0} zł</span>
+                  <Label className="text-xs text-muted-foreground mr-1">{t('min')}</Label>
+                  <span className="font-semibold">{formatPrice(filters.priceRange?.min || 0)}</span>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Max</Label>
-                  <span className="font-semibold">{filters.priceRange?.max || 10000} zł</span>
+                  <Label className="text-xs text-muted-foreground mr-1">{t('max')}</Label>
+                  <span className="font-semibold">{formatPrice(filters.priceRange?.max || 10000)}</span>
                 </div>
               </div>
             </CollapsibleContent>
@@ -226,7 +230,7 @@ export function UnifiedFilterSidebar({
           {/* RATING */}
           <Collapsible open={isExpanded('rating')} onOpenChange={() => toggleSection('rating')}>
             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-medium hover:bg-accent rounded-md px-2">
-              <span>Ocena</span>
+              <span>{t('rating')}</span>
               <ChevronDown className={cn('w-4 h-4 transition', isExpanded('rating') && 'rotate-180')} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-2">
@@ -243,7 +247,7 @@ export function UnifiedFilterSidebar({
                         <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                       ))}
                     </span>
-                    <span className="text-sm">{stars}+ gwiazdek</span>
+                    <span className="text-sm">{t('ratingStars', { stars })}</span>
                   </Label>
                 </div>
               ))}
@@ -255,7 +259,7 @@ export function UnifiedFilterSidebar({
             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-medium hover:bg-accent rounded-md px-2">
               <span className="flex items-center gap-2">
                 <Package className="w-4 h-4" />
-                Dostępność
+                {t('availability')}
               </span>
               <ChevronDown className={cn('w-4 h-4 transition', isExpanded('availability') && 'rotate-180')} />
             </CollapsibleTrigger>
@@ -267,7 +271,7 @@ export function UnifiedFilterSidebar({
                   onCheckedChange={handleAvailabilityChange}
                 />
                 <Label htmlFor="in-stock" className="cursor-pointer flex-1">
-                  Tylko dostępne
+                  {t('onlyAvailable')}
                 </Label>
               </div>
             </CollapsibleContent>
@@ -278,7 +282,7 @@ export function UnifiedFilterSidebar({
             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-medium hover:bg-accent rounded-md px-2">
               <span className="flex items-center gap-2">
                 <Tag className="w-4 h-4" />
-                Promocje
+                {t('promotions')}
               </span>
               <ChevronDown className={cn('w-4 h-4 transition', isExpanded('promo') && 'rotate-180')} />
             </CollapsibleTrigger>
@@ -290,13 +294,13 @@ export function UnifiedFilterSidebar({
                   onCheckedChange={handleDiscountChange}
                 />
                 <Label htmlFor="discount-only" className="cursor-pointer flex-1">
-                  Ze zniżką
+                  {t('onlyDiscount')}
                 </Label>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="free-shipping" />
                 <Label htmlFor="free-shipping" className="cursor-pointer flex-1">
-                  Darmowa dostawa
+                  {t('freeShipping')}
                 </Label>
               </div>
             </CollapsibleContent>
@@ -306,7 +310,7 @@ export function UnifiedFilterSidebar({
           {brands.length > 0 && (
             <Collapsible open={isExpanded('brands')} onOpenChange={() => toggleSection('brands')}>
               <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-medium hover:bg-accent rounded-md px-2">
-                <span>Marka</span>
+                <span>{t('brands')}</span>
                 <ChevronDown className={cn('w-4 h-4 transition', isExpanded('brands') && 'rotate-180')} />
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-2 space-y-2 max-h-60 overflow-y-auto">
@@ -331,7 +335,7 @@ export function UnifiedFilterSidebar({
             <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-medium hover:bg-accent rounded-md px-2">
               <span className="flex items-center gap-2">
                 <Truck className="w-4 h-4" />
-                Źródło
+                {t('sources')}
               </span>
               <ChevronDown className={cn('w-4 h-4 transition', isExpanded('source') && 'rotate-180')} />
             </CollapsibleTrigger>
@@ -356,11 +360,11 @@ export function UnifiedFilterSidebar({
       {/* Active filters badges */}
       {hasActiveFilters && (
         <div className="pt-2 border-t space-y-2">
-          <p className="text-xs text-muted-foreground">Aktywne filtry:</p>
+          <p className="text-xs text-muted-foreground">{t('activeFilters')}:</p>
           <div className="flex flex-wrap gap-2">
             {filters.priceRange && (
               <Badge variant="secondary" className="gap-1">
-                {filters.priceRange.min} - {filters.priceRange.max} zł
+                {formatPrice(filters.priceRange.min)} - {formatPrice(filters.priceRange.max)}
                 <button onClick={() => handlePriceChange([0, 10000])} className="ml-1 hover:text-destructive">
                   ✕
                 </button>
@@ -376,7 +380,7 @@ export function UnifiedFilterSidebar({
             )}
             {filters.availability?.inStockOnly && (
               <Badge variant="secondary" className="gap-1">
-                W magazynie
+                {t('onlyAvailable')}
                 <button onClick={() => handleAvailabilityChange(false)} className="ml-1 hover:text-destructive">
                   ✕
                 </button>
@@ -384,7 +388,7 @@ export function UnifiedFilterSidebar({
             )}
             {filters.promo?.discountOnly && (
               <Badge variant="secondary" className="gap-1">
-                Ze zniżką
+                {t('onlyDiscount')}
                 <button onClick={() => handleDiscountChange(false)} className="ml-1 hover:text-destructive">
                   ✕
                 </button>

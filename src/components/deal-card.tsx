@@ -21,7 +21,7 @@ import { useSmartCart } from '@/lib/cart-context';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
-import AdminEditButton from '@/components/admin/admin-edit-button';
+import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 // import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import { useContentLanguage } from '@/hooks/use-content-language';
@@ -559,16 +559,14 @@ export default function DealCard({ deal, product }: DealCardProps) {
           )}
         </div>
         
-        {/* Admin Edit Button (Bottom-right overlay) */}
-        {user?.role === 'admin' && (
-          <div className="absolute right-2 bottom-2">
-            <AdminEditButton
-              onClick={() => setEditDialogOpen(true)}
-              className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
-              tooltip="Edytuj deal (admin)"
-            />
-          </div>
-        )}
+        {/* Admin Quick Actions (Bottom-right overlay) */}
+        <div className="absolute right-2 bottom-2">
+          <AdminQuickActions
+            productId={deal.product?.id || deal.id} // Deal might link to product, or assume deal ID if product missing
+            itemType="deal"
+            onEdit={() => setEditDialogOpen(true)}
+          />
+        </div>
       </div>
       
       {/* Edit Dialog (Admin only) */}

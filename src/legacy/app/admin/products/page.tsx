@@ -27,6 +27,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { refineProductAction } from '@/app/actions/refine-product-action';
 import { getRecommendedProducts, getProductsForAdmin } from '@/lib/data';
 import { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -149,7 +150,30 @@ export default function AdminProductsPage() {
       setDeletingProduct(null);
     }
   };
-
+  const handleRunRefiner = async (product: Product) => {
+    try {
+      toast({ title: 'AI Refiner', description: 'Uruchamiam Refiner (tytuł, opis, specs)...' });
+      
+      const result = await refineProductAction(product.id);
+      
+      if (result.success) {
+        toast({ 
+          title: 'Refiner zakończony', 
+          description: 'Produkt zaktualizowany (Tytuł/Opis/Specs)' 
+        });
+        fetchProducts(); // Refresh list
+      } else {
+        throw new Error(result.error || 'Refiner failed');
+      }
+    } catch (error) {
+      console.error('Refiner failed:', error);
+      toast({ 
+        title: 'Błąd Refinera', 
+        description: error instanceof Error ? error.message : 'Wystąpił błąd',
+        variant: 'destructive' 
+      });
+    }
+  };
   const handleCreateDealFromProduct = async (product: Product) => {
     try {
       const res = await fetch('/api/admin/deals/from-product', {
@@ -465,6 +489,10 @@ export default function AdminProductsPage() {
                           <DropdownMenuItem onClick={() => handleAITranslate(product)}>
                             <Sparkles className="mr-2 h-4 w-4" />
                             Przetłumacz AI
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRunRefiner(product)}>
+                            <Sparkles className="mr-2 h-4 w-4 text-green-500" />
+                            Refiner (Human Like)
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleCreateDealFromProduct(product)}>
                             <PlusCircle className="mr-2 h-4 w-4" />

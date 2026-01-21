@@ -132,28 +132,31 @@ npm run deploy:prod      # Deploy everything (hosting + functions)
 - **E2E tests**: Playwright config in `playwright.config.ts`; uses port 9002 by default (configurable via `NEXT_PORT`)
 - **Test patterns**: Always test status filters, admin role checks, cache invalidation, optimistic UI rollback
 
-## Debugging utilities (root-level scripts)
-Root directory contains 30+ debugging scripts for common troubleshooting tasks. These bypass UI and directly inspect Firestore.
+## Debugging utilities (legacy folder)
+**Note**: Debug scripts have been moved to `/legacy/` folder (ignored by git) to keep root directory clean.
+
+Root directory now focuses on essential files only. All debug/test scripts are in `legacy/` for reference.
 
 **Quick reference table**:
 | Problem | Script | Usage |
 |---------|--------|-------|
-| Import stuck | `check-job-status.js <jobId>` | Debug specific harvester job |
-| Products missing | `check-products.mjs` | List all products with stats |
-| Categories wrong | `check-categories.mjs` | Verify category hierarchy |
-| Full import trace | `debug-import-flow.js` | End-to-end pipeline logs |
-| Job cleanup | `clean-stuck-jobs.mjs` | Remove stale/failed jobs |
-| Recent imports | `list-recent-jobs.js` | Show last N import jobs |
+| Database inspection | `legacy/debug-scripts/check-db-collections.mjs` | List all Firestore collections |
+| Products check | `legacy/debug-scripts/check-products-detail.mjs` | List products with stats |
+| Categories verification | `legacy/debug-scripts/check-categories-m6.mjs` | Verify category hierarchy |
+| Jobs inspection | `legacy/debug-scripts/check-job-details.mjs` | Check harvester job status |
+| Admin utilities | `legacy/debug-scripts/set-admin-role.mjs` | Set user admin role |
+| Full logs | `legacy/debug-scripts/show-full-logs.mjs` | Show detailed logs |
 
 **Organization**:
-- **Import debugging**: `check-imports.mjs`, `check-job-status.js`, `debug-import-flow.js`, `check-specific-job.mjs`
-- **Data inspection**: `check-products.mjs`, `check-categories.mjs`, `check-titles.js`, `verify_products.js`
-- **Logs analysis**: `check-full-logs.mjs`, `show-full-logs.mjs`, `inspect-logs.mjs`, `check-firestore-logs.mjs`
-- **Job management**: `clean-stuck-jobs.mjs`, `trigger-processor.mjs`, `run-processor.mjs`
+- **Debug scripts**: `legacy/debug-scripts/` (53 files) - check/debug/migrate tools
+- **Test scripts**: `legacy/test-scripts/` (17 files) - manual testing utilities
+- **Old docs**: `legacy/docs/` (24 files) - historical documentation
+- **See**: `legacy/README.md` for complete index
 
-**Pattern**: Most scripts use `.mjs` (ESM) or `.js` (CommonJS); run with `node <script>` or `tsx <script>` for TypeScript
+**Pattern**: Run with `node legacy/debug-scripts/<script>` or `tsx legacy/debug-scripts/<script>`
 **Auth**: Scripts use `serviceAccountKey.json` for Firebase Admin SDK access (never commit this file!)
 **When to use**: Direct database inspection, bypassing Next.js API layer; analyzing production data; emergency fixes
+**Note**: These scripts are NOT connected to the UI and are kept for debugging/reference only
 
 ## API routes & server actions
 - **Route pattern**: API routes in `src/app/api/**/route.ts` export `GET`, `POST`, etc. as named async functions
@@ -203,10 +206,10 @@ ALIEXPRESS_APP_KEY=xxx             # Marketplace integration
 | Stale data after mutation | Cache not invalidated | Call `invalidate*Cache()` before mutation |
 | Auth error on server | Wrong auth module | Use `src/lib/auth-server.ts`, not `auth.tsx` |
 | Deal won't save | Status check missing | Ensure `status: "approved"` for public queries |
-| Import stuck at 0% | Job not processing | Run `node check-job-status.js <jobId>` |
+| Import stuck at 0% | Job not processing | Check job in admin UI or use `legacy/debug-scripts/check-job-details.mjs` |
 | Product duplicates | Identity mismatch | Check `IdentityMatch` collection for hash |
 | Polish text missing | Wrong translation file | Add key to `messages/pl/*.json` |
-| Price display inconsistent | Multiple currency systems | **See CURRENCY_ISSUES_REPORT.md** - needs unification |
+| Price display inconsistent | Multiple currency systems | **See legacy/docs/CURRENCY_ISSUES_REPORT.md** |
 | Currency switch not working | Components ignore choice | Use `useCurrency()` hook, not hardcoded PLN |
 
 ## Before committing

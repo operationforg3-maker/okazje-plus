@@ -16,7 +16,7 @@ let vertexInstance: VertexAI | null = null;
 function getVertexInstance(): VertexAI {
   if (!vertexInstance) {
     const project = process.env.GOOGLE_CLOUD_PROJECT;
-    const location = process.env.VERTEX_LOCATION || "europe-west1";
+    const location = process.env.VERTEX_LOCATION || process.env.VERTEX_AI_LOCATION || "us-central1";
 
     if (!project) {
       throw new Error("GOOGLE_CLOUD_PROJECT is not set");
@@ -217,8 +217,9 @@ export interface TextModerationResult {
 export async function moderateText(text: string): Promise<TextModerationResult> {
   try {
     const vertex = getVertexInstance();
+    // Use stable model for moderation checks to ensure availability
     const model = vertex.preview.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-1.0-pro",
     });
 
     const response = await model.generateContent({
@@ -281,8 +282,8 @@ export function parseJsonFromResponse(text: string): Record<string, any> {
     // Spróbuj parsować JSON bezpośrednio
     return JSON.parse(text);
   } catch {
-    // Jeśli nie, szukaj JSON bloku w tekście
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/);
+    // Jeśli nie, szukaj JSON bloku w tekście (more robust regex)
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
     if (jsonMatch && jsonMatch[1]) {
       try {
         return JSON.parse(jsonMatch[1]);

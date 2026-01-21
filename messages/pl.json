@@ -20,6 +20,35 @@
     "confirm": "Potwierdź",
     "viewAll": "Zobacz wszystko"
   },
+  "filters": {
+    "title": "Filtry",
+    "sort": "Sortuj",
+    "price": "Cena",
+    "min": "Min",
+    "max": "Max",
+    "rating": "Ocena",
+    "ratingStars": "{stars}+ gwiazdek",
+    "availability": "Dostępność",
+    "onlyAvailable": "Tylko dostępne",
+    "promotions": "Promocje",
+    "onlyDiscount": "Ze zniżką",
+    "freeShipping": "Darmowa dostawa",
+    "brands": "Marki",
+    "sources": "Źródła",
+    "activeFilters": "Aktywne filtry",
+    "clear": "Wyczyść",
+    "sortOptions": {
+      "relevance": "Najlepsze dopasowanie",
+      "price_asc": "Najtańsze",
+      "price_desc": "Najdroższe",
+      "rating_desc": "Najwyższa ocena",
+      "newest": "Najnowsze",
+      "hot": "Gorące",
+      "discount_desc": "Największa zniżka",
+      "reviews_count": "Najbardziej dyskutowane",
+      "popularity": "Najpopularniejsze"
+    }
+  },
   "nav": {
     "home": "Strona główna",
     "deals": "Okazje",
@@ -108,7 +137,9 @@
     "priceLowHigh": "Cena: rosnąco",
     "priceHighLow": "Cena: malejąco",
     "newest": "Najnowsze",
-    "mostPopular": "Najpopularniejsze"
+    "mostPopular": "Najpopularniejsze",
+    "labelDeal": "Okazja",
+    "labelProduct": "Produkt"
   },
   "user": {
     "profile": "Profil",

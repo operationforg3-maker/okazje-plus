@@ -26,7 +26,7 @@ import ShareButton from '@/components/share-button';
 import { useAuth } from '@/lib/auth';
 import { useEffect, useState } from 'react';
 import { trackFirestoreView, trackFirestoreClick, trackFirestoreShare } from '@/lib/analytics';
-import AdminEditButton from '@/components/admin/admin-edit-button';
+import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 // import ProductEditDialog from '@/components/admin/product-edit-dialog';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
@@ -420,15 +420,14 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
           )}
         </div>
 
-        {/* Admin Edit */}
-        {user?.role === 'admin' && (
-          <div className="absolute right-2 bottom-2 z-10">
-            <AdminEditButton
-              onClick={() => setEditDialogOpen(true)}
-              className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
-            />
-          </div>
-        )}
+        {/* Admin Quick Actions */}
+        <div className="absolute right-2 bottom-2 z-10">
+          <AdminQuickActions
+            productId={product.id}
+            onEdit={() => setEditDialogOpen(true)}
+            className=""
+          />
+        </div>
       </div>
 
       {/* Content Body */}

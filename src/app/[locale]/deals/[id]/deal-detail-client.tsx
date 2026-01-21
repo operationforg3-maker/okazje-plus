@@ -48,6 +48,7 @@ import CommentSection from '@/components/comment-section';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import ShareButton from '@/components/share-button';
 import { useAuth } from '@/lib/auth';
+import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
@@ -513,9 +514,16 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               )}
             </div>
 
-            <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl mb-4 break-words">
-              {dealTitle}
-            </h1>
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="font-headline text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl mb-4 break-words flex-1">
+                {dealTitle}
+              </h1>
+              <AdminQuickActions 
+                 productId={deal.product?.id || (deal as any).productCoreId}
+                 itemType="deal"
+                 className="mt-2 flex-shrink-0"
+              />
+            </div>
 
             {/* Meta Info */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">

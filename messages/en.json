@@ -20,6 +20,35 @@
     "confirm": "Confirm",
     "viewAll": "View all"
   },
+  "filters": {
+    "title": "Filters",
+    "sort": "Sort",
+    "price": "Price",
+    "min": "Min",
+    "max": "Max",
+    "rating": "Rating",
+    "ratingStars": "{stars}+ stars",
+    "availability": "Availability",
+    "onlyAvailable": "In stock only",
+    "promotions": "Promotions",
+    "onlyDiscount": "Discounted only",
+    "freeShipping": "Free shipping",
+    "brands": "Brands",
+    "sources": "Sources",
+    "activeFilters": "Active filters",
+    "clear": "Clear",
+    "sortOptions": {
+      "relevance": "Best match",
+      "price_asc": "Lowest price",
+      "price_desc": "Highest price",
+      "rating_desc": "Highest rated",
+      "newest": "Newest",
+      "hot": "Hottest",
+      "discount_desc": "Biggest discount",
+      "reviews_count": "Most discussed",
+      "popularity": "Most popular"
+    }
+  },
   "nav": {
     "home": "Home",
     "deals": "Deals",
@@ -101,7 +130,9 @@
     "priceLowHigh": "Price: Low to High",
     "priceHighLow": "Price: High to Low",
     "newest": "Newest",
-    "mostPopular": "Most Popular"
+    "mostPopular": "Most Popular",
+    "labelDeal": "Deal",
+    "labelProduct": "Product"
   },
   "user": {
     "profile": "Profile",
