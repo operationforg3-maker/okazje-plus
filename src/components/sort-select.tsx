@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ export function SortSelect() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const t = useTranslations('filters');
 
   const currentSort = searchParams.get('sort') || 'newest';
 
@@ -27,13 +29,13 @@ export function SortSelect() {
     <div className="w-[180px]">
       <Select value={currentSort} onValueChange={handleSortChange}>
         <SelectTrigger>
-          <SelectValue placeholder="Sortowanie" />
+          <SelectValue placeholder={t('sort')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="newest">Najnowsze</SelectItem>
-          <SelectItem value="popularity">Najpopularniejsze</SelectItem>
-          <SelectItem value="price_asc">Cena: rosnąco</SelectItem>
-          <SelectItem value="price_desc">Cena: malejąco</SelectItem>
+          <SelectItem value="newest">{t('sortOptions.newest')}</SelectItem>
+          <SelectItem value="popularity">{t('sortOptions.popularity')}</SelectItem>
+          <SelectItem value="price_asc">{t('sortOptions.price_asc')}</SelectItem>
+          <SelectItem value="price_desc">{t('sortOptions.price_desc')}</SelectItem>
         </SelectContent>
       </Select>
     </div>

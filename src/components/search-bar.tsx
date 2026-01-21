@@ -89,13 +89,13 @@ const SearchBar = () => {
                 {'title' in hit.document ? (
                   // Wynik z kolekcji 'deals'
                   <div>
-                    <p className="font-bold">Okazja: {hit.document.title}</p>
+                    <p className="font-bold">{t('labelDeal')}: {hit.document.title}</p>
                     <p className="text-sm text-gray-600">{hit.document.description}</p>
                   </div>
                 ) : (
                   // Wynik z kolekcji 'products'
                   <div>
-                    <p className="font-bold">Produkt: {hit.document.name}</p>
+                    <p className="font-bold">{t('labelProduct')}: {hit.document.name}</p>
                     <p className="text-sm text-gray-600">{hit.document.description}</p>
                   </div>
                 )}

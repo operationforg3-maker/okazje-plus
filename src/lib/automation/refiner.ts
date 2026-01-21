@@ -18,16 +18,12 @@ export class AIRefiner {
 
   /**
    * Refine all existing products in database by status
-   * Iterates through entire collection and enriches each product individually
-   * 
-   * @param status - Filter products by status (e.g., 'draft', 'pending_approval')
-   * @param limit - Maximum products to refine in one job
-   * @param refinationType - Type of refinement to apply
    */
   async refineExistingProducts(
     status?: string,
     limit: number = 100,
-    refinationType: 'full_enrichment' | 'specs_cleanup' = 'full_enrichment'
+    refinationType: 'full_enrichment' | 'specs_cleanup' = 'full_enrichment',
+    dryRun: boolean = false
   ): Promise<RefinerJob> {
     const jobStartTime = new Date().toISOString();
     let productsSuccessful = 0;
@@ -35,7 +31,7 @@ export class AIRefiner {
     const processedIds: string[] = [];
 
     try {
-      this.addLog('info', `Starting DB refinement job: status=${status || 'all'}, limit=${limit}, type=${refinationType}`);
+      this.addLog('info', `Starting DB refinement job: status=${status || 'all'}, limit=${limit}, type=${refinationType}, dryRun=${dryRun}`);
 
       // Build query to fetch products from database
       const productsRef = adminDb.collection('product_cores');
@@ -66,19 +62,20 @@ export class AIRefiner {
           // Perform refinement based on type
           const refined = await this.performRefinement(product, refinationType);
 
-          // Update product in Firestore
-          await this.updateProduct(productId, refined);
-
-          this.addLog(
-            'success',
-            `Refined ${product.title.pl || 'Unknown'}`,
-            { productId, refinationType }
-          );
+          if (!dryRun) {
+            // Update product in Firestore
+            await this.updateProduct(productId, refined);
+            this.addLog('success', `Refined & Saved ${product.title.pl || 'Unknown'}`, { productId, refinationType });
+          } else {
+             this.addLog('info', `[DRY-RUN] Would save changes for ${product.title.pl}`, { refined });
+          }
+          
           productsSuccessful++;
         } catch (err) {
           this.addLog(
             'failed',
             `Failed to refine ${product.title.pl || 'Unknown'}`,
+            { error: (err as Error).message }
           );
           productsFailed++;
         }
@@ -114,14 +111,15 @@ export class AIRefiner {
    */
   async refineProducts(
     productIds: string[],
-    refinationType: 'full_enrichment' | 'specs_cleanup' = 'full_enrichment'
+    refinationType: 'full_enrichment' | 'specs_cleanup' = 'full_enrichment',
+    dryRun: boolean = false
   ): Promise<RefinerJob> {
     const jobStartTime = new Date().toISOString();
     let productsSuccessful = 0;
     let productsFailed = 0;
 
     try {
-      console.log(`Starting AI refinement job for ${productIds.length} products`);
+      console.log(`Starting AI refinement job for ${productIds.length} products (dryRun=${dryRun})`);
 
       for (const productId of productIds) {
         try {
@@ -139,14 +137,23 @@ export class AIRefiner {
           // Perform refinement based on type
           const refined = await this.performRefinement(product, refinationType);
 
-          // Update product in Firestore
-          await this.updateProduct(productId, refined);
+          if (!dryRun) {
+            // Update product in Firestore
+            await this.updateProduct(productId, refined);
+            this.addLog(
+              productId,
+              'success',
+              `Refined with ${refinationType}`
+            );
+          } else {
+            console.log(`[DRY-RUN] Refined data for ${productId}:`, JSON.stringify(refined, null, 2));
+             this.addLog(
+              productId,
+              'success',
+              `[DRY-RUN] Would refine with ${refinationType}`
+            );
+          }
 
-          this.addLog(
-            productId,
-            'success',
-            `Refined with ${refinationType}`
-          );
           productsSuccessful++;
         } catch (err) {
           this.addLog(
@@ -181,6 +188,16 @@ export class AIRefiner {
   }
 
   /**
+   * Perform AI enrichment on a single product (Public Wrapper)
+   */
+  public async enrichSingleProduct(
+    product: ProductCore,
+    refinationType: string = 'full_enrichment'
+  ): Promise<Partial<ProductCore>> {
+    return this.performRefinement(product, refinationType);
+  }
+
+  /**
    * Perform AI enrichment on a single product
    */
   private async performRefinement(
@@ -209,11 +226,40 @@ export class AIRefiner {
       refined.specs = await this.cleanupSpecs(product.specs);
     }
 
+    if (refinationType === 'full_enrichment' || refinationType === 'title_cleanup') {
+      try {
+        const { cleanProductTitle } = await import('@/ai/flows/enrichment');
+        
+        // Clean title & extract missing specs
+        const titleResult = await cleanProductTitle({
+          originalTitle: product.title.pl || product.title.en || 'Unknown Product',
+          specs: refined.specs || product.specs || {}
+        });
+
+        // Update titles
+        refined.title = {
+          pl: titleResult.titlePL,
+          en: titleResult.titleEN,
+          de: titleResult.titleDE,
+        };
+
+        // Merge extracted specs
+        if (titleResult.specsExtracted) {
+          refined.specs = {
+            ...(refined.specs || product.specs || {}),
+            ...titleResult.specsExtracted
+          };
+        }
+      } catch (e) {
+        console.error('[Refiner] Title cleanup failed:', e);
+      }
+    }
+
     if (refinationType === 'full_enrichment' || refinationType === 'description_generation') {
       // Generate multilingual descriptions
       refined.fullDescription = await this.generateDescriptions(
-        product.title,
-        product.specs
+        refined.title || product.title,
+        refined.specs || product.specs || {}
       );
 
       // Generate SEO metadata
@@ -309,24 +355,76 @@ export class AIRefiner {
 
   /**
    * Generate multilingual product descriptions using AI
-   * TODO: Integrate with Vertex AI / Genkit
+   * Uses translateContent flow to generate real EN/DE descriptions
    */
   private async generateDescriptions(
     title: LocalizedText,
     specs: Record<string, string>
   ): Promise<LocalizedText> {
-    // TODO: Call Vertex AI API to generate descriptions
-    // For now, return placeholder
+    try {
+      const { translateContent } = await import('@/ai/flows/enrichment');
+      
+      const titlePL = title.pl || '';
+      if (!titlePL) return title; // Cant generate without base
 
-    const specsText = Object.entries(specs)
+      const specsText = Object.entries(specs)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
+
+      const baseDescription = `${titlePL}. Specyfikacja: ${specsText}.`;
+
+      // Use AI to translate/generate descriptions
+      const translationResult = await translateContent({
+        text: baseDescription,
+        sourceLocale: 'pl',
+        targetLocales: ['en', 'de']
+      });
+
+      return {
+        pl: baseDescription,
+        en: translationResult.translations['en'] || `[AI] ${title.en || titlePL}`,
+        de: translationResult.translations['de'] || `[AI] ${title.de || titlePL}`,
+      };
+    } catch (e) {
+      console.error('Error generating descriptions:', e);
+      // Fallback
+      const specsText = Object.entries(specs)
       .map(([k, v]) => `${k}: ${v}`)
       .join(', ');
 
-    return {
-      pl: `${title.pl}. Specyfikacja: ${specsText}`,
-      en: `${title.en}. Specifications: ${specsText}`,
-      de: `${title.de}. Spezifikation: ${specsText}`,
-    };
+      return {
+        pl: `${title.pl}. Specyfikacja: ${specsText}`,
+        en: `${title.en}. Specifications: ${specsText}`,
+        de: `${title.de}. Spezifikation: ${specsText}`,
+      };
+    }
+  }
+
+  /**
+   * Translates missing or incorrect title languages
+   * e.g. if EN title is copy of PL title
+   */
+  private async fixTitleTranslations(title: LocalizedText): Promise<LocalizedText> {
+    try {
+      if (title.pl && (!title.en || title.en === title.pl)) {
+        const { translateContent } = await import('@/ai/flows/enrichment');
+        const res = await translateContent({
+          text: title.pl,
+          sourceLocale: 'pl',
+          targetLocales: ['en', 'de']
+        });
+        
+        return {
+          pl: title.pl,
+          en: res.translations['en'] || title.en,
+          de: res.translations['de'] || title.de || ''
+        };
+      }
+      return title;
+    } catch (e) {
+      console.error('Error fixing title translations:', e);
+      return title;
+    }
   }
 
   /**

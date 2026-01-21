@@ -86,10 +86,75 @@ const BatchEnrichSchema = z.object({
 });
 
 const BatchEnrichOutputSchema = z.object({
-  enrichedProducts: z.array(z.record(z.any())),
+  results: z.array(z.any()),
 });
 
-// ===== Flow: Generate Product Description =====
+// ===== Flow: Clean Product Title =====
+// New flow to humanize and clean up spammy product titles
+export const cleanProductTitle = ai.defineFlow(
+  {
+    name: "cleanProductTitle",
+    inputSchema: z.object({
+      originalTitle: z.string(),
+      specs: z.record(z.string()).optional(),
+    }),
+    outputSchema: z.object({
+      titlePL: z.string(),
+      titleEN: z.string(),
+      titleDE: z.string(),
+      specsExtracted: z.record(z.string()).optional(),
+    }),
+  },
+  async (input) => {
+    try {
+      const specsStr = input.specs ? JSON.stringify(input.specs) : "";
+      const prompt = `You are a professional copywriter for an e-commerce store.
+Your task is to rewrite a messy product title (often from AliExpress) into a clear, concise, and human-readable title in Polish, English, and German.
+
+Input Title: "${input.originalTitle}"
+Known Specs: ${specsStr}
+
+Guidelines:
+1. Remove keyword stuffing (e.g., "Phone case iphone 13 14 15 soft silicone clear").
+2. Format: [Product Name] [Key Model/Feature]. Keep it natural.
+3. Example: "Silikonowe etui do iPhone 13/14/15" instead of "2024 New Arrive Case for Apple...".
+4. If you identify new specs in the title that are missing from Known Specs (like Color, Size, Model), extract them.
+5. Title length should be roughly 30-80 chars. 
+
+Return JSON:
+{
+  "titlePL": "...",
+  "titleEN": "...",
+  "titleDE": "...",
+  "specsExtracted": { "Key": "Value" } 
+}`;
+
+      const response = await ai.generate({
+        prompt,
+        config: { temperature: 0.4, maxOutputTokens: 500 },
+      });
+
+      const text = response.text ?? "";
+      const parsed = parseJsonFromResponse(text);
+
+      return {
+        titlePL: parsed.titlePL || input.originalTitle,
+        titleEN: parsed.titleEN || input.originalTitle,
+        titleDE: parsed.titleDE || input.originalTitle,
+        specsExtracted: parsed.specsExtracted || {},
+      };
+    } catch (error) {
+      logger.error("cleanProductTitle flow failed", { error, input });
+      // Fallback: return original as title for all langs
+      return {
+        titlePL: input.originalTitle,
+        titleEN: input.originalTitle,
+        titleDE: input.originalTitle,
+      };
+    }
+  }
+);
+
 export const generateProductDescription = ai.defineFlow(
   {
     name: "generateProductDescription",
@@ -98,22 +163,26 @@ export const generateProductDescription = ai.defineFlow(
   },
   async (input: ProductDescriptionInput) => {
     try {
-      const prompt = `You are an e-commerce SEO specialist.
+      const prompt = `You are a professional e-commerce copywriter.
 Product: ${input.productTitle}
 Category: ${input.productCategory}
 Target language: ${input.targetLocale}
 
-Generate for locale "${input.targetLocale}":
-1. SEO-optimized title (max 60 chars, include primary keyword)
-2. Meta description (max 160 chars, compelling and keyword-rich)
-3. Top 5 key features as bullet points
+Write a description for this product in "${input.targetLocale}".
+Guidelines:
+1. Tone: Professional yet approachable, human-like. Avoid robotic repitition.
+2. Structure: Start with a hook, followed by benefits, then specifications.
+3. SEO: naturally include keywords but prioritize readability.
+4. Output:
+   - "seoTitle": Clear, concise title (max 60 chars).
+   - "seoDescription": Meta description (max 160 chars).
+   - "features": 4-6 bullet points focusing on benefits, not just specs.
 
 Return as JSON: { "seoTitle": "...", "seoDescription": "...", "features": ["...", "..."] }`;
 
       const response = await ai.generate({
-        model: gemini15Flash,
         prompt,
-        config: { temperature: 0.5, maxOutputTokens: 300 },
+        config: { temperature: 0.5, maxOutputTokens: 1000 },
       });
 
       const text = response.text ?? "";
@@ -163,7 +232,6 @@ Maintain SEO quality and readability. Return ONLY the translated text, no explan
 Text: ${input.text}`;
 
         const response = await ai.generate({
-          model: gemini15Flash,
           prompt,
           config: { temperature: 0.3, maxOutputTokens: 500 },
         });
@@ -198,7 +266,6 @@ Tags: searchable categories/attributes (max 10)
 Keywords: SEO-focused terms (max 10)`;
 
       const response = await ai.generate({
-        model: gemini15Flash,
         prompt,
         config: { temperature: 0.4, maxOutputTokens: 300 },
       });
@@ -271,7 +338,7 @@ export const batchEnrichProducts = ai.defineFlow(
         count: enrichedProducts.length,
       });
 
-      return { enrichedProducts };
+      return { results: enrichedProducts };
     } catch (error) {
       logger.error("batchEnrichProducts flow failed", { error });
       throw error;
