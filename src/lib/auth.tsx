@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await signOut(auth);
+    document.cookie = 'firebaseIdToken=; path=/; max-age=0';
     setUser(null);
     setFirebaseUser(null);
   };
@@ -50,6 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       try {
         if (firebaseUserObj) {
+          // Set cookie for Server Actions
+          const token = await firebaseUserObj.getIdToken();
+          document.cookie = `firebaseIdToken=${token}; path=/; max-age=3600; SameSite=Lax`;
+
           const userRef = doc(db, 'users', firebaseUserObj.uid);
           // 1) Spróbuj odczytać rolę z custom claims — to jest najszybsza ścieżka dla UI
 
@@ -106,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           })();
         } else {
           DEBUG && console.log('[AuthProvider] No user, clearing state');
+          document.cookie = 'firebaseIdToken=; path=/; max-age=0';
           // Batch all setState calls into single update
           setFirebaseUser(null);
           setUser(null);

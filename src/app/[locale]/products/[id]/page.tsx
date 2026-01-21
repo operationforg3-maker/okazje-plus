@@ -4,6 +4,8 @@ import { doc, getDoc, collection, query, where, limit, getDocs, orderBy } from '
 import { db } from '@/lib/firebase';
 import { Product, ProductRating, ProductCore, DealM6 } from '@/lib/types';
 import { getProductRatings, getProductWithDeals } from '@/lib/data';
+import { getProductWithDealsAdmin } from '@/lib/data-admin';
+import { getServerAuthSession } from '@/lib/auth-server';
 import ProductDetailM6Client from './product-detail-m6-client';
 
 // Force dynamic rendering dla real-time danych
@@ -24,9 +26,18 @@ async function getProductData(id: string) {
     }
 
     console.log(`[getProductData] Fetching product: ${id}`);
+    const session = await getServerAuthSession();
+    const isAdmin = session?.role === 'admin' || session?.role === 'moderator';
 
     // Try M6 first (ProductCore + Deals)
-    const m6Data = await getProductWithDeals(id);
+    // If admin, use Admin permissions (view drafts). If generic user, use standard query (only approved).
+    let m6Data;
+    if (isAdmin) {
+       console.log('[getProductData] Admin access detected - using privileged fetch');
+       m6Data = await getProductWithDealsAdmin(id);
+    } else {
+       m6Data = await getProductWithDeals(id);
+    }
     
     if (m6Data) {
       console.log(`[getProductData] M6 data found for ${id}, have ${m6Data.deals.length} deals`);
@@ -34,7 +45,8 @@ async function getProductData(id: string) {
       const { product: productCore, deals } = m6Data;
 
       // Skip non-approved cores early to avoid leaking drafts
-      if (productCore?.status && productCore.status !== 'approved') {
+      // UNLESS user is admin
+      if (productCore?.status && productCore.status !== 'approved' && !isAdmin) {
         return null;
       }
 

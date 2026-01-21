@@ -4,7 +4,7 @@
  */
 
 import { adminDb } from '@/lib/firebase-admin';
-import { Category, Product, Deal } from '@/lib/types';
+import { Category, Product, Deal, ProductCore } from '@/lib/types';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
 /**
@@ -444,4 +444,78 @@ export async function getSubSubcategories(categoryId: string, subcategoryId: str
       translations: data.translations,
     };
   });
+}
+
+/**
+ * Pobiera ProductCore by ID (Admin SDK - bypass security rules)
+ */
+export async function getProductCoreAdmin(productId: string): Promise<ProductCore | null> {
+  try {
+    const docRef = adminDb.collection('product_cores').doc(productId);
+    const docSnap = await docRef.get();
+    
+    if (!docSnap.exists) return null;
+    
+    const data = docSnap.data();
+    if (!data) return null;
+
+    // Map timestamps from Firestore Timestamp to string/ISO if needed, 
+    // but ProductCore interface usually expects strings or any.
+    // For safety, let's assume direct mapping or minimal conversion.
+    const productData = {
+      ...data,
+      id: docSnap.id,
+      createdAt: (data.createdAt && typeof data.createdAt.toDate === 'function') 
+         ? data.createdAt.toDate().toISOString() 
+         : (data.createdAt || new Date().toISOString()),
+      updatedAt: (data.updatedAt && typeof data.updatedAt.toDate === 'function')
+         ? data.updatedAt.toDate().toISOString()
+         : (data.updatedAt || new Date().toISOString()),
+      // Ensure specific fields if needed
+    } as ProductCore;
+    
+    // Explicitly stringify any remaining non-serializable fields if needed, 
+    // but usually only Timestamps cause issues.
+    return JSON.parse(JSON.stringify(productData)); // Crude but effective deep-sanitize for Server->Client
+  } catch (error) {
+    console.error('Error fetching ProductCore (Admin):', error);
+    return null;
+  }
+}
+
+/**
+ * M6: Get ProductCore with all linked Deals (Admin SDK)
+ */
+export async function getProductWithDealsAdmin(productId: string): Promise<{ product: ProductCore; deals: any[] } | null> {
+  try {
+    const product = await getProductCoreAdmin(productId);
+    if (!product) return null;
+
+    // Fetch Deals linked to this productCore
+    const dealsSnap = await adminDb
+      .collection('deals')
+      .where('productCoreId', '==', productId)
+      .get();
+      
+    // Admin sees ALL deals (including draft/expired), filtering should happen in UI if needed
+    const deals = dealsSnap.docs.map(doc => {
+       const d = doc.data();
+       return {
+         ...d,
+         id: doc.id,
+         // Convert Timestamps to ISO strings for serialization if they are Timestamp objects
+         createdAt: (d.createdAt && typeof d.createdAt.toDate === 'function') 
+            ? d.createdAt.toDate().toISOString() 
+            : (d.createdAt || new Date().toISOString()),
+         updatedAt: (d.updatedAt && typeof d.updatedAt.toDate === 'function') 
+            ? d.updatedAt.toDate().toISOString() 
+            : (d.updatedAt || new Date().toISOString()),
+       };
+    });
+
+    return JSON.parse(JSON.stringify({ product, deals }));
+  } catch (error) {
+     console.error('Error fetching Product+Deals (Admin):', error);
+     return null;
+  }
 }

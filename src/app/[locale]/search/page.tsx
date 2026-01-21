@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { searchProductsTypesense, searchDealsTypesense } from '@/lib/search';
 import ProductListCard from '@/components/product-list-card';
 import ProductCard from '@/components/product-card';
@@ -31,8 +32,11 @@ interface SearchFilters {
   sortBy: string;
 }
 
-export default function SearchPage({ searchParams }: { searchParams: { q: string } }) {
+export default function SearchPage() {
   const t = useTranslations('search');
+  const searchParams = useSearchParams();
+  const q = searchParams.get('q') || '';
+
   const [products, setProducts] = useState<ProductCore[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,18 +48,18 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
 
   useEffect(() => {
     async function fetchResults() {
-      if (searchParams.q) {
+      if (q) {
         setLoading(true);
         try {
           const [productResults, dealResults] = await Promise.all([
-            searchProductsTypesense(searchParams.q, {
+            searchProductsTypesense(q, {
               limit: 50,
               minPrice: filters.minPrice,
               maxPrice: filters.maxPrice,
               minRating: filters.minRating,
               sortBy: filters.sortBy as any,
             }),
-            searchDealsTypesense(searchParams.q, {
+            searchDealsTypesense(q, {
               limit: 50,
               minPrice: filters.minPrice,
               maxPrice: filters.maxPrice,
@@ -73,7 +77,7 @@ export default function SearchPage({ searchParams }: { searchParams: { q: string
       }
     }
     fetchResults();
-  }, [searchParams.q, filters]);
+  }, [q, filters]);
 
   const clearFilters = () => {
     setFilters({ sortBy: 'relevance' });
