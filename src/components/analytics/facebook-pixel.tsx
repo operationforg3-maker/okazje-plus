@@ -9,9 +9,9 @@ import { useEffect } from 'react';
 export function FacebookPixel() {
   const pixelId = process.env.NEXT_PUBLIC_FB_PIXEL_ID;
 
-  if (!pixelId) return null;
-
   useEffect(() => {
+    if (!pixelId) return;
+
     // Load Facebook Pixel asynchronously after component mounts
     const loadFBPixel = async () => {
       const script = document.createElement('script');

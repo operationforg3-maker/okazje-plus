@@ -9,9 +9,9 @@ import { useEffect } from 'react';
 export function GoogleTagManager() {
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
   
-  if (!gtmId) return null;
-
   useEffect(() => {
+    if (!gtmId) return;
+
     // Load GTM script asynchronously after component mounts
     const loadGTM = async () => {
       const script = document.createElement('script');
