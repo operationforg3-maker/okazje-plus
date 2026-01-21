@@ -13,6 +13,7 @@
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "echo \"No tests specified\" && exit 0",
     "typecheck": "tsc --noEmit",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:interactions": "ts-node src/scripts/seed-interactions.ts",
