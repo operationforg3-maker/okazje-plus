@@ -43,6 +43,16 @@ function SharedCartPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { addItem } = useSmartCart();
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (cartData) {
+      const expiresDate = new Date(cartData.expiresAt);
+      const now = Date.now();
+      const diff = Math.ceil((expiresDate.getTime() - now) / (1000 * 60 * 60 * 24));
+      setDaysLeft(diff);
+    }
+  }, [cartData]);
 
   useEffect(() => {
     if (!shareId) return;
@@ -135,13 +145,6 @@ function SharedCartPageContent() {
 
   const expiresDate = new Date(cartData.expiresAt);
   const createdDate = new Date(cartData.createdAt);
-  const [daysLeft, setDaysLeft] = useState<number | null>(null);
-
-  useEffect(() => {
-    const now = Date.now();
-    const diff = Math.ceil((expiresDate.getTime() - now) / (1000 * 60 * 60 * 24));
-    setDaysLeft(diff);
-  }, [expiresDate]);
 
   return (
     <div className="min-h-screen bg-muted/30 py-8">
