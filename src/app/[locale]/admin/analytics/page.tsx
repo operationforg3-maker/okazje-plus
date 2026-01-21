@@ -174,7 +174,7 @@ function AnalyticsPage() {
         <CardContent className="h-72">
           {data && data.viewsByDay.length > 0 ? (
             <ChartContainer config={{ views: { label: 'Wyświetlenia', color: 'hsl(var(--primary))' } }} className="h-full w-full">
-              <ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={data.viewsByDay}>
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />

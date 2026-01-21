@@ -65,7 +65,12 @@ export async function getServerAuthSession(): Promise<ServerAuthSession | null> 
       role,
       emailVerified: decodedToken.email_verified || false,
     };
-  } catch (error) {
+  } catch (error: any) {
+    // Suppress expected errors like expired tokens
+    if (error?.code === 'auth/id-token-expired' || error?.code === 'auth/argument-error') {
+      // Token expired or invalid - treat as logged out
+      return null;
+    }
     console.error('[Auth] Session verification failed:', error);
     return null;
   }

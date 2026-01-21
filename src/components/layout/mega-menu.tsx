@@ -177,7 +177,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                 >
                   {subcategory.image ? (
                     <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
-                      <Image src={subcategory.image} alt={subcategory.name} fill className="object-cover transition-transform duration-300 group-hover:scale-110" />
+                      <Image src={subcategory.image} alt={subcategory.name} fill sizes="64px" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                     </div>
                   ) : (
                     <div className="h-16 w-16 flex-shrink-0 rounded-md bg-muted" />
@@ -726,7 +726,7 @@ export function MegaMenu() {
                       <div className="flex items-center gap-3">
                         <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                           {tile.image ? (
-                            <Image src={tile.image} alt={tile.title} fill className="object-cover" />
+                            <Image src={tile.image} alt={tile.title} fill sizes="56px" className="object-cover" />
                           ) : null}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -791,7 +791,7 @@ export function MegaMenu() {
                         {smartState.topProducts.map((p) => (
                           <Link key={p.id} href={`/products/${p.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
                             <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
-                              {p.image ? <Image src={p.image} alt={p.name} fill className="object-cover" /> : null}
+                              {p.image ? <Image src={p.image} alt={p.name} fill sizes="48px" className="object-cover" /> : null}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium">{p.name}</p>
@@ -812,7 +812,7 @@ export function MegaMenu() {
                         {smartState.hotDeals.map((d) => (
                           <Link key={d.id} href={`/deals/${d.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
                             <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
-                              {d.image ? <Image src={d.image} alt={d.title} fill className="object-cover" /> : null}
+                              {d.image ? <Image src={d.image} alt={d.title} fill sizes="48px" className="object-cover" /> : null}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium">{d.title}</p>

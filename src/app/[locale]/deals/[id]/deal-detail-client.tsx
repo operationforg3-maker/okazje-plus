@@ -356,26 +356,28 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
   };
 
   return (
-    <div className="page-container py-4 md:py-8 lg:py-12">
+    <div className="page-container pb-8 pt-2 md:pt-4">
       {/* Breadcrumbs - Navigation + Categories */}
-      <div className="mb-4 md:mb-6 space-y-2">
-        {/* Main navigation breadcrumb */}
-        <div className="flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
-          <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>
-          <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-          <Link href="/deals" className="hover:text-primary transition-colors whitespace-nowrap">Okazje</Link>
-          <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-          <span className="font-medium text-foreground truncate max-w-[200px]">{dealTitle}</span>
-        </div>
-
-        {/* Category breadcrumb with 3 levels + translations */}
-        <CategoryBreadcrumb
-          mainCategorySlug={deal.mainCategorySlug}
-          subCategorySlug={deal.subCategorySlug}
-          subSubCategorySlug={deal.subSubCategorySlug}
-          contextType="deals"
-          className="pl-0"
-        />
+      <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
+        <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">Strona główna</Link>
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <Link href="/deals" className="hover:text-primary transition-colors whitespace-nowrap">Okazje</Link>
+        
+        {deal.mainCategorySlug && (
+          <>
+            <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+            <CategoryBreadcrumb
+              mainCategorySlug={deal.mainCategorySlug}
+              subCategorySlug={deal.subCategorySlug}
+              subSubCategorySlug={deal.subSubCategorySlug}
+              contextType="deals"
+              className="pl-0"
+            />
+          </>
+        )}
+        
+        <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+        <span className="font-medium text-foreground truncate max-w-[200px]">{dealTitle}</span>
       </div>
 
       {/* Main Deal Section */}

@@ -3,13 +3,19 @@ import { LRUCache } from 'lru-cache';
 // Initialize Redis client only on server-side
 let redis: any = null;
 let redisInitPromise: Promise<void> | null = null;
+let redisChecked = false; // Zapobiega spamowaniu logami
 
 // Lazy init redis only when needed (avoids webpack bundling node modules)
 async function initRedis() {
-  if (redis || redisInitPromise) return;
+  if (redis || redisInitPromise || redisChecked) return;
   if (typeof window !== 'undefined') return; // Client-side bail
+  
+  redisChecked = true; // Oznaczamy, że sprawdziliśmy konfigurację
+
   if (!process.env.REDIS_URL) {
-    console.info('REDIS_URL not set — using in-memory LRU cache as fallback.');
+    if (process.env.NODE_ENV === 'production') {
+      console.info('REDIS_URL not set — using in-memory LRU cache as fallback.');
+    }
     return;
   }
 

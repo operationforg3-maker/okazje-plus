@@ -5,6 +5,10 @@ runConfig:
   minInstances: 0
   maxInstances: 100
   concurrency: 200
+  network:
+    vpcAccess:
+      connector: projects/okazje-plus/locations/europe-west1/connectors/redis-connector
+      egress: ALL_TRAFFIC
 
 # Environment variables for the Next.js build process.
 # These are used to embed the Firebase config into the client-side code.
@@ -157,5 +161,10 @@ env:
   # Admin API key (pełny dostęp do indeksowania; tylko runtime, server-side)
   - variable: TYPESENSE_ADMIN_API_KEY
     secret: TYPESENSE_ADMIN_API_KEY
+    availability:
+      - RUNTIME
+
+  - variable: REDIS_URL
+    value: redis://10.122.50.67:6379
     availability:
       - RUNTIME

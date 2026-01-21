@@ -1,0 +1,29 @@
+{
+  "title": "Filters",
+  "clear": "Clear",
+  "sort": "Sort by",
+  "price": "Price",
+  "min": "Min",
+  "max": "Max",
+  "rating": "Rating",
+  "ratingStars": "{stars}+ Stars",
+  "availability": "Availability",
+  "onlyAvailable": "Available only",
+  "promotions": "Promotions",
+  "onlyDiscount": "Discounted only",
+  "freeShipping": "Free shipping",
+  "brands": "Brands",
+  "sources": "Stores",
+  "activeFilters": "Active filters",
+  "sortOptions": {
+    "relevance": "Best Match",
+    "price_asc": "Price: Low to High",
+    "price_desc": "Price: High to Low",
+    "rating_desc": "Highest Rated",
+    "newest": "Newest",
+    "hot": "Trending",
+    "discount_desc": "Biggest Discount",
+    "reviews_count": "Most Discussed",
+    "popularity": "Most Popular"
+  }
+}

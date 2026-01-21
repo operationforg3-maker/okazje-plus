@@ -1,0 +1,29 @@
+{
+  "title": "Filtry",
+  "clear": "Wyczyść",
+  "sort": "Sortowanie",
+  "price": "Cena",
+  "min": "Od",
+  "max": "Do",
+  "rating": "Ocena",
+  "ratingStars": "{stars}+ Gwiazdek",
+  "availability": "Dostępność",
+  "onlyAvailable": "Tylko dostępne",
+  "promotions": "Promocje",
+  "onlyDiscount": "Tylko przeceny",
+  "freeShipping": "Darmowa dostawa",
+  "brands": "Marki",
+  "sources": "Sklepy",
+  "activeFilters": "Aktywne filtry",
+  "sortOptions": {
+    "relevance": "Najlepsze dopasowanie",
+    "price_asc": "Cena: rosnąco",
+    "price_desc": "Cena: malejąco",
+    "rating_desc": "Najwyższa ocena",
+    "newest": "Najnowsze",
+    "hot": "Gorące",
+    "discount_desc": "Największa zniżka",
+    "reviews_count": "Najczęściej komentowane",
+    "popularity": "Najpopularniejsze"
+  }
+}

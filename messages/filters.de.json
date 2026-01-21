@@ -1,0 +1,29 @@
+{
+  "title": "Filter",
+  "clear": "Läschen",
+  "sort": "Sortieren",
+  "price": "Preis",
+  "min": "Min",
+  "max": "Max",
+  "rating": "Bewertung",
+  "ratingStars": "{stars}+ Sterne",
+  "availability": "Verfügbarkeit",
+  "onlyAvailable": "Nur verfügbar",
+  "promotions": "Angebote",
+  "onlyDiscount": "Nur reduziert",
+  "freeShipping": "Kostenloser Versand",
+  "brands": "Marken",
+  "sources": "Geschäfte",
+  "activeFilters": "Aktive Filter",
+  "sortOptions": {
+    "relevance": "Relevanz",
+    "price_asc": "Preis: aufsteigend",
+    "price_desc": "Preis: absteigend",
+    "rating_desc": "Beste Bewertung",
+    "newest": "Neueste",
+    "hot": "Beliebt",
+    "discount_desc": "Höchster Rabatt",
+    "reviews_count": "Meist diskutiert",
+    "popularity": "Beliebteste"
+  }
+}

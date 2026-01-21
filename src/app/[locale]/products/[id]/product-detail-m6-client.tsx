@@ -168,7 +168,7 @@ export default function ProductDetailM6Client({
 
 
   return (
-    <div className="page-container py-4 md:py-8 lg:py-12">
+    <div className="page-container pb-8 pt-2 md:pt-4">
       {/* Breadcrumbs */}
       <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
         <Link href={`/${locale}`} className="hover:text-foreground transition-colors whitespace-nowrap">
@@ -601,7 +601,7 @@ export default function ProductDetailM6Client({
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {imageUrls.map((url: string, idx: number) => (
                         <div key={idx} className="relative aspect-square bg-muted rounded overflow-hidden">
-                          <Image src={url} alt={`${title} - zdjęcie ${idx + 1}`} fill className="object-contain" />
+                          <Image src={url} alt={`${title} - zdjęcie ${idx + 1}`} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
                         </div>
                       ))}
                     </div>

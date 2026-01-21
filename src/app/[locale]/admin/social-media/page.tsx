@@ -79,21 +79,32 @@ export default function SocialMediaAdminPage() {
   async function loadData() {
     try {
       setLoading(true);
-      const [configsData, postsData, templatesData, statsData] = await Promise.all([
-        getAllSocialConfigs(),
-        getSocialPosts(undefined, undefined, 100),
-        getSocialTemplates(),
-        getSocialPostStats(),
-      ]);
-
-      const configsMap: Record<string, SocialConfig> = {};
-      configsData.forEach(config => {
-        configsMap[config.platform] = config;
-      });
-      setConfigs(configsMap);
-      setPosts(postsData);
-      setTemplates(templatesData);
-      setStats(statsData);
+      
+      // Permission check - safe fail if not admin
+      try {
+        const [configsData, postsData, templatesData, statsData] = await Promise.all([
+          getAllSocialConfigs(),
+          getSocialPosts(undefined, undefined, 100),
+          getSocialTemplates(),
+          getSocialPostStats(),
+        ]);
+        
+        const configsMap: Record<string, SocialConfig> = {};
+        configsData.forEach(config => {
+          configsMap[config.platform] = config;
+        });
+        setConfigs(configsMap);
+        setPosts(postsData);
+        setTemplates(templatesData);
+        setStats(statsData);
+      } catch (permError: any) {
+        if (permError?.code === 'permission-denied' || permError?.message?.includes('Missing or insufficient permissions')) {
+          console.warn('[SocialMediaAdminPage] Brak uprawnień do ładowania danych social media.');
+          toast.error('Brak uprawnień administratora do sekcji Social Media');
+        } else {
+          throw permError;
+        }
+      }
     } catch (error) {
       console.error('Error loading social media data:', error);
       toast.error('Błąd ładowania danych');

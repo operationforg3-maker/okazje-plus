@@ -94,7 +94,7 @@ export function PriceHistoryChart({ priceHistory, currency = 'PLN' }: PriceHisto
       )}
       
       {/* Chart */}
-      <ResponsiveContainer width="100%" height={150}>
+      <ResponsiveContainer width="100%" height={150} minWidth={0}>
         <AreaChart
           data={chartData}
           margin={{ top: 5, right: 5, left: 0, bottom: 5 }}

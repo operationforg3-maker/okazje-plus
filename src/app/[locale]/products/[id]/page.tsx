@@ -90,7 +90,16 @@ async function getProductData(id: string) {
         relatedProducts,
       ]);
       
-      return { productCore, deals, relatedProducts: resolvedRelated, recentRatings, isM6: true };
+      // Serialize everything to prevent "passing non-serializable data to Client Component" errors
+      // caused by Firestore Timestamps in relatedProducts or recentRatings
+      // This is critical for both Admin (draft) and User (approved) views
+      return JSON.parse(JSON.stringify({ 
+        productCore, 
+        deals, 
+        relatedProducts: resolvedRelated, 
+        recentRatings, 
+        isM6: true 
+      }));
     }
     
     // Fallback to legacy Product if not found in ProductCore
@@ -144,7 +153,14 @@ async function getProductData(id: string) {
     recentRatings = [];
   }
   
-  return { product, relatedProducts, recentRatings, deals: [], isM6: false };
+  // Serialize legacy data return as well
+  return JSON.parse(JSON.stringify({ 
+    product, 
+    relatedProducts, 
+    recentRatings, 
+    deals: [], 
+    isM6: false 
+  }));
   } catch (error) {
     console.error('[getProductData] Unexpected error fetching product:', error);
     return null;
