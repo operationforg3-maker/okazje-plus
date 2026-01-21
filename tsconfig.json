@@ -43,6 +43,8 @@
     "node_modules",
     ".next",
     "okazje-plus",
-    "src/legacy"
+    "src/legacy",
+    "**/*.test.ts",
+    "src/lib/__tests__"
   ]
 }
