@@ -24,7 +24,7 @@ export async function refineProductAction(productId: string) {
 
     if (job.productsFailed > 0) {
        // Check logs for specific error
-       const failureLog = job.logs.find(l => l.level === 'failed');
+       const failureLog = job.logs.find(l => l.status === 'failed');
        return { 
          success: false, 
          error: failureLog?.message || 'Refinement failed for unknown reason' 

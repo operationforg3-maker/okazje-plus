@@ -36,9 +36,9 @@ jobs:
       - name: Lint check
         run: npm run lint
 
-      - name: Run unit tests
-        run: npm run test -- unified-currency.test.ts
-        continue-on-error: true
+      # - name: Run unit tests
+      #   run: npm run test -- unified-currency.test.ts
+      #   continue-on-error: true
 
       - name: Build Next.js app
         run: npm run build

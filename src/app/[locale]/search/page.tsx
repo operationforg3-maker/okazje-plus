@@ -113,7 +113,7 @@ export default function SearchPage() {
           {t('title')}
         </h1>
         <p className="text-lg text-muted-foreground">
-          Zapytanie: <span className="font-medium text-foreground">"{searchParams.q}"</span>
+          Zapytanie: <span className="font-medium text-foreground">"{q}"</span>
           {!loading && (
             <span className="ml-2">
               ({totalResults} {totalResults === 1 ? 'wynik' : totalResults < 5 ? 'wyniki' : 'wyników'})
@@ -270,7 +270,7 @@ export default function SearchPage() {
       ) : totalResults === 0 ? (
         <div className="text-center py-16">
           <p className="text-xl text-muted-foreground mb-4">
-            {t('results.empty')}: "{searchParams.q}"
+            {t('results.empty')}: "{q}"
           </p>
           <p className="text-sm text-muted-foreground">
             {t('results.emptyDescription')}
@@ -347,7 +347,7 @@ export default function SearchPage() {
           minPrice: filters.minPrice,
           maxPrice: filters.maxPrice,
           minTemperature: filters.minTemperature,
-          keywords: searchParams.q,
+          keywords: q,
         } as SavedSearchFilters}
       />
     </div>
