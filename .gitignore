@@ -54,3 +54,6 @@ src/scripts/serviceAccountKey.json
 # project specific
 # Usunięto ignorowanie src/scripts aby móc wersjonować pliki seed / narzędziowe
 serviceAccountKey.json
+
+# Legacy files - debug scripts, old docs, test utilities
+/legacy/
