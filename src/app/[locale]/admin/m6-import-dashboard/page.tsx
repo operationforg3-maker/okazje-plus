@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -30,6 +31,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  Eye,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -320,6 +322,7 @@ export default function M6ImportDashboard() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [killing, setKilling] = useState(false);
   const [wiping, setWiping] = useState(false);
+  const [showDuplicatesDialog, setShowDuplicatesDialog] = useState(false);
 
   // Critical: Prevent hydration mismatch
   useEffect(() => {
@@ -524,7 +527,7 @@ export default function M6ImportDashboard() {
         )}
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
               <div className="space-y-2">
@@ -572,10 +575,33 @@ export default function M6ImportDashboard() {
           <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
               <div className="space-y-2">
-                <p className="text-sm text-slate-600">Produktów razem</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {jobs.reduce((sum, j) => sum + j.productsCreated, 0)}
-                </p>
+                <p className="text-sm text-slate-600">Produkty (Import)</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-blue-600">
+                    {jobs.reduce((sum, j) => sum + (j.productsCreated || 0), 0)}
+                  </p>
+                  <span className="text-xs text-slate-400">total</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                   Znaleziono: {jobs.reduce((sum, j) => sum + (j.productsFound || 0), 0)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
+            <CardContent className="pt-6">
+               <div className="space-y-2">
+                <p className="text-sm text-slate-600">Okazje (Deals)</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-purple-600">
+                    {jobs.reduce((sum, j) => sum + (j.dealsCreated || 0), 0)}
+                  </p>
+                  <span className="text-xs text-slate-400">total</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  Nowe oferty (M6)
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -583,10 +609,20 @@ export default function M6ImportDashboard() {
           <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="pt-6">
               <div className="space-y-2">
-                <p className="text-sm text-slate-600">Duplikatów pominięto</p>
-                <p className="text-3xl font-bold text-amber-600">
-                  {jobs.reduce((sum, j) => sum + j.duplicatesSkipped, 0)}
-                </p>
+                <div className="flex justify-between items-start">
+                   <p className="text-sm text-slate-600">Pominięte duplikaty</p>
+                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0" title="Podejrzyj duplikaty" onClick={() => setShowDuplicatesDialog(true)}>
+                     <Eye className="w-4 h-4 text-slate-500 hover:text-amber-600" />
+                   </Button>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-amber-600">
+                    {jobs.reduce((sum, j) => sum + (j.duplicatesSkipped || 0), 0)}
+                  </p>
+                </div>
+                 <div className="text-xs text-slate-500 mt-1">
+                  Dopasowane do istniejących
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -726,6 +762,12 @@ export default function M6ImportDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <DuplicatesOverviewDialog 
+         open={showDuplicatesDialog} 
+         onOpenChange={setShowDuplicatesDialog}
+         jobs={jobs}
+      />
     </div>
   );
 }
@@ -1494,5 +1536,79 @@ function MetricBox({ label, value, color = "text-slate-900" }: { label: string, 
       <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">{label}</p>
       <p className={`font-bold ${color}`}>{value}</p>
     </div>
+  );
+}
+
+function DuplicatesOverviewDialog({
+  open,
+  onOpenChange,
+  jobs
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  jobs: HarvesterJob[];
+}) {
+  const jobsWithDuplicates = jobs.filter(j => (j.duplicatesSkipped || 0) > 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Przegląd Pominiętych Duplikatów (Ostatnie joby)</DialogTitle>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-auto pr-2">
+          {jobsWithDuplicates.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              Brak duplikatów w ostatnich zadaniach.
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="w-full">
+              {jobsWithDuplicates.map((job) => {
+                 const duplicateLogs = (job.logs || []).filter(l => 
+                    l.message.includes("Found existing product")
+                 );
+
+                 return (
+                  <AccordionItem key={job.id} value={job.id}>
+                    <AccordionTrigger className="hover:no-underline px-1">
+                      <div className="flex items-center gap-2 md:gap-4 text-left w-full pr-4">
+                        <Badge variant="outline" className="shrink-0">{job.source}</Badge>
+                        <span className="font-mono text-sm truncate max-w-[150px] md:max-w-[300px]" title={job.query}>{job.query}</span>
+                        <div className="flex-1" />
+                        <span className="text-amber-600 font-bold whitespace-nowrap">
+                          {job.duplicatesSkipped} match
+                        </span>
+                        <span className="text-xs text-slate-400 font-normal hidden md:inline">
+                          {new Date(job.startedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <ScrollArea className="h-60 w-full rounded border bg-slate-50 p-2">
+                         {duplicateLogs.length > 0 ? (
+                           <div className="space-y-1.5">
+                             {duplicateLogs.map((log, idx) => (
+                               <div key={idx} className="text-xs font-mono text-slate-700 border-b border-slate-200/50 pb-1 last:border-0 break-all">
+                                 <span className="text-slate-400 mr-2 select-none">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                                 {log.message}
+                               </div>
+                             ))}
+                           </div>
+                         ) : (
+                           <p className="text-xs text-slate-400 italic p-2">
+                             Brak szczegółowych logów dla duplikatów w pamięci podręcznej joba.
+                           </p>
+                         )}
+                      </ScrollArea>
+                    </AccordionContent>
+                  </AccordionItem>
+                 );
+              })}
+            </Accordion>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
