@@ -277,6 +277,7 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
 
 interface HarvesterJob {
   id: string;
+  type?: 'import'; // Optional for backward compatibility
   source: "aliexpress" | "amazon" | "allegro";
   query: string;
   status: "running" | "completed" | "failed" | "paused";
@@ -296,9 +297,22 @@ interface HarvesterJob {
   }>;
 }
 
+interface RefinerJob {
+  id: string;
+  type: 'refiner';
+  status: "running" | "completed" | "failed" | "paused";
+  refinationType: string;
+  productsProcessed: number;
+  productsSuccessful: number;
+  productsFailed: number;
+  startedAt: string;
+  completedAt?: string;
+}
+
 export default function M6ImportDashboard() {
   const { getIdToken } = useAuth();
   const [jobs, setJobs] = useState<HarvesterJob[]>([]);
+  const [refinerJobs, setRefinerJobs] = useState<RefinerJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<HarvesterJob | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -368,25 +382,36 @@ export default function M6ImportDashboard() {
     }
 
     try {
-      const res = await fetch("/api/admin/harvester-jobs", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      // Fetch Harvester Jobs
+      const resHarvester = await fetch("/api/admin/harvester-jobs", {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.status === 401 || res.status === 403) {
+      if (resHarvester.status === 401 || resHarvester.status === 403) {
         setAuthError("Brak uprawnień administratora do odczytu jobów.");
         setJobs([]);
+        setRefinerJobs([]);
         setLoading(false);
         return;
       }
 
-      const data = await res.json();
-      setJobs(data.jobs || []);
+      const dataHarvester = await resHarvester.json();
+      setJobs(dataHarvester.jobs || []);
+
+      // Fetch Refiner Jobs
+      const resRefiner = await fetch("/api/admin/refiner-jobs", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (resRefiner.ok) {
+        const dataRefiner = await resRefiner.json();
+        setRefinerJobs(dataRefiner.jobs || []);
+      }
+
       setAuthError(null);
     } catch (err) {
       console.error("Error loading jobs", err);
-      setAuthError("Nie udało się pobrać listy jobów (sprawdź sieć / uprawnienia)");
+      // setAuthError("Nie udało się pobrać listy jobów"); // Don't block UI on partial failure
     } finally {
       setLoading(false);
     }
@@ -504,9 +529,25 @@ export default function M6ImportDashboard() {
             <CardContent className="pt-6">
               <div className="space-y-2">
                 <p className="text-sm text-slate-600">Aktywne joby</p>
-                <p className="text-3xl font-bold text-slate-900">
-                  {jobs.filter((j) => j.status === "running").length}
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-slate-900">
+                    {jobs.filter((j) => j.status === "running").length + refinerJobs.filter((j) => j.status === "running").length + (wiping ? 1 : 0)}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-0.5 text-xs text-slate-500 mt-1">
+                  <div className="flex justify-between">
+                    <span>Import:</span>
+                    <span className="font-mono font-medium text-slate-700">{jobs.filter((j) => j.status === "running").length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Refiner:</span>
+                    <span className="font-mono font-medium text-slate-700">{refinerJobs.filter((j) => j.status === "running").length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Depopulacja:</span>
+                    <span className="font-mono font-medium text-slate-700">{wiping ? 1 : 0}</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -515,9 +556,15 @@ export default function M6ImportDashboard() {
             <CardContent className="pt-6">
               <div className="space-y-2">
                 <p className="text-sm text-slate-600">Ukończonych</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {jobs.filter((j) => j.status === "completed").length}
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl font-bold text-green-600">
+                   {jobs.filter((j) => j.status === "completed").length + refinerJobs.filter((j) => j.status === "completed").length}
+                  </p>
+                </div>
+                <div className="flex gap-2 text-xs text-slate-500 mt-1">
+                   <span>Import: {jobs.filter((j) => j.status === "completed").length}</span>
+                   <span>Refiner: {refinerJobs.filter((j) => j.status === "completed").length}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
