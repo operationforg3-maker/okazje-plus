@@ -312,7 +312,7 @@ interface RefinerJob {
 }
 
 export default function M6ImportDashboard() {
-  const { getIdToken } = useAuth();
+  const { getIdToken, user } = useAuth();
   const [jobs, setJobs] = useState<HarvesterJob[]>([]);
   const [refinerJobs, setRefinerJobs] = useState<RefinerJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -522,7 +522,15 @@ export default function M6ImportDashboard() {
 
         {authError && (
           <div className="p-4 border border-red-200 bg-red-50 text-red-800 rounded-lg">
-            {authError}
+            <p className="font-bold">Błąd: {authError}</p>
+            {user && (
+               <div className="mt-2 text-xs text-red-700 font-mono space-y-1">
+                 <p>Zalogowany jako: {user.email}</p>
+                 <p>UID: {user.uid}</p>
+                 <p>Role: {user.role || 'user'}</p>
+                 <p className="mt-2 font-bold">⚠️ Spróbuj się wylogować i zalogować ponownie, aby odświeżyć uprawnienia.</p>
+               </div>
+            )}
           </div>
         )}
 
