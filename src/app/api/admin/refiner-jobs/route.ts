@@ -47,8 +47,16 @@ export async function GET(request: NextRequest) {
       total: jobs.length // This is just the fetched count, not total in DB
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API] Error listing refiner jobs:', error);
+    
+    if (error.message?.includes('Unauthorized') || error.message?.includes('unauthorized') || error.message?.includes('Forbidden')) {
+      return NextResponse.json(
+        { error: 'Unauthorized/Forbidden. Admin role required.' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: 'Internal Server Error' },
       { status: 500 }

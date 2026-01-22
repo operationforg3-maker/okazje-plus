@@ -61,9 +61,9 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('[Harvester Jobs API Error]', error);
 
-    if (error.message?.includes('Unauthorized') || error.message?.includes('unauthorized')) {
+    if (error.message?.includes('Unauthorized') || error.message?.includes('unauthorized') || error.message?.includes('Forbidden')) {
       return NextResponse.json(
-        { error: 'Unauthorized. Admin role required.' },
+        { error: 'Unauthorized/Forbidden. Admin role required.' },
         { status: 403 }
       );
     }

@@ -391,22 +391,28 @@ export default function M6ImportDashboard() {
       });
 
       if (resHarvester.status === 401 || resHarvester.status === 403) {
-        setAuthError("Brak uprawnień administratora do odczytu jobów.");
+        setAuthError("Brak uprawnień (403/401) do odczytu jobów.");
         setJobs([]);
         setRefinerJobs([]);
         setLoading(false);
         return;
       }
-
-      const dataHarvester = await resHarvester.json();
-      setJobs(dataHarvester.jobs || []);
+      
+      if (!resHarvester.ok) {
+         console.error('Harvester fetch failed:', resHarvester.status, resHarvester.statusText);
+      } else {
+        const dataHarvester = await resHarvester.json();
+        setJobs(dataHarvester.jobs || []);
+      }
 
       // Fetch Refiner Jobs
       const resRefiner = await fetch("/api/admin/refiner-jobs", {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      if (resRefiner.ok) {
+      if (resRefiner.status === 401 || resRefiner.status === 403) {
+        // Already handled above or ignore
+      } else if (resRefiner.ok) {
         const dataRefiner = await resRefiner.json();
         setRefinerJobs(dataRefiner.jobs || []);
       }
@@ -414,7 +420,7 @@ export default function M6ImportDashboard() {
       setAuthError(null);
     } catch (err) {
       console.error("Error loading jobs", err);
-      // setAuthError("Nie udało się pobrać listy jobów"); // Don't block UI on partial failure
+      setAuthError(`Błąd pobierania danych: ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
