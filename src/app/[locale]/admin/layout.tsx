@@ -33,6 +33,7 @@ const pathNames: Record<string, string> = {
   '/admin/import-export': 'Import/Export Console',
   '/admin/social-media': 'Social Media Automation',
   '/admin/tools-inventory': 'Inwentarz Narzędzi',
+  '/admin/database': 'Zarządzanie Bazą Danych',
   '/admin/m6-import-dashboard': 'M6 Import Dashboard',
   '/admin/m6-pipeline-visualizer': 'M6 Pipeline Visualizer',
   '/admin/m6-ui-guide': 'M6 UI Guide',

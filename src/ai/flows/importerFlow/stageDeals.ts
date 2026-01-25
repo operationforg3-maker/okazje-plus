@@ -118,6 +118,7 @@ function convertProductToDeal(product: AliExpressProduct): AliExpressDeal {
     discount,
     dealType,
     temperature,
+    dealPrice: product.price,
     expiryDate,
     stockLevel: undefined, // Could be fetched from product details API
   };

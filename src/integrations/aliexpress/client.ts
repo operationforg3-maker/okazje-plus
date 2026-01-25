@@ -404,15 +404,21 @@ export class AliExpressClient {
     });
     
     try {
+      // Map sort options
+      let sort = params.sort || 'LAST_VOLUME_DESC';
+      if (sort === 'price_asc') sort = 'SALE_PRICE_ASC';
+      if (sort === 'price_desc') sort = 'SALE_PRICE_DESC';
+      if (sort === 'rating') sort = 'LAST_VOLUME_DESC'; // API logic: Volume is best proxy for rating
+
       // Map params to TOP API format
       const topApiParams: Record<string, any> = {
         keywords: params.q,
         page_no: params.page || 1,
         page_size: Math.min(params.limit || 20, 50), // TOP API max 50
-        target_currency: 'PLN', // M6: Polish context for accurate prices
-        target_language: 'PL',  // M6: Polish language
-        ship_to_country: 'PL',  // M6: Force Polish availability
-        sort: params.sort || 'LAST_VOLUME_DESC', // Default: Best-selling products (commercial feed strategy)
+        target_currency: params.targetCurrency || 'PLN', // Default M6: PLN
+        target_language: params.targetLanguage || 'PL',  // Default M6: PL
+        ship_to_country: params.shipToCountry || 'PL',   // Default M6: PL
+        sort: sort,
       };
       
       // Add optional filters
@@ -423,6 +429,7 @@ export class AliExpressClient {
         topApiParams.max_price = params.maxPrice;
       }
       
+      // M6 Update: Use correct Affiliate API endpoint
       const result = await this.request<any>('aliexpress.affiliate.product.query', topApiParams);
       
       // Transform TOP API response to our format
@@ -462,8 +469,8 @@ export class AliExpressClient {
     const baseParams: Record<string, any> = {
       // Geo/currency/language context (CRITICAL for PL availability)
       ship_to_country: params.shipToCountry || 'PL',
-      target_currency: 'PLN',
-      target_language: 'PL',
+      target_currency: params.targetCurrency || 'PLN',
+      target_language: params.targetLanguage || 'PL',
       // Mandatory deep fields (M6+ complete set)
       fields: [
         'product_id',
@@ -504,7 +511,7 @@ export class AliExpressClient {
         product_id: params.productId,
         ...baseParams,
       };
-      return await this.request<AliExpressProductDetailsResponse>('aliexpress.affiliate.productdetail.get', topParams);
+      return await this.request<AliExpressProductDetailsResponse>('aliexpress.affiliate.product.detail.get', topParams);
     } catch (error) {
       logger.error('Product details fetch failed', { error });
       throw error;

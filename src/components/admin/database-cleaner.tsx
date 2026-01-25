@@ -99,6 +99,7 @@ export function DatabaseCleaner({ onConsoleLog }: DatabaseCleanerProps) {
 
   // Filtry dla produktów i okazji
   const [filters, setFilters] = useState({
+    id: '',
     category: '',
     status: 'inactive',
     maxAgeDays: '30',
@@ -170,7 +171,13 @@ export function DatabaseCleaner({ onConsoleLog }: DatabaseCleanerProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: deleteType,
-          ids: preview.items.map(i => i.id),
+          deleteAll: true,
+          filters:
+            deleteType === 'products' || deleteType === 'deals'
+              ? filters
+              : deleteType === 'categories'
+                ? categoryFilters
+                : userFilters,
           options:
             deleteType === 'users'
               ? {
@@ -211,6 +218,17 @@ export function DatabaseCleaner({ onConsoleLog }: DatabaseCleanerProps) {
           <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
             <h4 className="font-semibold text-sm">Filtry</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">ID Elementu (opcjonalne)</Label>
+                 <Input
+                  placeholder="Wpisz ID produktu/okazji"
+                  value={filters.id || ''}
+                  onChange={e =>
+                    setFilters({ ...filters, id: e.target.value })
+                  }
+                  className="text-sm"
+                />
+              </div>
               <div>
                 <Label className="text-xs">Kategoria</Label>
                 <Input

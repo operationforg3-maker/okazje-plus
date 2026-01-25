@@ -291,6 +291,75 @@ export class AliExpressClient {
     return this.call("aliexpress.affiliate.hotproduct.query", params);
   }
 
+  /**
+   * Search for products (Affiliate API)
+   * Doc: https://developers.aliexpress.com/en/doc.htm?docId=45803&docType=2
+   */
+  async searchAffiliateProducts(
+    params: {
+        keywords?: string;
+        category_ids?: string;
+        min_price?: number;
+        max_price?: number;
+        page_no?: number;
+        page_size?: number;
+        sort?: 'SALE_PRICE_ASC' | 'SALE_PRICE_DESC' | 'LAST_VOLUME_ASC' | 'LAST_VOLUME_DESC';
+        target_currency?: string;
+        target_language?: string;
+        ship_to_country?: string;
+        delivery_days?: number;
+    }
+  ): Promise<any> {
+    const requestParams = {
+        target_currency: 'PLN',
+        target_language: 'PL',
+        ship_to_country: 'PL',
+        page_size: 20,
+        ...params
+    };
+    
+    // endpoint: aliexpress.affiliate.product.query
+    return this.call("aliexpress.affiliate.product.query", requestParams);
+  }
+
+  /**
+   * Get product details with affiliate links (Affiliate API)
+   * Doc: https://developers.aliexpress.com/en/doc.htm?docId=45802&docType=2
+   */
+  async getAffiliateProductDetails(
+     productIds: string[]
+  ): Promise<any> {
+      if (productIds.length > 50) {
+          throw new Error("Max 50 product IDs per request");
+      }
+      
+      const params = {
+          product_ids: productIds.join(','),
+          target_currency: 'PLN',
+          target_language: 'PL',
+          ship_to_country: 'PL'
+      };
+      
+      // endpoint: aliexpress.affiliate.product.detail.get
+      return this.call("aliexpress.affiliate.product.detail.get", params);
+  }
+  
+  /**
+   * Smart Match Recommendations (Affiliate API)
+   * Doc: https://developers.aliexpress.com/en/doc.htm?docId=45804&docType=2
+   */
+   async smartMatchAffiliate(productId: string): Promise<any> {
+       const params = {
+           product_id: productId,
+           target_currency: 'PLN',
+           target_language: 'PL',
+           ship_to_country: 'PL'
+       };
+
+       // endpoint: aliexpress.affiliate.product.smartmatch
+       return this.call("aliexpress.affiliate.product.smartmatch", params);
+   }
+
   // Smart match (Advanced API)
   async smartMatch(keywords: string): Promise<any> {
     // endpoint: aliexpress.solution.product.smart.match (docId w portalu)

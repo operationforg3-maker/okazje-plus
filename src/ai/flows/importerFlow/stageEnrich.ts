@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { generateObject } from '@genkit-ai/ai';
-import { gemini15Flash } from '@genkit-ai/vertexai';
+import { ai } from '@/ai/genkit';
 import { AliExpressProduct, EnrichedProduct, ImportStageConfig } from './types';
 import { LocalizedText, SmartPrice } from '@/lib/types';
 
@@ -81,12 +80,16 @@ export async function refineProductsBatch(
         4. Generate SEO metadata.
       `;
 
-      const { object: result } = await generateObject({
-        model: gemini15Flash,
+      const { output: result } = await ai.generate({
         prompt: prompt,
-        schema: RefinedOutputSchema,
+        output: { schema: RefinedOutputSchema },
         config: { temperature: 0.3 }
       });
+
+      if (!result) {
+        console.warn('  ⚠ AI returned empty result, skipping.');
+        continue;
+      }
 
       if (result.qualityScore < (finalConfig.minQualityScore || 40)) {
         console.warn(`  ⚠ Low quality (${result.qualityScore}), skipping.`);
@@ -127,7 +130,10 @@ export async function refineProductsBatch(
         price: {
           amount: raw.price,
           currency: (raw.currency as any) || 'USD',
-          baseAmount: raw.price
+          originalPrice: raw.originalPrice,
+          shippingCost: 0,
+          totalPrice: raw.price,
+          freeShipping: false
         },
         originalPriceValue: raw.originalPrice,
         discountValue: raw.discount,

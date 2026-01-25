@@ -21,6 +21,7 @@ export interface AliExpressProduct {
   id: string;
   title: string;
   image: string;
+  images?: string[]; // Added: raw images array
   price: number;
   originalPrice?: number;
   currency: string;
@@ -29,6 +30,7 @@ export interface AliExpressProduct {
   orders?: number;
   link: string;
   description?: string;
+  descriptionHtml?: string; // HTML Description support
   specs?: Record<string, string>;
   gallery?: string[];
   storeName?: string;
@@ -38,9 +40,27 @@ export interface AliExpressProduct {
   rawSpecs?: any;
   videoUrl?: string;
   hasVideo?: boolean;
+  attributes?: any[]; // Added: raw attributes
+  specifications?: any[]; // Added: specifications alias
+  variants?: any[]; // Added: variants
+  warehouse?: string; // Added: warehouse
+  deliveryTime?: string; // Added: deliveryTime
+  freeShipping?: boolean; // Added: freeShipping
+  _enhanced?: boolean; // Added: enhancement flag
+  _enhancedAt?: string; // Added: enhancement timestamp
 }
 
-export interface EnrichedProduct extends Partial<AliExpressProduct> {
+export interface AliExpressDeal extends AliExpressProduct {
+  dealPrice: number;
+  startTime?: string;
+  endTime?: string;
+  stock?: number;
+  stockLevel?: number; // Added alias
+  dealType?: string; // Added: deal type identifier
+  temperature?: number; // Added: deal temperature
+  expiryDate?: string; // Added: expiry date
+}
+export interface EnrichedProduct extends Omit<Partial<AliExpressProduct>, 'title' | 'price' | 'description'> {
   // Identification
   originalId: string;
   
@@ -48,6 +68,43 @@ export interface EnrichedProduct extends Partial<AliExpressProduct> {
   title: LocalizedText;
   description: LocalizedText;
   specs: LocalizedText; // HTML formatted list per language
+  
+  // Temporary / Working fields during import
+  titlePL?: string;
+  titleEN?: string;
+  titleDE?: string;
+  titleNormalizedEN?: string;
+  titleOriginal?: string;
+  
+  descriptionPL?: string;
+  descriptionEN?: string;
+  descriptionDE?: string;
+  
+  pricePLN?: number;
+  priceUSD?: number;
+  
+  affiliateUrl?: string;
+  
+  // Category Flattening
+  mainCategorySlug?: string;
+  subCategorySlug?: string;
+  subSubCategorySlug?: string;
+  
+  categoryName?: string;
+  subcategoryName?: string;
+  subsubcategoryName?: string;
+
+  // AI Content Container
+  aiContent?: {
+      titlePL?: string;
+      titleEN?: string;
+      titleDE?: string;
+      description?: {
+          pl?: string;
+          en?: string;
+          de?: string;
+      }
+  };
   
   // SEO Metadata
   seo: {

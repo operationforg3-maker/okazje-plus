@@ -186,6 +186,9 @@ export interface AliExpressSearchParams {
   page?: number;
   limit?: number;
   sort?: 'price_asc' | 'price_desc' | 'orders' | 'rating' | 'newest';
+  targetLanguage?: string; // e.g. 'EN', 'PL'
+  targetCurrency?: string; // e.g. 'USD', 'PLN'
+  shipToCountry?: string; // e.g. 'PL', 'DE'
 }
 
 /**
@@ -197,6 +200,8 @@ export interface AliExpressProductDetailsParams {
   includeVariants?: boolean;
   // M6+: Specify destination country for warehouse/shipping info
   shipToCountry?: string;
+  targetLanguage?: string; // e.g. 'EN', 'PL'
+  targetCurrency?: string; // e.g. 'USD', 'PLN'
 }
 
 /**

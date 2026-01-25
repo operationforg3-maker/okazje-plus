@@ -1760,7 +1760,7 @@ function DuplicatesOverviewDialog({
           ) : (
             <Accordion type="single" collapsible className="w-full">
               {jobsWithDuplicates.map((job) => {
-                 const duplicateLogs = (job.logs || []).filter(l => 
+                 const duplicateLogs = ((job as any).logs || []).filter((l: any) => 
                     l.message.includes("Found existing product")
                  );
 

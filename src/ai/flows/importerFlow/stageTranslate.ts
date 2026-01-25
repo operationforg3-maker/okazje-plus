@@ -61,28 +61,40 @@ export async function translateProducts(
       
       // CURRENCY CONVERSION - Convert to PLN ONLY if pricePLN is missing
       if (!product.pricePLN || product.pricePLN <= 0) {
-        if (product.currency === 'PLN') {
+        // Extract basic values handling both number and SmartPrice
+        const currentPrice = typeof product.price === 'object' && 'amount' in product.price 
+          ? (product.price as any).amount 
+          : (typeof product.price === 'number' ? product.price : 0);
+          
+        const currentCurrency = typeof product.price === 'object' && 'currency' in product.price
+          ? (product.price as any).currency
+          : product.currency;
+
+        if (currentCurrency === 'PLN') {
           // Product already in PLN, just copy
-          product.pricePLN = product.price;
-          console.log(`  ✓ Price already in PLN: ${product.price}`);
-        } else if (product.price > 0 && product.currency) {
+          product.pricePLN = currentPrice;
+          console.log(`  ✓ Price already in PLN: ${currentPrice}`);
+        } else if (currentPrice > 0 && currentCurrency) {
           // Convert from foreign currency to PLN using NBP
           try {
-            const pricePLN = await convertToPLN(product.price, product.currency);
+            const pricePLN = await convertToPLN(currentPrice, currentCurrency);
             product.pricePLN = pricePLN;
             
             if (product.originalPrice && product.originalPrice > 0) {
-              const originalPricePLN = await convertToPLN(product.originalPrice, product.currency);
-              product.originalPrice = originalPricePLN;
+              const originalPrice = typeof product.originalPrice === 'number' ? product.originalPrice : 0;
+              if (originalPrice > 0) {
+                 const originalPricePLN = await convertToPLN(originalPrice, currentCurrency);
+                 product.originalPrice = originalPricePLN;
+              }
             }
             
             prices_converted++;
-            console.log(`  💱 Converted: ${product.price} ${product.currency} → ${pricePLN} PLN (NBP)`);
+            console.log(`  💱 Converted: ${currentPrice} ${currentCurrency} → ${pricePLN} PLN (NBP)`);
           } catch (e: any) {
             console.error(`  ✗ NBP conversion failed:`, e.message);
             // Fallback: use original price as PLN (better than nothing)
-            product.pricePLN = product.price;
-            console.warn(`  ⚠️ Using original price as fallback: ${product.price}`);
+            product.pricePLN = currentPrice;
+            console.warn(`  ⚠️ Using original price as fallback: ${currentPrice}`);
           }
         } else {
           console.warn(`  ⚠️ No valid price to convert: ${product.price} ${product.currency}`);

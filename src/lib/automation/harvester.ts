@@ -570,6 +570,9 @@ export class SmartHarvester {
         q: searchQuery,
         limit: fetchSize,
         sort: isTreeMode ? 'rating' : 'price_asc', // For tree mode, sort by rating; otherwise by price
+        targetLanguage: 'EN', // Fetch in English for better AI translation
+        targetCurrency: 'PLN', // Ensure prices are in PLN
+        shipToCountry: 'PL'    // Ensure shipping to Poland
       });
       
       if (!response.success || !response.products) {

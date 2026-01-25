@@ -233,8 +233,29 @@ export async function fetchProductsFromAliexpress(
     for (const keyword of keywords) {
       try {
         console.log(`[Importer:Fetch] Direct: Searching "${keyword}"...`);
-        const results = await client.smartMatch(keyword);
-        const products = results?.products?.items || [];
+        // Use Affiliate Query (M6 Standard)
+        // Note: For AI Translation better source is English (targetLanguage='EN'), 
+        // but for price accuracy we keep currency='PLN' and country='PL'.
+        const response = await client.searchAffiliateProducts({ 
+            keywords: keyword,
+            sort: 'LAST_VOLUME_DESC', // Best by volue
+            page_size: 20,
+            target_language: 'EN', // Fetch in English for better AI translation source
+            target_currency: 'PLN', // Prices in PLN
+            ship_to_country: 'PL'    // Shipping to PL
+        });
+        
+        let products: any[] = [];
+        
+        // Parse Deep Response Structure from Affiliate API
+        // Structure: response.aliexpress_affiliate_product_query_response.resp_result.result.products.product
+        if (response?.aliexpress_affiliate_product_query_response?.resp_result?.result?.products?.product) {
+             products = response.aliexpress_affiliate_product_query_response.resp_result.result.products.product;
+        } 
+        // Fallback or simplified response check
+        else if (response?.products) { 
+             products = response.products;
+        }
         
         console.log(`[Importer:Fetch] Direct: Got ${products.length} products for "${keyword}"`);
         
@@ -244,7 +265,7 @@ export async function fetchProductsFromAliexpress(
           console.log(`[Importer:Fetch] 🔍 Image fields check:`, {
             product_main_image_url: products[0].product_main_image_url,
             product_image: products[0].product_image,
-            image_url: products[0].image_url,
+            image_url: products[0].image_url, // Sometimes legacy field
             item_main_image: products[0].item_main_image,
             all_keys: Object.keys(products[0]),
           });
@@ -257,22 +278,22 @@ export async function fetchProductsFromAliexpress(
           seenIds.add(productId);
           
           // Extract image from image_urls array (per AliExpress API spec)
-          const mainImage = Array.isArray(p.image_urls) && p.image_urls.length > 0 && p.image_urls[0] 
-            ? p.image_urls[0] 
-            : (p.product_main_image_url || p.product_image || '');
+          const mainImage = p.product_main_image_url || 
+                           (Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '') ||
+                           (p.product_image || '');
           
           const product: AliExpressProduct = {
             id: productId,
-            title: p.product_title || 'Untitled',
+            title: p.product_title || p.title || 'Untitled',
             image: mainImage,
-            price: parseFloat(p.sale_price || p.price || '0'),
-            originalPrice: parseFloat(p.original_price || p.list_price || '0') || undefined,
-            discount: p.discount || undefined,
-            rating: parseFloat(p.evaluation_rate || '0'),
-            orders: parseInt(p.total_transaction_seller || '0', 10),
-            merchant: p.shop_name || 'AliExpress',
-            link: p.product_detail_url || '#',
-            currency: 'USD',
+            price: parseFloat(p.target_sale_price || p.sale_price || p.price || '0'),
+            originalPrice: parseFloat(p.target_original_price || p.original_price || '0') || undefined,
+            discount: p.discount ? parseFloat(String(p.discount).replace('%','')) : undefined,
+            rating: parseFloat(p.evaluate_rate || p.evaluation_rate || '0'),
+            orders: parseInt(p.lastest_volume || p.volume || p.total_transaction_seller || '0', 10),
+            merchant: p.shop_id ? `Shop ${p.shop_id}` : (p.merchant || 'AliExpress'), // List API lacks shop_name often
+            link: p.promotion_link || p.product_detail_url || '#',
+            currency: p.target_sale_price_currency || 'PLN', // We requested PLN
             description: p.product_description || '',
             images: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls : (p.product_images || (mainImage ? [mainImage] : [])),
             ...p

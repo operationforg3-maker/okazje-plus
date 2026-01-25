@@ -30,14 +30,21 @@ export async function generateSmartContentForProducts(
   });
   
   // Convert enriched products to smart content inputs
-  const inputs: SmartContentInput[] = products.map(p => ({
-    originalTitle: p.titleNormalizedEN || p.titleOriginal,
-    originalDescription: p.descriptionEN,
-    specifications: extractSpecifications(p),
-    category: p.subcategorySlugEN || p.categorySlugEN || 'general',
-    price: p.priceUSD || p.price,
-    discount: p.discount,
-  }));
+  const inputs: SmartContentInput[] = products.map(p => {
+    // Extract numeric price safely from SmartPrice or number
+    const priceValue = typeof p.price === 'object' && p.price !== null && 'amount' in p.price 
+      ? (p.price as any).amount 
+      : (typeof p.price === 'number' ? p.price : 0);
+
+    return {
+      originalTitle: p.titleNormalizedEN || (typeof p.title === 'string' ? p.title : (p.title?.en || '')),
+      originalDescription: p.descriptionEN || (p.description ? (typeof p.description === 'string' ? p.description : p.description.en) : ''),
+      specifications: p.rawSpecs ? Object.values(p.rawSpecs).map(v => String(v)) : [],
+      category: p.subcategorySlugEN || p.categorySlugEN || 'general',
+      price: priceValue,
+      discount: p.discount,
+    };
+  });
   
   // Batch generate AI content
   const results = await batchGenerateSmartContent(inputs, {
@@ -95,8 +102,18 @@ function extractSpecifications(product: EnrichedProduct): string[] {
   
   // Add price info
   if (product.originalPrice && product.price) {
-    const discount = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
-    specs.push(`${discount}% discount`);
+    const priceAmount = typeof product.price === 'object' && 'amount' in product.price 
+        ? (product.price as any).amount 
+        : (typeof product.price === 'number' ? product.price : 0);
+        
+    const originalAmount = typeof product.originalPrice === 'number' 
+        ? product.originalPrice 
+        : (priceAmount > 0 ? priceAmount * 1.2 : 0);
+    
+    if (originalAmount > 0) {
+        const discount = Math.round(((originalAmount - priceAmount) / originalAmount) * 100);
+        specs.push(`${discount}% discount`);
+    }
   }
   
   // Add rating info

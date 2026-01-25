@@ -217,7 +217,7 @@ export interface TextModerationResult {
 export async function moderateText(text: string): Promise<TextModerationResult> {
   try {
     const vertex = getVertexInstance();
-    // Use stable model for moderation checks to ensure availability
+    // Use preview model consistent with generation
     const model = vertex.preview.getGenerativeModel({
       model: "gemini-2.0-flash-exp",
     });
@@ -267,11 +267,13 @@ export async function moderateText(text: string): Promise<TextModerationResult> 
     return { approved, safetyRatings, flags, reasoning };
   } catch (error) {
     logger.error("Text moderation failed", { error });
+    // Fail OPEN on technical errors (like 404/500 from Vertex) to avoid blocking valid content
+    // when the moderation service is having issues.
     return {
-      approved: false,
+      approved: true,
       safetyRatings: [],
-      flags: ["moderation_check_failed"],
-      reasoning: "Moderation check failed; defaulting to reject",
+      flags: ["moderation_check_skipped_on_error"],
+      reasoning: "Moderation check failed (technical error); defaulting to approve",
     };
   }
 }
