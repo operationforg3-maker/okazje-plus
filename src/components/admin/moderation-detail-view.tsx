@@ -207,12 +207,25 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
         </Section>
 
         {/* Descriptions */}
-        <Section title="📝 Opisy" id="descriptions">
+        <Section title="📝 Opisy (HTML & SEO)" id="descriptions">
           <div className="space-y-1">
-            <FieldRow label="Description (PL)" value={item.description?.pl} />
-            <FieldRow label="Description (EN)" value={item.description?.en} />
-            <FieldRow label="Description (DE)" value={item.description?.de} />
-            <FieldRow label="Short Desc (PL)" value={item.shortDescription?.pl} />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="border p-2 rounded bg-slate-50">
+                     <p className="text-xs font-bold text-slate-500 mb-1">HTML Description (PL)</p>
+                     {item.description?.pl ? (
+                         <div className="prose prose-sm prose-slate max-w-none text-xs" dangerouslySetInnerHTML={{ __html: item.description.pl }} />
+                     ) : <span className="text-red-400 text-xs italic">Brak HTML PL</span>}
+                 </div>
+                 <div className="border p-2 rounded bg-slate-50">
+                     <p className="text-xs font-bold text-slate-500 mb-1">Short/SEO Description ({item.seoDescription ? 'SEO' : 'Base'})</p>
+                      <p className="text-xs">{item.shortDescription?.pl || item.seoDescription || '--'}</p>
+                 </div>
+             </div>
+             
+             <div className="mt-2 border-t pt-2 space-y-1">
+                <FieldRow label="Full Text (Generated PL)" value={item.fullDescription?.pl} />
+                <FieldRow label="Full Text (Generated EN)" value={item.fullDescription?.en} />
+             </div>
           </div>
         </Section>
 
@@ -264,13 +277,13 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
         </Section>
 
         {/* Images */}
-        <Section title="🖼️ Obrazy" id="specs" count={item.images?.length || 0}>
+        <Section title="🖼️ Obrazy" id="images" count={(item.images?.length || (item.image ? 1 : 0))}>
           <div className="space-y-2">
-            {item.images?.map((img: string, i: number) => (
+            {(item.images && item.images.length > 0 ? item.images : (item.image ? [item.image] : [])).map((img: string, i: number) => (
               <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 py-2 border-b last:border-b-0">
                 <div className="font-medium text-xs min-w-0 sm:min-w-[80px] flex-shrink-0">Image {i + 1}:</div>
                 <div className="flex-1 flex flex-col gap-2 w-full">
-                  <img src={img} alt="Preview" className="h-20 w-20 object-cover rounded border flex-shrink-0" />
+                  <img src={img} alt="Preview" className="h-20 w-20 object-contain bg-white rounded border flex-shrink-0" />
                   <input 
                     type="text" 
                     value={img} 
@@ -289,11 +302,14 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
                 </div>
               </div>
             ))}
+            {!item.images?.length && !item.image && (
+               <div className="text-muted-foreground text-xs italic">Brak obrazów</div>
+            )}
           </div>
         </Section>
 
         {/* Search Tags */}
-        <Section title="🏷️ Tagi Wyszukiwania" id="specs" count={item.searchTags?.length || 0}>
+        <Section title="🏷️ Tagi Wyszukiwania" id="searchTags" count={item.searchTags?.length || 0}>
           <div className="space-y-1">
             {item.searchTags?.map((tag: string, i: number) => (
               <Badge key={i} variant="secondary" className="mr-2 mb-2">{tag}</Badge>
@@ -304,7 +320,39 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
           </div>
         </Section>
 
-        {/* Full Raw Data JSON */}
+        {/* Raw Data Comparison (Added for M6 Moderation) */}
+        <Section title="🔎 Porównanie: Oryginał vs AI Refined" id="comparison">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border rounded p-2 bg-amber-50/50">
+              <h4 className="font-semibold text-xs text-amber-700 mb-2 uppercase border-b border-amber-200 pb-1">
+                Oryginał (Raw / Metadata)
+              </h4>
+              <div className="text-xs font-mono whitespace-pre-wrap max-h-[300px] overflow-auto">
+                 {JSON.stringify({
+                    title: item.metadata?.originalTitle || item.originalTitle || 'N/A',
+                    desc: (item.metadata?.originalDescription || item.originalDescription || 'N/A')?.substring(0, 300) + '...',
+                    specs: item.metadata?.originalSpecs || 'N/A',
+                    source: item.metadata?.source || 'N/A'
+                 }, null, 2)}
+              </div>
+            </div>
+            
+            <div className="border rounded p-2 bg-green-50/50">
+              <h4 className="font-semibold text-xs text-green-700 mb-2 uppercase border-b border-green-200 pb-1">
+                Wzbogacone (Refined)
+              </h4>
+              <div className="text-xs font-mono whitespace-pre-wrap max-h-[300px] overflow-auto">
+                 {JSON.stringify({
+                    title: item.title,
+                    desc: item.description,
+                    specs: item.specs,
+                    qualityScore: item.qualityScore
+                 }, null, 2)}
+              </div>
+            </div>
+          </div>
+        </Section>
+
         {/* Full Raw Data JSON */}
         <Section title="📄 Pełne Raw Data (JSON)" id="rawData">
           <div className="relative">

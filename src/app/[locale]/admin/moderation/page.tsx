@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { ModerationDetailView } from '@/components/admin/moderation-detail-view';
 import { 
   CheckSquare, 
@@ -214,24 +215,41 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
         {items.map(item => {
           let titleText = 'Unknown item';
           if (item.title) {
-            titleText = typeof item.title === 'string' ? item.title : JSON.stringify(item.title);
+            if (typeof item.title === 'string') {
+               titleText = item.title;
+            } else if (typeof item.title === 'object') {
+               titleText = (item.title as any).pl || (item.title as any).en || 'Localized Title';
+            } else {
+               titleText = String(item.title);
+            }
           } else if (item.name) {
             titleText = typeof item.name === 'string' ? item.name : JSON.stringify(item.name);
           }
           const displayName = titleText.substring(0, 30);
+          const bgClass = selected[item.id] 
+             ? 'bg-blue-100 text-blue-800 border-blue-300 shadow-sm' 
+             : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200';
+          const imageSrc = item.images?.[0] || item.image;
+
           return (
             <button
               key={item.id}
               onClick={() => toggle(item.id)}
-              className={
-                "text-xs px-2 py-1 rounded border transition-colors " + 
-                (selected[item.id] 
-                  ? 'bg-primary text-primary-foreground border-primary' 
-                  : 'bg-background hover:bg-accent')
-              }
+              className={cn(
+                "group flex items-center gap-2 text-xs px-2 py-1.5 rounded-md border transition-all duration-200", 
+                bgClass
+              )}
               title={titleText}
             >
-              {selected[item.id] ? '✓' : ''} {displayName}...
+              {selected[item.id] ? <CheckCircle className="w-3.5 h-3.5 text-blue-600" /> : <div className="w-3.5 h-3.5 rounded-full border border-slate-300 group-hover:border-slate-400" />}
+              
+              {imageSrc && (
+                <div className="w-6 h-6 rounded bg-slate-100 border overflow-hidden shrink-0">
+                   <img src={imageSrc} className="w-full h-full object-cover" alt="" />
+                </div>
+              )}
+              
+              <span className="truncate max-w-[150px] font-medium leading-none">{displayName}...</span>
             </button>
           );
         })}
@@ -998,7 +1016,11 @@ function ModerationPage() {
                       {/* Metadane i akcje po prawej */}
                       <div className="flex-1 min-w-0 space-y-3 w-full">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate">{product.name}</h3>
+                          <h3 className="font-semibold truncate max-w-[300px]" title={
+                              typeof product.title === 'object' ? product.title.pl : (product.name || product.title)
+                          }>
+                              {typeof product.title === 'object' ? product.title.pl : (product.name || product.title)}
+                          </h3>
                           <Badge variant={
                             product.status === 'approved' ? 'default' :
                             product.status === 'pending_approval' ? 'secondary' :
@@ -1039,7 +1061,9 @@ function ModerationPage() {
                             </DialogTrigger>
                             <DialogContent className="w-full max-w-4xl h-screen md:h-auto max-h-[90vh] overflow-hidden flex flex-col">
                               <DialogHeader className="flex-shrink-0 overflow-hidden">
-                                <DialogTitle className="truncate">Moderacja ProductCore: {product.name || product.title?.pl}</DialogTitle>
+                                <DialogTitle className="truncate">Moderacja ProductCore: {
+                                    typeof product.title === 'object' ? product.title?.pl : (product.title || 'Unknown')
+                                }</DialogTitle>
                               </DialogHeader>
                               <div className="flex-1 overflow-y-auto">
                                 <ModerationDetailView item={product} itemType="product" />

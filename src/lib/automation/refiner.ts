@@ -228,13 +228,34 @@ export class AIRefiner {
 
     if (refinationType === 'full_enrichment' || refinationType === 'title_cleanup') {
       try {
-        const { cleanProductTitle } = await import('@/ai/flows/enrichment');
+        const { cleanProductTitle, translateContent } = await import('@/ai/flows/enrichment');
         
         // Clean title & extract missing specs
-        const titleResult = await cleanProductTitle({
+        let titleResult = await cleanProductTitle({
           originalTitle: product.title.pl || product.title.en || 'Unknown Product',
           specs: refined.specs || product.specs || {}
         });
+
+        // FAILSAFE: If AI returned identical titles for PL/EN (common when it fails/hallucinates),
+        // FORCE translation from English to Polish/German.
+        if (titleResult.titlePL === titleResult.titleEN && titleResult.titlePL.length > 0) {
+           try {
+             const tr = await translateContent({
+               text: titleResult.titleEN,
+               sourceLocale: 'en',
+               targetLocales: ['pl', 'de']
+             });
+             // Only override if translation produced something different
+             if (tr.translations['pl'] && tr.translations['pl'] !== titleResult.titlePL) {
+               titleResult.titlePL = tr.translations['pl'];
+             }
+             if (tr.translations['de']) {
+               titleResult.titleDE = tr.translations['de'];
+             }
+           } catch(err) {
+             console.error('[Refiner] Failsafe translation failed', err);
+           }
+        }
 
         // Update titles
         refined.title = {
@@ -265,6 +286,24 @@ export class AIRefiner {
       // Generate SEO metadata
       refined.seoTitle = await this.generateSeoTitle(product.title);
       refined.seoDescription = await this.generateSeoDescription(product.title, product.specs);
+
+      // M6 Update: Also populate 'description' (HTML) if missing
+      // We use fullDescription content wrapped in paragraph for now
+      // This ensures moderation view shows something
+      refined.description = {
+        pl: refined.fullDescription?.pl ? `<p>${refined.fullDescription.pl}</p>` : (product.description?.pl || ''),
+        en: refined.fullDescription?.en ? `<p>${refined.fullDescription.en}</p>` : (product.description?.en || ''),
+        de: refined.fullDescription?.de ? `<p>${refined.fullDescription.de}</p>` : (product.description?.de || ''),
+      };
+
+      // M6 Update: Sync shortDescription with SEO description for Cards/Deals
+      if (refined.seoDescription) {
+        refined.shortDescription = {
+          pl: refined.seoDescription,
+          en: product.shortDescription?.en || product.shortDescription?.pl || '',
+          de: product.shortDescription?.de || product.shortDescription?.pl || '',
+        };
+      }
     }
 
     if (refinationType === 'full_enrichment' || refinationType === 'review_summary') {

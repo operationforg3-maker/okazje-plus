@@ -31,6 +31,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Eye,
   AlertTriangle,
 } from "lucide-react";
@@ -310,6 +311,130 @@ interface RefinerJob {
   productsFailed: number;
   startedAt: string;
   completedAt?: string;
+}
+
+// --- Tree Viewer Component ---
+interface CategoryNode {
+  name: string;
+  fullPath: string;
+  count: number;
+  status: 'ok' | 'error' | 'pending';
+  children: Record<string, CategoryNode>;
+  totalProductsInSubtree: number;
+}
+
+function JobCategoryTree({ categories }: { categories: NonNullable<HarvesterJob['processedCategories']> }) {
+  // 1. Build Tree
+  const root: Record<string, CategoryNode> = {};
+  
+  categories.forEach(cat => {
+    const parts = cat.category.split('/');
+    let currentLevel = root;
+    
+    parts.forEach((part, idx) => {
+      if (!currentLevel[part]) {
+        currentLevel[part] = {
+          name: part,
+          fullPath: parts.slice(0, idx + 1).join('/'),
+          count: 0,
+          status: 'pending', // Default
+          children: {},
+          totalProductsInSubtree: 0
+        };
+      }
+      
+      // If leaf (matches processed item)
+      if (idx === parts.length - 1) {
+        currentLevel[part].count = cat.count;
+        currentLevel[part].status = cat.status;
+      }
+      
+      currentLevel = currentLevel[part].children;
+    });
+  });
+
+  // 2. Aggregate counts (recursive)
+  const calculateTotals = (nodes: Record<string, CategoryNode>): number => {
+    let sum = 0;
+    Object.values(nodes).forEach(node => {
+      const childSum = calculateTotals(node.children);
+      node.totalProductsInSubtree = node.count + childSum;
+      sum += node.totalProductsInSubtree;
+    });
+    return sum;
+  };
+  calculateTotals(root);
+
+  // 3. Render
+  return (
+    <div className="bg-white min-h-0">
+      <div className="p-2">
+        {Object.values(root).map((node) => (
+          <TreeNode key={node.fullPath} node={node} level={0} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TreeNode({ node, level }: { node: CategoryNode, level: number }) {
+  const [isOpen, setIsOpen] = useState(level < 1); // Open root level by default
+  const hasChildren = Object.keys(node.children).length > 0;
+  
+  // Choose which count to display:
+  // If no children (leaf), show direct count.
+  // If children (branch), show total subtree count.
+  const displayCount = hasChildren ? node.totalProductsInSubtree : node.count;
+
+  return (
+    <div className="text-sm">
+      <div 
+        className={cn(
+          "flex items-center gap-2 py-1.5 px-2 rounded hover:bg-slate-50 cursor-pointer select-none transition-colors",
+          level > 0 && "ml-4 border-l-2 border-slate-100 pl-2"
+        )}
+        onClick={() => hasChildren && setIsOpen(!isOpen)}
+      >
+        <div className={cn("w-4 h-4 flex items-center justify-center text-slate-400 transition-transform duration-200", !hasChildren && "opacity-0", isOpen && "rotate-90")}>
+          <ChevronRight className="w-3.5 h-3.5" />
+        </div>
+        
+        <span className={cn("font-mono text-slate-700 truncate", level === 0 && "font-bold text-slate-900")}>
+          {node.name}
+        </span>
+        
+        <div className="flex-1 border-b border-slate-100 border-dashed mx-2 opacity-50" />
+        
+        <div className="flex items-center gap-2 text-xs">
+          {/* Display simplified status only for leaves */}
+          {!hasChildren && (
+            <span className={cn(
+              "w-2 h-2 rounded-full",
+              node.status === 'ok' && "bg-green-500",
+              node.status === 'error' && "bg-red-500",
+              node.status === 'pending' && "bg-slate-300"
+            )} />
+          )}
+
+          {/* Count Badge */}
+          <span className={cn(
+            "font-mono px-2 py-0.5 rounded text-[11px]",
+            hasChildren ? "bg-slate-100 text-slate-600 font-semibold" : "bg-blue-50 text-blue-700 font-bold"
+          )}>
+            {displayCount} szt.
+          </span>
+        </div>
+      </div>
+      
+      {isOpen && hasChildren && (
+        <div className="border-l-2 border-slate-100 ml-3 pl-1">
+          {Object.values(node.children).map(child => (
+            <TreeNode key={child.fullPath} node={child} level={level + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function M6ImportDashboard() {
@@ -1467,18 +1592,26 @@ function JobItem({ job }: { job: HarvesterJob }) {
              )}
           </div>
 
-          {/* Job Info */}
-          <div className="text-sm">
-             <span className="font-semibold text-slate-700">{job.source}</span>
-             <ArrowRight className="inline mx-1 w-3 h-3 text-slate-400" />
-             <span className="font-mono text-slate-600 bg-slate-100 px-1 rounded">"{job.query}"</span>
+          <div className="text-sm flex items-center">
+             <span className="font-semibold text-slate-700 whitespace-nowrap">{job.source}</span>
+             <ArrowRight className="mx-1 w-3 h-3 text-slate-400 flex-shrink-0" />
+             <span className="font-mono text-slate-600 bg-slate-100 px-1 rounded truncate max-w-[250px]" title={job.query}>
+               "{job.query}"
+             </span>
           </div>
 
           {/* Progress Section */}
           <div className="space-y-1.5 p-3 bg-slate-50 rounded-md border border-slate-100">
             {isTreeMode ? (
                <div className="flex justify-between text-xs font-medium text-slate-600">
-                 <span>Kategorie: {job.processedCategories?.length || 0} / {job.totalCategories}</span>
+                 <div className="flex flex-col gap-0.5">
+                   <span>Kategorie: {job.processedCategories?.length || 0} / {job.totalCategories}</span>
+                   {job.processedCategories && job.processedCategories.length > 0 && (
+                     <span className="text-[10px] text-slate-400">
+                       Ost: {job.processedCategories[job.processedCategories.length - 1].category} ({job.processedCategories[job.processedCategories.length - 1].count})
+                     </span>
+                   )}
+                 </div>
                  <span>{progressPercent}%</span>
                </div>
             ) : (
@@ -1495,8 +1628,22 @@ function JobItem({ job }: { job: HarvesterJob }) {
               />
             </div>
             
+            {/* Detailed Info for Tree Mode */}
+            {isTreeMode && job.processedCategories && (
+              <div className="pt-1 flex gap-2 overflow-x-auto pb-1 max-w-full no-scrollbar">
+                {job.processedCategories.slice(-3).map((cat, i) => (
+                  <div key={i} className="flex-shrink-0 text-[10px] px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500 whitespace-nowrap">
+                    {cat.status === 'ok' ? '✅' : '❌'} {cat.category.split('/').pop()} <span className="font-bold">({cat.count})</span>
+                  </div>
+                ))}
+                {job.processedCategories.length > 3 && (
+                  <span className="text-[10px] text-slate-400 self-center">...</span>
+                )}
+              </div>
+            )}
+
             {job.status === 'running' && isTreeMode && job.currentCategory && (
-                <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 p-1.5 rounded border border-blue-100 animate-pulse">
+                <div className="flex items-center gap-2 text-xs text-blue-700 bg-blue-50 p-1.5 rounded border border-blue-100 animate-pulse mt-1">
                   <Zap className="w-3 h-3" />
                   <span className="font-semibold">Przetwarzanie:</span>
                   <span className="font-mono truncate flex-1">{job.currentCategory}</span>
@@ -1519,78 +1666,56 @@ function JobItem({ job }: { job: HarvesterJob }) {
                   Szczegóły
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
               <DialogHeader>
-                <DialogTitle>Job {job.id}</DialogTitle>
+                <DialogTitle>Szczegóły Zadania: {job.id}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-slate-600">Status</p>
-                    <Badge className={getStatusColor(job.status)}>{job.status}</Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600">Source</p>
-                    <p className="font-mono">{job.source}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-600">Query</p>
-                    <p className="font-mono text-xs">{job.query}</p>
-                  </div>
+              <div className="flex-1 overflow-hidden flex flex-col gap-4">
+                {/* Header Stats */}
+                <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg shrink-0 border">
+                    <div>
+                      <p className="text-xs text-slate-500 uppercase font-medium">Status</p>
+                      <Badge className={cn("mt-1", getStatusColor(job.status))}>{job.status}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 uppercase font-medium">Source</p>
+                      <p className="font-mono font-bold text-slate-700">{job.source}</p>
+                    </div>
+                     <div>
+                      <p className="text-xs text-slate-500 uppercase font-medium">Found</p>
+                      <p className="font-bold text-slate-900">{job.productsFound}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 uppercase font-medium">New</p>
+                      <span className="font-bold text-green-600">+{job.productsCreated}</span>
+                      <span className="text-slate-400 mx-1">/</span>
+                      <span className="font-bold text-blue-600">Deal +{job.dealsCreated}</span>
+                    </div>
                 </div>
 
-                <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold text-slate-900">Wyniki</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-slate-600">Produktów znalezionych</p>
-                      <p className="text-lg font-semibold">{job.productsFound}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-600">Nowych produktów</p>
-                      <p className="text-lg font-semibold text-green-600">{job.productsCreated}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-600">Nowych Deali</p>
-                      <p className="text-lg font-semibold text-blue-600">{job.dealsCreated}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-600">Duplikatów pominięto</p>
-                      <p className="text-lg font-semibold text-amber-600">{job.duplicatesSkipped}</p>
-                    </div>
+                 {/* Main Content: Tree View */}
+                {job.processedCategories && job.processedCategories.length > 0 ? (
+                  <div className="flex-1 border rounded-lg overflow-hidden flex flex-col bg-white">
+                     <div className="px-4 py-2 border-b bg-slate-50 flex justify-between items-center">
+                        <span className="font-semibold text-slate-700 flex items-center gap-2">
+                           <ListTree className="w-4 h-4" />
+                           Struktura i Postęp Kategorii
+                        </span>
+                        <Badge variant="outline" className="bg-white">
+                           {job.processedCategories.length} przetworzonych
+                        </Badge>
+                     </div>
+                     <div className="flex-1 overflow-y-auto bg-white">
+                        <JobCategoryTree categories={job.processedCategories} />
+                     </div>
                   </div>
-                </div>
-
-                {job.processedCategories && job.processedCategories.length > 0 && (
-                  <Accordion type="single" collapsible className="w-full bg-slate-50 rounded-lg border">
-                    <AccordionItem value="categories" className="border-0">
-                       <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-slate-100 rounded-lg group text-sm font-semibold text-slate-900">
-                          <div className="flex items-center gap-2">
-                             Szczegóły Kategorii
-                             <Badge variant="secondary" className="bg-white text-slate-600 border-slate-200 ml-2">
-                                {job.processedCategories.length}
-                             </Badge>
-                          </div>
-                       </AccordionTrigger>
-                       <AccordionContent className="px-4 pb-4">
-                          <div className="space-y-1 text-xs max-h-60 overflow-y-auto pt-2 border-t mt-1">
-                            {job.processedCategories.map((cat, i) => (
-                                <div key={i} className="flex justify-between items-center py-1 border-b border-slate-200 last:border-0">
-                                <span className="font-mono text-slate-700 truncate flex-1 pr-2" title={cat.category}>{cat.category}</span>
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <span className="font-bold">{cat.count}</span>
-                                    {cat.status === 'ok' ? (
-                                    <span className="text-green-600">OK</span>
-                                    ) : (
-                                    <span className="text-red-600">ERR</span>
-                                    )}
-                                </div>
-                                </div>
-                            ))}
-                          </div>
-                       </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center border rounded-lg bg-slate-50 border-dashed">
+                     <div className="text-center text-slate-500">
+                        <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>Brak danych o strukturze kategorii dla tego zadania.</p>
+                     </div>
+                  </div>
                 )}
               </div>
             </DialogContent>

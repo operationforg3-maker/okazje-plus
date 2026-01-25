@@ -13,6 +13,7 @@ import {
   extractDimensionsFromTitle,
   normalizeProductIdentifier,
 } from './identity-matcher';
+import { AIRefiner } from './refiner';
 import { convertToPLN } from '@/lib/currency-exchange';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
@@ -888,6 +889,10 @@ export class SmartHarvester {
         source: source as any,
         originalId: sourceProduct.sourceProductId,
         importedAt: now,
+        // Save original raw data for moderation/comparison
+        originalTitle: sourceProduct.title,
+        originalDescription: sourceProduct.description || '',
+        originalUrl: sourceProduct.sourceUrl,
         // NEW: AliExpress category IDs for hot-products mode
         aliexpressCategoryIds: categoryMetadata.aliexpressCategoryIds || [],
         // Product identifiers (critical for deduplication & SEO)
@@ -908,7 +913,29 @@ export class SmartHarvester {
     };
 
     const docRef = await adminDb.collection('product_cores').add(product);
-    return docRef.id;
+    const productId = docRef.id;
+
+    // ========================================================================
+    // INTEGRATED AI REFINEMENT (M6 Requirement)
+    // ========================================================================
+    // Immediately refine the product to ensure descriptions/titles are AI-enhanced
+    // before the Deal is created.
+    try {
+      this.addLog('info', `Starting integrated AI refinement for ${productId}...`);
+      const refiner = new AIRefiner(this.jobId);
+      
+      // Perform full enrichment
+      const enriched = await refiner.enrichSingleProduct({ ...product, id: productId });
+      
+      // Update in Firestore
+      await docRef.update(enriched);
+      
+      this.addLog('info', `AI Refinement complete for ${productId}`);
+    } catch (err) {
+      this.addLog('warn', `AI Refinement failed for ${productId} - continuing with raw data`, err);
+    }
+
+    return productId;
   }
 
   /**

@@ -37,7 +37,7 @@ export async function generateText(
     model?: "gemini-1.5-flash" | "gemini-1.5-pro";
   }
 ): Promise<string> {
-  const model = options?.model || "gemini-1.5-flash";
+  const model = options?.model || "gemini-2.0-flash-exp";
   const temperature = options?.temperature ?? 0.4;
   const maxTokens = options?.maxTokens ?? 512;
 
@@ -219,7 +219,7 @@ export async function moderateText(text: string): Promise<TextModerationResult> 
     const vertex = getVertexInstance();
     // Use stable model for moderation checks to ensure availability
     const model = vertex.preview.getGenerativeModel({
-      model: "gemini-1.0-pro",
+      model: "gemini-2.0-flash-exp",
     });
 
     const response = await model.generateContent({

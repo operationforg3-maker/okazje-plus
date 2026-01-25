@@ -6,7 +6,7 @@
  * - Safety & moderation
  */
 
-import { gemini15Flash } from "@genkit-ai/vertexai";
+import { gemini20Flash } from "@genkit-ai/vertexai";
 import { ai } from "../genkit";
 import { logger } from "@/lib/logging";
 import { parseJsonFromResponse, moderateText } from "@/lib/vertex";
@@ -130,6 +130,7 @@ Return JSON:
 }`;
 
       const response = await ai.generate({
+        model: gemini20Flash,
         prompt,
         config: { temperature: 0.4, maxOutputTokens: 500 },
       });
@@ -181,6 +182,7 @@ Guidelines:
 Return as JSON: { "seoTitle": "...", "seoDescription": "...", "features": ["...", "..."] }`;
 
       const response = await ai.generate({
+        model: gemini20Flash,
         prompt,
         config: { temperature: 0.5, maxOutputTokens: 1000 },
       });
@@ -232,6 +234,7 @@ Maintain SEO quality and readability. Return ONLY the translated text, no explan
 Text: ${input.text}`;
 
         const response = await ai.generate({
+          model: gemini20Flash,
           prompt,
           config: { temperature: 0.3, maxOutputTokens: 500 },
         });
@@ -266,6 +269,7 @@ Tags: searchable categories/attributes (max 10)
 Keywords: SEO-focused terms (max 10)`;
 
       const response = await ai.generate({
+        model: gemini20Flash,
         prompt,
         config: { temperature: 0.4, maxOutputTokens: 300 },
       });

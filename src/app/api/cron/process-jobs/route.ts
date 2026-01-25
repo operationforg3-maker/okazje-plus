@@ -691,7 +691,8 @@ async function processUIImportJob(uiJob: any): Promise<void> {
             fetched: pipelineResult.fetched.length,
             deduplicated: pipelineResult.deduplicated.length,
             enriched: pipelineResult.enriched.length,
-            translated: pipelineResult.translated.length,
+            // Translation is now part of enrichment
+            refiner: pipelineResult.enriched.length,
           });
         }
         
