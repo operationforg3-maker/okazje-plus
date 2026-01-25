@@ -1,26 +1,18 @@
 /**
- * Modular Product Importer - Orchestra wyciągająca wszystkie 5 etapów
+ * Modular Product Importer - Atomic Import+Refine Architecture
  * 
- * Wzorzec użycia:
- * ```typescript
- * const result = await runProductImportPipeline(
- *   ['phones', 'laptops'],
- *   {
- *     mainCategorySlug: 'electronics',
- *     maxProducts: 500,
- *     translateToPolish: true,
- *     currencyRate: 4.2,
- *   }
- * );
- * ```
+ * New Flow (M6):
+ * 1. Fetch (API) -> 1.5 Enhance (Details) -> 2. Dedupe -> 3. Refine (AI Genkit) -> 4. Save (Firestore)
+ * 
+ * consolidates Import + Refinement into a single atomic operation.
  */
 
 import { fetchProductsFromAliexpress, fetchProductsFromConvertiser } from './stageFetch';
 import { enhanceProductDetails } from './stageEnhance';
 import { deduplicateProducts, sanitizeProducts } from './stageDedupe';
-import { enrichProducts } from './stageEnrich';
-import { translateProducts } from './stageTranslate';
-import { saveProductsToFirestore, SaveConfig } from './stageSave';
+import { refineProductsBatch } from './stageEnrich';
+// import { autoPromoteHotDeals } from './stageAutoPromote'; // Disabled for atomic refactor safety
+import { saveProductsToFirestore } from './stageSave';
 import { EnrichedProduct, ImportJobConfig, AliExpressProduct } from './types';
 import { FieldValue } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase-admin';
@@ -46,21 +38,26 @@ export interface PipelineConfig extends Partial<ImportJobConfig> {
   jobId?: string;
   keywords: string[];
   maxProducts?: number;
-  categoryPath: string[];
+  categoryPath: string[]; // [Main, Sub, SubSub]
   categorySlugEN: string;
   subcategorySlugEN: string;
   subsubcategorySlugEN?: string;
-  categoryNamePL?: string; // NEW: Polish category name for saving to Firestore
-  subcategoryNamePL?: string; // NEW: Polish subcategory name for saving to Firestore
-  subsubcategoryNamePL?: string; // NEW: Polish sub-subcategory name for saving to Firestore
-  translateToPolish?: boolean;
+  
+  // Polish names for saving
+  categoryNamePL?: string; 
+  subcategoryNamePL?: string; 
+  subsubcategoryNamePL?: string; 
+  
+  // Importer settings
+  importerType?: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct';
+  aliexpressCategoryIds?: string[];
+  translateToPolish?: boolean; // Legacy flag, now implicit in Refiner
   currencyRate?: number;
-  importerType?: 'keyword-search' | 'hot-products' | 'convertiser' | 'category-direct'; // NEW: wybór metody importu
-  aliexpressCategoryIds?: string[]; // NEW: dla hot-products i category-direct
+  
+  // Stage configs
   fetch?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
   dedupe?: { batchSize?: number; minPrice?: number; maxPrice?: number; minRating?: number; minOrders?: number };
   enrich?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
-  translate?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
   save?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; skipExisting?: boolean };
 }
 
@@ -70,7 +67,6 @@ export async function runProductImportPipeline(
   fetched: AliExpressProduct[];
   deduplicated: AliExpressProduct[];
   enriched: EnrichedProduct[];
-  translated: EnrichedProduct[];
   saved: { created: string[]; updated: string[]; skipped: string[] };
   totalTime: number;
 }> {
@@ -78,27 +74,26 @@ export async function runProductImportPipeline(
   const jobId = config.jobId;
   
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`[ProductImporter] Starting pipeline for ${config.subcategorySlugEN}`);
+  console.log(`[ProductImporter] Starting NEW Atomic Pipeline for ${config.subcategorySlugEN}`);
+  console.log(`[ProductImporter] Job ID: ${jobId || 'N/A'}`);
   console.log(`${'='.repeat(60)}\n`);
   
-  await logToJob(jobId, `Starting pipeline for ${config.subcategorySlugEN}`);
+  await logToJob(jobId, `Starting Atomic Pipeline for ${config.subcategorySlugEN} (${config.keywords.join(', ')})`);
   
   try {
+    // =========================================================================
     // STAGE 1: FETCH
+    // =========================================================================
     const sourceLabel = config.importerType === 'convertiser' ? 'Convertiser' : 'AliExpress';
     console.log(`[ProductImporter] Stage 1: FETCH from ${sourceLabel}`);
-    console.log(`[ProductImporter] Importer Type: ${config.importerType || 'keyword-search'}`);
-    
-    await logToJob(jobId, `Stage 1: Fetching from ${sourceLabel}`, { importerType: config.importerType });
     
     let fetched: AliExpressProduct[] = [];
     
     if (config.importerType === 'convertiser') {
-      // Fetch from Convertiser instead of AliExpress
       fetched = await fetchProductsFromConvertiser(
         config.keywords,
         {
-          name: 'fetch',
+          name: 'fetch-convertiser',
           batchSize: config.fetch?.batchSize || 50,
           delayBetweenItems: config.fetch?.delayBetweenItems || 100,
           delayBetweenBatches: config.fetch?.delayBetweenBatches || 500,
@@ -107,16 +102,15 @@ export async function runProductImportPipeline(
         }
       );
     } else {
-      // Fetch from AliExpress (default, hot-products, category-direct)
       fetched = await fetchProductsFromAliexpress(
         config.keywords,
         {
-          name: 'fetch',
+          name: 'fetch-ali',
           batchSize: config.fetch?.batchSize || 50,
           delayBetweenItems: config.fetch?.delayBetweenItems || 200,
           delayBetweenBatches: config.fetch?.delayBetweenBatches || 1000,
           maxRetries: config.fetch?.maxRetries || 2,
-          importerType: config.importerType || 'keyword-search', // NEW: pass importer type
+          importerType: config.importerType || 'keyword-search',
         }
       );
     }
@@ -125,27 +119,22 @@ export async function runProductImportPipeline(
     await logToJob(jobId, `Stage 1: Fetched ${fetched.length} products`, { source: sourceLabel });
     
     if (fetched.length === 0) {
-      console.error(`[ProductImporter] ❌ PROBLEM: No products fetched!`);
-      console.error(`[ProductImporter] Possible reasons:`);
-      console.error(`  1. ${sourceLabel} API not configured - check .env.local`);
-      console.error(`  2. Keywords don't match products: ${config.keywords.join(', ')}`);
-      console.error(`  3. API rate limiting or network issue`);
-      console.error(`[ProductImporter] Aborting pipeline for ${config.categorySlugEN}/${config.subcategorySlugEN}`);
+      console.error(`[ProductImporter] ❌ Aborting: No products fetched.`);
       await logToJob(jobId, `Aborting: No products fetched from ${sourceLabel}`);
       return {
         fetched: [],
         deduplicated: [],
         enriched: [],
-        translated: [],
         saved: { created: [], updated: [], skipped: [] },
         totalTime: Date.now() - startTime,
       };
     }
     
-    // STAGE 1.5: ENHANCE (Pobierz szczegółowe dane produktów)
-    console.log(`[ProductImporter] Stage 1.5: ENHANCE - Fetching detailed product info`);
-    await logToJob(jobId, `Stage 1.5: Enhancing with detailed data...`);
-    
+    // =========================================================================
+    // STAGE 1.5: ENHANCE (Details)
+    // =========================================================================
+    console.log(`[ProductImporter] Stage 1.5: ENHANCE (Detail Fetching)`);
+    // Note: Enhance is critical for specs that the Refiner will normalize
     const enhanced = await enhanceProductDetails(fetched, {
       name: 'enhance',
       batchSize: 10,
@@ -153,17 +142,17 @@ export async function runProductImportPipeline(
       delayBetweenBatches: 1000,
       maxRetries: 2,
       siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002',
-      skipIfHasDescription: false, // Always fetch details
+      skipIfHasDescription: false,
     });
     
-    console.log(`[ProductImporter] ✅ Enhanced: ${enhanced.length} products with detailed data`);
-    await logToJob(jobId, `Stage 1.5: Enhanced ${enhanced.length} products`);
+    console.log(`[ProductImporter] ✅ Enhanced: ${enhanced.length} products`);
+    await logToJob(jobId, `Stage 1.5: Enhanced ${enhanced.length} products with details`);
     
+    // =========================================================================
     // STAGE 2: DEDUPE
+    // =========================================================================
     console.log(`[ProductImporter] Stage 2: DEDUPLICATE & SANITIZE`);
-    await logToJob(jobId, `Stage 2: Deduplicating...`);
     
-    // Sanitize with relaxed rules
     let deduplicated = sanitizeProducts(enhanced);
     deduplicated = await deduplicateProducts(
       deduplicated,
@@ -180,7 +169,7 @@ export async function runProductImportPipeline(
       }
     );
     
-    console.log(`[ProductImporter] Deduplicated: ${deduplicated.length} products\n`);
+    console.log(`[ProductImporter] ✅ Deduplicated: ${deduplicated.length} valid products`);
     await logToJob(jobId, `Stage 2: Deduplicated to ${deduplicated.length} products`);
     
     if (deduplicated.length === 0) {
@@ -189,83 +178,65 @@ export async function runProductImportPipeline(
         fetched,
         deduplicated: [],
         enriched: [],
-        translated: [],
         saved: { created: [], updated: [], skipped: [] },
         totalTime: Date.now() - startTime,
       };
     }
     
-    // Limit to maxProducts if specified
-    let forEnrichment = deduplicated;
-    if (config.maxProducts && forEnrichment.length > config.maxProducts) {
-      forEnrichment = forEnrichment.slice(0, config.maxProducts);
-      console.log(`[ProductImporter] Limited to ${config.maxProducts} products\n`);
+    // Limit cap
+    let forRefinement = deduplicated;
+    if (config.maxProducts && forRefinement.length > config.maxProducts) {
+      forRefinement = forRefinement.slice(0, config.maxProducts);
+      console.log(`[ProductImporter] Limited to ${config.maxProducts} products for refinement`);
     }
     
-    // STAGE 3: ENRICH
-    console.log(`[ProductImporter] Stage 3: ENRICH & NORMALIZE`);
-    const enriched = await enrichProducts(
-      forEnrichment,
+    // =========================================================================
+    // STAGE 3: REFINE (Atomic Enrichment + Localization)
+    // =========================================================================
+    console.log(`[ProductImporter] Stage 3: REFINE (AI Genkit - PL/EN/DE + Quality)`);
+    await logToJob(jobId, `Stage 3: Starting AI Refinement (Gemini 1.5 Flash)...`);
+    
+    const enriched = await refineProductsBatch(
+      forRefinement,
       config.categorySlugEN,
       config.subcategorySlugEN,
       config.subsubcategorySlugEN || config.subcategorySlugEN,
       {
-        name: 'enrich',
-        batchSize: config.enrich?.batchSize ?? 10,
-        delayBetweenItems: config.enrich?.delayBetweenItems ?? 200,
-        delayBetweenBatches: config.enrich?.delayBetweenBatches ?? 1000,
-        maxRetries: config.enrich?.maxRetries ?? 1,
-        currencyTarget: 'PLN',
-        exchangeRateUsdToPln: config.currencyRate ?? 4.0,
+        name: 'refine',
+        batchSize: config.enrich?.batchSize ?? 5, // Process in small batches for Genkit stability
+        delayBetweenItems: config.enrich?.delayBetweenItems ?? 500,
+        delayBetweenBatches: config.enrich?.delayBetweenBatches ?? 2000,
+        maxRetries: config.enrich?.maxRetries ?? 2,
+        currencyRate: config.currencyRate ?? 4.0,
       }
     );
     
-    console.log(`[ProductImporter] Enriched: ${enriched.length} products\n`);
-    await logToJob(jobId, `Stage 3: Enriched ${enriched.length} products`);
+    console.log(`[ProductImporter] ✅ Refined: ${enriched.length} high-quality products`);
+    await logToJob(jobId, `Stage 3: Successfully refined ${enriched.length} products`);
+
+    if (enriched.length === 0) {
+      console.warn(`[ProductImporter] No products passed Refinement (Quality Score / Errors), aborting`);
+      await logToJob(jobId, `Stage 3 Warning: All products failed refinement.`);
+      return {
+        fetched,
+        deduplicated,
+        enriched: [],
+        saved: { created: [], updated: [], skipped: [] },
+        totalTime: Date.now() - startTime,
+      };
+    }
+
+    // =========================================================================
+    // STAGE 4: SAVE (Firestore)
+    // =========================================================================
+    console.log(`[ProductImporter] Stage 4: SAVE to Firestore`);
+    await logToJob(jobId, `Stage 4: Saving to Firestore...`);
     
-    // STAGE 4: AI SMART CONTENT GENERATION (Parallel Multilingual)
-    console.log(`[ProductImporter] Stage 4: AI SMART CONTENT GENERATION`);
-    await logToJob(jobId, `Stage 4: Generating AI content (PL/EN/DE)...`);
-    
-    const { generateSmartContentForProducts } = await import('./stageSmartContent');
-    const withAIContent = await generateSmartContentForProducts(
+    const saved = await saveProductsToFirestore(
       enriched,
       {
-        name: 'smartcontent',
-        batchSize: config.translate?.batchSize ?? 10,
-        delayBetweenItems: config.translate?.delayBetweenItems ?? 200,
-        delayBetweenBatches: config.translate?.delayBetweenBatches ?? 1000,
-        maxRetries: config.translate?.maxRetries ?? 2,
-      }
-    );
-    
-    console.log(`[ProductImporter] AI Content Generated: ${withAIContent.length} products\n`);
-    await logToJob(jobId, `Stage 4: Generated AI content for ${withAIContent.length} products`);
-    
-    // STAGE 4.5: AUTO-PROMOTE HOT DEALS
-    console.log(`[ProductImporter] Stage 4.5: AUTO-PROMOTE HOT DEALS`);
-    await logToJob(jobId, `Stage 4.5: Auto-promoting hot deals...`);
-    
-    const { autoPromoteHotDeals } = await import('./stageAutoPromote');
-    const promotionResult = await autoPromoteHotDeals(withAIContent, {
-      minDiscount: 40,
-      minRating: 4.5,
-      minSalesVolume: 100,
-    });
-    
-    console.log(`[ProductImporter] Hot Deals Promoted: ${promotionResult.promoted.length} products\n`);
-    await logToJob(jobId, `Stage 4.5: Promoted ${promotionResult.promoted.length} hot deals`);
-    
-    let translated = withAIContent;
-    
-    // STAGE 5: SAVE
-    console.log(`[ProductImporter] Stage 5: SAVE to Firestore`);
-    await logToJob(jobId, `Stage 5: Saving to Firestore...`);
-    const saved = await saveProductsToFirestore(
-      translated,
-      {
         name: 'save',
-        batchSize: config.save?.batchSize || 5,
+        batchSize: config.save?.batchSize || 10,
         delayBetweenItems: config.save?.delayBetweenItems || 100,
         delayBetweenBatches: config.save?.delayBetweenBatches || 500,
         maxRetries: 0,
@@ -277,37 +248,34 @@ export async function runProductImportPipeline(
       }
     );
     
-    console.log(`[ProductImporter] Saved: ${saved.created.length} created, ${saved.updated.length} updated, ${saved.skipped.length} skipped\n`);
+    console.log(`[ProductImporter] ✅ Saved: ${saved.created.length} new, ${saved.updated.length} updated, ${saved.skipped.length} skipped`);
     
+    // =========================================================================
+    // SUMMARY
+    // =========================================================================
     const totalTime = Date.now() - startTime;
-    console.log(`${'='.repeat(60)}`);
-    console.log(`[ProductImporter] Pipeline completed in ${(totalTime / 1000).toFixed(1)}s`);
-    console.log(`[ProductImporter] ✅ SUMMARY:`);
-    console.log(`  📦 Fetched: ${fetched.length} products`);
-    console.log(`  🔍 Deduplicated: ${deduplicated.length} products`);
-    console.log(`  ✨ Enriched: ${enriched.length} products`);
-    console.log(`  🌐 Translated: ${translated.length} products`);
-    console.log(`  💾 Saved: ${saved.created.length} created, ${saved.updated.length} updated, ${saved.skipped.length} skipped`);
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[ProductImporter] ATOMIC PIPELINE COMPLETED in ${(totalTime / 1000).toFixed(1)}s`);
+    console.log(`[ProductImporter]   📦 Fetched:      ${fetched.length}`);
+    console.log(`[ProductImporter]   🔍 Deduplicated: ${deduplicated.length}`);
+    console.log(`[ProductImporter]   ✨ Refined:      ${enriched.length}`);
+    console.log(`[ProductImporter]   💾 Created:      ${saved.created.length}`);
+    console.log(`[ProductImporter]   📝 Updated:      ${saved.updated.length}`);
     console.log(`${'='.repeat(60)}\n`);
     
+    await logToJob(jobId, `Pipeline Completed in ${(totalTime / 1000).toFixed(0)}s. Created: ${saved.created.length}, Updated: ${saved.updated.length}.`);
+
     return {
       fetched,
       deduplicated,
       enriched,
-      translated,
       saved,
       totalTime,
     };
     
   } catch (error: any) {
-    console.error(`[ProductImporter] Pipeline failed:`, error);
+    console.error(`[ProductImporter] ❌ CRITICAL ERROR in Pipeline:`, error);
+    await logToJob(jobId, `Critical Pipeline Failure: ${error.message}`);
     throw error;
   }
 }
-
-export { fetchProductsFromAliexpress, fetchProductsFromConvertiser } from './stageFetch';
-export { deduplicateProducts, sanitizeProducts } from './stageDedupe';
-export { enrichProducts } from './stageEnrich';
-export { translateProducts } from './stageTranslate';
-export { saveProductsToFirestore } from './stageSave';
-export type { EnrichedProduct, ImportJobConfig, ImportStageConfig } from './types';

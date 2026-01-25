@@ -32,6 +32,7 @@ import {
   ChevronDown,
   ChevronUp,
   Eye,
+  AlertTriangle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -323,6 +324,7 @@ export default function M6ImportDashboard() {
   const [killing, setKilling] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [showDuplicatesDialog, setShowDuplicatesDialog] = useState(false);
+  const [pendingCounts, setPendingCounts] = useState<{ products: number; deals: number; draft: number } | null>(null);
 
   // Critical: Prevent hydration mismatch
   useEffect(() => {
@@ -415,6 +417,19 @@ export default function M6ImportDashboard() {
       } else if (resRefiner.ok) {
         const dataRefiner = await resRefiner.json();
         setRefinerJobs(dataRefiner.jobs || []);
+      }
+
+      // Fetch Pending Counts (Moderation)
+      const resPending = await fetch("/api/admin/pending-counts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (resPending.ok) {
+        const dataPending = await resPending.json();
+        setPendingCounts({
+          products: dataPending.pendingProducts || 0,
+          deals: dataPending.pendingDeals || 0,
+          draft: dataPending.draftProducts || 0,
+        });
       }
 
       setAuthError(null);
@@ -637,6 +652,38 @@ export default function M6ImportDashboard() {
                  <div className="text-xs text-slate-500 mt-1">
                   Dopasowane do istniejących
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow border-l-4 border-l-orange-400">
+            <CardContent className="pt-6">
+              <div className="space-y-2">
+                 <div className="flex gap-2 items-center text-orange-600">
+                    <AlertTriangle className="w-4 h-4" />
+                    <p className="text-sm font-semibold">Do moderacji</p>
+                 </div>
+                 
+                 {pendingCounts ? (
+                    <div className="space-y-1 mt-1">
+                       <div className="flex justify-between items-baseline">
+                          <span className="text-xs text-slate-600">Produkty:</span>
+                          <span className="text-2xl font-bold text-slate-800">{pendingCounts.products}</span>
+                       </div>
+                       <div className="flex justify-between items-baseline pt-1 border-t border-dashed">
+                          <span className="text-xs text-slate-600">Okazje:</span>
+                          <span className="text-xl font-bold text-slate-700">{pendingCounts.deals}</span>
+                       </div>
+                       <div className="flex justify-between items-baseline pt-1 border-t border-dashed">
+                          <span className="text-xs text-slate-400">Draft:</span>
+                          <span className="text-sm font-mono text-slate-500">{pendingCounts.draft}</span>
+                       </div>
+                    </div>
+                 ) : (
+                    <div className="h-20 flex items-center justify-center">
+                       <div className="animate-spin w-5 h-5 border-2 border-orange-200 border-t-orange-500 rounded-full" />
+                    </div>
+                 )}
               </div>
             </CardContent>
           </Card>
@@ -1515,26 +1562,35 @@ function JobItem({ job }: { job: HarvesterJob }) {
                 </div>
 
                 {job.processedCategories && job.processedCategories.length > 0 && (
-                  <div className="bg-slate-50 rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
-                    <h4 className="font-semibold text-slate-900 sticky top-0 bg-slate-50 pb-2 border-b text-sm">
-                      Szczegóły Kategorii ({job.processedCategories.length})
-                    </h4>
-                    <div className="space-y-1 text-xs">
-                      {job.processedCategories.map((cat, i) => (
-                        <div key={i} className="flex justify-between items-center py-1 border-b border-slate-200 last:border-0">
-                          <span className="font-mono text-slate-700 truncate flex-1 pr-2" title={cat.category}>{cat.category}</span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-bold">{cat.count}</span>
-                            {cat.status === 'ok' ? (
-                              <span className="text-green-600">OK</span>
-                            ) : (
-                              <span className="text-red-600">ERR</span>
-                            )}
+                  <Accordion type="single" collapsible className="w-full bg-slate-50 rounded-lg border">
+                    <AccordionItem value="categories" className="border-0">
+                       <AccordionTrigger className="px-4 py-2 hover:no-underline hover:bg-slate-100 rounded-lg group text-sm font-semibold text-slate-900">
+                          <div className="flex items-center gap-2">
+                             Szczegóły Kategorii
+                             <Badge variant="secondary" className="bg-white text-slate-600 border-slate-200 ml-2">
+                                {job.processedCategories.length}
+                             </Badge>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                       </AccordionTrigger>
+                       <AccordionContent className="px-4 pb-4">
+                          <div className="space-y-1 text-xs max-h-60 overflow-y-auto pt-2 border-t mt-1">
+                            {job.processedCategories.map((cat, i) => (
+                                <div key={i} className="flex justify-between items-center py-1 border-b border-slate-200 last:border-0">
+                                <span className="font-mono text-slate-700 truncate flex-1 pr-2" title={cat.category}>{cat.category}</span>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="font-bold">{cat.count}</span>
+                                    {cat.status === 'ok' ? (
+                                    <span className="text-green-600">OK</span>
+                                    ) : (
+                                    <span className="text-red-600">ERR</span>
+                                    )}
+                                </div>
+                                </div>
+                            ))}
+                          </div>
+                       </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 )}
               </div>
             </DialogContent>
