@@ -280,7 +280,8 @@ export class AIRefiner {
       // Generate multilingual descriptions
       refined.fullDescription = await this.generateDescriptions(
         refined.title || product.title,
-        refined.specs || product.specs || {}
+        refined.specs || product.specs || {},
+        product.metadata
       );
 
       // Generate SEO metadata
@@ -398,32 +399,55 @@ export class AIRefiner {
    */
   private async generateDescriptions(
     title: LocalizedText,
-    specs: Record<string, string>
+    specs: Record<string, string>,
+    metadata?: ProductCore['metadata']
   ): Promise<LocalizedText> {
     try {
       const { translateContent } = await import('@/ai/flows/enrichment');
       
-      const titlePL = title.pl || '';
-      if (!titlePL) return title; // Cant generate without base
+      // M6 FIX: Determine source language from metadata
+      // AliExpress fetches are now in English (for better AI translation context)
+      // but Harvester puts the same title in PL/EN/DE.
+      // We must detect if we should treat the "PL" input as actually English.
+      const isEnSource = metadata?.source === 'aliexpress' || metadata?.source === 'amazon';
+      const sourceLocale = isEnSource ? 'en' : 'pl';
+      const targetLocales = isEnSource ? ['pl', 'de'] : ['en', 'de'];
+
+      // Use the appropriate title base
+      const baseTitle = isEnSource ? (title.en || title.pl || '') : (title.pl || '');
+      if (!baseTitle) return title; // Cant generate without base
 
       const specsText = Object.entries(specs)
         .map(([k, v]) => `${k}: ${v}`)
         .join(', ');
 
-      const baseDescription = `${titlePL}. Specyfikacja: ${specsText}.`;
+      const baseDescription = `${baseTitle}. Specyfikacja: ${specsText}.`;
 
       // Use AI to translate/generate descriptions
       const translationResult = await translateContent({
         text: baseDescription,
-        sourceLocale: 'pl',
-        targetLocales: ['en', 'de']
+        sourceLocale: sourceLocale,
+        targetLocales: targetLocales
       });
-
-      return {
-        pl: baseDescription,
-        en: translationResult.translations['en'] || `[AI] ${title.en || titlePL}`,
-        de: translationResult.translations['de'] || `[AI] ${title.de || titlePL}`,
+      
+      // Map translations to result
+      const result: LocalizedText = {
+        pl: '',
+        en: '',
+        de: ''
       };
+
+      if (sourceLocale === 'en') {
+        result.en = baseDescription;
+        result.pl = translationResult.translations['pl'] || `[AI] ${baseTitle}`;
+        result.de = translationResult.translations['de'] || `[AI] ${baseTitle}`;
+      } else {
+        result.pl = baseDescription;
+        result.en = translationResult.translations['en'] || `[AI] ${baseTitle}`;
+        result.de = translationResult.translations['de'] || `[AI] ${baseTitle}`;
+      }
+
+      return result;
     } catch (e) {
       console.error('Error generating descriptions:', e);
       // Fallback
