@@ -1,5 +1,5 @@
 // @ts-nocheck
-import type { Deal, Product, ProductImageEntry, ProductRatingCard, ProductRatingSources } from '@/lib/types';
+import type { Deal, Product, ProductImageEntry, ProductRatingCard, ProductRatingSources, LocalizedText } from '@/lib/types';
 
 type ProductMetadata = NonNullable<Product['metadata']>;
 type DealMetadata = NonNullable<Deal['metadata']>;
@@ -438,6 +438,30 @@ export const sanitizeProductRecord = (raw: any, id: string): Product => ({
 });
 
 export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
+  // Helper to sanitize LocalizedText
+  const sanitizeLocalizedText = (value: any, fallback = { pl: 'Oferta', en: 'Deal', de: 'Angebot' }): LocalizedText => {
+    if (!value) {
+      return fallback;
+    }
+    // If already a LocalizedText object
+    if (typeof value === 'object' && !Array.isArray(value) && ('pl' in value || 'en' in value)) {
+      return {
+        pl: ensureString((value as any).pl, fallback.pl),
+        en: ensureString((value as any).en, fallback.en),
+        de: ensureOptionalString((value as any).de) || fallback.de,
+      } as LocalizedText;
+    }
+    // If a string (legacy format), convert to LocalizedText
+    if (typeof value === 'string' && value.trim()) {
+      return {
+        pl: value.trim(),
+        en: value.trim(),
+        de: value.trim(),
+      };
+    }
+    return fallback;
+  };
+
   const status = ensureString(raw.status, 'draft');
   const normalizedStatus: Deal['status'] = ['draft', 'approved', 'rejected'].includes(status)
     ? (status as Deal['status'])
@@ -448,13 +472,13 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     : undefined;
 
   return {
-    title: ensureString(raw.title, 'Oferta'),
-    description: ensureString(raw.description, ''),
+    title: sanitizeLocalizedText(raw.title),
+    description: sanitizeLocalizedText(raw.description, { pl: '', en: '', de: '' }),
     price: ensurePrice(raw.price),
     originalPrice: ensureOptionalNumber(raw.originalPrice),
     link: ensureString(raw.link, FALLBACK_URL) || FALLBACK_URL,
     image: ensureString(raw.image, FALLBACK_IMAGE) || FALLBACK_IMAGE,
-    imageHint: ensureString(raw.imageHint || raw.title || 'okazja', 'okazja'),
+    imageHint: ensureString(raw.imageHint || (typeof raw.title === 'string' ? raw.title : (raw.title as any)?.pl) || 'okazja', 'okazja'),
     postedBy: ensureString(raw.postedBy, 'system'),
     postedAt: ensureString(raw.postedAt, new Date().toISOString()),
     voteCount: ensureNumber(raw.voteCount, 0),

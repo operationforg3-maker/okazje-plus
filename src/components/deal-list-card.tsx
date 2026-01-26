@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo } from '@/lib/i18n-utils';
+import { useContentLanguage } from '@/hooks/use-content-language';
 
 interface DealListCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -76,6 +77,8 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { mainName: categoryLabel } = useCategoryName(deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const { getText } = useContentLanguage();
   const [dealData, setDealData] = useState<{
     isNew: boolean;
     relativeTime: string;
@@ -92,7 +95,18 @@ export default function DealListCard({ deal }: DealListCardProps) {
     discount: null,
   });
   
-  const description = safeText(deal.description);
+  // Hydration safety - set mounted flag on client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  // Get localized deal title and description - handle both LocalizedText objects and legacy strings
+  const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || 'Okazja', en: deal.title || 'Deal' };
+  const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
+  
+  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || 'Okazja');
+  const description = isMounted ? getText(descObj) : (descObj.pl || '');
+  
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   const { currency } = useCurrency();
 
@@ -216,7 +230,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
           <div className="flex items-center justify-between gap-3">
             <Link href={`${prefix}/deals/${deal.id}`} className="group/title">
               <h3 className="font-headline text-xl font-semibold group-hover/title:text-primary transition-colors line-clamp-2">
-                {safeText(deal.title)}
+                {dealTitle}
               </h3>
             </Link>
           </div>
