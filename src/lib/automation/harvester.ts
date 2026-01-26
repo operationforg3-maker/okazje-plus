@@ -1108,10 +1108,15 @@ export class SmartHarvester {
         reviewCount: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
         avgRating: sourceProduct.rating || 0,
       },
-      title: {
-        pl: sourceProduct.title || 'Produkt',
-        en: sourceProduct.title || 'Product',
-        de: sourceProduct.title || 'Produkt',
+      // M6: Use sourceProduct title if available, otherwise fallback to ProductCore title (NEVER empty)
+      title: sourceProduct.title && sourceProduct.title.trim() ? {
+        pl: sourceProduct.title,
+        en: sourceProduct.title,
+        de: sourceProduct.title,
+      } : {
+        pl: product.title.pl,
+        en: product.title.en,
+        de: product.title.de,
       } as LocalizedText,
       description: typeof product?.shortDescription === 'object' 
         ? (product.shortDescription.pl || product.shortDescription.en || '') 

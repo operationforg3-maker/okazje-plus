@@ -211,10 +211,11 @@ export default function DealCard({ deal, product }: DealCardProps) {
   
   // Get localized deal title and description - use safe defaults to prevent hydration mismatch
   // Handle both LocalizedText and legacy string formats
-  const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || 'Okazja', en: deal.title || 'Deal' };
+  // NOTE: Empty string fallback is intentional - if deal title is missing, it should come from ProductCore
+  const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || '', en: deal.title || '' };
   const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
   
-  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || 'Okazja');
+  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || '');
   const dealDescription = isMounted ? getText(descObj) : (descObj.pl || '');
   
   const couponCode = safeText(deal.couponCode);

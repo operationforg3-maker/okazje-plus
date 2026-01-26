@@ -101,10 +101,11 @@ export default function DealListCard({ deal }: DealListCardProps) {
   }, []);
   
   // Get localized deal title and description - handle both LocalizedText objects and legacy strings
-  const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || 'Okazja', en: deal.title || 'Deal' };
+  // NOTE: Empty string fallback is intentional - if deal title is missing, it should come from ProductCore
+  const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || '', en: deal.title || '' };
   const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
   
-  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || 'Okazja');
+  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || '');
   const description = isMounted ? getText(descObj) : (descObj.pl || '');
   
   const postedBy = safeText(deal.postedBy, 'Użytkownik');

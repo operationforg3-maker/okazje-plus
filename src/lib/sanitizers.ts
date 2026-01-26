@@ -439,7 +439,9 @@ export const sanitizeProductRecord = (raw: any, id: string): Product => ({
 
 export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
   // Helper to sanitize LocalizedText
-  const sanitizeLocalizedText = (value: any, fallback = { pl: 'Oferta', en: 'Deal', de: 'Angebot' }): LocalizedText => {
+  // NOTE: For deal.title, empty string fallback is intentional - components should handle missing titles
+  // by pulling from linkedProductIds[0] (ProductCore) if available
+  const sanitizeLocalizedText = (value: any, fallback = { pl: '', en: '', de: '' }): LocalizedText => {
     if (!value) {
       return fallback;
     }
@@ -472,7 +474,7 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     : undefined;
 
   return {
-    title: sanitizeLocalizedText(raw.title),
+    title: sanitizeLocalizedText(raw.title, { pl: '', en: '', de: '' }),
     description: sanitizeLocalizedText(raw.description, { pl: '', en: '', de: '' }),
     price: ensurePrice(raw.price),
     originalPrice: ensureOptionalNumber(raw.originalPrice),
