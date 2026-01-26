@@ -580,27 +580,58 @@ export class SmartHarvester {
         return [];
       }
       
-      this.addLog('info', `Found ${response.products.length} products from AliExpress`);
+      this.addLog('info', `Found ${response.products.length} products from AliExpress. Fetching deep details for top items...`);
+      
+      // DEEP FETCH: Get detailed info (HTML descriptions) for top 10 items
+      // We can't do all 50 due to rate limits/performance, but top 10 is good for quality
+      const productsToEnrich = response.products.slice(0, 50); // M6: Try more? No, stick to batch to avoid timeout
+      
+      const detailedProducts = await Promise.all(
+        productsToEnrich.map(async (p: any) => {
+          try {
+            // Only fetch details if we have an ID
+            const pid = String(p.item_id || p.product_id || '');
+            if (!pid) return p;
+
+            // Fetch details (includes HTML description now)
+            const details = await client.getProductDetails({
+              productId: pid,
+              targetCurrency: 'PLN',
+              targetLanguage: 'EN',
+              shipToCountry: 'PL'
+            });
+
+            if (details) {
+              return { ...p, ...details }; // Merge details into product
+            }
+            return p;
+          } catch (e) {
+            // Fail silently on detail fetch, keep basic info
+            return p;
+          }
+        })
+      );
       
       // Transform to RawProduct format (already in PLN from API)
-      return response.products.map((p: any) => ({
+      return detailedProducts.map((p: any) => ({
         title: p.title || p.product_title || '',
-        imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : '',
-        price: p.price?.current || 0,
-        originalPrice: p.price?.original || undefined, // Price before discount
-        currency: p.price?.currency || 'PLN', // Should be PLN from API
+        description: p.product_description || '', // RAW HTML from Deep Fetch
+        imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : (p.product_main_image_url || ''),
+        price: p.price?.current || p.target_sale_price || 0,
+        originalPrice: p.price?.original || p.original_price || undefined, // Price before discount
+        currency: p.price?.currency || p.target_sale_price_currency || 'PLN', // Should be PLN from API
         shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
-        shippingDays: 7, // Default estimate
+        shippingDays: p.ship_to_days || 7, // Default estimate
         sourceProductId: String(p.item_id || p.product_id || ''),
-        sourceUrl: p.product_url || '',
+        sourceUrl: p.product_url || p.promotion_link || '',
         videoUrl: p.product_video_url || p.video_url || undefined,
-        merchantName: 'AliExpress',
-        merchantRating: 4.0,
-        specs: extractDimensionsFromTitle(p.title || ''),
-        rating: p.rating?.score || 0,
-        ratingCount: p.rating?.count || 0,
-        images: Array.isArray(p.image_urls) ? p.image_urls : [], // Full gallery
-        variants: Array.isArray(p.variants) ? p.variants : undefined, // Product variants (colors, sizes)
+        merchantName: p.store_info?.store_name || 'AliExpress',
+        merchantRating: p.store_info?.score || 4.0,
+        specs: extractDimensionsFromTitle(p.title || p.product_title || ''), // TODO: Parse p.product_props if available
+        rating: p.rating?.score || p.evaluate_rate ? parseFloat(p.evaluate_rate) / 20 : 0, // evaluate_rate is 0-100% or 0-5
+        ratingCount: p.rating?.count || p.volume || 0,
+        images: Array.isArray(p.image_urls) ? p.image_urls : (p.all_images || []), // Full gallery
+        variants: Array.isArray(p.variants) ? p.variants : (p.sku_list || undefined), // Product variants (colors, sizes)
         // Product identifiers (for robust deduplication & SEO)
         sku: p.sku || undefined,
         ean: p.ean || p.barcode || undefined,

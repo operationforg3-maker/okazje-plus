@@ -493,6 +493,7 @@ export class AliExpressClient {
         'sku_list',                   // M6+: Variant pricing for real price ranges
         'second_level_image_url',     // Additional images
         'first_level_image_url',      // Additional images
+        'product_description',        // User Request: Fetch raw HTML description for AI context
       ].join(','),
     };
 
