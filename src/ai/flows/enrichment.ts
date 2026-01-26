@@ -349,3 +349,99 @@ export const batchEnrichProducts = ai.defineFlow(
     }
   }
 );
+
+// ===== Flow: Generate Marketing Content (The "Creator" Flow) =====
+// Replaces simple translation with intelligent content generation
+export const generateMarketingContent = ai.defineFlow(
+  {
+    name: "generateMarketingContent",
+    inputSchema: z.object({
+      originalTitle: z.string(),
+      specs: z.record(z.string()),
+      category: z.string().optional(),
+      source: z.string().optional(),
+    }),
+    outputSchema: z.object({
+      title: z.object({
+        pl: z.string(),
+        en: z.string(),
+        de: z.string(),
+      }),
+      shortDescription: z.object({
+        pl: z.string(),
+        en: z.string(),
+        de: z.string(),
+      }),
+      fullDescription: z.object({
+        pl: z.string(), // HTML format
+        en: z.string(), // HTML format
+        de: z.string(), // HTML format
+      }),
+      features: z.object({
+        pl: z.array(z.string()),
+        en: z.array(z.string()),
+        de: z.array(z.string()),
+      }),
+      seo: z.object({
+         title: z.string(), // SEO optimized title
+         description: z.string(),
+         keywords: z.array(z.string())
+      })
+    }),
+  },
+  async (input) => {
+    try {
+      const specsStr = Object.entries(input.specs).map(([k,v]) => `- ${k}: ${v}`).join('\n');
+      
+      const prompt = `You are a Senior E-commerce Copywriter and SEO Specialist.
+Your task is to take raw product data (often spammy or incomplete) and create high-quality, professional listing content in Polish (PL), English (EN), and German (DE).
+
+INPUT DATA:
+- Source: ${input.source || 'Unknown'}
+- Original Title: "${input.originalTitle}"
+- Category: ${input.category || 'General'}
+- Technical Specs:
+${specsStr}
+
+INSTRUCTIONS:
+1. **TITLES**: Create concise, readable titles (Brand + Model + Key Feature). Remove spammy keywords.
+2. **DESCRIPTIONS (HTML)**: Write persuasive, benefit-oriented product descriptions wrapped in <p> tags. 
+   - **DO NOT TRANSLATE ITERATIVELY**. Write fresh content for each language based on the specs.
+   - If specs are sparse, use your knowledge of this product type to fill in plausible generic benefits (e.g., "Durable material", "Easy to use").
+   - Structure: A strong opening hook, followed by key capabilities.
+3. **FEATURES**: Extract 3-5 key selling points as bullet points.
+4. **SEO**: Generate one optimized SEO title and description (primary market PL).
+
+OUTPUT SCHEMA (JSON):
+{
+  "title": { "pl": "...", "en": "...", "de": "..." },
+  "shortDescription": { "pl": "...", "en": "...", "de": "..." },
+  "fullDescription": { "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>" },
+  "features": { "pl": ["..."], "en": ["..."], "de": ["..."] },
+  "seo": { "title": "For Google...", "description": "...", "keywords": ["..."] }
+}`;
+
+      const response = await ai.generate({
+        model: gemini20Flash,
+        prompt,
+        config: { temperature: 0.5 }, // Slightly creative but grounded
+      });
+
+      const text = response.text ?? "";
+      const parsed = parseJsonFromResponse(text);
+
+      // Fallback/Validation defaults
+      return {
+        title: parsed.title || { pl: input.originalTitle, en: input.originalTitle, de: input.originalTitle },
+        shortDescription: parsed.shortDescription || { pl: "", en: "", de: "" },
+        fullDescription: parsed.fullDescription || { pl: "", en: "", de: "" },
+        features: parsed.features || { pl: [], en: [], de: [] },
+        seo: parsed.seo || { title: "", description: "", keywords: [] }
+      };
+
+    } catch (error) {
+      logger.error("generateMarketingContent flow failed", { error, input });
+      throw error; // Re-throw to handle in Refiner
+    }
+  }
+);

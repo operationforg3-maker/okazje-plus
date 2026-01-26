@@ -225,8 +225,54 @@ export class AIRefiner {
       // Clean up specs using AI
       refined.specs = await this.cleanupSpecs(product.specs);
     }
+    
+    // M6 UPGRADE: Use intelligent generator instead of iterative translation
+    // This addresses "AI should improve, not just translate"
+    if (refinationType === 'full_enrichment') {
+      try {
+        const { generateMarketingContent } = await import('@/ai/flows/enrichment');
+        
+        // Determine original title
+        const isEnSource = product.metadata?.source === 'aliexpress' || product.metadata?.source === 'amazon';
+        const originalTitle = isEnSource && product.title.en ? product.title.en : (product.title.pl || product.title.en || 'Unknown');
 
-    if (refinationType === 'full_enrichment' || refinationType === 'title_cleanup') {
+        this.addLog('info', `Generating creative content for: ${originalTitle} (Source: ${product.metadata?.source})`);
+
+        const refinedContent = await generateMarketingContent({
+          originalTitle,
+          specs: refined.specs || product.specs || {},
+          category: product.mainCategorySlug,
+          source: product.metadata?.source as string
+        });
+
+        // Map AI output to ProductCore fields
+        refined.title = refinedContent.title;
+        
+        // Use HTML descriptions
+        refined.description = refinedContent.fullDescription;
+        refined.fullDescription = refinedContent.fullDescription;
+        refined.shortDescription = refinedContent.shortDescription;
+        
+        // Use SEO output
+        refined.seoTitle = refinedContent.seo.title;
+        refined.seoDescription = refinedContent.seo.description;
+        refined.searchTags = [
+          ...(refinedContent.seo.keywords || []),
+          ...(await this.extractSearchTags(refined.title, refined.specs))
+        ];
+        
+        // Note: We skip 'cleanProductTitle' and 'generateDescriptions' calls below because 
+        // generateMarketingContent handles ALL of this in one powerful prompt.
+        
+      } catch (e) {
+        console.error('[Refiner] Creative generation failed, falling back to legacy pipeline:', e);
+        // If creative fail, let the legacy blocks below run (logic unchanged)
+      }
+    }
+
+    // LEGACY BLOCKS - Only run if we didn't do full enrichment or if full enrichment failed/was partial
+    // We check if 'refined.title' is set to know if we need to run legacy title cleanup
+    if ((!refined.title || refinationType === 'title_cleanup')) {
       try {
         const { cleanProductTitle, translateContent } = await import('@/ai/flows/enrichment');
         
