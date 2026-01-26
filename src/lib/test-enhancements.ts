@@ -15,10 +15,10 @@ import { getDealsForAdmin, getProductsForAdmin } from '@/lib/data';
 export async function testDealRefinerHTML() {
   console.log('\n=== Test 1: Deal Refiner HTML Generation ===\n');
   
-  const refiner = new DealRefiner('test-job-' + Date.now());
+  const refiner = new DealRefiner('test-job-' + Date.now().toString());
   
   // Get sample deals
-  const deals = await getDealsForAdmin(10, ['pending_refinement']);
+  const deals = await getDealsForAdmin('approved', 10);
   
   if (deals.length === 0) {
     console.log('⚠️  No deals in pending_refinement. Creating sample...');
@@ -37,8 +37,8 @@ export async function testDealRefinerHTML() {
   const results = await refiner.refineNewDeals(3);
   
   console.log(`\n✅ Refinement Results:`);
-  console.log(`  Processed: ${results.processed}`);
-  console.log(`  Errors: ${results.errors}`);
+  console.log(`  Status: ${results.status}`);
+  console.log(`  Total logs: ${results.logs.length}`);
   
   return results;
 }
@@ -65,7 +65,12 @@ export async function testProductDescriptionFormatting() {
   const baseDescription = 'Zaawansowany zegarek sportowy z ekranem AMOLED. Doskonały do śledzenia aktywności fizycznej.';
   
   // Format description
-  const formatted = formatProductDescription('Smartwatch Z7 Pro', baseDescription, specs, 'pl');
+  const formatted = formatProductDescription({
+    title: 'Smartwatch Z7 Pro',
+    plainDescription: baseDescription,
+    specs,
+    features: ['RAM: 1GB', 'Bateria: 500mAh', 'Ekran: AMOLED 1.4"']
+  });
   
   console.log('Formatted HTML Preview (first 500 chars):');
   console.log(formatted.substring(0, 500) + '...\n');
@@ -105,18 +110,20 @@ export async function testSpecsFormatting() {
   };
   
   // Format specs
-  const formatted = formatSpecs(specs, 'pl');
+  const formatted = formatSpecs(specs);
   
   console.log('Formatted Specs by Category:');
   Object.entries(formatted).forEach(([category, items]) => {
     console.log(`\n  [${category.toUpperCase()}]`);
-    items.forEach(([label, value]) => {
-      console.log(`    - ${label}: ${value}`);
-    });
+    if (Array.isArray(items)) {
+      items.forEach(([label, value]) => {
+        console.log(`    - ${label}: ${value}`);
+      });
+    }
   });
   
   // Extract features
-  const features = specsToFeatures(specs, 'pl');
+  const features = specsToFeatures(specs);
   
   console.log('\n\nExtracted Top Features:');
   features.forEach((feature, i) => {
@@ -132,10 +139,10 @@ export async function testSpecsFormatting() {
 export async function testPolishGuarantee() {
   console.log('\n=== Test 4: Polish Title Guarantee ===\n');
   
-  const refiner = new DealRefiner('test-polish-' + Date.now());
+  const refiner = new DealRefiner('test-polish-' + Date.now().toString());
   
   // Get deals that might be missing Polish
-  const deals = await getDealsForAdmin(5, ['pending_refinement', 'approved']);
+  const deals = await getDealsForAdmin('approved', 5);
   
   console.log(`Checking ${deals.length} deals for Polish titles...\n`);
   
