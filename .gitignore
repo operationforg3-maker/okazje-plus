@@ -57,3 +57,8 @@ serviceAccountKey.json
 
 # Legacy files - debug scripts, old docs, test utilities
 /legacy/
+
+# Debug scripts (keep local only)
+check-jobs-latest.ts
+check-latest-products.ts
+verify-specific-product.ts
