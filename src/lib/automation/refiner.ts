@@ -270,9 +270,11 @@ export class AIRefiner {
       }
     }
 
-    // LEGACY BLOCKS - Only run if we didn't do full enrichment or if full enrichment failed/was partial
+    // LEGACY BLOCKS - Only run if we didn't do full enrichment or if full enrichment failed (creative flow)
     // We check if 'refined.title' is set to know if we need to run legacy title cleanup
-    if ((!refined.title || refinationType === 'title_cleanup')) {
+    
+    // 1. Title Cleanup (Legacy) - Skip if creative flow already populated title
+    if ((!refined.title && refinationType === 'full_enrichment') || refinationType === 'title_cleanup') {
       try {
         const { cleanProductTitle, translateContent } = await import('@/ai/flows/enrichment');
         
@@ -322,7 +324,8 @@ export class AIRefiner {
       }
     }
 
-    if (refinationType === 'full_enrichment' || refinationType === 'description_generation') {
+    // 2. Description Generation (Legacy) - Skip if creative flow already populated descriptions
+    if ((!refined.fullDescription && refinationType === 'full_enrichment') || refinationType === 'description_generation') {
       // Generate multilingual descriptions
       refined.fullDescription = await this.generateDescriptions(
         refined.title || product.title,
