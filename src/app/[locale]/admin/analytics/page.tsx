@@ -9,9 +9,10 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Eye, TrendingUp, Clock, BarChart3, Globe, Smartphone, Monitor } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import Link from 'next/link';
 
 interface DashboardAnalyticsData {
   totalViews: number;
@@ -21,9 +22,15 @@ interface DashboardAnalyticsData {
   uniqueUsers: number;
   uniqueSessions: number;
   viewsByDay: Array<{ date: string; count: number }>;
-  topDeals: Array<{ id: string; views: number; clicks: number }>;
-  topProducts: Array<{ id: string; views: number; clicks: number }>;
+  topDeals: Array<{ id: string; views: number; clicks: number; title: string }>;
+  topProducts: Array<{ id: string; views: number; clicks: number; title: string }>;
+  eventsPerSession: number;
+  bounceRate: number;
+  deviceStats: Array<{ device: string; count: number }>;
+  topReferrers: Array<{ source: string; count: number }>;
 }
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 function AnalyticsPage() {
   const [days, setDays] = useState(7);
@@ -166,39 +173,126 @@ function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Wyświetlenia dziennie</CardTitle>
-          <CardDescription>Rozkład w wybranym zakresie</CardDescription>
-        </CardHeader>
-        <CardContent className="h-72">
-          {data && data.viewsByDay.length > 0 ? (
-            <ChartContainer config={{ views: { label: 'Wyświetlenia', color: 'hsl(var(--primary))' } }} className="h-full w-full">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                <BarChart data={data.viewsByDay}>
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="count" fill="var(--color-views)" radius={[4,4,0,0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          ) : loading ? <p className="text-sm text-muted-foreground">Ładowanie...</p> : <p className="text-sm text-muted-foreground">Brak danych do wyświetlenia.</p>}
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+               <CardTitle className="text-sm font-medium">Wydarzeń / Sesja</CardTitle>
+               <TrendingUp className="h-4 w-4 text-muted-foreground" />
+           </CardHeader>
+           <CardContent>
+               <div className="text-2xl font-bold">{data ? data.eventsPerSession : '—'}</div>
+               <p className="text-xs text-muted-foreground">Średnia aktywność (UX)</p>
+           </CardContent>
+        </Card>
+        <Card>
+           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+               <CardTitle className="text-sm font-medium">Współczynnik odrzuceń</CardTitle>
+               <TrendingUp className="h-4 w-4 text-muted-foreground" />
+           </CardHeader>
+           <CardContent>
+               <div className="text-2xl font-bold">{data ? `${data.bounceRate}%` : '—'}</div>
+               <p className="text-xs text-muted-foreground">Sesje z 1 zdarzeniem</p>
+           </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Wyświetlenia dziennie</CardTitle>
+            <CardDescription>Rozkład w wybranym zakresie</CardDescription>
+          </CardHeader>
+          <CardContent className="h-72">
+            {data && data.viewsByDay.length > 0 ? (
+              <ChartContainer config={{ views: { label: 'Wyświetlenia', color: 'hsl(var(--primary))' } }} className="h-full w-full">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <BarChart data={data.viewsByDay}>
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="var(--color-views)" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : loading ? <p className="text-sm text-muted-foreground">Ładowanie...</p> : <p className="text-sm text-muted-foreground">Brak danych do wyświetlenia.</p>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Urządzenia</CardTitle>
+            <CardDescription>Podział według typu</CardDescription>
+          </CardHeader>
+          <CardContent className="h-72 flex justify-center items-center">
+            {data && data.deviceStats.length > 0 ? (
+              <div className="w-full h-full"> 
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data.deviceStats}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="count"
+                      nameKey="device"
+                    >
+                      {data.deviceStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : loading ? <p className="text-sm text-muted-foreground">Ładowanie...</p> : <p className="text-sm text-muted-foreground">Brak danych.</p>}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+             <CardTitle>Top Źródła</CardTitle>
+             <CardDescription>Referrery</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="space-y-4">
+                  {data?.topReferrers.map((ref, idx) => (
+                      <div key={idx} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                          <div className="flex items-center gap-2">
+                               <Globe className="h-4 w-4 text-muted-foreground" />
+                               <span className="text-sm font-medium">{ref.source}</span>
+                          </div>
+                          <Badge variant="secondary">{ref.count}</Badge>
+                      </div>
+                  ))}
+                  {(!data?.topReferrers.length) && <p className="text-sm text-muted-foreground">Brak danych.</p>}
+              </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Top Okazje</CardTitle>
-            <CardDescription>Najczęściej oglądane</CardDescription>
+            <CardDescription>Najczęściej oglądane (Top 20)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {data?.topDeals.slice(0,5).map(d => (
-                <div key={d.id} className="flex items-center justify-between text-sm border-b last:border-0 py-1">
-                  <span className="font-mono">{d.id}</span>
-                  <span className="text-muted-foreground">{d.views} / {d.clicks} klik</span>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+              {data?.topDeals.map(d => (
+                <div key={d.id} className="flex items-center justify-between text-sm border-b last:border-0 py-2 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/pl/deals/${d.id}`} className="font-medium hover:underline block truncate text-primary" target="_blank">
+                      {d.title}
+                    </Link>
+                    <div className="text-xs text-muted-foreground font-mono truncate opacity-70">{d.id}</div>
+                  </div>
+                  <div className="flex-shrink-0 text-right flex flex-col items-end">
+                    <span className="font-bold">{d.views} <span className="font-normal text-muted-foreground text-xs">wyśw.</span></span>
+                    <span className="text-xs text-muted-foreground">{d.clicks} klik</span>
+                  </div>
                 </div>
               )) || <p className="text-sm text-muted-foreground">Brak danych</p>}
             </div>
@@ -207,14 +301,22 @@ function AnalyticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Top Produkty</CardTitle>
-            <CardDescription>Najczęściej oglądane</CardDescription>
+            <CardDescription>Najczęściej oglądane (Top 20)</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {data?.topProducts.slice(0,5).map(p => (
-                <div key={p.id} className="flex items-center justify-between text-sm border-b last:border-0 py-1">
-                  <span className="font-mono">{p.id}</span>
-                  <span className="text-muted-foreground">{p.views} / {p.clicks} klik</span>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+              {data?.topProducts.map(p => (
+                <div key={p.id} className="flex items-center justify-between text-sm border-b last:border-0 py-2 gap-3">
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/pl/products/${p.id}`} className="font-medium hover:underline block truncate text-primary" target="_blank">
+                      {p.title}
+                    </Link>
+                    <div className="text-xs text-muted-foreground font-mono truncate opacity-70">{p.id}</div>
+                  </div>
+                   <div className="flex-shrink-0 text-right flex flex-col items-end">
+                    <span className="font-bold">{p.views} <span className="font-normal text-muted-foreground text-xs">wyśw.</span></span>
+                    <span className="text-xs text-muted-foreground">{p.clicks} klik</span>
+                  </div>
                 </div>
               )) || <p className="text-sm text-muted-foreground">Brak danych</p>}
             </div>

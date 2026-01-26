@@ -45,7 +45,8 @@ import ShareButton from '@/components/share-button';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
 import AIExpertSummary from '@/components/ai-expert-summary';
 import { PriceHistoryChart } from '@/components/price-history-chart';
-import { getTotalPrice, getPriceAmount, formatPrice } from '@/lib/i18n-utils';
+import { getTotalPrice, getPriceAmount } from '@/lib/i18n-utils';
+import { useCurrency } from '@/lib/unified-currency';
 import { 
   Tooltip,
   TooltipContent,
@@ -66,6 +67,7 @@ interface Props {
 
 export default function ProductDetailClient({ product, relatedProducts, recentRatings: initialRatings }: Props) {
   const { user } = useAuth();
+  const { currency, formatPrice } = useCurrency();
   const [userRating, setUserRating] = useState<ProductRating | null>(null);
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -86,15 +88,15 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
 
   const currentPrice = getTotalPrice(product.price);
   const itemPrice = getPriceAmount(product.price);
-  const price = formatPrice(currentPrice, 'PLN');
+  const price = formatPrice(currentPrice);
   const originalPrice = (product as any).originalPrice 
-    ? formatPrice((product as any).originalPrice, 'PLN')
+    ? formatPrice((product as any).originalPrice)
     : null;
   const discount = (product as any).originalPrice && (product as any).originalPrice > currentPrice
     ? Math.round((((product as any).originalPrice - currentPrice) / (product as any).originalPrice) * 100)
     : null;
   const savings = (product as any).originalPrice && (product as any).originalPrice > currentPrice
-    ? formatPrice((product as any).originalPrice - currentPrice, 'PLN')
+    ? formatPrice((product as any).originalPrice - currentPrice)
     : null;
 
   const avgRating = product.ratingCard?.average ?? 0;

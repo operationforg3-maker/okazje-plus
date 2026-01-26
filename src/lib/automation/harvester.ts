@@ -674,7 +674,17 @@ export class SmartHarvester {
         merchantName: p.store_info?.store_name || 'AliExpress',
         merchantRating: p.store_info?.score || 4.0,
         specs: extractDimensionsFromTitle(p.title || p.product_title || ''), // TODO: Parse p.product_props if available
-        rating: p.rating?.score || p.evaluate_rate ? parseFloat(p.evaluate_rate) / 20 : 0, // evaluate_rate is 0-100% or 0-5
+        rating: (() => {
+          // Robust rating parser handling 0-5 and 0-100 scales
+          if (p.rating?.score) return Number(p.rating.score);
+          if (p.evaluate_rate) {
+            const parsed = parseFloat(String(p.evaluate_rate).replace('%', ''));
+            // If likely 0-100 scale (e.g. "95", "4.8/5" parsed as 4.8)
+            // Heuristic: If > 5, assumes 0-100 scale -> divide by 20.
+            if (!isNaN(parsed)) return parsed > 5 ? parsed / 20 : parsed;
+          }
+          return 0;
+        })(),
         ratingCount: p.rating?.count || p.volume || 0,
         images: Array.isArray(p.image_urls) ? p.image_urls : (p.all_images || []), // Full gallery
         variants: Array.isArray(p.variants) ? p.variants : (p.sku_list || undefined), // Product variants (colors, sizes)
@@ -1098,7 +1108,11 @@ export class SmartHarvester {
         reviewCount: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
         avgRating: sourceProduct.rating || 0,
       },
-      title: sourceProduct.title || 'Produkt',
+      title: {
+        pl: sourceProduct.title || 'Produkt',
+        en: sourceProduct.title || 'Product',
+        de: sourceProduct.title || 'Produkt',
+      } as LocalizedText,
       description: typeof product?.shortDescription === 'object' 
         ? (product.shortDescription.pl || product.shortDescription.en || '') 
         : (product?.shortDescription || ''),

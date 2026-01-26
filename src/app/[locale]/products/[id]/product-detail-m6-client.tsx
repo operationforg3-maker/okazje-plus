@@ -32,7 +32,6 @@ import VariantsM6 from '@/components/variants-m6';
 import CommentSection from '@/components/comment-section';
 import RatingInput from '@/components/rating-input';
 import ShareButton from '@/components/share-button';
-import { formatPrice } from '@/lib/i18n-utils';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
@@ -65,7 +64,7 @@ export default function ProductDetailM6Client({
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'rate'>('description');
   const { addItem, isInCart } = useSmartCart();
-  const { currency } = useCurrency();
+  const { currency, formatPrice, formatPriceCustom } = useCurrency();
 
   // Use productCore if M6, otherwise use product
   const productData = isM6 ? productCore : product;
@@ -123,10 +122,32 @@ export default function ProductDetailM6Client({
 
   // Price - M6 has bestPrice, legacy has price
   const priceAmount = isM6 ? (productCore?.bestPrice?.amount || 0) : (product?.price || 0);
-  const price = formatPrice(priceAmount, 'PLN');
+  const price = formatPriceCustom(priceAmount, 'PLN');
 
   // Re-render when currency changes for reactive UI
   const formattedPriceWithCurrency = formatPrice(priceAmount);
+
+  // M6+ Market Price Estimation Display
+  const marketPriceInfo = (() => {
+    if (!isM6 || !productCore?.averageMarketPrice) return null;
+    const mp = productCore.averageMarketPrice;
+    if (!mp.amount || mp.amount <= priceAmount) return null; // Only show if we are cheaper
+    
+    // Calculate market price (convert if needed, assume stored in PLN usually)
+    // For now assuming stored as PLN if currency not set, or respecting currency field
+    // TODO: Ideally use convertFromPLN if stored in PLN. 
+    // Assuming automation stores in PLN for now as per flow instructions.
+    
+    // Calculate savings
+    const diff = mp.amount - priceAmount;
+    const percent = Math.round((diff / mp.amount) * 100);
+    
+    return {
+      formatted: formatPrice(mp.amount),
+      percent,
+      amount: mp.amount
+    };
+  })();
 
   // Rating
   const avgRating = isM6 ? (productCore?.rating?.score || 0) : (product?.ratingCard?.average || 0);
@@ -246,6 +267,25 @@ export default function ProductDetailM6Client({
               <div className="text-4xl font-bold text-green-600 mb-4">
                 {formattedPriceWithCurrency}
               </div>
+              
+              {marketPriceInfo && (
+                <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm border border-muted">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-muted-foreground">Średnia rynkowa:</span>
+                    <span className="font-medium line-through text-muted-foreground">{marketPriceInfo.formatted}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-green-700 font-medium">
+                    <span>Oszczędzasz:</span>
+                    <span className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">-{marketPriceInfo.percent}%</Badge>
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-2 opacity-70">
+                    *Szacowana średnia cena z innych platform (Allegro/Amazon)
+                  </p>
+                </div>
+              )}
+
               {isM6 && deals.length > 0 && (
                 <div className="space-y-2 text-sm text-gray-600">
                   <p className="flex items-center gap-2">
@@ -383,7 +423,7 @@ export default function ProductDetailM6Client({
       )}
 
       {/* Price Comparison Table (M6 only) */}
-      {isM6 && deals.length > 0 && (
+      {isM6 && deals.length > 1 && (
         <div className="mb-8" id="price-comparison">
           <PriceComparisonTable productId={productId} onBuyClick={(deal: any) => {
             // Optional: also add to cart after clicking buy
@@ -719,7 +759,7 @@ export default function ProductDetailM6Client({
                     </h3>
                     {relatedProduct.bestPrice && (
                       <p className="text-lg font-bold text-green-600">
-                        {formatPrice(relatedProduct.bestPrice.amount, 'PLN')}
+                        {formatPrice(relatedProduct.bestPrice.amount)}
                       </p>
                     )}
                   </CardContent>

@@ -181,7 +181,9 @@ import {
   getCountFromServer,
   orderBy,
   limit,
-  Timestamp 
+  Timestamp,
+  doc,
+  getDoc
 } from 'firebase/firestore';
 
 export type FirestoreEventType = 'view' | 'click' | 'share' | 'favorite' | 'comment' | 'vote';
@@ -373,6 +375,16 @@ export interface AnalyticsStats {
   uniqueUsers: number;
 }
 
+
+function extractTitle(data: any): string {
+  if (!data || !data.title) return 'Brak tytułu';
+  if (typeof data.title === 'string') return data.title;
+  if (typeof data.title === 'object') {
+     return data.title.pl || data.title.en || Object.values(data.title)[0] || 'Brak tytułu';
+  }
+  return 'Brak tytułu';
+}
+
 /**
  * Pobiera globalne statystyki analytics dla dashboardu admina
  */
@@ -384,8 +396,12 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
   uniqueUsers: number;
   uniqueSessions: number;
   viewsByDay: Array<{ date: string; count: number }>;
-  topDeals: Array<{ id: string; views: number; clicks: number }>;
-  topProducts: Array<{ id: string; views: number; clicks: number }>;
+  topDeals: Array<{ id: string; views: number; clicks: number; title: string }>;
+  topProducts: Array<{ id: string; views: number; clicks: number; title: string }>;
+  eventsPerSession: number;
+  bounceRate: number;
+  deviceStats: Array<{ device: string; count: number }>;
+  topReferrers: Array<{ source: string; count: number }>;
 }> {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - daysBack);
@@ -404,13 +420,65 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
   const totalClicks = events.filter(e => e.type === 'click').length;
   const totalShares = events.filter(e => e.type === 'share').length;
 
-  // Liczenie unikalnych użytkowników i sesji
+  // Advanced Stats Calculation
   const uniqueUserIds = new Set<string>();
   const uniqueSessionIds = new Set<string>();
+  const sessionEventsCount: Record<string, number> = {};
+  const deviceCounts: Record<string, number> = { mobile: 0, desktop: 0, tablet: 0 };
+  const referrerCounts: Record<string, number> = {};
+
   events.forEach(event => {
+    // Basic Unique Counts
     if (event.userId) uniqueUserIds.add(event.userId);
-    if (event.sessionId) uniqueSessionIds.add(event.sessionId);
+    if (event.sessionId) {
+      uniqueSessionIds.add(event.sessionId);
+      sessionEventsCount[event.sessionId] = (sessionEventsCount[event.sessionId] || 0) + 1;
+    }
+
+    // Device Detection (Simple UA parsing)
+    const ua = event.metadata?.userAgent || '';
+    if (/tablet|ipad/i.test(ua)) deviceCounts.tablet++;
+    else if (/mobile|android|iphone/i.test(ua)) deviceCounts.mobile++;
+    else deviceCounts.desktop++;
+
+    // Referrer Grouping
+    let ref = event.metadata?.referrer;
+    if (!ref || ref === '' || ref.includes('localhost') || ref.includes('okazje.plus')) {
+      ref = 'bezpośrednie';
+    } else {
+      try {
+        const url = new URL(ref);
+        ref = url.hostname.replace('www.', '');
+      } catch {
+        ref = 'inne';
+      }
+    }
+    referrerCounts[ref] = (referrerCounts[ref] || 0) + 1;
   });
+
+  const totalSessions = uniqueSessionIds.size;
+  const sessionCounts = Object.values(sessionEventsCount);
+  const totalEvents = sessionCounts.reduce((a, b) => a + b, 0);
+  
+  // UX Metrics
+  const eventsPerSession = totalSessions > 0 
+    ? Math.round((totalEvents / totalSessions) * 10) / 10 
+    : 0;
+  
+  const bouncedSessions = sessionCounts.filter(c => c === 1).length;
+  const bounceRate = totalSessions > 0 
+    ? Math.round((bouncedSessions / totalSessions) * 100) 
+    : 0;
+
+  // Format Device & Referrer Stats
+  const deviceStats = Object.entries(deviceCounts)
+    .map(([device, count]) => ({ device, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const topReferrers = Object.entries(referrerCounts)
+    .map(([source, count]) => ({ source, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
 
   const avgConversionRate = totalViews > 0 
     ? Math.round((totalClicks / totalViews) * 1000) / 10 
@@ -437,10 +505,23 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
     if (event.type === 'click') dealStats[event.resourceId].clicks++;
   });
 
-  const topDeals = Object.entries(dealStats)
+  const topDealsRaw = Object.entries(dealStats)
     .map(([id, stats]) => ({ id, ...stats }))
     .sort((a, b) => b.views - a.views)
-    .slice(0, 10);
+    .slice(0, 20);
+
+  const topDeals = await Promise.all(topDealsRaw.map(async (d) => {
+    let title = d.id;
+    try {
+      const snap = await getDoc(doc(db, 'deals', d.id));
+      if (snap.exists()) {
+        title = extractTitle(snap.data());
+      }
+    } catch (e) {
+      // ignore
+    }
+    return { ...d, title };
+  }));
 
   // Top products
   const productStats: Record<string, { views: number; clicks: number }> = {};
@@ -452,10 +533,26 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
     if (event.type === 'click') productStats[event.resourceId].clicks++;
   });
 
-  const topProducts = Object.entries(productStats)
+  const topProductsRaw = Object.entries(productStats)
     .map(([id, stats]) => ({ id, ...stats }))
     .sort((a, b) => b.views - a.views)
-    .slice(0, 10);
+    .slice(0, 20);
+
+  const topProducts = await Promise.all(topProductsRaw.map(async (p) => {
+    let title = p.id;
+    try {
+      let snap = await getDoc(doc(db, 'product_cores', p.id));
+      if (!snap.exists()) {
+        snap = await getDoc(doc(db, 'products', p.id));
+      }
+      if (snap.exists()) {
+        title = extractTitle(snap.data());
+      }
+    } catch (e) {
+      // ignore
+    }
+    return { ...p, title };
+  }));
 
   return {
     totalViews,
@@ -466,7 +563,11 @@ export async function getGlobalAnalytics(daysBack: number = 7): Promise<{
     uniqueSessions: uniqueSessionIds.size,
     viewsByDay: viewsByDayArray,
     topDeals,
-    topProducts
+    topProducts,
+    eventsPerSession,
+    bounceRate,
+    deviceStats,
+    topReferrers
   };
 }
 

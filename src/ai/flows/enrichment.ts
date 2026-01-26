@@ -386,7 +386,12 @@ export const generateMarketingContent = ai.defineFlow(
          title: z.string(), // SEO optimized title
          description: z.string(),
          keywords: z.array(z.string())
-      })
+      }),
+      averageMarketPrice: z.object({
+        amount: z.number(),
+        currency: z.string(),
+        range: z.object({ min: z.number(), max: z.number() }).optional(),
+      }).optional(),
     }),
   },
   async (input) => {
@@ -411,6 +416,7 @@ INSTRUCTIONS:
    - Structure: A strong opening hook, followed by key capabilities.
 3. **FEATURES**: Extract 3-5 key selling points as bullet points.
 4. **SEO**: Generate one optimized SEO title and description (primary market PL).
+5. **MARKET PRICING**: Estimate the typical market price for this product on major platforms (Amazon/Allegro) in PLN. Be realistic.
 
 OUTPUT SCHEMA (JSON):
 {
@@ -418,7 +424,12 @@ OUTPUT SCHEMA (JSON):
   "shortDescription": { "pl": "...", "en": "...", "de": "..." },
   "fullDescription": { "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>" },
   "features": { "pl": ["..."], "en": ["..."], "de": ["..."] },
-  "seo": { "title": "For Google...", "description": "...", "keywords": ["..."] }
+  "seo": { "title": "For Google...", "description": "...", "keywords": ["..."] },
+  "averageMarketPrice": { 
+     "amount": 123.00, 
+     "currency": "PLN", 
+     "range": { "min": 100, "max": 150 } 
+  }
 }`;
 
       const response = await ai.generate({
@@ -436,7 +447,8 @@ OUTPUT SCHEMA (JSON):
         shortDescription: parsed.shortDescription || { pl: "", en: "", de: "" },
         fullDescription: parsed.fullDescription || { pl: "", en: "", de: "" },
         features: parsed.features || { pl: [], en: [], de: [] },
-        seo: parsed.seo || { title: "", description: "", keywords: [] }
+        seo: parsed.seo || { title: "", description: "", keywords: [] },
+        averageMarketPrice: parsed.averageMarketPrice || undefined,
       };
 
     } catch (error) {

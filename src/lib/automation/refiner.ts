@@ -1,5 +1,6 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { ProductCore, RefinerJob, LocalizedText } from '@/lib/types';
+import { formatProductDescription, formatSpecs, specsToFeatures } from '@/ai/flows/product-formatting';
 
 /**
  * AI Refiner - Enriches draft ProductCores with AI-generated content
@@ -286,12 +287,12 @@ export class AIRefiner {
         });
 
         // Map AI output to ProductCore fields
-        refined.title = refinedContent.title;
+        refined.title = refinedContent.title as LocalizedText;
         
         // Use HTML descriptions
-        refined.description = refinedContent.fullDescription;
-        refined.fullDescription = refinedContent.fullDescription;
-        refined.shortDescription = refinedContent.shortDescription;
+        refined.description = refinedContent.fullDescription as LocalizedText;
+        refined.fullDescription = refinedContent.fullDescription as LocalizedText;
+        refined.shortDescription = refinedContent.shortDescription as LocalizedText;
         
         // Use SEO output
         refined.seoTitle = refinedContent.seo.title;
@@ -300,6 +301,11 @@ export class AIRefiner {
           ...(refinedContent.seo.keywords || []),
           ...(await this.extractSearchTags(refined.title, refined.specs))
         ];
+
+        // M6+ Market Price Estimation
+        if (refinedContent.averageMarketPrice && refinedContent.averageMarketPrice.amount && refinedContent.averageMarketPrice.currency) {
+          refined.averageMarketPrice = refinedContent.averageMarketPrice as { amount: number; currency: string; range?: { min: number; max: number; } };
+        }
         
         // Note: We skip 'cleanProductTitle' and 'generateDescriptions' calls below because 
         // generateMarketingContent handles ALL of this in one powerful prompt.
@@ -377,13 +383,30 @@ export class AIRefiner {
       refined.seoTitle = await this.generateSeoTitle(product.title);
       refined.seoDescription = await this.generateSeoDescription(product.title, product.specs);
 
-      // M6 Update: Also populate 'description' (HTML) if missing
-      // We use fullDescription content wrapped in paragraph for now
-      // This ensures moderation view shows something
+      // M6 Update: Generate richly formatted HTML descriptions with structure
+      // Include specs table, features list, and proper formatting
+      const title = typeof refined.title === 'object' ? refined.title.pl : (refined.title || product.title);
+      const features = refined.specs ? specsToFeatures(refined.specs) : [];
+      
       refined.description = {
-        pl: refined.fullDescription?.pl ? `<p>${refined.fullDescription.pl}</p>` : (product.description?.pl || ''),
-        en: refined.fullDescription?.en ? `<p>${refined.fullDescription.en}</p>` : (product.description?.en || ''),
-        de: refined.fullDescription?.de ? `<p>${refined.fullDescription.de}</p>` : (product.description?.de || ''),
+        pl: formatProductDescription({
+          title: title,
+          plainDescription: refined.fullDescription?.pl || '',
+          specs: refined.specs || {},
+          features: features,
+        }),
+        en: formatProductDescription({
+          title: typeof refined.title === 'object' ? refined.title.en : title,
+          plainDescription: refined.fullDescription?.en || '',
+          specs: refined.specs || {},
+          features: features,
+        }),
+        de: formatProductDescription({
+          title: typeof refined.title === 'object' ? refined.title.de : title,
+          plainDescription: refined.fullDescription?.de || '',
+          specs: refined.specs || {},
+          features: features,
+        }),
       };
 
       // M6 Update: Sync shortDescription with SEO description for Cards/Deals
