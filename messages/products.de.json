@@ -114,6 +114,11 @@
       "deliveryDash": "—",
       "buy": "Kaufen",
       "lowestInfo": "Niedrigster Preis: Spare gegenüber anderen Shops. Kostenloser Versand möglich.",
+      "marketPrice": {
+        "label": "Marktdurchschnitt",
+        "savings": "Du sparst",
+        "note": "*Geschätzter Durchschnittspreis anderer Plattformen (Allegro/Amazon)"
+      },
       "loading": "Angebote werden geladen...",
       "empty": "Keine Angebote für dieses Produkt"
     },

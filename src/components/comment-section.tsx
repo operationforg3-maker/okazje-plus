@@ -76,10 +76,12 @@ export default function CommentSection({ collectionName, docId }: CommentSection
       setComments(await getComments(collectionName, docId, 50));
       toast.success("Komentarz został dodany.");
     } catch (error) {
+      console.error('Add comment error:', error);
+      const message = (error as any)?.message || "Wystąpił błąd podczas dodawania komentarza.";
       // rollback optimistic update
       commentsCount.decrement?.(1);
       setComments(await getComments(collectionName, docId, 50));
-      toast.error("Wystąpił błąd podczas dodawania komentarza.");
+      toast.error(message);
     }
   };
 

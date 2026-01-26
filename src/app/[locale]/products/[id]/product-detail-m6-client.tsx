@@ -271,17 +271,17 @@ export default function ProductDetailM6Client({
               {marketPriceInfo && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm border border-muted">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-muted-foreground">Średnia rynkowa:</span>
+                    <span className="text-muted-foreground">{t('productDetail.priceComparison.marketPrice.label')}:</span>
                     <span className="font-medium line-through text-muted-foreground">{marketPriceInfo.formatted}</span>
                   </div>
                   <div className="flex justify-between items-center text-green-700 font-medium">
-                    <span>Oszczędzasz:</span>
+                    <span>{t('productDetail.priceComparison.marketPrice.savings')}:</span>
                     <span className="flex items-center gap-1">
                       <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">-{marketPriceInfo.percent}%</Badge>
                     </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-2 opacity-70">
-                    *Szacowana średnia cena z innych platform (Allegro/Amazon)
+                    {t('productDetail.priceComparison.marketPrice.note')}
                   </p>
                 </div>
               )}
@@ -429,13 +429,6 @@ export default function ProductDetailM6Client({
             // Optional: also add to cart after clicking buy
             try { addItem(asLegacyProduct(), 1); } catch {}
           }} />
-        </div>
-      )}
-
-      {/* Price History Chart (M6 only) */}
-      {isM6 && deals.length > 0 && (
-        <div className="mb-8">
-          <ProductPriceHistoryChart deals={deals} />
         </div>
       )}
 
@@ -767,6 +760,13 @@ export default function ProductDetailM6Client({
               </Link>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Price History Chart (M6 only) */}
+      {isM6 && deals.length > 0 && (
+        <div className="mb-8">
+          <ProductPriceHistoryChart deals={deals} />
         </div>
       )}
     </div>

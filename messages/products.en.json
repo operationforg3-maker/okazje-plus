@@ -114,6 +114,11 @@
       "deliveryDash": "—",
       "buy": "Buy",
       "lowestInfo": "Lowest price: save compared to other stores. Free delivery may be available.",
+      "marketPrice": {
+        "label": "Market average",
+        "savings": "You save",
+        "note": "*Estimated average price from other platforms (Allegro/Amazon)"
+      },
       "loading": "Loading offers...",
       "empty": "No offers for this product"
     },
