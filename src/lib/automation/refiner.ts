@@ -47,6 +47,26 @@ export class AIRefiner {
 
       // Iterate through each product document
       for (const doc of snapshot.docs) {
+        // Check for stop signal
+        if (!(await this.isJobActive())) {
+           this.addLog('warn', 'Refiner job stopped externally');
+           const jobStopped: RefinerJob = {
+              id: this.jobId,
+              status: 'paused',
+              productIds: processedIds,
+              refinationType,
+              productsProcessed: processedIds.length,
+              productsSuccessful,
+              productsFailed,
+              startedAt: jobStartTime,
+              completedAt: new Date().toISOString(),
+              lastUpdatedAt: new Date().toISOString(),
+              logs: this.logs,
+            };
+            await this.updateJobRecord(jobStopped);
+            return jobStopped;
+        }
+
         if (processCount >= limit) {
           this.addLog('info', `Reached limit of ${limit} products. Stopping.`);
           break;
@@ -122,6 +142,26 @@ export class AIRefiner {
       console.log(`Starting AI refinement job for ${productIds.length} products (dryRun=${dryRun})`);
 
       for (const productId of productIds) {
+        // Check for stop signal
+        if (!(await this.isJobActive())) {
+             this.addLog('warn', 'Refinement stopped externally');
+             const jobStopped: RefinerJob = {
+                id: this.jobId,
+                status: 'paused',
+                productIds,
+                refinationType,
+                productsProcessed: productsSuccessful + productsFailed,
+                productsSuccessful,
+                productsFailed,
+                startedAt: jobStartTime,
+                completedAt: new Date().toISOString(),
+                lastUpdatedAt: new Date().toISOString(),
+                logs: this.logs,
+              };
+              await this.updateJobRecord(jobStopped);
+              return jobStopped;
+        }
+
         try {
           const product = await this.getProduct(productId);
           if (!product) {
@@ -693,6 +733,21 @@ export class AIRefiner {
   ): Promise<void> {
     const docRef = adminDb.collection('product_cores').doc(productId);
     await docRef.update(updates as any);
+  }
+
+  /**
+   * Check if job is still active (not paused/cancelled)
+   */
+  private async isJobActive(): Promise<boolean> {
+    try {
+      const doc = await adminDb.collection('refiner_jobs').doc(this.jobId).get();
+      if (!doc.exists) return false;
+      const status = doc.data()?.status;
+      return status === 'running';
+    } catch (e) {
+      console.error('Failed to check job status', e);
+      return true; // Keep running on temporary DB error
+    }
   }
 
   /**

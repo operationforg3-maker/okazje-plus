@@ -206,25 +206,76 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
           </div>
         </Section>
 
-        {/* Descriptions */}
-        <Section title="📝 Opisy (HTML & SEO)" id="descriptions">
-          <div className="space-y-1">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="border p-2 rounded bg-slate-50">
-                     <p className="text-xs font-bold text-slate-500 mb-1">HTML Description (PL)</p>
-                     {item.description?.pl ? (
-                         <div className="prose prose-sm prose-slate max-w-none text-xs" dangerouslySetInnerHTML={{ __html: item.description.pl }} />
-                     ) : <span className="text-red-400 text-xs italic">Brak HTML PL</span>}
+        {/* Descriptions & AI Content */}
+        <Section title="🤖 AI Content & Descriptions" id="descriptions">
+          <div className="space-y-4">
+             {/* SEO & Meta */}
+             <div className="space-y-2 border-b pb-4">
+               <h4 className="text-xs font-bold uppercase text-muted-foreground">SEO & Meta</h4>
+               <FieldRow label="SEO Title (Generated)" value={item.seoTitle} />
+               <FieldRow label="SEO Desc (Generated)" value={item.seoDescription} />
+               <FieldRow label="Short Desc (PL)" value={item.shortDescription?.pl} />
+               {item.searchTags && (
+                 <div className="py-2">
+                   <div className="font-medium text-xs mb-1">Search Tags:</div>
+                   <div className="flex flex-wrap gap-1">
+                     {item.searchTags.map((tag: string, i: number) => (
+                       <Badge key={i} variant="secondary" className="text-[10px]">{tag}</Badge>
+                     ))}
+                   </div>
                  </div>
-                 <div className="border p-2 rounded bg-slate-50">
-                     <p className="text-xs font-bold text-slate-500 mb-1">Short/SEO Description ({item.seoDescription ? 'SEO' : 'Base'})</p>
-                      <p className="text-xs">{item.shortDescription?.pl || item.seoDescription || '--'}</p>
-                 </div>
+               )}
              </div>
-             
-             <div className="mt-2 border-t pt-2 space-y-1">
-                <FieldRow label="Full Text (Generated PL)" value={item.fullDescription?.pl} />
-                <FieldRow label="Full Text (Generated EN)" value={item.fullDescription?.en} />
+
+             {/* Features */}
+             {(item.features?.pl || item.features?.en) && (
+               <div className="space-y-2 border-b pb-4">
+                 <h4 className="text-xs font-bold uppercase text-muted-foreground">Cechy (Features)</h4>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {item.features?.pl && (
+                      <div>
+                        <span className="text-xs font-bold text-blue-600">PL</span>
+                        <ul className="list-disc pl-4 mt-1 space-y-1">
+                          {item.features.pl.map((f: string, i: number) => (
+                            <li key={i} className="text-xs text-muted-foreground">{f}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {item.features?.en && (
+                      <div>
+                        <span className="text-xs font-bold text-orange-600">EN</span>
+                        <ul className="list-disc pl-4 mt-1 space-y-1">
+                          {item.features.en.map((f: string, i: number) => (
+                            <li key={i} className="text-xs text-muted-foreground">{f}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                 </div>
+               </div>
+             )}
+
+             {/* HTML Descriptions */}
+             <div className="space-y-2">
+                 <h4 className="text-xs font-bold uppercase text-muted-foreground">HTML Description (AI Generated)</h4>
+                 <div className="grid grid-cols-1 gap-4">
+                     {item.fullDescription?.pl ? (
+                         <div className="border rounded bg-white">
+                             <div className="bg-slate-100 p-2 border-b text-xs font-mono flex justify-between">
+                               <span>PL Preview</span>
+                               <span className="text-[10px] text-slate-500">Rendered HTML</span>
+                             </div>
+                             <div className="p-4 prose prose-sm prose-slate max-w-none text-xs" dangerouslySetInnerHTML={{ __html: item.fullDescription.pl }} />
+                         </div>
+                     ) : (
+                       <div className="text-xs text-red-500">Brak wygenerowanego opisu HTML (PL)</div>
+                     )}
+                     
+                     <div className="mt-2">
+                        <FieldRow label="Raw HTML (PL)" value={item.fullDescription?.pl?.substring(0, 100) + '...'} />
+                     </div>
+                 </div>
              </div>
           </div>
         </Section>

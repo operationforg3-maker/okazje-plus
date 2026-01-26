@@ -108,8 +108,10 @@ export default function ProductDetailM6Client({
 
   // Extract data with locale support
   const title = getLocalizedText(productData.title, 'Produkt');
+  // Use HTML fullDescription if available, else plain text description
+  const fullHtmlDescription = isM6 ? getLocalizedText(productCore?.fullDescription, '') : '';
   const description = isM6 
-    ? getLocalizedText(productCore?.description, '')
+    ? (fullHtmlDescription || getLocalizedText(productCore?.description, ''))
     : (product?.description || '');
 
   // Images - M6 has images array, legacy has single image
@@ -330,44 +332,44 @@ export default function ProductDetailM6Client({
       )}
 
       {/* Features / Pros & Cons (if available) */}
-      {isM6 && (productCore?.features?.pl?.length || productCore?.pros?.pl?.length || productCore?.cons?.pl?.length) && (
+      {isM6 && (productCore?.features?.[locale]?.length || productCore?.pros?.[locale]?.length || productCore?.cons?.[locale]?.length) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {productCore?.features?.pl && productCore.features.pl.length > 0 && (
+          {productCore?.features?.[locale] && productCore.features[locale].length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle>Cechy produktu</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="list-disc pl-5 space-y-1">
-                  {productCore?.features?.pl?.map((f, idx) => (
+                  {productCore?.features?.[locale]?.map((f: string, idx: number) => (
                     <li key={idx} className="text-sm text-gray-700">{f}</li>
                   ))}
                 </ul>
               </CardContent>
             </Card>
           )}
-          {(productCore?.pros?.pl?.length || productCore?.cons?.pl?.length) && (
+          {(productCore?.pros?.[locale]?.length || productCore?.cons?.[locale]?.length) && (
             <Card>
               <CardHeader>
                 <CardTitle>Plusy i minusy</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {productCore?.pros?.pl && productCore.pros.pl.length > 0 && (
+                  {productCore?.pros?.[locale] && productCore.pros[locale].length > 0 && (
                     <div>
                       <h4 className="font-medium mb-2 text-green-700">Plusy</h4>
                       <ul className="list-disc pl-5 space-y-1">
-                        {productCore?.pros?.pl?.map((p, idx) => (
+                        {productCore?.pros?.[locale]?.map((p: string, idx: number) => (
                           <li key={idx} className="text-sm text-gray-700">{p}</li>
                         ))}
                       </ul>
                     </div>
                   )}
-                  {productCore?.cons?.pl && productCore.cons.pl.length > 0 && (
+                  {productCore?.cons?.[locale] && productCore.cons[locale].length > 0 && (
                     <div>
                       <h4 className="font-medium mb-2 text-red-700">Minusy</h4>
                       <ul className="list-disc pl-5 space-y-1">
-                        {productCore?.cons?.pl?.map((c, idx) => (
+                        {productCore?.cons?.[locale]?.map((c: string, idx: number) => (
                           <li key={idx} className="text-sm text-gray-700">{c}</li>
                         ))}
                       </ul>
@@ -413,9 +415,16 @@ export default function ProductDetailM6Client({
               <CardTitle>Opis produktu</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="prose prose-gray max-w-none">
-                {description || 'Brak opisu produktu.'}
-              </div>
+              {fullHtmlDescription ? (
+                <div 
+                  className="prose prose-gray max-w-none"
+                  dangerouslySetInnerHTML={{ __html: fullHtmlDescription }} 
+                />
+              ) : (
+                <div className="prose prose-gray max-w-none">
+                  {description || 'Brak opisu produktu.'}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

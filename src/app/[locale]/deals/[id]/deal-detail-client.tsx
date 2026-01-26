@@ -545,9 +545,17 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               )}
             </div>
 
-            <p className="text-base text-muted-foreground leading-relaxed whitespace-pre-line">
-              {dealDescription}
-            </p>
+            {/* Description - HTML support for M6 */}
+            {dealDescription && /<[a-z][\s\S]*>/i.test(dealDescription) ? (
+              <div 
+                className="text-base text-muted-foreground leading-relaxed prose prose-neutral max-w-none"
+                dangerouslySetInnerHTML={{ __html: dealDescription }}
+              />
+            ) : (
+              <p className="text-base text-muted-foreground leading-relaxed whitespace-pre-line">
+                {dealDescription}
+              </p>
+            )}
 
             {/* Spec cards highlight */}
             {specifications && specifications.length > 0 && (

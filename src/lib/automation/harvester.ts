@@ -220,6 +220,29 @@ export class SmartHarvester {
     try {
       // Iterate through all provided queries/categories
       for (const currentQuery of queries) {
+        // Check if we should stop
+        if (!(await this.isJobActive())) {
+           this.addLog('warn', 'Job stopped externally (paused/cancelled)');
+           return {
+             id: this.jobId,
+             status: 'paused',
+             source,
+             query: queries.join(', '),
+             maxResults,
+             productsFound,
+             productsCreated,
+             dealsCreated,
+             duplicatesSkipped,
+             errors,
+             currentCategory: currentQuery,
+             totalCategories: queries.length,
+             processedCategories: processedCategoriesLog,
+             startedAt: jobStartTime,
+             lastUpdatedAt: new Date().toISOString(),
+             logs: this.logs,
+           };
+        }
+
         this.addLog('info', `Processing query/category: ${currentQuery}`);
         let categoryProductsCreated = 0; // Local counter for this category
 
@@ -361,6 +384,29 @@ export class SmartHarvester {
               // Periodic update: Update job status co 5 produktów
               processedCount++;
               if (processedCount % 5 === 0) {
+                // Check if we should stop
+                if (!(await this.isJobActive())) {
+                  this.addLog('warn', 'Job stopped externally (paused/cancelled)');
+                  return {
+                    id: this.jobId,
+                    status: 'paused',
+                    source,
+                    query: queries.join(', '),
+                    maxResults,
+                    productsFound,
+                    productsCreated,
+                    dealsCreated,
+                    duplicatesSkipped,
+                    errors,
+                    currentCategory: currentQuery,
+                    totalCategories: queries.length,
+                    processedCategories: processedCategoriesLog,
+                    startedAt: jobStartTime,
+                    lastUpdatedAt: new Date().toISOString(),
+                    logs: this.logs,
+                  };
+                }
+
                 await this.updateJobRecord({
                   id: this.jobId,
                   status: 'running',
@@ -1207,6 +1253,21 @@ export class SmartHarvester {
     };
 
     await adminDb.collection('identity_matches').add(match);
+  }
+
+  /**
+   * Check if job is still active (not paused/cancelled)
+   */
+  private async isJobActive(): Promise<boolean> {
+    try {
+      const doc = await adminDb.collection('harvester_jobs').doc(this.jobId).get();
+      if (!doc.exists) return false;
+      const status = doc.data()?.status;
+      return status === 'running';
+    } catch (e) {
+      console.error('Failed to check job status', e);
+      return true; // Keep running on temporary DB error
+    }
   }
 
   /**

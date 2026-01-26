@@ -47,7 +47,20 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
   if (!image) return null;
 
   const title = ensureLocalizedText(raw?.title, product?.title?.pl || 'Okazja');
-  const description = ensureLocalizedText(raw?.description, product?.shortDescription?.pl || '');
+  
+  // M6: Prioritize ProductCore full HTML description if deal description is missing
+  let descriptionInput = raw?.description;
+  if (!descriptionInput && product) {
+    if (product.fullDescription) descriptionInput = product.fullDescription;
+    else if (product.description) descriptionInput = product.description;
+    else if (product.shortDescription) descriptionInput = product.shortDescription;
+  }
+  
+  // Logic to ensure we have a valid LocalizedText
+  const description = (descriptionInput && typeof descriptionInput === 'object' && descriptionInput.pl)
+    ? descriptionInput as LocalizedText
+    : ensureLocalizedText(descriptionInput, product?.shortDescription?.pl || '');
+
   const link = raw?.link || raw?.affiliateLink || raw?.sourceUrl || '';
   const mainCategorySlug = raw?.mainCategorySlug || product?.mainCategorySlug || 'inne';
   const subCategorySlug = raw?.subCategorySlug || product?.subCategorySlug || 'inne';
