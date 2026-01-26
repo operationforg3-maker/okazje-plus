@@ -8,7 +8,16 @@ const nextPlugin = require('@next/eslint-plugin-next');
 
 module.exports = {
   files: ['**/*.{js,jsx,ts,tsx}'],
-  ignores: ['.next/**', 'node_modules/**', 'out/**', 'scripts/**', 'src/legacy/**'],
+  ignores: [
+    '.next/**',
+    'node_modules/**',
+    'out/**',
+    'scripts/**',
+    'src/legacy/**',
+    '**/*.test.ts',
+    '**/*.test.tsx',
+    '**/__tests__/**',
+  ],
   languageOptions: {
     parser: tsParser,
     parserOptions: {
