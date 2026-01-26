@@ -391,6 +391,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                   src={images[currentImageIndex].src}
                   alt={dealTitle}
                   fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
                   className="object-contain p-4 md:p-8"
                   priority
                 />
@@ -486,6 +487,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                       src={img.src}
                       alt={dealTitle}
                       fill
+                      sizes="80px"
                       className="object-contain p-1"
                     />
                   </button>
