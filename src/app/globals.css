@@ -202,12 +202,14 @@
     
     --radius: 0.5rem; /* 8px - standardowe zaokrąglenie dla wszystkich elementów */
     
-    /* ============ PAGE LAYOUT SPACING ============
-       Unified padding system for consistent UI edges
-       Mobile: 16px, Tablet: 24px, Desktop: 32px, Wide: 48px
-       ============================================= */
-    --page-padding-x: 1rem;      /* 16px mobile */
-    --page-max-width: 1400px;    /* max-w-screen-2xl */
+    /* ============ PAGE LAYOUT SPACING (Mobile-First) ============
+       Mobile: 16px (xs), Tablet: 20px (sm), Laptop: 24px (md), Desktop: 32px (lg+)
+       ============================================================ */
+    --page-padding-x: 1rem;      /* 16px - xs (mobile) */
+    --page-padding-x-sm: 1.25rem; /* 20px - sm (tablet 640px+) */
+    --page-padding-x-md: 1.5rem; /* 24px - md (laptop 768px+) */
+    --page-padding-x-lg: 2rem;   /* 32px - lg (desktop 1024px+) */
+    --page-max-width: 1400px;    /* max-w-screen-2xl - 1400px */
     
     /* ============ UNIFIED SIZING SYSTEM ============
        Consistent spacing, shadows, radius across app
@@ -652,10 +654,10 @@
 }
 
 @layer components {
-  /* ============ PAGE CONTAINER SYSTEM ============
+  /* ============ PAGE CONTAINER SYSTEM (Mobile-First) ============
      Use .page-container for all main page content
-     Provides consistent max-width and padding
-     ============================================== */
+     Mobile: 16px → Tablet: 20px → Laptop: 24px → Desktop: 32px
+     ============================================================== */
   .page-container {
     width: 100%;
     max-width: var(--page-max-width);
@@ -663,6 +665,28 @@
     margin-right: auto;
     padding-left: var(--page-padding-x);
     padding-right: var(--page-padding-x);
+  }
+
+  /* Responsive padding adjustments */
+  @media (min-width: 640px) {
+    .page-container {
+      padding-left: var(--page-padding-x-sm);
+      padding-right: var(--page-padding-x-sm);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .page-container {
+      padding-left: var(--page-padding-x-md);
+      padding-right: var(--page-padding-x-md);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .page-container {
+      padding-left: var(--page-padding-x-lg);
+      padding-right: var(--page-padding-x-lg);
+    }
   }
   
   /* Full-width sections that need edge-to-edge background but contained content */
@@ -828,6 +852,41 @@
 
   .action-btn:hover {
     color: hsl(var(--primary));
+  }
+
+  /* ============ RESPONSIVE UTILITIES ============ */
+  
+  /* Button responsive - Hide text on mobile, show on sm+ */
+  .btn-responsive-text {
+    @apply hidden sm:inline;
+  }
+
+  /* Flex responsive - Stack on mobile, row on desktop */
+  .flex-responsive {
+    @apply flex flex-col sm:flex-row;
+  }
+
+  /* Grid responsive - 1 col mobile, 2+ on tablet+ */
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4;
+  }
+
+  /* Padding responsive - Smaller on mobile, larger on desktop */
+  .p-responsive {
+    @apply p-3 sm:p-4 md:p-6;
+  }
+
+  .px-responsive {
+    @apply px-3 sm:px-4 md:px-6;
+  }
+
+  .py-responsive {
+    @apply py-3 sm:py-4 md:py-6;
+  }
+
+  /* Gap responsive - Tighter on mobile */
+  .gap-responsive {
+    @apply gap-2 sm:gap-3 md:gap-4;
   }
 
   /* Coming Soon - Hide navbar and footer */

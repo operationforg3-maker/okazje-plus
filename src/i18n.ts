@@ -20,6 +20,7 @@ const namespaces = [
   'nav',
   'filters',
   'footer',
+  'savedSearch',
 ];
 
 async function loadMessagesForLocale(locale: string) {

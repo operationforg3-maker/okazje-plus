@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import DOMPurify from 'isomorphic-dompurify';
+import { useTranslations } from 'next-intl';
 
 interface CommentSectionProps {
   collectionName: 'products' | 'deals';
@@ -29,6 +30,7 @@ interface CommentSectionProps {
 }
 
 export default function CommentSectionV2({ collectionName, docId }: CommentSectionProps) {
+  const t = useTranslations('common');
   const { user } = useAuth();
   const [commentState, setCommentState] = useState({
     comments: [] as Comment[],
@@ -84,13 +86,13 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
 
   const handleSubmitComment = async () => {
     if (!user) {
-      toast.error("Musisz być zalogowany, aby dodać komentarz.");
+      toast.error(t('comments.mustBeLoggedIn'));
       return;
     }
     const now = Date.now();
     if (now < commentState.cooldownUntil) {
       const wait = Math.ceil((commentState.cooldownUntil - now) / 1000);
-      toast.error(`Zaczekaj ${wait}s przed dodaniem kolejnego komentarza.`);
+      toast.error(t('comments.waitBeforeNext', { seconds: wait }));
       return;
     }
     if (!commentState.newComment.trim()) {
@@ -126,13 +128,13 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
         comments,
         cooldownUntil: Date.now() + 5000
       }));
-      toast.success("Komentarz został dodany.");
+      toast.success(t('comments.commentAdded'));
     } catch (error) {
       // rollback optimistic update
       commentsCount.decrement?.(1);
       const comments = await getComments(collectionName, docId, 100);
       setCommentState(prev => ({ ...prev, comments }));
-      toast.error("Wystąpił błąd podczas dodawania komentarza.");
+      toast.error(t('comments.commentAddError'));
     }
   };
 
@@ -198,7 +200,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
         throw new Error(data.message || 'Błąd podczas usuwania');
       }
 
-      toast.success('Komentarz został usunięty');
+      toast.success(t('comments.commentDeleted'));
       
       // Refresh comments and clear state in single setState
       const comments = await getComments(collectionName, docId, 100);
@@ -209,7 +211,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
         isDeleting: false
       }));
     } catch (error: any) {
-      toast.error(error.message || 'Wystąpił błąd podczas usuwania komentarza');
+      toast.error(error.message || t('comments.commentDeleteError'));
       console.error('Delete comment error:', error);
       // Still reset deleting state on error
       setCommentState(prev => ({ 
@@ -295,9 +297,9 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
                           const comments = await getComments(collectionName, docId, 100);
                           setEditState(prev => ({ ...prev, editingId: null }));
                           setCommentState(prev => ({ ...prev, comments }));
-                          toast.success('Komentarz zaktualizowany');
+                          toast.success(t('comments.commentUpdated'));
                         } catch (e) {
-                          toast.error('Nie udało się zaktualizować komentarza');
+                          toast.error(t('comments.commentUpdateError'));
                         }
                       }}
                     >Zapisz</Button>
@@ -403,19 +405,19 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
   return (
     <div className="mt-8">
       <h3 className="font-headline text-2xl font-bold mb-4">
-        Komentarze ({commentState.comments.length})
+        {t('comments.title')} ({commentState.comments.length})
       </h3>
       
       {user && (
         <div className="mb-6 space-y-2">
           <Textarea 
-            placeholder="Dodaj swój komentarz..."
+            placeholder={t('comments.addCommentPlaceholder')}
             value={commentState.newComment}
             onChange={(e) => setCommentState(prev => ({ ...prev, newComment: e.target.value }))}
             className="mb-2 min-h-[100px]"
           />
           <Button onClick={handleSubmitComment} disabled={!commentState.newComment.trim()}>
-            Dodaj komentarz
+            {t('comments.addComment')}
           </Button>
         </div>
       )}
@@ -423,7 +425,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
       <div className="space-y-6">
         {organizedComments.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
-            Brak komentarzy. Bądź pierwszy!
+            {t('comments.noComments')}
           </p>
         ) : (
           organizedComments.map(comment => renderComment(comment))
@@ -436,13 +438,13 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              Usuń komentarz
+              {t('comments.deleteComment')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Czy na pewno chcesz usunąć ten komentarz? Ta operacja jest nieodwracalna.
+              {t('comments.confirmDelete')}
               {commentState.deletingComment && (commentState.deletingComment.repliesCount || 0) > 0 && (
                 <span className="block mt-2 text-destructive font-medium">
-                  UWAGA: Ten komentarz ma {commentState.deletingComment.repliesCount} odpowiedzi, które również zostaną usunięte.
+                  {t('comments.withReplies', { count: commentState.deletingComment.repliesCount })}
                 </span>
               )}
             </AlertDialogDescription>
@@ -454,7 +456,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
               disabled={commentState.isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {commentState.isDeleting ? 'Usuwam...' : 'Usuń komentarz'}
+              {commentState.isDeleting ? t('comments.deleting') : t('comments.deleteComment')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

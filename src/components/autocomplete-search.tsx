@@ -6,8 +6,10 @@ import { Search, Loader2, Flame, ShoppingBag } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { trackSearch } from '@/lib/analytics';
+import { useTranslations } from 'next-intl';
 
 export function AutocompleteSearch({ className }: { className?: string }) {
+  const t = useTranslations('common');
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -76,7 +78,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Szukaj produktów lub okazji..."
+            placeholder={t('search.placeholder')}
             className="pl-9 pr-10"
             aria-autocomplete="list"
             aria-expanded={open}
@@ -105,9 +107,9 @@ export function AutocompleteSearch({ className }: { className?: string }) {
             >
               <span className="font-medium text-sm flex items-center space-sm">
                 {s.type === 'deal' ? (
-                  <><Flame className="h-4 w-4 text-orange-500" /> Okazja</>
+                  <><Flame className="h-4 w-4 text-orange-500" /> {t('labels.deal')}</>
                 ) : (
-                  <><ShoppingBag className="h-4 w-4 text-primary" /> Produkt</>
+                  <><ShoppingBag className="h-4 w-4 text-primary" /> {t('labels.product')}</>
                 )}
                 {s.label}
               </span>
@@ -117,13 +119,13 @@ export function AutocompleteSearch({ className }: { className?: string }) {
             </button>
           ))}
           <div className="pt-1 mt-1 border-t text-xs text-muted-foreground px-2">
-            Naciśnij Enter aby wyszukać pełnotekstowo
+            {t('search.enterToSearch')}
           </div>
         </div>
       )}
       {open && !loading && suggestions.length === 0 && query.trim().length >= 2 && (
         <div className="absolute left-0 right-0 mt-1 rounded-md border bg-popover shadow-md z-50 p-3 text-sm text-muted-foreground">
-          Brak sugestii
+          {t('search.noSuggestions')}
         </div>
       )}
     </div>

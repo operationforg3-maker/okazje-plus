@@ -289,6 +289,7 @@ export function useCurrency() {
     const handleCurrencyChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ currency: Currency }>;
       if (customEvent.detail?.currency) {
+        console.log('[Currency] Changed to:', customEvent.detail.currency);
         setCurrencyState(customEvent.detail.currency);
       }
     };

@@ -25,6 +25,7 @@ import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 // import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import { useContentLanguage } from '@/hooks/use-content-language';
+import { useTranslations } from 'next-intl';
 import {
   Tooltip,
   TooltipContent,
@@ -122,6 +123,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   const { currency } = useCurrency();
   const { addDeal } = useSmartCart();
+  const t = useTranslations('common');
   
   // Format prices using state to fix Intl.NumberFormat hydration mismatch
   const [priceData, setPriceData] = useState<{
@@ -277,7 +279,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
 
   const handleVote = async (action: 'up' | 'down') => {
     if (!user) {
-      toast.error("Musisz być zalogowany, aby zagłosować.");
+      toast.error(t('auth.loginToVote'));
       return;
     }
 
@@ -314,7 +316,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
       // Pobierz token Firebase Auth
       const firebaseUser = auth.currentUser;
       if (!firebaseUser) {
-        throw new Error('Sesja wygasła - zaloguj się ponownie');
+        throw new Error(t('auth.sessionExpired'));
       }
       const token = await firebaseUser.getIdToken();
 
@@ -342,7 +344,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.message || 'Błąd podczas głosowania');
+        throw new Error(data.message || t('messages.voteError'));
       }
 
       setTemperature(data.temperature);
@@ -352,13 +354,13 @@ export default function DealCard({ deal, product }: DealCardProps) {
       trackVote('deal', deal.id, action);
       void trackFirestoreVote('deal', deal.id, user.uid, action);
       
-      toast.success("Dziękujemy za oddanie głosu!");
+      toast.success(t('messages.thankYouForVote'));
     } catch (error: any) {
       setTemperature(oldTemperature);
       setVoteCount(oldVoteCount);
       setUserVote(oldUserVote);
       
-      toast.error(error.message || "Wystąpił błąd podczas głosowania.");
+      toast.error(error.message || t('errors.voteError'));
       console.error('Vote error:', error);
     } finally {
       setIsVoting(false);
@@ -594,7 +596,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
           </div>
         </div>
 
-        <h3 className="font-headline text-sm sm:text-base md:text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
+        <h3 className="font-headline text-base sm:text-lg md:text-xl font-bold leading-tight transition-colors group-hover:text-primary">
           {dealTitle}
         </h3>
         
@@ -866,22 +868,22 @@ export default function DealCard({ deal, product }: DealCardProps) {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
-          {priceData.formattedOriginal && <span className="text-xs sm:text-sm text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-2xl sm:text-3xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
+          {priceData.formattedOriginal && <span className="text-sm sm:text-base text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
           {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-            <Badge variant="destructive">-{priceData.discount}%</Badge>
+            <Badge variant="destructive" className="text-sm px-2 py-0.5">-{priceData.discount}%</Badge>
           )}
           {priceData.formattedSavings && (
-            <span className="ml-auto text-xs font-semibold text-green-600">Oszczędzasz {priceData.formattedSavings}</span>
+            <span className="ml-auto text-sm font-semibold text-green-600">Oszczędzasz {priceData.formattedSavings}</span>
           )}
         </div>
 
         {/* Temperature bar */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-1 text-muted-foreground">
-              <Flame className="h-3 w-3" />
+              <Flame className="h-4 w-4" />
               Temperatura
             </span>
             <span className="font-semibold">{temperature} pkt</span>
@@ -894,20 +896,20 @@ export default function DealCard({ deal, product }: DealCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Dodane przez <span className="font-medium text-foreground">{postedBy}</span></span>
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>{t('labels.addedBy')} <span className="font-medium text-foreground">{postedBy}</span></span>
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1" title="Głosy">
-              <ArrowUp className="h-3 w-3" />
+            <span className="flex items-center gap-1" title={t('labels.votes')}>
+              <ArrowUp className="h-4 w-4" />
               {voteCount}
             </span>
-            <span className="flex items-center gap-1" title="Komentarze">
-              <MessageSquare className="h-3 w-3" />
+            <span className="flex items-center gap-1" title={t('comments.title')}>
+              <MessageSquare className="h-4 w-4" />
               {liveComments.count}
             </span>
             {typeof deal.shareCount === 'number' && deal.shareCount > 0 && (
-              <span className="flex items-center gap-1" title="Udostępnienia">
-                <Share2 className="h-3 w-3" />
+              <span className="flex items-center gap-1" title={t('labels.shares')}>
+                <Share2 className="h-4 w-4" />
                 {deal.shareCount}
               </span>
             )}
@@ -917,19 +919,19 @@ export default function DealCard({ deal, product }: DealCardProps) {
         <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
           <Badge variant="outline" className="gap-1">
             <Scale className="h-3 w-3" />
-            Porównaj
+            {t('comparison.compare')}
           </Badge>
           <Badge variant="outline" className="gap-1">
             <Heart className="h-3 w-3" />
-            Ulubione
+            {t('auth.favorites')}
           </Badge>
           <Badge variant="outline" className="gap-1">
             <MessageSquare className="h-3 w-3" />
-            Komentarze
+            {t('comments.title')}
           </Badge>
           <Badge variant="outline" className="gap-1">
             <ArrowUp className="h-3 w-3" />
-            Głosowanie
+            {t('actions.vote')}
           </Badge>
         </div>
       </div>
@@ -944,7 +946,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
               e.stopPropagation();
               handleVote('up');
             }} 
-            aria-label="Głos w górę"
+            aria-label={t('auth.voteUp')}
             disabled={isVoting}
           >
             <ArrowUp className="h-4 w-4" />
@@ -957,7 +959,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
               e.stopPropagation();
               handleVote('down');
             }} 
-            aria-label="Głos w dół"
+            aria-label={t('auth.voteDown')}
             disabled={isVoting}
           >
             <ArrowDown className="h-4 w-4" />
@@ -973,7 +975,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
               e.stopPropagation();
               toggleFavorite();
             }}
-            aria-label={isFavorited ? "Usuń z ulubionych" : "Dodaj do ulubionych"}
+            aria-label={isFavorited ? t('auth.removeFromFavorites') : t('auth.addToFavorites')}
             disabled={isFavoriteLoading}
             className={isFavorited ? "bg-red-500 hover:bg-red-600" : ""}
           >
@@ -982,7 +984,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
           <ShareButton 
             type="deal" 
             itemId={deal.id} 
-            title={dealTitle || 'Okazja'} 
+            title={dealTitle || t('labels.deal')} 
             url={`/deals/${deal.id}`} 
             variant="outline" 
             size="sm" 
@@ -994,9 +996,9 @@ export default function DealCard({ deal, product }: DealCardProps) {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              toast.success("📢 Będziesz powiadomiony o zmianach ceny!");
+              toast.success(t('messages.priceAlertEnabled'));
             }}
-            aria-label="Alert cenowy"
+            aria-label={t('auth.priceAlert')}
             className="gap-1"
           >
             <AlertTriangle className="h-4 w-4" />
@@ -1009,7 +1011,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
               e.stopPropagation();
               addToComparison({ ...deal, type: 'deal' });
             }}
-            aria-label="Dodaj do porównania"
+            aria-label={t('comparison.addToComparison')}
           >
             <Scale className="h-4 w-4" />
           </Button>
@@ -1021,27 +1023,27 @@ export default function DealCard({ deal, product }: DealCardProps) {
               e.stopPropagation();
               try {
                 addDeal(deal, 1);
-                toast.success('Dodano okazję do koszyka');
+                toast.success(t('messages.dealAddedToCart'));
               } catch (err) {
                 console.error('addDeal failed', err);
-                toast.error('Nie udało się dodać do koszyka');
+                toast.error(t('cart.addToCartError'));
               }
             }}
-            aria-label="Dodaj do koszyka"
+            aria-label={t('cart.addToCart')}
             className="gap-1"
           >
-            Do koszyka
+            {t('cart.addToCart')}
           </Button>
           {deal.metadata?.isExpired ? (
             <ExpiredDealBadge 
               isExpired={true}
-              reason={deal.metadata?.expiryReason || 'Oferta wygasła'}
+              reason={deal.metadata?.expiryReason || t('messages.dealExpired')}
               checkedAt={deal.metadata?.expiryCheckedAt}
               variant="button"
             />
           ) : (
             <Button size="sm" className="gap-1">
-              Przejdź
+              {t('actions.goTo')}
               <ArrowUp className="h-3 w-3 rotate-90" />
             </Button>
           )}

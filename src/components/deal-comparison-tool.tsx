@@ -25,12 +25,14 @@ import { Scale, X, ExternalLink, Check, Flame, Star, ShoppingCart, TrendingDown,
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { useSmartCart } from '@/lib/cart-context';
+import { useTranslations } from 'next-intl';
 
 type ComparisonItem = (Deal | Product) & { type: 'deal' | 'product' };
 
 const MAX_COMPARISON_ITEMS = 4;
 
 export function DealComparisonTool() {
+  const t = useTranslations('common');
   const [comparisonState, setComparisonState] = useState({
     items: [] as ComparisonItem[],
     isOpen: false,
@@ -71,12 +73,12 @@ export function DealComparisonTool() {
 
   const addItem = (item: ComparisonItem) => {
     if (comparisonState.items.length >= MAX_COMPARISON_ITEMS) {
-      toast.error(`Możesz porównać maksymalnie ${MAX_COMPARISON_ITEMS} elementy`);
+      toast.error(t('comparison.maxItemsReached', { max: MAX_COMPARISON_ITEMS }));
       return;
     }
 
     if (comparisonState.items.some(i => i.id === item.id)) {
-      toast.error('Ten element jest już w porównaniu');
+      toast.error(t('comparison.alreadyInComparison'));
       return;
     }
 
@@ -84,9 +86,9 @@ export function DealComparisonTool() {
       ...prev,
       items: [...prev.items, item]
     }));
-    toast.success('Dodano do porównania', {
+    toast.success(t('messages.addedToComparison'), {
       action: {
-        label: 'Pokaż',
+        label: t('actions.show'),
         onClick: () => setComparisonState(prev => ({ ...prev, isOpen: true })),
       },
     });
@@ -97,7 +99,7 @@ export function DealComparisonTool() {
       ...prev,
       items: prev.items.filter(i => i.id !== itemId)
     }));
-    toast.success('Usunięto z porównania');
+    toast.success(t('messages.removedFromComparison'));
   };
 
   const clearAll = () => {
@@ -180,16 +182,16 @@ export function DealComparisonTool() {
             {/* Smart insights */}
             <div className="p-3 bg-primary/5 border-b text-xs space-y-1">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Łączna wartość:</span>
+                <span className="text-muted-foreground">{t('comparison.totalValue')}:</span>
                 <span className="font-bold">{totalValue.toFixed(2)} zł</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Średnia cena:</span>
+                <span className="text-muted-foreground">{t('comparison.avgPrice')}:</span>
                 <span className="font-semibold">{avgPrice.toFixed(2)} zł</span>
               </div>
               {bestDeal && (
                 <div className="flex justify-between text-green-600 dark:text-green-400">
-                  <span>🏆 Najlepsza oferta:</span>
+                  <span>🏆 {t('comparison.bestDeal')}:</span>
                   <span className="font-bold">{lowestPrice.toFixed(2)} zł</span>
                 </div>
               )}
@@ -385,7 +387,7 @@ export function DealComparisonTool() {
                 </div>
                 <Button asChild variant="default" size="lg">
                   <Link href="/deals">
-                    Przeglądaj okazje
+                    {t('actions.browseDeals')}
                   </Link>
                 </Button>
               </div>
@@ -402,11 +404,11 @@ export function DealComparisonTool() {
                     <div className="text-xl font-bold">{avgPrice.toFixed(2)} zł</div>
                   </div>
                   <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-center">
-                    <div className="text-xs text-green-600 dark:text-green-400 mb-1 font-medium">Najlepsza cena</div>
+                    <div className="text-xs text-green-600 dark:text-green-400 mb-1 font-medium">{t('comparison.bestPrice')}</div>
                     <div className="text-xl font-bold text-green-600 dark:text-green-400">{lowestPrice.toFixed(2)} zł</div>
                   </div>
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-center">
-                    <div className="text-xs text-muted-foreground mb-1">Możliwe oszczędności</div>
+                    <div className="text-xs text-muted-foreground mb-1">{t('comparison.possibleSavings')}</div>
                     <div className="text-xl font-bold text-primary">{(totalValue - (lowestPrice * items.length)).toFixed(2)} zł</div>
                   </div>
                 </div>
@@ -589,7 +591,7 @@ export function DealComparisonTool() {
                           target="_blank"
                         >
                           <Button variant="outline" size="sm" className="gap-2">
-                            Zobacz szczegóły
+                            {t('actions.viewDetails')}
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         </Link>

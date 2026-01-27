@@ -26,6 +26,7 @@ import { SavedSearch, SavedSearchFilters } from '@/lib/saved-searches';
 import { useAuth } from '@/lib/auth';
 import { getFirestore, collection, addDoc, updateDoc, doc } from 'firebase/firestore';
 import { getApp } from 'firebase/app';
+import { useTranslations } from 'next-intl';
 
 interface SavedSearchDialogProps {
   open: boolean;
@@ -40,6 +41,7 @@ export default function SavedSearchDialog({
   existingSearch,
   initialFilters,
 }: SavedSearchDialogProps) {
+  const t = useTranslations('savedSearch');
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   
@@ -54,12 +56,12 @@ export default function SavedSearchDialog({
 
   const handleSave = async () => {
     if (!user) {
-      toast.error('Musisz być zalogowany');
+      toast.error(t('mustBeLoggedIn'));
       return;
     }
 
     if (!name.trim()) {
-      toast.error('Nazwa wyszukiwania jest wymagana');
+      toast.error(t('nameRequired'));
       return;
     }
 
@@ -85,17 +87,17 @@ export default function SavedSearchDialog({
         await updateDoc(doc(db, 'saved_searches', existingSearch.id), {
           ...searchData,
         });
-        toast.success('Zapisane wyszukiwanie zaktualizowane');
+        toast.success(t('updated'));
       } else {
         // Create
         await addDoc(collection(db, 'saved_searches'), searchData);
-        toast.success('Wyszukiwanie zapisane');
+        toast.success(t('saved'));
       }
 
       onOpenChange(false);
     } catch (error) {
       console.error('Error saving search:', error);
-      toast.error('Nie udało się zapisać wyszukiwania');
+      toast.error(t('saveError'));
     } finally {
       setLoading(false);
     }
@@ -106,19 +108,19 @@ export default function SavedSearchDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {existingSearch ? 'Edytuj wyszukiwanie' : 'Zapisz wyszukiwanie'}
+            {existingSearch ? t('editTitle') : t('save')}
           </DialogTitle>
           <DialogDescription>
-            Otrzymuj powiadomienia gdy pojawią się nowe okazje pasujące do Twoich kryteriów
+            {t('dialogDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nazwa wyszukiwania</Label>
+            <Label htmlFor="name">{t('name')}</Label>
             <Input
               id="name"
-              placeholder="np. Laptopy do 3000 zł"
+              placeholder={t('namePlaceholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
@@ -126,10 +128,10 @@ export default function SavedSearchDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Opis (opcjonalny)</Label>
+            <Label htmlFor="description">{t('description')}</Label>
             <Textarea
               id="description"
-              placeholder="Dodatkowe szczegóły..."
+              placeholder={t('descriptionPlaceholder')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -139,9 +141,9 @@ export default function SavedSearchDialog({
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Powiadomienia</Label>
+                <Label>{t('notifications')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Otrzymuj alerty o nowych okazjach
+                  {t('notificationsDescription')}
                 </p>
               </div>
               <Switch
@@ -152,7 +154,7 @@ export default function SavedSearchDialog({
 
             {notificationsEnabled && (
               <div className="space-y-2">
-                <Label htmlFor="frequency">Częstotliwość powiadomień</Label>
+                <Label htmlFor="frequency">{t('frequency')}</Label>
                 <Select
                   value={notificationFrequency}
                   onValueChange={(value: 'instant' | 'daily' | 'weekly') =>
@@ -163,9 +165,9 @@ export default function SavedSearchDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="instant">Natychmiastowe</SelectItem>
-                    <SelectItem value="daily">Codzienne podsumowanie</SelectItem>
-                    <SelectItem value="weekly">Cotygodniowe podsumowanie</SelectItem>
+                    <SelectItem value="instant">{t('instant')}</SelectItem>
+                    <SelectItem value="daily">{t('daily')}</SelectItem>
+                    <SelectItem value="weekly">{t('weekly')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -179,10 +181,10 @@ export default function SavedSearchDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
-            Anuluj
+            {t('cancel')}
           </Button>
           <Button onClick={handleSave} disabled={loading}>
-            {loading ? 'Zapisywanie...' : existingSearch ? 'Zapisz zmiany' : 'Zapisz wyszukiwanie'}
+            {loading ? t('saving') : existingSearch ? t('saveChanges') : t('save')}
           </Button>
         </DialogFooter>
       </DialogContent>

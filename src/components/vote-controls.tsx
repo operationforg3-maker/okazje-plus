@@ -5,6 +5,7 @@ import { ArrowUp, ArrowDown } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
+import { useTranslations } from 'next-intl';
 import { Button } from "@/components/ui/button";
 import { trackVote } from "@/lib/analytics";
 
@@ -15,13 +16,14 @@ interface VoteControlsProps {
 
 export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
   const { user } = useAuth();
+  const t = useTranslations('common');
   const [isLoading, setIsLoading] = useState(false);
   // Stan dla licznika głosów będzie potrzebny, jeśli będziemy go aktualizować w czasie rzeczywistym
   // Na razie polegamy na initialVoteCount
 
   const handleVote = async (direction: 'up' | 'down') => {
     if (!user) {
-      toast.error("Musisz być zalogowany, aby głosować.");
+      toast.error(t('auth.loginToVote'));
       return;
     }
 
@@ -30,7 +32,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       // Pobierz Firebase Auth token z aktualnego użytkownika Firebase
       const firebaseUser = auth.currentUser;
       if (!firebaseUser) {
-        toast.error("Sesja wygasła - zaloguj się ponownie");
+        toast.error(t('auth.sessionExpired'));
         return;
       }
       
@@ -76,7 +78,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       
     } catch (error) {
       console.error("Błąd podczas głosowania:", error);
-      toast.error("Wystąpił błąd podczas głosowania.");
+      toast.error(t('errors.voteError'));
     } finally {
       setIsLoading(false);
     }

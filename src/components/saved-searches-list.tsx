@@ -21,8 +21,10 @@ import { getFirestore, collection, query, where, onSnapshot, deleteDoc, doc, upd
 import { getApp } from 'firebase/app';
 import { toast } from 'sonner';
 import SavedSearchDialog from './saved-search-dialog';
+import { useTranslations } from 'next-intl';
 
 export default function SavedSearchesList() {
+  const t = useTranslations('savedSearch');
   const { user } = useAuth();
   const [searches, setSearches] = useState<SavedSearch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,10 +66,10 @@ export default function SavedSearchesList() {
     try {
       const db = getFirestore(getApp());
       await deleteDoc(doc(db, 'saved_searches', searchToDelete));
-      toast.success('Wyszukiwanie usunięte');
+      toast.success(t('deleted'));
     } catch (error) {
       console.error('Error deleting search:', error);
-      toast.error('Nie udało się usunąć wyszukiwania');
+      toast.error(t('deleteError'));
     } finally {
       setDeleteDialogOpen(false);
       setSearchToDelete(null);
@@ -81,11 +83,11 @@ export default function SavedSearchesList() {
         notificationsEnabled: !currentState,
       });
       toast.success(
-        !currentState ? 'Powiadomienia włączone' : 'Powiadomienia wyłączone'
+        !currentState ? t('notificationsEnabled') : t('notificationsDisabled')
       );
     } catch (error) {
       console.error('Error toggling notifications:', error);
-      toast.error('Nie udało się zmienić ustawień');
+      toast.error(t('notificationToggleError'));
     }
   };
 
@@ -93,7 +95,7 @@ export default function SavedSearchesList() {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-center text-muted-foreground">Ładowanie...</p>
+          <p className="text-center text-muted-foreground">{t('loading')}</p>
         </CardContent>
       </Card>
     );
@@ -106,10 +108,10 @@ export default function SavedSearchesList() {
           <div className="text-center space-y-2">
             <Search className="h-12 w-12 mx-auto text-muted-foreground" />
             <p className="text-muted-foreground">
-              Nie masz jeszcze zapisanych wyszukiwań
+              {t('noSearches')}
             </p>
             <p className="text-sm text-muted-foreground">
-              Zapisz swoje ulubione filtry aby otrzymywać powiadomienia o nowych okazjach
+              {t('noSearchesDescription')}
             </p>
           </div>
         </CardContent>
@@ -174,21 +176,21 @@ export default function SavedSearchesList() {
                 <div className="flex items-center gap-2 flex-wrap">
                   {search.notificationsEnabled && (
                     <Badge variant="secondary">
-                      Powiadomienia:{' '}
+                      {t('notificationsLabel')}{' '}
                       {search.notificationFrequency === 'instant'
-                        ? 'natychmiastowe'
+                        ? t('instant')
                         : search.notificationFrequency === 'daily'
-                        ? 'codzienne'
-                        : 'cotygodniowe'}
+                        ? t('daily')
+                        : t('weekly')}
                     </Badge>
                   )}
                   {search.matchCount > 0 && (
                     <Badge variant="outline">
-                      {search.matchCount} {search.matchCount === 1 ? 'dopasowanie' : 'dopasowań'}
+                      {search.matchCount} {search.matchCount === 1 ? t('match') : t('matches')}
                     </Badge>
                   )}
                   <span className="text-xs text-muted-foreground">
-                    Utworzono: {new Date(search.createdAt).toLocaleDateString('pl-PL')}
+                    {t('created')} {new Date(search.createdAt).toLocaleDateString('pl-PL')}
                   </span>
                 </div>
               </div>
@@ -200,14 +202,14 @@ export default function SavedSearchesList() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Czy na pewno usunąć?</AlertDialogTitle>
+            <AlertDialogTitle>{t('confirmDelete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Ta akcja jest nieodwracalna. Zapisane wyszukiwanie zostanie trwale usunięte.
+              {t('confirmDeleteDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Anuluj</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Usuń</AlertDialogAction>
+            <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{t('delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

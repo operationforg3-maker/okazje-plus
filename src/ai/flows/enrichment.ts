@@ -397,39 +397,61 @@ export const generateMarketingContent = ai.defineFlow(
   async (input) => {
     try {
       const specsStr = Object.entries(input.specs).map(([k,v]) => `- ${k}: ${v}`).join('\n');
-      
-      const prompt = `You are a Senior E-commerce Copywriter and SEO Specialist.
-Your task is to take raw product data (often spammy or incomplete) and create high-quality, professional listing content in Polish (PL), English (EN), and German (DE).
+
+      const prompt = `You are a Senior E-commerce Copywriter and SEO Specialist writing for Polish shoppers.
+Create **original**, sales-focused content in three languages (PL primary, EN, DE) without literal translation. Use the specs and your domain knowledge. Avoid generic fluff.
 
 INPUT DATA:
 - Source: ${input.source || 'Unknown'}
 - Original Title: "${input.originalTitle}"
 - Category: ${input.category || 'General'}
-- Technical Specs:
-${specsStr}
+- Technical Specs (may be incomplete):
+${specsStr || '- none provided'}
 
-INSTRUCTIONS:
-1. **TITLES**: Create concise, readable titles (Brand + Model + Key Feature). Remove spammy keywords.
-2. **DESCRIPTIONS (HTML)**: Write persuasive, benefit-oriented product descriptions wrapped in <p> tags. 
-   - **DO NOT TRANSLATE ITERATIVELY**. Write fresh content for each language based on the specs.
-   - If specs are sparse, use your knowledge of this product type to fill in plausible generic benefits (e.g., "Durable material", "Easy to use").
-   - Structure: A strong opening hook, followed by key capabilities.
-3. **FEATURES**: Extract 3-5 key selling points as bullet points.
-4. **SEO**: Generate one optimized SEO title and description (primary market PL).
-5. **MARKET PRICING**: Estimate the typical market price for this product on major platforms (Amazon/Allegro) in PLN. Be realistic.
+GLOBAL RULES:
+- Polish must sound native and persuasive. No machine-translation tone.
+- Keep numbers and units explicit (e.g., "16GB RAM", "144 Hz", "5000 mAh").
+- Never invent fake brands/models. If brand missing, omit brand.
+- Keep claims realistic; avoid hype like "best in the world".
 
-OUTPUT SCHEMA (JSON):
+TITLES (pl/en/de):
+- Format: Brand (if known) + Model + 1-2 killer attributes.
+- Length target: 55-70 chars. Remove spammy keywords.
+
+FULL DESCRIPTION (HTML per language):
+- Structure with clear HTML tags, no markdown.
+- Layout:
+  <p>Hook in 1 short sentence</p>
+  <ul>
+    <li>Benefit or spec 1</li>
+    <li>Benefit or spec 2</li>
+    <li>Benefit or spec 3</li>
+  </ul>
+  <p>Closing reassurance (warranty, compatibility, ease of use)</p>
+- Use concrete details from specs; if missing, use safe, generic but useful benefits (e.g., "Solidna obudowa", "Prosta obsługa").
+
+SHORT DESCRIPTION (pl/en/de):
+- 2-3 sentences, max ~320 chars, focused on key value props.
+
+FEATURES (pl/en/de):
+- 4-6 bullet-ready strings, each containing a concrete value (number, material, dimension, or outcome).
+
+SEO (PL market):
+- seo.title: 55-60 chars, include category keyword if natural.
+- seo.description: 150-170 chars, include 1-2 key specs; no price claims.
+- seo.keywords: 5-8 concise keywords.
+
+MARKET PRICE:
+- averageMarketPrice.amount in PLN (number), realistic street price for Poland; include range {min,max} when possible.
+
+OUTPUT STRICTLY JSON MATCHING:
 {
   "title": { "pl": "...", "en": "...", "de": "..." },
   "shortDescription": { "pl": "...", "en": "...", "de": "..." },
   "fullDescription": { "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>" },
   "features": { "pl": ["..."], "en": ["..."], "de": ["..."] },
-  "seo": { "title": "For Google...", "description": "...", "keywords": ["..."] },
-  "averageMarketPrice": { 
-     "amount": 123.00, 
-     "currency": "PLN", 
-     "range": { "min": 100, "max": 150 } 
-  }
+  "seo": { "title": "...", "description": "...", "keywords": ["..."] },
+  "averageMarketPrice": { "amount": 123.00, "currency": "PLN", "range": { "min": 100, "max": 150 } }
 }`;
 
       const response = await ai.generate({

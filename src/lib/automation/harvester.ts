@@ -14,6 +14,7 @@ import {
   normalizeProductIdentifier,
 } from './identity-matcher';
 import { AIRefiner } from './refiner';
+import { startDealRefinerJob } from './deal-refiner';
 import { convertToPLN } from '@/lib/currency-exchange';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
@@ -216,6 +217,7 @@ export class SmartHarvester {
     let duplicatesSkipped = 0;
     const errors: HarvesterJob['errors'] = [];
     let processedCount = 0; // Counter for periodic updates
+    const dealsToRefine: string[] = [];
 
     try {
       // Iterate through all provided queries/categories
@@ -336,6 +338,7 @@ export class SmartHarvester {
 
                 const dealId = await this.createDeal(existingProduct.id, sourceProduct, source);
                 dealsCreated++;
+                dealsToRefine.push(dealId);
 
                 // Update product's best price
                 await this.updateProductBestPrice(existingProduct.id);
@@ -368,6 +371,7 @@ export class SmartHarvester {
                   source
                 );
                 dealsCreated++;
+                dealsToRefine.push(dealId);
 
                 // Update product's best price (M6: CRITICAL - was missing for new products!)
                 await this.updateProductBestPrice(productId);
@@ -508,6 +512,18 @@ export class SmartHarvester {
         'info',
         `Harvest completed: Created ${productsCreated} products, ${dealsCreated} deals, Skipped ${duplicatesSkipped} duplicates`
       );
+
+      // Trigger asynchronous Deal Refiner for freshly created deals
+      if (dealsToRefine.length > 0) {
+        this.addLog('info', `Uruchamiam Deal Refiner dla ${dealsToRefine.length} ofert (async)`);
+        startDealRefinerJob(dealsToRefine)
+          .then((result) => {
+            this.addLog('info', `Deal Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+          })
+          .catch((err) => {
+            this.addLog('error', 'Deal Refiner nie powiódł się w tle', err);
+          });
+      }
 
       return job;
     } catch (err) {

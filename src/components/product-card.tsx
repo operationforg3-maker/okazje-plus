@@ -5,6 +5,7 @@ import { ProductGallery } from './product-gallery';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
@@ -52,6 +53,7 @@ const safeText = (value: unknown, fallback = ''): string => {
 };
 
 export default function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: ProductCardProps) {
+  const t = useTranslations('common');
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(() => localeFromParams);
@@ -534,9 +536,9 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             {isAddingToCart ? (
                <span className="flex items-center"><div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent mr-2" /> Dodaję</span>
             ) : inCart ? (
-               <span className="flex items-center"><Check className="w-3 h-3 mr-1" /> W koszyku</span>
-            ) : (
-               <span className="flex items-center"><ShoppingCart className="w-3 h-3 mr-1" /> Do koszyka</span>
+               <span className="flex items-center"><Check className="w-3 h-3 mr-1" /> {t('cart.inCart')}</span>
+             ) : (
+               <span className="flex items-center"><ShoppingCart className="w-3 h-3 mr-1" /> {t('cart.addToCart')}</span>
             )}
           </Button>
 

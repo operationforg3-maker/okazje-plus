@@ -69,6 +69,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
   }, []);
 
   const switchCurrency = (newCurrency: string) => {
+    console.log('[Currency] Switch to:', newCurrency);
     setCurrency(newCurrency);
     if (typeof window !== 'undefined') {
       localStorage.setItem('preferredCurrency', newCurrency);

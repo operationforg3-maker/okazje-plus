@@ -69,6 +69,7 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
   activeIndex: number;
   setActiveIndex: (i: number) => void;
 }) {
+  const t = useTranslations('common');
   return (
       <nav className="space-y-1.5" aria-label="Kategorie">
         {categories.map((category, index) => {
@@ -887,7 +888,7 @@ export function MegaMenu() {
                         className="flex w-full items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-destructive/60 hover:text-destructive"
                       >
                         <span className="flex items-center gap-2">
-                          <LogOut className="h-4 w-4" /> Wyloguj się
+                          <LogOut className="h-4 w-4" /> {t('auth.logout')}
                         </span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </button>

@@ -118,6 +118,73 @@ export class DealRefiner {
   }
 
   /**
+   * Refine specific deals by ID (used for post-harvest auto-enrichment)
+   */
+  async refineDeals(dealIds: string[]): Promise<RefinerJob> {
+    const jobStartTime = new Date().toISOString();
+    let dealsSuccessful = 0;
+    let dealsFailed = 0;
+    let dealsSkipped = 0;
+    const processedIds: string[] = [];
+
+    try {
+      this.addLog('info', `Starting targeted Deal Refiner job for ${dealIds.length} deals`);
+
+      for (const dealId of dealIds) {
+        try {
+          const dealDoc = await adminDb.collection('deals').doc(dealId).get();
+          if (!dealDoc.exists) {
+            this.addLog('warn', `Deal ${dealId} not found, skipping`);
+            dealsSkipped++;
+            continue;
+          }
+
+          const deal = dealDoc.data() as DealM6;
+
+          if (!this.dealNeedsRefinement(deal)) {
+            dealsSkipped++;
+            this.addLog('info', `Deal ${dealId} already localized, skipping`);
+            continue;
+          }
+
+          const refined = await this.refineSingleDeal(deal, dealId);
+          if (refined) {
+            await dealDoc.ref.update(refined);
+            dealsSuccessful++;
+            processedIds.push(dealId);
+          } else {
+            dealsSkipped++;
+          }
+        } catch (err) {
+          dealsFailed++;
+          this.addLog('error', `Failed to refine deal ${dealId}`, err);
+        }
+      }
+
+      const completedAt = new Date().toISOString();
+      const job: RefinerJob = {
+        id: this.jobId,
+        status: 'completed',
+        productIds: dealIds, // Reuse field for traceability
+        refinationType: 'deal_enrichment' as any,
+        productsProcessed: dealIds.length,
+        productsSuccessful: dealsSuccessful,
+        productsFailed: dealsFailed,
+        startedAt: jobStartTime,
+        completedAt,
+        lastUpdatedAt: completedAt,
+        logs: this.logs,
+      };
+
+      this.addLog('info', `Targeted Deal Refiner finished: ${dealsSuccessful} refined, ${dealsFailed} failed, ${dealsSkipped} skipped`);
+      return job;
+    } catch (err) {
+      this.addLog('error', 'Targeted Deal Refiner job failed', err);
+      throw err;
+    }
+  }
+
+  /**
    * Check if a deal needs refinement
    * Criteria:
    * - title is not localized (plain string)
@@ -290,4 +357,13 @@ export class DealRefiner {
       return null;
     }
   }
+}
+
+/**
+ * Helper: start deal refiner for specific deal IDs
+ */
+export async function startDealRefinerJob(dealIds: string[]): Promise<RefinerJob> {
+  const jobId = `deal_refiner_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  const refiner = new DealRefiner(jobId);
+  return await refiner.refineDeals(dealIds);
 }
