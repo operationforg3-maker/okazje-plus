@@ -797,7 +797,7 @@ export const processImportJobsTrigger = onRequest(
     region: "europe-west1",
     timeoutSeconds: 120,
     memory: "256MiB",
-    secrets: ["CRON_SECRET"],
+    // Removed secrets: ["CRON_SECRET"] to avoid Secret Manager billing requirement
   },
   async (req, res) => {
     const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
