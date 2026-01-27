@@ -11,6 +11,7 @@ import {
 import { PanelLeft, Home, ChevronRight } from 'lucide-react';
 import { AdminAuthGuard } from '@/components/auth/admin-auth-guard';
 import { AdminNav } from '@/components/admin/admin-nav';
+import { CurrencySwitcher } from '@/components/currency-switcher';
 
 const pathNames: Record<string, string> = {
   '/admin': 'Dashboard',
@@ -81,6 +82,10 @@ export default function AdminLayout({
                     </>
                   )}
                 </div>
+              </div>
+              {/* Currency Switcher */}
+              <div className="flex items-center gap-2">
+                <CurrencySwitcher />
               </div>
             </header>
             <main className="flex-1 w-full">
