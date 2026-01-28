@@ -49,6 +49,7 @@ import {
 import { ActivityFeed } from '@/components/activity-feed';
 import { NotificationSettingsCard } from '@/components/notification-settings-card';
 import { UserStatsCard } from '@/components/user-stats-card';
+import { useTranslations } from 'next-intl';
 
 type UserActivity = {
   votes: number;

@@ -23,6 +23,7 @@ import {
   FileText
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from 'next-intl';
 
 type ModerationItem = {
   type: "thread" | "post";

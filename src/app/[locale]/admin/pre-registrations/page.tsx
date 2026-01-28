@@ -17,6 +17,7 @@ import { PreRegistration } from "@/lib/types";
 import { Trophy, Users, Download, Search, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { useTranslations } from 'next-intl';
 
 export default function PreRegistrationsPage() {
   const { toast } = useToast();

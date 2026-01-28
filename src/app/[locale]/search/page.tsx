@@ -23,6 +23,7 @@ import { QUICK_FILTERS } from '@/lib/saved-searches';
 import SavedSearchDialog from '@/components/saved-search-dialog';
 import { useTranslations } from 'next-intl';
 import type { SavedSearchFilters } from '@/lib/saved-searches';
+import { useCurrency } from '@/lib/unified-currency';
 
 interface SearchFilters {
   minPrice?: number;
@@ -34,6 +35,7 @@ interface SearchFilters {
 
 export default function SearchPage() {
   const t = useTranslations('search');
+  const tActions = useTranslations('common.actions');
   const searchParams = useSearchParams();
   const q = searchParams.get('q') || '';
 
