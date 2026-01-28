@@ -60,6 +60,7 @@ type UserActivity = {
 
 function ProfilePage() {
   const { user, logout } = useAuth();
+  const t = useTranslations('profile');
   const { notifications, unreadCount, loading: notificationsLoading, markAsRead, markAllAsRead, deleteNotif } = useNotifications();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
@@ -331,7 +332,7 @@ function ProfilePage() {
       {/* Statystyki */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard icon={ThumbsUp} label="Głosy oddane" value={activity.votes} />
-        <StatCard icon={MessageSquare} label="Komentarze" value={activity.comments} />
+        <StatCard icon={MessageSquare} label={t('commentsLabel')} value={activity.comments} />
         <StatCard icon={Flame} label="Dodane okazje" value={activity.dealsPosted} />
         <StatCard icon={Award} label="Oceny produktów" value={activity.productsReviewed} />
       </div>
@@ -349,7 +350,7 @@ function ProfilePage() {
           </TabsTrigger>
           <TabsTrigger value="comments" className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4" />
-            <span className="hidden sm:inline">Komentarze</span>
+            <span className="hidden sm:inline">{t('comments')}</span>
           </TabsTrigger>
           <TabsTrigger value="deals" className="flex items-center gap-2">
             <Flame className="h-4 w-4" />
@@ -511,7 +512,7 @@ function ProfilePage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <MessageSquare className="h-5 w-5" />
-                    Komentarze
+                    {t('comments')}
                   </CardTitle>
                   <CardDescription>Historia komentarzy ({commentsWithContext.length})</CardDescription>
                 </div>

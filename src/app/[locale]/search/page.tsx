@@ -189,7 +189,7 @@ export default function SearchPage() {
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
-                    placeholder="Od"
+                    placeholder={tActions('from')}
                     value={filters.minPrice || ''}
                     onChange={(e) => setFilters({ ...filters, minPrice: e.target.value ? Number(e.target.value) : undefined })}
                     className="w-full"
@@ -197,7 +197,7 @@ export default function SearchPage() {
                   <span className="text-muted-foreground">-</span>
                   <Input
                     type="number"
-                    placeholder="Do"
+                    placeholder={tActions('to')}
                     value={filters.maxPrice || ''}
                     onChange={(e) => setFilters({ ...filters, maxPrice: e.target.value ? Number(e.target.value) : undefined })}
                     className="w-full"

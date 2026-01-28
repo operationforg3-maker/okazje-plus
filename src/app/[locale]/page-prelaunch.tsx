@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from 'next-intl';
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ interface TimeLeft {
 }
 
 export default function Home() {
+  const t = useTranslations('common');
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -168,10 +170,10 @@ export default function Home() {
                   </div>
                   <div className="flex gap-3">
                     {[
-                      { label: "Dni", value: hydrated ? betaTimeLeft.days : 0 },
-                      { label: "Godz", value: hydrated ? betaTimeLeft.hours : 0 },
-                      { label: "Min", value: hydrated ? betaTimeLeft.minutes : 0 },
-                      { label: "Sek", value: hydrated ? betaTimeLeft.seconds : 0 },
+                      { label: t("time.days"), value: hydrated ? betaTimeLeft.days : 0 },
+                      { label: t("time.hours"), value: hydrated ? betaTimeLeft.hours : 0 },
+                      { label: t("time.minutes"), value: hydrated ? betaTimeLeft.minutes : 0 },
+                      { label: t("time.seconds"), value: hydrated ? betaTimeLeft.seconds : 0 },
                     ].map(({ label, value }) => (
                       <div key={label} className="text-center">
                         <div className="bg-primary/10 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">
@@ -200,10 +202,10 @@ export default function Home() {
                   </div>
                   <div className="flex gap-3">
                     {[
-                      { label: "Dni", value: hydrated ? publicTimeLeft.days : 0 },
-                      { label: "Godz", value: hydrated ? publicTimeLeft.hours : 0 },
-                      { label: "Min", value: hydrated ? publicTimeLeft.minutes : 0 },
-                      { label: "Sek", value: hydrated ? publicTimeLeft.seconds : 0 },
+                      { label: t("time.days"), value: hydrated ? publicTimeLeft.days : 0 },
+                      { label: t("time.hours"), value: hydrated ? publicTimeLeft.hours : 0 },
+                      { label: t("time.minutes"), value: hydrated ? publicTimeLeft.minutes : 0 },
+                      { label: t("time.seconds"), value: hydrated ? publicTimeLeft.seconds : 0 },
                     ].map(({ label, value }) => (
                       <div key={label} className="text-center">
                         <div className="bg-accent/10 rounded-lg p-3 md:p-4 min-w-[60px] md:min-w-[80px]">

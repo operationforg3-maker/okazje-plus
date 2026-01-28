@@ -20,6 +20,7 @@ import { getFunctions, httpsCallable } from "firebase/functions";
 
 export default function PreRegistrationsPage() {
   const { toast } = useToast();
+  const t = useTranslations('admin.common');
   const [registrations, setRegistrations] = useState<PreRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -235,9 +236,9 @@ export default function PreRegistrationsPage() {
                   </TableCell>
                   <TableCell>
                     <Badge variant={reg.status === "confirmed" ? "default" : "secondary"}>
-                      {reg.status === "pending" && "Oczekuje"}
-                      {reg.status === "confirmed" && "Potwierdzony"}
-                      {reg.status === "invited" && "Zaproszony"}
+                      {reg.status === "pending" && t('statusPending')}
+                      {reg.status === "confirmed" && t('statusConfirmed')}
+                      {reg.status === "invited" && t('statusInvited')}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">

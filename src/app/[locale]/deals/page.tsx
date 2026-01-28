@@ -942,7 +942,7 @@ export default function DealsPage() {
                       <span className="text-sm text-muted-foreground whitespace-nowrap">Cena:</span>
                       <Input
                         type="number"
-                        placeholder="Min"
+                        placeholder={t('min')}
                         value={priceRange[0]}
                         onChange={(e) => {
                           const val = parseInt(e.target.value) || 0;
@@ -953,7 +953,7 @@ export default function DealsPage() {
                       <span className="text-muted-foreground">-</span>
                       <Input
                         type="number"
-                        placeholder="Max"
+                        placeholder={t('max')}
                         value={priceRange[1]}
                         onChange={(e) => {
                           const val = parseInt(e.target.value) || 10000;

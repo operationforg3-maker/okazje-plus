@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { getGlobalAnalytics } from '@/lib/analytics';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -33,6 +34,7 @@ interface DashboardAnalyticsData {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 function AnalyticsPage() {
+  const t = useTranslations('admin.common');
   const [days, setDays] = useState(7);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardAnalyticsData | null>(null);
@@ -67,7 +69,7 @@ function AnalyticsPage() {
           <span className="text-sm text-muted-foreground">Zakres:</span>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-32">
-              <SelectValue placeholder="Zakres" />
+              <SelectValue placeholder={t('range')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="7">7 dni</SelectItem>

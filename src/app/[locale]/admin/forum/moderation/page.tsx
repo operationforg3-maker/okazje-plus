@@ -39,6 +39,7 @@ type ModerationItem = {
 
 export default function ForumModerationPage() {
   const { user } = useAuth();
+  const t = useTranslations('admin.common');
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"pending" | "reported" | "all">("pending");
@@ -87,7 +88,7 @@ export default function ForumModerationPage() {
           type: "thread",
           id: doc.id,
           title: data.title,
-          authorDisplayName: data.authorDisplayName || "Anonim",
+          authorDisplayName: data.authorDisplayName || t('anonymous'),
           status: data.status || "approved",
           createdAt: data.createdAt,
           isPinned: data.isPinned,
@@ -129,7 +130,7 @@ export default function ForumModerationPage() {
           type: "post",
           id: doc.id,
           content: data.content,
-          authorDisplayName: data.authorDisplayName || "Anonim",
+          authorDisplayName: data.authorDisplayName || t('anonymous'),
           status: data.status || "approved",
           createdAt: data.createdAt,
           reportCount: data.reportCount || 0,
@@ -259,7 +260,7 @@ export default function ForumModerationPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline">
-                    {item.type === "thread" ? "Wątek" : "Post"}
+                    {item.type === "thread" ? t('thread') : t('post')}
                   </Badge>
                   <Badge variant={
                     item.status === "approved" ? "default" :

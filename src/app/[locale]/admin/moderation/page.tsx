@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 import { withAuth } from '@/components/auth/withAuth';
 import { auth } from '@/lib/firebase';
+import { useTranslations } from 'next-intl';
 import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -290,6 +291,7 @@ interface Report {
 }
 
 function ModerationPage() {
+  const t = useTranslations('admin.common');
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [pendingDeals, setPendingDeals] = useState<Deal[]>([]);
@@ -756,7 +758,7 @@ function ModerationPage() {
                     setSelectedSubSubCategory('');
                   }}>
                     <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Podkategoria" />
+                      <SelectValue placeholder={t('subcategory')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Wszystkie podkategorie</SelectItem>
@@ -949,7 +951,7 @@ function ModerationPage() {
                     setSelectedSubSubCategory('');
                   }}>
                     <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Podkategoria" />
+                      <SelectValue placeholder={t('subcategory')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Wszystkie podkategorie</SelectItem>
