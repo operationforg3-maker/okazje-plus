@@ -42,8 +42,8 @@ export function LogoSVGWrapper({ className = "h-8 flex-shrink-0 md:h-9 lg:h-10",
   // Dynamically create SVG with light/dark mode support by setting fill attribute
   const svgContent = `
     <svg
-      width="100%"
-      height="100%"
+      width="852"
+      height="222"
       viewBox="0 0 852 222"
       version="1.1"
       xmlns="http://www.w3.org/2000/svg"
