@@ -34,7 +34,6 @@ import {
 // import { ImportSystemsComparison } from '@/components/admin/import-systems-comparison';
 // import { ImportProgress, ImportLog, ImportStats, ImportStatus } from '@/components/admin/import-progress';
 // import { CategoryBuilder } from '@/components/admin/category-builder';
-import { useTranslations } from 'next-intl';
 
 // interface ImportLog {
 //   timestamp: string;
