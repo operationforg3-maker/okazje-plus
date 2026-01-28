@@ -2,6 +2,7 @@
 'use client';
 
 import { useAuth } from '@/lib/auth';
+import { useTranslations } from 'next-intl';
 
 import { useState, useEffect } from 'react';
 import { withAuth } from '@/components/auth/withAuth';
@@ -56,6 +57,7 @@ import { ImportLog, ImportStats, ImportStatus } from '@/lib/types'; // Using pla
 function SetupPage() {
   const { user, getIdToken } = useAuth();
   const t = useTranslations('adminSetup');
+  const tCommon = useTranslations('admin.common');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
   const [seedingStatus, setSeedingStatus] = useState<any>('idle');
@@ -720,7 +722,7 @@ function SetupPage() {
                     <Calendar className="h-6 w-6 text-white" />
                   </div>
                   <Badge variant={scheduleEnabled ? "default" : "secondary"} className={scheduleEnabled ? "bg-green-600" : ""}>
-                    {scheduleEnabled ? '✓ Aktywny' : 'Nieaktywny'}
+                    {scheduleEnabled ? `✓ ${tCommon('statusActive')}` : tCommon('statusInactive')}
                   </Badge>
                 </div>
                 <CardTitle className="text-xl">Harmonogram Import</CardTitle>
@@ -1038,7 +1040,7 @@ function SetupPage() {
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium">Harmonogram weryfikacji</label>
                   <Badge variant={indexesScheduleEnabled ? "default" : "secondary"}>
-                    {indexesScheduleEnabled ? "Aktywny" : "Nieaktywny"}
+                    {indexesScheduleEnabled ? t('statusActive') : t('statusInactive')}
                   </Badge>
                 </div>
                 

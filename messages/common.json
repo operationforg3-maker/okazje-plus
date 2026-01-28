@@ -5,6 +5,12 @@
     "system": "Motyw: Systemowy",
     "hint": "kliknij, aby zmienić"
   },
+  "time": {
+    "days": "Dni",
+    "hours": "Godz",
+    "minutes": "Min",
+    "seconds": "Sek"
+  },
   "search": {
     "placeholder": "Szukaj produktów lub okazji...",
     "noSuggestions": "Brak sugestii",
@@ -25,6 +31,10 @@
     "clearAll": "Wyczyść wszystko",
     "apply": "Zastosuj",
     "reset": "Resetuj",
+    "min": "Min",
+    "max": "Max",
+    "from": "Od",
+    "to": "Do",
     "loading": "Ładowanie...",
     "saving": "Zapisywanie...",
     "deleting": "Usuwanie...",

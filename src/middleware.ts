@@ -17,5 +17,5 @@ export const config = {
   // - Static files (/_next/static/...)
   // - Image optimization files (/_next/image/...)
   // - Favicon, etc.
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  matcher: ['/((?!api|_next|_vercel|favicon|robots|.*\\..*).*)'],
 };
