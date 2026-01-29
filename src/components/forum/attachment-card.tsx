@@ -21,7 +21,17 @@ function getPriceValue(price: any): number {
 }
 
 export function AttachmentCard({ item, type, variant = 'full' }: AttachmentCardProps) {
+  // Helper to extract title from either string or LocalizedText
+  const getTitleValue = (title: any): string => {
+    if (typeof title === 'string') return title;
+    if (title && typeof title === 'object') {
+      return title.pl || title.en || title.de || 'N/A';
+    }
+    return 'N/A';
+  };
+  
   const title = type === 'deal' ? (item as Deal).title : (item as Product).name;
+  const titleStr = getTitleValue(title);
   const image = item.image;
   const price = type === 'deal' ? (item as Deal).price : (item as Product).price;
   const priceValue = getPriceValue(price);
@@ -33,9 +43,9 @@ export function AttachmentCard({ item, type, variant = 'full' }: AttachmentCardP
     return (
       <Link href={url} className="block">
         <Card className="p-2 flex items-center gap-2 hover:bg-muted/50 transition-colors">
-          <img src={image} alt={title} className="w-12 h-12 object-cover rounded" />
+          <img src={image} alt={titleStr} className="w-12 h-12 object-cover rounded" />
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium line-clamp-1">{title}</div>
+            <div className="text-sm font-medium line-clamp-1">{titleStr}</div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">{priceValue} zł</Badge>
               {temperature !== undefined && <Badge variant="secondary" className="text-xs">{temperature}°</Badge>}
@@ -51,10 +61,10 @@ export function AttachmentCard({ item, type, variant = 'full' }: AttachmentCardP
     <Link href={url} className="block">
       <Card className="p-4 hover:bg-muted/50 transition-colors">
         <div className="flex gap-4">
-          <img src={image} alt={title} className="w-24 h-24 object-cover rounded" />
+          <img src={image} alt={titleStr} className="w-24 h-24 object-cover rounded" />
           <div className="flex-1">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold line-clamp-2">{title}</h3>
+              <h3 className="font-semibold line-clamp-2">{titleStr}</h3>
               <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
             </div>
             <div className="mt-2 flex items-center gap-2">
