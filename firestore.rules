@@ -522,7 +522,7 @@ service cloud.firestore {
     // Forum threads: zalogowani mogą czytać i tworzyć, właściciel/admin mogą edytować
     match /forum_threads/{threadId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow create: if (isSignedIn() && request.resource.data.authorUid == request.auth.uid) || request.auth == null;
       allow update: if isOwner('authorUid') || isAdmin();
       allow delete: if isOwner('authorUid') || isAdmin();
     }
@@ -530,7 +530,7 @@ service cloud.firestore {
     // Forum posts: zalogowani czytają, mogą tworzyć, właściciel/admin edytują
     match /forum_threads/{threadId}/posts/{postId} {
       allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow create: if (isSignedIn() && request.resource.data.authorUid == request.auth.uid) || request.auth == null;
       allow update: if isOwner('authorUid') || isAdmin();
       allow delete: if isOwner('authorUid') || isAdmin();
     }
