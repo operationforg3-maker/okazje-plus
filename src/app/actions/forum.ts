@@ -1,13 +1,13 @@
 'use server';
 
-import { getServerAuthSession, requireAuth } from '@/lib/auth-server';
+import { getServerAuthSession } from '@/lib/auth-server';
 import { PostAttachment } from '@/lib/types';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Server action to create forum thread with user authentication
- * Uses Admin SDK internally to bypass client-side Firestore permission issues
+ * Uses Firebase Admin SDK to bypass client-side Firestore permission issues
  */
 export async function createForumThreadServerAction(params: {
   title: string;
@@ -21,36 +21,36 @@ export async function createForumThreadServerAction(params: {
     throw new Error('Unauthorized - user not authenticated');
   }
 
-  const now = new Date().toISOString();
-  
-  // Create thread document
-  const threadData: Record<string, any> = {
-    title: params.title,
-    authorUid: session.uid,
-    authorDisplayName: session.displayName || session.email || null,
-    categoryId: params.categoryId ?? null,
-    tags: [],
-    summary: params.content.slice(0, 200),
-    postsCount: 1,
-    createdAt: now,
-    updatedAt: now,
-    lastPostAt: now,
-    status: 'approved',
-  };
-
-  // Add attachments only if they exist
-  if (params.attachments && params.attachments.length > 0) {
-    threadData.attachments = params.attachments;
-  }
-
   try {
-    const threadRef = await addDoc(collection(db, 'forum_threads'), threadData);
+    const now = new Date();
+    
+    // Create thread document using Admin SDK
+    const threadData: Record<string, any> = {
+      title: params.title,
+      authorUid: session.uid,
+      authorDisplayName: session.email || null,
+      categoryId: params.categoryId ?? null,
+      tags: [],
+      summary: params.content.slice(0, 200),
+      postsCount: 1,
+      createdAt: now,
+      updatedAt: now,
+      lastPostAt: now,
+      status: 'approved',
+    };
+
+    // Add attachments only if they exist
+    if (params.attachments && params.attachments.length > 0) {
+      threadData.attachments = params.attachments;
+    }
+
+    const threadRef = await adminDb.collection('forum_threads').add(threadData);
 
     // Create first post in subcollection
     const post: Record<string, any> = {
       threadId: threadRef.id,
       authorUid: session.uid,
-      authorDisplayName: session.displayName || session.email || null,
+      authorDisplayName: session.email || null,
       content: params.content,
       parentId: null,
       upvotes: 0,
@@ -65,7 +65,7 @@ export async function createForumThreadServerAction(params: {
       post.attachments = params.attachments;
     }
 
-    await addDoc(collection(db, 'forum_threads', threadRef.id, 'posts'), post);
+    await adminDb.collection('forum_threads').doc(threadRef.id).collection('posts').add(post);
 
     return threadRef.id;
   } catch (error) {
