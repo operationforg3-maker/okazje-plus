@@ -36,10 +36,12 @@ function NewThreadPageImpl() {
 
     setLoading(true);
     try {
-      const postAttachments: PostAttachment[] | undefined = 
-        attachments.length === 0 
-          ? undefined
-          : attachments.map(att => ({ type: att.type, id: att.id } as PostAttachment));
+      // Filter out any attachments with missing data and create valid PostAttachments
+      const validAttachments = attachments
+        .filter(att => att.type && att.id) // Ensure both type and id exist
+        .map(att => ({ type: att.type, id: att.id } as PostAttachment));
+
+      const postAttachments = validAttachments.length > 0 ? validAttachments : undefined;
 
       const id = await createForumThread({
         title,

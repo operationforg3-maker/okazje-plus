@@ -37,7 +37,9 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
         const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Deal | Product));
         const filtered = all.filter(item => {
           const title = type === 'deal' ? (item as Deal).title : (item as Product).name;
-          return title.toLowerCase().includes(searchQuery.toLowerCase());
+          // Handle both string and LocalizedText formats
+          const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || '');
+          return titleStr.toLowerCase().includes(searchQuery.toLowerCase());
         });
         
         setResults(filtered.slice(0, 10));
@@ -61,14 +63,16 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
 
   if (selected) {
     const title = type === 'deal' ? (selected as Deal).title : (selected as Product).name;
+    // Handle both string and LocalizedText formats
+    const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || 'N/A');
     const image = selected.image;
     const price = type === 'deal' ? (selected as Deal).price : (selected as Product).price;
     
     return (
       <Card className="p-3 flex items-center gap-3">
-        <img src={image} alt={title} className="w-16 h-16 object-cover rounded" />
+        <img src={image} alt={titleStr} className="w-16 h-16 object-cover rounded" />
         <div className="flex-1">
-          <div className="font-medium text-sm line-clamp-1">{title}</div>
+          <div className="font-medium text-sm line-clamp-1">{titleStr}</div>
           <Badge variant="outline">{price} zł</Badge>
         </div>
         {onClear && (
@@ -98,6 +102,8 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
         <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
           {results.map((item) => {
             const title = type === 'deal' ? (item as Deal).title : (item as Product).name;
+            // Handle both string and LocalizedText formats
+            const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || 'N/A');
             const image = item.image;
             const price = type === 'deal' ? (item as Deal).price : (item as Product).price;
             
@@ -107,9 +113,9 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
                 onClick={() => onSelect(item)}
                 className="p-3 flex items-center gap-3 hover:bg-muted/50 cursor-pointer"
               >
-                <img src={image} alt={title} className="w-12 h-12 object-cover rounded" />
+                <img src={image} alt={titleStr} className="w-12 h-12 object-cover rounded" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium line-clamp-1">{title}</div>
+                  <div className="text-sm font-medium line-clamp-1">{titleStr}</div>
                   <Badge variant="outline" className="text-xs">{price} zł</Badge>
                 </div>
               </div>
