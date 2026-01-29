@@ -2034,20 +2034,25 @@ export async function createForumThread(params: {
 }): Promise<string> {
   const now = new Date().toISOString();
   // Najpierw utwórz wątek
-  const thread: Omit<ForumThread, 'id'> = {
+  const threadData: Record<string, any> = {
     title: params.title,
     authorUid: params.authorUid,
     authorDisplayName: params.authorDisplayName ?? null,
     categoryId: params.categoryId ?? null,
     tags: [],
     summary: params.content.slice(0, 200),
-    ...(params.attachments && params.attachments.length > 0 && { attachments: params.attachments }),
     postsCount: 1,
     createdAt: now,
     updatedAt: now,
     lastPostAt: now,
   };
-  const threadRef = await addDoc(collection(db, 'forum_threads'), thread as any);
+  
+  // Dodaj attachments tylko jeśli istnieją
+  if (params.attachments && params.attachments.length > 0) {
+    threadData.attachments = params.attachments;
+  }
+  
+  const threadRef = await addDoc(collection(db, 'forum_threads'), threadData);
 
   // Następnie dodaj pierwszy post do subkolekcji
   const post: Omit<ForumPost, 'id'> = {
@@ -2076,19 +2081,24 @@ export async function addForumPost(params: {
   parentId?: string | null;
 }): Promise<string> {
   const now = new Date().toISOString();
-  const post: Omit<ForumPost, 'id'> = {
+  const postData: Record<string, any> = {
     threadId: params.threadId,
     authorUid: params.authorUid,
     authorDisplayName: params.authorDisplayName ?? null,
     content: params.content,
-    ...(params.attachments && params.attachments.length > 0 && { attachments: params.attachments }),
     parentId: params.parentId ?? null,
     upvotes: 0,
     downvotes: 0,
     createdAt: now,
     updatedAt: now,
   };
-  const ref = await addDoc(collection(db, 'forum_threads', params.threadId, 'posts'), post as any);
+  
+  // Dodaj attachments tylko jeśli istnieją
+  if (params.attachments && params.attachments.length > 0) {
+    postData.attachments = params.attachments;
+  }
+  
+  const ref = await addDoc(collection(db, 'forum_threads', params.threadId, 'posts'), postData);
   // Aktualizuj licznik i lastPostAt
   await updateDoc(doc(db, 'forum_threads', params.threadId), {
     postsCount: increment(1),
