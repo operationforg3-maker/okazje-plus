@@ -124,6 +124,66 @@ export function CategoryBreadcrumb({
     return label[locale as keyof CategoryLabel] || label.pl;
   };
 
+  // Generate BreadcrumbList JSON-LD for SEO
+  useEffect(() => {
+    if (!mainCategorySlug || isLoading) return;
+
+    const breadcrumbList = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Strona główna',
+          item: 'https://okazjeplus.pl'
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: contextType === 'products' ? 'Produkty' : 'Okazje',
+          item: `https://okazjeplus.pl/${contextType === 'products' ? 'products' : 'deals'}`
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: getText(labels.main) || mainCategorySlug,
+          item: `https://okazjeplus.pl/${routePrefix}?category=${mainCategorySlug}`
+        },
+        ...(subCategorySlug ? [{
+          '@type': 'ListItem',
+          position: 4,
+          name: getText(labels.sub) || subCategorySlug,
+          item: `https://okazjeplus.pl/${routePrefix}?category=${mainCategorySlug}&sub=${subCategorySlug}`
+        }] : []),
+        ...(subSubCategorySlug ? [{
+          '@type': 'ListItem',
+          position: 5,
+          name: getText(labels.subsub) || subSubCategorySlug,
+          item: `https://okazjeplus.pl/${routePrefix}?category=${mainCategorySlug}&sub=${subCategorySlug}&subsub=${subSubCategorySlug}`
+        }] : []),
+      ]
+    };
+
+    // Add or update script tag
+    const existingScript = document.getElementById('breadcrumb-jsonld');
+    if (existingScript) {
+      existingScript.textContent = JSON.stringify(breadcrumbList);
+    } else {
+      const script = document.createElement('script');
+      script.id = 'breadcrumb-jsonld';
+      script.type = 'application/ld+json';
+      script.textContent = JSON.stringify(breadcrumbList);
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      // Cleanup on unmount
+      const script = document.getElementById('breadcrumb-jsonld');
+      if (script) script.remove();
+    };
+  }, [mainCategorySlug, subCategorySlug, subSubCategorySlug, labels, isLoading, routePrefix, locale, contextType]);
+
   return (
     <div
       className={`flex items-center gap-1 text-xs sm:text-sm text-muted-foreground ${className}`}
