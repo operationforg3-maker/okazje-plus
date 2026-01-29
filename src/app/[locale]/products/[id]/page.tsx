@@ -6,6 +6,7 @@ import { Product, ProductRating, ProductCore, DealM6 } from '@/lib/types';
 import { getProductRatings, getProductWithDeals } from '@/lib/data';
 import { getProductWithDealsAdmin } from '@/lib/data-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
+import { generateProductJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 import ProductDetailM6Client from './product-detail-m6-client';
 
 // Force dynamic rendering dla real-time danych
@@ -328,95 +329,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const productName = typeof (productData as any)?.title === 'object' 
     ? ((productData as any).title.pl || (productData as any).title.en || 'Produkt')
     : ((productData as any)?.title || (productData as any)?.name || 'Produkt');
-  const productDescription = typeof (productData as any)?.description === 'string' 
-    ? (productData as any).description 
-    : ((productData as any)?.shortDescription?.pl || (productData as any)?.fullDescription?.pl || '');
   
-  // For M6: use bestPrice, for legacy: use price
-  const priceAmount = isM6 ? (productCore?.bestPrice?.amount ?? 0) : (product?.price ?? 0);
-  const priceCurrency = isM6 ? (productCore?.bestPrice?.currency ?? 'PLN') : 'PLN';
-  const safeDeals = Array.isArray(deals) ? deals.filter((deal) => deal?.price?.amount != null) : [];
-  const lowestDealPrice = safeDeals.length > 0 ? Math.min(...safeDeals.map((deal: any) => deal.price.amount)) : priceAmount;
-  
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: productName,
-    description: productDescription,
-    image: isM6 ? (productCore?.images?.[0] || '') : (product?.image || ''),
-    sku: productData.id,
-    brand: {
-      '@type': 'Brand',
-      name: 'Various',
-    },
-    offers: isM6 ? {
-      '@type': 'AggregateOffer',
-      url: `https://okazje.plus/pl/products/${productData.id}`,
-      priceCurrency: priceCurrency,
-      lowPrice: lowestDealPrice,
-      offerCount: safeDeals.length,
-      offers: safeDeals.slice(0, 5).map((deal: any) => ({
-        '@type': 'Offer',
-        price: deal?.price?.amount || 0,
-        priceCurrency: deal?.price?.currency || priceCurrency,
-        availability: deal?.stockStatus === 'in_stock' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-        seller: {
-          '@type': 'Organization',
-          name: deal?.merchantName || 'Merchant',
-        },
-      })),
-    } : {
-      '@type': 'Offer',
-      url: `https://okazje.plus/pl/products/${productData.id}`,
-      priceCurrency: 'PLN',
-      price: product?.price || 0,
-      ...(product?.originalPrice && { 
-        priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      }),
-      availability: product?.metadata?.stockStatus === 'in_stock' 
-        ? 'https://schema.org/InStock'
-        : product?.metadata?.stockStatus === 'low_stock'
-        ? 'https://schema.org/LimitedAvailability'
-        : 'https://schema.org/OutOfStock',
-      seller: {
-        '@type': 'Organization',
-        name: product?.metadata?.merchant || 'Various',
-      },
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: isM6 ? (productCore?.rating?.score ?? 0) : (product?.ratingCard?.average ?? 0),
-      reviewCount: isM6 ? (productCore?.rating?.count ?? 0) : (product?.ratingCard?.count ?? 0),
-      bestRating: 5,
-      worstRating: 1,
-    },
-  };
-
-  // BreadcrumbList schema for better navigation in Google
-  const breadcrumbList = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Strona główna',
-        item: 'https://okazjeplus.pl'
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Produkty',
-        item: 'https://okazjeplus.pl/products'
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: productName,
-        item: `https://okazjeplus.pl/products/${productData.id}`
-      }
-    ]
-  };
+  const jsonLd = generateProductJsonLd(productData, isM6, deals || [], productCore, product);
+  const breadcrumbList = generateBreadcrumbJsonLd(
+    productName,
+    productData.id,
+    (productData as any)?.subCategorySlug || undefined
+  );
   
   return (
     <>
