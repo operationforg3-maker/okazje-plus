@@ -2185,3 +2185,111 @@ export const testCreateImportJob = onRequest(
   }
 );
 
+// =============================================================================
+// FORUM THREAD CREATION VIA CLOUD FUNCTION
+// =============================================================================
+
+/**
+ * Cloud Function: Creates a forum thread with first post
+ * Uses Admin SDK for server-side Firestore writes (bypasses client restrictions)
+ * 
+ * @param {CallableRequest} request - Request with forum thread data
+ * @return {Promise} Success status and thread ID
+ */
+export const createForumThreadCloudFunction = onCall(
+  {
+    region: "europe-west1",
+    cors: true,
+  },
+  async (request: CallableRequest<{
+    title: string;
+    content: string;
+    categoryId?: string;
+    attachments?: Array<{type: string; id: string}>;
+  }>) => {
+    // Verify authentication
+    if (!request.auth?.uid) {
+      throw new HttpsError(
+        "unauthenticated",
+        "User must be authenticated to create forum thread"
+      );
+    }
+
+    const {title, content, categoryId, attachments} = request.data;
+
+    // Validate input
+    if (!title || !content) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Title and content are required"
+      );
+    }
+
+    try {
+      const now = Timestamp.now();
+      const userDoc = await db.collection("users").doc(request.auth.uid).get();
+      const userData = userDoc.data();
+      const authorDisplayName = userData?.displayName || userData?.email || "Anonymous";
+
+      // Create thread document
+      const threadData = {
+        title,
+        authorUid: request.auth.uid,
+        authorDisplayName,
+        categoryId: categoryId || null,
+        tags: [],
+        summary: content.slice(0, 200),
+        postsCount: 1,
+        createdAt: now,
+        updatedAt: now,
+        lastPostAt: now,
+        status: "approved",
+        ...(attachments && attachments.length > 0 ? {attachments} : {}),
+      };
+
+      const threadRef = await db.collection("forum_threads").add(threadData);
+
+      // Create first post in subcollection
+      const post = {
+        threadId: threadRef.id,
+        authorUid: request.auth.uid,
+        authorDisplayName,
+        content,
+        parentId: null,
+        upvotes: 0,
+        downvotes: 0,
+        createdAt: now,
+        updatedAt: now,
+        status: "approved",
+        ...(attachments && attachments.length > 0 ? {attachments} : {}),
+      };
+
+      await db
+        .collection("forum_threads")
+        .doc(threadRef.id)
+        .collection("posts")
+        .add(post);
+
+      logger.info(`Forum thread created: ${threadRef.id}`, {
+        author: request.auth.uid,
+        category: categoryId,
+      });
+
+      return {
+        success: true,
+        threadId: threadRef.id,
+        message: "Forum thread created successfully",
+      };
+    } catch (error) {
+      logger.error(
+        "[createForumThreadCloudFunction] Error:",
+        error instanceof Error ? error.message : error
+      );
+      throw new HttpsError(
+        "internal",
+        error instanceof Error ? error.message : "Failed to create forum thread"
+      );
+    }
+  }
+);
+

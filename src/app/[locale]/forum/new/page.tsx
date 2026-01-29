@@ -16,7 +16,8 @@ import { ForumRichEditor } from '@/components/forum/rich-editor';
 import { CategorySuggestionDialog } from '@/components/forum/category-suggestion-dialog';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createForumThreadServerAction } from '@/app/actions/forum';
+import { functions } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 
 function NewThreadPageImpl() {
   const { user } = useAuth();
@@ -45,13 +46,24 @@ function NewThreadPageImpl() {
 
       const postAttachments = validAttachments.length > 0 ? validAttachments : undefined;
 
-      const id = await createForumThreadServerAction({
+      // Call Cloud Function instead of server action
+      const createForumThread = httpsCallable(functions, 'createForumThreadCloudFunction');
+      const result = await createForumThread({
         title,
         content,
         categoryId: categoryId || undefined,
         attachments: postAttachments,
       });
-      router.push(`/forum/${id}`);
+
+      const data = result.data as any;
+      if (data.success && data.threadId) {
+        router.push(`/forum/${data.threadId}`);
+      } else {
+        throw new Error(data.message || 'Failed to create forum thread');
+      }
+    } catch (error) {
+      console.error('Error creating forum thread:', error);
+      alert(`Błąd: ${error instanceof Error ? error.message : 'Nie udało się utworzyć wątku'}`);
     } finally {
       setLoading(false);
     }
