@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableAttachmentPicker } from '@/components/forum/searchable-attachment-picker';
 import { AttachmentCard } from '@/components/forum/attachment-card';
 import { ForumRichEditor } from '@/components/forum/rich-editor';
+import { CategorySuggestionDialog } from '@/components/forum/category-suggestion-dialog';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -79,7 +80,10 @@ function NewThreadPageImpl() {
       <Card>
         <CardHeader>
           <CardTitle>Podstawowe informacje</CardTitle>
-          <CardDescription>Uzupełnij tytuł, treść oraz kategorię</CardDescription>
+          <CardDescription className="flex items-center justify-between">
+            <span>Uzupełnij tytuł, treść oraz kategorię</span>
+            <CategorySuggestionDialog onSuggestionCreated={() => listForumCategories().then(setCategories)} />
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-2">

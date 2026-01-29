@@ -767,6 +767,19 @@ export interface ForumCategory {
   createdAt?: string;
 }
 
+export interface CategorySuggestion {
+  id: string;
+  name: string;
+  description: string;
+  suggestedByUid: string;
+  suggestedByName?: string | null;
+  status: 'pending' | 'approved' | 'rejected'; // pending = oczekujące, approved = zaakceptowana i stworzona jako kategoria
+  createdAt: string;
+  reviewedAt?: string;
+  reviewedByUid?: string; // Admin który zaakceptował/odrzucił
+  rejectionReason?: string; // Powód odrzucenia (jeśli applicable)
+}
+
 export type PostAttachment =
   | { type: 'deal'; id: string }
   | { type: 'product'; id: string };

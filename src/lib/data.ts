@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment } from "@/lib/types";
+import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment, CategorySuggestion } from "@/lib/types";
 import { sanitizeDealRecord, sanitizeProductRecord, sanitizeProductCoreRecord } from '@/lib/sanitizers';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
 const _warnedOnce = new Set<string>();
@@ -1874,6 +1874,89 @@ export async function listForumCategories(): Promise<ForumCategory[]> {
   const ref = collection(db, 'forum_categories');
   const snap = await getDocs(query(ref, orderBy('sortOrder', 'asc')));
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumCategory));
+}
+
+// ===== CATEGORY SUGGESTIONS =====
+
+/** Dodaj propozycję kategorii od użytkownika */
+export async function createCategorySuggestion(data: {
+  name: string;
+  description: string;
+  suggestedByUid: string;
+  suggestedByName?: string | null;
+}): Promise<string> {
+  const ref = collection(db, 'forum_category_suggestions');
+  const docRef = await addDoc(ref, {
+    ...data,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  } as Omit<CategorySuggestion, 'id'>);
+  return docRef.id;
+}
+
+/** Lista propozycji kategorii dla admina */
+export async function listCategorySuggestions(statusFilter?: 'pending' | 'approved' | 'rejected'): Promise<CategorySuggestion[]> {
+  const ref = collection(db, 'forum_category_suggestions');
+  let q;
+  if (statusFilter) {
+    q = query(ref, where('status', '==', statusFilter), orderBy('createdAt', 'desc'));
+  } else {
+    q = query(ref, orderBy('createdAt', 'desc'));
+  }
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as CategorySuggestion));
+}
+
+/** Zaakceptuj propozycję i stwórz nową kategorię */
+export async function approveCategorySuggestion(suggestionId: string, adminUid: string): Promise<string> {
+  const suggestionRef = doc(db, 'forum_category_suggestions', suggestionId);
+  const suggestionSnap = await getDoc(suggestionRef);
+  
+  if (!suggestionSnap.exists()) {
+    throw new Error('Propozycja nie znaleziona');
+  }
+  
+  const suggestion = suggestionSnap.data() as CategorySuggestion;
+  
+  // Utwórz nową kategorię
+  const slug = suggestion.name
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+  
+  // Pobranie liczby kategorii by określić sortOrder
+  const categoriesRef = collection(db, 'forum_categories');
+  const categoriesSnap = await getDocs(categoriesRef);
+  const nextSortOrder = categoriesSnap.size + 1;
+  
+  const newCategoryRef = await addDoc(categoriesRef, {
+    name: suggestion.name,
+    slug,
+    description: suggestion.description,
+    sortOrder: nextSortOrder,
+    createdAt: new Date().toISOString(),
+  });
+  
+  // Zaktualizuj status propozycji
+  await updateDoc(suggestionRef, {
+    status: 'approved',
+    reviewedAt: new Date().toISOString(),
+    reviewedByUid: adminUid,
+  });
+  
+  return newCategoryRef.id;
+}
+
+/** Odrzuć propozycję kategorii */
+export async function rejectCategorySuggestion(suggestionId: string, adminUid: string, reason: string): Promise<void> {
+  const suggestionRef = doc(db, 'forum_category_suggestions', suggestionId);
+  await updateDoc(suggestionRef, {
+    status: 'rejected',
+    reviewedAt: new Date().toISOString(),
+    reviewedByUid: adminUid,
+    rejectionReason: reason,
+  });
 }
 
 // Lista wątków (z sortowaniem po ostatniej aktywności)
