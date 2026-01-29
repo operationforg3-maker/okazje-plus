@@ -3,7 +3,7 @@
 import { withAuth } from '@/components/auth/withAuth';
 import { useAuth } from '@/lib/auth';
 import { useState } from 'react';
-import { createForumThread, listForumCategories } from '@/lib/data';
+import { listForumCategories } from '@/lib/data';
 import { ForumCategory, PostAttachment, Deal, Product } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { ForumRichEditor } from '@/components/forum/rich-editor';
 import { CategorySuggestionDialog } from '@/components/forum/category-suggestion-dialog';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createForumThreadServerAction } from '@/app/actions/forum';
 
 function NewThreadPageImpl() {
   const { user } = useAuth();
@@ -44,13 +45,11 @@ function NewThreadPageImpl() {
 
       const postAttachments = validAttachments.length > 0 ? validAttachments : undefined;
 
-      const id = await createForumThread({
+      const id = await createForumThreadServerAction({
         title,
         content,
         categoryId: categoryId || undefined,
         attachments: postAttachments,
-        authorUid: user.uid,
-        authorDisplayName: user.displayName || user.email,
       });
       router.push(`/forum/${id}`);
     } finally {
