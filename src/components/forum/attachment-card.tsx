@@ -13,10 +13,18 @@ interface AttachmentCardProps {
   variant?: 'full' | 'compact';
 }
 
+// Helper to extract numeric price from either number or {amount, currency} object
+function getPriceValue(price: any): number {
+  if (typeof price === 'number') return price;
+  if (price && typeof price === 'object' && typeof price.amount === 'number') return price.amount;
+  return 0;
+}
+
 export function AttachmentCard({ item, type, variant = 'full' }: AttachmentCardProps) {
   const title = type === 'deal' ? (item as Deal).title : (item as Product).name;
   const image = item.image;
   const price = type === 'deal' ? (item as Deal).price : (item as Product).price;
+  const priceValue = getPriceValue(price);
   const temperature = type === 'deal' ? (item as Deal).temperature : undefined;
   const url = type === 'deal' ? `/deals/${item.id}` : `/products/${item.id}`;
   const merchant = type === 'deal' ? (item as Deal).merchant : undefined;
@@ -29,7 +37,7 @@ export function AttachmentCard({ item, type, variant = 'full' }: AttachmentCardP
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium line-clamp-1">{title}</div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">{price} zł</Badge>
+              <Badge variant="outline" className="text-xs">{priceValue} zł</Badge>
               {temperature !== undefined && <Badge variant="secondary" className="text-xs">{temperature}°</Badge>}
             </div>
           </div>
@@ -50,7 +58,7 @@ export function AttachmentCard({ item, type, variant = 'full' }: AttachmentCardP
               <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-1" />
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <Badge className="text-base font-bold">{price} zł</Badge>
+              <Badge className="text-base font-bold">{priceValue} zł</Badge>
               {temperature !== undefined && <Badge variant="secondary">{temperature}°</Badge>}
               <Badge variant="outline">{type === 'deal' ? 'Okazja' : 'Produkt'}</Badge>
             </div>

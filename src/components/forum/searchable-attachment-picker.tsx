@@ -18,6 +18,13 @@ interface SearchableAttachmentPickerProps {
   onClear?: () => void;
 }
 
+// Helper to extract numeric price from either number or {amount, currency} object
+function getPriceValue(price: any): number {
+  if (typeof price === 'number') return price;
+  if (price && typeof price === 'object' && typeof price.amount === 'number') return price.amount;
+  return 0;
+}
+
 export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }: SearchableAttachmentPickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<(Deal | Product)[]>([]);
@@ -67,13 +74,14 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
     const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || 'N/A');
     const image = selected.image;
     const price = type === 'deal' ? (selected as Deal).price : (selected as Product).price;
+    const priceValue = getPriceValue(price);
     
     return (
       <Card className="p-3 flex items-center gap-3">
         <img src={image} alt={titleStr} className="w-16 h-16 object-cover rounded" />
         <div className="flex-1">
           <div className="font-medium text-sm line-clamp-1">{titleStr}</div>
-          <Badge variant="outline">{price} zł</Badge>
+          <Badge variant="outline">{priceValue} zł</Badge>
         </div>
         {onClear && (
           <Button variant="ghost" size="sm" onClick={onClear}>
@@ -106,6 +114,7 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
             const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || 'N/A');
             const image = item.image;
             const price = type === 'deal' ? (item as Deal).price : (item as Product).price;
+            const priceValue = getPriceValue(price);
             
             return (
               <div
@@ -116,7 +125,7 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
                 <img src={image} alt={titleStr} className="w-12 h-12 object-cover rounded" />
                 <div className="flex-1">
                   <div className="text-sm font-medium line-clamp-1">{titleStr}</div>
-                  <Badge variant="outline" className="text-xs">{price} zł</Badge>
+                  <Badge variant="outline" className="text-xs">{priceValue} zł</Badge>
                 </div>
               </div>
             );
