@@ -511,6 +511,39 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
+    // FORUM (Categories, Threads, Posts, Suggestions)
+    ////////////////////////////////
+    // Forum categories: publiczne odczyt, admin pisze
+    match /forum_categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Forum threads: zalogowani mogą czytać i tworzyć, właściciel/admin mogą edytować
+    match /forum_threads/{threadId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow update: if isOwner('authorUid') || isAdmin();
+      allow delete: if isOwner('authorUid') || isAdmin();
+    }
+
+    // Forum posts: zalogowani czytają, mogą tworzyć, właściciel/admin edytują
+    match /forum_threads/{threadId}/posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow update: if isOwner('authorUid') || isAdmin();
+      allow delete: if isOwner('authorUid') || isAdmin();
+    }
+
+    // Category suggestions: zalogowani mogą dodawać, admin zarządza
+    match /forum_category_suggestions/{suggestionId} {
+      allow read: if isAdmin(); // Tylko admin widzi wszystkie
+      allow create: if isSignedIn() && request.resource.data.suggestedByUid == request.auth.uid;
+      allow update: if isAdmin(); // Admin zatwierdza/odrzuca
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
     // CONFIG (System settings)
     ////////////////////////////////
     match /config/{configId} {
