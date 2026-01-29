@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableAttachmentPicker } from '@/components/forum/searchable-attachment-picker';
 import { AttachmentCard } from '@/components/forum/attachment-card';
+import { ForumRichEditor } from '@/components/forum/rich-editor';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -22,8 +23,7 @@ function NewThreadPageImpl() {
   const [content, setContent] = useState('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [categories, setCategories] = useState<ForumCategory[]>([]);
-  const [attachmentType, setAttachmentType] = useState<'none' | 'deal' | 'product'>('none');
-  const [selectedAttachment, setSelectedAttachment] = useState<Deal | Product | null>(null);
+  const [attachments, setAttachments] = useState<Array<{ type: 'deal' | 'product'; id: string; item: Deal | Product }>>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,16 +36,16 @@ function NewThreadPageImpl() {
 
     setLoading(true);
     try {
-      const attachments: PostAttachment[] | undefined =
-        attachmentType === 'none' || !selectedAttachment
+      const postAttachments: PostAttachment[] | undefined = 
+        attachments.length === 0 
           ? undefined
-          : [{ type: attachmentType, id: selectedAttachment.id } as PostAttachment];
+          : attachments.map(att => ({ type: att.type, id: att.id } as PostAttachment));
 
       const id = await createForumThread({
         title,
         content,
         categoryId: categoryId || undefined,
-        attachments,
+        attachments: postAttachments,
         authorUid: user.uid,
         authorDisplayName: user.displayName || user.email,
       });
@@ -53,6 +53,18 @@ function NewThreadPageImpl() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAttachmentAdd = (item: Deal | Product, type: 'deal' | 'product') => {
+    // Avoid duplicates
+    if (attachments.some(att => att.id === item.id)) {
+      return;
+    }
+    setAttachments(prev => [...prev, { type, id: item.id, item }]);
+  };
+
+  const handleAttachmentRemove = (id: string) => {
+    setAttachments(prev => prev.filter(att => att.id !== id));
   };
 
   return (
@@ -87,30 +99,14 @@ function NewThreadPageImpl() {
           </div>
           <div className="grid gap-2">
             <label className="text-sm font-medium">Treść</label>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={10} placeholder="Opisz problem, temat dyskusji lub zaprezentuj produkt/okazję..." />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Załączniki (opcjonalnie)</CardTitle>
-          <CardDescription>Możesz podpiąć istniejący produkt lub okazję. W treści możesz również użyć @deal:id lub @product:id.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Button variant={attachmentType === 'none' ? 'default' : 'outline'} onClick={() => { setAttachmentType('none'); setSelectedAttachment(null); }}>Brak</Button>
-            <Button variant={attachmentType === 'deal' ? 'default' : 'outline'} onClick={() => { setAttachmentType('deal'); setSelectedAttachment(null); }}>Okazja</Button>
-            <Button variant={attachmentType === 'product' ? 'default' : 'outline'} onClick={() => { setAttachmentType('product'); setSelectedAttachment(null); }}>Produkt</Button>
-          </div>
-          {attachmentType !== 'none' && (
-            <SearchableAttachmentPicker
-              type={attachmentType}
-              onSelect={(item) => setSelectedAttachment(item)}
-              selected={selectedAttachment}
-              onClear={() => setSelectedAttachment(null)}
+            <ForumRichEditor
+              value={content}
+              onChange={setContent}
+              attachments={attachments}
+              onAttachmentAdd={handleAttachmentAdd}
+              onAttachmentRemove={handleAttachmentRemove}
             />
-          )}
+          </div>
         </CardContent>
       </Card>
 
