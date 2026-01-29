@@ -10,6 +10,15 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+// Helper to extract name from either string or LocalizedText object
+function getName(name: any): string {
+  if (typeof name === 'string') return name;
+  if (name && typeof name === 'object') {
+    return name.pl || name.en || name.de || 'Kategoria';
+  }
+  return 'Kategoria';
+}
+
 interface CategoryGridProps {
   categories: Category[];
 }
@@ -85,7 +94,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                       'text-xl font-bold mb-2 transition-colors group-hover:text-primary',
                       style.accent
                     )}>
-                      {category.name}
+                      {getName(category.name)}
                     </h3>
                   </Link>
                   

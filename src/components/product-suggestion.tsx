@@ -6,6 +6,15 @@ import { Product } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
+// Helper to extract product name from either string or LocalizedText object
+function getProductName(name: any): string {
+  if (typeof name === 'string') return name;
+  if (name && typeof name === 'object') {
+    return name.pl || name.en || name.de || 'Produkt';
+  }
+  return 'Produkt';
+}
+
 interface ProductSuggestionProps {
   onProductSelect: (productId: string) => void;
   dealTitle: string;
@@ -35,7 +44,7 @@ export default function ProductSuggestion({ onProductSelect, dealTitle }: Produc
 
   const handleSelect = (product: Product) => {
     setSelectedProduct(product.id);
-    setSearchText(product.name);
+    setSearchText(getProductName(product.name));
     onProductSelect(product.id);
     setSuggestions([]);
   }
@@ -56,7 +65,7 @@ export default function ProductSuggestion({ onProductSelect, dealTitle }: Produc
               className="px-4 py-2 cursor-pointer hover:bg-accent"
               onClick={() => handleSelect(product)}
             >
-              {product.name}
+              {getProductName(product.name)}
             </li>
           ))}
         </ul>

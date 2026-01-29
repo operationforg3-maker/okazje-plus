@@ -40,6 +40,15 @@ const formatCurrency = (value?: number | null) => {
   return priceFormatter.format(value);
 };
 
+// Helper to extract name from either string or LocalizedText object
+function getName(name: any): string {
+  if (typeof name === 'string') return name;
+  if (name && typeof name === 'object') {
+    return name.pl || name.en || name.de || 'Kategoria';
+  }
+  return 'Kategoria';
+}
+
 type ShowcaseItem = {
   id: string;
   title: string;
@@ -83,7 +92,7 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
               onClick={() => setActiveIndex(index)}
               aria-selected={isActive}
               aria-current={isActive ? 'true' : undefined}
-              aria-label={`Wybierz kategorię ${category.name}`}
+              aria-label={`Wybierz kategorię ${getName(category.name)}`}
               className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm font-medium transition-all ${
                 isActive
                   ? "bg-secondary text-secondary-foreground shadow-sm"
@@ -98,7 +107,7 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
                 ) : (
                   <Sparkles className="h-4 w-4 shrink-0" />
                 )}
-                <span className="truncate">{category.name}</span>
+                <span className="truncate">{getName(category.name)}</span>
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
             </button>
@@ -185,7 +194,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-foreground truncate">{subcategory.name}</h4>
+                      <h4 className="font-semibold text-foreground truncate">{getName(subcategory.name)}</h4>
                       {subcategory.highlight && (
                         <Badge className="text-[10px] uppercase flex-shrink-0" variant="secondary">Polecane</Badge>
                       )}
@@ -214,7 +223,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                           {subSubcategory.icon && (
                             <span className="text-base shrink-0">{subSubcategory.icon}</span>
                           )}
-                          <span className="flex-1 truncate font-medium group-hover:text-primary">{subSubcategory.name}</span>
+                          <span className="flex-1 truncate font-medium group-hover:text-primary">{getName(subSubcategory.name)}</span>
                           <ArrowRight className="h-3 w-3 shrink-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                         </Link>
                       );
