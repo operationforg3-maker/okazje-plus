@@ -11,10 +11,11 @@ import { Star, ShoppingCart, ExternalLink, Clock, Tag, Heart, Scale, Flame } fro
 import { useLocale, useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { useContentLanguage } from '@/hooks/use-content-language';
-import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { useCategoryName } from '@/hooks/use-category-name';
+import { useCardBaseState } from '@/hooks/use-card-base-state';
+import ShareButton from '@/components/share-button';
 
 interface ProductListCardProps {
   product: ProductCore;
@@ -67,8 +68,9 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   const productId = product.id || (product as any).identityHash || 'unknown';
   
   const { getText } = useContentLanguage();
-  const { isFavorited, isLoading: favLoading, toggleFavorite } = useFavorites(productId, 'product');
-  const { addItem, isInCart } = useSmartCart();
+  const baseState = useCardBaseState(product, 'product');
+  const { isFavorited, isFavoriteLoading, toggleFavorite, addToComparison, t: tCommon } = baseState;
+  const { addItem } = useSmartCart();
   const { formatPrice } = useCurrency();
   const { mainName: categoryLabel } = useCategoryName(product.mainCategorySlug, product.subCategorySlug, product.subSubCategorySlug);
   const [productData, setProductData] = useState({
@@ -156,10 +158,10 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     : '/placeholder.png';
 
   return (
-    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 rounded-lg border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+    <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
       {/* Image - Top on mobile, left on desktop */}
-      <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
-        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted">
+      <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
+        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted/50">
           <Image
             src={primaryImage}
             alt={displayTitle}
@@ -200,16 +202,19 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {productData.relativeTime}
             </span>
             {categoryLabel && (
-              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                <Tag className="h-3 w-3" aria-hidden />
-                {categoryLabel}
-              </Badge>
+              <>
+                <span aria-hidden>•</span>
+                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                  <Tag className="h-3 w-3" aria-hidden />
+                  {categoryLabel}
+                </Badge>
+              </>
             )}
           </div>
 
@@ -254,54 +259,92 @@ export default function ProductListCard({ product }: ProductListCardProps) {
       </div>
 
       {/* Action Buttons - Right Column (Matches DealListCard 3-col layout) */}
-      <div className="flex flex-col items-center justify-center gap-3 pl-4 border-l sm:min-w-[160px]">
-        {/* Primary Action - Go To Offer */}
-        <Button
-            asChild
-            size="lg"
-            className="w-full whitespace-nowrap bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-sm"
-          >
-            <a
-              href={(bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl || '#')}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              {t('card.go')}
-            </a>
-          </Button>
-
-          {/* Secondary Action - Details */}
+      <div className="flex flex-col items-center justify-center gap-3 pt-3 sm:pt-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l w-full sm:w-auto sm:min-w-[180px]">
+        <div className="grid grid-cols-3 gap-2 w-full">
           <Button
-            asChild
-            variant="outline"
+            variant={isFavorited ? "default" : "outline"}
             size="sm"
-            className="w-full gap-1"
-          >
-            <Link href={`${prefix}/products/${productId}`}>
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              {t('card.details')}
-            </Link>
-          </Button>
-          
-          {/* Quick Cart Action */}
-           <Button
-            size="sm"
-            variant="ghost"
-            className="w-full gap-1 text-muted-foreground hover:text-primary"
             onClick={(e) => {
               e.preventDefault();
-              addItem({
-                id: bestDeal?.id || productId,
-                name: getText(product.title) || 'Produkt',
-                image: Array.isArray(product.images) ? product.images[0] : '',
-                price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
-                affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
-              } as any, 1);
+              e.stopPropagation();
+              toggleFavorite();
             }}
+            aria-label={isFavorited ? tCommon('auth.removeFromFavorites') : tCommon('auth.addToFavorites')}
+            disabled={isFavoriteLoading}
+            className={isFavorited ? "h-9 w-9 p-0 bg-red-500 hover:bg-red-600" : "h-9 w-9 p-0"}
           >
-            <span className="text-xs">+ {t('card.cart', {default: 'Do koszyka'})}</span>
+            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
           </Button>
+          <ShareButton
+            type="product"
+            itemId={productId}
+            title={displayTitle}
+            url={`/products/${productId}`}
+            variant="outline"
+            size="icon"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              addToComparison({ ...product, type: 'product' } as any);
+            }}
+            aria-label={tCommon('comparison.addToComparison')}
+            className="h-9 w-9 p-0"
+          >
+            <Scale className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Primary Action - Go To Offer */}
+        <Button
+          asChild
+          size="lg"
+          className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white"
+        >
+          <a
+            href={(bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl || '#')}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            {t('card.go')}
+          </a>
+        </Button>
+
+        {/* Secondary Action - Details */}
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="w-full gap-1"
+        >
+          <Link href={`${prefix}/products/${productId}`}>
+            <ShoppingCart className="h-4 w-4 mr-1" />
+            {t('card.details')}
+          </Link>
+        </Button>
+        
+        {/* Quick Cart Action */}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="w-full gap-1 text-muted-foreground hover:text-primary"
+          onClick={(e) => {
+            e.preventDefault();
+            addItem({
+              id: bestDeal?.id || productId,
+              name: getText(product.title) || 'Produkt',
+              image: Array.isArray(product.images) ? product.images[0] : '',
+              price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
+              affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
+            } as any, 1);
+          }}
+        >
+          <span className="text-xs">+ {t('card.cart', {default: 'Do koszyka'})}</span>
+        </Button>
       </div>
     </div>
   );

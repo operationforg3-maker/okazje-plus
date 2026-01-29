@@ -1151,18 +1151,12 @@ export async function getCategoriesWithContent(
               return null; // Usuń podkategorię bez treści i bez pod-podkategorii
             }
             
-            // Filtruj pod-podkategorie
-            if (subcategory.subcategories) {
-              const filteredSubSubcategories = await Promise.all(
-                subcategory.subcategories.map(async (subsubcategory) => {
-                  const subsubHasContent = await getCategoryContentCount(subsubcategory.slug! || subsubcategory.id!, 'subSubCategorySlug');
-                  return subsubHasContent > 0 ? subsubcategory : null;
-                })
-              );
-              
+            // Filtruj pod-podkategorie - ZAWSZE pokazuj L3 kategorie, niezależnie czy mają content
+            if (subcategory.subcategories && subcategory.subcategories.length > 0) {
+              // Nie filtruj L3 - pokazuj je wszystkie aby użytkownik mógł wybierać
               return {
                 ...subcategory,
-                subcategories: filteredSubSubcategories.filter(s => s !== null),
+                subcategories: subcategory.subcategories, // Zachowaj wszystkie L3
               };
             }
             
@@ -2679,6 +2673,8 @@ export async function mergeProductCores(sourceId: string, targetId: string): Pro
 export async function getProductCoresByFilters(
   filters: {
     priceRange?: { min: number; max: number };
+    priceLimitMin?: number;
+    priceLimitMax?: number;
     minRating?: number;
     inStockOnly?: boolean;
     discountOnly?: boolean;
@@ -2793,6 +2789,8 @@ export async function getProductCoresByFilters(
 export async function getDealsByFilters(
   filters: {
     priceRange?: { min: number; max: number };
+    priceLimitMin?: number;
+    priceLimitMax?: number;
     minRating?: number;
     inStockOnly?: boolean;
     discountOnly?: boolean;
@@ -2923,6 +2921,32 @@ export async function getDealsByFilters(
   } catch (err) {
     console.error('Error filtering deals:', err);
     return [] as Deal[];
+  }
+}
+
+export async function getDealsCount(filters: {
+  categoryId?: string;
+  subCategorySlug?: string;
+  subSubCategorySlug?: string;
+  status?: string;
+} = {}): Promise<number> {
+  try {
+    const constraints = [where('status', '==', filters.status || 'approved')];
+
+    if (filters.subSubCategorySlug) {
+      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+    } else if (filters.subCategorySlug) {
+      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+    } else if (filters.categoryId) {
+      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
+    }
+
+    const q = query(collection(db, 'deals'), ...constraints);
+    const snap = await getCountFromServer(q);
+    return snap.data().count || 0;
+  } catch (err) {
+    console.error('Error counting deals:', err);
+    return 0;
   }
 }
 

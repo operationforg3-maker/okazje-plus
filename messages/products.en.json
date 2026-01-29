@@ -1,6 +1,11 @@
 {
   "title": "Products",
   "subtitle": "Best products from AliExpress",
+  "recommendations": "Recommendations Panel",
+  "viewToggle": {
+    "grid": "Grid View",
+    "list": "List View"
+  },
   "filters": {
     "search": "Search products...",
     "title": "Categories & filters",
@@ -16,6 +21,9 @@
     "priceRange": "Price Range",
     "min": "Min",
     "max": "Max",
+    "priceLimits": "Price Range Limits",
+    "minLimit": "Min limit:",
+    "maxLimit": "Max limit:",
     "quickFilters": {
       "freeShipping": "Free Shipping",
       "highRating": "High Rating",
@@ -49,6 +57,7 @@
   "empty": {
     "title": "No Products",
     "description": "No products found matching your criteria.",
+    "inCategory": "No products in this category",
     "cta": "Back to All Products"
   },
   "loading": "Loading products...",

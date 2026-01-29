@@ -19,12 +19,12 @@ import { UnifiedFilters, SortBy, SORT_OPTIONS, DEFAULT_FILTERS, CATEGORY_SPECS }
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { useTranslations } from 'next-intl';
 import { useCurrency } from '@/lib/unified-currency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DualRangeSlider } from '@/components/dual-range-slider';
 import {
   Select,
   SelectContent,
@@ -203,25 +203,25 @@ export function UnifiedFilterSidebar({
               <ChevronDown className={cn('w-4 h-4 transition', isExpanded('price') && 'rotate-180')} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-3">
-              <Slider
-                min={DEFAULT_FILTERS.price.min}
-                max={DEFAULT_FILTERS.price.max}
-                step={DEFAULT_FILTERS.price.step}
+              <DualRangeSlider
+                min={0}
+                max={50000}
+                step={100}
                 value={[
-                  filters.priceRange?.min || DEFAULT_FILTERS.price.min,
-                  filters.priceRange?.max || DEFAULT_FILTERS.price.max,
+                  filters.priceRange?.min || 0,
+                  filters.priceRange?.max || 15000,
                 ]}
                 onValueChange={handlePriceChange}
                 className="w-full"
               />
-              <div className="flex gap-2 text-sm justify-between">
+              <div className="flex gap-2 text-sm justify-between mt-2">
                 <div>
                   <Label className="text-xs text-muted-foreground mr-1">{t('min')}</Label>
                   <span className="font-semibold">{formatPrice(filters.priceRange?.min || 0)}</span>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground mr-1">{t('max')}</Label>
-                  <span className="font-semibold">{formatPrice(filters.priceRange?.max || 10000)}</span>
+                  <span className="font-semibold">{formatPrice(filters.priceRange?.max || 15000)}</span>
                 </div>
               </div>
             </CollapsibleContent>

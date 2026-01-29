@@ -14,6 +14,7 @@ import { ComparisonListener } from '@/components/deal-comparison-tool';
 import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
 import { CashbackWarningModal } from '@/components/cashback-warning-modal';
 import { AnalyticsProvider } from '@/components/analytics/provider';
+import { CookieConsentBanner } from '@/components/cookie-consent';
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazje-plus.web.app'),
@@ -171,6 +172,7 @@ export default async function LocaleLayout({
                   <ComparisonListener />
                   <ExtensionWarningBanner />
                   <CashbackWarningModal />
+                  <CookieConsentBanner />
                   <Toaster />
                 </div>
               </SmartCartProvider>

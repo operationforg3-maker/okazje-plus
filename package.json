@@ -84,6 +84,8 @@
     "react-dom": "18.3.1",
     "react-firebase-hooks": "^5.1.1",
     "react-hook-form": "^7.71.0",
+    "react-virtualized-auto-sizer": "^2.0.2",
+    "react-window": "^2.2.5",
     "recharts": "^2.15.4",
     "sharp": "0.33.5",
     "sonner": "^2.0.7",
@@ -94,6 +96,7 @@
     "typescript": "5.9.3",
     "typesense": "^2.1.0",
     "uuid": "^13.0.0",
+    "vanilla-cookieconsent": "^3.1.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {

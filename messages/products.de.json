@@ -1,6 +1,11 @@
 {
   "title": "Produkte",
   "subtitle": "Beste Produkte von AliExpress",
+  "recommendations": "Empfehlungs-Panel",
+  "viewToggle": {
+    "grid": "Rasteransicht",
+    "list": "Listenansicht"
+  },
   "filters": {
     "search": "Produkte suchen...",
     "title": "Kategorien & Filter",
@@ -16,6 +21,9 @@
     "priceRange": "Preisspanne",
     "min": "Min",
     "max": "Max",
+    "priceLimits": "Preisspannengrenzen",
+    "minLimit": "Min. Grenze:",
+    "maxLimit": "Max. Grenze:",
     "quickFilters": {
       "freeShipping": "Kostenloser Versand",
       "highRating": "Hohe Bewertung",
@@ -49,6 +57,7 @@
   "empty": {
     "title": "Keine Produkte",
     "description": "Keine Produkte gefunden, die Ihren Kriterien entsprechen.",
+    "inCategory": "Keine Produkte in dieser Kategorie",
     "cta": "Zurück zu allen Produkten"
   },
   "loading": "Produkte werden geladen...",

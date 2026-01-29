@@ -7,13 +7,15 @@ import { useCategoryName } from '@/hooks/use-category-name';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
-import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart } from 'lucide-react';
+import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart, Heart, AlertTriangle, Scale } from 'lucide-react';
 import { useSmartCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo } from '@/lib/i18n-utils';
-import { useContentLanguage } from '@/hooks/use-content-language';
+import { useCardBaseState } from '@/hooks/use-card-base-state';
+import ShareButton from '@/components/share-button';
+import { toast } from 'sonner';
 
 interface DealListCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -76,9 +78,10 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const prefix = `/${locale}`;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { mainName: categoryLabel } = useCategoryName(deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug);
+  const baseState = useCardBaseState(deal, 'deal');
+  const { getText, addToComparison, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const { getText } = useContentLanguage();
   const [dealData, setDealData] = useState<{
     isNew: boolean;
     relativeTime: string;
@@ -173,14 +176,15 @@ export default function DealListCard({ deal }: DealListCardProps) {
   }, [deal.postedAt, deal.price, deal.originalPrice, currency]);
 
   return (
-    <div className="group flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 rounded-lg border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-  <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-md">
-        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted">
+    <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
+      <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
+        <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted/50">
           <Image
             src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
             alt={safeText(deal.title) || 'Okazja'}
             data-ai-hint={safeText(deal.imageHint)}
             fill
+            priority
             sizes="160px"
             className="object-contain transition-transform duration-300 group-hover:scale-105"
           />
@@ -236,17 +240,23 @@ export default function DealListCard({ deal }: DealListCardProps) {
             </Link>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {dealData.relativeTime}
             </span>
-            <span>przez <span className="font-medium text-foreground">{postedBy}</span></span>
+            <span aria-hidden>•</span>
+            <span>
+              przez <span className="font-medium text-foreground">{postedBy}</span>
+            </span>
             {categoryLabel && (
-              <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-                <Tag className="h-3 w-3" aria-hidden />
-                {categoryLabel}
-              </Badge>
+              <>
+                <span aria-hidden>•</span>
+                <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+                  <Tag className="h-3 w-3" aria-hidden />
+                  {categoryLabel}
+                </Badge>
+              </>
             )}
           </div>
 
@@ -299,25 +309,82 @@ export default function DealListCard({ deal }: DealListCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-col items-center justify-between gap-3 pl-4 border-l">
-        <VoteControls dealId={deal.id} initialVoteCount={deal.temperature} />
-        <Button asChild size="lg" className="whitespace-nowrap">
-          <Link href={typeof deal.link === 'string' ? deal.link : '#'} target="_blank" rel="noopener noreferrer">
-            Idź do okazji
-          </Link>
-        </Button>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          className="w-full gap-1"
-          onClick={() => {
-            try { addDeal(deal, 1); } catch {}
-          }}
-        >
-          <ShoppingCart className="h-4 w-4" />
-          Dodaj do koszyka
-        </Button>
-      </div>
+        <div className="flex flex-col items-center justify-between gap-3 pt-3 sm:pt-0 pl-0 sm:pl-4 border-t sm:border-t-0 sm:border-l w-full sm:w-auto sm:min-w-[180px]">
+          <VoteControls dealId={deal.id} initialVoteCount={deal.temperature} />
+
+          <div className="grid grid-cols-4 sm:grid-cols-2 gap-2">
+            <Button
+              variant={isFavorited ? "default" : "outline"}
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleFavorite();
+              }}
+              aria-label={isFavorited ? t('auth.removeFromFavorites') : t('auth.addToFavorites')}
+              disabled={isFavoriteLoading}
+              className={isFavorited ? "h-9 w-9 p-0 bg-red-500 hover:bg-red-600" : "h-9 w-9 p-0"}
+            >
+              <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
+            </Button>
+            <ShareButton
+              type="deal"
+              itemId={deal.id}
+              title={dealTitle || t('labels.deal')}
+              url={`/deals/${deal.id}`}
+              variant="outline"
+              size="icon"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toast.success(t('messages.priceAlertEnabled'));
+              }}
+              aria-label={t('auth.priceAlert')}
+              className="h-9 w-9 p-0"
+            >
+              <AlertTriangle className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addToComparison({ ...deal, type: 'deal' });
+              }}
+              aria-label={t('comparison.addToComparison')}
+              className="h-9 w-9 p-0"
+            >
+              <Scale className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Button asChild size="lg" className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Link href={typeof deal.link === 'string' ? deal.link : '#'} target="_blank" rel="noopener noreferrer">
+              {t('actions.goTo')}
+            </Link>
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="w-full gap-1"
+            onClick={() => {
+              try { 
+                addDeal(deal, 1);
+                toast.success(t('messages.dealAddedToCart'));
+              } catch {
+                toast.error(t('cart.addToCartError'));
+              }
+            }}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {t('cart.addToCart')}
+          </Button>
+        </div>
     </div>
   );
 }

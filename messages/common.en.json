@@ -12,6 +12,11 @@
     "noResults": "No results",
     "searching": "Searching..."
   },
+  "breadcrumb": {
+    "home": "Home",
+    "deals": "Deals",
+    "products": "Products"
+  },
   "actions": {
     "save": "Save",
     "cancel": "Cancel",

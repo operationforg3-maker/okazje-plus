@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { getUnreadNotifications, markNotificationAsRead } from '@/lib/data';
 import { Notification } from '@/lib/types';
@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useSmartPoll } from '@/hooks/use-smart-poll';
 
 interface NotificationWithRelativeTime extends Notification {
   relativeTime?: string;
@@ -28,31 +29,21 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<NotificationWithRelativeTime[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchNotifications = async () => {
-      try {
-        const unread = await getUnreadNotifications(user.uid);
-        setNotifications(unread);
-        setUnreadCount(unread.length);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-      }
-    };
-
-    fetchNotifications();
-
-    // Poll co 30 sekund dla nowych powiadomień
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return [] as Notification[];
+    return getUnreadNotifications(user.uid);
   }, [user]);
+
+  const unread = useSmartPoll(fetchNotifications, {
+    interval: 30000,
+    immediate: !!user,
+  });
+
+  useEffect(() => {
+    if (!unread) return;
+    setNotifications(unread as NotificationWithRelativeTime[]);
+    setUnreadCount(unread.length);
+  }, [unread]);
 
   // Calculate relative times on client side to prevent hydration mismatch
   useEffect(() => {
@@ -128,7 +119,7 @@ export function NotificationBell() {
     return new Date(isoDate).toLocaleDateString('pl-PL');
   }
 
-  if (!isMounted || !user) return null;
+  if (!user) return null;
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>

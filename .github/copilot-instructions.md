@@ -1,9 +1,26 @@
 # Okazje Plus — AI Coding Assistant Guide
 
-**Updated:** December 27, 2025 | **Status:** M6 Product-Centric Architecture Complete  
-**Architecture:** Product-comparison marketplace (Ceneo/PriceRunner style) with AI-powered harvesting & enrichment
+**Updated:** January 28, 2026 | **Status:** M6 Complete; 2026 Optimization Phase Launching  
+**Architecture:** Product-comparison marketplace (Ceneo/PriceRunner style) with AI-powered harvesting & enrichment  
+**🔴 CRITICAL FOCUS:** Fix Harvester batch operations (10-15× speedup), refactor data.ts monolith (2930 → modular), eliminate N+1 category queries
 
 Productivity-first guide for this codebase. **Polish-first UI policy** — all user-facing text MUST be in Polish. Mirror existing patterns, avoid data model churn.
+
+## ⚠️ JANUARY 2026 AUDIT FINDINGS - TOP PRIORITIES
+
+**Full audit:** [AUDYT_APLIKACJI_2026.md](./AUDYT_APLIKACJI_2026.md) (1400 lines, detailed code examples)  
+**Implementation roadmap:** [PLAN_NAPRAWY_2026.md](./PLAN_NAPRAWY_2026.md) with Quick Wins + phased rollout
+
+| Priority | Issue | Impact | Solution | ETA |
+|----------|-------|--------|----------|-----|
+| 🔴 CRITICAL | Harvester sequential writes | 100 items = 8-12min | Use `writeBatch()` + parallel queries | Phase 1 (2-3 days) |
+| 🔴 CRITICAL | `data.ts` monolith 2930 lines | Maintenance nightmare | Split into 9 modules (queries, filtering, deals, products, categories, forum, notifications, favorites, utils) | Phase 2 (5-7 days) |
+| 🔴 CRITICAL | N+1 category queries | 1050+ Firestore ops (30-60s) | Batch aggregates or denormalize tree | Phase 2 |
+| 🟡 MEDIUM | LRU cache size | 2-3× more misses | Increase max 50→500, TTL 30s→1h | Quick Win (2 min) |
+| 🟡 MEDIUM | Missing JSON-LD schemas | SEO impact | Add Product, BreadcrumbList, FAQSchema | Phase 3 |
+| 🟢 LOW | Search filtering in memory | 200 docs loaded | Use Typesense/Firestore indexes | Phase 3 |
+
+**When fixing anything:** Check [PLAN_NAPRAWY_2026.md](./PLAN_NAPRAWY_2026.md) first for context and code examples.
 
 ## Big picture architecture
 - **Platform**: Product-comparison marketplace (M6, like Ceneo/PriceRunner) — Next.js 15 app router + Firebase (Auth/Firestore/Storage) + Vertex AI Genkit + optional Typesense search
@@ -108,15 +125,14 @@ npm run genkit:dev       # Genkit UI for testing/debugging AI flows (:4000)
 npm run genkit:watch     # Genkit with hot reload for flow development
 npm run typecheck        # TypeScript validation (strict mode)
 npm run lint             # ESLint (run with --fix for auto-fix)
-npm run test             # Jest unit tests (*.test.ts, *.spec.ts)
-npm run test:watch       # Jest watch mode for TDD
-npm run test:e2e         # Playwright E2E tests (tests/ dir)
 npm run build            # Production build (validates TS + runs next build)
 npm run seed:categories  # Seed category hierarchy to Firestore
 npm run deploy:hosting   # Deploy Next.js to Firebase App Hosting
 npm run deploy:functions # Deploy Cloud Functions only
 npm run deploy:prod      # Deploy everything (hosting + functions)
 ```
+
+**Note**: `npm test`, `npm run test:watch`, `npm run test:e2e` removed in Jan 2026 cleanup. Use Admin UI "Testy" tab for system tests instead.
 
 **Local development setup**:
 1. Copy `.env.local.example` → `.env.local` with Firebase project credentials + `GEMINI_API_KEY`
@@ -127,10 +143,64 @@ npm run deploy:prod      # Deploy everything (hosting + functions)
 
 ## Testing approaches
 - **Quick system tests**: Admin UI → "Testy" tab → "Uruchom Testy" button; or `POST /api/admin/tests/run` with admin token
-- **Test service**: `src/lib/test-service.ts` exports `runAllTests()` with categories (technical/functional/business/security)
-- **Unit tests**: Jest config in `jest.config.js`; colocate with source files
-- **E2E tests**: Playwright config in `playwright.config.ts`; uses port 9002 by default (configurable via `NEXT_PORT`)
+- **Test service**: `src/lib/test-service.ts` exports `runAllTests()` with categories (technical/functional/business/security). This is the PRIMARY testing approach.
 - **Test patterns**: Always test status filters, admin role checks, cache invalidation, optimistic UI rollback
+- **Legacy test frameworks**: Jest/Playwright configs moved to `legacy/` (Jan 2026 cleanup). Not actively maintained; use Admin UI tests instead.
+- **Manual scripts**: Debug/test scripts in `legacy/debug-scripts/` for direct database inspection (use `tsx` or `node` to run)
+
+## 2026 Optimization Phases & Quick Wins
+
+**Status:** Ready for implementation (audit complete Jan 26, 2026)
+
+### Phase 0: Quick Wins (1-2 hours)
+Quick, high-impact improvements requiring no architectural changes.
+
+**Win #1: Cache LRU Size** (2 minutes)
+```typescript
+// File: src/lib/cache.ts:64
+// BEFORE: max: 50, ttl: 1000 * 30
+// AFTER:  max: 500, ttl: 1000 * 3600, updateAgeOnGet: true
+```
+Effect: 2-3× fewer cache misses, negligible memory increase
+
+**Win #2: Parallelize Identity Matcher Queries** (20 minutes)
+Currently 5 sequential queries per product during harvest. Parallelize with `Promise.all()` in `src/lib/automation/identity-matcher.ts`.  
+Effect: 3-4× faster deduplication
+
+### Phase 1: Harvester Batch Operations (2-3 days)
+**Problem:** Sequential writes (8-12 min for 100 items) → batch writes (30-60s)
+
+**Key changes in `src/lib/automation/harvester.ts`:**
+1. Collect all product updates into array during loop
+2. Use `writeBatch()` for 500-op chunks (Firestore limit)
+3. Batch AI enrichment calls (10 products per request)
+4. Throttle job status updates (every 5 seconds, not per-product)
+
+**Expected result:** 10-15× faster imports (100 items: 12 min → 1 min)
+
+### Phase 2: Monolith Refactor & N+1 Fixes (5-7 days)
+**Problem:** `src/lib/data.ts` 2930 lines + N+1 queries
+
+**Architecture refactor:** Split into 9 modules under `src/lib/data/`:
+- `queries.ts` (core read patterns, pagination)
+- `filtering.ts` (search/filter business logic)
+- `deals.ts` (deal-specific queries)
+- `products.ts` (product-specific queries)
+- `categories.ts` (category tree + N+1 fix)
+- `forum.ts` (comment/reply queries)
+- `notifications.ts` (notification queries)
+- `favorites.ts` (saved deals/products)
+- `utils.ts` (helpers: temperature calc, sanitization)
+
+**N+1 fix in categories:** Replace nested loops with batch aggregate query. Instead of 1050+ individual checks, run 1 aggregation query.
+
+**Expected results:** Better maintainability, eliminate 1050+ queries (30s → 0.3s for category loads)
+
+### Phase 3: SEO & Polish (3-5 days)
+- Add JSON-LD schemas: Product, BreadcrumbList, FAQ
+- Implement sitemap generation
+- Add meta descriptions for all product pages
+- Consider Typesense full-text search to replace in-memory filtering
 
 ## Debugging utilities (legacy folder)
 **Note**: Debug scripts have been moved to `/legacy/` folder (ignored by git) to keep root directory clean.
@@ -213,12 +283,15 @@ ALIEXPRESS_APP_KEY=xxx             # Marketplace integration
 | Currency switch not working | Components ignore choice | Use `useCurrency()` hook, not hardcoded PLN |
 
 ## Before committing
-1. Keep all Firestore access in `data.ts`; reuse existing helpers (heat calculation, pagination, cache invalidation)
-2. Run quality gates: `npm run typecheck && npm run lint && npm run test && npm run build`
-3. Verify required env vars present (Firebase + Gemini minimum)
-4. Check Firestore indexes if adding new compound queries (`firestore.indexes.json`)
-5. Update cache invalidation if modifying data mutations
-6. Add i18n keys to **all** locale files (not just Polish) — check `messages/pl/`, `messages/en/`, `messages/de/`
+1. **Priority awareness**: Know if your changes touch critical areas (Harvester, data.ts, categories queries, cache). See audit findings above.
+2. Keep all Firestore access in `data.ts`; reuse existing helpers (heat calculation, pagination, cache invalidation)
+3. Run quality gates: `npm run typecheck && npm run lint && npm run build`
+4. Verify required env vars present (Firebase + Gemini minimum)
+5. Check Firestore indexes if adding new compound queries (`firestore.indexes.json`)
+6. Update cache invalidation if modifying data mutations
+7. Add i18n keys to **all** locale files (not just Polish) — check `messages/pl/`, `messages/en/`, `messages/de/`
+
+**Note**: `npm test` not available (moved to legacy). Manual testing via Admin UI or build validation only.
 
 ## Documentation
 - **Index**: `docs/INDEX.md` (comprehensive guide to all docs, updated Dec 2025)

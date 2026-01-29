@@ -33,6 +33,7 @@ export default function ShareButton({
   size = 'sm',
   onShared
 }: ShareButtonProps) {
+  const isIconOnly = size === 'icon';
   const [copied, setCopied] = useState(false);
 
   const handleShare = async (method: 'facebook' | 'twitter' | 'copy_link') => {
@@ -93,8 +94,8 @@ export default function ShareButton({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size={size}>
-          <Share2 className="h-4 w-4 mr-2" />
-          Udostępnij
+          <Share2 className={`h-4 w-4${isIconOnly ? '' : ' mr-2'}`} />
+          {!isIconOnly && 'Udostępnij'}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">

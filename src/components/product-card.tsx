@@ -2,10 +2,8 @@
 "use client";
 
 import { ProductGallery } from './product-gallery';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
@@ -22,14 +20,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useFavorites } from '@/hooks/use-favorites';
 import ShareButton from '@/components/share-button';
-import { useAuth } from '@/lib/auth';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { trackFirestoreView, trackFirestoreClick, trackFirestoreShare } from '@/lib/analytics';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 // import ProductEditDialog from '@/components/admin/product-edit-dialog';
-import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { 
@@ -37,7 +32,8 @@ import {
   getDiscountPercent 
 } from '@/lib/i18n-utils';
 import { cn } from '@/lib/utils';
-import { useComparison } from '@/components/deal-comparison-tool';
+import { useCardBaseState } from '@/hooks/use-card-base-state';
+import { CardHeader } from '@/components/ui/card-header';
 
 interface ProductCardProps {
   product: Product;
@@ -52,23 +48,19 @@ const safeText = (value: unknown, fallback = ''): string => {
   return fallback;
 };
 
-export default function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: ProductCardProps) {
-  const t = useTranslations('common');
+function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: ProductCardProps) {
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(() => localeFromParams);
   const prefix = `/${locale}`;
-  const { getText } = useContentLanguage();
+  const baseState = useCardBaseState(product, 'product');
+  const { getText, addToComparison, user, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
   const { addItem, isInCart } = useSmartCart();
-  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(product.id, 'product');
-  const { user } = useAuth();
   const { count: commentsCount } = useCommentsCount('products', product.id);
-  const { addToComparison } = useComparison();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { currency } = useCurrency();
-  const [isMounted, setIsMounted] = useState(false);
 
   // Format prices using state to fix hydration mismatch
   const [priceData, setPriceData] = useState<{
@@ -85,15 +77,13 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     savings: null,
   });
 
-  // Hydration safety
+  // Sync locale when route param changes
   useEffect(() => {
-    setIsMounted(true);
     setLocale(localeFromParams);
   }, [localeFromParams]);
 
   // Price formatting
   useEffect(() => {
-    if (!isMounted) return;
     const userCurrency = currency || 'PLN';
     
     const isPC = !!(product as any).bestPrice;
@@ -150,7 +140,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
       discount: calculatedDiscount,
       savings,
     });
-  }, [isMounted, currency, product.price, (product as any).bestPrice]);
+  }, [currency, product.price, (product as any).bestPrice]);
 
   const titleText = typeof product.title === 'string' 
     ? product.title 
@@ -334,44 +324,23 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
   // --------------------------------------------------------------------------
   return (
     <div 
-      className="card-interactive group flex h-full flex-col overflow-hidden cursor-pointer"
+      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-xl border bg-card transition-shadow duration-200 hover:shadow-md"
       onClick={() => {
         window.location.href = productUrl;
       }}
       role="link"
       tabIndex={0}
     >
-      <div className="relative overflow-hidden aspect-square bg-muted">
-        {/* Gallery / Image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src={primaryImageSrc}
-            alt={displayTitle || 'Produkt'}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-contain transition-transform-base group-hover:scale-105 p-4"
-          />
-        </div>
-
-        {/* Favorite Button (Left Top) */}
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white transition-all-fast z-10 btn-icon-hover"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite();
-          }}
-          disabled={isFavoriteLoading}
-        >
-          <Heart
-            className={`h-4 w-4 md:h-5 md:w-5 btn-favorite ${
-              isFavorited ? 'btn-favorite-active' : ''
-            }`}
-          />
-        </Button>
-
+      <CardHeader
+        image={primaryImageSrc}
+        title={displayTitle || 'Produkt'}
+        onFavorite={() => toggleFavorite()}
+        isFavorited={isFavorited}
+        isFavoritesLoading={isFavoriteLoading}
+        imageClassName="object-contain transition-transform-base group-hover:scale-105 p-4"
+        imageContainerClassName="h-auto aspect-square bg-muted/40 rounded-t-xl border-b"
+        className="rounded-none"
+      >
         {/* Badges Column (Right Top) */}
         <div className="absolute right-2 top-2 flex flex-col space-sm z-10 gap-1 items-end">
           {/* Social Proof */}
@@ -430,7 +399,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             className=""
           />
         </div>
-      </div>
+      </CardHeader>
 
       {/* Content Body */}
       <div className="flex-grow space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-5 min-w-0">
@@ -505,7 +474,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
         {/* Main Action: Buy Now */}
         <Button
           asChild
-          className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold text-sm h-9 shadow-sm hover:shadow-md transition-all"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-9 shadow-sm hover:shadow-md transition-all"
         >
           <a 
             href={product.affiliateUrl} 
@@ -516,36 +485,51 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
               trackFirestoreClick(product.id, 'product', 'buy_now_button');
             }}
           >
-            🚀 Kup teraz
-            <ExternalLink className="w-3 h-3 ml-2" />
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Kup teraz
           </a>
         </Button>
 
-        {/* Secondary Actions Row */}
-        <div className="flex gap-2">
+        {/* Secondary Actions Row - Icon Only */}
+        <div className="flex gap-1.5 justify-center">
           <Button
             onClick={handleAddToCart}
             disabled={isAddingToCart || inCart}
             variant={inCart ? "default" : "outline"}
+            size="icon"
             className={cn(
-              "flex-1 font-semibold transition-all h-8 text-xs border-input bg-background hover:bg-accent hover:text-accent-foreground",
-              inCart && "bg-green-600 hover:bg-green-700 text-white border-green-600"
+              "h-8 w-8 transition-all",
+              inCart && "bg-green-600 hover:bg-green-700 text-white"
             )}
-            size="sm"
+            title={inCart ? t('cart.inCart') : t('cart.addToCart')}
           >
             {isAddingToCart ? (
-               <span className="flex items-center"><div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent mr-2" /> Dodaję</span>
+               <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-current border-t-transparent" />
             ) : inCart ? (
-               <span className="flex items-center"><Check className="w-3 h-3 mr-1" /> {t('cart.inCart')}</span>
+               <Check className="w-4 h-4" />
              ) : (
-               <span className="flex items-center"><ShoppingCart className="w-3 h-3 mr-1" /> {t('cart.addToCart')}</span>
+               <ShoppingCart className="w-4 h-4" />
             )}
           </Button>
 
           <Button 
+            variant={isFavorited ? "default" : "outline"}
+            size="icon"
+            className={cn("h-8 w-8", isFavorited && "bg-red-500 hover:bg-red-600")}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleFavorite();
+            }}
+            title={isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+          >
+            <Heart className={cn("w-4 h-4", isFavorited && "fill-current")} />
+          </Button>
+
+          <Button 
             variant="outline" 
-            size="sm" 
-            className="h-8 px-2"
+            size="icon"
+            className="h-8 w-8"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -553,7 +537,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             }}
             title="Porównaj"
           >
-            <Scale className="w-3.5 h-3.5" />
+            <Scale className="w-4 h-4" />
           </Button>
 
           <ShareButton 
@@ -562,8 +546,7 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
             title={displayTitle} 
             url={`${typeof window !== 'undefined' ? window.location.origin : ''}${productUrl}`}
             variant="outline" 
-            size="sm"
-            className="h-8 w-8 px-0" 
+            size="icon"
             onShared={(platform) => handleShare(platform)} 
           />
         </div>
@@ -571,3 +554,17 @@ export default function ProductCard({ product, showFullDetails = false, viewMode
     </div>
   );
 }
+
+const ProductCardMemo = React.memo(
+  ProductCard,
+  (prevProps, nextProps) => {
+    const sameId = prevProps.product?.id === nextProps.product?.id;
+    const sameBestPrice = (prevProps.product as any)?.bestPrice === (nextProps.product as any)?.bestPrice;
+    const samePrice = (prevProps.product as any)?.price === (nextProps.product as any)?.price;
+    const sameView = prevProps.viewMode === nextProps.viewMode;
+    const sameDetails = prevProps.showFullDetails === nextProps.showFullDetails;
+    return sameId && sameBestPrice && samePrice && sameView && sameDetails;
+  }
+);
+
+export default ProductCardMemo;

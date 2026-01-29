@@ -1,0 +1,38 @@
+{
+  "title": "Cookie-Richtlinie",
+  "lastUpdated": "Letzte Aktualisierung: 29. Januar 2026",
+  "intro": {
+    "title": "Was sind Cookies?",
+    "description": "Cookies sind kleine Textdateien, die auf Ihrem Gerät (Computer, Tablet, Smartphone) gespeichert werden, wenn Sie Websites besuchen. Sie ermöglichen es der Website, Ihre Aktionen und Präferenzen über einen bestimmten Zeitraum zu speichern."
+  },
+  "usage": {
+    "title": "Wie verwenden wir Cookies?",
+    "description": "Wir verwenden Cookies für folgende Zwecke:",
+    "categories": {
+      "necessary": {
+        "title": "Notwendig",
+        "description": "Diese Cookies sind für das Funktionieren der Website unerlässlich. Sie umfassen Benutzersitzungen, Sicherheit und grundlegende Funktionen.",
+        "examples": "Authentifizierung, Spracheinstellungen, Sicherheit"
+      },
+      "analytics": {
+        "title": "Analytisch",
+        "description": "Helfen uns zu verstehen, wie Besucher unsere Website nutzen, damit wir sie verbessern können.",
+        "examples": "Google Analytics, Besuchsstatistiken, Benutzerverhalten"
+      },
+      "marketing": {
+        "title": "Marketing",
+        "description": "Werden verwendet, um auf Ihre Interessen zugeschnittene Anzeigen anzuzeigen.",
+        "examples": "Remarketing-Cookies, maßgeschneiderte Anzeigen"
+      }
+    }
+  },
+  "control": {
+    "title": "Wie kontrolliert man Cookies?",
+    "description": "Sie können Cookies nach Belieben kontrollieren und/oder löschen. Sie können alle Cookies von Ihrem Computer löschen, und die meisten Browser ermöglichen es Ihnen, deren Speicherung zu blockieren.",
+    "settings": "Um Ihre Cookie-Einstellungen auf dieser Website zu ändern, klicken Sie auf die Schaltfläche 'Einstellungen verwalten' im Cookie-Banner oder in der Website-Fußzeile."
+  },
+  "more": {
+    "title": "Weitere Informationen",
+    "description": "Wenn Sie Fragen zu unserer Cookie-Richtlinie haben, kontaktieren Sie uns bitte über das Kontaktformular."
+  }
+}

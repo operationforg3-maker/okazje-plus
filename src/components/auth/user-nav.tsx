@@ -28,10 +28,8 @@ import ErrorBoundary from './error-boundary';
 export function UserNav() {
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
     if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
       console.log('[UserNav] Component mounted');
     }
@@ -49,26 +47,17 @@ export function UserNav() {
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
       console.log('[UserNav] Auth state changed:', { 
-        isMounted, 
         loading, 
         hasUser: !!user, 
         userEmail: user?.email,
         userRole: user?.role 
       });
     }
-  }, [isMounted, loading, user]);
+  }, [loading, user]);
 
   const handleLogout = async () => {
     await auth.signOut();
   };
-
-  // Don't render until mounted to avoid hydration mismatch
-  if (!isMounted) {
-    if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-      console.log('[UserNav] Not mounted yet - showing skeleton');
-    }
-    return <div className="h-10 w-24 rounded-md bg-muted animate-pulse" />;
-  }
 
   if (loading) {
     if (process.env.NEXT_PUBLIC_DEBUG === 'true') {

@@ -18,6 +18,11 @@
     "noResults": "Brak wyników",
     "searching": "Wyszukiwanie..."
   },
+  "breadcrumb": {
+    "home": "Strona główna",
+    "deals": "Okazje",
+    "products": "Produkty"
+  },
   "actions": {
     "save": "Zapisz",
     "cancel": "Anuluj",

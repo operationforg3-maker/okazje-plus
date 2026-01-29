@@ -1,22 +1,17 @@
 // @ts-nocheck
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useCategoryName } from '@/hooks/use-category-name';
-import { useComparison } from '@/components/deal-comparison-tool';
-import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video } from "lucide-react";
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart } from "lucide-react";
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
 import ShareButton from '@/components/share-button';
@@ -24,8 +19,6 @@ import { RatingBar } from './rating-bar';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 // import DealEditDialog from '@/components/admin/deal-edit-dialog';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
-import { useContentLanguage } from '@/hooks/use-content-language';
-import { useTranslations } from 'next-intl';
 import {
   Tooltip,
   TooltipContent,
@@ -35,6 +28,8 @@ import {
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo, getDiscountPercent } from '@/lib/i18n-utils';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
+import { useCardBaseState } from '@/hooks/use-card-base-state';
+import { CardHeader } from '@/components/ui/card-header';
 // TEMPORARILY REMOVED FOR DEBUGGING React #418:
 // import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 // import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
@@ -95,24 +90,21 @@ function getRelativeTime(when: any): string {
   return `${Math.floor(diffDays / 30)} mies. temu`;
 }
 
-export default function DealCard({ deal, product }: DealCardProps) {
+function DealCard({ deal, product }: DealCardProps) {
   // Używaj przekazanego ProductCore jeśli dostępny (spójność z ProductCard)
   const resolvedProduct = product || null;
   const params = useParams();
-  const [isMounted, setIsMounted] = useState(false);
   const localeFromParams = (params?.locale as string) || 'pl';
-  const [locale, setLocale] = useState('pl');
+  const [locale, setLocale] = useState(localeFromParams);
   const prefix = `/${locale}`;
-  const { getText } = useContentLanguage();
+  const baseState = useCardBaseState(deal, 'deal');
+  const { getText, addToComparison, user, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { mainName: categoryLabel } = useCategoryName(
     deal.mainCategorySlug || resolvedProduct?.mainCategorySlug,
     deal.subCategorySlug || resolvedProduct?.subCategorySlug,
     deal.subSubCategorySlug || resolvedProduct?.subSubCategorySlug
   );
-  const { addToComparison } = useComparison();
-  const { user } = useAuth();
-  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   // Usunięto wywołanie useCoupons - dane kuponów powinny być już w Firestore
   const [temperature, setTemperature] = useState(deal.temperature);
   const [voteCount, setVoteCount] = useState(deal.voteCount);
@@ -123,7 +115,6 @@ export default function DealCard({ deal, product }: DealCardProps) {
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   const { currency } = useCurrency();
   const { addDeal } = useSmartCart();
-  const t = useTranslations('common');
   
   // Format prices using state to fix Intl.NumberFormat hydration mismatch
   const [priceData, setPriceData] = useState<{
@@ -140,16 +131,14 @@ export default function DealCard({ deal, product }: DealCardProps) {
     discount: null,
   });
 
-  // Hydration safety - sync locale on mount
+  // Sync locale when route param changes
   useEffect(() => {
-    setIsMounted(true);
     setLocale(localeFromParams);
   }, [localeFromParams]);
 
   // Format prices on client only (using unified currency system)
   // M6: Support both legacy (deal.price = number) and new (deal.price = {amount, currency}) formats
   useEffect(() => {
-    if (!isMounted) return;
     const userCurrency = currency || 'PLN';
     
     // M6 compatibility: Robust extraction using shared utility
@@ -203,7 +192,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
       formattedShippingCost: shipping,
       discount: calculatedDiscount,
     });
-  }, [isMounted, currency, deal.price, deal.originalPrice, deal.shippingCost]);
+  }, [currency, deal.price, deal.originalPrice, deal.shippingCost]);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
 
   const coverImage = typeof deal.image === 'string' && deal.image ? deal.image : resolvedProduct?.images?.[0];
@@ -217,8 +206,8 @@ export default function DealCard({ deal, product }: DealCardProps) {
   const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || '', en: deal.title || '' };
   const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
   
-  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || '');
-  const dealDescription = isMounted ? getText(descObj) : (descObj.pl || '');
+  const dealTitle = getText(titleObj) || (titleObj.pl || '');
+  const dealDescription = getText(descObj) || (descObj.pl || '');
   
   const couponCode = safeText(deal.couponCode);
   const deliveryTime = safeText(deal.importMetadata?.deliveryTime);
@@ -431,7 +420,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
 
   return (
     <div 
-      className="card-interactive group flex h-full flex-col overflow-hidden cursor-pointer"
+      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-xl border bg-card transition-shadow duration-200 hover:shadow-md"
       onClick={() => {
         window.location.href = `${prefix}/deals/${deal.id}`;
       }}
@@ -443,37 +432,22 @@ export default function DealCard({ deal, product }: DealCardProps) {
       role="link"
       tabIndex={0}
     >
-      <div className="relative overflow-hidden aspect-square bg-muted">
+      <CardHeader
+        image={coverImage || '/placeholder.png'}
+        title={dealTitle || 'Okazja'}
+        onFavorite={() => toggleFavorite()}
+        isFavorited={isFavorited}
+        isFavoritesLoading={isFavoriteLoading}
+        imageClassName="object-contain transition-transform-base group-hover:scale-105"
+        imageContainerClassName="h-auto aspect-square bg-muted/40 rounded-t-xl border-b"
+        className="rounded-none"
+      >
         {/* Pasek ocen produktu jeśli powiązany */}
         {resolvedProduct && resolvedProduct.ratingSources && (
           <div className="absolute left-1.5 top-1.5 z-10">
             <RatingBar users={resolvedProduct.ratingSources.users} editorial={resolvedProduct.ratingSources.editorial} external={resolvedProduct.ratingSources.external} />
           </div>
         )}
-        <Image
-          src={coverImage || '/placeholder.png'}
-          alt={dealTitle || 'Okazja'}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-contain transition-transform-base group-hover:scale-105"
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute left-2 top-2 h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white transition-all-fast z-10 btn-icon-hover"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite();
-          }}
-          disabled={isFavoriteLoading}
-        >
-          <Heart
-            className={`h-4 w-4 md:h-5 md:w-5 btn-favorite ${
-              isFavorited ? 'btn-favorite-active' : ''
-            }`}
-          />
-        </Button>
         <div className="absolute right-2 top-2 flex flex-col space-sm z-10 gap-1">
           {/* Social Proof Badge */}
           {((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount || 0) > 10 && (
@@ -570,7 +544,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
             onEdit={() => setEditDialogOpen(true)}
           />
         </div>
-      </div>
+      </CardHeader>
       
       {/* Edit Dialog (Admin only) */}
       {/* {user?.role === 'admin' && (
@@ -896,8 +870,9 @@ export default function DealCard({ deal, product }: DealCardProps) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>{t('labels.addedBy')} <span className="font-medium text-foreground">{postedBy}</span></span>
+          <span aria-hidden>•</span>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1" title={t('labels.votes')}>
               <ArrowUp className="h-4 w-4" />
@@ -940,7 +915,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
         <div className="flex items-center gap-1 justify-center sm:justify-start">
           <Button 
             variant={userVote === 1 ? "default" : "outline"} 
-            size="sm" 
+            size="icon"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -948,12 +923,13 @@ export default function DealCard({ deal, product }: DealCardProps) {
             }} 
             aria-label={t('auth.voteUp')}
             disabled={isVoting}
+            className="h-8 w-8"
           >
             <ArrowUp className="h-4 w-4" />
           </Button>
           <Button 
             variant={userVote === -1 ? "default" : "outline"} 
-            size="sm" 
+            size="icon"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -961,6 +937,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
             }} 
             aria-label={t('auth.voteDown')}
             disabled={isVoting}
+            className="h-8 w-8"
           >
             <ArrowDown className="h-4 w-4" />
           </Button>
@@ -969,7 +946,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
         <div className="flex flex-wrap items-center gap-1 justify-center sm:justify-end">
           <Button 
             variant={isFavorited ? "default" : "outline"} 
-            size="sm" 
+            size="icon"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -977,7 +954,7 @@ export default function DealCard({ deal, product }: DealCardProps) {
             }}
             aria-label={isFavorited ? t('auth.removeFromFavorites') : t('auth.addToFavorites')}
             disabled={isFavoriteLoading}
-            className={isFavorited ? "bg-red-500 hover:bg-red-600" : ""}
+            className={isFavorited ? "h-8 w-8 bg-red-500 hover:bg-red-600" : "h-8 w-8"}
           >
             <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
           </Button>
@@ -987,37 +964,38 @@ export default function DealCard({ deal, product }: DealCardProps) {
             title={dealTitle || t('labels.deal')} 
             url={`/deals/${deal.id}`} 
             variant="outline" 
-            size="sm" 
+            size="icon"
             onShared={(platform) => handleShareTrack(platform)} 
           />
           <Button 
             variant="outline" 
-            size="sm" 
+            size="icon"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               toast.success(t('messages.priceAlertEnabled'));
             }}
             aria-label={t('auth.priceAlert')}
-            className="gap-1"
+            className="h-8 w-8"
           >
             <AlertTriangle className="h-4 w-4" />
           </Button>
           <Button 
             variant="outline" 
-            size="sm" 
+            size="icon"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               addToComparison({ ...deal, type: 'deal' });
             }}
             aria-label={t('comparison.addToComparison')}
+            className="h-8 w-8"
           >
             <Scale className="h-4 w-4" />
           </Button>
           <Button 
             variant="default" 
-            size="sm" 
+            size="icon"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -1030,9 +1008,9 @@ export default function DealCard({ deal, product }: DealCardProps) {
               }
             }}
             aria-label={t('cart.addToCart')}
-            className="gap-1"
+            className="h-8 w-8"
           >
-            {t('cart.addToCart')}
+            <ShoppingCart className="h-4 w-4" />
           </Button>
           {deal.metadata?.isExpired ? (
             <ExpiredDealBadge 
@@ -1042,9 +1020,8 @@ export default function DealCard({ deal, product }: DealCardProps) {
               variant="button"
             />
           ) : (
-            <Button size="sm" className="gap-1">
-              {t('actions.goTo')}
-              <ArrowUp className="h-3 w-3 rotate-90" />
+            <Button size="icon" className="h-8 w-8 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
+              <ArrowUp className="h-4 w-4 rotate-90" />
             </Button>
           )}
         </div>
@@ -1052,3 +1029,16 @@ export default function DealCard({ deal, product }: DealCardProps) {
     </div>
   );
 }
+
+const DealCardMemo = React.memo(
+  DealCard,
+  (prevProps, nextProps) => {
+    const sameId = prevProps.deal?.id === nextProps.deal?.id;
+    const sameTemp = prevProps.deal?.temperature === nextProps.deal?.temperature;
+    const sameVotes = prevProps.deal?.voteCount === nextProps.deal?.voteCount;
+    const sameProduct = prevProps.product?.id === nextProps.product?.id;
+    return sameId && sameTemp && sameVotes && sameProduct;
+  }
+);
+
+export default DealCardMemo;

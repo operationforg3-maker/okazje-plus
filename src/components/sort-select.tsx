@@ -26,9 +26,9 @@ export function SortSelect() {
   };
 
   return (
-    <div className="w-[180px]">
+    <div className="w-[180px] h-10">
       <Select value={currentSort} onValueChange={handleSortChange}>
-        <SelectTrigger>
+        <SelectTrigger className="h-10">
           <SelectValue placeholder={t('sort')} />
         </SelectTrigger>
         <SelectContent>

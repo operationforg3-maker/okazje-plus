@@ -1,9 +1,19 @@
 {
   "title": "Deals",
   "subtitle": "Hottest offers verified by the community",
+  "min": "Minimum",
+  "max": "Maximum",
+  "stats": {
+    "avgDiscount": "Avg. discount",
+    "bestDeal": "Best"
+  },
+  "filtersTitle": "Filters and sorting",
+  "filtersSubtitle": "Quick access to price, type and free shipping",
+  "priceLabel": "Price:",
   "filters": {
     "search": "Search deals...",
     "sort": "Sort",
+    "filterButtonText": "Categories and Filters",
     "sortOptions": {
       "hottest": "Hottest",
       "newest": "Newest",
@@ -13,6 +23,11 @@
     },
     "type": "Type",
     "priceRange": "Price Range",
+    "min": "Minimum",
+    "max": "Maximum",
+    "priceLimits": "Price Range Limits",
+    "minLimit": "Min limit:",
+    "maxLimit": "Max limit:",
     "quickFilters": {
       "freeShipping": "Free Shipping",
       "bigDiscount": "Big Discount",
@@ -25,21 +40,31 @@
     },
     "clearAll": "Clear Filters",
     "saveFilter": "Save Filter",
+    "saveFilterCurrent": "Save Current Filters",
     "savedLabel": "Saved:"
   },
+  "recommendations": "Recommendations Panel",
+  "heading": "Deals",
   "viewMode": {
     "list": "List",
     "grid": "Grid"
   },
+  "viewToggle": {
+    "grid": "Grid View",
+    "list": "List View"
+  },
   "empty": {
     "title": "No Deals",
     "description": "No deals found matching your criteria. Try adjusting filters.",
+    "inCategory": "No deals in this category",
     "cta": "Back to All Deals"
   },
   "loading": "Loading deals...",
   "sidebar": {
     "categories": "Categories",
-    "allDeals": "All"
+    "allDeals": "All",
+    "showAll": "Show All",
+    "hideEmpty": "Hide Empty"
   },
   "card": {
     "price": "Price",

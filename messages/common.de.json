@@ -11,6 +11,11 @@
     "noResults": "Keine Ergebnisse",
     "searching": "Suche..."
   },
+  "breadcrumb": {
+    "home": "Startseite",
+    "deals": "Angebote",
+    "products": "Produkte"
+  },
   "actions": {
     "save": "Speichern",
     "cancel": "Abbrechen",

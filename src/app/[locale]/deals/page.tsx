@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsByFilters } from '@/lib/data';
+import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsByFilters, getDealsCount } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib/offline-utils';
 import { Deal, Category, Product } from '@/lib/types';
@@ -15,9 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -57,6 +58,7 @@ export default function DealsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const t = useTranslations('deals');
+  const tCommon = useTranslations('common');
   const locale = useLocale();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -67,10 +69,14 @@ export default function DealsPage() {
   const [productOfTheDay, setProductOfTheDay] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [totalDealsCount, setTotalDealsCount] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({
-    priceRange: { min: 0, max: 10000 },
+    priceRange: { min: 0, max: 15000 },
+    priceLimitMin: 0,
+    priceLimitMax: 50000,
     rating: undefined,
     availability: 'all',
   });
@@ -86,9 +92,6 @@ export default function DealsPage() {
   };
   
   const [typeFilter, setTypeFilter] = useState<DealTypeFilter>('all');
-  const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(10000);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000]);
   const [quickFilters, setQuickFilters] = useState({
     freeShipping: false,
     bigDiscount: false,
@@ -97,7 +100,6 @@ export default function DealsPage() {
   });
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
-  const [showEmptyCategories, setShowEmptyCategories] = useState(false);
   const categoryInitialized = useRef(false);
 
   // Helper: unify postedAt to timestamp (ms)
@@ -302,7 +304,7 @@ export default function DealsPage() {
         }
         
         const [fetchedCategories, showcaseConfig, hotDeals] = await Promise.all([
-          retryWithBackoff(() => showEmptyCategories ? getCategories() : getCategoriesWithContent('deals'), 2, 500),
+          retryWithBackoff(() => getCategoriesWithContent('deals'), 2, 500),
           retryWithBackoff(() => getNavigationShowcase(), 1, 500),
           retryWithBackoff(() => getHotDeals(100), 2, 500), // Pobierz gorące okazje na start
         ]);
@@ -334,7 +336,7 @@ export default function DealsPage() {
       }
     }
     fetchData();
-  }, [showEmptyCategories]);
+  }, []);
 
   // Pobierz deals przy zmianie kategorii / subkategorii / wyszukiwaniu / filtrów
   useEffect(() => {
@@ -387,6 +389,41 @@ export default function DealsPage() {
     return () => { cancelled = true; clearTimeout(t); };
   }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchDealsCount() {
+      if (searchTerm.trim().length > 1) {
+        if (!cancelled) setTotalDealsCount(null);
+        return;
+      }
+
+      try {
+        if (!isOnline()) {
+          const online = await waitForOnline(2000);
+          if (!online) {
+            if (!cancelled) setTotalDealsCount(null);
+            return;
+          }
+        }
+
+        const count = await retryWithBackoff(() => getDealsCount({
+          categoryId: selectedCategory?.id || selectedCategory?.slug,
+          subCategorySlug: selectedSubcategory || undefined,
+          subSubCategorySlug: selectedSubSubcategory || undefined,
+        }), 2, 500);
+
+        if (!cancelled) setTotalDealsCount(count);
+      } catch (error) {
+        console.warn('[DealsPage] Error fetching deals count:', error);
+        if (!cancelled) setTotalDealsCount(null);
+      }
+    }
+
+    fetchDealsCount();
+    return () => { cancelled = true; };
+  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
+
   // Sortowanie i filtrowanie lokalne (po pobraniu z API)
   const filteredAndSortedDeals = useMemo(() => {
     return deals
@@ -416,7 +453,9 @@ export default function DealsPage() {
 
         // M6 compatible: extract price from both legacy and M6 formats
         const dealPrice = extractDealPriceAmount(deal);
-        if (dealPrice < priceRange[0] || dealPrice > priceRange[1]) return false;
+        const minPrice = unifiedFilters.priceRange?.min ?? 0;
+        const maxPrice = unifiedFilters.priceRange?.max ?? 15000;
+        if (dealPrice < minPrice || dealPrice > maxPrice) return false;
 
         return true;
       })
@@ -447,7 +486,7 @@ export default function DealsPage() {
             return 0;
         }
       });
-  }, [deals, typeFilter, quickFilters, priceRange, sortBy]);
+  }, [deals, typeFilter, quickFilters, unifiedFilters, sortBy]);
 
   // Infinite scroll hook - ładuje kolejne deale przy scrollowaniu
   const {
@@ -462,24 +501,38 @@ export default function DealsPage() {
   });
 
   // Statystyki
-  const stats = {
-    total: filteredAndSortedDeals.length,
-    avgDiscount: filteredAndSortedDeals.reduce((acc, deal) => {
+  const discountStats = filteredAndSortedDeals.reduce(
+    (acc, deal) => {
       if (!deal.originalPrice) return acc;
-      const currentPrice = typeof deal.price === 'object' ? deal.price.amount : deal.price;
+      const currentPrice = extractDealPriceAmount(deal);
       const discount = ((deal.originalPrice - currentPrice) / deal.originalPrice) * 100;
-      return acc + discount;
-    }, 0) / filteredAndSortedDeals.length || 0,
+      return { sum: acc.sum + discount, count: acc.count + 1 };
+    },
+    { sum: 0, count: 0 }
+  );
+
+  const stats = {
+    total: totalDealsCount !== null ? (totalDealsCount || filteredAndSortedDeals.length) : filteredAndSortedDeals.length,
+    avgDiscount: discountStats.count ? discountStats.sum / discountStats.count : 0,
     bestDeal: filteredAndSortedDeals.reduce((best, deal) => {
       if (!deal.originalPrice) return best;
-      const currentPrice = typeof deal.price === 'object' ? deal.price.amount : deal.price;
+      const currentPrice = extractDealPriceAmount(deal);
       const discount = ((deal.originalPrice - currentPrice) / deal.originalPrice) * 100;
       
-      const bestPrice = best && (typeof best.price === 'object' ? best.price.amount : best.price);
+      const bestPrice = best ? extractDealPriceAmount(best) : 0;
       const bestDiscount = best?.originalPrice && bestPrice ? ((best.originalPrice - bestPrice) / best.originalPrice) * 100 : 0;
       return discount > bestDiscount ? deal : best;
     }, filteredAndSortedDeals[0]),
   };
+
+  const bestDealDiscount = (() => {
+    if (!stats.bestDeal?.originalPrice) return null;
+    const currentPrice = extractDealPriceAmount(stats.bestDeal);
+    const originalPrice = stats.bestDeal.originalPrice;
+    if (!originalPrice || originalPrice <= 0) return null;
+    const discount = ((originalPrice - currentPrice) / originalPrice) * 100;
+    return Number.isFinite(discount) ? discount : null;
+  })();
 
   const priceFormatter = new Intl.NumberFormat('pl-PL', {
     style: 'currency',
@@ -637,16 +690,8 @@ export default function DealsPage() {
   // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
   const SidebarContent = () => (
     <div className="space-y-2">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-headline text-lg font-semibold">Kategorie</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowEmptyCategories(!showEmptyCategories)}
-          className="text-xs"
-        >
-          {showEmptyCategories ? 'Ukryj puste' : 'Pokaż wszystkie'}
-        </Button>
+      <div className="mb-4">
+        <h2 className="font-headline text-lg font-semibold">{t('sidebar.categories')}</h2>
       </div>
       <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">{/* All categories */}
         <div className="mb-1">
@@ -740,7 +785,7 @@ export default function DealsPage() {
                         </button>
 
                         {/* Pod-podkategorie (trzeci poziom) */}
-                        {subActive && sub.subcategories && sub.subcategories.length > 0 && selectedSubcategory === subSlug && (
+                        {subActive && sub.subcategories && sub.subcategories.length > 0 && (
                           <div className="ml-2 space-y-1 border-l border-muted-foreground/30 pl-3">
                             {sub.subcategories.map((subsub) => {
                               const subSubSlug = subsub.slug || subsub.id;
@@ -789,10 +834,10 @@ export default function DealsPage() {
         <div className="page-container py-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-primary transition-colors">
-              Strona główna
+              {tCommon('breadcrumb.home')}
             </Link>
             <ChevronRight className="h-4 w-4" />
-            <span className="font-medium text-foreground">Okazje</span>
+            <span className="font-medium text-foreground">{tCommon('breadcrumb.deals')}</span>
             {selectedCategory && (
               <>
                 <ChevronRight className="h-4 w-4" />
@@ -819,7 +864,7 @@ export default function DealsPage() {
                 <SheetTrigger asChild>
                   <Button variant="outline" className="w-full">
                     <Filter className="mr-2 h-4 w-4" />
-                    Kategorie i filtry
+                    {t('filters.filterButtonText')}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[80vw] p-0 flex flex-col">
@@ -879,7 +924,7 @@ export default function DealsPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Szukaj w okazjach..."
+                    placeholder={t('filters.search')}
                     className="pl-9"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -889,34 +934,34 @@ export default function DealsPage() {
 
               {/* Statystyki */}
               {stats.total > 0 && (
-                <div className="mb-4 lg:mb-6 grid grid-cols-3 gap-2">
-                  <Card className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-primary" />
+                <div className="mb-3 lg:mb-4 grid grid-cols-3 gap-1.5">
+                  <Card className="p-2">
+                    <div className="flex items-center gap-1.5">
+                      <Package className="h-3.5 w-3.5 text-primary" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Okazje</p>
-                        <p className="text-lg font-bold">{stats.total}</p>
+                        <p className="text-[10px] text-muted-foreground">{t('title')}</p>
+                        <p className="text-base font-bold">{stats.total}</p>
                       </div>
                     </div>
                   </Card>
-                  <Card className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-green-500" />
+                  <Card className="p-2">
+                    <div className="flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-green-500" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Śr. zniżka</p>
-                        <p className="text-lg font-bold">{stats.avgDiscount.toFixed(0)}%</p>
+                        <p className="text-[10px] text-muted-foreground">{t('stats.avgDiscount')}</p>
+                        <p className="text-base font-bold">
+                          {Number.isFinite(stats.avgDiscount) ? `${stats.avgDiscount.toFixed(0)}%` : '-'}
+                        </p>
                       </div>
                     </div>
                   </Card>
-                  <Card className="p-3">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-4 w-4 text-orange-500" />
+                  <Card className="p-2">
+                    <div className="flex items-center gap-1.5">
+                      <Flame className="h-3.5 w-3.5 text-orange-500" />
                       <div>
-                        <p className="text-xs text-muted-foreground">Najlepszy</p>
-                        <p className="text-lg font-bold">
-                          {stats.bestDeal?.originalPrice ? 
-                            `${(((stats.bestDeal.originalPrice - stats.bestDeal.price) / stats.bestDeal.originalPrice) * 100).toFixed(0)}%` 
-                            : '-'}
+                        <p className="text-[10px] text-muted-foreground">{t('stats.bestDeal')}</p>
+                        <p className="text-base font-bold">
+                          {bestDealDiscount !== null ? `${bestDealDiscount.toFixed(0)}%` : '-'}
                         </p>
                       </div>
                     </div>
@@ -926,139 +971,120 @@ export default function DealsPage() {
 
               {/* Filtry i sortowanie */}
               <Card className="mb-4 shadow-sm border-dashed">
-                <CardContent className="space-y-3 pt-4">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <p className="text-sm font-semibold">Filtry i sortowanie</p>
-                    <span className="text-xs text-muted-foreground">Szybki dostęp do ceny, typu i darmowej dostawy</span>
-                  </div>
-
-                  {/* Sortowanie */}
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <SortSelect />
-
-                    {/* Zakres ceny */}
-                    <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg bg-muted/40">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">Cena:</span>
-                      <Input
-                        type="number"
-                        placeholder={t('min')}
-                        value={priceRange[0]}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          setPriceRange([val, priceRange[1]]);
-                        }}
-                        className="h-8 w-20 text-xs"
+                <CardContent className="p-4 pt-3 space-y-2">
+                  <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+                    <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold">{t('filtersTitle')}</p>
+                        <span className="text-xs text-muted-foreground">{t('filtersSubtitle')}</span>
+                      </div>
+                      <ChevronDown
+                        className={cn('h-4 w-4 text-muted-foreground transition-transform', isFiltersOpen && 'rotate-180')}
                       />
-                      <span className="text-muted-foreground">-</span>
-                      <Input
-                        type="number"
-                        placeholder={t('max')}
-                        value={priceRange[1]}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 10000;
-                          setPriceRange([priceRange[0], val]);
-                        }}
-                        className="h-8 w-20 text-xs"
-                      />
-                      <span className="text-sm">zł</span>
-                    </div>
-                  </div>
+                    </CollapsibleTrigger>
 
-                  {/* Quick filters - chipy */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge
-                      variant={quickFilters.freeShipping ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
-                    >
-                      <Truck className="h-3 w-3 mr-1" />
-                      {t('filters.quickFilters.freeShipping')}
-                    </Badge>
-                    {FEATURES.DEALS_TYPE_FILTER && (
-                      <Badge
-                        variant={typeFilter === 'coupon' ? 'default' : 'outline'}
-                        className="cursor-pointer hover:bg-primary/10 transition-colors"
-                        onClick={() => setTypeFilter(prev => prev === 'coupon' ? 'all' as DealTypeFilter : 'coupon')}
-                      >
-                        🎟️ {t('filters.quickFilters.couponOnly')}
-                      </Badge>
-                    )}
-                    {FEATURES.DEALS_TYPE_FILTER && (
-                      <Badge
-                        variant={typeFilter === 'freebie' ? 'default' : 'outline'}
-                        className="cursor-pointer hover:bg-primary/10 transition-colors"
-                        onClick={() => setTypeFilter(prev => prev === 'freebie' ? 'all' as DealTypeFilter : 'freebie')}
-                      >
-                        🆓 {t('filters.quickFilters.freebies')}
-                      </Badge>
-                    )}
-                    <Badge
-                      variant={quickFilters.bigDiscount ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setQuickFilters(prev => ({ ...prev, bigDiscount: !prev.bigDiscount }))}
-                    >
-                      <Tag className="h-3 w-3 mr-1" />
-                      {t('filters.quickFilters.bigDiscount')}
-                    </Badge>
-                    <Badge
-                      variant={quickFilters.today ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setQuickFilters(prev => ({ ...prev, today: !prev.today }))}
-                    >
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {t('filters.quickFilters.todayOnly')}
-                    </Badge>
-                    <Badge
-                      variant={quickFilters.verified ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setQuickFilters(prev => ({ ...prev, verified: !prev.verified }))}
-                    >
-                      <Star className="h-3 w-3 mr-1" />
-                      {t('filters.quickFilters.verifiedStores')}
-                    </Badge>
-                  </div>
+                    <CollapsibleContent className="space-y-2 pt-2">
+                      {/* Sortowanie */}
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <SortSelect />
+                      </div>
 
-                  {/* Zapisane filtry */}
-                  {user && savedFilters.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Bookmark className="h-3 w-3" />
-                        {t('filters.savedLabel')}
-                      </span>
-                      {savedFilters.map((filter) => (
+                      {/* Quick filters - chipy */}
+                      <div className="flex flex-wrap gap-2">
                         <Badge
-                          key={filter.name}
-                          variant="secondary"
-                          className="cursor-pointer hover:bg-secondary/80 transition-colors group"
+                          variant={quickFilters.freeShipping ? 'default' : 'outline'}
+                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
+                          onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
                         >
-                          <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteSavedFilter(filter.name);
-                            }}
-                            className="ml-1 hover:text-destructive"
-                          >
-                            ×
-                          </button>
+                          <Truck className="h-3 w-3 mr-1" />
+                          {t('filters.quickFilters.freeShipping')}
                         </Badge>
-                      ))}
-                    </div>
-                  )}
+                        {FEATURES.DEALS_TYPE_FILTER && (
+                          <Badge
+                            variant={typeFilter === 'coupon' ? 'default' : 'outline'}
+                            className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
+                            onClick={() => setTypeFilter(prev => prev === 'coupon' ? 'all' as DealTypeFilter : 'coupon')}
+                          >
+                            🎟️ {t('filters.quickFilters.couponOnly')}
+                          </Badge>
+                        )}
+                        {FEATURES.DEALS_TYPE_FILTER && (
+                          <Badge
+                            variant={typeFilter === 'freebie' ? 'default' : 'outline'}
+                            className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
+                            onClick={() => setTypeFilter(prev => prev === 'freebie' ? 'all' as DealTypeFilter : 'freebie')}
+                          >
+                            🆓 {t('filters.quickFilters.freebies')}
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={quickFilters.bigDiscount ? 'default' : 'outline'}
+                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
+                          onClick={() => setQuickFilters(prev => ({ ...prev, bigDiscount: !prev.bigDiscount }))}
+                        >
+                          <Tag className="h-3 w-3 mr-1" />
+                          {t('filters.quickFilters.bigDiscount')}
+                        </Badge>
+                        <Badge
+                          variant={quickFilters.today ? 'default' : 'outline'}
+                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
+                          onClick={() => setQuickFilters(prev => ({ ...prev, today: !prev.today }))}
+                        >
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {t('filters.quickFilters.todayOnly')}
+                        </Badge>
+                        <Badge
+                          variant={quickFilters.verified ? 'default' : 'outline'}
+                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
+                          onClick={() => setQuickFilters(prev => ({ ...prev, verified: !prev.verified }))}
+                        >
+                          <Star className="h-3 w-3 mr-1" />
+                          {t('filters.quickFilters.verifiedStores')}
+                        </Badge>
+                      </div>
 
-                  {/* Przycisk zapisywania filtra */}
-                  {user && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={saveCurrentFilter}
-                      className="w-full sm:w-auto"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Zapisz obecne filtry
-                    </Button>
-                  )}
+                      {/* Zapisane filtry */}
+                      {user && savedFilters.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-2 border-t">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Bookmark className="h-3 w-3" />
+                            {t('filters.savedLabel')}
+                          </span>
+                          {savedFilters.map((filter) => (
+                            <Badge
+                              key={filter.name}
+                              variant="secondary"
+                              className="cursor-pointer hover:bg-secondary/80 transition-colors group"
+                            >
+                              <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteSavedFilter(filter.name);
+                                }}
+                                className="ml-1 hover:text-destructive"
+                              >
+                                ×
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Przycisk zapisywania filtra */}
+                      {user && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={saveCurrentFilter}
+                          className="w-full sm:w-auto h-8 px-3 text-xs"
+                        >
+                          <Save className="h-4 w-4 mr-2" />
+                          {t('filters.saveFilterCurrent')}
+                        </Button>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
                 </CardContent>
               </Card>
 
@@ -1066,7 +1092,7 @@ export default function DealsPage() {
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                   <h3 className="font-headline text-base font-semibold">
-                    🔥 Okazje ({filteredAndSortedDeals.length})
+                    🔥 {t('heading')} ({filteredAndSortedDeals.length})
                   </h3>
 
                   <div className="flex items-center gap-2">
@@ -1077,7 +1103,7 @@ export default function DealsPage() {
                       onClick={() => setInsightsOpen(true)}
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Panel rekomendacji
+                      {t('recommendations')}
                     </Button>
 
                     {/* View Mode Toggle */}
@@ -1089,7 +1115,7 @@ export default function DealsPage() {
                         className="h-8 px-3"
                       >
                         <List className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Lista</span>
+                        <span className="hidden sm:inline">{t('viewMode.list')}</span>
                       </Button>
                       <Button
                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -1098,27 +1124,7 @@ export default function DealsPage() {
                         className="h-8 px-3"
                       >
                         <LayoutGrid className="h-4 w-4 mr-1" />
-                        <span className="hidden sm:inline">Kafelki</span>
-                      </Button>
-                    </div>
-
-                    {/* Density Toggle */}
-                    <div className="flex items-center gap-1 border rounded-lg p-1">
-                      <Button
-                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
-                        size="sm"
-                        className="h-8 px-3"
-                        onClick={() => setCardDensity('comfortable')}
-                      >
-                        Standard
-                      </Button>
-                      <Button
-                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
-                        size="sm"
-                        className="h-8 px-3"
-                        onClick={() => setCardDensity('compact')}
-                      >
-                        Kompakt
+                        <span className="hidden sm:inline">{t('viewMode.grid')}</span>
                       </Button>
                     </div>
                   </div>

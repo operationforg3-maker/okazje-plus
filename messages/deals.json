@@ -1,9 +1,19 @@
 {
   "title": "Okazje",
   "subtitle": "Najgorętsze oferty sprawdzone przez społeczność",
+  "min": "Minimum",
+  "max": "Maksimum",
+  "stats": {
+    "avgDiscount": "Śr. zniżka",
+    "bestDeal": "Najlepszy"
+  },
+  "filtersTitle": "Filtry i sortowanie",
+  "filtersSubtitle": "Szybki dostęp do ceny, typu i darmowej dostawy",
+  "priceLabel": "Cena:",
   "filters": {
     "search": "Szukaj okazji...",
     "sort": "Sortuj",
+    "filterButtonText": "Kategorie i filtry",
     "sortOptions": {
       "hottest": "Najgorętsze",
       "newest": "Najnowsze",
@@ -13,6 +23,11 @@
     },
     "type": "Typ",
     "priceRange": "Zakres cen",
+    "min": "Minimum",
+    "max": "Maksimum",
+    "priceLimits": "Limity zakresu",
+    "minLimit": "Min limit:",
+    "maxLimit": "Max limit:",
     "quickFilters": {
       "freeShipping": "Darmowa dostawa",
       "bigDiscount": "Duża zniżka",
@@ -25,11 +40,18 @@
     },
     "clearAll": "Wyczyść filtry",
     "saveFilter": "Zapisz filtr",
+    "saveFilterCurrent": "Zapisz obecne filtry",
     "savedLabel": "Zapisane:"
   },
+  "recommendations": "Panel rekomendacji",
+  "heading": "Okazje",
   "viewMode": {
     "list": "Lista",
     "grid": "Siatka"
+  },
+  "viewToggle": {
+    "grid": "Widok siatki",
+    "list": "Widok listy"
   },
   "empty": {
     "title": "Brak okazji",
@@ -50,7 +72,9 @@
   "seeMore": "Zobacz więcej",
   "sidebar": {
     "categories": "Kategorie",
-    "allDeals": "Wszystkie"
+    "allDeals": "Wszystkie",
+    "showAll": "Pokaż wszystkie",
+    "hideEmpty": "Ukryj puste"
   },
   "card": {
     "price": "Cena",

@@ -11,7 +11,7 @@
     "searchButton": "Search"
   },
   "stats": {
-    "hotDeals": "Hot deals",
+    "hotDealsCount": "Hot deals",
     "products": "Products",
     "community": "Community",
     "savings": "Savings"
@@ -35,6 +35,9 @@
     "viewAll": "Browse catalog",
     "empty": "The best products will appear here soon!"
   },
+  "recommendedProducts": "Recommended Products",
+  "noDeals": "No approved deals to display.",
+  "noProducts": "No approved products to display.",
   "browseCategories": {
     "viewSubcategories": "View subcategories",
     "subcategoryCount": "{count, plural, one {# subcategory} other {# subcategories}}",

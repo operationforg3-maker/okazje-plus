@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
 import { Category, ProductCore, Deal } from '@/lib/types';
 import { useCurrency } from '@/lib/unified-currency';
 import Link from 'next/link';
@@ -71,7 +71,6 @@ function ProductsPageContent() {
   const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({});
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
-  const [showEmptyCategories, setShowEmptyCategories] = useState(false);
   const { formatPrice } = useCurrency();
   const lang = (locale as SupportedLanguage) || 'pl';
 
@@ -81,7 +80,7 @@ function ProductsPageContent() {
       setIsLoading(true);
       try {
         const [fetchedCategories, showcaseConfig] = await Promise.all([
-          showEmptyCategories ? getCategories() : getCategoriesWithContent('products'),
+          getCategoriesWithContent('products'),
           getNavigationShowcase(),
         ]);
         
@@ -122,7 +121,7 @@ function ProductsPageContent() {
       }
     }
     fetchData();
-  }, [mainCategoryParam, subCategoryParam, showEmptyCategories]);
+  }, [mainCategoryParam, subCategoryParam]);
 
   useEffect(() => {
     try {
@@ -391,16 +390,8 @@ function ProductsPageContent() {
 
   const SidebarContent = () => (
     <div className="space-y-2">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4">
         <h2 className="font-headline text-lg font-semibold">{t('categories.title')}</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowEmptyCategories(!showEmptyCategories)}
-          className="text-xs"
-        >
-          {showEmptyCategories ? t('categories.hideEmpty') : t('categories.showAll')}
-        </Button>
       </div>
       <ScrollArea ref={scrollAreaRef} className="h-[calc(100vh-200px)] lg:h-[600px] pr-1">
         {/* Przycisk "Wszystkie" */}
@@ -496,7 +487,7 @@ function ProductsPageContent() {
                         </button>
 
                         {/* Pod-podkategorie (trzeci poziom) */}
-                        {subActive && sub.subcategories && sub.subcategories.length > 0 && selectedSubcategory === subSlug && (
+                        {subActive && sub.subcategories && sub.subcategories.length > 0 && (
                           <div className="ml-2 space-y-1 border-l border-muted-foreground/30 pl-3">
                             {sub.subcategories.map((subsub) => {
                               const subSubSlug = subsub.slug || subsub.id;
@@ -650,7 +641,7 @@ function ProductsPageContent() {
                   <div className="flex flex-wrap gap-3">
                     {/* Sortowanie */}
                     <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                      <SelectTrigger className="w-[200px]">
+                      <SelectTrigger className="w-[200px] h-10">
                         <TrendingUp className="mr-2 h-4 w-4" />
                         <SelectValue placeholder={t('filters.sort')} />
                       </SelectTrigger>
@@ -662,48 +653,6 @@ function ProductsPageContent() {
                         <SelectItem value="price_desc">{t('filters.sortOptions.price_desc')}</SelectItem>
                       </SelectContent>
                     </Select>
-
-                    {/* Zakres ceny */}
-                    <div className="flex-1 flex items-center gap-2 px-3 py-2 border rounded-lg bg-muted/40">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">{t('filters.priceRange')}</span>
-                      <Input
-                        type="number"
-                        placeholder={t('filters.min')}
-                        value={unifiedFilters.priceRange?.min ?? 0}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          setUnifiedFilters(prev => ({
-                            ...prev,
-                            priceRange: {
-                              min: val,
-                              max: prev.priceRange?.max ?? 10000,
-                              step: prev.priceRange?.step ?? 100,
-                            },
-                          }));
-                        }}
-                        className="h-8 w-20 text-xs"
-                      />
-                      <span className="text-muted-foreground">-</span>
-                      <Input
-                        type="number"
-                        placeholder={t('filters.max')}
-                        value={unifiedFilters.priceRange?.max ?? 10000}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 10000;
-                          setUnifiedFilters(prev => ({
-                            ...prev,
-                            priceRange: {
-                              min: prev.priceRange?.min ?? 0,
-                              max: val,
-                              step: prev.priceRange?.step ?? 100,
-                            },
-                          }));
-                        }}
-                        className="h-8 w-20 text-xs"
-                      />
-                      <span className="text-sm">PLN</span>
-                    </div>
                   </div>
 
                   {/* Quick filters - chipy */}
@@ -798,7 +747,7 @@ function ProductsPageContent() {
                       onClick={() => setInsightsOpen(true)}
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
-                      Panel rekomendacji
+                      {t('recommendations')}
                     </Button>
                     <div className="flex items-center gap-1 border rounded-lg p-1">
                       <Button
@@ -818,26 +767,6 @@ function ProductsPageContent() {
                       >
                         <List className="h-4 w-4 mr-1" />
                         <span className="hidden sm:inline">{t('viewMode.list')}</span>
-                      </Button>
-                    </div>
-
-                    {/* Density Toggle */}
-                    <div className="flex items-center gap-1 border rounded-lg p-1">
-                      <Button
-                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
-                        size="sm"
-                        className="h-8 px-3"
-                        onClick={() => setCardDensity('comfortable')}
-                      >
-                        {t('density.standard')}
-                      </Button>
-                      <Button
-                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
-                        size="sm"
-                        className="h-8 px-3"
-                        onClick={() => setCardDensity('compact')}
-                      >
-                        {t('density.compact')}
                       </Button>
                     </div>
                   </div>

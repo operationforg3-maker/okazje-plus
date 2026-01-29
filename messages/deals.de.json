@@ -1,9 +1,19 @@
 {
   "title": "Angebote",
   "subtitle": "Heißeste Angebote von der Community geprüft",
+  "min": "Minimum",
+  "max": "Maximum",
+  "stats": {
+    "avgDiscount": "Durchschn. Rabatt",
+    "bestDeal": "Beste"
+  },
+  "filtersTitle": "Filter und Sortierung",
+  "filtersSubtitle": "Schnellzugriff auf Preis, Typ und kostenloser Versand",
+  "priceLabel": "Preis:",
   "filters": {
     "search": "Angebote suchen...",
     "sort": "Sortieren",
+    "filterButtonText": "Kategorien und Filter",
     "sortOptions": {
       "hottest": "Heißeste",
       "newest": "Neueste",
@@ -13,6 +23,11 @@
     },
     "type": "Typ",
     "priceRange": "Preisspanne",
+    "min": "Minimum",
+    "max": "Maximum",
+    "priceLimits": "Preisspannengrenzen",
+    "minLimit": "Min. Grenze:",
+    "maxLimit": "Max. Grenze:",
     "quickFilters": {
       "freeShipping": "Kostenloser Versand",
       "bigDiscount": "Großer Rabatt",
@@ -25,21 +40,31 @@
     },
     "clearAll": "Filter löschen",
     "saveFilter": "Filter speichern",
+    "saveFilterCurrent": "Aktuelle Filter speichern",
     "savedLabel": "Gespeichert:"
   },
+  "recommendations": "Empfehlungs-Panel",
+  "heading": "Angebote",
   "viewMode": {
     "list": "Liste",
     "grid": "Raster"
   },
+  "viewToggle": {
+    "grid": "Rasteransicht",
+    "list": "Listenansicht"
+  },
   "empty": {
     "title": "Keine Angebote",
     "description": "Keine Angebote gefunden, die Ihren Kriterien entsprechen. Versuchen Sie, die Filter anzupassen.",
+    "inCategory": "Keine Angebote in dieser Kategorie",
     "cta": "Zurück zu allen Angeboten"
   },
   "loading": "Angebote werden geladen...",
   "sidebar": {
     "categories": "Kategorien",
-    "allDeals": "Alle"
+    "allDeals": "Alle",
+    "showAll": "Alle anzeigen",
+    "hideEmpty": "Leere ausblenden"
   },
   "card": {
     "price": "Preis",

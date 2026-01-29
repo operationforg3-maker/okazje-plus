@@ -1,0 +1,38 @@
+{
+  "title": "Cookie Policy",
+  "lastUpdated": "Last updated: January 29, 2026",
+  "intro": {
+    "title": "What are cookies?",
+    "description": "Cookies are small text files that are saved on your device (computer, tablet, smartphone) when you visit websites. They allow the site to remember your actions and preferences over a certain period of time."
+  },
+  "usage": {
+    "title": "How do we use cookies?",
+    "description": "We use cookies for the following purposes:",
+    "categories": {
+      "necessary": {
+        "title": "Necessary",
+        "description": "These cookies are essential for the website to function. They include user session, security and basic functionality.",
+        "examples": "Authentication, language preferences, security"
+      },
+      "analytics": {
+        "title": "Analytics",
+        "description": "Help us understand how visitors use our website so we can improve it.",
+        "examples": "Google Analytics, visit statistics, user behavior"
+      },
+      "marketing": {
+        "title": "Marketing",
+        "description": "Used to display ads tailored to your interests.",
+        "examples": "Remarketing cookies, tailored ads"
+      }
+    }
+  },
+  "control": {
+    "title": "How to control cookies?",
+    "description": "You can control and/or delete cookies as you wish. You can delete all cookies from your computer, and most browsers allow you to block their storage.",
+    "settings": "To change your cookie preferences on this site, click the 'Manage preferences' button in the cookie banner or in the website footer."
+  },
+  "more": {
+    "title": "More information",
+    "description": "If you have questions about our cookie policy, please contact us via the contact form."
+  }
+}

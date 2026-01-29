@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -36,7 +37,6 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCurrency } from '@/lib/unified-currency';
-import { useTranslations } from 'next-intl';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 
 interface Props {
@@ -57,6 +57,7 @@ export default function ProductDetailM6Client({
   isM6 
 }: Props) {
   const t = useTranslations('products');
+  const tCommon = useTranslations('common');
   const { user } = useAuth();
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
@@ -195,11 +196,11 @@ export default function ProductDetailM6Client({
       {/* Breadcrumbs */}
       <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
         <Link href={`/${locale}`} className="hover:text-foreground transition-colors whitespace-nowrap">
-          Strona główna
+          {tCommon('breadcrumb.home')}
         </Link>
         <ChevronRight className="w-4 h-4 flex-shrink-0" />
         <Link href={`/${locale}/products`} className="hover:text-foreground transition-colors whitespace-nowrap">
-          Produkty
+          {tCommon('breadcrumb.products')}
         </Link>
         {mainCategorySlug && (
           <>

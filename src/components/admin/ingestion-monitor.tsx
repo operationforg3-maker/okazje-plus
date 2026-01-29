@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { getHarvesterJobs, getRefinerJobs } from '@/lib/data';
+import { useSmartPoll } from '@/hooks/use-smart-poll';
 
 /**
  * IngestionMonitor - Tracks harvester and refiner job progress in real-time
@@ -28,14 +29,7 @@ export function IngestionMonitor() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('harvester');
 
-  useEffect(() => {
-    loadJobs();
-    // Poll for updates every 5 seconds
-    const interval = setInterval(loadJobs, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
     try {
       const [harvester, refiner] = await Promise.all([
         getHarvesterJobs(10),
@@ -48,7 +42,12 @@ export function IngestionMonitor() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useSmartPoll(async () => {
+    await loadJobs();
+    return null;
+  }, { interval: 5000, immediate: true });
 
   return (
     <Card>

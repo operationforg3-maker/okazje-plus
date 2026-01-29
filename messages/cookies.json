@@ -1,0 +1,38 @@
+{
+  "title": "Polityka Cookies",
+  "lastUpdated": "Ostatnia aktualizacja: 29 stycznia 2026",
+  "intro": {
+    "title": "Czym są pliki cookies?",
+    "description": "Pliki cookies to małe pliki tekstowe zapisywane na Twoim urządzeniu (komputerze, tablecie, smartfonie) podczas odwiedzania stron internetowych. Umożliwiają one stronie zapamiętanie Twoich działań i preferencji przez określony czas."
+  },
+  "usage": {
+    "title": "Jak używamy plików cookies?",
+    "description": "Wykorzystujemy pliki cookies w następujących celach:",
+    "categories": {
+      "necessary": {
+        "title": "Niezbędne",
+        "description": "Te pliki cookies są konieczne do działania strony. Obejmują sesję użytkownika, bezpieczeństwo i podstawowe funkcje.",
+        "examples": "Uwierzytelnianie, preferencje językowe, bezpieczeństwo"
+      },
+      "analytics": {
+        "title": "Analityczne",
+        "description": "Pomagają nam zrozumieć, jak odwiedzający korzystają z naszej strony, abyśmy mogli ją ulepszać.",
+        "examples": "Google Analytics, statystyki odwiedzin, zachowanie użytkowników"
+      },
+      "marketing": {
+        "title": "Marketingowe",
+        "description": "Wykorzystywane do wyświetlania reklam dopasowanych do Twoich zainteresowań.",
+        "examples": "Remarketingowe pliki cookies, dopasowane reklamy"
+      }
+    }
+  },
+  "control": {
+    "title": "Jak kontrolować pliki cookies?",
+    "description": "Możesz kontrolować i/lub usuwać pliki cookies według własnego uznania. Możesz usunąć wszystkie pliki cookies z komputera, a większość przeglądarek pozwala zablokować ich zapisywanie.",
+    "settings": "Aby zmienić preferencje cookies na tej stronie, kliknij przycisk 'Zarządzaj preferencjami' w bannerze cookies lub w stopce strony."
+  },
+  "more": {
+    "title": "Więcej informacji",
+    "description": "Jeśli masz pytania dotyczące naszej polityki cookies, skontaktuj się z nami poprzez formularz kontaktowy."
+  }
+}

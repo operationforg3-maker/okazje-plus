@@ -11,7 +11,7 @@
     "searchButton": "Suchen"
   },
   "stats": {
-    "hotDeals": "Heiße Angebote",
+    "hotDealsCount": "Heiße Angebote",
     "products": "Produkte",
     "community": "Community",
     "savings": "Ersparnisse"
@@ -35,6 +35,9 @@
     "viewAll": "Katalog ansehen",
     "empty": "Die besten Produkte erscheinen hier bald!"
   },
+  "recommendedProducts": "Empfohlene Produkte",
+  "noDeals": "Keine genehmigten Angebote zum Anzeigen.",
+  "noProducts": "Keine genehmigten Produkte zum Anzeigen.",
   "browseCategories": {
     "viewSubcategories": "Unterkategorien anzeigen",
     "subcategoryCount": "{count, plural, one {# Unterkategorie} other {# Unterkategorien}}",
