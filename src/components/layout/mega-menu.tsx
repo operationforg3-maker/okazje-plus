@@ -127,7 +127,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
           </Link>
           <span className="opacity-60">/</span>
           {activeCategory ? (
-            <span className="text-primary">{activeCategory.name}</span>
+            <span className="text-primary">{getName(activeCategory.name)}</span>
           ) : (
             <span>Kategorie</span>
           )}
@@ -144,7 +144,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
         >
           <Image
             src={activeCategory.heroImage}
-            alt={activeCategory.name}
+            alt={getName(activeCategory.name)}
             width={960}
             height={320}
             className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -154,7 +154,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
             <Badge className="w-fit bg-background/80 text-xs uppercase text-muted-foreground" variant="secondary">
               Kolekcja
             </Badge>
-            <h3 className="text-xl font-semibold text-foreground">{activeCategory.name}</h3>
+            <h3 className="text-xl font-semibold text-foreground">{getName(activeCategory.name)}</h3>
             {activeCategory.description && (
               <p className="max-w-xl text-sm text-muted-foreground">
                 {activeCategory.description}
@@ -505,7 +505,7 @@ export function MegaMenu() {
                   </Link>
                   <span className="opacity-60">/</span>
                   {activeCategory ? (
-                    <span className="text-primary">{activeCategory.name}</span>
+                    <span className="text-primary">{getName(activeCategory.name)}</span>
                   ) : (
                     <span>Kategorie</span>
                   )}
@@ -522,7 +522,7 @@ export function MegaMenu() {
                 >
                   <Image
                     src={activeCategory.heroImage}
-                    alt={activeCategory.name}
+                    alt={getName(activeCategory.name)}
                     width={960}
                     height={320}
                     className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -532,7 +532,7 @@ export function MegaMenu() {
                     <Badge className="w-fit bg-background/80 text-xs uppercase text-muted-foreground" variant="secondary">
                       Kolekcja
                     </Badge>
-                    <h3 className="text-xl font-semibold text-foreground">{activeCategory.name}</h3>
+                    <h3 className="text-xl font-semibold text-foreground">{getName(activeCategory.name)}</h3>
                     {activeCategory.description && (
                       <p className="max-w-xl text-sm text-muted-foreground">
                         {activeCategory.description}
@@ -573,7 +573,7 @@ export function MegaMenu() {
                             <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
                               <Image
                                 src={subcategory.image}
-                                alt={subcategory.name}
+                                alt={getName(subcategory.name)}
                                 fill
                                 className="object-cover transition-transform duration-300 group-hover:scale-110"
                               />
@@ -584,7 +584,7 @@ export function MegaMenu() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-semibold text-foreground truncate">
-                                {subcategory.name}
+                                {getName(subcategory.name)}
                               </h4>
                               {subcategory.highlight && (
                                 <Badge className="text-[10px] uppercase flex-shrink-0" variant="secondary">

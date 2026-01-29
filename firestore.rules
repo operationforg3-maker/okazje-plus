@@ -538,7 +538,7 @@ service cloud.firestore {
     // Category suggestions: zalogowani mogą dodawać, admin zarządza
     match /forum_category_suggestions/{suggestionId} {
       allow read: if isSignedIn(); // Zalogowani mogą widzieć sugestie
-      allow create: if isSignedIn(); // Temporarily permissive for debugging
+      allow create: if isSignedIn() && request.resource.data.suggestedByUid == request.auth.uid;
       allow update: if isAdmin(); // Admin zatwierdza/odrzuca
       allow delete: if isAdmin();
     }
