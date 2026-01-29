@@ -1,0 +1,555 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    ////////////////////////////////
+    // Helper functions
+    ////////////////////////////////
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+    function isAdmin() {
+      return isSignedIn() && userDoc(request.auth.uid).data.role == 'admin';
+    }
+    function isOwner(uidField) {
+      return isSignedIn() && resource.data[uidField] == request.auth.uid;
+    }
+    function isOwnerNew(uidField) {
+      return isSignedIn() && request.resource.data[uidField] == request.auth.uid;
+    }
+
+    // Generic validators
+    function stringMax(field, maxLen) {
+      return !(field in request.resource.data) || (request.resource.data[field].size() <= maxLen);
+    }
+    function numberMin(field, minVal) {
+      return !(field in request.resource.data) || (request.resource.data[field] >= minVal);
+    }
+    function allowedStatus(field) {
+      return !(field in request.resource.data) || request.resource.data[field] in ['draft','pending','pending_approval','approved','rejected'];
+    }
+
+    ////////////////////////////////
+    // USERS
+    ////////////////////////////////
+    // Odczyt ograniczony: publicznie tylko wybrane pola, pełny dokument tylko dla właściciela lub admina
+    match /users/{userId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId) || true; // TODO: ograniczyć publiczny zakres pól przez Cloud Functions maskowania
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isAdmin();
+    }
+    // Preferencje / zapisane filtry użytkownika (subkolekcja preferences)
+    match /users/{userId}/preferences/{prefId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    ////////////////////////////////
+    // MODERATION
+    ////////////////////////////////
+    // Logi moderacji - tylko admini
+    match /moderation_log/{logId} {
+      allow read: if isAdmin();
+      allow write: if false; // Tylko przez Admin SDK
+    }
+    
+    // Zgłoszenia (reports)
+    match /reports/{reportId} {
+      // Użytkownicy mogą tworzyć zgłoszenia
+      allow create: if isSignedIn() && request.resource.data.reportedBy == request.auth.uid;
+      // Użytkownik widzi tylko swoje zgłoszenia, admin/moderator wszystkie
+      allow read: if isAdmin() || (isSignedIn() && resource.data.reportedBy == request.auth.uid);
+      // Tylko admin/moderator może aktualizować (resolve/reject)
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // CATEGORIES
+    ////////////////////////////////
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+      match /subcategories/{subcategoryId} {
+        allow read: if true;
+        allow write: if isAdmin();
+        // Sub-subkategorie (poziom 3)
+        match /subcategories/{subsubcategoryId} {
+          allow read: if true;
+          allow write: if isAdmin();
+        }
+      }
+      // Kafelki promocyjne kategorii
+      match /tiles/{tileId} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    ////////////////////////////////
+    // DEALS
+    ////////////////////////////////
+    match /deals/{dealId} {
+      // Public read tylko dla approved, autor widzi swoją wersję, admin widzi wszystko
+      // Gość widzi tylko approved, autor widzi swoje, admin wszystko
+      allow read: if (
+        resource.data.status == 'approved' ||
+        (isSignedIn() && resource.data.postedBy == request.auth.uid) ||
+        isAdmin()
+      );
+      // Create draft
+      // Wymagane pole link
+      allow create: if isSignedIn()
+        && request.resource.data.postedBy == request.auth.uid
+        && request.resource.data.status == 'draft'
+        && request.resource.data.temperature == 0
+        && request.resource.data.voteCount == 0
+        && request.resource.data.commentsCount == 0
+        && numberMin('price',0)
+        && stringMax('title',160)
+        && allowedStatus('status')
+        // pozwalamy na nazewnictwo link lub dealUrl (frontend używa dealUrl)
+        && (request.resource.data.keys().hasAny(['link']) || request.resource.data.keys().hasAny(['dealUrl']));
+      // Update: autor lub admin; dodatkowo osobny przypadek głosowania (tylko temperature & voteCount)
+      allow update: if isSignedIn() && (
+        resource.data.postedBy == request.auth.uid
+        || isAdmin()
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['temperature','voteCount'])
+            && request.resource.data.keys().hasAll(resource.data.keys()))
+      );
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // PRODUCTS
+    ////////////////////////////////
+    match /products/{productId} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if isAdmin()
+        && request.resource.data.status == 'draft'
+        && numberMin('price',0)
+        && allowedStatus('status');
+      // Update:
+      //  - Admin: pełna edycja
+      //  - Użytkownik: może edytować tylko ratingCard
+      //  - Moderacja: przejście draft->approved / rejected wymaga admina (role=admin)
+      allow update: if (
+        isAdmin() || (
+          isSignedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingCard'])
+            && request.resource.data.keys().hasAll(resource.data.keys())
+        )
+      )
+      && (
+        // Jeśli zmieniamy status, tylko admin
+        !(request.resource.data.status in ['approved','rejected']) || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // PRODUCT_CORES (M6)
+    ////////////////////////////////
+    match /product_cores/{productId} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if isAdmin() && allowedStatus('status');
+      // Updates tylko dla administratora; pola są immutable poza statusem/bestPrice/linkedDealIds
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Ustawienia globalne (np. konfiguracja nawigacji): dostępne do odczytu dla wszystkich, edycja tylko dla administracji.
+    ////////////////////////////////
+    // SETTINGS
+    ////////////////////////////////
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // ADMIN SETTINGS (kursy walut, konfiguracja panelu)
+    ////////////////////////////////
+    match /admin/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // Komentarze jako subkolekcje (products/{productId}/comments i deals/{dealId}/comments)
+    ////////////////////////////////
+    // PRODUCT COMMENTS
+    ////////////////////////////////
+    match /products/{productId}/comments/{commentId} {
+      allow read: if true; // komentarze produktów są publiczne gdy produkt approved
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && stringMax('content',2000);
+      allow update: if isOwner('userId') && stringMax('content',2000);
+      allow delete: if isOwner('userId') || isAdmin();
+    }
+
+    // Oceny produktów: każdy może czytać, tylko właściciel może dodawać/edytować swoją ocenę
+    ////////////////////////////////
+    // PRODUCT RATINGS (po jednej na usera)
+    ////////////////////////////////
+    match /products/{productId}/ratings/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.auth.uid == userId && !request.resource.data.keys().hasAny(['average','count']);
+      allow update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    ////////////////////////////////
+    // DEAL COMMENTS
+    ////////////////////////////////
+    match /deals/{dealId}/comments/{commentId} {
+      allow read: if true; // komentarze są publiczne przy approved dealu
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && stringMax('content',2000);
+      allow update: if isOwner('userId') && stringMax('content',2000);
+      allow delete: if isOwner('userId') || isAdmin();
+    }
+
+    
+    // Głosy jako subkolekcje: Każdy może czytać. Zapis tylko dla właściciela głosu.
+    // Zmiana temperature jest dozwolona przez transakcję w update deala
+    ////////////////////////////////
+    // DEAL VOTES
+    ////////////////////////////////
+    match /deals/{dealId}/votes/{userId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Ulubione: Użytkownik może zarządzać tylko swoimi ulubionymi
+    ////////////////////////////////
+    // SHOPPING CART (M4)
+    ////////////////////////////////
+    match /user_carts/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    ////////////////////////////////
+    // FAVORITES
+    ////////////////////////////////
+    match /favorites/{favoriteId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Powiadomienia: Użytkownik może czytać, aktualizować i usuwać tylko swoje powiadomienia
+    // Tworzenie mogą tylko admini lub system (Cloud Functions)
+    ////////////////////////////////
+    // NOTIFICATIONS
+    ////////////////////////////////
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && (isAdmin() || request.resource.data.userId == request.auth.uid);
+    }
+
+    ////////////////////////////////
+    // M3: PRICE MONITORING
+    ////////////////////////////////
+    match /price_snapshots/{snapshotId} {
+      allow read: if true; // Public read for price history
+      allow write: if isAdmin();
+    }
+
+    match /price_histories/{historyId} {
+      allow read: if true; // Public read for price history charts
+      allow write: if isAdmin();
+    }
+
+    match /price_alerts/{alertId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /price_change_notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: AI REVIEW SUMMARIES
+    ////////////////////////////////
+    match /review_summaries/{summaryId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /sentiment_analysis/{analysisId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /review_analysis_jobs/{jobId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: GAMIFICATION
+    ////////////////////////////////
+    match /user_points/{userId} {
+      allow read: if true; // Public read for leaderboards
+      allow write: if isAdmin();
+    }
+
+    match /point_transactions/{transactionId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /user_badges/{userBadgeId} {
+      allow read: if true; // Public read for profiles
+      allow write: if isAdmin();
+    }
+
+    match /leaderboards/{leaderboardId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /user_activities/{activityId} {
+      allow read: if resource.data.visibility == 'public' || 
+                     (isSignedIn() && resource.data.userId == request.auth.uid) ||
+                     isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isSignedIn() && (resource.data.reportedBy == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.reportedBy == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: PERSONALIZATION
+    ////////////////////////////////
+    match /user_preferences/{userId} {
+      allow read: if isSignedIn() && (userId == request.auth.uid || isAdmin());
+      allow write: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    match /user_interactions/{interactionId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    match /user_embeddings/{userId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /feed_recommendations/{recommendationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    match /ab_test_variants/{variantId} {
+      allow read: if true; // Public read for client-side tests
+      allow write: if isAdmin();
+    }
+
+    match /ab_test_assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // M3: MULTI-MARKETPLACE
+    ////////////////////////////////
+    match /marketplaces/{marketplaceId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /category_mappings/{mappingId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /price_comparisons/{comparisonId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /multi_source_products/{productId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    match /review_aggregations/{aggregationId} {
+      allow read: if true; // Public read
+      allow write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // ANALYTICS
+    ////////////////////////////////
+    // Write-only for all users (authenticated or anonymous)
+    // Only admins can read (for dashboard/reports)
+    match /analytics/{eventId} {
+      allow read: if isAdmin();
+      allow create: if true; // Allow anonymous tracking
+      allow update, delete: if false; // Immutable events
+    }
+
+    ////////////////////////////////
+    // SECRET PAGES (Tajne strony promocyjne)
+    ////////////////////////////////
+    match /secret_pages/{pageId} {
+      // Admin może czytać wszystko
+      allow read: if isAdmin();
+      // Publiczny odczyt tylko aktywnych stron (dla renderowania pojedynczej strony)
+      allow get: if resource.data.isActive == true;
+      // Tylko admin może tworzyć, edytować i usuwać
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Historia zakręceń koła fortuny
+    match /secret_page_spins/{spinId} {
+      // Publiczny zapis (anonimowe zakręcenia)
+      allow create: if true;
+      // Tylko admin może czytać statystyki
+      allow read: if isAdmin();
+      allow update, delete: if false; // Immutable
+    }
+
+    // Pre-rejestracje beta/pioneer (max 5000)
+    match /pre_registrations/{registrationId} {
+      // Publiczny zapis z podstawową walidacją
+      allow create: if request.resource.data.keys().hasAll(['email', 'name', 'role', 'status', 'registrationNumber', 'createdAt'])
+                    && request.resource.data.email is string
+                    && request.resource.data.email.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$')
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() >= 2
+                    && request.resource.data.role in ['beta', 'pioneer']
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.registrationNumber is int
+                    && request.resource.data.registrationNumber > 0
+                    && request.resource.data.registrationNumber <= 5000;
+      
+      // Tylko admin może czytać listę i edytować statusy
+      allow read, update: if isAdmin();
+      allow delete: if false; // Nie można usuwać rejestracji
+    }
+
+    ////////////////////////////////
+    // OAUTH TOKENS
+    ////////////////////////////////
+    match /oauthTokens/{tokenId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // DUPLICATE GROUPS
+    ////////////////////////////////
+    match /duplicateGroups/{groupId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // AUDIT & SNAPSHOTS
+    ////////////////////////////////
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /productSnapshots/{snapshotId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /dealSnapshots/{snapshotId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // SOCIAL & FOLLOWS
+    ////////////////////////////////
+    match /follows/{followId} {
+      allow read: if true; // Public read
+      allow write: if isSignedIn() && (
+        request.resource.data.follower == request.auth.uid ||
+        request.resource.data.followee == request.auth.uid
+      );
+    }
+
+    ////////////////////////////////
+    // INDEXING JOBS (Typesense)
+    ////////////////////////////////
+    match /indexingJobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // IMPORT JOBS & AI COMMANDS
+    ////////////////////////////////
+    match /import_jobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Import jobs from admin UI (camelCase version)
+    match /importJobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /aiCommands/{commandId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // FORUM (Categories, Threads, Posts, Suggestions)
+    ////////////////////////////////
+    // Forum categories: publiczne odczyt, admin pisze
+    match /forum_categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Forum threads: zalogowani mogą czytać i tworzyć, właściciel/admin mogą edytować
+    match /forum_threads/{threadId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow update: if isOwner('authorUid') || isAdmin();
+      allow delete: if isOwner('authorUid') || isAdmin();
+    }
+
+    // Forum posts: zalogowani czytają, mogą tworzyć, właściciel/admin edytują
+    match /forum_threads/{threadId}/posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
+      allow update: if isOwner('authorUid') || isAdmin();
+      allow delete: if isOwner('authorUid') || isAdmin();
+    }
+
+    // Category suggestions: zalogowani mogą dodawać, admin zarządza
+    match /forum_category_suggestions/{suggestionId} {
+      allow read: if isSignedIn(); // Zalogowani mogą widzieć sugestie
+      allow create: if isSignedIn() && request.resource.data.suggestedByUid == request.auth.uid;
+      allow update: if isAdmin(); // Admin zatwierdza/odrzuca
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
+    // CONFIG (System settings)
+    ////////////////////////////////
+    match /config/{configId} {
+      allow read: if true; // Public read dla currency preference, indexes schedule, etc
+      allow write: if isAdmin();
+    }
+  }
+}
+
