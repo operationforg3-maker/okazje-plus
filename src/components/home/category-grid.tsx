@@ -36,7 +36,6 @@ const CATEGORY_STYLES = [
 
 export default function CategoryGrid({ categories }: CategoryGridProps) {
   const t = useTranslations('home.browseCategories');
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Count total products in category (including all subcategories)
@@ -51,22 +50,12 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
     return total;
   };
 
-  // Count total subcategories (sub + subsub)
-  const getTotalSubcategories = (category: Category) => {
-    let total = category.subcategories?.length || 0;
-    category.subcategories?.forEach(sub => {
-      total += sub.subcategories?.length || 0;
-    });
-    return total;
-  };
-
   return (
     <div className="w-full space-y-8">
       {/* Main Grid View - Top Level Categories */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {categories.map((category, idx) => {
           const style = CATEGORY_STYLES[idx % CATEGORY_STYLES.length];
-          const totalSubs = getTotalSubcategories(category);
           const totalProducts = getTotalProducts(category);
           const isExpanded = expandedId === category.id;
 
@@ -79,8 +68,6 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                   style.border,
                   isExpanded && 'ring-2 ring-primary'
                 )}
-                onMouseEnter={() => setHoveredId(category.id || null)}
-                onMouseLeave={() => setHoveredId(null)}
               >
                 <CardContent className="p-4">
                   {/* Główny nagłówek - ikona, tytuł i liczba produktów w jednej linii */}
