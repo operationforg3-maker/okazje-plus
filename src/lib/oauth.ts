@@ -260,12 +260,15 @@ export async function getActiveToken(vendorId: string, accountName?: string): Pr
  */
 export async function getAllTokens(vendorId: string): Promise<OAuthToken[]> {
   try {
+    logger.info('[getAllTokens] Starting', { vendorId, isServer });
     if (isServer) {
+      logger.info('[getAllTokens] Using Admin SDK');
       const snapshot = await adminDb.collection('oauthTokens')
         .where('vendorId', '==', vendorId)
         .orderBy('createdAt', 'desc')
         .get();
 
+      logger.info('[getAllTokens] Query complete', { docsCount: snapshot.docs.length });
       return snapshot.docs.map(docSnap => {
         const data = docSnap.data();
         return {
@@ -303,7 +306,7 @@ export async function getAllTokens(vendorId: string): Promise<OAuthToken[]> {
       } as OAuthToken;
     });
   } catch (error) {
-    logger.error('Failed to get all tokens', { vendorId, error });
+    logger.error('Failed to get all tokens', { vendorId, error, errorMessage: (error as Error)?.message, errorStack: (error as Error)?.stack });
     throw error;
   }
 }
