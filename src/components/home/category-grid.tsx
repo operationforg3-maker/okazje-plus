@@ -41,11 +41,11 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
 
   // Count total products in category (including all subcategories)
   const getTotalProducts = (category: Category) => {
-    let total = category.productCount || 0;
+    let total = (category as any).productCount || 0;
     category.subcategories?.forEach(sub => {
-      total += sub.productCount || 0;
+      total += (sub as any).productCount || 0;
       sub.subcategories?.forEach(subsub => {
-        total += subsub.productCount || 0;
+        total += (subsub as any).productCount || 0;
       });
     });
     return total;
