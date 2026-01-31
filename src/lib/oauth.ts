@@ -72,43 +72,20 @@ function normalizeOAuthConfigData(id: string, data: any): OAuthConfig {
  */
 export async function getOAuthConfig(vendorId: string): Promise<OAuthConfig | null> {
   try {
-    logger.info('[getOAuthConfig] Starting', { vendorId, isServer });
-    if (isServer) {
-      logger.info('[getOAuthConfig] Using Admin SDK');
-      try {
-        const configSnap = await adminDb.collection('oauthConfigs').doc(vendorId).get();
-        logger.info('[getOAuthConfig] Query complete', { exists: configSnap.exists });
+    logger.info('[getOAuthConfig] Starting (admin-only)', { vendorId });
 
-        if (!configSnap.exists) {
-          logger.warn('OAuth config not found', { vendorId });
-          return null;
-        }
+    const configSnap = await adminDb.collection('oauthConfigs').doc(vendorId).get();
+    logger.info('[getOAuthConfig] Query complete', { exists: configSnap.exists });
 
-        const rawData = configSnap.data();
-        logger.info('[getOAuthConfig] Raw data retrieved', { hasData: !!rawData });
-        const normalized = normalizeOAuthConfigData(configSnap.id, rawData);
-        logger.info('[getOAuthConfig] Normalized', { clientId: normalized.clientId, enabled: normalized.enabled });
-        return normalized;
-      } catch (adminError) {
-        logger.error('[getOAuthConfig] Admin SDK error', { 
-          vendorId, 
-          error: String(adminError),
-          message: (adminError as Error)?.message,
-          stack: (adminError as Error)?.stack
-        });
-        throw adminError;
-      }
-    }
-
-    const configRef = doc(db, 'oauthConfigs', vendorId);
-    const configSnap = await getDoc(configRef);
-
-    if (!configSnap.exists()) {
+    if (!configSnap.exists) {
       logger.warn('OAuth config not found', { vendorId });
       return null;
     }
 
-    const normalized = normalizeOAuthConfigData(configSnap.id, configSnap.data());
+    const rawData = configSnap.data();
+    logger.info('[getOAuthConfig] Raw data retrieved', { hasData: !!rawData });
+    const normalized = normalizeOAuthConfigData(configSnap.id, rawData);
+    logger.info('[getOAuthConfig] Normalized', { clientId: normalized.clientId, enabled: normalized.enabled });
     return normalized;
   } catch (error) {
     logger.error('Failed to get OAuth config', { 
