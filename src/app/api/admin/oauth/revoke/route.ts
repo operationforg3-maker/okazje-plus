@@ -11,6 +11,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revokeOAuthToken } from '@/lib/oauth';
 import { logger } from '@/lib/logging';
 
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

@@ -10,6 +10,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAllTokens } from '@/lib/oauth';
 import { logger } from '@/lib/logging';
 
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
