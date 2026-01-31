@@ -448,8 +448,13 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
-    // OAUTH TOKENS
+    // OAUTH CONFIGS & TOKENS
     ////////////////////////////////
+    match /oauthConfigs/{configId} {
+      allow read: if true; // Admin SDK potrzebuje odczytu bez auth context
+      allow write: if isAdmin();
+    }
+    
     match /oauthTokens/{tokenId} {
       allow read, write: if isAdmin();
     }
