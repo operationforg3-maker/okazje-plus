@@ -531,6 +531,31 @@ service cloud.firestore {
     match /forum_threads/{threadId}/posts/{postId} {
       allow read: if true;
       allow create: if (isSignedIn() && request.resource.data.authorUid == request.auth.uid) || request.auth == null;
+      allow update: if isOwner('authorUid') || isAdmin()
+        || (isSignedIn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'upvotes',
+            'downvotes',
+            'reactions',
+            'updatedAt'
+          ])
+          && request.resource.data.keys().hasAll(resource.data.keys())
+        );
+      allow delete: if isOwner('authorUid') || isAdmin();
+    }
+
+    // Forum post votes: użytkownik może zarządzać własnym głosem
+    match /forum_threads/{threadId}/posts/{postId}/votes/{voteId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == voteId && request.resource.data.userId == request.auth.uid;
+      allow update: if isSignedIn() && request.auth.uid == voteId && request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() && request.auth.uid == voteId;
+    }
+
+    // Forum posts (top-level collection): odczyt publiczny, tworzenie przez autora, edycja przez właściciela/admina
+    match /forum_posts/{postId} {
+      allow read: if true;
+      allow create: if (isSignedIn() && request.resource.data.authorUid == request.auth.uid) || request.auth == null;
       allow update: if isOwner('authorUid') || isAdmin();
       allow delete: if isOwner('authorUid') || isAdmin();
     }

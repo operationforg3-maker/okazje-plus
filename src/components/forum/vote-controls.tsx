@@ -38,7 +38,7 @@ export function VoteControls({
 
     const loadUserVote = async () => {
       try {
-        const voteRef = doc(db, `forum_posts/${postId}/votes`, user.uid);
+        const voteRef = doc(db, 'forum_threads', threadId, 'posts', postId, 'votes', user.uid);
         const voteSnap = await getDoc(voteRef);
         
         if (voteSnap.exists()) {
@@ -63,8 +63,8 @@ export function VoteControls({
     setVoteState(prev => ({ ...prev, loading: true }));
 
     try {
-      const postRef = doc(db, "forum_posts", postId);
-      const voteRef = doc(db, `forum_posts/${postId}/votes`, user.uid);
+      const postRef = doc(db, 'forum_threads', threadId, 'posts', postId);
+      const voteRef = doc(db, 'forum_threads', threadId, 'posts', postId, 'votes', user.uid);
 
       // Jeśli użytkownik już głosował
       if (voteState.userVote) {

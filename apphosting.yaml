@@ -100,6 +100,10 @@ env:
     secret: ALIEXPRESS_API_BASE
     availability:
       - RUNTIME
+  - variable: ALIEXPRESS_API_ENDPOINT
+    secret: ALIEXPRESS_API_ENDPOINT
+    availability:
+      - RUNTIME
   - variable: ALIEXPRESS_APP_KEY
     secret: ALIEXPRESS_APP_KEY
     availability:
@@ -110,6 +114,14 @@ env:
       - RUNTIME
   - variable: ALIEXPRESS_AFFILIATE_ID
     secret: ALIEXPRESS_AFFILIATE_ID
+    availability:
+      - RUNTIME
+  - variable: ALIEXPRESS_TRACKING_ID
+    secret: ALIEXPRESS_TRACKING_ID
+    availability:
+      - RUNTIME
+  - variable: ALIEXPRESS_REGION
+    secret: ALIEXPRESS_REGION
     availability:
       - RUNTIME
 

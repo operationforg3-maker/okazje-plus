@@ -15,7 +15,7 @@
 import { logger } from '@/lib/logging';
 import { getValidToken } from '@/lib/oauth';
 import { OAuthToken } from '@/lib/types';
-import { createHash } from 'crypto';
+import { createHash, createHmac } from 'crypto';
 import {
   AliExpressClientConfig,
   AliExpressSearchParams,
@@ -67,12 +67,24 @@ export class AliExpressClient {
    * 
    * FALLBACK: If no OAuth token exists, client can still work
    * with APP_KEY/APP_SECRET for non-authenticated endpoints
+   * 
+   * NOTE: For AliExpress TOP API (gw.api.taobao.com), we MUST use
+   * APP_KEY/APP_SECRET signature auth, not OAuth. OAuth is only for
+   * newer endpoints. Set ALIEXPRESS_FORCE_SIGNATURE_AUTH=true to skip OAuth.
    */
   private async ensureToken(): Promise<void> {
     logger.debug('Ensuring valid access token', {
       vendorId: this.vendorId,
       accountName: this.accountName,
     });
+    
+    // For TOP API (gw.api.taobao.com), force signature auth instead of OAuth
+    const forceSignatureAuth = process.env.ALIEXPRESS_FORCE_SIGNATURE_AUTH === 'true';
+    if (forceSignatureAuth) {
+      logger.debug('Forcing signature authentication (TOP API mode)');
+      this.token = null;
+      return;
+    }
     
     try {
       // Try to get valid OAuth token (will refresh if needed)
@@ -109,13 +121,15 @@ export class AliExpressClient {
     const sortedKeys = Object.keys(params).sort();
     
     // Concatenate key-value pairs
+    // AliExpress TOP API format: secret + key1value1key2value2... + secret
     let signString = this.config.appSecret || '';
     for (const key of sortedKeys) {
       signString += key + params[key];
     }
     signString += this.config.appSecret || '';
     
-    // MD5 hash and uppercase
+    // Generate plain MD5 signature (not HMAC)
+    // This is the standard format for AliExpress TOP API
     const hash = createHash('md5').update(signString).digest('hex');
     return hash.toUpperCase();
   }
@@ -215,20 +229,40 @@ export class AliExpressClient {
       // TOP API with signature auth (fallback)
       logger.debug('Using signature authentication (TOP API)');
       
+      // Build request params
+      // Timestamp format: yyyy-MM-dd HH:mm:ss (GMT+8 timezone)
+      const now = new Date();
+      const timestamp = now.toISOString()
+        .replace('T', ' ')
+        .substring(0, 19); // Format: YYYY-MM-DD HH:mm:ss
+      
       const requestParams: Record<string, any> = {
         method,
         app_key: this.config.appKey,
         sign_method: 'md5',
-        timestamp: new Date().getTime().toString(),
+        timestamp: timestamp,
         format: 'json',
         v: '2.0',
         simplify: 'true',
         ...params,
       };
       
-      // Generate signature
-      const sign = this.generateSignature(requestParams);
+      // Generate signature - must NOT include sign_method or sign itself
+      // Create params without sign_method for signing
+      const paramsForSigning = Object.entries(requestParams)
+        .filter(([key]) => key !== 'sign_method' && key !== 'sign')
+        .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
+      
+      const sign = this.generateSignature(paramsForSigning);
       requestParams.sign = sign;
+      
+      // Debug: log signature parameters
+      logger.info('TOP API Signature Debug', {
+        appKey: this.config.appKey,
+        signMethod: 'md5',
+        paramsForSignature: JSON.stringify(paramsForSigning).substring(0, 200),
+        generatedSign: sign.substring(0, 16) + '...'
+      });
       
       // Build query string
       const queryString = Object.keys(requestParams)
@@ -237,22 +271,34 @@ export class AliExpressClient {
       
       const url = `${apiBase}?${queryString}`;
       
+      logger.info('TOP API Request URL', { url: url.substring(0, 200) + '...' });
+      
       try {
         const response = await fetch(url, {
           method: 'GET',
           signal: AbortSignal.timeout(this.config.timeout || 30000),
         });
         
+        logger.info('TOP API Response', { 
+          status: response.status, 
+          contentType: response.headers.get('content-type')
+        });
+        
         if (!response.ok) {
           const errorText = await response.text();
           logger.error('TOP API request failed', {
             status: response.status,
-            error: errorText,
+            error: errorText.substring(0, 500),
           });
-          throw new Error(`API request failed: ${response.status} - ${errorText}`);
+          throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
         }
         
-        const data = await response.json();
+        const responseText = await response.text();
+        logger.debug('TOP API raw response', { 
+          text: responseText.substring(0, 500) 
+        });
+        
+        const data = JSON.parse(responseText);
         logger.debug('TOP API request successful', { data });
         return data;
       } catch (error) {
@@ -421,6 +467,11 @@ export class AliExpressClient {
         sort: sort,
       };
       
+      // Add tracking ID for commission tracking if available
+      if (this.config.trackingId || this.config.affiliateId) {
+        topApiParams.tracking_id = this.config.trackingId || this.config.affiliateId;
+      }
+      
       // Add optional filters
       if (params.minPrice) {
         topApiParams.min_price = params.minPrice;
@@ -496,6 +547,11 @@ export class AliExpressClient {
         'product_description',        // User Request: Fetch raw HTML description for AI context
       ].join(','),
     };
+
+    // Add tracking ID for commission tracking if available
+    if (this.config.trackingId || this.config.affiliateId) {
+      baseParams.tracking_id = this.config.trackingId || this.config.affiliateId;
+    }
 
     try {
       // Prefer OAuth endpoint if available; fallback to TOP API method
@@ -777,9 +833,13 @@ export class AliExpressClient {
  * Create a new AliExpress client instance (M2 Enhanced)
  * 
  * Configuration is read from environment variables:
- * - ALIEXPRESS_APP_KEY
- * - ALIEXPRESS_APP_SECRET
+ * - ALIEXPRESS_APP_KEY (required)
+ * - ALIEXPRESS_APP_SECRET (required)
  * - ALIEXPRESS_API_ENDPOINT (optional)
+ * - ALIEXPRESS_AFFILIATE_ID (optional - for tracking commissions)
+ * - ALIEXPRESS_TRACKING_ID (optional - alternative to AFFILIATE_ID)
+ * - ALIEXPRESS_REGION (optional - 'eu', 'us', 'sg')
+ * - ALIEXPRESS_RATE_LIMIT (optional)
  * 
  * M2: Now supports multi-account via accountName parameter
  * Tokens are managed via OAuth system, no longer using env vars
@@ -798,6 +858,9 @@ export function createAliExpressClient(accountName?: string): AliExpressClient {
     appKey: appKey || '',
     appSecret: appSecret || '',
     apiEndpoint: process.env.ALIEXPRESS_API_ENDPOINT,
+    affiliateId: process.env.ALIEXPRESS_AFFILIATE_ID || process.env.ALIEXPRESS_TRACKING_ID,
+    trackingId: process.env.ALIEXPRESS_TRACKING_ID || process.env.ALIEXPRESS_AFFILIATE_ID,
+    region: process.env.ALIEXPRESS_REGION,
     rateLimitPerMinute: process.env.ALIEXPRESS_RATE_LIMIT 
       ? parseInt(process.env.ALIEXPRESS_RATE_LIMIT, 10) 
       : undefined

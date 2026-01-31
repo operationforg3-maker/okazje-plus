@@ -325,6 +325,7 @@ export default function ThreadPage() {
                   />
                   <PostReactions
                     postId={p.id}
+                    threadId={thread.id}
                     initialReactions={p.reactions}
                   />
                 </div>

@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+config({ path: '.env.local' });
 import { createAliExpressClient } from './src/integrations/aliexpress/client';
 
 (async () => {

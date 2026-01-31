@@ -41,6 +41,7 @@
   "browseCategories": {
     "viewSubcategories": "Zobacz podkategorie",
     "subcategoryCount": "{count, plural, one {# podkategoria} other {# podkategorii}}",
+    "productsCount": "{count, plural, one {# produkt} few {# produkty} other {# produktów}}",
     "browseAll": "Przeglądaj wszystko",
     "allCategories": "Wszystkie kategorie",
     "moreCategories": "+{count} więcej kategorii"

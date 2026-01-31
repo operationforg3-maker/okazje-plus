@@ -169,6 +169,9 @@ export interface AliExpressClientConfig {
   apiVersion?: string;
   timeout?: number; // milliseconds
   rateLimitPerMinute?: number;
+  affiliateId?: string; // Tracking/Affiliate ID for commission tracking
+  trackingId?: string; // Alternative name for affiliate ID
+  region?: string; // 'eu', 'us', 'sg' - API region
 }
 
 /**

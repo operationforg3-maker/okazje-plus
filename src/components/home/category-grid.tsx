@@ -5,10 +5,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { Category } from '@/lib/types';
-import { ChevronRight, Grid3x3, Package, Layers } from 'lucide-react';
+import { ChevronRight, Grid3x3, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 
 // Helper to extract name from either string or LocalizedText object
 function getName(name: any): string {
@@ -40,6 +39,18 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Count total products in category (including all subcategories)
+  const getTotalProducts = (category: Category) => {
+    let total = category.productCount || 0;
+    category.subcategories?.forEach(sub => {
+      total += sub.productCount || 0;
+      sub.subcategories?.forEach(subsub => {
+        total += subsub.productCount || 0;
+      });
+    });
+    return total;
+  };
+
   // Count total subcategories (sub + subsub)
   const getTotalSubcategories = (category: Category) => {
     let total = category.subcategories?.length || 0;
@@ -53,9 +64,10 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
     <div className="w-full space-y-8">
       {/* Main Grid View - Top Level Categories */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {categories.slice(0, 12).map((category, idx) => {
+        {categories.map((category, idx) => {
           const style = CATEGORY_STYLES[idx % CATEGORY_STYLES.length];
           const totalSubs = getTotalSubcategories(category);
+          const totalProducts = getTotalProducts(category);
           const isExpanded = expandedId === category.id;
 
           return (
@@ -70,77 +82,64 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                 onMouseEnter={() => setHoveredId(category.id || null)}
                 onMouseLeave={() => setHoveredId(null)}
               >
-                <CardHeader className={cn('pb-3 bg-gradient-to-br', style.bg)}>
-                  <div className="flex items-start justify-between">
-                    <div className={cn('p-3 rounded-xl bg-gradient-to-br shadow-lg', `bg-gradient-to-br ${style.gradient}`)}>
+                <CardContent className="p-4">
+                  {/* Główny nagłówek - ikona, tytuł i liczba produktów w jednej linii */}
+                  <Link 
+                    href={`/products?category=${category.slug || category.id}`}
+                    className="flex items-center gap-3 mb-3 group/title"
+                  >
+                    <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg', `bg-gradient-to-br ${style.gradient}`)}>
                       {category.icon ? (
-                        <span className="text-3xl">{category.icon}</span>
+                        <span className="text-2xl">{category.icon}</span>
                       ) : (
-                        <Package className="h-8 w-8 text-white" />
+                        <Package className="h-6 w-6 text-white" />
                       )}
                     </div>
-                    {totalSubs > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        <Layers className="h-3 w-3 mr-1" />
-                        {totalSubs}
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="pt-4">
-                  <Link href={`/products?category=${category.slug || category.id}`}>
-                    <h3 className={cn(
-                      'text-xl font-bold mb-2 transition-colors group-hover:text-primary',
-                      style.accent
-                    )}>
-                      {getName(category.name)}
-                    </h3>
-                  </Link>
-                  
-                  {category.description && (
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {category.description}
-                    </p>
-                  )}
-
-                  {/* Subcategory Preview (if available) */}
-                  {category.subcategories && category.subcategories.length > 0 && (
-                    <div className="space-y-2 mt-3 pt-3 border-t">
-                      <button
-                        onClick={() => setExpandedId(isExpanded ? null : category.id || null)}
-                        className="w-full flex items-center justify-between text-sm font-medium hover:text-primary transition-colors"
-                      >
-                        <span className="flex items-center gap-1">
-                          <Grid3x3 className="h-4 w-4" />
-                          {t('viewSubcategories')} ({category.subcategories.length})
-                        </span>
-                        <ChevronRight className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-90')} />
-                      </button>
-
-                      {/* Quick Preview - Top 3 subcategories */}
-                      {!isExpanded && (
-                        <div className="flex flex-wrap gap-1">
-                          {category.subcategories.slice(0, 3).map((sub) => (
-                            <Link
-                              key={sub.id}
-                              href={`/products?category=${category.slug || category.id}&subcategory=${sub.slug || sub.id}`}
-                              className="text-xs px-2 py-1 rounded-md bg-secondary hover:bg-primary/10 hover:text-primary transition-colors"
-                            >
-                              {sub.name}
-                            </Link>
-                          ))}
+                    <div className="flex-1">
+                      <h3 className={cn(
+                        'text-lg font-bold transition-colors group-hover/title:text-primary',
+                        style.accent
+                      )}>
+                        {getName(category.name)}
+                      </h3>
+                      {totalProducts > 0 && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {t('productsCount', { count: totalProducts })}
                         </div>
                       )}
                     </div>
+                  </Link>
+
+                  {/* Podkategorie - pokazuj wszystkie L2 */}
+                  {category.subcategories && category.subcategories.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {category.subcategories.map((sub) => (
+                          <Link
+                            key={sub.id}
+                            href={`/products?category=${category.slug || category.id}&subcategory=${sub.slug || sub.id}`}
+                            className="text-xs px-2 py-1 rounded-md bg-secondary/50 hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            {sub.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   )}
 
-                  <Link href={`/products?category=${category.slug || category.id}`}>
-                    <div className="mt-4 pt-3 border-t flex items-center justify-between text-sm font-medium text-primary group-hover:translate-x-1 transition-transform">
-                      {t('browseAll')}
-                      <ChevronRight className="h-4 w-4" />
-                    </div>
-                  </Link>
+                  {/* Przycisk View Subcategories */}
+                  {category.subcategories && category.subcategories.length > 0 && (
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : category.id || null)}
+                      className="w-full flex items-center justify-between text-sm font-medium hover:text-primary transition-colors py-2 px-3 rounded-lg hover:bg-secondary/50"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Grid3x3 className="h-4 w-4" />
+                        {t('viewSubcategories')}
+                      </span>
+                      <ChevronRight className={cn('h-4 w-4 transition-transform', isExpanded && 'rotate-90')} />
+                    </button>
+                  )}
                 </CardContent>
               </Card>
 
@@ -203,29 +202,6 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
         })}
       </div>
 
-      {/* View All Categories Button */}
-      {categories.length > 12 && (
-        <div className="text-center">
-          <Link href="/products">
-            <Card className="inline-block hover:border-primary hover:shadow-lg transition-all cursor-pointer">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Grid3x3 className="h-6 w-6 text-primary" />
-                  <div>
-                    <div className="font-semibold text-lg">
-                      {t('allCategories')}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {t('moreCategories', { count: categories.length - 12 })}
-                    </div>
-                  </div>
-                  <ChevronRight className="h-6 w-6 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

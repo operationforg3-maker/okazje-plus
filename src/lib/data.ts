@@ -1968,7 +1968,6 @@ export async function listForumThreads(limitCount: number = 20, categoryId?: str
       qBase = query(
         ref,
         where('categoryId', '==', categoryId),
-        where('status', 'in', ['approved', undefined, null]),
         orderBy('isPinned', 'desc'),
         orderBy('lastPostAt', 'desc'),
         limit(limitCount)
@@ -1976,7 +1975,6 @@ export async function listForumThreads(limitCount: number = 20, categoryId?: str
     } else {
       qBase = query(
         ref,
-        where('status', 'in', ['approved', undefined, null]),
         orderBy('isPinned', 'desc'),
         orderBy('lastPostAt', 'desc'),
         limit(limitCount)
@@ -2009,11 +2007,9 @@ export async function getForumThread(threadId: string): Promise<ForumThread | nu
 }
 
 export async function listForumPosts(threadId: string, limitCount: number = 100): Promise<ForumPost[]> {
-  const ref = collection(db, 'forum_posts');
+  const ref = collection(db, 'forum_threads', threadId, 'posts');
   const q = query(
     ref,
-    where('threadId', '==', threadId),
-    where('status', 'in', ['approved', undefined, null]),
     orderBy('createdAt', 'asc'),
     limit(limitCount)
   );

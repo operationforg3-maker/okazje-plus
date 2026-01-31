@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 interface PostReactionsProps {
   postId: string;
+  threadId: string;
   initialReactions?: Record<string, string[]>; // emoji -> array of userIds
   className?: string;
 }
@@ -27,6 +28,7 @@ const AVAILABLE_REACTIONS = [
 
 export function PostReactions({
   postId,
+  threadId,
   initialReactions = {},
   className,
 }: PostReactionsProps) {
@@ -39,7 +41,7 @@ export function PostReactions({
   useEffect(() => {
     const loadReactions = async () => {
       try {
-        const postRef = doc(db, "forum_posts", postId);
+        const postRef = doc(db, 'forum_threads', threadId, 'posts', postId);
         const postSnap = await getDoc(postRef);
         
         if (postSnap.exists()) {
@@ -54,7 +56,7 @@ export function PostReactions({
     };
 
     loadReactions();
-  }, [postId]);
+  }, [postId, threadId]);
 
   const handleReaction = async (emoji: string) => {
     if (!user) {
@@ -67,7 +69,7 @@ export function PostReactions({
     setLoading(true);
 
     try {
-      const postRef = doc(db, "forum_posts", postId);
+      const postRef = doc(db, 'forum_threads', threadId, 'posts', postId);
       const usersWithThisReaction = reactions[emoji] || [];
       const userAlreadyReacted = usersWithThisReaction.includes(user.uid);
 
