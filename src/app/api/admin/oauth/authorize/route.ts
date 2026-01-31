@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     const vendorId = searchParams.get('vendorId');
     const accountName = searchParams.get('accountName') || 'default';
     
+    logger.info('[authorize] Starting OAuth flow', { vendorId, accountName });
+    
     if (!vendorId) {
       return NextResponse.json(
         { error: 'vendorId is required' },
@@ -24,7 +26,9 @@ export async function GET(request: NextRequest) {
     }
     
     // Get OAuth configuration
+    logger.info('[authorize] Fetching OAuth config', { vendorId });
     const config = await getOAuthConfig(vendorId);
+    logger.info('[authorize] Config retrieved', { vendorId, hasConfig: !!config, enabled: config?.enabled });
     
     if (!config || !config.enabled) {
       return NextResponse.json(
@@ -44,17 +48,23 @@ export async function GET(request: NextRequest) {
     // Encode state as base64
     const encodedState = Buffer.from(state).toString('base64url');
     
+    logger.info('[authorize] Generating auth URL', { vendorId, clientId: config.clientId, redirectUri: config.redirectUri });
+    
     // Generate authorization URL
     const authUrl = generateAuthorizationUrl(config, encodedState);
     
-    logger.info('OAuth authorization initiated', { vendorId, accountName });
+    logger.info('OAuth authorization initiated', { vendorId, accountName, authUrl });
     
     // Redirect to vendor's authorization page
     return NextResponse.redirect(authUrl);
   } catch (error) {
-    logger.error('OAuth authorization failed', { error });
+    logger.error('OAuth authorization failed', { 
+      error, 
+      errorMessage: (error as Error)?.message, 
+      errorStack: (error as Error)?.stack 
+    });
     return NextResponse.json(
-      { error: 'Failed to initiate OAuth flow' },
+      { error: 'Failed to initiate OAuth flow', details: (error as Error)?.message },
       { status: 500 }
     );
   }
