@@ -72,16 +72,32 @@ function normalizeOAuthConfigData(id: string, data: any): OAuthConfig {
  */
 export async function getOAuthConfig(vendorId: string): Promise<OAuthConfig | null> {
   try {
+    logger.info('[getOAuthConfig] Starting', { vendorId, isServer });
     if (isServer) {
-      const configSnap = await adminDb.collection('oauthConfigs').doc(vendorId).get();
+      logger.info('[getOAuthConfig] Using Admin SDK');
+      try {
+        const configSnap = await adminDb.collection('oauthConfigs').doc(vendorId).get();
+        logger.info('[getOAuthConfig] Query complete', { exists: configSnap.exists });
 
-      if (!configSnap.exists) {
-        logger.warn('OAuth config not found', { vendorId });
-        return null;
+        if (!configSnap.exists) {
+          logger.warn('OAuth config not found', { vendorId });
+          return null;
+        }
+
+        const rawData = configSnap.data();
+        logger.info('[getOAuthConfig] Raw data retrieved', { hasData: !!rawData });
+        const normalized = normalizeOAuthConfigData(configSnap.id, rawData);
+        logger.info('[getOAuthConfig] Normalized', { clientId: normalized.clientId, enabled: normalized.enabled });
+        return normalized;
+      } catch (adminError) {
+        logger.error('[getOAuthConfig] Admin SDK error', { 
+          vendorId, 
+          error: String(adminError),
+          message: (adminError as Error)?.message,
+          stack: (adminError as Error)?.stack
+        });
+        throw adminError;
       }
-
-      const normalized = normalizeOAuthConfigData(configSnap.id, configSnap.data());
-      return normalized;
     }
 
     const configRef = doc(db, 'oauthConfigs', vendorId);
@@ -95,7 +111,13 @@ export async function getOAuthConfig(vendorId: string): Promise<OAuthConfig | nu
     const normalized = normalizeOAuthConfigData(configSnap.id, configSnap.data());
     return normalized;
   } catch (error) {
-    logger.error('Failed to get OAuth config', { vendorId, error });
+    logger.error('Failed to get OAuth config', { 
+      vendorId, 
+      error: String(error),
+      message: (error as Error)?.message,
+      stack: (error as Error)?.stack,
+      name: (error as Error)?.name
+    });
     throw error;
   }
 }
