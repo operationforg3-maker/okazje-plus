@@ -192,6 +192,7 @@ export class AliExpressClient {
     // Determine authentication method
     const useOAuth = !!this.token;
     const apiBase = this.config.apiEndpoint || process.env.ALIEXPRESS_API_BASE || 'https://openapi.aliexpress.com/gateway.do';
+    const isSingaporeEndpoint = apiBase.includes('api-sg.aliexpress.com');
     
     if (useOAuth) {
       // New API with OAuth
@@ -231,8 +232,10 @@ export class AliExpressClient {
       
       // Build request params
       // Timestamp format: yyyy-MM-dd HH:mm:ss (GMT+8 timezone)
+      // CRITICAL: AliExpress requires timestamp in UTC+8 (China Standard Time)
       const now = new Date();
-      const timestamp = now.toISOString()
+      const timestampUTC8 = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours
+      const timestamp = timestampUTC8.toISOString()
         .replace('T', ' ')
         .substring(0, 19); // Format: YYYY-MM-DD HH:mm:ss
       
@@ -247,6 +250,86 @@ export class AliExpressClient {
         ...params,
       };
       
+      // Singapore endpoint requires different parameter structure
+      if (isSingaporeEndpoint) {
+        // For Singapore: all business params go into a separate object
+        const businessParams = { ...params };
+        requestParams.method = method;
+        delete requestParams.keywords;
+        delete requestParams.page_no;
+        delete requestParams.page_size;
+        delete requestParams.target_currency;
+        delete requestParams.target_language;
+        delete requestParams.ship_to_country;
+        delete requestParams.sort;
+        delete requestParams.tracking_id;
+        
+        // Generate signature - must NOT include sign or sign_method
+        const paramsForSigning = Object.entries(requestParams)
+          .filter(([key]) => key !== 'sign' && key !== 'sign_method')
+          .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
+        
+        // Add sorted business params to signature
+        Object.keys(businessParams).sort().forEach(key => {
+          paramsForSigning[key] = businessParams[key];
+        });
+        
+        const sign = this.generateSignature(paramsForSigning);
+        requestParams.sign = sign;
+        
+        // Merge back business params for request
+        Object.assign(requestParams, businessParams);
+        
+        logger.info('Singapore API Signature Debug', {
+          appKey: this.config.appKey,
+          signMethod: 'md5',
+          paramsCount: Object.keys(paramsForSigning).length,
+          generatedSign: sign.substring(0, 16) + '...'
+        });
+        
+        // Singapore endpoint uses POST with JSON body
+        const url = apiBase;
+        logger.info('Singapore API Request URL', { url, method: 'POST' });
+        
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestParams),
+            signal: AbortSignal.timeout(this.config.timeout || 30000),
+          });
+          
+          logger.info('Singapore API Response', { 
+            status: response.status, 
+            contentType: response.headers.get('content-type')
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            logger.error('Singapore API request failed', {
+              status: response.status,
+              error: errorText.substring(0, 500),
+            });
+            throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
+          }
+          
+          const responseText = await response.text();
+          logger.debug('Singapore API raw response', { 
+            text: responseText.substring(0, 500) 
+          });
+          
+          const data = JSON.parse(responseText);
+          logger.debug('Singapore API request successful', { data });
+          return data;
+        } catch (error) {
+          logger.error('Singapore API request error', { method, error });
+          throw error;
+        }
+      }
+      
+      // Standard gateway.do endpoint (original code)
       // Generate signature - must NOT include sign_method or sign itself
       // Create params without sign_method for signing
       const paramsForSigning = Object.entries(requestParams)

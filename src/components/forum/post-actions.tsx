@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +10,7 @@ import { toast } from "sonner";
 
 interface PostActionsProps {
   postId: string;
+  threadId: string;
   authorUid: string;
   content: string;
   onUpdate?: () => void;
@@ -20,12 +19,13 @@ interface PostActionsProps {
 
 export function PostActions({
   postId,
+  threadId,
   authorUid,
   content,
   onUpdate,
   onDelete,
 }: PostActionsProps) {
-  const { user } = useAuth();
+  const { user, getIdToken } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -45,13 +45,22 @@ export function PostActions({
     setLoading(true);
 
     try {
-      const postRef = doc(db, "forum_posts", postId);
-      
-      await updateDoc(postRef, {
-        content: editedContent,
-        isEdited: true,
-        editedAt: new Date().toISOString(),
+      const token = await getIdToken();
+      if (!token) throw new Error('Brak autoryzacji');
+
+      const response = await fetch(`/api/forum/threads/${threadId}/posts/${postId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: editedContent }),
       });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Błąd podczas edycji posta');
+      }
 
       toast.success("Post zaktualizowany");
       setIsEditing(false);
@@ -71,14 +80,20 @@ export function PostActions({
     setLoading(true);
 
     try {
-      const postRef = doc(db, "forum_posts", postId);
-      
-      // Soft delete - oznacz jako usunięty zamiast kasować
-      await updateDoc(postRef, {
-        status: "deleted",
-        deletedBy: user?.uid || "unknown",
-        deletedAt: new Date().toISOString(),
+      const token = await getIdToken();
+      if (!token) throw new Error('Brak autoryzacji');
+
+      const response = await fetch(`/api/forum/threads/${threadId}/posts/${postId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Błąd podczas usuwania posta');
+      }
 
       toast.success("Post usunięty");
       setShowDeleteDialog(false);

@@ -28,6 +28,12 @@ import { logger } from './logging';
 
 const isServer = typeof window === 'undefined';
 
+// Lazy import crypto only on server
+let cryptoModule: typeof import('crypto') | null = null;
+if (isServer) {
+  cryptoModule = require('crypto');
+}
+
 function normalizeTimestamp(value: any): string | undefined {
   if (!value) return undefined;
   if (typeof value === 'string') return value;
@@ -44,6 +50,55 @@ function normalizeScope(scope: any): string[] {
   return [];
 }
 
+function getGmt8Timestamp(): string {
+  const now = new Date();
+  const timestampUTC8 = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  return timestampUTC8.toISOString().replace('T', ' ').substring(0, 19);
+}
+
+function getSystemInterfacePath(url: string, fallback?: string): string {
+  if (!url) return fallback || '';
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname.startsWith('/rest/')) {
+      return parsed.pathname.replace('/rest', '');
+    }
+    return parsed.pathname;
+  } catch {
+    return fallback || '';
+  }
+}
+
+function generateSystemSignature(
+  path: string,
+  params: Record<string, any>,
+  secret: string,
+  signMethod: string
+): string {
+  if (!isServer || !cryptoModule) {
+    throw new Error('generateSystemSignature can only be called on server');
+  }
+
+  const sortedKeys = Object.keys(params).sort();
+  let signString = path;
+  for (const key of sortedKeys) {
+    signString += key + String(params[key]);
+  }
+
+  const method = (signMethod || 'sha256').toLowerCase();
+  if (method === 'md5') {
+    return cryptoModule.createHmac('md5', secret).update(signString).digest('hex').toUpperCase();
+  }
+
+  return cryptoModule.createHmac('sha256', secret).update(signString).digest('hex').toUpperCase();
+}
+
+function isAopSystemInterface(config: OAuthConfig): boolean {
+  const authType = (config as any).authType || '';
+  const tokenUrl = config.tokenUrl || '';
+  return authType === 'aop-oauth' || tokenUrl.includes('/auth/token');
+}
+
 function normalizeOAuthConfigData(id: string, data: any): OAuthConfig {
   const clientId = data.clientId || data.appKey || data.app_key || '';
   const clientSecret = data.clientSecret || data.appSecret || data.app_secret || '';
@@ -51,6 +106,9 @@ function normalizeOAuthConfigData(id: string, data: any): OAuthConfig {
   const authorizationUrl = data.authorizationUrl || data.authUrl || data.authorizeUrl || '';
   const tokenUrl = data.tokenUrl || data.tokenURL || '';
   const scope = normalizeScope(data.scope || data.scopes);
+  const authType = data.authType || data.auth_type || 'oauth';
+  const signMethod = data.signMethod || data.sign_method || 'sha256';
+  const systemPath = data.systemPath || data.system_path || undefined;
 
   return {
     id,
@@ -62,6 +120,9 @@ function normalizeOAuthConfigData(id: string, data: any): OAuthConfig {
     redirectUri,
     scope,
     enabled: data.enabled ?? true,
+    authType,
+    signMethod,
+    systemPath,
     createdAt: normalizeTimestamp(data.createdAt) || new Date().toISOString(),
     updatedAt: normalizeTimestamp(data.updatedAt),
   } as OAuthConfig;
@@ -382,21 +443,51 @@ export async function refreshOAuthToken(
       throw new Error(`OAuth config not found for vendor ${token.vendorId}`);
     }
     
-    logger.info('Refreshing OAuth token', { tokenId, vendorId: token.vendorId });
-    
-    // Make token refresh request
-    const response = await fetch(config.tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
+    logger.info('Refreshing OAuth token', { tokenId, vendorId: token.vendorId, authType: config.authType });
+
+    let response: Response;
+
+    if (isAopSystemInterface(config)) {
+      const signMethod = (config.signMethod || 'sha256').toLowerCase();
+      const path = config.systemPath || getSystemInterfacePath(config.tokenUrl, '/auth/token/refresh');
+
+      const params: Record<string, any> = {
+        app_key: config.clientId,
+        timestamp: getGmt8Timestamp(),
+        sign_method: signMethod,
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
         client_id: config.clientId,
         client_secret: config.clientSecret,
-      }),
-    });
+      };
+
+      const sign = generateSystemSignature(path, params, config.clientSecret, signMethod);
+
+      response = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          ...params,
+          sign,
+        }),
+      });
+    } else {
+      // Standard OAuth refresh
+      response = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+        }),
+      });
+    }
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -415,16 +506,23 @@ export async function refreshOAuthToken(
     }
     
     const refreshData = await response.json();
+    const accessToken = refreshData.access_token || refreshData.accessToken || refreshData?.data?.access_token;
+    const newRefreshToken = refreshData.refresh_token || refreshData.refreshToken || refreshData?.data?.refresh_token || refreshToken;
+    const expiresInSeconds = refreshData.expires_in || refreshData.expiresIn || refreshData?.data?.expires_in || 3600;
+
+    if (!accessToken) {
+      logger.error('Refresh response missing access token', { tokenId, refreshData });
+      throw new Error('Refresh response did not include access_token');
+    }
     
     // Calculate new expiration time
-    const expiresInSeconds = refreshData.expires_in || 3600;
     const expiresAt = new Date(Date.now() + expiresInSeconds * 1000);
     
     // Update token in Firestore
     const now = new Date();
     await updateToken({
-      accessToken: refreshData.access_token,
-      refreshToken: refreshData.refresh_token || refreshToken, // Keep old if not provided
+      accessToken: accessToken,
+      refreshToken: newRefreshToken,
       expiresAt: isServer ? expiresAt : Timestamp.fromDate(expiresAt),
       lastRefreshedAt: isServer ? now : Timestamp.fromDate(now),
       updatedAt: isServer ? now : Timestamp.fromDate(now),
@@ -439,8 +537,8 @@ export async function refreshOAuthToken(
     // Return updated token
     return {
       ...token,
-      accessToken: refreshData.access_token,
-      refreshToken: refreshData.refresh_token || refreshToken,
+      accessToken: accessToken,
+      refreshToken: newRefreshToken,
       expiresAt: expiresAt.toISOString(),
       lastRefreshedAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -625,22 +723,52 @@ export async function exchangeCodeForToken(
       throw new Error('OAuth config is missing required fields (redirectUri/clientId/clientSecret)');
     }
     
-    logger.info('Exchanging authorization code for token', { vendorId });
-    
-    // Exchange code for token
-    const response = await fetch(config.tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
+    logger.info('Exchanging authorization code for token', { vendorId, authType: config.authType });
+
+    let response: Response;
+
+    if (isAopSystemInterface(config)) {
+      const signMethod = (config.signMethod || 'sha256').toLowerCase();
+      const path = config.systemPath || getSystemInterfacePath(config.tokenUrl, '/auth/token/create');
+
+      const params: Record<string, any> = {
+        app_key: clientId,
+        timestamp: getGmt8Timestamp(),
+        sign_method: signMethod,
         grant_type: 'authorization_code',
         code,
-        redirect_uri: redirectUri,
         client_id: clientId,
         client_secret: clientSecret,
-      }),
-    });
+      };
+
+      const sign = generateSystemSignature(path, params, clientSecret, signMethod);
+
+      response = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          ...params,
+          sign,
+        }),
+      });
+    } else {
+      // Standard OAuth exchange
+      response = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: redirectUri,
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      });
+    }
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -652,9 +780,17 @@ export async function exchangeCodeForToken(
     }
     
     const tokenData = await response.json();
+    const accessToken = tokenData.access_token || tokenData.accessToken || tokenData?.data?.access_token;
+    const refreshToken = tokenData.refresh_token || tokenData.refreshToken || tokenData?.data?.refresh_token;
+    const expiresIn = tokenData.expires_in || tokenData.expiresIn || tokenData?.data?.expires_in || 3600;
+
+    if (!accessToken) {
+      logger.error('Token response missing access token', { vendorId, tokenData });
+      throw new Error('Token response did not include access_token');
+    }
     
     // Calculate expiration time
-    const expiresInSeconds = tokenData.expires_in || 3600;
+    const expiresInSeconds = expiresIn;
     const now = new Date();
     const expiresAt = new Date(now.getTime() + expiresInSeconds * 1000);
     
@@ -662,9 +798,9 @@ export async function exchangeCodeForToken(
     const token = await storeOAuthToken({
       vendorId,
       accountName: accountName || 'default',
-      accessToken: tokenData.access_token,
-      refreshToken: tokenData.refresh_token,
-      tokenType: tokenData.token_type || 'Bearer',
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      tokenType: tokenData.token_type || tokenData.tokenType || 'Bearer',
       expiresAt: expiresAt.toISOString(),
       obtainedAt: now.toISOString(),
       scope: tokenData.scope ? tokenData.scope.split(' ') : config.scope,

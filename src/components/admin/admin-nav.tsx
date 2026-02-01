@@ -23,6 +23,7 @@ import {
   Sparkles,
   Combine,
   Share2,
+  MessageCircle,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -52,6 +53,14 @@ const navStructure: (NavItem | NavGroup)[] = [
     title: 'Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
+  },
+  {
+    title: 'Forum',
+    icon: MessageCircle,
+    items: [
+      { title: 'Moderacja', href: '/admin/forum/moderation', icon: AlertTriangle, badge: '0' },
+      { title: 'Kategorie', href: '/admin/forum/categories', icon: Layers },
+    ],
   },
   {
     title: 'Moderacja',

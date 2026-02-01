@@ -29,12 +29,21 @@ export function AttachmentCard({ item, type, variant = 'full' }: AttachmentCardP
     }
     return 'N/A';
   };
-  
-  const title = type === 'deal' ? (item as Deal).title : (item as Product).name;
+
+  const title = type === 'deal'
+    ? (item as Deal).title
+    : ((item as any).title ?? (item as Product).name);
   const titleStr = getTitleValue(title);
-  const image = item.image;
-  const price = type === 'deal' ? (item as Deal).price : (item as Product).price;
+
+  const image = type === 'deal'
+    ? (item as Deal).image
+    : ((item as any).image ?? (item as any).imageUrl ?? (item as any).images?.[0]);
+
+  const price = type === 'deal'
+    ? (item as Deal).price
+    : ((item as any).price ?? (item as any).bestPrice?.amount ?? (item as any).bestTotalPrice);
   const priceValue = getPriceValue(price);
+
   const temperature = type === 'deal' ? (item as Deal).temperature : undefined;
   const url = type === 'deal' ? `/deals/${item.id}` : `/products/${item.id}`;
   const merchant = type === 'deal' ? (item as Deal).merchant : undefined;

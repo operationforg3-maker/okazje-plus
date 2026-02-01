@@ -76,7 +76,8 @@ export function CardHeader({
             onFavorite(!isFavorited);
           }}
           disabled={isFavoritesLoading}
-          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label={isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+          title={isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
         >
           <Heart
             className={cn(

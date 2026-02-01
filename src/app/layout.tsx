@@ -15,6 +15,16 @@ export default function RootLayout({
   // Root layout MUSI zawierać html i body dla Next.js 15
   return (
     <html lang="pl" suppressHydrationWarning>
+      {/* Critical CSS inline for better LCP */}
+      <head>
+        <style dangerouslySetInnerHTML={{__html: `
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          html { scroll-behavior: smooth; }
+          body { background: #ffffff; color: #000000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+          a { color: inherit; text-decoration: none; }
+          button { cursor: pointer; border: none; background: none; font-family: inherit; }
+        `}} />
+      </head>
       <body suppressHydrationWarning className={cn('min-h-screen bg-background font-body antialiased')} style={{ WebkitOverflowScrolling: 'touch' }}>
         {children}
       </body>

@@ -20,6 +20,7 @@ const pathNames: Record<string, string> = {
   '/admin/deals': 'Okazje',
   '/admin/categories': 'Kategorie',
   '/admin/forum/moderation': 'Moderacja Forum',
+  '/admin/forum/categories': 'Kategorie Forum',
   '/admin/moderation': 'Panel Moderacji',
   '/admin/duplicates': 'Duplikaty',
   '/admin/users': 'Użytkownicy',

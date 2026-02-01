@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/lib/auth';
-import { createCategorySuggestion } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -23,7 +22,7 @@ interface CategorySuggestionDialogProps {
 }
 
 export function CategorySuggestionDialog({ onSuggestionCreated }: CategorySuggestionDialogProps) {
-  const { user } = useAuth();
+  const { user, getIdToken } = useAuth();
   const { toast } = useToast();
   const t = useTranslations('forum');
   const [open, setOpen] = useState(false);
@@ -52,12 +51,26 @@ export function CategorySuggestionDialog({ onSuggestionCreated }: CategorySugges
 
     setLoading(true);
     try {
-      await createCategorySuggestion({
-        name: name.trim(),
-        description: description.trim(),
-        suggestedByUid: user.uid,
-        suggestedByName: user.displayName || user.email,
+      const token = await getIdToken();
+      if (!token) throw new Error('Brak autoryzacji');
+
+      const response = await fetch('/api/forum/categories/suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          suggestedByName: user.displayName || user.email,
+        }),
       });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Nie udało się wysłać propozycji');
+      }
 
       toast({
         title: 'Sukces',

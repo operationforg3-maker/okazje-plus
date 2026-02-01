@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Only thread author or moderator can mark best answer" }, { status: 403 });
     }
 
-    // Pobierz post
-    const postRef = adminDb.collection("forum_posts").doc(postId);
+    // Pobierz post z subkolekcji wątku
+    const postRef = adminDb.collection("forum_threads").doc(threadId).collection("posts").doc(postId);
     const postSnap = await postRef.get();
 
     if (!postSnap.exists) {

@@ -46,6 +46,22 @@ export default function ForumModerationPage() {
   const [filter, setFilter] = useState<"pending" | "reported" | "all">("pending");
   const [actionReason, setActionReason] = useState<Record<string, string>>({});
 
+  const formatDateTime = (value: unknown) => {
+    if (!value) return "";
+    if (value instanceof Date) return value.toLocaleString("pl-PL");
+    if (typeof (value as any)?.toDate === "function") {
+      return (value as any).toDate().toLocaleString("pl-PL");
+    }
+    if (typeof value === "string" || typeof value === "number") {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "" : date.toLocaleString("pl-PL");
+    }
+    if (typeof (value as any)?._seconds === "number") {
+      return new Date((value as any)._seconds * 1000).toLocaleString("pl-PL");
+    }
+    return "";
+  };
+
   useEffect(() => {
     loadModerationQueue();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -301,7 +317,7 @@ export default function ForumModerationPage() {
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  Autor: {item.authorDisplayName} • {new Date(item.createdAt).toLocaleString("pl-PL")}
+                  Autor: {item.authorDisplayName} • {formatDateTime(item.createdAt)}
                 </p>
 
                 {/* Pole powodu */}

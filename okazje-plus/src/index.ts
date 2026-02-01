@@ -1083,6 +1083,76 @@ export const notifyOnProductCommentReply = onDocumentCreated(
   }
 );
 
+// Forum: mention notifications
+export const notifyOnForumPostMention = onDocumentCreated(
+  "forum_threads/{threadId}/posts/{postId}",
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+    const data = snap.data() as any;
+    const threadId = (event.params as any).threadId as string;
+    const postId = snap.id;
+
+    // Parse @user:uid mentions from post content
+    const mentionRegex = /@user:([a-zA-Z0-9_-]+)/g;
+    const mentions = Array.from(data.content?.matchAll(mentionRegex) || []);
+    
+    if (mentions.length === 0) return;
+
+    // Get thread details for link
+    const threadRef = db.collection("forum_threads").doc(threadId);
+    const threadDoc = await threadRef.get();
+    if (!threadDoc.exists) return;
+    const threadData = threadDoc.data() as any;
+    const threadTitle = threadData?.title || "Wątek forum";
+
+    // Get author info
+    const authorId = data.authorUid;
+    const authorName = data.authorDisplayName || "Użytkownik";
+
+    // Send notifications for each mentioned user
+    const notifiedUserIds = new Set<string>();
+    
+    for (const match of mentions) {
+      const mentionedUid = match[1];
+      
+      // Don't notify the same user twice
+      if (notifiedUserIds.has(mentionedUid)) continue;
+      // Don't notify author of themselves
+      if (mentionedUid === authorId) continue;
+      
+      notifiedUserIds.add(mentionedUid);
+
+      // Create notification
+      await db.collection("notifications").add({
+        userId: mentionedUid,
+        type: "forum_mention",
+        title: `${authorName} oznaczył Cię na forum`,
+        message: `W wątku "${threadTitle}" - ${data.content?.slice(0, 100)}...`,
+        link: `/forum/${threadId}#post-${postId}`,
+        itemId: threadId,
+        itemType: "forum_thread",
+        read: false,
+        createdAt: Timestamp.now(),
+        metadata: {
+          threadId,
+          postId,
+          authorId,
+          authorName,
+          mentionedUid,
+        },
+      });
+
+      logger.info("Forum mention notification created", {
+        mentionedUserId: mentionedUid,
+        authorId,
+        threadId,
+        postId,
+      });
+    }
+  }
+);
+
 // ============================================
 // Notifications: email dispatcher (onCreate)
 // ============================================
@@ -1113,6 +1183,7 @@ export const sendEmailOnNotification = onDocumentCreated(
 
       const subjectMap: Record<string, string> = {
         comment_reply: "Nowa odpowiedź na Twój komentarz",
+        forum_mention: "Zostałeś oznaczony na forum",
         system: "Powiadomienie systemowe",
         new_deal: "Nowa okazja",
         deal_approved: "Twoja okazja została zaakceptowana",

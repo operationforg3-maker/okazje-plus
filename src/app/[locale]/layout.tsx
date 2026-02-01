@@ -88,11 +88,11 @@ export default async function LocaleLayout({
   
   return (
     <>
-      {/* Structured Data - WebSite Schema */}
+      {/* Structured Data - WebSite Schema - beforeInteractive for better indexing */}
       <Script
         id="schema-website"
         type="application/ld+json"
-        strategy="afterInteractive"
+        strategy="beforeInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -113,11 +113,11 @@ export default async function LocaleLayout({
         }}
       />
 
-      {/* Structured Data - Organization Schema */}
+      {/* Structured Data - Organization Schema - beforeInteractive for better indexing */}
       <Script
         id="schema-organization"
         type="application/ld+json"
-        strategy="afterInteractive"
+        strategy="beforeInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -138,14 +138,17 @@ export default async function LocaleLayout({
         }}
       />
 
-      {/* Google Analytics 4 */}
+      {/* Font Preload for better LCP */}
+      <link rel="preload" as="font" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" crossOrigin="anonymous" />
+
+      {/* Google Analytics 4 - Lazy loaded to avoid blocking main thread */}
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-FT6DRFR25D"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
       />
       <Script
         id="google-analytics"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];

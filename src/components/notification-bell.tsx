@@ -89,8 +89,8 @@ export function NotificationBell() {
   const getNotificationIcon = (type: Notification['type']): string => {
     switch (type) {
       case 'comment_reply':
-        return '💬';
-      case 'deal_approved':
+        return '💬';      case 'forum_mention':
+        return '👤';      case 'deal_approved':
         return '✅';
       case 'deal_rejected':
         return '❌';

@@ -675,12 +675,12 @@ export interface Favorite {
 export interface Notification {
   id: string;
   userId: string;
-  type: 'comment_reply' | 'new_deal' | 'system' | 'deal_approved' | 'deal_rejected';
+  type: 'comment_reply' | 'forum_mention' | 'new_deal' | 'system' | 'deal_approved' | 'deal_rejected';
   title: string;
   message: string;
   link?: string; // Link do odpowiedniego zasobu
-  itemId?: string; // ID powiązanego elementu (deal, product, comment)
-  itemType?: 'deal' | 'product' | 'comment';
+  itemId?: string; // ID powiązanego elementu (deal, product, comment, forum_thread)
+  itemType?: 'deal' | 'product' | 'comment' | 'forum_thread';
   read: boolean;
   createdAt: string; // ISO string
   metadata?: {
@@ -1080,6 +1080,9 @@ export interface OAuthConfig {
   enabled: boolean;
   createdAt: string;
   updatedAt?: string;
+  authType?: 'oauth' | 'signature' | 'aop-oauth' | string;
+  signMethod?: 'sha256' | 'md5' | string;
+  systemPath?: string;
 }
 
 // ============================================

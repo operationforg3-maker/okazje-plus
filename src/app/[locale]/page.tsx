@@ -4,8 +4,9 @@ import HomeClient from './home-client';
 import { getHotDeals, getRecommendedProducts, getCategories } from '@/lib/data';
 import { getServerAuthSession } from '@/lib/auth-server';
 
+// Cache home page more aggressively for better performance
 export const dynamic = 'force-dynamic';
-export const revalidate = 180; // Revalidate co 3 minuty
+export const revalidate = 60; // Revalidate co 1 minutę (było 180) dla lepszych Core Web Vitals
 
 export const metadata: Metadata = {
   title: 'Okazje Plus - Najlepsze promocje i produkty w jednym miejscu',

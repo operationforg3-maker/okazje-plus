@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { listForumThreads, listForumCategories } from '@/lib/data';
 import { ForumThread, ForumCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MessageSquare, Tags, Pin, Lock, Award, Search } from 'lucide-react';
+import { MessageSquare, Tags, Pin, Lock, Award, Search, Bookmark } from 'lucide-react';
 
 type SortOption = 'newest' | 'popular' | 'unanswered';
 type FilterOption = 'all' | 'answered' | 'unanswered' | 'pinned';
@@ -29,13 +28,17 @@ export default function ForumHomePage() {
     let mounted = true;
     (async () => {
       try {
-        const [cats, th] = await Promise.all([
-          listForumCategories().catch(() => []),
-          listForumThreads(100).catch(() => []), // Zwiększ limit aby mieć więcej do sortowania/filtrowania
+        const [catsRes, threadsRes] = await Promise.all([
+          fetch('/api/forum/categories', { cache: 'no-store' }),
+          fetch('/api/forum/threads?limit=100', { cache: 'no-store' }),
         ]);
+
+        const catsJson = await catsRes.json().catch(() => ({ categories: [] }));
+        const threadsJson = await threadsRes.json().catch(() => ({ threads: [] }));
+
         if (!mounted) return;
-        setCategories(cats);
-        setThreads(th);
+        setCategories(Array.isArray(catsJson?.categories) ? catsJson.categories : []);
+        setThreads(Array.isArray(threadsJson?.threads) ? threadsJson.threads : []);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -110,9 +113,17 @@ export default function ForumHomePage() {
           <h1 className="text-3xl font-bold">Forum</h1>
           <p className="text-muted-foreground">Pytania, dyskusje, poradniki i prezentacje produktów/okazji</p>
         </div>
-        <Button asChild>
-          <Link href="/forum/new">Nowy wątek</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/forum/saved" className="gap-1">
+              <Bookmark className="h-4 w-4" />
+              Moje zapisane
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/forum/new">Nowy wątek</Link>
+          </Button>
+        </div>
       </div>
 
       {/* Wyszukiwanie */}

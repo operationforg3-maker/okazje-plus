@@ -30,11 +30,23 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
   const [results, setResults] = useState<(Deal | Product)[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const getTitleValue = (title: any): string => {
+    if (typeof title === 'string') return title;
+    if (title && typeof title === 'object') {
+      return title.pl || title.en || title.de || 'N/A';
+    }
+    return 'N/A';
+  };
+
+  const getProductTitle = (item: any) => getTitleValue(item?.title ?? item?.name);
+  const getProductImage = (item: any) => item?.image ?? item?.imageUrl ?? item?.images?.[0];
+  const getProductPrice = (item: any) => item?.price ?? item?.bestPrice?.amount ?? item?.bestTotalPrice;
+
   useEffect(() => {
     const handleSearch = async () => {
       setLoading(true);
       try {
-        const collectionName = type === 'deal' ? 'deals' : 'products';
+        const collectionName = type === 'deal' ? 'deals' : 'product_cores';
         const ref = collection(db, collectionName);
         
         // Firestore doesn't support full-text search, so we fetch approved items and filter client-side
@@ -43,9 +55,9 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
         
         const all = snap.docs.map(d => ({ id: d.id, ...d.data() } as Deal | Product));
         const filtered = all.filter(item => {
-          const title = type === 'deal' ? (item as Deal).title : (item as Product).name;
-          // Handle both string and LocalizedText formats
-          const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || '');
+          const titleStr = type === 'deal'
+            ? getTitleValue((item as Deal).title)
+            : getProductTitle(item);
           return titleStr.toLowerCase().includes(searchQuery.toLowerCase());
         });
         
@@ -69,11 +81,11 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
   }, [searchQuery, type]);
 
   if (selected) {
-    const title = type === 'deal' ? (selected as Deal).title : (selected as Product).name;
-    // Handle both string and LocalizedText formats
-    const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || 'N/A');
-    const image = selected.image;
-    const price = type === 'deal' ? (selected as Deal).price : (selected as Product).price;
+    const titleStr = type === 'deal'
+      ? getTitleValue((selected as Deal).title)
+      : getProductTitle(selected as any);
+    const image = type === 'deal' ? (selected as Deal).image : getProductImage(selected as any);
+    const price = type === 'deal' ? (selected as Deal).price : getProductPrice(selected as any);
     const priceValue = getPriceValue(price);
     
     return (
@@ -109,11 +121,11 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
       {results.length > 0 && (
         <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
           {results.map((item) => {
-            const title = type === 'deal' ? (item as Deal).title : (item as Product).name;
-            // Handle both string and LocalizedText formats
-            const titleStr = typeof title === 'string' ? title : (title?.pl || title?.en || title?.de || 'N/A');
-            const image = item.image;
-            const price = type === 'deal' ? (item as Deal).price : (item as Product).price;
+            const titleStr = type === 'deal'
+              ? getTitleValue((item as Deal).title)
+              : getProductTitle(item as any);
+            const image = type === 'deal' ? (item as Deal).image : getProductImage(item as any);
+            const price = type === 'deal' ? (item as Deal).price : getProductPrice(item as any);
             const priceValue = getPriceValue(price);
             
             return (

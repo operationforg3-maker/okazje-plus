@@ -65,21 +65,32 @@ export async function getHotDeals(count: number): Promise<Deal[]> {
     if (cached) return cached as Deal[];
   }
 
-  const dealsRef = collection(db, "deals");
-  const q = query(
-    dealsRef,
-    where("status", "==", "approved"),
-    orderBy("temperature", "desc"),
-    limit(count)
-  );
-  const querySnapshot = await getDocs(q);
-  const deals = querySnapshot.docs.map(docToDeal);
-  
-  if (cacheSetFn) {
-    await cacheSetFn(cacheKey, deals, 300);
+  try {
+    const dealsRef = collection(db, "deals");
+    const q = query(
+      dealsRef,
+      where("status", "==", "approved"),
+      orderBy("temperature", "desc"),
+      limit(count)
+    );
+    const querySnapshot = await getDocs(q);
+    const deals = querySnapshot.docs.map(docToDeal);
+    
+    if (cacheSetFn) {
+      await cacheSetFn(cacheKey, deals, 300);
+    }
+    
+    return deals;
+  } catch (error: any) {
+    // Fallback: jeśli indeks się buduje, zwróć puste dane zamiast crashować stronę
+    const errorMessage = error?.message || String(error);
+    if (errorMessage.includes('index') && errorMessage.includes('building')) {
+      console.warn('[getHotDeals] Index building, returning empty array temporarily');
+      return [];
+    }
+    // Inne błędy - propaguj dalej
+    throw error;
   }
-  
-  return deals;
 }
 
 // Pobiera kilka losowych okazji (np. do sekcji trending AI porównawczych) - fallback gdy mało danych

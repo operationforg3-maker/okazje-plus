@@ -33,6 +33,13 @@ const nextConfig: NextConfig = {
   },
   // Allow dev assets fetched from 127.0.0.1
   allowedDevOrigins: ['127.0.0.1'],
+  // Optimize images for better Core Web Vitals
+  images: {
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year for static images
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? pkg.version,
     NEXT_PUBLIC_GIT_SHA: computedGitSha ?? '',
@@ -79,6 +86,10 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  // Compress text for better performance
+  compress: true,
+  // Generate strict source maps only in dev
+  productionBrowserSourceMaps: false,
 };
 
 export default withNextIntl(nextConfig);
