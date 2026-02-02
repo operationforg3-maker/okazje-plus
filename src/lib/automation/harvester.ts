@@ -774,8 +774,9 @@ export class SmartHarvester {
       this.addLog('info', `Found ${products.length} products from Convertiser`);
 
       // Transform Convertiser products to RawProduct format
-      return products
-        .map((product: any) => {
+      // Use Promise.all for async currency conversion
+      const rawProducts = await Promise.all(
+        products.map(async (product: any) => {
           try {
             const title = product.title || product.name || '';
             if (!title) return null;
@@ -787,22 +788,46 @@ export class SmartHarvester {
               return null;
             }
 
-            // Parse price from "PLN 199.99" format
-            const parsePrice = (priceStr: string) => {
-              if (!priceStr) return 0;
-              const match = String(priceStr).match(/[\d.,]+/);
-              return match ? parseFloat(match[0].replace(',', '.')) : 0;
+            // Parse price and currency from "PLN 199.99" or "USD 199.99" format
+            const parsePriceWithCurrency = (priceStr: string): { amount: number, currency: string } => {
+              if (!priceStr) return { amount: 0, currency: 'PLN' };
+              const str = String(priceStr);
+              // Try to extract currency code (3 letters at start)
+              const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
+              if (currencyMatch) {
+                return {
+                  currency: currencyMatch[1],
+                  amount: parseFloat(currencyMatch[2].replace(',', '.'))
+                };
+              }
+              // Fallback: just extract number, assume PLN
+              const match = str.match(/[\d.,]+/);
+              return {
+                amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
+                currency: 'PLN'
+              };
             };
 
-            const price = parsePrice(product.sale_price || product.price) || 0;
-            const originalPrice = product.price && product.sale_price ? parsePrice(product.price) : 0;
+            const salePriceParsed = parsePriceWithCurrency(product.sale_price || product.price);
+            const regularPriceParsed = parsePriceWithCurrency(product.price);
+            
+            // Convert to PLN if needed (async)
+            const price = salePriceParsed.currency !== 'PLN' 
+              ? await convertToPLN(salePriceParsed.amount, salePriceParsed.currency)
+              : salePriceParsed.amount;
+            
+            const originalPrice = regularPriceParsed.amount > salePriceParsed.amount 
+              ? (regularPriceParsed.currency !== 'PLN' 
+                  ? await convertToPLN(regularPriceParsed.amount, regularPriceParsed.currency)
+                  : regularPriceParsed.amount)
+              : 0;
 
             return {
               title,
               imageUrl,
               price,
-              originalPrice: originalPrice && originalPrice > price ? originalPrice : undefined,
-              currency: 'PLN',
+              originalPrice: originalPrice > price ? originalPrice : undefined,
+              currency: 'PLN', // Always PLN after conversion
               shippingCost: product.shipping_cost ? parseFloat(product.shipping_cost) : 0,
               shippingDays: product.shipping_days || 7,
               sourceProductId: String(product.id || product.sku || ''),
@@ -824,7 +849,10 @@ export class SmartHarvester {
             return null;
           }
         })
-        .filter((p: any): p is RawProduct => p !== null);
+      );
+      
+      // Filter out null results
+      return rawProducts.filter((p: any): p is RawProduct => p !== null);
     } catch (error) {
       this.addLog('error', `Convertiser API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
