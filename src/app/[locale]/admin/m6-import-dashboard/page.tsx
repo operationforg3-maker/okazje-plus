@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth";
+import { useCurrency } from "@/lib/unified-currency";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1562,6 +1563,7 @@ function ModerationPanel({
   setAuthError: (message: string | null) => void;
   onModerated?: () => void;
 }) {
+  const { formatPrice } = useCurrency();
   const [draftProducts, setDraftProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -1794,7 +1796,7 @@ function ModerationPanel({
                     </p>
                     {product.bestPrice && (
                       <p className="text-sm text-slate-700 mt-1">
-                        💰 {product.bestPrice.amount} {product.bestPrice.currency}
+                        💰 {formatPrice(product.bestPrice.amount)}
                       </p>
                     )}
                     <div className="flex gap-2 mt-2">
