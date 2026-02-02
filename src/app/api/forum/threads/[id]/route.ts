@@ -12,18 +12,23 @@ const normalizeTimestamp = (value: any) => {
   return value;
 };
 
-export async function GET(_req: NextRequest, context: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const threadId = context.params.id;
+    const { id: threadId } = await params;
     const docSnap = await adminDb.collection('forum_threads').doc(threadId).get();
 
     if (!docSnap.exists) {
       return NextResponse.json({ success: false, error: 'Wątek nie istnieje' }, { status: 404 });
     }
 
+    const data = docSnap.data() as Record<string, any>;
     const thread = {
       id: docSnap.id,
-      ...(docSnap.data() as Record<string, any>),
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+      lastPostAt: data.lastPostAt,
+      status: data.status,
+      ...data,
     };
 
     thread.createdAt = normalizeTimestamp(thread.createdAt);

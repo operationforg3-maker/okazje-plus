@@ -131,9 +131,9 @@ export async function DELETE(req: NextRequest) {
 
     // Verify ownership
     const favRef = doc(db, 'forum_favorites', favoriteId);
-    const favSnap = await favRef.get();
+    const favSnap = await favRef.get() as any;
     
-    if (!favSnap.exists()) {
+    if (!favSnap.exists) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
