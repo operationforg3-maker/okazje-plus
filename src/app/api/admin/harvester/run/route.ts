@@ -5,11 +5,11 @@ import { SmartHarvester } from '@/lib/automation/harvester';
 /**
  * POST /api/admin/harvester/run
  * 
- * Uruchamia Harvester do pobierania produktów z AliExpress/Amazon/Allegro
+ * Uruchamia Harvester do pobierania produktów z Convertiser/AliExpress/Amazon/Allegro
  * 
  * Request body:
  * {
- *   source: 'aliexpress' | 'amazon' | 'allegro',
+ *   source: 'convertiser' | 'aliexpress' | 'amazon' | 'allegro',
  *   query: string,
  *   maxResults: number (10-200)
  *   mode?: 'single' | 'category-tree'
@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['aliexpress', 'amazon', 'allegro'].includes(source)) {
+    if (!['aliexpress', 'amazon', 'allegro', 'convertiser'].includes(source)) {
       return NextResponse.json(
-        { error: 'Invalid source. Must be aliexpress, amazon, or allegro' },
+        { error: 'Invalid source. Must be aliexpress, amazon, allegro, or convertiser' },
         { status: 400 }
       );
     }
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Run harvest in background (don't await - async execution)
     harvester.harvestProducts(
-      source as 'aliexpress' | 'amazon' | 'allegro',
+      source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
       effectiveQuery,
       max,
       categories,

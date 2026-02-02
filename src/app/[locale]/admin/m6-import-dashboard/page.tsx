@@ -282,7 +282,7 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
 interface HarvesterJob {
   id: string;
   type?: 'import'; // Optional for backward compatibility
-  source: "aliexpress" | "amazon" | "allegro";
+  source: "aliexpress" | "amazon" | "allegro" | "convertiser";
   query: string;
   status: "running" | "completed" | "failed" | "paused";
   productsFound: number;
@@ -876,6 +876,10 @@ export default function M6ImportDashboard() {
               <Zap className="w-4 h-4" />
               AI Refiner
             </TabsTrigger>
+            <TabsTrigger value="moderation" className="gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Moderacja
+            </TabsTrigger>
             <TabsTrigger value="monitor" className="gap-2">
               <Code className="w-4 h-4" />
               Live Monitor
@@ -939,6 +943,15 @@ export default function M6ImportDashboard() {
               onJobCreated={refreshJobs}
               authToken={authToken}
               setAuthError={setAuthError}
+            />
+          </TabsContent>
+
+          {/* TAB: Moderacja */}
+          <TabsContent value="moderation">
+            <ModerationPanel
+              authToken={authToken}
+              setAuthError={setAuthError}
+              onModerated={refreshJobs}
             />
           </TabsContent>
 
@@ -1072,8 +1085,8 @@ function HarvesterWizard({
   authToken: string | null;
   setAuthError: (message: string | null) => void;
 }) {
-  const [source, setSource] = useState<"aliexpress" | "amazon" | "allegro">(
-    "aliexpress"
+  const [source, setSource] = useState<"aliexpress" | "amazon" | "allegro" | "convertiser">(
+    "convertiser"
   );
   const [query, setQuery] = useState("");
   const [maxResults, setMaxResults] = useState(50);
@@ -1146,8 +1159,8 @@ function HarvesterWizard({
           <label className="block text-sm font-semibold text-slate-900">
             1. Wybierz źródło
           </label>
-          <div className="grid grid-cols-3 gap-3">
-            {(["aliexpress", "amazon", "allegro"] as const).map((s) => (
+          <div className="grid grid-cols-4 gap-3">
+            {(["convertiser", "aliexpress", "amazon", "allegro"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSource(s)}
@@ -1536,6 +1549,293 @@ console.log('Results:', result);
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* ==================== MODERATION PANEL ==================== */
+function ModerationPanel({
+  authToken,
+  setAuthError,
+  onModerated,
+}: {
+  authToken: string | null;
+  setAuthError: (message: string | null) => void;
+  onModerated?: () => void;
+}) {
+  const [draftProducts, setDraftProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [result, setResult] = useState<any>(null);
+
+  // Load draft products on mount
+  useEffect(() => {
+    if (authToken) {
+      loadDraftProducts();
+    }
+  }, [authToken]);
+
+  const loadDraftProducts = async () => {
+    if (!authToken) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/products/drafts', {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDraftProducts(data.products || []);
+      } else if (res.status !== 401 && res.status !== 403) {
+        setAuthError(`Błąd pobierania produktów: ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Error loading draft products:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === draftProducts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(draftProducts.map(p => p.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const handleApprove = async () => {
+    if (selectedIds.size === 0) return;
+    if (!authToken) {
+      setAuthError('Brak tokenu administratora');
+      return;
+    }
+
+    setProcessing(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/admin/products/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ productIds: Array.from(selectedIds) }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setResult({
+          success: true,
+          message: data.message,
+          approved: data.results.approved,
+          failed: data.results.failed,
+        });
+        setSelectedIds(new Set());
+        await loadDraftProducts();
+        onModerated?.();
+      } else {
+        setResult({ success: false, error: data.error });
+      }
+    } catch (err) {
+      setResult({ success: false, error: (err as Error).message });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (selectedIds.size === 0) return;
+    if (!authToken) {
+      setAuthError('Brak tokenu administratora');
+      return;
+    }
+
+    if (!confirm(`Czy na pewno chcesz odrzucić ${selectedIds.size} produktów?`)) return;
+
+    setProcessing(true);
+    setResult(null);
+    try {
+      const res = await fetch('/api/admin/moderation/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          items: Array.from(selectedIds).map(id => ({ id, type: 'product' })),
+          action: 'reject',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setResult({
+          success: true,
+          message: data.message,
+        });
+        setSelectedIds(new Set());
+        await loadDraftProducts();
+      } else {
+        setResult({ success: false, error: data.message });
+      }
+    } catch (err) {
+      setResult({ success: false, error: (err as Error).message });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <Card className="bg-white border-0 shadow-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            Moderacja produktów (Draft)
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadDraftProducts}
+            disabled={loading}
+            className="gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Odśwież
+          </Button>
+        </div>
+        <p className="text-sm text-slate-600 mt-2">
+          Przejrzyj i zatwierdź produkty z harvestera, zanim trafią do Refinera AI
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {loading ? (
+          <div className="text-center py-8 text-slate-600">
+            Ładowanie produktów...
+          </div>
+        ) : draftProducts.length === 0 ? (
+          <div className="text-center py-8 text-slate-600">
+            ✅ Brak produktów do moderacji! Wszystkie zostały zatwierdzone.
+          </div>
+        ) : (
+          <>
+            {/* Selection toolbar */}
+            <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <label className="flex items-center gap-2 font-semibold">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === draftProducts.length && draftProducts.length > 0}
+                  onChange={handleSelectAll}
+                  className="w-4 h-4 rounded"
+                />
+                Zaznacz wszystkie ({selectedIds.size}/{draftProducts.length})
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleApprove}
+                  disabled={selectedIds.size === 0 || processing}
+                  className="gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  {processing ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                      Zatwierdzanie...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      Zatwierdź ({selectedIds.size})
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleReject}
+                  disabled={selectedIds.size === 0 || processing}
+                  className="gap-2"
+                >
+                  Odrzuć ({selectedIds.size})
+                </Button>
+              </div>
+            </div>
+
+            {/* Products list */}
+            <div className="space-y-2 max-h-[500px] overflow-y-auto border rounded-lg p-2">
+              {draftProducts.map((product) => (
+                <div
+                  key={product.id}
+                  className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(product.id)}
+                    onChange={() => toggleSelect(product.id)}
+                    className="w-4 h-4 rounded mt-1"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-slate-900">
+                      {product.title?.pl || product.title || 'Bez tytułu'}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1 font-mono">
+                      ID: {product.id}
+                    </p>
+                    {product.bestPrice && (
+                      <p className="text-sm text-slate-700 mt-1">
+                        💰 {product.bestPrice.amount} {product.bestPrice.currency}
+                      </p>
+                    )}
+                    <div className="flex gap-2 mt-2">
+                      <Badge variant="outline" className="text-xs">
+                        {product.mainCategorySlug || 'uncategorized'}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Créé: {new Date(product.createdAt).toLocaleDateString('pl-PL')}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Result */}
+            {result && (
+              <div
+                className={`p-4 rounded-lg border-2 space-y-2 ${
+                  result.success
+                    ? 'border-green-300 bg-green-50'
+                    : 'border-red-300 bg-red-50'
+                }`}
+              >
+                <p className="font-semibold text-slate-900">
+                  {result.success ? '✅ Sukces!' : '❌ Błąd'}
+                </p>
+                <p className="text-sm text-slate-700">
+                  {result.message || result.error}
+                </p>
+                {result.approved && (
+                  <p className="text-sm text-slate-600">
+                    Zatwierdzono: {result.approved}, Błędy: {result.failed}
+                  </p>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

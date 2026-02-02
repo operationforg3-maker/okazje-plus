@@ -231,11 +231,10 @@ export class AliExpressClient {
       logger.debug('Using signature authentication (TOP API)');
       
       // Build request params
-      // Timestamp format: yyyy-MM-dd HH:mm:ss (GMT+8 timezone)
-      // CRITICAL: AliExpress requires timestamp in UTC+8 (China Standard Time)
+      // Timestamp format: yyyy-MM-dd HH:mm:ss (STRING in UTC)
+      // CRITICAL: AliExpress TOP API requires this exact format for signature validation
       const now = new Date();
-      const timestampUTC8 = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours
-      const timestamp = timestampUTC8.toISOString()
+      const timestamp = now.toISOString()
         .replace('T', ' ')
         .substring(0, 19); // Format: YYYY-MM-DD HH:mm:ss
       
@@ -352,13 +351,19 @@ export class AliExpressClient {
         .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(requestParams[key])}`)
         .join('&');
       
-      const url = `${apiBase}?${queryString}`;
+      const url = `${apiBase}`;
       
-      logger.info('TOP API Request URL', { url: url.substring(0, 200) + '...' });
+      logger.info('TOP API Request', { method: 'POST', params: Object.keys(requestParams).join(', ') });
       
       try {
         const response = await fetch(url, {
-          method: 'GET',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: Object.keys(requestParams)
+            .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(requestParams[key])}`)
+            .join('&'),
           signal: AbortSignal.timeout(this.config.timeout || 30000),
         });
         

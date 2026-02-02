@@ -176,7 +176,7 @@ export class SmartHarvester {
    * @param categories - Optional: Iterate through multiple categories/sub-categories
    */
   async harvestProducts(
-    source: 'aliexpress' | 'amazon' | 'allegro',
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
     query: string,
     maxResults: number = 50,
     categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
@@ -557,7 +557,7 @@ export class SmartHarvester {
    * This is a placeholder - integrate with actual AliExpress/Amazon/Allegro APIs
    */
   private async fetchFromSource(
-    source: 'aliexpress' | 'amazon' | 'allegro',
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
     searchQuery: string,
     maxResults: number,
     isTreeMode: boolean = false
@@ -589,6 +589,8 @@ export class SmartHarvester {
         return await this.fetchFromAmazon(searchQuery, maxResults);
       case 'allegro':
         return await this.fetchFromAllegro(searchQuery, maxResults);
+      case 'convertiser':
+        return await this.fetchFromConvertiser(searchQuery, maxResults);
       default:
         throw new Error(`Unknown source: ${source}`);
     }
@@ -735,6 +737,98 @@ export class SmartHarvester {
     this.addLog('warn', 'Allegro API not configured - requires OAuth setup');
     // Allegro REST API integration pending
     return [];
+  }
+
+  /**
+   * Fetch products from Convertiser
+   * Convertiser is an affiliate network with multi-marketplace product discovery
+   */
+  private async fetchFromConvertiser(searchQuery: string, maxResults: number) {
+    try {
+      const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
+      const client = getConvertiserClient();
+
+      this.addLog('info', `Fetching from Convertiser: "${searchQuery}"`);
+
+      // Convertiser has "Search Products" endpoint for product discovery
+      // Use v2 for better product data (images, pricing, descriptions)
+      const response = await client.searchProductsV2(
+        {
+          query: searchQuery,
+          country: 'PL', // Polish marketplace
+        },
+        {
+          page: 1,
+          page_size: Math.min(maxResults, 50),
+        }
+      );
+
+      // Convertiser v2 returns products in 'data' field, not 'results'
+      const products = (response as any).data || response.results || [];
+
+      if (!products || products.length === 0) {
+        this.addLog('warn', `Convertiser: No products found for "${searchQuery}"`);
+        return [];
+      }
+
+      this.addLog('info', `Found ${products.length} products from Convertiser`);
+
+      // Transform Convertiser products to RawProduct format
+      return products
+        .map((product: any) => {
+          try {
+            const title = product.title || product.name || '';
+            if (!title) return null;
+
+            // Convertiser images are in 'images.default' or 'image_link'
+            const imageUrl = product.images?.default || product.image_link || product.image_url || '';
+            // Skip products without valid image URL (required for identity hash)
+            if (!imageUrl || imageUrl.trim() === '') {
+              return null;
+            }
+
+            // Parse price from "PLN 199.99" format
+            const parsePrice = (priceStr: string) => {
+              if (!priceStr) return 0;
+              const match = String(priceStr).match(/[\d.,]+/);
+              return match ? parseFloat(match[0].replace(',', '.')) : 0;
+            };
+
+            const price = parsePrice(product.sale_price || product.price) || 0;
+            const originalPrice = product.price && product.sale_price ? parsePrice(product.price) : 0;
+
+            return {
+              title,
+              imageUrl,
+              price,
+              originalPrice: originalPrice && originalPrice > price ? originalPrice : undefined,
+              currency: 'PLN',
+              shippingCost: product.shipping_cost ? parseFloat(product.shipping_cost) : 0,
+              shippingDays: product.shipping_days || 7,
+              sourceProductId: String(product.id || product.sku || ''),
+              sourceUrl: product.direct_link || product.link || product.url || '',
+              merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+              merchantRating: product.merchant_rating ? parseFloat(product.merchant_rating) : 0,
+              specs: extractDimensionsFromTitle(title),
+              rating: product.rating ? parseFloat(product.rating) : 0,
+              ratingCount: product.review_count || product.reviews || 0,
+              images: [imageUrl], // Use main image
+              sku: product.sku || undefined,
+              ean: product.ean || product.barcode || product.gtin || undefined,
+              gtin: product.gtin || undefined,
+              upc: product.upc || undefined,
+              mpn: product.mpn || undefined,
+            };
+          } catch (e) {
+            this.addLog('warn', `Failed to map Convertiser product: ${e instanceof Error ? e.message : 'Unknown error'}`);
+            return null;
+          }
+        })
+        .filter((p: any): p is RawProduct => p !== null);
+    } catch (error) {
+      this.addLog('error', `Convertiser API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return [];
+    }
   }
 
   /**
@@ -988,7 +1082,7 @@ export class SmartHarvester {
       },
       linkedDealIds: [],
       searchTags: categoryMetadata.searchKeywords || [],
-      status: 'pending_approval', // Requires AI enrichment before approval
+      status: 'draft', // Harvested products require moderation before approval
       createdAt: now,
       updatedAt: now,
       metadata: {
@@ -1022,24 +1116,13 @@ export class SmartHarvester {
     const productId = docRef.id;
 
     // ========================================================================
-    // INTEGRATED AI REFINEMENT (M6 Requirement)
+    // NO AI REFINEMENT FOR DRAFT PRODUCTS
     // ========================================================================
-    // Immediately refine the product to ensure descriptions/titles are AI-enhanced
-    // before the Deal is created.
-    try {
-      this.addLog('info', `Starting integrated AI refinement for ${productId}...`);
-      const refiner = new AIRefiner(this.jobId);
-      
-      // Perform full enrichment
-      const enriched = await refiner.enrichSingleProduct({ ...product, id: productId });
-      
-      // Update in Firestore
-      await docRef.update(enriched);
-      
-      this.addLog('info', `AI Refinement complete for ${productId}`);
-    } catch (err) {
-      this.addLog('warn', `AI Refinement failed for ${productId} - continuing with raw data`, err);
-    }
+    // Draft products require moderation (admin approval) before AI enrichment.
+    // Refinement will be triggered AFTER admin approval via separate endpoint.
+    // This allows admins to review raw product data before AI transformation.
+    
+    this.addLog('info', `Created draft product ${productId} - awaiting moderation before AI refinement`);
 
     return productId;
   }
@@ -1050,7 +1133,7 @@ export class SmartHarvester {
   private async createDeal(
     productId: string,
     sourceProduct: RawProduct,
-    source: 'aliexpress' | 'amazon' | 'allegro'
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser'
   ): Promise<string> {
     if (!productId || typeof productId !== 'string') {
       throw new Error('Invalid productId for deal creation');
@@ -1150,7 +1233,7 @@ export class SmartHarvester {
       voteCount: 0,
       temperature: 0,
       commentsCount: 0,
-      status: 'approved',
+      status: 'draft', // Harvested deals require moderation before approval
       sourceProductId: sourceProduct.sourceProductId,
       sourceUrl: sourceProduct.sourceUrl,
       createdAt: now,

@@ -22,14 +22,14 @@ import { IngestionMonitor } from '@/components/admin/ingestion-monitor';
  * Admin Catalog Page - Product-Centric Architecture Control Panel
  * Features:
  * - Product Management (view, merge, delete duplicates)
- * - Harvester Control (trigger imports from AliExpress/Amazon/Allegro)
+ * - Harvester Control (trigger imports from Convertiser/AliExpress/Amazon/Allegro)
  * - Refiner Control (trigger AI enrichment)
  * - Real-time job monitoring
  */
 export default function AdminCatalogPage() {
   const [activeTab, setActiveTab] = useState('products');
   const [harvesterQuery, setHarvesterQuery] = useState('');
-  const [harvesterSource, setHarvesterSource] = useState('aliexpress');
+  const [harvesterSource, setHarvesterSource] = useState('convertiser'); // Default to Convertiser
   const [harvesterRunning, setHarvesterRunning] = useState(false);
   const [refinerRunning, setRefinerRunning] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -191,7 +191,7 @@ export default function AdminCatalogPage() {
             <CardHeader>
               <CardTitle>Smart Harvester</CardTitle>
               <CardDescription>
-                Automatically import products from external sources (AliExpress, Amazon, Allegro).
+                Automatically import products from external sources (Convertiser, AliExpress, Amazon, Allegro).
                 Includes deduplication and automatic deal creation.
               </CardDescription>
             </CardHeader>
@@ -207,9 +207,10 @@ export default function AdminCatalogPage() {
                     className="w-full px-3 py-2 border rounded-md"
                     disabled={harvesterRunning}
                   >
-                    <option value="aliexpress">AliExpress</option>
-                    <option value="amazon">Amazon</option>
-                    <option value="allegro">Allegro</option>
+                    <option value="convertiser">🇵🇱 Convertiser (419k produktów PL)</option>
+                    <option value="aliexpress">🇨🇳 AliExpress</option>
+                    <option value="amazon">🛒 Amazon</option>
+                    <option value="allegro">🇵🇱 Allegro</option>
                   </select>
                 </div>
 

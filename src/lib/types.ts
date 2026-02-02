@@ -2401,7 +2401,7 @@ export interface DealM6 {
   };
   
   // Source & Affiliate
-  source: 'aliexpress' | 'amazon' | 'allegro' | 'ebay' | 'manual';
+  source: 'aliexpress' | 'amazon' | 'allegro' | 'ebay' | 'convertiser' | 'manual';
   affiliateLink: string; // Generated with tracking code
   /** Master schema names */
   affiliateUrl?: string;
@@ -2499,7 +2499,7 @@ export interface HarvesterJob {
   
   // Job Metadata
   status: 'running' | 'completed' | 'failed' | 'paused';
-  source: 'aliexpress' | 'amazon' | 'allegro' | 'manual';
+  source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'manual';
   
   // Input Parameters
   query: string; // Search term or category ID
