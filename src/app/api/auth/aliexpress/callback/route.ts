@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Delete state (one-time use)
-    await db.collection('oauthStates').doc(state).delete();
+    await adminDb.collection('oauthStates').doc(state).delete();
 
     // Check for authorization code
     if (!code) {
