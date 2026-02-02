@@ -181,7 +181,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ...(deal.tags || []),
   ].filter(Boolean);
   
-  const canonicalUrl = `https://okazje.plus/pl/deals/${deal.id}`;
+  const canonicalUrl = `https://okazjeplus.pl/pl/deals/${deal.id}`;
   
   return {
     title: metaTitle,
@@ -254,7 +254,7 @@ export default async function DealDetailPage({ params }: PageProps) {
     name: dealTitle,
     description: dealDescription,
     image: deal.image,
-    url: `https://okazje.plus/pl/deals/${deal.id}`,
+    url: `https://okazjeplus.pl/pl/deals/${deal.id}`,
     priceCurrency: 'PLN',
     price: deal.price,
     ...(deal.originalPrice && {

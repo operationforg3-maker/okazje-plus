@@ -17,7 +17,7 @@ import { AnalyticsProvider } from '@/components/analytics/provider';
 import { CookieConsentBanner } from '@/components/cookie-consent';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazje-plus.web.app'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl'),
   title: {
     default: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
     template: '%s | Okazje+'
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'pl_PL',
-    url: 'https://okazje.plus',
+    url: 'https://okazjeplus.pl',
     siteName: 'Okazje+',
     title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
     description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',

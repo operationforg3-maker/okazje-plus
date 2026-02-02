@@ -15,13 +15,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Okazje Plus - Najlepsze promocje i produkty',
     description: 'Społeczność łowców okazji. Odkrywaj najlepsze promocje, dziel się znaleziskami, oszczędzaj!',
-    url: 'https://okazje.plus',
+    url: 'https://okazjeplus.pl',
     siteName: 'Okazje Plus',
     locale: 'pl_PL',
     type: 'website',
     images: [
       {
-        url: 'https://okazje.plus/og-home.jpg',
+        url: 'https://okazjeplus.pl/og-home.jpg',
         width: 1200,
         height: 630,
         alt: 'Okazje Plus - Najlepsze promocje',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     description: 'Odkryj najgorętsze promocje i produkty. Dołącz do społeczności!',
   },
   alternates: {
-    canonical: 'https://okazje.plus',
+    canonical: 'https://okazjeplus.pl',
   },
 };
 

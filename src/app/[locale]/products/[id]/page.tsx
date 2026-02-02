@@ -234,7 +234,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     productData.subSubCategorySlug || '',
   ].filter(Boolean);
   
-  const canonicalUrl = `https://okazje.plus/pl/products/${productData.id}`;
+  const canonicalUrl = `https://okazjeplus.pl/pl/products/${productData.id}`;
   
   const productImage = isM6 && productCore ? (productCore.images?.[0] || '') : (product?.image || '');
   const stockStatus = isM6 
