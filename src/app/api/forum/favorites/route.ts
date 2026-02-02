@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, auth } from '@/lib/firebase';
-import { collection, addDoc, deleteDoc, query, where, getDocs, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, query, where, getDocs, doc, getDoc, Timestamp } from 'firebase/firestore';
 
 /**
  * GET /api/forum/favorites
@@ -131,14 +131,14 @@ export async function DELETE(req: NextRequest) {
 
     // Verify ownership
     const favRef = doc(db, 'forum_favorites', favoriteId);
-    const favSnap = await favRef.get() as any;
+    const favSnap = await getDoc(favRef);
     
-    if (!favSnap.exists) {
+    if (!favSnap.exists()) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
-    const favData = favSnap.data() as any;
-    if (favData.userId !== user.uid) {
+    const favData = favSnap.data();
+    if (favData?.userId !== user.uid) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

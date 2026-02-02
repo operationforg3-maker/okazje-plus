@@ -50,7 +50,7 @@ export default function SavedForumPage() {
         setSaved(items);
 
         // Fetch thread details for display
-        const threadIds = new Set(items.map((i: any) => i.threadId as string).filter(Boolean));
+        const threadIds = new Set<string>(items.map((i: any) => i.threadId as string).filter(Boolean));
         for (const tid of threadIds) {
           try {
             const threadRes = await fetch(`/api/forum/threads/${tid}`);
