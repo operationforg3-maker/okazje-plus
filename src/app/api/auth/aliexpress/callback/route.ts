@@ -17,6 +17,10 @@ import { initializeApp, cert, getApps } from 'firebase-admin/app';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
+// Force dynamic rendering to avoid build-time Firebase initialization
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 // Initialize Firebase Admin
 if (getApps().length === 0) {
   try {
