@@ -164,17 +164,26 @@ export function Navbar() {
                 size="icon" 
                 className="relative rounded-full"
                 onClick={() => setCartMenuOpen(!cartMenuOpen)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setCartMenuOpen(false);
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setCartMenuOpen(!cartMenuOpen);
+                  }
+                }}
                 data-testid="cart-button"
-                aria-label="Otwórz koszyk"
+                aria-label={cartMenuOpen ? 'Zamknij koszyk' : 'Otwórz koszyk'}
+                aria-expanded={cartMenuOpen}
+                aria-haspopup="dialog"
               >
                 <ShoppingBag className="h-5 w-5" />
                 <MiniCartBadge />
               </Button>
 
               {cartMenuOpen && isMounted && (
-                <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50">
+                <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50" role="dialog" aria-labelledby="cart-title" aria-modal="true">
                   <div className="p-4">
-                    <h3 className="font-semibold text-lg mb-3">Twoje zakupy</h3>
+                    <h3 id="cart-title" className="font-semibold text-lg mb-3">Twoje zakupy</h3>
                     
                     {/* Cart Preview */}
                     <div className="mb-4">
@@ -221,6 +230,8 @@ export function Navbar() {
                                   size="icon"
                                   className="text-destructive"
                                   onClick={() => removeItem(((item.product as any)?.id ?? (item.deal as any)?.id))}
+                                  aria-label={`Usuń ${title} z koszyka`}
+                                  title={`Usuń ${title}`}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -288,13 +299,13 @@ export function Navbar() {
         </div>
 
         {/* Secondary quick links (mobile-friendly scroll) */}
-        <div className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground">
-          <span className="rounded-full px-3 py-1 font-medium text-foreground/70">{t('seasonalHits')}</span>
-          <Link href={`${prefix}/deals?sort=hot`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('hottest')}</Link>
-          <Link href={`${prefix}/deals?sort=new`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('newest')}</Link>
-          <Link href={`${prefix}/products?sort=trending`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('trending')}</Link>
-          <Link href={`${prefix}/forum`} className="rounded-full px-3 py-1 transition-colors hover:text-primary">{t('forum')}</Link>
-        </div>
+        <nav className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground" aria-label="Szybkie linki">
+          <span className="rounded-full px-3 py-1 font-medium text-foreground/70" role="status">{t('seasonalHits')}</span>
+          <Link href={`${prefix}/deals?sort=hot`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Gorące okazje">{t('hottest')}</Link>
+          <Link href={`${prefix}/deals?sort=new`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Nowe okazje">{t('newest')}</Link>
+          <Link href={`${prefix}/products?sort=trending`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Popularne produkty">{t('trending')}</Link>
+          <Link href={`${prefix}/forum`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Forum społeczności">{t('forum')}</Link>
+        </nav>
       </div>
     </header>
   );

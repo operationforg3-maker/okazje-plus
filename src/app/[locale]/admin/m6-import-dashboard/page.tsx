@@ -1711,8 +1711,10 @@ function ModerationPanel({
             onClick={loadDraftProducts}
             disabled={loading}
             className="gap-2"
+            aria-label="Odśwież listę produktów do moderacji"
+            title="Pobierz najnowszą listę produktów"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
             Odśwież
           </Button>
         </div>
@@ -1722,25 +1724,27 @@ function ModerationPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-          <div className="text-center py-8 text-slate-600">
+          <div className="text-center py-8 text-slate-600" role="status" aria-live="polite" aria-busy="true">
             Ładowanie produktów...
           </div>
         ) : draftProducts.length === 0 ? (
-          <div className="text-center py-8 text-slate-600">
+          <div className="text-center py-8 text-slate-600" role="status" aria-live="polite">
             ✅ Brak produktów do moderacji! Wszystkie zostały zatwierdzone.
           </div>
         ) : (
           <>
             {/* Selection toolbar */}
-            <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200" role="toolbar" aria-label="Narzędzia moderacji">
               <label className="flex items-center gap-2 font-semibold">
                 <input
                   type="checkbox"
                   checked={selectedIds.size === draftProducts.length && draftProducts.length > 0}
                   onChange={handleSelectAll}
                   className="w-4 h-4 rounded"
+                  aria-label="Zaznacz wszystkie produkty"
+                  title="Zaznacz lub odznacz wszystkie produkty na tej stronie"
                 />
-                Zaznacz wszystkie ({selectedIds.size}/{draftProducts.length})
+                <span aria-live="polite">Zaznacz wszystkie ({selectedIds.size}/{draftProducts.length})</span>
               </label>
               <div className="flex gap-2">
                 <Button
@@ -1749,16 +1753,18 @@ function ModerationPanel({
                   onClick={handleApprove}
                   disabled={selectedIds.size === 0 || processing}
                   className="gap-2 bg-green-600 hover:bg-green-700"
+                  aria-label={selectedIds.size === 0 ? 'Zatwierdź (brak wybranych produktów)' : `Zatwierdź ${selectedIds.size} wybranych produktów`}
+                  title="Zatwierdź wybrane produkty i dodaj do systemu"
                 >
                   {processing ? (
                     <>
-                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                      Zatwierdzanie...
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" aria-hidden="true" />
+                      <span aria-live="polite">Zatwierdzanie...</span>
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-4 h-4" />
-                      Zatwierdź ({selectedIds.size})
+                      <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
+                      <span>Zatwierdź ({selectedIds.size})</span>
                     </>
                   )}
                 </Button>
@@ -1768,24 +1774,29 @@ function ModerationPanel({
                   onClick={handleReject}
                   disabled={selectedIds.size === 0 || processing}
                   className="gap-2"
+                  aria-label={selectedIds.size === 0 ? 'Odrzuć (brak wybranych produktów)' : `Odrzuć ${selectedIds.size} wybranych produktów`}
+                  title="Odrzuć wybrane produkty"
                 >
-                  Odrzuć ({selectedIds.size})
+                  <span>Odrzuć ({selectedIds.size})</span>
                 </Button>
               </div>
             </div>
 
             {/* Products list */}
-            <div className="space-y-2 max-h-[500px] overflow-y-auto border rounded-lg p-2">
+            <div className="space-y-2 max-h-[500px] overflow-y-auto border rounded-lg p-2" role="list" aria-label="Lista produktów do moderacji">
               {draftProducts.map((product) => (
                 <div
                   key={product.id}
                   className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-slate-100 transition"
+                  role="listitem"
                 >
                   <input
                     type="checkbox"
                     checked={selectedIds.has(product.id)}
                     onChange={() => toggleSelect(product.id)}
                     className="w-4 h-4 rounded mt-1"
+                    aria-label={`Wybierz produkt: ${product.title?.pl || product.title || 'Bez tytułu'}`}
+                    title="Kliknij aby wybrać ten produkt do moderacji"
                   />
                   <div className="flex-1">
                     <h3 className="font-semibold text-slate-900">
