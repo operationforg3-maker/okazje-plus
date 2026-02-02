@@ -12,33 +12,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
 
 // Force dynamic rendering to avoid build-time Firebase initialization
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Initialize Firebase Admin
-if (getApps().length === 0) {
-  try {
-    const serviceAccount = JSON.parse(
-      readFileSync(resolve(process.cwd(), 'serviceAccountKey.json'), 'utf-8')
-    );
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin:', error);
-  }
-}
-
-const db = getFirestore();
-
 export async function GET(request: NextRequest) {
   try {
+    // Lazy import Firebase Admin to avoid build-time initialization
+    const { adminDb } = await import('@/lib/firebase-admin');
+    
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
     const state = searchParams.get('state');
@@ -71,7 +54,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const stateDoc = await db.collection('oauthStates').doc(state).get();
+    const stateDoc = await adminDb.collection('oauthStates').doc(state).get();
     if (!stateDoc.exists) {
       console.error('❌ Invalid or expired state:', state);
       return NextResponse.redirect(
