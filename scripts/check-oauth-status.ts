@@ -62,7 +62,8 @@ async function checkOAuthStatus() {
     } else {
       console.log(`   ✅ Found ${tokensSnapshot.size} token(s):`);
       
-      tokensSnapshot.forEach((doc, index) => {
+      let index = 0;
+      tokensSnapshot.forEach((doc) => {
         const token = doc.data();
         const now = Date.now();
         const expiresAt = token.expiresAt?.toMillis?.() || token.expiresAt;
@@ -78,6 +79,7 @@ async function checkOAuthStatus() {
         console.log(`      Status: ${isExpired ? '🔴 EXPIRED' : '✅ VALID'}`);
         console.log(`      Created: ${new Date(token.createdAt?.toMillis?.() || token.createdAt).toISOString()}`);
         console.log(`      Updated: ${new Date(token.updatedAt?.toMillis?.() || token.updatedAt).toISOString()}`);
+        index++;
       });
     }
 
