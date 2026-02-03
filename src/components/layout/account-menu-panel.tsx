@@ -26,9 +26,10 @@ interface AccountMenuPanelProps {
   loading?: boolean;
   onLogout: () => void;
   onNavigate?: () => void;
+  unreadCount?: number;
 }
 
-export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: AccountMenuPanelProps) {
+export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCount = 0 }: AccountMenuPanelProps) {
   const t = useTranslations('nav');
   const router = useRouter();
   
@@ -153,7 +154,14 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate }: Accoun
             </Link>
             <Link href="/profile?tab=notifications" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
               <span className="flex items-center gap-2"><Bell className="h-4 w-4" /> {t('notifications')}</span>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <span className="flex items-center gap-2">
+                {unreadCount > 0 ? (
+                  <Badge variant="destructive" className="h-5 rounded-full px-1.5 text-[10px]">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Badge>
+                ) : null}
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </span>
             </Link>
             <Link href="/profile/settings" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
               <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> {t('settings')}</span>

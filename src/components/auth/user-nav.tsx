@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,9 +25,11 @@ import { NotificationBell } from './notification-bell';
 import { useState, useEffect } from 'react';
 import { AccountMenuPanel } from '@/components/layout/account-menu-panel';
 import ErrorBoundary from './error-boundary';
+import { useNotifications } from '@/hooks/use-notifications';
 
 export function UserNav() {
   const { user, loading } = useAuth();
+  const { unreadCount } = useNotifications();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -120,6 +123,15 @@ export function UserNav() {
               {open && (
                 <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-primary shadow-md" />
               )}
+              {unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                  aria-label={`${unreadCount} nowych powiadomień`}
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -133,6 +145,7 @@ export function UserNav() {
                 loading={loading}
                 onLogout={handleLogout}
                 onNavigate={() => setOpen(false)}
+                unreadCount={unreadCount}
               />
             </ErrorBoundary>
           </DropdownMenuContent>
