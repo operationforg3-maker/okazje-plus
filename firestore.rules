@@ -48,6 +48,18 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
+    // USER PROFILES (Social)
+    ////////////////////////////////
+    match /userProfiles/{userId} {
+      // Public read: podstawowe dane profilu
+      // Pełny dostęp: właściciel lub admin
+      allow read: if true; // Public profiles
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    ////////////////////////////////
     // MODERATION
     ////////////////////////////////
     // Logi moderacji - tylko admini

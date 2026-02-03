@@ -625,6 +625,23 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "lastUsedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "user_activities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "visibility", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_activities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
