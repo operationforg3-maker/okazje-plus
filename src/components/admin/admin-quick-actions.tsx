@@ -65,6 +65,7 @@ export function AdminQuickActions({
             size="icon" 
             variant="secondary" 
             className="h-8 w-8 rounded-full shadow-md bg-white/90 hover:bg-white"
+            aria-label="Akcje administratora"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
