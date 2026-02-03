@@ -16,64 +16,84 @@ import { CashbackWarningModal } from '@/components/cashback-warning-modal';
 import { AnalyticsProvider } from '@/components/analytics/provider';
 import { CookieConsentBanner } from '@/components/cookie-consent';
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl'),
-  title: {
-    default: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
-    template: '%s | Okazje+'
-  },
-  description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
-  keywords: ['okazje', 'promocje', 'wyprzedaże', 'zakupy online', 'najlepsze ceny', 'rabaty', 'kupony'],
-  authors: [{ name: 'Okazje+' }],
-  creator: 'Okazje+',
-  verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-    other: {
-      'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || '',
-      'convertiser-verification': '3bc0a4fd6e7289720f9c2784de4b87f345bcca47',
-    },
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'pl_PL',
-    url: 'https://okazjeplus.pl',
-    siteName: 'Okazje+',
-    title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
-    description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
-    images: [
-      {
-        url: '/Logotyp_okazjePlus.png',
-        width: 1200,
-        height: 630,
-        alt: 'Okazje+ - Najlepsze okazje zakupowe',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
-    description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże',
-    images: ['/Logotyp_okazjePlus.png'],
-  },
-  icons: {
-    icon: '/icon_okazjeplus.svg',
-    apple: '/icon_okazjeplus.png',
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-  alternates: {
-    canonical: 'https://okazjeplus.pl',
-    languages: {
-      'pl': 'https://okazjeplus.pl/pl/',
-      'x-default': 'https://okazjeplus.pl/pl/',
-    },
-    types: {
-      'application/rss+xml': 'https://okazjeplus.pl/rss.xml',
-    },
-  },
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
+
+const LOCALE_CONFIG: Record<string, { path: string; ogLocale: string }> = {
+  pl: { path: '/pl/', ogLocale: 'pl_PL' },
+  en: { path: '/en/', ogLocale: 'en_US' },
+  de: { path: '/de/', ogLocale: 'de_DE' },
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { locale: string };
+}): Promise<Metadata> {
+  const locale = params?.locale || 'pl';
+  const config = LOCALE_CONFIG[locale] ?? LOCALE_CONFIG.pl;
+  const canonical = `${SITE_URL}${config.path}`;
+
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
+      template: '%s | Okazje+'
+    },
+    description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
+    keywords: ['okazje', 'promocje', 'wyprzedaże', 'zakupy online', 'najlepsze ceny', 'rabaty', 'kupony'],
+    authors: [{ name: 'Okazje+' }],
+    creator: 'Okazje+',
+    verification: {
+      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+      other: {
+        'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || '',
+        'convertiser-verification': '3bc0a4fd6e7289720f9c2784de4b87f345bcca47',
+      },
+    },
+    openGraph: {
+      type: 'website',
+      locale: config.ogLocale,
+      url: canonical,
+      siteName: 'Okazje+',
+      title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
+      description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
+      images: [
+        {
+          url: '/Logotyp_okazjePlus.png',
+          width: 1200,
+          height: 630,
+          alt: 'Okazje+ - Najlepsze okazje zakupowe',
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
+      description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże',
+      images: ['/Logotyp_okazjePlus.png'],
+    },
+    icons: {
+      icon: '/icon_okazjeplus.svg',
+      apple: '/icon_okazjeplus.png',
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+    alternates: {
+      canonical,
+      languages: {
+        pl: `${SITE_URL}/pl/`,
+        en: `${SITE_URL}/en/`,
+        de: `${SITE_URL}/de/`,
+        'x-default': `${SITE_URL}/pl/`,
+      },
+      types: {
+        'application/rss+xml': `${SITE_URL}/rss.xml`,
+      },
+    },
+  };
+}
 
 export default async function LocaleLayout({
   children,

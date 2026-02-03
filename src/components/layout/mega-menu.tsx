@@ -730,9 +730,9 @@ export function MegaMenu() {
               {/* Kafelki konfigurowalne (admin) */}
               {activeCategory?.tiles && activeCategory.tiles.length > 0 ? (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {activeCategory.tiles.slice(0, 4).map((tile) => (
-                    <Link key={tile.id ?? tile.title} href={tile.link ?? '#'}
-                      className="group relative overflow-hidden rounded-xl border border-border/40 bg-card/90 p-4 hover:border-primary/50 transition-colors">
+                  {activeCategory.tiles.slice(0, 4).map((tile) => {
+                    const tileClasses = "group relative overflow-hidden rounded-xl border border-border/40 bg-card/90 p-4 hover:border-primary/50 transition-colors";
+                    const tileContent = (
                       <div className="flex items-center gap-3">
                         <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                           {tile.image ? (
@@ -750,8 +750,18 @@ export function MegaMenu() {
                         </div>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </div>
-                    </Link>
-                  ))}
+                    );
+
+                    return tile.link ? (
+                      <Link key={tile.id ?? tile.title} href={tile.link} className={tileClasses}>
+                        {tileContent}
+                      </Link>
+                    ) : (
+                      <div key={tile.id ?? tile.title} className={tileClasses} aria-disabled="true">
+                        {tileContent}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : null}
 

@@ -175,6 +175,8 @@ export default function DealListCard({ deal }: DealListCardProps) {
     });
   }, [deal.postedAt, deal.price, deal.originalPrice, currency]);
 
+  const dealUrl = typeof deal.link === 'string' ? deal.link : '';
+
   return (
     <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
       <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
@@ -337,37 +339,41 @@ export default function DealListCard({ deal }: DealListCardProps) {
             />
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 toast.success(t('messages.priceAlertEnabled'));
               }}
               aria-label={t('auth.priceAlert')}
-              className="h-9 w-9 p-0"
             >
               <AlertTriangle className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 addToComparison({ ...deal, type: 'deal' });
               }}
               aria-label={t('comparison.addToComparison')}
-              className="h-9 w-9 p-0"
             >
               <Scale className="h-4 w-4" />
             </Button>
           </div>
 
-          <Button asChild size="lg" className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white">
-            <Link href={typeof deal.link === 'string' ? deal.link : '#'} target="_blank" rel="noopener noreferrer">
+          {dealUrl ? (
+            <Button asChild size="lg" className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Link href={dealUrl} target="_blank" rel="noopener noreferrer">
+                {t('actions.goTo')}
+              </Link>
+            </Button>
+          ) : (
+            <Button size="lg" className="w-full whitespace-nowrap bg-emerald-600 text-white opacity-80" disabled>
               {t('actions.goTo')}
-            </Link>
-          </Button>
+            </Button>
+          )}
           <Button 
             size="sm" 
             variant="outline" 

@@ -157,6 +157,8 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     ? product.images[0]
     : '/placeholder.png';
 
+  const offerUrl = bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl;
+
   return (
     <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
       {/* Image - Top on mobile, left on desktop */}
@@ -285,34 +287,44 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           />
           <Button
             variant="outline"
-            size="sm"
+            size="icon"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               addToComparison({ ...product, type: 'product' } as any);
             }}
             aria-label={tCommon('comparison.addToComparison')}
-            className="h-9 w-9 p-0"
           >
             <Scale className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Primary Action - Go To Offer */}
-        <Button
-          asChild
-          size="lg"
-          className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white"
-        >
-          <a
-            href={(bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl || '#')}
-            target="_blank"
-            rel="noopener noreferrer"
+        {offerUrl ? (
+          <Button
+            asChild
+            size="lg"
+            className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <a
+              href={offerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              {t('card.go')}
+            </a>
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            className="w-full whitespace-nowrap bg-emerald-600 text-white opacity-80"
+            disabled
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             {t('card.go')}
-          </a>
-        </Button>
+          </Button>
+        )}
 
         {/* Secondary Action - Details */}
         <Button
