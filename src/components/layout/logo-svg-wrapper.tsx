@@ -48,6 +48,8 @@ export function LogoSVGWrapper({ className = "h-8 flex-shrink-0 md:h-9 lg:h-10",
       xmlns:xlink="http://www.w3.org/1999/xlink"
       xml:space="preserve"
       xmlns:serif="http://www.serif.com/"
+      aria-label="${alt}"
+      role="img"
       style="width:100%;height:100%;fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"
       preserveAspectRatio="xMidYMid meet">
       <g>
