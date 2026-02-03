@@ -59,12 +59,12 @@ export class DealRefiner {
       this.addLog('info', `Starting Deal Refiner job: limit=${limit}`);
 
       // Find deals that need refinement:
-      // - Status is 'approved' (live deals)
+      // - Status is 'draft' (newly harvested deals awaiting moderation + enrichment)
       // - title is missing OR
       // - title lacks 'pl' field (Polish translation missing - CRITICAL!)
       const dealsSnapshot = await adminDb
         .collection('deals')
-        .where('status', '==', 'approved')
+        .where('status', '==', 'draft')
         .limit(limit)
         .get();
 

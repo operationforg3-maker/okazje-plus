@@ -16,6 +16,7 @@ import {
 import { AIRefiner } from './refiner';
 import { startDealRefinerJob } from './deal-refiner';
 import { convertToPLN } from '@/lib/currency-exchange';
+import { addToModerationQueue } from '@/lib/moderation';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
 
@@ -340,6 +341,14 @@ export class SmartHarvester {
                 dealsCreated++;
                 dealsToRefine.push(dealId);
 
+                // Add deal to moderation queue for admin review
+                try {
+                  await addToModerationQueue(dealId, 'deal', 'import', 'harvester', 'high');
+                  this.addLog('info', `Deal ${dealId} added to moderation queue`);
+                } catch (err) {
+                  this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
+                }
+
                 // Update product's best price
                 await this.updateProductBestPrice(existingProduct.id);
                 duplicatesSkipped++;
@@ -372,6 +381,14 @@ export class SmartHarvester {
                 );
                 dealsCreated++;
                 dealsToRefine.push(dealId);
+
+                // Add deal to moderation queue for admin review
+                try {
+                  await addToModerationQueue(dealId, 'deal', 'import', 'harvester', 'high');
+                  this.addLog('info', `Deal ${dealId} added to moderation queue`);
+                } catch (err) {
+                  this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
+                }
 
                 // Update product's best price (M6: CRITICAL - was missing for new products!)
                 await this.updateProductBestPrice(productId);
