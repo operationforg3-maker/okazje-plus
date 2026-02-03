@@ -48,6 +48,19 @@ firestore-debug.log
 # Firebase service account credentials
 src/scripts/serviceAccountKey.json
 
+# Test files (development/debugging scripts)
+test-*.ts
+test-*.js
+test-*.mjs
+test-*.tsx
+*-test.ts
+*-test.js
+check-*.ts
+check-*.mjs
+debug-*.ts
+temp-*.js
+verify-*.ts
+
 .env.local
 
 
