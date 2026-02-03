@@ -2,18 +2,16 @@
 
 import { withAuth } from '@/components/auth/withAuth';
 import { useAuth } from '@/lib/auth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ForumCategory, PostAttachment, Deal, Product } from '@/lib/types';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchableAttachmentPicker } from '@/components/forum/searchable-attachment-picker';
 import { AttachmentCard } from '@/components/forum/attachment-card';
 import { ForumRichEditor } from '@/components/forum/rich-editor';
 import { CategorySuggestionDialog } from '@/components/forum/category-suggestion-dialog';
-import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 function NewThreadPageImpl() {
@@ -125,16 +123,30 @@ function NewThreadPageImpl() {
           </div>
           <div className="grid gap-2">
             <label className="text-sm font-medium">Kategoria</label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Wybierz kategorię (opcjonalnie)" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={categoryId === '' ? 'default' : 'outline'}
+                onClick={() => setCategoryId('')}
+              >
+                Bez kategorii
+              </Button>
+              {categories.map((c) => (
+                <Button
+                  key={c.id}
+                  type="button"
+                  size="sm"
+                  variant={categoryId === c.id ? 'default' : 'outline'}
+                  onClick={() => setCategoryId(c.id)}
+                >
+                  {c.name}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Kategorie są płaskie — wybierz jedną dla lepszej widoczności wątku.
+            </p>
           </div>
           <div className="grid gap-2">
             <label className="text-sm font-medium">Treść</label>

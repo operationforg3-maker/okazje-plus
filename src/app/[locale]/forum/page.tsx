@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ForumThread, ForumCategory } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,11 @@ export default function ForumHomePage() {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const categoryMap = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])),
+    [categories]
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -172,15 +177,18 @@ export default function ForumHomePage() {
       </div>
 
       {/* Kategorie */}
-      <div className="flex gap-2 flex-wrap">
-        <Button variant={activeCategory === '' ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(undefined)}>
-          Wszystko
-        </Button>
-        {categories.map((c) => (
-          <Button key={c.id} variant={activeCategory === c.id ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(c.id)}>
-            {c.name}
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Kategorie</h3>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant={activeCategory === '' ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(undefined)}>
+            Wszystko
           </Button>
-        ))}
+          {categories.map((c) => (
+            <Button key={c.id} variant={activeCategory === c.id ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(c.id)}>
+              {c.name}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -195,58 +203,207 @@ export default function ForumHomePage() {
             {searchQuery ? `Brak wyników dla "${searchQuery}"` : 'Brak wątków w tej kategorii.'}
           </CardContent>
         </Card>
+      ) : activeCategory === '' && filteredThreads.length > 0 ? (
+        <div className="space-y-6">
+          {/* Grupowanie według kategorii gdy wybrano "Wszystko" */}
+          {(() => {
+            const grouped = new Map<string, typeof filteredThreads>();
+            const uncategorized: typeof filteredThreads = [];
+            
+            filteredThreads.forEach((t) => {
+              if (!t.categoryId) {
+                uncategorized.push(t);
+              } else {
+                if (!grouped.has(t.categoryId)) {
+                  grouped.set(t.categoryId, []);
+                }
+                grouped.get(t.categoryId)!.push(t);
+              }
+            });
+
+            return (
+              <>
+                {Array.from(grouped.entries()).map(([catId, threads]) => {
+                  const catName = categoryMap.get(catId) || 'Inna kategoria';
+                  return (
+                    <div key={catId} className="space-y-3">
+                      <div className="flex items-center gap-2 border-b pb-2">
+                        <h2 className="text-lg font-semibold">{catName}</h2>
+                        <Badge variant="secondary">{threads.length}</Badge>
+                      </div>
+                      {threads.map((t) => (
+                        <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Link href={`/forum/${t.id}`} className="hover:underline">
+                                {t.title}
+                              </Link>
+                              {t.isPinned && (
+                                <Badge variant="outline" className="gap-1">
+                                  <Pin className="h-3 w-3" />
+                                  Przypięty
+                                </Badge>
+                              )}
+                              {t.isLocked && (
+                                <Badge variant="destructive" className="gap-1">
+                                  <Lock className="h-3 w-3" />
+                                  Zablokowany
+                                </Badge>
+                              )}
+                              {t.bestAnswerId && (
+                                <Badge variant="default" className="gap-1 bg-green-600">
+                                  <Award className="h-3 w-3" />
+                                  Rozwiązany
+                                </Badge>
+                              )}
+                            </CardTitle>
+                            <CardDescription>
+                              {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm text-muted-foreground line-clamp-2 max-w-[70%]">
+                                {t.summary || ''}
+                              </div>
+                              <div className="flex items-center gap-3 text-sm">
+                                <div className="flex items-center gap-1"><MessageSquare className="h-4 w-4" />{t.postsCount}</div>
+                                {t.tags && t.tags.length > 0 && (
+                                  <div className="flex items-center gap-1 text-muted-foreground">
+                                    <Tags className="h-4 w-4" />
+                                    {t.tags.slice(0,3).map(tag => (
+                                      <Badge key={tag} variant="outline">{tag}</Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  );
+                })}
+                {uncategorized.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 border-b pb-2">
+                      <h2 className="text-lg font-semibold">Bez kategorii</h2>
+                      <Badge variant="secondary">{uncategorized.length}</Badge>
+                    </div>
+                    {uncategorized.map((t) => (
+                      <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Link href={`/forum/${t.id}`} className="hover:underline">
+                              {t.title}
+                            </Link>
+                            {t.isPinned && (
+                              <Badge variant="outline" className="gap-1">
+                                <Pin className="h-3 w-3" />
+                                Przypięty
+                              </Badge>
+                            )}
+                            {t.isLocked && (
+                              <Badge variant="destructive" className="gap-1">
+                                <Lock className="h-3 w-3" />
+                                Zablokowany
+                              </Badge>
+                            )}
+                            {t.bestAnswerId && (
+                              <Badge variant="default" className="gap-1 bg-green-600">
+                                <Award className="h-3 w-3" />
+                                Rozwiązany
+                              </Badge>
+                            )}
+                          </CardTitle>
+                          <CardDescription>
+                            {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-muted-foreground line-clamp-2 max-w-[70%]">
+                              {t.summary || ''}
+                            </div>
+                            <div className="flex items-center gap-3 text-sm">
+                              <div className="flex items-center gap-1"><MessageSquare className="h-4 w-4" />{t.postsCount}</div>
+                              {t.tags && t.tags.length > 0 && (
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Tags className="h-4 w-4" />
+                                  {t.tags.slice(0,3).map(tag => (
+                                    <Badge key={tag} variant="outline">{tag}</Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
       ) : (
         <div className="space-y-3">
-          {filteredThreads.map((t) => (
-            <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Link href={`/forum/${t.id}`} className="hover:underline">
-                    {t.title}
-                  </Link>
-                  {t.isPinned && (
-                    <Badge variant="outline" className="gap-1">
-                      <Pin className="h-3 w-3" />
-                      Przypięty
-                    </Badge>
-                  )}
-                  {t.isLocked && (
-                    <Badge variant="destructive" className="gap-1">
-                      <Lock className="h-3 w-3" />
-                      Zablokowany
-                    </Badge>
-                  )}
-                  {t.bestAnswerId && (
-                    <Badge variant="default" className="gap-1 bg-green-600">
-                      <Award className="h-3 w-3" />
-                      Rozwiązany
-                    </Badge>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground line-clamp-2 max-w-[70%]">
-                    {t.summary || ''}
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="flex items-center gap-1"><MessageSquare className="h-4 w-4" />{t.postsCount}</div>
-                    {t.tags && t.tags.length > 0 && (
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Tags className="h-4 w-4" />
-                        {t.tags.slice(0,3).map(tag => (
-                          <Badge key={tag} variant="outline">{tag}</Badge>
-                        ))}
-                      </div>
+          {filteredThreads.map((t) => {
+            const categoryLabel = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
+            return (
+              <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Link href={`/forum/${t.id}`} className="hover:underline">
+                      {t.title}
+                    </Link>
+                    {categoryLabel && (
+                      <Badge variant="secondary">{categoryLabel}</Badge>
                     )}
+                    {t.isPinned && (
+                      <Badge variant="outline" className="gap-1">
+                        <Pin className="h-3 w-3" />
+                        Przypięty
+                      </Badge>
+                    )}
+                    {t.isLocked && (
+                      <Badge variant="destructive" className="gap-1">
+                        <Lock className="h-3 w-3" />
+                        Zablokowany
+                      </Badge>
+                    )}
+                    {t.bestAnswerId && (
+                      <Badge variant="default" className="gap-1 bg-green-600">
+                        <Award className="h-3 w-3" />
+                        Rozwiązany
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground line-clamp-2 max-w-[70%]">
+                      {t.summary || ''}
+                    </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="flex items-center gap-1"><MessageSquare className="h-4 w-4" />{t.postsCount}</div>
+                      {t.tags && t.tags.length > 0 && (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Tags className="h-4 w-4" />
+                          {t.tags.slice(0,3).map(tag => (
+                            <Badge key={tag} variant="outline">{tag}</Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
