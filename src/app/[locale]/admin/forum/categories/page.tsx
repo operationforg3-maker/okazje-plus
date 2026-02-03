@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { CategorySuggestionsManager } from "@/components/admin/category-suggestions-manager";
+import { ForumCategoryManager } from "@/components/admin/forum-category-manager";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ForumCategoriesPage() {
   const { user } = useAuth();
@@ -23,11 +25,24 @@ export default function ForumCategoriesPage() {
       <div>
         <h1 className="text-3xl font-bold">Zarządzanie kategoriami forum</h1>
         <p className="text-muted-foreground">
-          Przeglądaj i zatwierdzaj propozycje kategorii od użytkowników
+          Twórz, edytuj kategorie oraz przeglądaj propozycje użytkowników
         </p>
       </div>
 
-      <CategorySuggestionsManager />
+      <Tabs defaultValue="manage" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="manage">Zarządzanie kategoriami</TabsTrigger>
+          <TabsTrigger value="suggestions">Propozycje użytkowników</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="manage">
+          <ForumCategoryManager />
+        </TabsContent>
+
+        <TabsContent value="suggestions">
+          <CategorySuggestionsManager />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
