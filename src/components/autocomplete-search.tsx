@@ -72,9 +72,9 @@ export function AutocompleteSearch({ className }: { className?: string }) {
 
   return (
     <div className={cn('relative w-full', className)} ref={containerRef}>
-      <form onSubmit={handleSubmit} className="w-full">
+      <form onSubmit={handleSubmit} className="w-full" role="search">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -83,12 +83,16 @@ export function AutocompleteSearch({ className }: { className?: string }) {
             aria-autocomplete="list"
             aria-expanded={open}
             aria-controls="autocomplete-popover"
+            aria-label="Wyszukaj produkty i okazje"
             autoComplete="off"
             data-lpignore="true"
             data-form-type="other"
+            type="search"
+            role="combobox"
+            aria-haspopup="listbox"
           />
           {loading && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" aria-label="Wyszukiwanie..." aria-live="polite" />
           )}
         </div>
       </form>
@@ -96,6 +100,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
         <div
           id="autocomplete-popover"
           role="listbox"
+          aria-label="Wyniki wyszukiwania"
           className="absolute left-0 right-0 mt-1 rounded-lg border bg-popover shadow-lg z-50 p-2 space-y-1"
         >
           {suggestions.map((s, i) => (

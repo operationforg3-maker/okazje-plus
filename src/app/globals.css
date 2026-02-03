@@ -146,6 +146,12 @@
   .text-tertiary { color: hsl(var(--text-tertiary)); }
   .text-disabled { color: hsl(var(--text-disabled)); }
   
+  /* High-contrast text utilities (WCAG AA) */
+  .text-high-contrast { color: hsl(var(--text-high-contrast)); }
+  .text-body { color: hsl(var(--text-body)); }
+  .text-muted-accessible { color: hsl(var(--text-muted-accessible)); }
+  .text-error { color: hsl(var(--error-text)); }
+  
   /* Borders */
   .border-subtle { border-color: hsl(var(--border-subtle)); }
   .border-default { border-color: hsl(var(--border-default)); }
@@ -158,6 +164,52 @@
 }
 
 @layer base {
+  /* ============ GLOBAL FOCUS STYLES (WCAG 2.1 AA) ============
+     Visible keyboard focus indicators for accessibility
+     Applied to all interactive elements
+     =========================================================== */
+  *:focus {
+    outline: none; /* Remove default */
+  }
+  
+  *:focus-visible {
+    outline: var(--focus-ring-width) solid hsl(var(--ring));
+    outline-offset: var(--focus-ring-offset);
+    border-radius: calc(var(--radius) - 2px);
+  }
+  
+  /* High-contrast focus for buttons */
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible {
+    outline: var(--focus-ring-width) solid hsl(var(--ring));
+    outline-offset: var(--focus-ring-offset);
+    box-shadow: 0 0 0 calc(var(--focus-ring-offset) + var(--focus-ring-width)) hsl(var(--ring) / 0.2);
+  }
+  
+  /* Input focus styles */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: var(--focus-ring-width) solid hsl(var(--ring));
+    outline-offset: 1px;
+    box-shadow: 0 0 0 4px hsl(var(--ring) / 0.1);
+  }
+  
+  /* Skip link focus (must be visible) */
+  .sr-only:focus {
+    position: fixed;
+    z-index: 100;
+    clip: auto;
+    width: auto;
+    height: auto;
+    padding: 1rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    outline: var(--focus-ring-width) solid hsl(var(--ring));
+    outline-offset: var(--focus-ring-offset);
+  }
+
   :root {
     /* ================== LIGHT MODE COLOR PALETTE ==================
        Design System: Teal-Primary, Orange-Accent, Professional Neutral
@@ -199,6 +251,13 @@
     --border: 214.3 31.8% 91.4%; /* Jasny szary - obramowania, separatory */
     --input: 214.3 31.8% 91.4%; /* Jasny szary - pola wejścia */
     --ring: 142.1 76.2% 36.3%; /* Teal - focus ring (accessibility) */
+    
+    /* ============ HIGH CONTRAST TOKENS (WCAG AA 4.5:1) ============ */
+    --text-high-contrast: 0 0% 9%; /* Near black for primary text (contrast 16:1) */
+    --text-body: 20 14.3% 4.1%; /* Default body text (contrast 15:1) */
+    --text-muted-accessible: 215 16% 35%; /* Muted text with 7:1 contrast (AA Large) */
+    --bg-high-contrast: 0 0% 100%; /* Pure white for maximum contrast */
+    --error-text: 0 84% 40%; /* Error text with 4.6:1 contrast on white */
     
     --radius: 0.5rem; /* 8px - standardowe zaokrąglenie dla wszystkich elementów */
     
@@ -332,6 +391,13 @@
     --border: 12.2 6.5% 15.1%; /* Ciemnoszary - obramowania */
     --input: 12.2 6.5% 15.1%; /* Ciemnoszary - pola wejścia */
     --ring: 142.1 70.6% 45.3%; /* Jaśniejszy teal - focus ring */
+    
+    /* ============ HIGH CONTRAST TOKENS (WCAG AA 4.5:1) ============ */
+    --text-high-contrast: 0 0% 95%; /* Near white for primary text (contrast 15:1) */
+    --text-body: 0 0% 90%; /* Default body text in dark mode (contrast 12:1) */
+    --text-muted-accessible: 215 16% 65%; /* Muted text with 7:1 contrast (AA Large) */
+    --bg-high-contrast: 0 0% 7%; /* Very dark for maximum contrast */
+    --error-text: 0 84% 65%; /* Error text with 4.6:1 contrast on dark */
     
     /* ============ SEMANTIC COLOR SYSTEM - DARK MODE ============
        High contrast colors for dark theme accessibility

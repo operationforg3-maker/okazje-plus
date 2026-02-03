@@ -66,9 +66,9 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
   return (
     <div className={cn('grid gap-6', className)} {...props}>
       {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" role="alert" aria-live="polite">
               <AlertTitle>{t('errors.title')}</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription id="login-error-message">{error}</AlertDescription>
           </Alert>
       )}
       <Tabs defaultValue="login" className="w-full">
@@ -77,7 +77,7 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
           <TabsTrigger value="register">{t('tabs.register')}</TabsTrigger>
         </TabsList>
         <TabsContent value="login">
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} noValidate aria-describedby={error ? 'login-error-message' : undefined}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="email-login">{t('labels.email')}</Label>
@@ -91,21 +91,37 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
                   disabled={isLoading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                  aria-required="true"
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'login-error-message' : undefined}
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password-login">{t('labels.password')}</Label>
-                <Input id="password-login" type="password" placeholder={t('placeholders.password')} autoComplete="current-password" disabled={isLoading} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input 
+                  id="password-login" 
+                  type="password" 
+                  placeholder={t('placeholders.password')} 
+                  autoComplete="current-password" 
+                  disabled={isLoading} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  aria-required="true"
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'login-error-message' : undefined}
+                />
               </div>
               <Button disabled={isLoading} className="mt-2">
-                {isLoading && <span className="animate-spin mr-2">...</span>}
+                {isLoading && <span className="animate-spin mr-2" aria-hidden="true">...</span>}
                 {t('buttons.login')}
               </Button>
             </div>
           </form>
         </TabsContent>
         <TabsContent value="register">
-          <form onSubmit={handleRegister}>
+          <form onSubmit={handleRegister} noValidate aria-describedby={error ? 'login-error-message' : undefined}>
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="email-register">{t('labels.email')}</Label>
@@ -119,14 +135,30 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
                   disabled={isLoading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                  aria-required="true"
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'login-error-message' : undefined}
                 />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password-register">{t('labels.password')}</Label>
-                <Input id="password-register" type="password" placeholder={t('placeholders.password')} autoComplete="new-password" disabled={isLoading} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input 
+                  id="password-register" 
+                  type="password" 
+                  placeholder={t('placeholders.password')} 
+                  autoComplete="new-password" 
+                  disabled={isLoading} 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  aria-required="true"
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'login-error-message' : undefined}
+                />
               </div>
               <Button disabled={isLoading} className="mt-2">
-                {isLoading && <span className="animate-spin mr-2">...</span>}
+                {isLoading && <span className="animate-spin mr-2" aria-hidden="true">...</span>}
                 {t('buttons.register')}
               </Button>
             </div>
