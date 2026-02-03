@@ -59,7 +59,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/8 via-background to-background" />
 
-        <div className="page-container relative py-16 md:py-24 lg:py-32">
+        <div className="page-container relative py-8 md:py-24 lg:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             {/* Logo & Tagline */}
             <div className="space-y-4">
@@ -68,13 +68,13 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
                 {t('hero.badge')}
               </div>
               
-              <h1 className="font-headline text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight">
+              <h1 className="font-headline text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight">
                 {t('hero.title.discover')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{t('hero.title.best')}</span>
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary">{t('hero.title.deals')}</span>
               </h1>
               
-              <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-2xl mx-auto">
                 {t('hero.subtitle')}
               </p>
             </div>
@@ -88,7 +88,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
                   placeholder={t('hero.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 pr-32 py-6 text-lg rounded-full border-2 focus:border-primary shadow-lg"
+                  className="pl-9 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-6 text-sm sm:text-lg rounded-full border-2 focus:border-primary shadow-lg"
                 />
                 <Button 
                   type="submit"
@@ -102,25 +102,25 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </form>
 
             {/* Primary CTAs - Browse Categories + Add Deal */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto pt-4">
-              <Button size="lg" variant="outline" className="rounded-full font-semibold" asChild>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto pt-2 md:pt-4">
+              <Button size="sm" variant="outline" className="rounded-full font-semibold text-xs sm:text-base py-2 sm:py-3 h-auto" asChild>
                 <Link href="/deals">
-                  <Flame className="mr-2 h-5 w-5" />
-                  Gorące okazje
+                  <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Gorące okazje</span><span className="sm:hidden">Okazje</span>
                 </Link>
               </Button>
               
-              <Button size="lg" className="rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold text-white shadow-lg" asChild>
+              <Button size="sm" className="rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold text-white shadow-lg text-xs sm:text-base py-2 sm:py-3 h-auto sm:col-span-2 md:col-span-1" asChild>
                 <Link href="/add-deal">
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Dodaj okazję
+                  <Sparkles className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Dodaj okazję</span><span className="sm:hidden">Dodaj</span>
                 </Link>
               </Button>
               
-              <Button size="lg" variant="outline" className="rounded-full font-semibold" asChild>
+              <Button size="sm" variant="outline" className="rounded-full font-semibold text-xs sm:text-base py-2 sm:py-3 h-auto" asChild>
                 <Link href="/products">
-                  <ShoppingBag className="mr-2 h-5 w-5" />
-                  Produkty
+                  <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="hidden sm:inline">Produkty</span><span className="sm:hidden">Artykuły</span>
                 </Link>
               </Button>
             </div>
@@ -240,7 +240,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <Badge className="mb-4 text-lg px-4 py-2">
-                <Gift className="mr-2 h-5 w-5" />
+                <Gift className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 {t('benefits.badge')}
               </Badge>
               <h2 className="font-headline text-4xl md:text-5xl font-bold mb-4">
@@ -309,7 +309,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <div className="text-center mt-12">
               <Button size="lg" className="text-lg px-8 py-6" asChild>
                 <Link href="/login">
-                  <Users className="mr-2 h-5 w-5" />
+                  <Users className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   {t('benefits.joinButton')}
                 </Link>
               </Button>
@@ -442,13 +442,13 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
                 <Link href="/deals">
-                  <Flame className="mr-2 h-5 w-5" />
+                  <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Przeglądaj okazje
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-white text-white hover:bg-white/10" asChild>
                 <Link href="/products">
-                  <ShoppingBag className="mr-2 h-5 w-5" />
+                  <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Katalog produktów
                 </Link>
               </Button>

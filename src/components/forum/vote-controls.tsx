@@ -137,25 +137,27 @@ export function VoteControls({
   const score = voteState.upvotes - voteState.downvotes;
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-1", className)}>
       {/* Upvote */}
       <Button
         variant={voteState.userVote === "up" ? "default" : "outline"}
-        size="sm"
-        onClick={() => handleVote("up")}
-        disabled={voteState.loading}
+        size="icon"
         className={cn(
-          "gap-1",
+          "h-8 w-8 rounded-full",
           voteState.userVote === "up" && "bg-green-600 hover:bg-green-700 text-white"
         )}
+        onClick={() => handleVote("up")}
+        disabled={voteState.loading}
+        title={`Głosuj pozytywnie (${voteState.upvotes})`}
+        aria-label={`Głosuj pozytywnie (${voteState.upvotes})`}
       >
         <ThumbsUp className="h-4 w-4" />
-        <span className="text-xs font-medium">{voteState.upvotes}</span>
       </Button>
+      <span className="text-xs font-medium hidden sm:inline">{voteState.upvotes}</span>
 
       {/* Score */}
       <div className={cn(
-        "px-3 py-1 rounded-md font-semibold text-sm",
+        "px-2 py-1 rounded-md font-semibold text-xs sm:text-sm ml-1",
         score > 0 && "text-green-600",
         score < 0 && "text-red-600",
         score === 0 && "text-muted-foreground"
@@ -166,17 +168,19 @@ export function VoteControls({
       {/* Downvote */}
       <Button
         variant={voteState.userVote === "down" ? "default" : "outline"}
-        size="sm"
-        onClick={() => handleVote("down")}
-        disabled={voteState.loading}
+        size="icon"
         className={cn(
-          "gap-1",
+          "h-8 w-8 rounded-full ml-1",
           voteState.userVote === "down" && "bg-red-600 hover:bg-red-700 text-white"
         )}
+        onClick={() => handleVote("down")}
+        disabled={voteState.loading}
+        title={`Głosuj negatywnie (${voteState.downvotes})`}
+        aria-label={`Głosuj negatywnie (${voteState.downvotes})`}
       >
         <ThumbsDown className="h-4 w-4" />
-        <span className="text-xs font-medium">{voteState.downvotes}</span>
       </Button>
+      <span className="text-xs font-medium hidden sm:inline">{voteState.downvotes}</span>
     </div>
   );
 }

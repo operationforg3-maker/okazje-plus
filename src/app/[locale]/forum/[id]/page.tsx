@@ -228,13 +228,15 @@ function SavePostButton({ postId, threadId }: { postId: string; threadId: string
   return (
     <Button
       variant={isFavorited ? "default" : "outline"}
-      size="sm"
+      size="icon"
+      className="h-8 w-8 rounded-full"
       onClick={toggleFavorite}
       disabled={isLoading}
-      className={isFavorited ? "gap-1" : "gap-1"}
+      title={isFavorited ? "Usuń z zapisanych" : "Dodaj do zapisanych"}
+      aria-label={isFavorited ? "Usuń z zapisanych" : "Dodaj do zapisanych"}
     >
       <Bookmark className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
-      {isFavorited ? 'Zapisane' : 'Zapisz'}
+      <span className="ml-2 hidden sm:inline">{isFavorited ? 'Zapisane' : 'Zapisz'}</span>
     </Button>
   );
 }
@@ -646,8 +648,8 @@ export default function ThreadPage() {
                         {canMarkBestAnswer && (
                           <Button
                             variant="outline"
-                            size="sm"
-                            className="gap-1"
+                            size="icon"
+                            className="h-10 w-10 rounded-full"
                             onClick={async () => {
                               try {
                                 const firebaseUser = auth.currentUser;
@@ -683,15 +685,18 @@ export default function ThreadPage() {
                                 toast.error(error.message || "Błąd oznaczania odpowiedzi");
                               }
                             }}
+                            title="Oznacz jako najlepszą odpowiedź"
+                            aria-label="Oznacz jako najlepszą odpowiedź"
                           >
                             <Award className="h-4 w-4" />
-                            Najlepsza odpowiedź
+                            <span className="ml-2 hidden sm:inline">Najlepsza</span>
                           </Button>
                         )}
                         {!thread.isLocked && (
                           <Button
                             variant={replyToPostId === p.id ? "default" : "outline"}
-                            size="sm"
+                            size="icon"
+                            className="h-10 w-10 rounded-full"
                             onClick={() => {
                               if (!user) {
                                 toast.error("Musisz być zalogowany, aby odpowiedzieć");
@@ -700,8 +705,11 @@ export default function ThreadPage() {
                               setReplyToPostId(replyToPostId === p.id ? null : p.id);
                               setReplyToContent('');
                             }}
+                            title={replyToPostId === p.id ? "Anuluj odpowiedź" : "Odpowiedz"}
+                            aria-label={replyToPostId === p.id ? "Anuluj odpowiedź" : "Odpowiedz"}
                           >
-                            Odpowiedz
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10L9 4m0 6l-6 6" /></svg>
+                            <span className="ml-2 hidden sm:inline">Odpowiedź</span>
                           </Button>
                         )}
                         {/* Save Post Button */}
@@ -766,16 +774,20 @@ export default function ThreadPage() {
                         <div className="flex gap-2 justify-end">
                           <Button
                             variant="outline"
+                            size="sm"
                             onClick={() => {
                               setReplyToPostId(null);
                               setReplyToContent('');
                               setReplyMentionContext(null);
                               setReplyMentionSuggestions([]);
                             }}
+                            title="Anuluj odpowiedź"
+                            aria-label="Anuluj odpowiedź"
                           >
                             Anuluj
                           </Button>
                           <Button
+                            size="sm"
                             onClick={() => handleReplyToPost(p.id)}
                             disabled={!replyToContent.trim() || saving}
                           >
@@ -847,28 +859,37 @@ export default function ThreadPage() {
           </div>
           
           <div className="space-y-3">
-            <div className="flex gap-2 items-center">
-              <span className="text-sm font-medium">Załącznik:</span>
+            <div className="flex gap-1 items-center flex-wrap">
+              <span className="text-sm font-medium mr-2">Załącznik:</span>
               <Button 
                 variant={attType === 'none' ? 'default' : 'outline'} 
-                size="sm" 
+                size="icon"
+                className="h-8 w-8 rounded-full"
                 onClick={() => { setAttType('none'); setSelectedAttachment(null); }}
+                title="Brak załącznika"
+                aria-label="Brak załącznika"
               >
-                Brak
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </Button>
               <Button 
                 variant={attType === 'deal' ? 'default' : 'outline'} 
-                size="sm" 
+                size="icon"
+                className="h-8 w-8 rounded-full"
                 onClick={() => { setAttType('deal'); setSelectedAttachment(null); }}
+                title="Dołącz okazję"
+                aria-label="Dołącz okazję"
               >
-                Okazja
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
               </Button>
               <Button 
                 variant={attType === 'product' ? 'default' : 'outline'} 
-                size="sm" 
+                size="icon"
+                className="h-8 w-8 rounded-full"
                 onClick={() => { setAttType('product'); setSelectedAttachment(null); }}
+                title="Dołącz produkt"
+                aria-label="Dołącz produkt"
               >
-                Produkt
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m0 0l8 4m-8-4v10l8 4m0-10l8 4m-8-4v10M4 12l8 4m8-4l-8 4" /></svg>
               </Button>
             </div>
             
@@ -883,7 +904,12 @@ export default function ThreadPage() {
           </div>
           
           <div className="flex justify-end">
-            <Button onClick={handleReply} disabled={!user || saving || !reply.trim()}>
+            <Button 
+              onClick={handleReply} 
+              disabled={!user || saving || !reply.trim()}
+              title="Wyślij odpowiedź"
+              aria-label="Wyślij odpowiedź"
+            >
               {saving ? 'Wysyłanie...' : 'Wyślij odpowiedź'}
             </Button>
           </div>

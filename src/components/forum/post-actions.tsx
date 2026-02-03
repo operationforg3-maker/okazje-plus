@@ -111,54 +111,58 @@ export function PostActions({
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {!isEditing ? (
           <>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
+              className="h-8 w-8 rounded-full"
               onClick={() => setIsEditing(true)}
-              className="gap-1"
+              title="Edytuj post"
+              aria-label="Edytuj post"
             >
               <Edit className="h-4 w-4" />
-              <span className="text-xs">Edytuj</span>
             </Button>
 
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
+              className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
               onClick={() => setShowDeleteDialog(true)}
-              className="gap-1 text-destructive hover:text-destructive"
+              title="Usuń post"
+              aria-label="Usuń post"
             >
               <Trash2 className="h-4 w-4" />
-              <span className="text-xs">Usuń</span>
             </Button>
           </>
         ) : (
           <>
             <Button
               variant="default"
-              size="sm"
+              size="icon"
+              className="h-8 w-8 rounded-full"
               onClick={handleSaveEdit}
               disabled={loading}
-              className="gap-1"
+              title="Zapisz zmiany"
+              aria-label="Zapisz zmiany"
             >
               <Save className="h-4 w-4" />
-              <span className="text-xs">Zapisz</span>
             </Button>
 
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 rounded-full"
               onClick={() => {
                 setIsEditing(false);
                 setEditedContent(content);
               }}
               disabled={loading}
-              className="gap-1"
+              title="Anuluj edycję"
+              aria-label="Anuluj edycję"
             >
               <X className="h-4 w-4" />
-              <span className="text-xs">Anuluj</span>
             </Button>
           </>
         )}

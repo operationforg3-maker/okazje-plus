@@ -118,7 +118,7 @@ export function PostReactions({
   );
 
   return (
-    <div className={cn("flex items-center gap-2 flex-wrap", className)}>
+    <div className={cn("flex items-center gap-1 flex-wrap", className)}>
       {/* Wyświetl istniejące reakcje */}
       {displayedReactions.map(([emoji, userIds]) => {
         const userReacted = user && userIds.includes(user.uid);
@@ -127,31 +127,38 @@ export function PostReactions({
           <Button
             key={emoji}
             variant={userReacted ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleReaction(emoji)}
-            disabled={loading}
+            size="icon"
             className={cn(
-              "gap-1 h-8 px-2",
+              "h-8 w-8 rounded-full",
               userReacted && "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
             )}
+            onClick={() => handleReaction(emoji)}
+            disabled={loading}
+            title={`${emoji} - ${userIds.length}`}
+            aria-label={`${emoji} - ${userIds.length}`}
           >
             <span className="text-base">{emoji}</span>
-            <span className="text-xs font-medium">{userIds.length}</span>
           </Button>
         );
       })}
+      {displayedReactions.length > 0 && (
+        <span className="text-xs text-muted-foreground hidden sm:inline ml-1">
+          ({displayedReactions.reduce((sum, [_, userIds]) => sum + userIds.length, 0)})
+        </span>
+      )}
 
       {/* Przycisk dodaj reakcję */}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
-            className="gap-1 h-8 px-2"
+            size="icon"
+            className="h-8 w-8 rounded-full"
             disabled={!user}
+            title="Dodaj reakcję"
+            aria-label="Dodaj reakcję"
           >
             <Smile className="h-4 w-4" />
-            <span className="text-xs">Reakcja</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2" align="start">
