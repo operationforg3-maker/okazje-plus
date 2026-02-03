@@ -60,8 +60,8 @@ export function CurrencySwitcher() {
   // Don't render dropdown content until mounted to avoid hydration mismatch
   if (!isMounted) {
     return (
-      <Button variant="ghost" size="icon" className="h-9 w-9" disabled>
-        <Coins className="h-4 w-4 md:h-5 md:w-5" />
+      <Button variant="ghost" size="icon" disabled>
+        <Coins className="h-5 w-5" />
         <span className="sr-only">Waluta</span>
       </Button>
     );
@@ -70,8 +70,8 @@ export function CurrencySwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Coins className="h-4 w-4 md:h-5 md:w-5" />
+        <Button variant="ghost" size="icon">
+          <Coins className="h-5 w-5" />
           <span className="sr-only">Wybierz walutę</span>
         </Button>
       </DropdownMenuTrigger>

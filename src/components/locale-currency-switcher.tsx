@@ -43,8 +43,8 @@ export function LanguageSwitcherMenu() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Languages className="h-4 w-4 md:h-5 md:w-5" />
+          <Button variant="ghost" size="icon">
+            <Languages className="h-5 w-5" />
             <span className="sr-only">Wybierz język</span>
           </Button>
         </DropdownMenuTrigger>
@@ -69,8 +69,8 @@ export function LanguageSwitcherMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Languages className="h-4 w-4 md:h-5 md:w-5" />
+        <Button variant="ghost" size="icon">
+          <Languages className="h-5 w-5" />
           <span className="sr-only">Wybierz język</span>
         </Button>
       </DropdownMenuTrigger>

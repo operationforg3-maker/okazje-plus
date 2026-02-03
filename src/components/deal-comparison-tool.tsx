@@ -244,11 +244,11 @@ export function DealComparisonTool() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 flex-shrink-0"
+                            className="flex-shrink-0"
                             onClick={() => removeItem(item.id)}
                             aria-label="Usuń z porównania"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>

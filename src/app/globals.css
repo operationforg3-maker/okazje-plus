@@ -161,6 +161,24 @@
   .hover\:bg-surface-hover:hover { background-color: hsl(var(--surface-hover)); }
   .hover\:bg-surface-active:hover { background-color: hsl(var(--surface-active)); }
   .hover\:border-strong:hover { border-color: hsl(var(--border-strong)); }
+  
+  /* ============ TOUCH TARGET ACCESSIBILITY (WCAG 2.1 AA) ============
+     Minimum 48x48px touch target size for mobile accessibility
+     Applied to interactive elements (buttons, links, controls)
+     =================================================================== */
+  .min-touch-target {
+    min-width: 48px;
+    min-height: 48px;
+  }
+  
+  /* For icon buttons that need accessible touch area without breaking layout */
+  .touch-target-wrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    min-height: 48px;
+  }
 }
 
 @layer base {
