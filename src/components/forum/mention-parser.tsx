@@ -63,9 +63,19 @@ async function parseMentions(content: string): Promise<{
     }
   }
   
-  // Remove @mentions from text
+  // Remove @mentions from text but keep displayName for users
+  const mentionMap = new Map<string, string>();
+  mentions.forEach(m => {
+    if (m.type === 'user' && m.item) {
+      const user = m.item as { id: string; displayName?: string; email?: string };
+      mentionMap.set(`@user:${m.id}`, `@${user.displayName || user.email || m.id}`);
+    }
+  });
+  
   const cleanText = content.replace(mentionRegex, (match, type, id) => {
-    if (type === 'user') return `@${id}`;
+    if (type === 'user') {
+      return mentionMap.get(`@user:${id}`) || `@${id}`;
+    }
     return '';
   });
   
