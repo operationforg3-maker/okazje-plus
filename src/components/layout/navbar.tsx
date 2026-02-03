@@ -161,8 +161,7 @@ export function Navbar() {
             <div className="relative" ref={cartMenuRef}>
               <Button 
                 variant="ghost" 
-                size="icon" 
-                className="relative rounded-full"
+                className="relative h-10 w-10 rounded-full p-0"
                 onClick={() => setCartMenuOpen(!cartMenuOpen)}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') setCartMenuOpen(false);
