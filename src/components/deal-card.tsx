@@ -923,7 +923,6 @@ function DealCard({ deal, product }: DealCardProps) {
             }} 
             aria-label={t('auth.voteUp')}
             disabled={isVoting}
-            className="h-8 w-8"
           >
             <ArrowUp className="h-4 w-4" />
           </Button>
@@ -937,7 +936,6 @@ function DealCard({ deal, product }: DealCardProps) {
             }} 
             aria-label={t('auth.voteDown')}
             disabled={isVoting}
-            className="h-8 w-8"
           >
             <ArrowDown className="h-4 w-4" />
           </Button>
@@ -954,7 +952,7 @@ function DealCard({ deal, product }: DealCardProps) {
             }}
             aria-label={isFavorited ? t('auth.removeFromFavorites') : t('auth.addToFavorites')}
             disabled={isFavoriteLoading}
-            className={isFavorited ? "h-8 w-8 bg-red-500 hover:bg-red-600" : "h-8 w-8"}
+            className={isFavorited ? "bg-red-500 hover:bg-red-600" : ""}
           >
             <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
           </Button>
@@ -976,7 +974,6 @@ function DealCard({ deal, product }: DealCardProps) {
               toast.success(t('messages.priceAlertEnabled'));
             }}
             aria-label={t('auth.priceAlert')}
-            className="h-8 w-8"
           >
             <AlertTriangle className="h-4 w-4" />
           </Button>
@@ -989,7 +986,6 @@ function DealCard({ deal, product }: DealCardProps) {
               addToComparison({ ...deal, type: 'deal' });
             }}
             aria-label={t('comparison.addToComparison')}
-            className="h-8 w-8"
           >
             <Scale className="h-4 w-4" />
           </Button>

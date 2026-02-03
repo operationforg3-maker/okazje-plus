@@ -529,13 +529,12 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
           <Button 
             variant="outline" 
             size="icon"
-            className="h-8 w-8"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               addToComparison({...product, type: 'product'});
             }}
-            title="Porównaj"
+            aria-label="Porównaj"
           >
             <Scale className="w-4 h-4" />
           </Button>
