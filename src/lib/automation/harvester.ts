@@ -762,23 +762,45 @@ export class SmartHarvester {
    */
   private async fetchFromConvertiser(searchQuery: string, maxResults: number) {
     try {
+      // Check if token is available before importing client
+      if (!process.env.CONVERTISER_API_TOKEN) {
+        this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
+        return [];
+      }
+
       const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
       const client = getConvertiserClient();
 
       this.addLog('info', `Fetching from Convertiser: "${searchQuery}"`);
 
       // Convertiser has "Search Products" endpoint for product discovery
-      // Use v2 for better product data (images, pricing, descriptions)
-      const response = await client.searchProductsV2(
-        {
-          query: searchQuery,
-          country: 'PL', // Polish marketplace
-        },
-        {
-          page: 1,
-          page_size: Math.min(maxResults, 50),
-        }
-      );
+      // Try v2 first (better data), fallback to v1 if not available
+      let response: any;
+      try {
+        response = await client.searchProductsV2(
+          {
+            query: searchQuery,
+            country: 'PL', // Polish marketplace
+          },
+          {
+            page: 1,
+            page_size: Math.min(maxResults, 50),
+          }
+        );
+      } catch (v2Error) {
+        this.addLog('warn', `Convertiser v2 API failed: ${v2Error instanceof Error ? v2Error.message : 'Unknown'} - Trying v1`);
+        // Fallback to v1
+        response = await client.searchProducts(
+          {
+            query: searchQuery,
+            country: 'PL',
+          },
+          {
+            page: 1,
+            page_size: Math.min(maxResults, 50),
+          }
+        );
+      }
 
       // Convertiser v2 returns products in 'data' field, not 'results'
       const products = (response as any).data || response.results || [];
@@ -871,7 +893,19 @@ export class SmartHarvester {
       // Filter out null results
       return rawProducts.filter((p: any): p is RawProduct => p !== null);
     } catch (error) {
-      this.addLog('error', `Convertiser API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Log different error types with context
+      if (errorMsg.includes('token') || errorMsg.includes('Token') || errorMsg.includes('CONVERTISER_API_TOKEN')) {
+        this.addLog('error', `Convertiser API authentication error: ${errorMsg} - Check CONVERTISER_API_TOKEN environment variable`);
+      } else if (errorMsg.includes('404') || errorMsg.includes('not found')) {
+        this.addLog('error', `Convertiser API endpoint not found (404): ${errorMsg} - API endpoint may have changed`);
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('ECONNRESET')) {
+        this.addLog('error', `Convertiser API connection error: ${errorMsg} - API server may be unreachable`);
+      } else {
+        this.addLog('error', `Convertiser API error: ${errorMsg}`);
+      }
+      
       return [];
     }
   }
