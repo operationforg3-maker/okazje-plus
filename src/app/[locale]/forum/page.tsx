@@ -133,22 +133,22 @@ export default function ForumHomePage() {
 
       {/* Wyszukiwanie */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
         <Input
-          placeholder="Szukaj wątków..."
+          placeholder="Szukaj..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="pl-9 sm:pl-10 text-sm sm:text-base"
         />
       </div>
 
       {/* Filtry i sortowanie */}
-      <div className="flex gap-4 flex-wrap items-center">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center">
         {/* Sortowanie */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Sortuj:</span>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Sortuj:</span>
           <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortOption)}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -160,10 +160,10 @@ export default function ForumHomePage() {
         </div>
 
         {/* Filtr statusu */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Status:</span>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Status:</span>
           <Select value={filterBy} onValueChange={(val) => setFilterBy(val as FilterOption)}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[140px] h-8 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -178,13 +178,13 @@ export default function ForumHomePage() {
 
       {/* Kategorie */}
       <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Kategorie</h3>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant={activeCategory === '' ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(undefined)}>
+        <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Kategorie</h3>
+        <div className="flex gap-1 sm:gap-2 flex-wrap">
+          <Button variant={activeCategory === '' ? 'default' : 'outline'} size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => handleCategoryChange(undefined)}>
             Wszystko
           </Button>
           {categories.map((c) => (
-            <Button key={c.id} variant={activeCategory === c.id ? 'default' : 'outline'} size="sm" onClick={() => handleCategoryChange(c.id)}>
+            <Button key={c.id} variant={activeCategory === c.id ? 'default' : 'outline'} size="sm" className="text-xs sm:text-sm h-8 sm:h-9" onClick={() => handleCategoryChange(c.id)}>
               {c.name}
             </Button>
           ))}
@@ -234,26 +234,26 @@ export default function ForumHomePage() {
                       {threads.map((t) => (
                         <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <Link href={`/forum/${t.id}`} className="hover:underline">
+                            <CardTitle className="text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
+                              <Link href={`/forum/${t.id}`} className="hover:underline break-words">
                                 {t.title}
                               </Link>
                               {t.isPinned && (
-                                <Badge variant="outline" className="gap-1">
+                                <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1">
                                   <Pin className="h-3 w-3" />
-                                  Przypięty
+                                  <span className="hidden sm:inline">Przypięty</span>
                                 </Badge>
                               )}
                               {t.isLocked && (
-                                <Badge variant="destructive" className="gap-1">
+                                <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1">
                                   <Lock className="h-3 w-3" />
-                                  Zablokowany
+                                  <span className="hidden sm:inline">Zablokowany</span>
                                 </Badge>
                               )}
                               {t.bestAnswerId && (
-                                <Badge variant="default" className="gap-1 bg-green-600">
+                                <Badge variant="default" className="gap-0.5 text-xs py-0 px-1 bg-green-600">
                                   <Award className="h-3 w-3" />
-                                  Rozwiązany
+                                  <span className="hidden sm:inline">Rozwiązany</span>
                                 </Badge>
                               )}
                             </CardTitle>
@@ -262,17 +262,17 @@ export default function ForumHomePage() {
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="pt-0">
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm text-muted-foreground line-clamp-2 max-w-[70%]">
+                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center sm:justify-between">
+                              <div className="text-xs sm:text-sm text-muted-foreground line-clamp-2 flex-1">
                                 {t.summary || ''}
                               </div>
-                              <div className="flex items-center gap-3 text-sm">
-                                <div className="flex items-center gap-1"><MessageSquare className="h-4 w-4" />{t.postsCount}</div>
+                              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0">
+                                <div className="flex items-center gap-1 whitespace-nowrap"><MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />{t.postsCount}</div>
                                 {t.tags && t.tags.length > 0 && (
-                                  <div className="flex items-center gap-1 text-muted-foreground">
-                                    <Tags className="h-4 w-4" />
-                                    {t.tags.slice(0,3).map(tag => (
-                                      <Badge key={tag} variant="outline">{tag}</Badge>
+                                  <div className="hidden sm:flex items-center gap-1 text-muted-foreground">
+                                    <Tags className="h-3 w-3 sm:h-4 sm:w-4" />
+                                    {t.tags.slice(0,2).map(tag => (
+                                      <Badge key={tag} variant="outline" className="text-xs py-0 px-1">{tag}</Badge>
                                     ))}
                                   </div>
                                 )}
@@ -293,26 +293,26 @@ export default function ForumHomePage() {
                     {uncategorized.map((t) => (
                       <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <Link href={`/forum/${t.id}`} className="hover:underline">
+                          <CardTitle className="text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
+                            <Link href={`/forum/${t.id}`} className="hover:underline break-words">
                               {t.title}
                             </Link>
                             {t.isPinned && (
-                              <Badge variant="outline" className="gap-1">
+                              <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1">
                                 <Pin className="h-3 w-3" />
-                                Przypięty
+                                <span className="hidden sm:inline">Przypięty</span>
                               </Badge>
                             )}
                             {t.isLocked && (
-                              <Badge variant="destructive" className="gap-1">
+                              <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1">
                                 <Lock className="h-3 w-3" />
-                                Zablokowany
+                                <span className="hidden sm:inline">Zablokowany</span>
                               </Badge>
                             )}
                             {t.bestAnswerId && (
-                              <Badge variant="default" className="gap-1 bg-green-600">
+                              <Badge variant="default" className="gap-0.5 text-xs py-0 px-1 bg-green-600">
                                 <Award className="h-3 w-3" />
-                                Rozwiązany
+                                <span className="hidden sm:inline">Rozwiązany</span>
                               </Badge>
                             )}
                           </CardTitle>
@@ -321,17 +321,17 @@ export default function ForumHomePage() {
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="pt-0">
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm text-muted-foreground line-clamp-2 max-w-[70%]">
+                          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center sm:justify-between">
+                            <div className="text-xs sm:text-sm text-muted-foreground line-clamp-2 flex-1">
                               {t.summary || ''}
                             </div>
-                            <div className="flex items-center gap-3 text-sm">
-                              <div className="flex items-center gap-1"><MessageSquare className="h-4 w-4" />{t.postsCount}</div>
+                            <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0">
+                              <div className="flex items-center gap-1 whitespace-nowrap"><MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />{t.postsCount}</div>
                               {t.tags && t.tags.length > 0 && (
-                                <div className="flex items-center gap-1 text-muted-foreground">
-                                  <Tags className="h-4 w-4" />
-                                  {t.tags.slice(0,3).map(tag => (
-                                    <Badge key={tag} variant="outline">{tag}</Badge>
+                                <div className="hidden sm:flex items-center gap-1 text-muted-foreground">
+                                  <Tags className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  {t.tags.slice(0,2).map(tag => (
+                                    <Badge key={tag} variant="outline" className="text-xs py-0 px-1">{tag}</Badge>
                                   ))}
                                 </div>
                               )}
@@ -353,29 +353,29 @@ export default function ForumHomePage() {
             return (
               <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Link href={`/forum/${t.id}`} className="hover:underline">
+                  <CardTitle className="text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
+                    <Link href={`/forum/${t.id}`} className="hover:underline break-words">
                       {t.title}
                     </Link>
                     {categoryLabel && (
-                      <Badge variant="secondary">{categoryLabel}</Badge>
+                      <Badge variant="secondary" className="text-xs py-0 px-1">{categoryLabel}</Badge>
                     )}
                     {t.isPinned && (
-                      <Badge variant="outline" className="gap-1">
+                      <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1">
                         <Pin className="h-3 w-3" />
-                        Przypięty
+                        <span className="hidden sm:inline">Przypięty</span>
                       </Badge>
                     )}
                     {t.isLocked && (
-                      <Badge variant="destructive" className="gap-1">
+                      <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1">
                         <Lock className="h-3 w-3" />
-                        Zablokowany
+                        <span className="hidden sm:inline">Zablokowany</span>
                       </Badge>
                     )}
                     {t.bestAnswerId && (
-                      <Badge variant="default" className="gap-1 bg-green-600">
+                      <Badge variant="default" className="gap-0.5 text-xs py-0 px-1 bg-green-600">
                         <Award className="h-3 w-3" />
-                        Rozwiązany
+                        <span className="hidden sm:inline">Rozwiązany</span>
                       </Badge>
                     )}
                   </CardTitle>
@@ -384,17 +384,17 @@ export default function ForumHomePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground line-clamp-2 max-w-[70%]">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center sm:justify-between">
+                    <div className="text-xs sm:text-sm text-muted-foreground line-clamp-2 flex-1">
                       {t.summary || ''}
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="flex items-center gap-1"><MessageSquare className="h-4 w-4" />{t.postsCount}</div>
+                    <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0">
+                      <div className="flex items-center gap-1 whitespace-nowrap"><MessageSquare className="h-3 w-3 sm:h-4 sm:w-4" />{t.postsCount}</div>
                       {t.tags && t.tags.length > 0 && (
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Tags className="h-4 w-4" />
-                          {t.tags.slice(0,3).map(tag => (
-                            <Badge key={tag} variant="outline">{tag}</Badge>
+                        <div className="hidden sm:flex items-center gap-1 text-muted-foreground">
+                          <Tags className="h-3 w-3 sm:h-4 sm:w-4" />
+                          {t.tags.slice(0,2).map(tag => (
+                            <Badge key={tag} variant="outline" className="text-xs py-0 px-1">{tag}</Badge>
                           ))}
                         </div>
                       )}
