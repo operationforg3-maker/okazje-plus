@@ -113,23 +113,43 @@ export class AliExpressClient {
   /**
    * Generate signature for TOP API (gateway.do) requests
    * 
-   * AliExpress TOP API uses HMAC-MD5 signature authentication:
+   * AliExpress TOP API uses MD5 signature authentication:
    * sign = MD5(app_secret + sorted_params + app_secret).toUpperCase()
+   * 
+   * CRITICAL POINTS:
+   * 1. Parameters MUST NOT be URL-encoded before hashing
+   * 2. All values must be converted to strings (toString())
+   * 3. Parameter keys are sorted alphabetically (ASCII sort)
+   * 4. app_secret is trimmed to remove trailing whitespace
+   * 5. Exact format: SECRET + key1 + value1 + key2 + value2 + ... + SECRET
    */
   private generateSignature(params: Record<string, any>): string {
-    // Sort parameters alphabetically
+    // Get app secret and TRIM to remove trailing whitespace
+    const appSecret = (this.config.appSecret || '').trim();
+    
+    // Sort parameters alphabetically (critical for signature match)
     const sortedKeys = Object.keys(params).sort();
     
-    // Concatenate key-value pairs
-    // AliExpress TOP API format: secret + key1value1key2value2... + secret
-    let signString = this.config.appSecret || '';
+    // Build signature string: SECRET + key1 + value1 + key2 + value2 + ... + SECRET
+    // CRITICAL: Values MUST NOT be URL-encoded at this stage
+    let signString = appSecret;
     for (const key of sortedKeys) {
-      signString += key + params[key];
+      // Convert value to string without URL encoding
+      const value = String(params[key]);
+      signString += key + value;
     }
-    signString += this.config.appSecret || '';
+    signString += appSecret;
+    
+    // Debug log the raw signature string (first 200 chars only for security)
+    logger.debug('Signature calculation', {
+      appSecretLength: appSecret.length,
+      paramsCount: sortedKeys.length,
+      sortedKeys: sortedKeys.slice(0, 5), // First 5 keys
+      signStringPreview: signString.substring(0, 100) + '...',
+      signStringLength: signString.length
+    });
     
     // Generate plain MD5 signature (not HMAC)
-    // This is the standard format for AliExpress TOP API
     const hash = createHash('md5').update(signString).digest('hex');
     return hash.toUpperCase();
   }
@@ -232,12 +252,15 @@ export class AliExpressClient {
       
       // Build request params
       // Timestamp format: yyyy-MM-dd HH:mm:ss (STRING in UTC)
-      // CRITICAL: AliExpress TOP API requires this exact format for signature validation
+      // CRITICAL: AliExpress TOP API requires exact format for signature validation
+      // Must NOT be URL-encoded before signature calculation
       const now = new Date();
+      // Format as UTC: YYYY-MM-DD HH:mm:ss
       const timestamp = now.toISOString()
         .replace('T', ' ')
-        .substring(0, 19); // Format: YYYY-MM-DD HH:mm:ss
+        .substring(0, 19); // Exact format: 2026-02-01 05:10:21
       
+      // Build base parameters (system params)
       const requestParams: Record<string, any> = {
         method,
         app_key: this.config.appKey,
@@ -246,55 +269,56 @@ export class AliExpressClient {
         format: 'json',
         v: '2.0',
         simplify: 'true',
-        ...params,
+        ...params, // Business parameters
       };
+      
+      logger.debug('Request params before signing', {
+        method,
+        timestamp,
+        paramKeys: Object.keys(requestParams).sort().slice(0, 10)
+      });
       
       // Singapore endpoint requires different parameter structure
       if (isSingaporeEndpoint) {
-        // For Singapore: all business params go into a separate object
-        const businessParams = { ...params };
-        requestParams.method = method;
-        delete requestParams.keywords;
-        delete requestParams.page_no;
-        delete requestParams.page_size;
-        delete requestParams.target_currency;
-        delete requestParams.target_language;
-        delete requestParams.ship_to_country;
-        delete requestParams.sort;
-        delete requestParams.tracking_id;
-        
-        // Generate signature - must NOT include sign or sign_method
+        // For Singapore: business params are merged with system params
+        // ALL parameters go into signature (including business params)
         const paramsForSigning = Object.entries(requestParams)
           .filter(([key]) => key !== 'sign' && key !== 'sign_method')
           .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
         
-        // Add sorted business params to signature
-        Object.keys(businessParams).sort().forEach(key => {
-          paramsForSigning[key] = businessParams[key];
-        });
+        // Merge business params into the signing params
+        // They will be sorted alphabetically by generateSignature
+        Object.assign(paramsForSigning, params);
         
+        // Calculate signature with ALL parameters sorted
         const sign = this.generateSignature(paramsForSigning);
         requestParams.sign = sign;
         
-        // Merge back business params for request
-        Object.assign(requestParams, businessParams);
+        // Merge business params into request params for sending
+        Object.assign(requestParams, params);
         
         logger.info('Singapore API Signature Debug', {
           appKey: this.config.appKey,
+          timestamp: timestamp,
           signMethod: 'md5',
+          allParamsForSigning: Object.keys(paramsForSigning).sort().join(', '),
           paramsCount: Object.keys(paramsForSigning).length,
           generatedSign: sign.substring(0, 16) + '...'
         });
         
         // Singapore endpoint uses POST with JSON body
         const url = apiBase;
-        logger.info('Singapore API Request URL', { url, method: 'POST' });
+        logger.info('Singapore API Request', { 
+          url, 
+          method: 'POST',
+          contentType: 'application/json'
+        });
         
         try {
           const response = await fetch(url, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/json;charset=utf-8',
             },
             body: JSON.stringify(requestParams),
             signal: AbortSignal.timeout(this.config.timeout || 30000),
@@ -309,7 +333,8 @@ export class AliExpressClient {
             const errorText = await response.text();
             logger.error('Singapore API request failed', {
               status: response.status,
-              error: errorText.substring(0, 500),
+              errorPreview: errorText.substring(0, 500),
+              sign: sign.substring(0, 16) + '...'
             });
             throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
           }
@@ -328,42 +353,47 @@ export class AliExpressClient {
         }
       }
       
-      // Standard gateway.do endpoint (original code)
-      // Generate signature - must NOT include sign_method or sign itself
-      // Create params without sign_method for signing
+      // Standard gateway.do endpoint
+      // CRITICAL: signature must be calculated BEFORE URL encoding
+      // Only system params + business params are signed (not sign itself)
       const paramsForSigning = Object.entries(requestParams)
-        .filter(([key]) => key !== 'sign_method' && key !== 'sign')
+        .filter(([key]) => key !== 'sign' && key !== 'sign_method')
         .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
       
       const sign = this.generateSignature(paramsForSigning);
       requestParams.sign = sign;
       
-      // Debug: log signature parameters
+      // Debug: log signature parameters and raw signature string
       logger.info('TOP API Signature Debug', {
         appKey: this.config.appKey,
+        timestamp: timestamp,
         signMethod: 'md5',
-        paramsForSignature: JSON.stringify(paramsForSigning).substring(0, 200),
-        generatedSign: sign.substring(0, 16) + '...'
+        paramsForSigning: Object.keys(paramsForSigning).sort().join(', '),
+        generatedSign: sign.substring(0, 16) + '...',
+        totalParams: Object.keys(requestParams).length
       });
-      
-      // Build query string
-      const queryString = Object.keys(requestParams)
-        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(requestParams[key])}`)
-        .join('&');
       
       const url = `${apiBase}`;
       
-      logger.info('TOP API Request', { method: 'POST', params: Object.keys(requestParams).join(', ') });
+      // Build request body with URL encoding (encoding happens AFTER signature)
+      const body = Object.keys(requestParams)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(requestParams[key]))}`)
+        .join('&');
+      
+      logger.info('TOP API Request', { 
+        url, 
+        method: 'POST',
+        contentType: 'application/x-www-form-urlencoded',
+        paramCount: Object.keys(requestParams).length
+      });
       
       try {
         const response = await fetch(url, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
           },
-          body: Object.keys(requestParams)
-            .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(requestParams[key])}`)
-            .join('&'),
+          body: body,
           signal: AbortSignal.timeout(this.config.timeout || 30000),
         });
         
@@ -376,7 +406,8 @@ export class AliExpressClient {
           const errorText = await response.text();
           logger.error('TOP API request failed', {
             status: response.status,
-            error: errorText.substring(0, 500),
+            errorPreview: errorText.substring(0, 500),
+            sign: sign.substring(0, 16) + '...'
           });
           throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
         }
