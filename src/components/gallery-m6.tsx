@@ -129,6 +129,7 @@ export default function GalleryM6({ images, title }: GalleryM6Props) {
             size="icon"
             className="absolute top-4 right-4 text-white hover:bg-white/20"
             onClick={() => setIsFullscreen(false)}
+            aria-label="Zamknij galerię"
           >
             <X className="w-6 h-6" />
           </Button>

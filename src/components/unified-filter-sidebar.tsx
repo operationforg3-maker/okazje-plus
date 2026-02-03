@@ -165,7 +165,7 @@ export function UnifiedFilterSidebar({
             </Button>
           )}
           {isMobile && onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose} className="h-8">
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-8" aria-label="Zamknij filtry">
               <X className="w-4 h-4" />
             </Button>
           )}

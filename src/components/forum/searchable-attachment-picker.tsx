@@ -96,7 +96,7 @@ export function SearchableAttachmentPicker({ type, onSelect, selected, onClear }
           <Badge variant="outline">{priceValue} zł</Badge>
         </div>
         {onClear && (
-          <Button variant="ghost" size="sm" onClick={onClear}>
+          <Button variant="ghost" size="sm" onClick={onClear} aria-label="Wyczyść wybór">
             <X className="h-4 w-4" />
           </Button>
         )}

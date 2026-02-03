@@ -75,20 +75,18 @@ export function PaginationControls({
       <div className="flex items-center gap-2">
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={onFirstPage}
           disabled={!canGoPrev}
-          className="h-8 w-8 p-0"
         >
           <ChevronsLeft className="h-4 w-4" />
           <span className="sr-only">Pierwsza strona</span>
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={onPrevPage}
           disabled={!canGoPrev}
-          className="h-8 w-8 p-0"
         >
           <ChevronLeft className="h-4 w-4" />
           <span className="sr-only">Poprzednia strona</span>
@@ -102,20 +100,18 @@ export function PaginationControls({
 
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={onNextPage}
           disabled={!canGoNext}
-          className="h-8 w-8 p-0"
         >
           <ChevronRight className="h-4 w-4" />
           <span className="sr-only">Następna strona</span>
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={onLastPage}
           disabled={!canGoNext}
-          className="h-8 w-8 p-0"
         >
           <ChevronsRight className="h-4 w-4" />
           <span className="sr-only">Ostatnia strona</span>

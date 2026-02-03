@@ -219,7 +219,7 @@ export function TemplatesTab({ templates, onUpdate }: TemplatesTabProps) {
                     <Save className="h-4 w-4 mr-2" />
                     Zapisz
                   </Button>
-                  <Button onClick={cancelEdit} variant="outline">
+                  <Button onClick={cancelEdit} variant="outline" aria-label="Anuluj edycję">
                     <X className="h-4 w-4 mr-2" />
                     Anuluj
                   </Button>
