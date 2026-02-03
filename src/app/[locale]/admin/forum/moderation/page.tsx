@@ -227,29 +227,91 @@ export default function ForumModerationPage() {
     );
   }
 
+  const pendingCount = items.filter(i => i.status === "pending" || i.status === "draft").length;
+  const reportedCount = items.filter(i => (i.reportCount || 0) > 0).length;
+
   return (
-    <div className="page-container py-6">
-      <h1 className="text-3xl font-bold mb-6">Moderacja Forum</h1>
+    <div className="page-container py-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Moderacja Forum</h1>
+        <p className="text-muted-foreground">Zarządzaj wątkami, postami i zgłoszeniami</p>
+      </div>
+
+      {/* Statystyki */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Oczekujące</p>
+              <p className="text-2xl font-bold">{pendingCount}</p>
+            </div>
+            <AlertTriangle className="h-8 w-8 text-yellow-500" />
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Zgłoszenia</p>
+              <p className="text-2xl font-bold">{reportedCount}</p>
+            </div>
+            <AlertTriangle className="h-8 w-8 text-red-500" />
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Wątki</p>
+              <p className="text-2xl font-bold">{items.filter(i => i.type === "thread").length}</p>
+            </div>
+            <FileText className="h-8 w-8 text-blue-500" />
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">Posty</p>
+              <p className="text-2xl font-bold">{items.filter(i => i.type === "post").length}</p>
+            </div>
+            <MessageSquare className="h-8 w-8 text-green-500" />
+          </div>
+        </Card>
+      </div>
 
       {/* Filtry */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-3">
         <Button
           variant={filter === "pending" ? "default" : "outline"}
           onClick={() => setFilter("pending")}
+          className="gap-2"
         >
-          Oczekujące ({items.filter(i => i.status === "pending" || i.status === "draft").length})
+          Oczekujące
+          {pendingCount > 0 && (
+            <Badge variant={filter === "pending" ? "secondary" : "default"} className="rounded-full ml-1">
+              {pendingCount}
+            </Badge>
+          )}
         </Button>
         <Button
           variant={filter === "reported" ? "default" : "outline"}
           onClick={() => setFilter("reported")}
+          className="gap-2"
         >
-          Zgłoszone ({items.filter(i => (i.reportCount || 0) > 0).length})
+          Zgłoszone
+          {reportedCount > 0 && (
+            <Badge variant="destructive" className="rounded-full ml-1">
+              {reportedCount}
+            </Badge>
+          )}
         </Button>
         <Button
           variant={filter === "all" ? "default" : "outline"}
           onClick={() => setFilter("all")}
+          className="gap-2"
         >
-          Wszystkie ({items.length})
+          Wszystkie
+          <Badge variant={filter === "all" ? "secondary" : "outline"} className="rounded-full ml-1">
+            {items.length}
+          </Badge>
         </Button>
       </div>
 
@@ -262,19 +324,26 @@ export default function ForumModerationPage() {
         )}
 
         {items.map((item) => (
-          <Card key={`${item.type}-${item.id}`} className="p-6">
-            <div className="flex items-start gap-4">
-              {/* Ikona typu */}
-              <div className="mt-1">
-                {item.type === "thread" ? (
-                  <FileText className="h-6 w-6 text-blue-500" />
-                ) : (
-                  <MessageSquare className="h-6 w-6 text-green-500" />
-                )}
-              </div>
+          <Card key={`${item.type}-${item.id}`} className="overflow-hidden">
+            <div className="flex items-start">
+              {/* Kolorowy pasek boczny */}
+              <div className={`w-1 self-stretch ${
+                item.type === "thread" ? "bg-blue-500" : "bg-green-500"
+              }`} />
+              
+              {/* Główna treść */}
+              <div className="flex-1 p-6 flex items-start gap-4">
+                {/* Ikona typu */}
+                <div className="mt-1">
+                  {item.type === "thread" ? (
+                    <FileText className="h-6 w-6 text-blue-500" />
+                  ) : (
+                    <MessageSquare className="h-6 w-6 text-green-500" />
+                  )}
+                </div>
 
-              {/* Treść */}
-              <div className="flex-1">
+                {/* Treść */}
+                <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline">
                     {item.type === "thread" ? t('thread') : t('post')}
@@ -338,10 +407,10 @@ export default function ForumModerationPage() {
                     }
                   />
                 </div>
-              </div>
+                </div>
 
-              {/* Akcje */}
-              <div className="flex flex-col gap-2 min-w-[180px]">
+                {/* Akcje */}
+                <div className="flex flex-col gap-2 min-w-[180px]">
                 <Button
                   size="sm"
                   variant="outline"
@@ -435,6 +504,7 @@ export default function ForumModerationPage() {
                   <Trash2 className="h-4 w-4" />
                   Usuń
                 </Button>
+                </div>
               </div>
             </div>
           </Card>

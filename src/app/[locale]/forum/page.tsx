@@ -227,9 +227,9 @@ export default function ForumHomePage() {
                   const catName = categoryMap.get(catId) || 'Inna kategoria';
                   return (
                     <div key={catId} className="space-y-3">
-                      <div className="flex items-center gap-2 border-b pb-2">
+                      <div className="flex items-center gap-2 pb-2 border-b-2 border-primary/20">
                         <h2 className="text-lg font-semibold">{catName}</h2>
-                        <Badge variant="secondary">{threads.length}</Badge>
+                        <Badge variant="secondary" className="rounded-full">{threads.length}</Badge>
                       </div>
                       {threads.map((t) => (
                         <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
@@ -286,9 +286,9 @@ export default function ForumHomePage() {
                 })}
                 {uncategorized.length > 0 && (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                      <h2 className="text-lg font-semibold">Bez kategorii</h2>
-                      <Badge variant="secondary">{uncategorized.length}</Badge>
+                    <div className="flex items-center gap-2 pb-2 border-b-2 border-muted">
+                      <h2 className="text-lg font-semibold text-muted-foreground">Bez kategorii</h2>
+                      <Badge variant="outline" className="rounded-full">{uncategorized.length}</Badge>
                     </div>
                     {uncategorized.map((t) => (
                       <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
