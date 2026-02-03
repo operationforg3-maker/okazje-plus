@@ -264,7 +264,7 @@ export function DealComparisonTool() {
               {bestDeal && (
                 <Button
                   className="w-full gap-2"
-                  size="sm"
+                  size="lg"
                   variant="default"
                   onClick={() => {
                     if (bestDeal.type === 'product') {
@@ -273,6 +273,7 @@ export function DealComparisonTool() {
                     }
                   }}
                   disabled={bestDeal.type !== 'product'}
+                  aria-label="Dodaj najlepszą ofertę do koszyka"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   Dodaj najlepszą do koszyka
@@ -283,7 +284,7 @@ export function DealComparisonTool() {
               <Button
                 variant="outline"
                 className="w-full gap-2"
-                size="sm"
+                size="lg"
                 onClick={() => {
                   let added = 0;
                   comparisonState.items.forEach(item => {
@@ -296,6 +297,7 @@ export function DealComparisonTool() {
                     toast.success(`Dodano ${added} produktów do koszyka`);
                   }
                 }}
+                aria-label="Dodaj wszystkie produkty do koszyka"
               >
                 <ShoppingCart className="h-4 w-4" />
                 Dodaj wszystkie do koszyka
@@ -304,11 +306,12 @@ export function DealComparisonTool() {
               <Button
                 variant="outline"
                 className="w-full gap-2"
-                size="sm"
+                size="lg"
                 onClick={() => {
                   setComparisonState(prev => ({ ...prev, isOpen: true }));
                   setIsExpanded(false);
                 }}
+                aria-label="Wyświetl pełne porównanie produktów"
               >
                 <Scale className="h-4 w-4" />
                 Pełne porównanie

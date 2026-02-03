@@ -23,7 +23,7 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
         <div className="overflow-hidden rounded-2xl border bg-card shadow-xl">
           <div className="relative flex flex-col gap-6 p-8 sm:p-10">
             <div className="flex flex-col space-y-3 text-center">
-              <Link href="/" className="flex items-center justify-center mb-2">
+              <Link href="/" className="flex items-center justify-center mb-2" aria-label="Powrót do strony głównej">
                 <LogoSVGWrapper className="h-12 w-auto" />
               </Link>
               <h1 className="text-2xl font-semibold tracking-tight font-headline">
