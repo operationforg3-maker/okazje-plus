@@ -574,6 +574,15 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
+    // MODERATION QUEUE (M6)
+    ////////////////////////////////
+    match /moderationQueue/{queueItemId} {
+      allow read: if isAdmin();  // Only admins can view moderation queue
+      allow create: if true;  // Allow all creates (Harvester via Admin SDK, manual submissions via isAdmin() check in app)
+      allow update, delete: if isAdmin();  // Only admins can manage queue
+    }
+
+    ////////////////////////////////
     // CONFIG (System settings)
     ////////////////////////////////
     match /config/{configId} {
