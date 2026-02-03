@@ -246,6 +246,7 @@ export function DealComparisonTool() {
                             size="icon"
                             className="h-6 w-6 flex-shrink-0"
                             onClick={() => removeItem(item.id)}
+                            aria-label="Usuń z porównania"
                           >
                             <X className="h-3 w-3" />
                           </Button>

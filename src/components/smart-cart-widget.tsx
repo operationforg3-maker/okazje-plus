@@ -226,6 +226,7 @@ export function SmartCartWidget() {
                       size="sm"
                       onClick={() => updateQuantity((item.product?.id ?? item.deal?.id)!, item.quantity - 1)}
                       disabled={item.quantity <= 1}
+                      aria-label="Zmniejsz ilość"
                     >
                       <Minus className="h-4 w-4" />
                     </Button>
@@ -236,6 +237,7 @@ export function SmartCartWidget() {
                       variant="outline"
                       size="sm"
                       onClick={() => updateQuantity((item.product?.id ?? item.deal?.id)!, item.quantity + 1)}
+                      aria-label="Zwiększ ilość"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -245,6 +247,7 @@ export function SmartCartWidget() {
                       size="sm"
                       onClick={() => removeItem((item.product?.id ?? item.deal?.id)!)}
                       className="ml-auto text-destructive"
+                      aria-label="Usuń z koszyka"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

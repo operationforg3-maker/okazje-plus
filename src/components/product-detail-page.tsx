@@ -244,12 +244,13 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
                     size="icon"
                     className="h-12 w-12"
                     onClick={() => setIsFavorite(!isFavorite)}
+                    aria-label={isFavorite ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
                   >
                     <Heart
                       className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : ''}`}
                     />
                   </Button>
-                  <Button variant="outline" size="icon" className="h-12 w-12">
+                  <Button variant="outline" size="icon" className="h-12 w-12" aria-label="Udostępnij produkt">
                     <Share2 className="w-5 h-5" />
                   </Button>
                 </div>

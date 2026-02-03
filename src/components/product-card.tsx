@@ -303,13 +303,13 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
                 </a>
               </Button>
               <div className="flex gap-2">
-                <Button onClick={handleAddToCart} disabled={isAddingToCart || inCart} className={cn("flex-1 h-8 text-xs", inCart ? "bg-green-500 hover:bg-green-600" : "")}>
+                <Button onClick={handleAddToCart} disabled={isAddingToCart || inCart} className={cn("flex-1 h-8 text-xs", inCart ? "bg-green-500 hover:bg-green-600" : "")} aria-label={inCart ? "W koszyku" : "Dodaj do koszyka"}>
                   {inCart ? <Check className="w-3 h-3" /> : <ShoppingCart className="w-3 h-3" />}
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.preventDefault(); addToComparison({...product, type: 'product'}); }}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.preventDefault(); addToComparison({...product, type: 'product'}); }} aria-label="Dodaj do porównania">
                   <Scale className="w-3 h-3" />
                 </Button>
-                <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.preventDefault(); toggleFavorite(); }}>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={(e) => { e.preventDefault(); toggleFavorite(); }} aria-label={isFavorited ? "Usuń z ulubionych" : "Dodaj do ulubionych"}>
                   <Heart className={cn("w-3 h-3", isFavorited && "fill-red-500 text-red-500")} />
                 </Button>
               </div>
