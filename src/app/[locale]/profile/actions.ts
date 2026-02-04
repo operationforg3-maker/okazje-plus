@@ -46,7 +46,10 @@ export async function getUserComments(userId: string): Promise<UserComment[]> {
     );
     
     const commentsSnapshot = await getDocs(commentsQuery);
-    console.log('[getUserComments] Found comments:', commentsSnapshot.docs.length);
+    console.log('[getUserComments] Query executed successfully, docs:', commentsSnapshot.docs.length);
+    if (commentsSnapshot.empty) {
+      console.warn('[getUserComments] Query returned empty result set for userId:', userId);
+    }
 
     const comments: UserComment[] = [];
 

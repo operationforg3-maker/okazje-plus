@@ -200,13 +200,22 @@ function ProfilePage() {
           console.warn('Error fetching forum activity:', err);
         }
 
+        // ===== TYMCZASOWY MOCK - DELETE LATER =====
+        console.log('[PROFILE DEBUG] Current values:');
+        console.log('  votesCount:', votesCount);
+        console.log('  comments:', (userComments || []).length);
+        console.log('  dealsPosted:', userDeals);
+        console.log('  ratingsCount:', ratingsCount);
+        console.log('  forumPosts:', forumPostsCount);
+        console.log('  forumReplies:', forumRepliesCount);
+
         setActivity({
-          votes: votesCount,
-          comments: (userComments || []).length,
-          dealsPosted: userDeals,
-          productsReviewed: ratingsCount,
-          forumPosts: forumPostsCount,
-          forumReplies: forumRepliesCount,
+          votes: votesCount > 0 ? votesCount : 99, // MOCK: pokazuj 99 jeśli 0
+          comments: (userComments || []).length > 0 ? (userComments || []).length : 77,
+          dealsPosted: userDeals > 0 ? userDeals : 55,
+          productsReviewed: ratingsCount > 0 ? ratingsCount : 33,
+          forumPosts: forumPostsCount > 0 ? forumPostsCount : 22,
+          forumReplies: forumRepliesCount > 0 ? forumRepliesCount : 11,
           memberSince: 'Styczeń 2024'
         });
 
