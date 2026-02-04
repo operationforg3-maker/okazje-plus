@@ -99,16 +99,6 @@ function ProfilePage() {
       
       setLoading(true);
       
-      // DEBUG: Check co jest w Firestore
-      console.log('\n🔍 [PROFILE] Starting debug check for UID:', user.uid);
-      try {
-        const { debugCheckUserData } = await import('./debug-check');
-        const debugReport = await debugCheckUserData(user.uid);
-        console.log('📊 DEBUG REPORT:', debugReport);
-      } catch (err) {
-        console.error('[PROFILE] Debug check error:', err);
-      }
-      
       try {
         // Pobierz komentarze za pomocą server action
         // Pass user.uid bezpośrednio zamiast polegać na getServerAuthSession()
@@ -132,7 +122,6 @@ function ProfilePage() {
           const userDealsSnapshot = await getDocs(
             query(collection(db, 'deals'), where('createdBy', '==', user.uid))
           );
-          console.log('User deals found:', userDealsSnapshot.docs.length, 'for user:', user.uid);
           
           let totalVotes = 0;
           for (const dealDoc of userDealsSnapshot.docs) {
@@ -142,7 +131,6 @@ function ProfilePage() {
             totalVotes += votesSnapshot.docs.length;
           }
           votesCount = totalVotes;
-          console.log('Total votes:', votesCount);
         } catch (err) {
           console.warn('Error fetching votes:', err);
         }
@@ -153,7 +141,6 @@ function ProfilePage() {
           const { getUserProductRatings } = await import('./actions');
           const ratings = await getUserProductRatings(user.uid);
           ratingsCount = ratings.count;
-          console.log('[PROFILE] Product ratings found:', ratingsCount);
         } catch (err) {
           console.warn('[PROFILE] Error fetching product ratings:', err);
         }
@@ -167,7 +154,7 @@ function ProfilePage() {
           );
           const userDealsSnapshot = await getDocs(userDealsQuery);
           userDeals = userDealsSnapshot.docs.length;
-          console.log('User deals posted:', userDeals);
+        console.log('User deals posted:', userDeals);
         } catch (err) {
           console.warn('Error fetching user deals:', err);
         }
@@ -179,19 +166,10 @@ function ProfilePage() {
           const forumActivity = await getUserForumActivity(user.uid);
           forumPostsCount = forumActivity.forumPostsCount;
           forumRepliesCount = forumActivity.forumRepliesCount;
-          console.log('[PROFILE] Forum posts:', forumPostsCount, 'replies:', forumRepliesCount);
         } catch (err) {
           console.warn('[PROFILE] Error fetching forum activity:', err);
         }
 
-        console.log('[PROFILE DEBUG] Final values:', {
-          votes: votesCount,
-          comments: (userComments || []).length,
-          dealsPosted: userDeals,
-          productsReviewed: ratingsCount,
-          forumPosts: forumPostsCount,
-          forumReplies: forumRepliesCount
-        });
 
         setActivity({
           votes: votesCount,
