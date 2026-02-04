@@ -14,6 +14,7 @@ import { ScheduleManager } from '@/components/admin/schedule-manager';
 import { LinkVerifier } from '@/components/admin/link-verifier';
 import { FirebaseIndexManager } from '@/components/admin/firebase-index-manager';
 import { DatabaseCleaner } from '@/components/admin/database-cleaner';
+import ConvertiserAutoImport from '@/components/admin/convertiser-auto-import';
 
 interface ConsoleLine {
   id: string;
@@ -59,6 +60,8 @@ function HarvesterPage() {
           Kompletny system do importu kategorii, produktów i automatycznego ulepszania za pomocą AI
         </p>
       </div>
+
+      <ConvertiserAutoImport />
 
       <div className="grid grid-cols-3 gap-6">
         {/* Main Content */}

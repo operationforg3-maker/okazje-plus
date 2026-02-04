@@ -118,6 +118,12 @@ const navStructure: (NavItem | NavGroup)[] = [
 export function AdminNav() {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState<string[]>([]);
+  const localePrefix = (() => {
+    const first = pathname.split('/')[1];
+    return ['pl', 'en', 'de'].includes(first) ? `/${first}` : '';
+  })();
+
+  const resolveHref = (href: string) => `${localePrefix}${href}`;
 
   const toggleGroup = (title: string) => {
     setOpenGroups(prev =>
@@ -128,10 +134,11 @@ export function AdminNav() {
   };
 
   const isActive = (href: string) => {
+    const target = resolveHref(href);
     if (href === '/admin') {
-      return pathname === href || pathname === '/pl/admin';
+      return pathname === target;
     }
-    return pathname.includes(href);
+    return pathname.startsWith(target);
   };
 
   return (
@@ -168,7 +175,7 @@ export function AdminNav() {
                 {item.items.map((subItem) => (
                   <Link
                     key={subItem.href}
-                    href={subItem.href}
+                    href={resolveHref(subItem.href)}
                     className={cn(
                       'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors',
                       isActive(subItem.href)
@@ -193,7 +200,7 @@ export function AdminNav() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={resolveHref(item.href)}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive(item.href)
