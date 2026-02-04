@@ -925,6 +925,13 @@ export default function M6ImportDashboard() {
           {/* TAB: Nowy Harvester */}
           <TabsContent value="harvester">
             <div className="space-y-4">
+              {/* Convertiser Auto-Browse */}
+              <ConvertiserAutoBrowsePanel
+                onJobCreated={refreshJobs}
+                authToken={authToken}
+                setAuthError={setAuthError}
+              />
+              
               <HarvesterWizard
                 onJobCreated={refreshJobs}
                 authToken={authToken}
@@ -1071,6 +1078,259 @@ function CategoryTreeBuilder({
             {result}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ==================== CONVERTISER AUTO-BROWSE PANEL ==================== */
+function ConvertiserAutoBrowsePanel({
+  onJobCreated,
+  authToken,
+  setAuthError,
+}: {
+  onJobCreated: () => void;
+  authToken: string | null;
+  setAuthError: (message: string | null) => void;
+}) {
+  const [isImporting, setIsImporting] = useState(false);
+  const [maxResults, setMaxResults] = useState(10000);
+  const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('offers');
+  const [progress, setProgress] = useState<{
+    jobId?: string;
+    productsFound?: number;
+    productsCreated?: number;
+    dealsCreated?: number;
+    status?: string;
+    error?: string;
+  }>({});
+
+  const handleAutoImport = async () => {
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      return;
+    }
+
+    try {
+      setIsImporting(true);
+      setProgress({});
+
+      const response = await fetch('/api/admin/harvester/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          source: 'convertiser',
+          query: '',
+          maxResults,
+          convertiserMode,
+          autoBrowse: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = data.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMsg);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to start auto-import');
+      }
+
+      const jobId = data.job?.id;
+      if (!jobId) {
+        throw new Error('No job ID returned');
+      }
+
+      setProgress({ jobId, status: 'running' });
+
+      // Poll for job status every 5 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/admin/harvester-jobs?jobId=${jobId}`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+          const statusData = await statusResponse.json();
+
+          if (!statusData.success || !statusData.job) {
+            clearInterval(pollInterval);
+            setProgress(prev => ({ ...prev, status: 'failed', error: 'Failed to fetch job status' }));
+            setIsImporting(false);
+            return;
+          }
+
+          const job = statusData.job;
+          setProgress({
+            jobId,
+            productsFound: job.productsFound || 0,
+            productsCreated: job.productsCreated || 0,
+            dealsCreated: job.dealsCreated || 0,
+            status: job.status,
+          });
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(pollInterval);
+            setIsImporting(false);
+            onJobCreated();
+          }
+        } catch (pollError) {
+          console.error('Failed to poll job status:', pollError);
+          clearInterval(pollInterval);
+          setIsImporting(false);
+        }
+      }, 5000);
+
+    } catch (error) {
+      console.error('Auto-import error:', error);
+      setProgress(prev => ({
+        ...prev,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }));
+      setIsImporting(false);
+    }
+  };
+
+  return (
+    <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+              <Download className="text-white" size={20} />
+            </div>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                🚀 Auto Import - Convertiser
+                <Badge className="bg-purple-600">NOWE</Badge>
+              </CardTitle>
+              <p className="text-xs text-slate-600 mt-1">
+                Pobierz WSZYSTKIE produkty z katalogu Convertiser (21k+ items) bez słów kluczowych
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Configuration */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="max-results">Max Results</Label>
+            <Input
+              id="max-results"
+              type="number"
+              value={maxResults}
+              onChange={(e) => setMaxResults(parseInt(e.target.value) || 10000)}
+              min={100}
+              max={50000}
+              step={1000}
+              disabled={isImporting}
+              className="w-full"
+            />
+            <p className="text-xs text-slate-500">Maksymalna liczba produktów</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mode">Mode</Label>
+            <Select value={convertiserMode} onValueChange={(v) => setConvertiserMode(v as 'products' | 'offers')} disabled={isImporting}>
+              <SelectTrigger id="mode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="offers">Offers (tracking links)</SelectItem>
+                <SelectItem value="products">Products</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">Offers generuje tracking linki</p>
+          </div>
+        </div>
+
+        {/* Progress Display */}
+        {progress.status && (
+          <div className="p-4 bg-white rounded-lg border-2 border-purple-200">
+            <div className="flex items-center gap-2 mb-3">
+              {progress.status === 'running' && (
+                <>
+                  <div className="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full" />
+                  <span className="font-semibold text-gray-900">⏳ Import w toku...</span>
+                </>
+              )}
+              {progress.status === 'completed' && (
+                <>
+                  <CheckCircle2 className="text-green-600" size={20} />
+                  <span className="font-semibold text-green-900">✅ Import zakończony!</span>
+                </>
+              )}
+              {progress.status === 'failed' && (
+                <>
+                  <AlertCircle className="text-red-600" size={20} />
+                  <span className="font-semibold text-red-900">❌ Import nie powiódł się</span>
+                </>
+              )}
+            </div>
+
+            {progress.jobId && (
+              <p className="text-xs text-gray-500 mb-3">Job ID: {progress.jobId}</p>
+            )}
+
+            <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="bg-blue-50 rounded p-2">
+                <div className="text-blue-600 font-medium text-xs">Znaleziono</div>
+                <div className="text-2xl font-bold text-blue-900">{progress.productsFound || 0}</div>
+              </div>
+              <div className="bg-green-50 rounded p-2">
+                <div className="text-green-600 font-medium text-xs">Produkty</div>
+                <div className="text-2xl font-bold text-green-900">{progress.productsCreated || 0}</div>
+              </div>
+              <div className="bg-purple-50 rounded p-2">
+                <div className="text-purple-600 font-medium text-xs">Oferty</div>
+                <div className="text-2xl font-bold text-purple-900">{progress.dealsCreated || 0}</div>
+              </div>
+            </div>
+
+            {progress.error && (
+              <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {progress.error}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Button */}
+        <Button
+          onClick={handleAutoImport}
+          disabled={isImporting}
+          size="lg"
+          className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+        >
+          {isImporting ? (
+            <>
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              Importowanie...
+            </>
+          ) : (
+            <>
+              <Download size={20} />
+              Uruchom Auto Import
+            </>
+          )}
+        </Button>
+
+        {/* Info */}
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 space-y-2">
+          <div className="font-semibold">📋 Jak to działa:</div>
+          <ul className="space-y-1 list-disc list-inside">
+            <li><strong>Paginacja:</strong> Pobiera katalog Convertisera (100 items/strona)</li>
+            <li><strong>Deduplikacja:</strong> Automatycznie unika duplikatów</li>
+            <li><strong>AI Kategoryzacja:</strong> Przypisuje kategorie batch processing</li>
+            <li><strong>Wzbogacanie:</strong> Deal-Refiner dodaje opisy i normalizuje specs</li>
+            <li><strong>Asynchroniczne:</strong> Wszystko w tle - możesz zamknąć przeglądarkę!</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );
