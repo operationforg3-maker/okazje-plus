@@ -98,6 +98,17 @@ function ProfilePage() {
       if (!user) return;
       
       setLoading(true);
+      
+      // DEBUG: Check co jest w Firestore
+      console.log('\n🔍 [PROFILE] Starting debug check for UID:', user.uid);
+      try {
+        const { debugCheckUserData } = await import('./debug-check');
+        const debugReport = await debugCheckUserData(user.uid);
+        console.log('📊 DEBUG REPORT:', debugReport);
+      } catch (err) {
+        console.error('[PROFILE] Debug check error:', err);
+      }
+      
       try {
         // Pobierz komentarze za pomocą server action
         // Pass user.uid bezpośrednio zamiast polegać na getServerAuthSession()
@@ -195,27 +206,27 @@ function ProfilePage() {
           const forumActivity = await getUserForumActivity(user.uid);
           forumPostsCount = forumActivity.forumPostsCount;
           forumRepliesCount = forumActivity.forumRepliesCount;
-          console.log('Forum posts:', forumPostsCount, 'replies:', forumRepliesCount);
+          console.log('[PROFILE] Forum posts:', forumPostsCount, 'replies:', forumRepliesCount);
         } catch (err) {
-          console.warn('Error fetching forum activity:', err);
+          console.warn('[PROFILE] Error fetching forum activity:', err);
         }
 
-        // ===== TYMCZASOWY MOCK - DELETE LATER =====
-        console.log('[PROFILE DEBUG] Current values:');
-        console.log('  votesCount:', votesCount);
-        console.log('  comments:', (userComments || []).length);
-        console.log('  dealsPosted:', userDeals);
-        console.log('  ratingsCount:', ratingsCount);
-        console.log('  forumPosts:', forumPostsCount);
-        console.log('  forumReplies:', forumRepliesCount);
+        console.log('[PROFILE DEBUG] Final values:', {
+          votes: votesCount,
+          comments: (userComments || []).length,
+          dealsPosted: userDeals,
+          productsReviewed: ratingsCount,
+          forumPosts: forumPostsCount,
+          forumReplies: forumRepliesCount
+        });
 
         setActivity({
-          votes: votesCount > 0 ? votesCount : 99, // MOCK: pokazuj 99 jeśli 0
-          comments: (userComments || []).length > 0 ? (userComments || []).length : 77,
-          dealsPosted: userDeals > 0 ? userDeals : 55,
-          productsReviewed: ratingsCount > 0 ? ratingsCount : 33,
-          forumPosts: forumPostsCount > 0 ? forumPostsCount : 22,
-          forumReplies: forumRepliesCount > 0 ? forumRepliesCount : 11,
+          votes: votesCount,
+          comments: (userComments || []).length,
+          dealsPosted: userDeals,
+          productsReviewed: ratingsCount,
+          forumPosts: forumPostsCount,
+          forumReplies: forumRepliesCount,
           memberSince: 'Styczeń 2024'
         });
 
