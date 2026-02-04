@@ -753,13 +753,13 @@ export async function addComment(collectionName: "products" | "deals", docId: st
     const commentsColRef = collection(db, collectionName, docId, "comments");
     
     // Pobierz user data dla photoURL
-    let userPhotoURL: string | undefined;
+    let userPhotoURL: string | null = null;
     let userDisplayName: string = `Użytkownik ${userId.substring(0, 6)}...`; // Default fallback
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        userPhotoURL = userData.photoURL || undefined;
+        userPhotoURL = userData.photoURL || null;
         userDisplayName = userData.displayName || userDisplayName;
       }
     } catch (error) {
