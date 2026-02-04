@@ -71,7 +71,8 @@ export async function getUserComments(userId: string): Promise<UserComment[]> {
       comments.push({
         id: cDoc.id,
         content: data.content || '',
-        createdAt: data.createdAt || 0,
+        // Convert Firestore Timestamp to milliseconds for serialization
+        createdAt: data.createdAt?.toMillis?.() || data.createdAt || 0,
         userId: data.userId,
         parentCollection,
         parentId,
