@@ -601,6 +601,19 @@ service cloud.firestore {
       allow read: if true; // Public read dla currency preference, indexes schedule, etc
       allow write: if isAdmin();
     }
+
+    ////////////////////////////////
+    // COLLECTION GROUP: COMMENTS
+    // Obsługa collectionGroup('comments') queries z profilu użytkownika
+    // Pozwala na pobieranie komentarzy napisanych przez konkretnego użytkownika
+    // niezależnie od tego czy są w /deals/{dealId}/comments lub /products/{productId}/comments
+    ////////////////////////////////
+    match /{path=**}/comments/{commentId} {
+      allow read: if true; // Publiczny dostęp do czytania komentarzy
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && stringMax('content',2000);
+      allow update: if isOwner('userId') && stringMax('content',2000);
+      allow delete: if isOwner('userId') || isAdmin();
+    }
   }
 }
 
