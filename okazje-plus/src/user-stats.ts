@@ -11,7 +11,8 @@ import {
   onDocumentDeleted,
 } from 'firebase-functions/v2/firestore';
 
-const db = admin.firestore();
+// Lazy initialize to avoid "no app" error during analysis
+const getDb = () => admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
 // ============================================================================
@@ -39,13 +40,13 @@ export const onVoteCreated = onDocumentCreated(
       // Update user stats and deal voteCount in parallel
       await Promise.all([
         // Increment user's voteCount
-        db.collection('users').doc(userId).update({
+        getDb().collection('users').doc(userId).update({
           'stats.voteCount': FieldValue.increment(1),
           'stats.lastUpdated': FieldValue.serverTimestamp(),
         } as any),
         
         // Increment deal's voteCount
-        db.collection('deals').doc(dealId).update({
+        getDb().collection('deals').doc(dealId).update({
           voteCount: FieldValue.increment(1),
         } as any),
       ]);
@@ -79,13 +80,13 @@ export const onVoteDeleted = onDocumentDeleted(
       // Update user stats and deal voteCount in parallel
       await Promise.all([
         // Decrement user's voteCount
-        db.collection('users').doc(userId).update({
+        getDb().collection('users').doc(userId).update({
           'stats.voteCount': FieldValue.increment(-1),
           'stats.lastUpdated': FieldValue.serverTimestamp(),
         } as any),
 
         // Decrement deal's voteCount
-        db.collection('deals').doc(dealId).update({
+        getDb().collection('deals').doc(dealId).update({
           voteCount: FieldValue.increment(-1),
         } as any),
       ]);
@@ -124,13 +125,13 @@ export const onCommentCreated = onDocumentCreated(
       // Update user stats and parent item's commentCount in parallel
       await Promise.all([
         // Increment user's commentCount
-        db.collection('users').doc(userId).update({
+        getDb().collection('users').doc(userId).update({
           'stats.commentCount': FieldValue.increment(1),
           'stats.lastUpdated': FieldValue.serverTimestamp(),
         } as any),
 
         // Increment parent item's commentCount (deal or product)
-        db.collection(parentCollection).doc(parentId).update({
+        getDb().collection(parentCollection).doc(parentId).update({
           commentCount: FieldValue.increment(1),
         } as any),
       ]);
@@ -165,13 +166,13 @@ export const onCommentDeleted = onDocumentDeleted(
       // Update user stats and parent item's commentCount in parallel
       await Promise.all([
         // Decrement user's commentCount
-        db.collection('users').doc(userId).update({
+        getDb().collection('users').doc(userId).update({
           'stats.commentCount': FieldValue.increment(-1),
           'stats.lastUpdated': FieldValue.serverTimestamp(),
         } as any),
 
         // Decrement parent item's commentCount
-        db.collection(parentCollection).doc(parentId).update({
+        getDb().collection(parentCollection).doc(parentId).update({
           commentCount: FieldValue.increment(-1),
         } as any),
       ]);
@@ -210,7 +211,7 @@ export const onCommentLikeCreated = onDocumentCreated(
 
     try {
       // Get the comment to find its author
-      const commentDoc = await db
+      const commentDoc = await getDb()
         .collection(parentCollection)
         .doc(parentId)
         .collection('comments')
@@ -234,7 +235,7 @@ export const onCommentLikeCreated = onDocumentCreated(
 
         // Increment comment author's totalLikesReceived
         commentAuthorId
-          ? db.collection('users').doc(commentAuthorId).update({
+          ? getDb().collection('users').doc(commentAuthorId).update({
               'stats.totalLikesReceived': FieldValue.increment(1),
               'stats.lastUpdated': FieldValue.serverTimestamp(),
             } as any)
@@ -264,7 +265,7 @@ export const onCommentLikeDeleted = onDocumentDeleted(
 
     try {
       // Get the comment to find its author
-      const commentDoc = await db
+      const commentDoc = await getDb()
         .collection(parentCollection)
         .doc(parentId)
         .collection('comments')
@@ -288,7 +289,7 @@ export const onCommentLikeDeleted = onDocumentDeleted(
 
         // Decrement comment author's totalLikesReceived
         commentAuthorId
-          ? db.collection('users').doc(commentAuthorId).update({
+          ? getDb().collection('users').doc(commentAuthorId).update({
               'stats.totalLikesReceived': FieldValue.increment(-1),
               'stats.lastUpdated': FieldValue.serverTimestamp(),
             } as any)
@@ -323,7 +324,7 @@ export const onForumPostCreated = onDocumentCreated(
     }
 
     try {
-      await db.collection('users').doc(userId).update({
+      await getDb().collection('users').doc(userId).update({
         'stats.forumReplyCount': FieldValue.increment(1),
         'stats.lastUpdated': FieldValue.serverTimestamp(),
       } as any);
@@ -352,7 +353,7 @@ export const onForumPostDeleted = onDocumentDeleted(
     }
 
     try {
-      await db.collection('users').doc(userId).update({
+      await getDb().collection('users').doc(userId).update({
         'stats.forumReplyCount': FieldValue.increment(-1),
         'stats.lastUpdated': FieldValue.serverTimestamp(),
       } as any);
