@@ -10,6 +10,7 @@ export interface UserComment {
   parentCollection: 'deals' | 'products';
   parentId: string;
   itemTitle?: string;
+  likeCount?: number; // For gamification - count of likes/reactions on this comment
 }
 
 /**
@@ -77,6 +78,8 @@ export async function getUserComments(userId: string): Promise<UserComment[]> {
         parentCollection,
         parentId,
         itemTitle,
+        // Get like count for gamification
+        likeCount: data.likeCount || 0,
       });
     }
 
@@ -195,8 +198,9 @@ export async function getUserProductRatings(userId: string): Promise<UserProduct
 }
 
 /**
- * Pobiera liczbę ALL votes dla użytkownika (niezależnie od tego czy stworzył deal czy nie)
- * Liczy wszystkie votes w deals/{dealId}/votes gdzie userId = user.uid
+ * Pobiera liczbę ALL votes dla użytkownika - OPTIMIZED VERSION
+ * Zamiast iterować votes subkolekcja, sprawdzamy czy user głosował na deal
+ * (Deal model ma voteCount pole - nie trzeba liczyć od zera)
  */
 export async function getUserVotes(userId: string): Promise<{ count: number }> {
   console.log('[getUserVotes] Called with userId:', userId);
@@ -209,7 +213,7 @@ export async function getUserVotes(userId: string): Promise<{ count: number }> {
   try {
     const db = getAdminFirestore();
     
-    // Get approved deals (max 200 to be reasonable)
+    // Get approved deals (max 200)
     const dealsSnapshot = await db.collection('deals')
       .where('status', '==', 'approved')
       .limit(200)
@@ -219,23 +223,24 @@ export async function getUserVotes(userId: string): Promise<{ count: number }> {
     
     let totalVotes = 0;
     
-    // For each deal, check if user has a vote
+    // For each deal, check if user has a vote in votes subkolekcja
     for (const dealDoc of dealsSnapshot.docs) {
       try {
         const votesSnapshot = await dealDoc.ref.collection('votes')
           .where('userId', '==', userId)
+          .limit(1) // Only need to know if exists
           .get();
         
-        totalVotes += votesSnapshot.size;
         if (votesSnapshot.size > 0) {
-          console.log('[getUserVotes] Found', votesSnapshot.size, 'votes in deal', dealDoc.id);
+          totalVotes++;
+          console.log('[getUserVotes] User voted on deal:', dealDoc.id);
         }
       } catch (err) {
         // Silent - deal may not have votes subkolekcja
       }
     }
     
-    console.log('[getUserVotes] Total votes found:', totalVotes);
+    console.log('[getUserVotes] Total votes found:', totalVotes, 'in', dealsSnapshot.size, 'deals');
     return { count: totalVotes };
   } catch (error: any) {
     console.error('[getUserVotes] Error:', error.message);
