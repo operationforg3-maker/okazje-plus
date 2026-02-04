@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { collection, query, where, getDocs, getDoc, orderBy, limit, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getUserComments, getUserForumActivity } from './actions';
+import { getUserComments, getUserForumActivity, getUserProductRatings } from './actions';
 import { Comment, Deal, Product } from '@/lib/types';
 import Link from 'next/link';
 import { getFavoriteDeals, getFavoriteProducts, getDealById, getProductById } from '@/lib/data';
@@ -147,42 +147,15 @@ function ProfilePage() {
           console.warn('Error fetching votes:', err);
         }
 
-        // Pobierz oceny produktów użytkownika
+        // Pobierz oceny produktów użytkownika (via server action)
         let ratingsCount = 0;
         try {
-          // Spróbuj najpierw /productRatings kolekcję
-          const ratingsQuery = query(
-            collection(db, 'productRatings'),
-            where('userId', '==', user.uid),
-            limit(100)
-          );
-          const ratingsSnapshot = await getDocs(ratingsQuery);
-          ratingsCount = ratingsSnapshot.docs.length;
-          console.log('Product ratings found:', ratingsCount);
+          const { getUserProductRatings } = await import('./actions');
+          const ratings = await getUserProductRatings(user.uid);
+          ratingsCount = ratings.count;
+          console.log('[PROFILE] Product ratings found:', ratingsCount);
         } catch (err) {
-          console.warn('productRatings collection not found or error:', err);
-          // Fallback: szukaj ratings w subkolekcjach produktów
-          try {
-            const productsSnapshot = await getDocs(
-              query(collection(db, 'products'), where('status', '==', 'approved'), limit(100))
-            );
-            console.log('Products found for ratings check:', productsSnapshot.docs.length);
-            let totalRatings = 0;
-            for (const productDoc of productsSnapshot.docs) {
-              try {
-                const userRating = await getDoc(
-                  doc(db, `products/${productDoc.id}/ratings/${user.uid}`)
-                );
-                if (userRating.exists()) totalRatings++;
-              } catch (e) {
-                // Silent fail
-              }
-            }
-            ratingsCount = totalRatings;
-            console.log('Total ratings (fallback):', ratingsCount);
-          } catch (err2) {
-            console.warn('Error fetching product ratings fallback:', err2);
-          }
+          console.warn('[PROFILE] Error fetching product ratings:', err);
         }
 
         // Pobierz liczbę okazji użytkownika (dealsPosted)

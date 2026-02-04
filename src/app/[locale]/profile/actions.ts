@@ -113,6 +113,10 @@ export interface UserForumActivity {
   forumRepliesCount: number;
 }
 
+export interface UserProductRatings {
+  count: number;
+}
+
 /**
  * Pobiera forum activity użytkownika
  */
@@ -167,5 +171,58 @@ export async function getUserForumActivity(userId: string): Promise<UserForumAct
   } catch (error: any) {
     console.error('Error fetching forum activity:', error);
     return { forumPostsCount: 0, forumRepliesCount: 0 };
+  }
+}
+
+/**
+ * Pobiera liczbę productRatings napisanych przez użytkownika
+ * Używa server-side query aby ominąć permissionErrors na client
+ */
+export async function getUserProductRatings(userId: string): Promise<UserProductRatings> {
+  console.log('[getUserProductRatings] Called with userId:', userId);
+  
+  if (!userId) {
+    console.error('[getUserProductRatings] No userId provided!');
+    return { count: 0 };
+  }
+
+  try {
+    // Spróbuj najpierw productRatings kolekcję
+    const ratingsQuery = query(
+      collection(db, 'productRatings'),
+      where('userId', '==', userId),
+      limit(100)
+    );
+    const ratingsSnapshot = await getDocs(ratingsQuery);
+    console.log('[getUserProductRatings] Found in productRatings:', ratingsSnapshot.docs.length);
+    return { count: ratingsSnapshot.docs.length };
+  } catch (err: any) {
+    console.warn('[getUserProductRatings] productRatings error:', err.message);
+    
+    // Fallback: szukaj ratings w subkolekcjach produktów
+    try {
+      let totalRatings = 0;
+      const productsSnapshot = await getDocs(
+        query(collection(db, 'products'), where('status', '==', 'approved'), limit(50))
+      );
+      
+      for (const productDoc of productsSnapshot.docs) {
+        try {
+          const ratingRef = doc(db, `products/${productDoc.id}/ratings/${userId}`);
+          const ratingDoc = await getDoc(ratingRef);
+          if (ratingDoc.exists()) {
+            totalRatings++;
+          }
+        } catch (e) {
+          // Silent
+        }
+      }
+      
+      console.log('[getUserProductRatings] Found in subkolekcja fallback:', totalRatings);
+      return { count: totalRatings };
+    } catch (fallbackErr: any) {
+      console.error('[getUserProductRatings] Fallback error:', fallbackErr.message);
+      return { count: 0 };
+    }
   }
 }
