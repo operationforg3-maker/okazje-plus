@@ -17,6 +17,7 @@ import { AIRefiner } from './refiner';
 import { startDealRefinerJob } from './deal-refiner';
 import { convertToPLN } from '@/lib/currency-exchange';
 import { addToModerationQueue } from '@/lib/moderation';
+import { assignProductCategory } from '@/ai/flows/convertiser-auto-category';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
 
@@ -362,14 +363,79 @@ export class SmartHarvester {
                 this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
 
                 // Parse category hierarchy from query (e.g., 'electronics/phones/flagship')
-                // CONVERTISER: All products → uncategorized (moderator assigns manually in admin UI)
+                // CONVERTISER: AI auto-maps category from title (no moderator needed!)
                 // OTHER SOURCES: Parse category from query path
-                const categoryParts = source === 'convertiser' ? [] : currentQuery.split('/');
-                const categoryInfo = {
-                  mainCategorySlug: source === 'convertiser' ? 'uncategorized' : (categoryParts[0] || 'uncategorized'),
-                  subCategorySlug: source === 'convertiser' ? 'uncategorized' : (categoryParts[1] || 'uncategorized'),
-                  subSubCategorySlug: source === 'convertiser' ? undefined : categoryParts[2],
-                };
+                let categoryInfo: any;
+                
+                if (source === 'convertiser') {
+                  // Auto-map category for Convertiser using AI
+                  try {
+                    this.addLog('info', `Auto-mapping category for Convertiser product: ${sourceProduct.title}`);
+                    
+                    // Get all available categories from Firestore
+                    const { getAllCategories, getSubcategories, getSubSubcategories } = await import('@/lib/data-admin');
+                    const mainCats = await getAllCategories();
+                    
+                    // Build flat list of all categories (main/sub/sub-sub)
+                    const availableCategories: any[] = [];
+                    for (const main of mainCats) {
+                      const subs = await getSubcategories(main.id);
+                      for (const sub of subs) {
+                        const subSubs = await getSubSubcategories(main.id, sub.id);
+                        if (subSubs.length === 0) {
+                          // No sub-subs: use main/sub
+                          availableCategories.push({
+                            mainSlug: main.slug,
+                            mainName: main.name,
+                            subSlug: sub.slug,
+                            subName: sub.name,
+                          });
+                        } else {
+                          // Has sub-subs: include all paths
+                          for (const subSub of subSubs) {
+                            availableCategories.push({
+                              mainSlug: main.slug,
+                              mainName: main.name,
+                              subSlug: sub.slug,
+                              subName: sub.name,
+                              subSubSlug: subSub.slug,
+                              subSubName: subSub.name,
+                            });
+                          }
+                        }
+                      }
+                    }
+                    
+                    // Call AI to assign category
+                    const assignment = await assignProductCategory({
+                      productTitle: sourceProduct.title,
+                      productDescription: sourceProduct.description || '',
+                      availableCategories,
+                    });
+                    
+                    categoryInfo = {
+                      mainCategorySlug: assignment.mainCategorySlug,
+                      subCategorySlug: assignment.subCategorySlug,
+                      subSubCategorySlug: assignment.subSubCategorySlug,
+                    };
+                    
+                    this.addLog('info', `✅ Auto-mapped category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}${categoryInfo.subSubCategorySlug ? '/' + categoryInfo.subSubCategorySlug : ''} (confidence: ${assignment.confidence})`);
+                  } catch (err) {
+                    this.addLog('warn', `Auto-mapping failed, falling back to uncategorized`, err);
+                    categoryInfo = {
+                      mainCategorySlug: 'uncategorized',
+                      subCategorySlug: 'uncategorized',
+                    };
+                  }
+                } else {
+                  // Other sources: parse from query path
+                  const categoryParts = currentQuery.split('/');
+                  categoryInfo = {
+                    mainCategorySlug: categoryParts[0] || 'uncategorized',
+                    subCategorySlug: categoryParts[1] || 'uncategorized',
+                    subSubCategorySlug: categoryParts[2],
+                  };
+                }
 
                 const productId = await this.createProductCore(
                   sourceProduct,
@@ -379,10 +445,6 @@ export class SmartHarvester {
                 );
                 productsCreated++;
                 categoryProductsCreated++;
-                
-                if (source === 'convertiser') {
-                  this.addLog('info', `Product ${productId} created as UNCATEGORIZED (moderator will assign category)`);
-                }
 
                 // Create associated deal
                 const dealId = await this.createDeal(
