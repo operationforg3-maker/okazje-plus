@@ -27,10 +27,11 @@ const LOCALE_CONFIG: Record<string, { path: string; ogLocale: string }> = {
 export async function generateMetadata({
   params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
-  const locale = params?.locale || 'pl';
-  const config = LOCALE_CONFIG[locale] ?? LOCALE_CONFIG.pl;
+  const { locale } = await params;
+  const finalLocale = locale || 'pl';
+  const config = LOCALE_CONFIG[finalLocale] ?? LOCALE_CONFIG.pl;
   const canonical = `${SITE_URL}${config.path}`;
 
   return {
