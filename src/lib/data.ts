@@ -754,13 +754,13 @@ export async function addComment(collectionName: "products" | "deals", docId: st
     
     // Pobierz user data dla photoURL
     let userPhotoURL: string | undefined;
-    let userDisplayName: string | undefined;
+    let userDisplayName: string = `Użytkownik ${userId.substring(0, 6)}...`; // Default fallback
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
       if (userDoc.exists()) {
         const userData = userDoc.data();
         userPhotoURL = userData.photoURL || undefined;
-        userDisplayName = userData.displayName || undefined;
+        userDisplayName = userData.displayName || userDisplayName;
       }
     } catch (error) {
       console.warn('Could not fetch user data for comment:', error);
