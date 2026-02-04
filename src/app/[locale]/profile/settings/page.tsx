@@ -307,7 +307,37 @@ function SettingsPage() {
                       value={avatarUrl}
                       onChange={(e) => setAvatarUrl(e.target.value)}
                     />
-                    <Button variant="outline" size="icon">
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={() => {
+                        // Trigger file input when clicked
+                        const fileInput = document.createElement('input');
+                        fileInput.type = 'file';
+                        fileInput.accept = 'image/*';
+                        fileInput.onchange = async (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          setLoading(true);
+                          try {
+                            // Konwertuj do data URL dla tymczasowego podglądu
+                            const reader = new FileReader();
+                            reader.onload = async (event: any) => {
+                              const dataUrl = event.target.result;
+                              setAvatarUrl(dataUrl);
+                              toast.info('Zdjęcie zostanie zapisane po kliknięciu "Zapisz zmiany"');
+                            };
+                            reader.readAsDataURL(file);
+                          } catch (error: any) {
+                            toast.error('Błąd przy wczytywaniu zdjęcia: ' + error.message);
+                          } finally {
+                            setLoading(false);
+                          }
+                        };
+                        fileInput.click();
+                      }}
+                    >
                       <Upload className="h-4 w-4" />
                     </Button>
                   </div>
