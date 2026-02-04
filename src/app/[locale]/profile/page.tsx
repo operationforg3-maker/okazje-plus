@@ -111,28 +111,75 @@ function ProfilePage() {
           itemId: uc.parentId,
         } as any)) as Array<Comment & { itemTitle?: string; itemType?: 'deal' | 'product'; itemId?: string }>;
 
-        // Pobierz oceny produktów użytkownika
-        const ratingsQuery = query(
-          collection(db, 'productRatings'),
-          where('userId', '==', user.uid),
-          limit(10)
-        );
-        const ratingsSnapshot = await getDocs(ratingsQuery);
-        const ratingsCount = ratingsSnapshot.docs.length;
+        // Pobierz głosy użytkownika - votes są w subkolekcjach deals/{dealId}/votes
+        let votesCount = 0;
+        try {
+          const userDealsSnapshot = await getDocs(
+            query(collection(db, 'deals'), where('createdBy', '==', user.uid))
+          );
+          
+          let totalVotes = 0;
+          for (const dealDoc of userDealsSnapshot.docs) {
+            const votesSnapshot = await getDocs(
+              collection(db, `deals/${dealDoc.id}/votes`)
+            );
+            totalVotes += votesSnapshot.docs.length;
+          }
+          votesCount = totalVotes;
+        } catch (err) {
+          console.warn('Error fetching votes:', err);
+        }
 
-        // Mock głosy - wymaga query na subkolekcjach
-        const voteCount = 15;
+        // Pobierz oceny produktów użytkownika
+        let ratingsCount = 0;
+        try {
+          // Spróbuj najpierw /productRatings kolekcję
+          const ratingsQuery = query(
+            collection(db, 'productRatings'),
+            where('userId', '==', user.uid),
+            limit(100)
+          );
+          const ratingsSnapshot = await getDocs(ratingsQuery);
+          ratingsCount = ratingsSnapshot.docs.length;
+        } catch (err) {
+          console.warn('productRatings collection not found or error:', err);
+          // Fallback: szukaj ratings w subkolekcjach produktów
+          try {
+            const productsSnapshot = await getDocs(
+              query(collection(db, 'products'), where('status', '==', 'approved'), limit(100))
+            );
+            let totalRatings = 0;
+            for (const productDoc of productsSnapshot.docs) {
+              try {
+                const userRating = await getDoc(
+                  doc(db, `products/${productDoc.id}/ratings/${user.uid}`)
+                );
+                if (userRating.exists()) totalRatings++;
+              } catch (e) {
+                // Silent fail
+              }
+            }
+            ratingsCount = totalRatings;
+          } catch (err2) {
+            console.warn('Error fetching product ratings fallback:', err2);
+          }
+        }
 
         // Pobierz liczbę okazji użytkownika (dealsPosted)
-        const userDealsQuery = query(
-          collection(db, 'deals'),
-          where('createdBy', '==', user.uid),
-        );
-        const userDealsSnapshot = await getDocs(userDealsQuery);
-        const userDeals = userDealsSnapshot.docs.length;
+        let userDeals = 0;
+        try {
+          const userDealsQuery = query(
+            collection(db, 'deals'),
+            where('createdBy', '==', user.uid),
+          );
+          const userDealsSnapshot = await getDocs(userDealsQuery);
+          userDeals = userDealsSnapshot.docs.length;
+        } catch (err) {
+          console.warn('Error fetching user deals:', err);
+        }
 
         setActivity({
-          votes: voteCount,
+          votes: votesCount,
           comments: (userComments || []).length,
           dealsPosted: userDeals,
           productsReviewed: ratingsCount,
