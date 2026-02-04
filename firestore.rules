@@ -607,6 +607,14 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
+    // HARVESTER PRESETS
+    ////////////////////////////////
+    match /harvester_presets/{presetId} {
+      allow read: if isAdmin();  // Only admins can view presets
+      allow create, update, delete: if isAdmin();  // Only admins can manage presets
+    }
+
+    ////////////////////////////////
     // CONFIG (System settings)
     ////////////////////////////////
     match /config/{configId} {

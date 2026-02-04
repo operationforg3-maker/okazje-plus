@@ -17,7 +17,7 @@ import { AIRefiner } from './refiner';
 import { startDealRefinerJob } from './deal-refiner';
 import { convertToPLN } from '@/lib/currency-exchange';
 import { addToModerationQueue } from '@/lib/moderation';
-import { assignProductCategory } from '@/ai/flows/convertiser-auto-category';
+import { batchAssignCategories } from '@/ai/flows/convertiser-auto-category';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
 
@@ -183,14 +183,23 @@ export class SmartHarvester {
     query: string,
     maxResults: number = 50,
     categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
-    isTreeMode: boolean = false // True when harvesting from category tree
+    isTreeMode: boolean = false, // True when harvesting from category tree
+    convertiserMode?: 'products' | 'offers', // Convertiser: fetch products or offers
+    autoBrowse: boolean = false // Auto-browse all available products (no keywords needed)
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
     
     // For Convertiser: NEVER use category tree mode - use simple query only
     // Moderator will manually categorize products in admin UI
-    const useSimpleQuery = source === 'convertiser' || !isTreeMode;
-    const queries = (useSimpleQuery || !categories || categories.length === 0) ? [query] : categories;
+    // AUTO-BROWSE MODE: Fetch all available products without keywords
+    let queries: string[];
+    if (autoBrowse && source === 'convertiser') {
+      // Auto-browse: fetch by pagination pages (no query needed)
+      queries = ['__AUTO_BROWSE__']; // Special marker for auto-browse
+    } else {
+      const useSimpleQuery = source === 'convertiser' || !isTreeMode;
+      queries = (useSimpleQuery || !categories || categories.length === 0) ? [query] : categories;
+    }
     const processedCategoriesLog: HarvesterJob['processedCategories'] = [];
     
     const modeDesc = source === 'convertiser' 
@@ -279,11 +288,13 @@ export class SmartHarvester {
         try {
           // Step 1: Fetch products from source API
           // For tree mode: extract category name from path (e.g., 'electronics/phones/flagship' -> 'flagship')
+          // For auto-browse: fetch without query
           const searchTerm = isTreeMode 
             ? currentQuery.split('/').pop() || currentQuery 
             : currentQuery;
-            
-          const sourceProducts = await this.fetchFromSource(source, searchTerm, maxResults, isTreeMode);
+          
+          const isAutoBrowse = searchTerm === '__AUTO_BROWSE__';
+          const sourceProducts = await this.fetchFromSource(source, isAutoBrowse ? '' : searchTerm, maxResults, isTreeMode, convertiserMode, isAutoBrowse);
           
           // For category-tree mode: Filter by rating/quality (top products only)
           let filteredProducts = sourceProducts;
@@ -293,6 +304,65 @@ export class SmartHarvester {
           
           productsFound += sourceProducts.length;
           this.addLog('info', `Fetched ${sourceProducts.length} products from ${source} for "${currentQuery}", using ${filteredProducts.length} after quality filter`);
+
+          // Step 1.5: Batch AI categorization for Convertiser (optimize token costs)
+          if (source === 'convertiser' && filteredProducts.length > 0) {
+            try {
+              this.addLog('info', `Running batch AI categorization for ${filteredProducts.length} Convertiser products...`);
+              
+              // Get all available categories once
+              const { getAllCategories, getSubcategories, getSubSubcategories } = await import('@/lib/data-admin');
+              const mainCats = await getAllCategories();
+              const availableCategories: any[] = [];
+              
+              for (const main of mainCats) {
+                const subs = await getSubcategories(main.id);
+                for (const sub of subs) {
+                  const subSubs = await getSubSubcategories(main.id, sub.id);
+                  if (subSubs.length === 0) {
+                    availableCategories.push({
+                      mainSlug: main.slug,
+                      mainName: main.name,
+                      subSlug: sub.slug,
+                      subName: sub.name,
+                    });
+                  } else {
+                    for (const subSub of subSubs) {
+                      availableCategories.push({
+                        mainSlug: main.slug,
+                        mainName: main.name,
+                        subSlug: sub.slug,
+                        subName: sub.name,
+                        subSubSlug: subSub.slug,
+                        subSubName: subSub.name,
+                      });
+                    }
+                  }
+                }
+              }
+              
+              // Batch assign categories
+              const { batchAssignCategories } = await import('@/ai/flows/convertiser-auto-category');
+              const batchResults = await batchAssignCategories({
+                products: filteredProducts.map((p, idx) => ({
+                  id: String(idx),
+                  title: p.title,
+                  description: p.description,
+                })),
+                availableCategories,
+              });
+              
+              // Cache results in filteredProducts for later use
+              batchResults.forEach((result, idx) => {
+                (filteredProducts[idx] as any).__categoryAssignment = result.assignment;
+              });
+              
+              this.addLog('info', `✅ Batch categorization complete for ${batchResults.length} products`);
+            } catch (batchErr) {
+              this.addLog('warn', `Batch categorization failed: ${batchErr instanceof Error ? batchErr.message : 'Unknown error'}`);
+              // Continue without categories - will use uncategorized fallback
+            }
+          }
 
           // Step 2: Process each product (create or link)
           for (const sourceProduct of filteredProducts) {
@@ -369,60 +439,18 @@ export class SmartHarvester {
                 let categoryInfo: any;
                 
                 if (source === 'convertiser') {
-                  // Auto-map category for Convertiser using AI
-                  try {
-                    this.addLog('info', `Auto-mapping category for Convertiser product: ${sourceProduct.title}`);
-                    
-                    // Get all available categories from Firestore
-                    const { getAllCategories, getSubcategories, getSubSubcategories } = await import('@/lib/data-admin');
-                    const mainCats = await getAllCategories();
-                    
-                    // Build flat list of all categories (main/sub/sub-sub)
-                    const availableCategories: any[] = [];
-                    for (const main of mainCats) {
-                      const subs = await getSubcategories(main.id);
-                      for (const sub of subs) {
-                        const subSubs = await getSubSubcategories(main.id, sub.id);
-                        if (subSubs.length === 0) {
-                          // No sub-subs: use main/sub
-                          availableCategories.push({
-                            mainSlug: main.slug,
-                            mainName: main.name,
-                            subSlug: sub.slug,
-                            subName: sub.name,
-                          });
-                        } else {
-                          // Has sub-subs: include all paths
-                          for (const subSub of subSubs) {
-                            availableCategories.push({
-                              mainSlug: main.slug,
-                              mainName: main.name,
-                              subSlug: sub.slug,
-                              subName: sub.name,
-                              subSubSlug: subSub.slug,
-                              subSubName: subSub.name,
-                            });
-                          }
-                        }
-                      }
-                    }
-                    
-                    // Call AI to assign category
-                    const assignment = await assignProductCategory({
-                      productTitle: sourceProduct.title,
-                      productDescription: sourceProduct.description || '',
-                      availableCategories,
-                    });
-                    
+                  // Batch AI categorization is done before the loop - use cached result
+                  const cachedAssignment = (sourceProduct as any).__categoryAssignment;
+                  if (cachedAssignment) {
                     categoryInfo = {
-                      mainCategorySlug: assignment.mainCategorySlug,
-                      subCategorySlug: assignment.subCategorySlug,
-                      subSubCategorySlug: assignment.subSubCategorySlug,
+                      mainCategorySlug: cachedAssignment.mainCategorySlug,
+                      subCategorySlug: cachedAssignment.subCategorySlug,
+                      subSubCategorySlug: cachedAssignment.subSubCategorySlug,
                     };
-                    
-                    this.addLog('info', `✅ Auto-mapped category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}${categoryInfo.subSubCategorySlug ? '/' + categoryInfo.subSubCategorySlug : ''} (confidence: ${assignment.confidence})`);
-                  } catch (err) {
-                    this.addLog('warn', `Auto-mapping failed, falling back to uncategorized`, err);
+                    this.addLog('info', `✅ Using batch-assigned category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}`);
+                  } else {
+                    // Fallback: uncategorized if batch failed
+                    this.addLog('warn', 'Batch categorization result missing, using uncategorized');
                     categoryInfo = {
                       mainCategorySlug: 'uncategorized',
                       subCategorySlug: 'uncategorized',
@@ -651,7 +679,9 @@ export class SmartHarvester {
     source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
     searchQuery: string,
     maxResults: number,
-    isTreeMode: boolean = false
+    isTreeMode: boolean = false,
+    convertiserMode?: 'products' | 'offers',
+    autoBrowse: boolean = false
   ): Promise<
     Array<{
       title: string;
@@ -682,7 +712,15 @@ export class SmartHarvester {
       case 'allegro':
         return await this.fetchFromAllegro(searchQuery, maxResults);
       case 'convertiser':
-        return await this.fetchFromConvertiser(searchQuery, maxResults);
+        const mode = convertiserMode || 'products';
+        if (autoBrowse) {
+          // Auto-browse: fetch all available products/offers
+          return await this.fetchFromConvertiserAutoBrowse(maxResults, mode);
+        } else if (mode === 'offers') {
+          return await this.fetchFromConvertiserOffers(searchQuery, maxResults);
+        } else {
+          return await this.fetchFromConvertiser(searchQuery, maxResults);
+        }
       default:
         throw new Error(`Unknown source: ${source}`);
     }
@@ -982,6 +1020,291 @@ export class SmartHarvester {
         this.addLog('error', `Convertiser API error: ${errorMsg}`);
       }
       
+      return [];
+    }
+  }
+
+  /**
+   * Fetch offers from Convertiser
+   * Convertiser Offers API provides direct merchant offers with tracking links
+   * Use this mode for direct affiliate monetization
+   */
+  private async fetchFromConvertiserOffers(searchQuery: string, maxResults: number) {
+    try {
+      // Check if token is available before importing client
+      if (!process.env.CONVERTISER_API_TOKEN) {
+        this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
+        return [];
+      }
+
+      const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
+      const client = getConvertiserClient();
+
+      this.addLog('info', `Fetching offers from Convertiser: "${searchQuery}"`);
+
+      // Use findOffers endpoint with search filters
+      const response = await client.findOffers({
+        q: searchQuery,
+        country: 'PL',
+        status: 'active',
+        page: 1,
+        page_size: Math.min(maxResults, 50),
+      });
+
+      const offers = response.results || [];
+
+      if (!offers || offers.length === 0) {
+        this.addLog('warn', `Convertiser Offers: No offers found for "${searchQuery}"`);
+        return [];
+      }
+
+      this.addLog('info', `Found ${offers.length} offers from Convertiser`);
+
+      // Transform Convertiser offers to RawProduct format
+      const rawProducts = await Promise.all(
+        offers.map(async (offer: any) => {
+          try {
+            const title = offer.name || offer.title || '';
+            if (!title) return null;
+
+            // Get offer image
+            const imageUrl = offer.image_url || offer.logo_url || '';
+            if (!imageUrl || imageUrl.trim() === '') {
+              return null;
+            }
+
+            // Generate tracking link for monetization
+            let trackingUrl = offer.url || '';
+            try {
+              const trackingResponse = await client.generateOfferTrackingLink(offer.uuid, {
+                subid: `harvester_${this.jobId}`,
+              });
+              trackingUrl = trackingResponse.tracking_link || trackingUrl;
+              this.addLog('info', `Generated tracking link for offer: ${offer.uuid}`);
+            } catch (trackErr) {
+              this.addLog('warn', `Failed to generate tracking link for offer ${offer.uuid}: ${trackErr instanceof Error ? trackErr.message : 'Unknown'}`);
+            }
+
+            // Parse price (Convertiser returns in various formats)
+            const parsePriceWithCurrency = (priceStr: string): { amount: number, currency: string } => {
+              if (!priceStr) return { amount: 0, currency: 'PLN' };
+              const str = String(priceStr);
+              const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
+              if (currencyMatch) {
+                return {
+                  currency: currencyMatch[1],
+                  amount: parseFloat(currencyMatch[2].replace(',', '.'))
+                };
+              }
+              const match = str.match(/[\d.,]+/);
+              return {
+                amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
+                currency: 'PLN'
+              };
+            };
+
+            const priceParsed = parsePriceWithCurrency(offer.price || '0');
+            
+            // Convert to PLN if needed
+            const price = priceParsed.currency !== 'PLN' 
+              ? await convertToPLN(priceParsed.amount, priceParsed.currency)
+              : priceParsed.amount;
+
+            return {
+              title,
+              description: offer.description || offer.short_description || '',
+              imageUrl,
+              price,
+              originalPrice: undefined, // Offers don't have original price
+              currency: 'PLN',
+              shippingCost: 0, // Usually included in offer price
+              shippingDays: 7,
+              sourceProductId: String(offer.uuid || offer.id),
+              sourceUrl: trackingUrl, // Use tracking link for affiliate revenue
+              merchantName: offer.advertiser_name || offer.advertiser || 'Convertiser',
+              merchantRating: 0,
+              specs: {},
+              rating: 0,
+              ratingCount: 0,
+              images: [imageUrl],
+              ean: undefined,
+              gtin: undefined,
+              upc: undefined,
+              mpn: undefined,
+            };
+          } catch (e) {
+            this.addLog('warn', `Failed to map Convertiser offer: ${e instanceof Error ? e.message : 'Unknown error'}`);
+            return null;
+          }
+        })
+      );
+      
+      return rawProducts.filter((p: any): p is RawProduct => p !== null);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMsg.includes('token') || errorMsg.includes('Token')) {
+        this.addLog('error', `Convertiser API authentication error: ${errorMsg} - Check CONVERTISER_API_TOKEN`);
+      } else if (errorMsg.includes('404')) {
+        this.addLog('error', `Convertiser API endpoint not found: ${errorMsg}`);
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('ECONNRESET')) {
+        this.addLog('error', `Convertiser API connection error: ${errorMsg}`);
+      } else {
+        this.addLog('error', `Convertiser Offers API error: ${errorMsg}`);
+      }
+      
+      return [];
+    }
+  }
+
+  /**
+   * AUTO-BROWSE MODE: Fetch all available products/offers from Convertiser without keywords
+   * Paginates through entire catalog (21k+ items) using Convertiser listOffers API
+   * 
+   * @param maxResults - Maximum number of products to fetch (default: 10000 for full catalog)
+   * @param mode - 'products' or 'offers' (offers mode recommended for tracking links)
+   */
+  private async fetchFromConvertiserAutoBrowse(
+    maxResults: number = 10000, 
+    mode: 'products' | 'offers' = 'offers'
+  ): Promise<RawProduct[]> {
+    try {
+      if (!process.env.CONVERTISER_API_TOKEN) {
+        this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
+        return [];
+      }
+
+      const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
+      const client = getConvertiserClient();
+
+      this.addLog('info', `🔄 AUTO-BROWSE MODE: Fetching ALL ${mode} from Convertiser (target: ${maxResults} items)`);
+
+      let allProducts: RawProduct[] = [];
+      let currentPage = 1;
+      const pageSize = 100; // Fetch 100 items per page
+      let hasMore = true;
+
+      while (hasMore && allProducts.length < maxResults) {
+        try {
+          this.addLog('info', `📄 Fetching page ${currentPage} (${allProducts.length}/${maxResults} items collected so far)...`);
+
+          const response = await client.listOffers({
+            page: currentPage,
+            page_size: Math.min(pageSize, maxResults - allProducts.length),
+          }, {
+            country: 'PL', // Polish marketplace only
+            // No query filter - fetch ALL available offers
+          });
+
+          const offers = response.results || [];
+          
+          if (offers.length === 0) {
+            this.addLog('info', `✅ No more offers on page ${currentPage} - stopping pagination`);
+            hasMore = false;
+            break;
+          }
+
+          this.addLog('info', `✅ Page ${currentPage}: Found ${offers.length} offers`);
+
+          // Transform offers to RawProduct format (same logic as fetchFromConvertiserOffers)
+          const { CurrencyManager } = await import('@/lib/unified-currency');
+          
+          const rawProducts = await Promise.all(
+            offers.map(async (offer: any) => {
+              try {
+                const title = offer.name || offer.title || '';
+                if (!title) return null;
+
+                const imageUrl = offer.image_url || offer.image_link || offer.images?.default || '';
+                if (!imageUrl || imageUrl.trim() === '') return null;
+
+                // Generate tracking link for affiliate revenue
+                let trackingUrl = offer.link || offer.url || '';
+                if (offer.uuid) {
+                  try {
+                    trackingUrl = await client.generateOfferTrackingLink(offer.uuid);
+                  } catch (e) {
+                    this.addLog('warn', `Failed to generate tracking link for offer ${offer.uuid}: ${e instanceof Error ? e.message : 'Unknown'}`);
+                  }
+                }
+
+                // Parse price and currency
+                const parsePriceWithCurrency = (priceStr: string): { amount: number, currency: string } => {
+                  if (!priceStr) return { amount: 0, currency: 'PLN' };
+                  const str = String(priceStr);
+                  const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
+                  if (currencyMatch) {
+                    return {
+                      amount: parseFloat(currencyMatch[2].replace(',', '.')),
+                      currency: currencyMatch[1]
+                    };
+                  }
+                  const match = str.match(/[\d.,]+/);
+                  return {
+                    amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
+                    currency: 'PLN'
+                  };
+                };
+
+                const priceParsed = parsePriceWithCurrency(offer.price || '0');
+                const price = priceParsed.currency !== 'PLN' 
+                  ? CurrencyManager.convertToPLN(priceParsed.amount, priceParsed.currency as any)
+                  : priceParsed.amount;
+
+                return {
+                  title,
+                  description: offer.description || offer.short_description || '',
+                  imageUrl,
+                  price,
+                  originalPrice: undefined,
+                  currency: 'PLN',
+                  shippingCost: 0,
+                  shippingDays: 7,
+                  sourceProductId: String(offer.uuid || offer.id),
+                  sourceUrl: trackingUrl,
+                  merchantName: offer.advertiser_name || offer.advertiser || 'Convertiser',
+                  merchantRating: 0,
+                  specs: {},
+                  rating: 0,
+                  ratingCount: 0,
+                  images: [imageUrl],
+                  ean: undefined,
+                  gtin: undefined,
+                  upc: undefined,
+                  mpn: undefined,
+                };
+              } catch (e) {
+                this.addLog('warn', `Failed to map Convertiser offer: ${e instanceof Error ? e.message : 'Unknown error'}`);
+                return null;
+              }
+            })
+          );
+
+          const validProducts = rawProducts.filter((p: any): p is RawProduct => p !== null);
+          allProducts = allProducts.concat(validProducts);
+
+          // Check if there are more pages
+          if (!response.next || offers.length < pageSize) {
+            this.addLog('info', `✅ Reached end of results (no next page or partial page)`);
+            hasMore = false;
+          } else {
+            currentPage++;
+            // Rate limiting: wait 500ms between requests to avoid API throttling
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+        } catch (pageError) {
+          this.addLog('error', `❌ Error fetching page ${currentPage}: ${pageError instanceof Error ? pageError.message : 'Unknown'}`);
+          hasMore = false; // Stop on error
+        }
+      }
+
+      this.addLog('info', `🎉 AUTO-BROWSE COMPLETE: Collected ${allProducts.length} products from ${currentPage - 1} pages`);
+      return allProducts;
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.addLog('error', `❌ Convertiser auto-browse error: ${errorMsg}`);
       return [];
     }
   }

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { auth } from "@/lib/firebase";
+import ConvertiserAutoImport from "@/components/admin/convertiser-auto-import";
 
 type SourceType = 'convertiser' | 'aliexpress' | 'amazon' | 'allegro';
 
@@ -84,6 +85,9 @@ export default function HarvesterPage() {
           <li><strong>M6 Architecture:</strong> ProductCore (immutable) + Deal (mutable)</li>
         </ul>
       </div>
+
+      {/* ⭐ NEW: Auto Import All Component */}
+      <ConvertiserAutoImport />
       
       <Card>
         <CardHeader>

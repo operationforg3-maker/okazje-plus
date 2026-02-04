@@ -36,7 +36,16 @@ export async function POST(request: NextRequest) {
 
     // 2. Parse request body
     const body = await request.json();
-    const { source, query, maxResults, mode = 'single', rootCategorySlug, categories: categoriesFromBody } = body;
+    const { 
+      source, 
+      query, 
+      maxResults, 
+      mode = 'single', 
+      rootCategorySlug, 
+      categories: categoriesFromBody,
+      convertiserMode = 'products', // New: 'products' or 'offers' for Convertiser
+      autoBrowse = false // NEW: Auto-browse all products (no keywords needed)
+    } = body;
 
     // 3. Validate input
     const isQueryValid = query && typeof query === 'string' && query.trim().length > 0 && query.trim() !== 'category-tree';
@@ -49,9 +58,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isQueryValid && !isCategoryTreeMode) {
+    // Auto-browse mode doesn't need query
+    if (!isQueryValid && !isCategoryTreeMode && !autoBrowse) {
       return NextResponse.json(
-        { error: 'Missing query or must set mode=category-tree' },
+        { error: 'Missing query or must set mode=category-tree or autoBrowse=true' },
         { status: 400 }
       );
     }
@@ -121,7 +131,9 @@ export async function POST(request: NextRequest) {
       effectiveQuery,
       max,
       categories,
-      isTreeMode
+      isTreeMode,
+      source === 'convertiser' ? convertiserMode : undefined,
+      autoBrowse // NEW: Pass auto-browse flag
     ).catch((err) => {
       console.error(`[Harvester ${jobId}] Background job failed:`, err);
     });
