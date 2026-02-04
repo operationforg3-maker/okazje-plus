@@ -6,6 +6,10 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import {
+  onDocumentCreated,
+  onDocumentDeleted,
+} from 'firebase-functions/v2/firestore';
 
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
@@ -17,12 +21,14 @@ const FieldValue = admin.firestore.FieldValue;
 /**
  * Increment voteCount on user.stats when vote is created
  */
-export const onVoteCreated = functions.firestore
-  .document('deals/{dealId}/votes/{voteId}')
-  .onCreate(async (snap, context) => {
-    const vote = snap.data();
+export const onVoteCreated = onDocumentCreated(
+  'deals/{dealId}/votes/{voteId}',
+  async (event) => {
+    const snap = event.data;
+    const context = event.params;
+    const vote = snap!.data();
     const userId = vote.userId;
-    const dealId = context.params.dealId;
+    const dealId = context.dealId;
 
     if (!userId) {
       console.log('[onVoteCreated] No userId in vote document');
@@ -49,17 +55,20 @@ export const onVoteCreated = functions.firestore
       console.error('[onVoteCreated] Error:', error);
       throw error;
     }
-  });
+  }
+);
 
 /**
  * Decrement voteCount on user.stats when vote is deleted
  */
-export const onVoteDeleted = functions.firestore
-  .document('deals/{dealId}/votes/{voteId}')
-  .onDelete(async (snap, context) => {
-    const vote = snap.data();
+export const onVoteDeleted = onDocumentDeleted(
+  'deals/{dealId}/votes/{voteId}',
+  async (event) => {
+    const snap = event.data;
+    const context = event.params;
+    const vote = snap!.data();
     const userId = vote.userId;
-    const dealId = context.params.dealId;
+    const dealId = context.dealId;
 
     if (!userId) {
       console.log('[onVoteDeleted] No userId in vote document');
@@ -86,7 +95,8 @@ export const onVoteDeleted = functions.firestore
       console.error('[onVoteDeleted] Error:', error);
       throw error;
     }
-  });
+  }
+);
 
 // ============================================================================
 // COMMENTS: Track when user posts comments on deals/products
@@ -95,13 +105,15 @@ export const onVoteDeleted = functions.firestore
 /**
  * Increment commentCount on user.stats when comment is created
  */
-export const onCommentCreated = functions.firestore
-  .document('{parentCollection}/{parentId}/comments/{commentId}')
-  .onCreate(async (snap, context) => {
-    const comment = snap.data();
+export const onCommentCreated = onDocumentCreated(
+  '{parentCollection}/{parentId}/comments/{commentId}',
+  async (event) => {
+    const snap = event.data;
+    const context = event.params;
+    const comment = snap!.data();
     const userId = comment.userId;
-    const parentId = context.params.parentId;
-    const parentCollection = context.params.parentCollection;
+    const parentId = context.parentId;
+    const parentCollection = context.parentCollection;
 
     if (!userId) {
       console.log('[onCommentCreated] No userId in comment document');
@@ -128,18 +140,21 @@ export const onCommentCreated = functions.firestore
       console.error('[onCommentCreated] Error:', error);
       throw error;
     }
-  });
+  }
+);
 
 /**
  * Decrement commentCount on user.stats when comment is deleted
  */
-export const onCommentDeleted = functions.firestore
-  .document('{parentCollection}/{parentId}/comments/{commentId}')
-  .onDelete(async (snap, context) => {
-    const comment = snap.data();
+export const onCommentDeleted = onDocumentDeleted(
+  '{parentCollection}/{parentId}/comments/{commentId}',
+  async (event) => {
+    const snap = event.data;
+    const context = event.params;
+    const comment = snap!.data();
     const userId = comment.userId;
-    const parentId = context.params.parentId;
-    const parentCollection = context.params.parentCollection;
+    const parentId = context.parentId;
+    const parentCollection = context.parentCollection;
 
     if (!userId) {
       console.log('[onCommentDeleted] No userId in comment document');
@@ -166,7 +181,8 @@ export const onCommentDeleted = functions.firestore
       console.error('[onCommentDeleted] Error:', error);
       throw error;
     }
-  });
+  }
+);
 
 // ============================================================================
 // COMMENT LIKES: Track when users like comments
@@ -176,14 +192,16 @@ export const onCommentDeleted = functions.firestore
  * Increment likeCount on comment when like is created
  * Also increment totalLikesReceived for the comment's author
  */
-export const onCommentLikeCreated = functions.firestore
-  .document('{parentCollection}/{parentId}/comments/{commentId}/likes/{likeId}')
-  .onCreate(async (snap, context) => {
-    const like = snap.data();
+export const onCommentLikeCreated = onDocumentCreated(
+  '{parentCollection}/{parentId}/comments/{commentId}/likes/{likeId}',
+  async (event) => {
+    const snap = event.data;
+    const context = event.params;
+    const like = snap!.data();
     const likerUserId = like.userId;
-    const commentId = context.params.commentId;
-    const parentId = context.params.parentId;
-    const parentCollection = context.params.parentCollection;
+    const commentId = context.commentId;
+    const parentId = context.parentId;
+    const parentCollection = context.parentCollection;
 
     if (!likerUserId) {
       console.log('[onCommentLikeCreated] No userId in like document');
@@ -230,17 +248,19 @@ export const onCommentLikeCreated = functions.firestore
       console.error('[onCommentLikeCreated] Error:', error);
       throw error;
     }
-  });
+  }
+);
 
 /**
  * Decrement likeCount on comment when like is deleted
  */
-export const onCommentLikeDeleted = functions.firestore
-  .document('{parentCollection}/{parentId}/comments/{commentId}/likes/{likeId}')
-  .onDelete(async (snap, context) => {
-    const commentId = context.params.commentId;
-    const parentId = context.params.parentId;
-    const parentCollection = context.params.parentCollection;
+export const onCommentLikeDeleted = onDocumentDeleted(
+  '{parentCollection}/{parentId}/comments/{commentId}/likes/{likeId}',
+  async (event) => {
+    const context = event.params;
+    const commentId = context.commentId;
+    const parentId = context.parentId;
+    const parentCollection = context.parentCollection;
 
     try {
       // Get the comment to find its author
@@ -280,7 +300,8 @@ export const onCommentLikeDeleted = functions.firestore
       console.error('[onCommentLikeDeleted] Error:', error);
       throw error;
     }
-  });
+  }
+);
 
 // ============================================================================
 // FORUM: Track forum posts and replies
@@ -289,10 +310,11 @@ export const onCommentLikeDeleted = functions.firestore
 /**
  * Increment forumPostCount when forum post is created
  */
-export const onForumPostCreated = functions.firestore
-  .document('forum_threads/{threadId}/posts/{postId}')
-  .onCreate(async (snap, context) => {
-    const post = snap.data();
+export const onForumPostCreated = onDocumentCreated(
+  'forum_threads/{threadId}/posts/{postId}',
+  async (event) => {
+    const snap = event.data;
+    const post = snap!.data();
     const userId = post.authorId;
 
     if (!userId) {
@@ -311,15 +333,17 @@ export const onForumPostCreated = functions.firestore
       console.error('[onForumPostCreated] Error:', error);
       throw error;
     }
-  });
+  }
+);
 
 /**
  * Decrement forumPostCount when forum post is deleted
  */
-export const onForumPostDeleted = functions.firestore
-  .document('forum_threads/{threadId}/posts/{postId}')
-  .onDelete(async (snap, context) => {
-    const post = snap.data();
+export const onForumPostDeleted = onDocumentDeleted(
+  'forum_threads/{threadId}/posts/{postId}',
+  async (event) => {
+    const snap = event.data;
+    const post = snap!.data();
     const userId = post.authorId;
 
     if (!userId) {
@@ -338,4 +362,5 @@ export const onForumPostDeleted = functions.firestore
       console.error('[onForumPostDeleted] Error:', error);
       throw error;
     }
-  });
+  }
+);
