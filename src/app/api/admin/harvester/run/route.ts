@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       rootCategorySlug, 
       categories: categoriesFromBody,
       convertiserMode = 'products', // New: 'products' or 'offers' for Convertiser
-      autoBrowse = false // NEW: Auto-browse all products (no keywords needed)
+      autoBrowse = false // Convertiser: fetch entire catalog without keywords
     } = body;
 
     // 3. Validate input
@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Auto-browse mode doesn't need query
     if (!isQueryValid && !isCategoryTreeMode && !autoBrowse) {
       return NextResponse.json(
         { error: 'Missing query or must set mode=category-tree or autoBrowse=true' },
@@ -133,7 +132,7 @@ export async function POST(request: NextRequest) {
       categories,
       isTreeMode,
       source === 'convertiser' ? convertiserMode : undefined,
-      autoBrowse // NEW: Pass auto-browse flag
+      autoBrowse
     ).catch((err) => {
       console.error(`[Harvester ${jobId}] Background job failed:`, err);
     });

@@ -177,6 +177,7 @@ export class SmartHarvester {
    * @param query - Search query or category slug (e.g., 'phones', 'phones/flagship' for sub-categories)
    * @param maxResults - Maximum products to fetch
    * @param categories - Optional: Iterate through multiple categories/sub-categories
+   * @param autoBrowse - Auto-browse entire catalog (Convertiser only)
    */
   async harvestProducts(
     source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
@@ -185,17 +186,15 @@ export class SmartHarvester {
     categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
     isTreeMode: boolean = false, // True when harvesting from category tree
     convertiserMode?: 'products' | 'offers', // Convertiser: fetch products or offers
-    autoBrowse: boolean = false // Auto-browse all available products (no keywords needed)
+    autoBrowse: boolean = false // Convertiser: fetch entire catalog without keywords
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
     
     // For Convertiser: NEVER use category tree mode - use simple query only
     // Moderator will manually categorize products in admin UI
-    // AUTO-BROWSE MODE: Fetch all available products without keywords
     let queries: string[];
     if (autoBrowse && source === 'convertiser') {
-      // Auto-browse: fetch by pagination pages (no query needed)
-      queries = ['__AUTO_BROWSE__']; // Special marker for auto-browse
+      queries = ['__AUTO_BROWSE__'];
     } else {
       const useSimpleQuery = source === 'convertiser' || !isTreeMode;
       queries = (useSimpleQuery || !categories || categories.length === 0) ? [query] : categories;
@@ -288,13 +287,11 @@ export class SmartHarvester {
         try {
           // Step 1: Fetch products from source API
           // For tree mode: extract category name from path (e.g., 'electronics/phones/flagship' -> 'flagship')
-          // For auto-browse: fetch without query
           const searchTerm = isTreeMode 
             ? currentQuery.split('/').pop() || currentQuery 
             : currentQuery;
-          
-          const isAutoBrowse = searchTerm === '__AUTO_BROWSE__';
-          const sourceProducts = await this.fetchFromSource(source, isAutoBrowse ? '' : searchTerm, maxResults, isTreeMode, convertiserMode, isAutoBrowse);
+            
+          const sourceProducts = await this.fetchFromSource(source, searchTerm, maxResults, isTreeMode, convertiserMode);
           
           // For category-tree mode: Filter by rating/quality (top products only)
           let filteredProducts = sourceProducts;
@@ -680,8 +677,7 @@ export class SmartHarvester {
     searchQuery: string,
     maxResults: number,
     isTreeMode: boolean = false,
-    convertiserMode?: 'products' | 'offers',
-    autoBrowse: boolean = false
+    convertiserMode?: 'products' | 'offers'
   ): Promise<
     Array<{
       title: string;
@@ -713,8 +709,7 @@ export class SmartHarvester {
         return await this.fetchFromAllegro(searchQuery, maxResults);
       case 'convertiser':
         const mode = convertiserMode || 'products';
-        if (autoBrowse) {
-          // Auto-browse: fetch all available products/offers
+        if (searchQuery === '__AUTO_BROWSE__') {
           return await this.fetchFromConvertiserAutoBrowse(maxResults, mode);
         } else if (mode === 'offers') {
           return await this.fetchFromConvertiserOffers(searchQuery, maxResults);
@@ -1158,14 +1153,11 @@ export class SmartHarvester {
   }
 
   /**
-   * AUTO-BROWSE MODE: Fetch all available products/offers from Convertiser without keywords
-   * Paginates through entire catalog (21k+ items) using Convertiser listOffers API
-   * 
-   * @param maxResults - Maximum number of products to fetch (default: 10000 for full catalog)
-   * @param mode - 'products' or 'offers' (offers mode recommended for tracking links)
+   * AUTO-BROWSE: Pobierz cały katalog Convertiser bez keywords.
+   * Używa listOffers + paginacja, z limitem maxResults.
    */
   private async fetchFromConvertiserAutoBrowse(
-    maxResults: number = 10000, 
+    maxResults: number = 10000,
     mode: 'products' | 'offers' = 'offers'
   ): Promise<RawProduct[]> {
     try {
@@ -1177,38 +1169,31 @@ export class SmartHarvester {
       const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
       const client = getConvertiserClient();
 
-      this.addLog('info', `🔄 AUTO-BROWSE MODE: Fetching ALL ${mode} from Convertiser (target: ${maxResults} items)`);
+      this.addLog('info', `AUTO-BROWSE: Fetching ALL ${mode} (target: ${maxResults})`);
 
       let allProducts: RawProduct[] = [];
       let currentPage = 1;
-      const pageSize = 100; // Fetch 100 items per page
+      const pageSize = 100;
       let hasMore = true;
 
       while (hasMore && allProducts.length < maxResults) {
         try {
-          this.addLog('info', `📄 Fetching page ${currentPage} (${allProducts.length}/${maxResults} items collected so far)...`);
-
-          const response = await client.listOffers({
-            page: currentPage,
-            page_size: Math.min(pageSize, maxResults - allProducts.length),
-          }, {
-            country: 'PL', // Polish marketplace only
-            // No query filter - fetch ALL available offers
-          });
+          const response = await client.listOffers(
+            {
+              page: currentPage,
+              page_size: Math.min(pageSize, maxResults - allProducts.length),
+            },
+            {
+              country: 'PL',
+            }
+          );
 
           const offers = response.results || [];
-          
           if (offers.length === 0) {
-            this.addLog('info', `✅ No more offers on page ${currentPage} - stopping pagination`);
             hasMore = false;
             break;
           }
 
-          this.addLog('info', `✅ Page ${currentPage}: Found ${offers.length} offers`);
-
-          // Transform offers to RawProduct format (same logic as fetchFromConvertiserOffers)
-          const { CurrencyManager } = await import('@/lib/unified-currency');
-          
           const rawProducts = await Promise.all(
             offers.map(async (offer: any) => {
               try {
@@ -1218,37 +1203,35 @@ export class SmartHarvester {
                 const imageUrl = offer.image_url || offer.image_link || offer.images?.default || '';
                 if (!imageUrl || imageUrl.trim() === '') return null;
 
-                // Generate tracking link for affiliate revenue
                 let trackingUrl = offer.link || offer.url || '';
                 if (offer.uuid) {
                   try {
                     trackingUrl = await client.generateOfferTrackingLink(offer.uuid);
                   } catch (e) {
-                    this.addLog('warn', `Failed to generate tracking link for offer ${offer.uuid}: ${e instanceof Error ? e.message : 'Unknown'}`);
+                    this.addLog('warn', `Tracking link error for ${offer.uuid}`);
                   }
                 }
 
-                // Parse price and currency
-                const parsePriceWithCurrency = (priceStr: string): { amount: number, currency: string } => {
+                const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
                   if (!priceStr) return { amount: 0, currency: 'PLN' };
                   const str = String(priceStr);
                   const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
                   if (currencyMatch) {
                     return {
                       amount: parseFloat(currencyMatch[2].replace(',', '.')),
-                      currency: currencyMatch[1]
+                      currency: currencyMatch[1],
                     };
                   }
                   const match = str.match(/[\d.,]+/);
                   return {
                     amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
-                    currency: 'PLN'
+                    currency: 'PLN',
                   };
                 };
 
                 const priceParsed = parsePriceWithCurrency(offer.price || '0');
-                const price = priceParsed.currency !== 'PLN' 
-                  ? CurrencyManager.convertToPLN(priceParsed.amount, priceParsed.currency as any)
+                const price = priceParsed.currency !== 'PLN'
+                  ? await convertToPLN(priceParsed.amount, priceParsed.currency as any)
                   : priceParsed.amount;
 
                 return {
@@ -1272,39 +1255,31 @@ export class SmartHarvester {
                   gtin: undefined,
                   upc: undefined,
                   mpn: undefined,
-                };
-              } catch (e) {
-                this.addLog('warn', `Failed to map Convertiser offer: ${e instanceof Error ? e.message : 'Unknown error'}`);
+                } as RawProduct;
+              } catch {
                 return null;
               }
             })
           );
 
-          const validProducts = rawProducts.filter((p: any): p is RawProduct => p !== null);
-          allProducts = allProducts.concat(validProducts);
+          allProducts = allProducts.concat(rawProducts.filter((p: any): p is RawProduct => p !== null));
 
-          // Check if there are more pages
           if (!response.next || offers.length < pageSize) {
-            this.addLog('info', `✅ Reached end of results (no next page or partial page)`);
             hasMore = false;
           } else {
             currentPage++;
-            // Rate limiting: wait 500ms between requests to avoid API throttling
             await new Promise(resolve => setTimeout(resolve, 500));
           }
-
         } catch (pageError) {
-          this.addLog('error', `❌ Error fetching page ${currentPage}: ${pageError instanceof Error ? pageError.message : 'Unknown'}`);
-          hasMore = false; // Stop on error
+          this.addLog('error', `Auto-browse page ${currentPage} failed`, pageError);
+          hasMore = false;
         }
       }
 
-      this.addLog('info', `🎉 AUTO-BROWSE COMPLETE: Collected ${allProducts.length} products from ${currentPage - 1} pages`);
+      this.addLog('info', `AUTO-BROWSE COMPLETE: ${allProducts.length} items`);
       return allProducts;
-
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.addLog('error', `❌ Convertiser auto-browse error: ${errorMsg}`);
+      this.addLog('error', 'Convertiser auto-browse error', error);
       return [];
     }
   }
