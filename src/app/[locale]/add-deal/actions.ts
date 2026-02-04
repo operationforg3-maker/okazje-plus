@@ -36,22 +36,28 @@ export async function createNewDeal(data: NewDealData) {
   } = data;
 
   // Tworzenie dokumentu Deal
-  const dealData = {
-    title,
-    description: description || '',
+  const dealData: Omit<any, "id" | "createdAt"> = {
+    title: { pl: title, en: title, de: title },
+    description: { pl: description || '', en: description || '', de: description || '' },
     price,
     originalPrice: originalPrice || null,
     link,
     image: image || '',
+    imageHint: '',
+    category: mainCategorySlug,
     mainCategorySlug,
     subCategorySlug,
     subSubCategorySlug: subSubCategorySlug || null,
     createdBy: session.email,
     createdAt: new Date().toISOString(),
-    status: 'pending', // Wymaga moderacji
+    postedBy: session.email,
+    postedAt: new Date().toISOString(),
+    status: 'draft' as const, // Wymaga moderacji
     votes: 0,
+    voteCount: 0,
     temperature: 0,
     comments: [],
+    commentsCount: 0,
     source: 'user_submission',
     sourceId: `user-${Date.now()}`,
   };

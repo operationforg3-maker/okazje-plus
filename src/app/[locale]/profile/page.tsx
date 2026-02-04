@@ -31,8 +31,9 @@ import {
   AlertCircle,
   Info
 } from 'lucide-react';
-import { collection, collectionGroup, query, where, getDocs, getDoc, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, orderBy, limit, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { getUserComments } from './actions';
 import { Comment, Deal, Product } from '@/lib/types';
 import Link from 'next/link';
 import { getFavoriteDeals, getFavoriteProducts, getDealById, getProductById } from '@/lib/data';
@@ -94,74 +95,21 @@ function ProfilePage() {
       
       setLoading(true);
       try {
-        // Zbierz komentarze napisane przez użytkownika używając collectionGroup
-        // Dzięki temu nie iterujemy po wszystkich produktach/okazjach ręcznie.
-        const commentsQuery = query(
-          collectionGroup(db, 'comments'),
-          where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc'),
-          limit(50)
-        );
-        const commentsSnapshot = await getDocs(commentsQuery);
+        // Pobierz komentarze za pomocą server action
+        // To ominięcie problemy z permissions dla collectionGroup queries
+        const userComments = await getUserComments();
 
-        const allComments = await Promise.all(
-          commentsSnapshot.docs.map(async (cDoc) => {
-            const data = cDoc.data();
-            // parent path: e.g. 'deals/{dealId}/comments/{commentId}'
-            const pathParts = cDoc.ref.path.split('/');
-            const parentCollection = pathParts[0];
-            const parentId = pathParts[1];
-
-            let itemTitle: string | undefined;
-            let itemType: 'deal' | 'product' | undefined;
-
-            try {
-              if (parentCollection === 'deals') {
-                itemType = 'deal';
-                const dealDoc = await getDoc(doc(db, 'deals', parentId));
-                if (dealDoc && dealDoc.exists()) {
-                  const rawTitle = (dealDoc.data() as any).title;
-                  itemTitle = typeof rawTitle === 'string' 
-                    ? rawTitle 
-                    : rawTitle?.pl || rawTitle?.en || 'Okazja';
-                } else {
-                  const helperDeal = await getDealById(parentId).catch(() => null);
-                  itemTitle = helperDeal?.title?.pl || helperDeal?.title?.en || 'Okazja';
-                }
-              } else if (parentCollection === 'products') {
-                itemType = 'product';
-                const productDoc = await getDoc(doc(db, 'products', parentId));
-                if (productDoc && productDoc.exists()) {
-                  const rawName = (productDoc.data() as any).name;
-                  itemTitle = typeof rawName === 'string' 
-                    ? rawName 
-                    : rawName?.pl || rawName?.en || 'Produkt';
-                } else {
-                  const helperProduct = await getProductById(parentId).catch(() => null);
-                  const hpName: any = (helperProduct as any)?.name;
-                  itemTitle = typeof hpName === 'string' 
-                    ? hpName 
-                    : hpName?.pl || hpName?.en || 'Produkt';
-                }
-              }
-            } catch (err) {
-              console.error('Error fetching parent item for comment:', err);
-            }
-
-            return {
-              id: cDoc.id,
-              userId: data.userId,
-              content: data.content,
-              createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-              itemTitle,
-              itemType,
-              itemId: parentId,
-            } as Comment & { itemTitle?: string; itemType?: 'deal' | 'product'; itemId?: string };
-          })
-        );
-
-        // Sortowane już przez query na serwerze — zachowaj porządek i przytnij
-        const comments = allComments.slice(0, 10);
+        const comments = (userComments || []).slice(0, 10).map(uc => ({
+          id: uc.id,
+          dealId: uc.parentId,
+          userId: uc.userId,
+          userDisplayName: 'Użytkownik',
+          content: uc.content,
+          createdAt: new Date(uc.createdAt).toISOString(),
+          itemTitle: uc.itemTitle,
+          itemType: uc.parentCollection as 'deal' | 'product',
+          itemId: uc.parentId,
+        } as any)) as Array<Comment & { itemTitle?: string; itemType?: 'deal' | 'product'; itemId?: string }>;
 
         // Pobierz oceny produktów użytkownika
         const ratingsQuery = query(
@@ -185,7 +133,7 @@ function ProfilePage() {
 
         setActivity({
           votes: voteCount,
-          comments: commentsSnapshot.size || comments.length,
+          comments: (userComments || []).length,
           dealsPosted: userDeals,
           productsReviewed: ratingsCount,
           memberSince: 'Styczeń 2024'
