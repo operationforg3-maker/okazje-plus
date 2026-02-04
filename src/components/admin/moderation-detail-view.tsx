@@ -111,6 +111,9 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
 
   // DEAL fields
   if (itemType === 'deal') {
+    const isUncategorized = item.mainCategorySlug === 'uncategorized';
+    const isConvertiser = item.source === 'convertiser';
+
     return (
       <div className="space-y-3">
         {/* Overview */}
@@ -125,6 +128,26 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
             <FieldRow label="Posted By" value={item.postedBy} />
           </div>
         </Section>
+
+        {/* Category Assignment (Convertiser Only) */}
+        {isConvertiser && isUncategorized && (
+          <div className="border-2 border-amber-300 rounded-lg p-4 bg-amber-50">
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <h3 className="font-bold text-sm text-amber-900 mb-2">⚠️ Brak kategorii (Convertiser)</h3>
+                <p className="text-xs text-amber-800 mb-3">
+                  Ten deal pochodzi z Convertiser i nie ma przypisanej kategorii. Moderator musi wybrać odpowiednią kategorię.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Kategorie:</strong> {mainName} {subName && `→ ${subName}`} {subSubName && `→ ${subSubName}`}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 <strong>Tip:</strong> Edytuj deal, aby zmienić kategorie. Kliknij przycisk edycji poniżej.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Pricing & Costs */}
         <Section title="💰 Ceny i koszty" id="pricing" count={Object.keys(item.price || {}).length}>

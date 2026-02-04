@@ -66,8 +66,18 @@ export async function POST(request: NextRequest) {
     const max = Math.max(10, Math.min(200, maxResults || 50));
 
     // 4. Resolve categories when running full tree mode
+    // CONVERTISER: Always uses simple query mode - moderator categorizes manually
     let categories: string[] | undefined;
-    if (mode === 'category-tree') {
+    if (source === 'convertiser') {
+      // Convertiser: block category-tree mode, force simple query
+      if (mode === 'category-tree') {
+        return NextResponse.json(
+          { error: 'Convertiser nie obsługuje category-tree mode. Użyj prostego query (np. "iPhone 15", "laptop gaming"). Kategorie przypisuje moderator.' },
+          { status: 400 }
+        );
+      }
+      categories = undefined;
+    } else if (mode === 'category-tree') {
       categories = await SmartHarvester.buildCategoryQueries(rootCategorySlug);
       if (!categories || categories.length === 0) {
         return NextResponse.json(

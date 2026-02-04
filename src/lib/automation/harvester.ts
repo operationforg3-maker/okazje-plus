@@ -185,11 +185,16 @@ export class SmartHarvester {
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
     
-    // For tree mode, use categories; otherwise use the query parameter
-    const queries = (isTreeMode && categories && categories.length > 0) ? categories : [query];
+    // For Convertiser: NEVER use category tree mode - use simple query only
+    // Moderator will manually categorize products in admin UI
+    const useSimpleQuery = source === 'convertiser' || !isTreeMode;
+    const queries = (useSimpleQuery || !categories || categories.length === 0) ? [query] : categories;
     const processedCategoriesLog: HarvesterJob['processedCategories'] = [];
     
-    this.addLog('info', `Starting harvest job: source=${source}, mode=${isTreeMode ? 'category-tree' : 'single'}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
+    const modeDesc = source === 'convertiser' 
+      ? 'simple-query (moderator categorizes)' 
+      : (isTreeMode ? 'category-tree' : 'single');
+    this.addLog('info', `Starting harvest job: source=${source}, mode=${modeDesc}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
 
     // Initialize job record immediately (so UI can poll for status)
     const initialJob: HarvesterJob = {
@@ -357,11 +362,13 @@ export class SmartHarvester {
                 this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
 
                 // Parse category hierarchy from query (e.g., 'electronics/phones/flagship')
-                const categoryParts = currentQuery.split('/');
+                // CONVERTISER: All products → uncategorized (moderator assigns manually in admin UI)
+                // OTHER SOURCES: Parse category from query path
+                const categoryParts = source === 'convertiser' ? [] : currentQuery.split('/');
                 const categoryInfo = {
-                  mainCategorySlug: categoryParts[0] || 'uncategorized',
-                  subCategorySlug: categoryParts[1] || 'uncategorized',
-                  subSubCategorySlug: categoryParts[2] || undefined,
+                  mainCategorySlug: source === 'convertiser' ? 'uncategorized' : (categoryParts[0] || 'uncategorized'),
+                  subCategorySlug: source === 'convertiser' ? 'uncategorized' : (categoryParts[1] || 'uncategorized'),
+                  subSubCategorySlug: source === 'convertiser' ? undefined : categoryParts[2],
                 };
 
                 const productId = await this.createProductCore(
@@ -372,6 +379,10 @@ export class SmartHarvester {
                 );
                 productsCreated++;
                 categoryProductsCreated++;
+                
+                if (source === 'convertiser') {
+                  this.addLog('info', `Product ${productId} created as UNCATEGORIZED (moderator will assign category)`);
+                }
 
                 // Create associated deal
                 const dealId = await this.createDeal(
