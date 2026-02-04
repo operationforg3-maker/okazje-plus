@@ -1,18 +1,6 @@
 'use server';
 
-import { getServerAuthSession } from '@/lib/auth-server';
-import { db } from '@/lib/firebase';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
-  getDocs,
-  getDoc,
-  doc,
-  collectionGroup as firestoreCollectionGroup
-} from 'firebase/firestore';
+import { getAdminFirestore } from '@/lib/firebase-admin-server';
 
 export interface UserComment {
   id: string;
@@ -26,30 +14,27 @@ export interface UserComment {
 
 /**
  * Pobiera komentarze napisane przez zalogowanego użytkownika
- * Używa Admin SDK na serwerze aby ominąć problemy z collectionGroup permissions w Firestore
+ * Używa Admin SDK na serwerze aby ominąć problemy z collectionGroup permissions
  */
 export async function getUserComments(userId: string): Promise<UserComment[]> {
-  console.log('[getUserComments] Called with userId:', userId);
-  
   if (!userId) {
-    console.error('[getUserComments] No userId provided!');
-    throw new Error('Nie jesteś zalogowany');
+    console.log('[getUserComments] userId is empty, returning empty list');
+    return [];
   }
 
+  console.log('[getUserComments] Called with userId:', userId);
+
   try {
-    console.log('[getUserComments] Querying comments for userId:', userId);
-    const commentsQuery = query(
-      firestoreCollectionGroup(db, 'comments'),
-      where('userId', '==', userId),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
+    const db = getAdminFirestore();
     
-    const commentsSnapshot = await getDocs(commentsQuery);
-    console.log('[getUserComments] Query executed successfully, docs:', commentsSnapshot.docs.length);
-    if (commentsSnapshot.empty) {
-      console.warn('[getUserComments] Query returned empty result set for userId:', userId);
-    }
+    // Use collectionGroup to query all comments across deals and products
+    const commentsSnapshot = await db.collectionGroup('comments')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+    
+    console.log('[getUserComments] Query executed, found:', commentsSnapshot.size, 'comments');
 
     const comments: UserComment[] = [];
 
@@ -63,16 +48,16 @@ export async function getUserComments(userId: string): Promise<UserComment[]> {
 
       try {
         if (parentCollection === 'deals') {
-          const dealDoc = await getDoc(doc(db, 'deals', parentId));
-          if (dealDoc.exists()) {
+          const dealDoc = await db.collection('deals').doc(parentId).get();
+          if (dealDoc.exists) {
             const rawTitle = (dealDoc.data() as any).title;
             itemTitle = typeof rawTitle === 'string' 
               ? rawTitle 
               : rawTitle?.pl || rawTitle?.en || 'Okazja';
           }
         } else if (parentCollection === 'products') {
-          const productDoc = await getDoc(doc(db, 'products', parentId));
-          if (productDoc.exists()) {
+          const productDoc = await db.collection('products').doc(parentId).get();
+          if (productDoc.exists) {
             const rawName = (productDoc.data() as any).name;
             itemTitle = typeof rawName === 'string' 
               ? rawName 
@@ -80,7 +65,7 @@ export async function getUserComments(userId: string): Promise<UserComment[]> {
           }
         }
       } catch (err) {
-        console.error('Error fetching parent item for comment:', err);
+        console.error('[getUserComments] Error fetching parent item:', err);
       }
 
       comments.push({
@@ -94,17 +79,11 @@ export async function getUserComments(userId: string): Promise<UserComment[]> {
       });
     }
 
+    console.log('[getUserComments] Returning', comments.length, 'comments');
     return comments;
   } catch (error: any) {
-    console.error('Error fetching user comments:', error);
-    
-    // Jeśli to jest błąd permissions, zwróć pustą listę zamiast rzucania błędu
-    if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-      console.warn('Permission denied for collectionGroup query - returning empty list');
-      return [];
-    }
-    
-    throw error;
+    console.error('[getUserComments] Error:', error.message);
+    return [];
   }
 }
 
@@ -113,107 +92,91 @@ export interface UserForumActivity {
   forumRepliesCount: number;
 }
 
-export interface UserProductRatings {
-  count: number;
-}
-
 /**
- * Pobiera forum activity użytkownika
+ * Pobiera forum activity użytkownika (posty i odpowiedzi)
  */
 export async function getUserForumActivity(userId: string): Promise<UserForumActivity> {
   console.log('[getUserForumActivity] Called with userId:', userId);
   
   if (!userId) {
-    console.error('[getUserForumActivity] No userId provided!');
     return { forumPostsCount: 0, forumRepliesCount: 0 };
   }
 
   try {
-    // Pobierz posty użytkownika
-    let forumPostsCount = 0;
-    try {
-      const postsQuery = query(
-        collection(db, 'forumPosts'),
-        where('authorId', '==', userId),
-        limit(100)
-      );
-      const postsSnapshot = await getDocs(postsQuery);
-      forumPostsCount = postsSnapshot.docs.length;
-      console.log('[getUserForumActivity] Forum posts:', forumPostsCount);
-    } catch (err) {
-      console.warn('Error fetching forum posts:', err);
-    }
+    const db = getAdminFirestore();
+    
+    // Count forum posts by this user
+    const postsSnapshot = await db.collection('forumPosts')
+      .where('authorId', '==', userId)
+      .get();
+    
+    let forumPostsCount = postsSnapshot.size;
+    console.log('[getUserForumActivity] Forum posts:', forumPostsCount);
 
-    // Pobierz replies użytkownika (z subkolekcji)
+    // Count forum replies by iterating through posts and checking replies subkolekcja
     let forumRepliesCount = 0;
     try {
-      const postsSnapshot = await getDocs(
-        query(collection(db, 'forumPosts'), limit(100))
-      );
+      const postsQuery = await db.collection('forumPosts').get();
       
-      for (const postDoc of postsSnapshot.docs) {
-        try {
-          const repliesSnapshot = await getDocs(
-            query(collection(db, `forumPosts/${postDoc.id}/replies`), 
-                  where('authorId', '==', userId))
-          );
-          forumRepliesCount += repliesSnapshot.docs.length;
-        } catch (e) {
-          // Silent fail
-        }
+      for (const postDoc of postsQuery.docs) {
+        const repliesSnapshot = await postDoc.ref.collection('replies')
+          .where('authorId', '==', userId)
+          .get();
+        forumRepliesCount += repliesSnapshot.size;
       }
-      console.log('[getUserForumActivity] Forum replies:', forumRepliesCount);
     } catch (err) {
-      console.warn('Error fetching forum replies:', err);
+      console.error('[getUserForumActivity] Error counting replies:', err);
     }
-
+    
+    console.log('[getUserForumActivity] Forum replies:', forumRepliesCount);
     return { forumPostsCount, forumRepliesCount };
   } catch (error: any) {
-    console.error('Error fetching forum activity:', error);
+    console.error('[getUserForumActivity] Error:', error.message);
     return { forumPostsCount: 0, forumRepliesCount: 0 };
   }
 }
 
+export interface UserProductRatings {
+  count: number;
+}
+
 /**
- * Pobiera liczbę productRatings napisanych przez użytkownika
- * Używa server-side query aby ominąć permissionErrors na client
+ * Pobiera liczbę ocen produktów dla użytkownika
  */
 export async function getUserProductRatings(userId: string): Promise<UserProductRatings> {
   console.log('[getUserProductRatings] Called with userId:', userId);
   
   if (!userId) {
-    console.error('[getUserProductRatings] No userId provided!');
     return { count: 0 };
   }
 
   try {
-    // Spróbuj najpierw productRatings kolekcję
-    const ratingsQuery = query(
-      collection(db, 'productRatings'),
-      where('userId', '==', userId),
-      limit(100)
-    );
-    const ratingsSnapshot = await getDocs(ratingsQuery);
-    console.log('[getUserProductRatings] Found in productRatings:', ratingsSnapshot.docs.length);
-    return { count: ratingsSnapshot.docs.length };
-  } catch (err: any) {
-    console.warn('[getUserProductRatings] productRatings error:', err.message);
+    const db = getAdminFirestore();
     
-    // Fallback: szukaj ratings w subkolekcjach produktów
+    // First try to query productRatings collection
     try {
-      let totalRatings = 0;
-      const productsSnapshot = await getDocs(
-        query(collection(db, 'products'), where('status', '==', 'approved'), limit(50))
-      );
+      const ratingsSnapshot = await db.collection('productRatings')
+        .where('userId', '==', userId)
+        .get();
+      
+      console.log('[getUserProductRatings] Found in productRatings collection:', ratingsSnapshot.size);
+      return { count: ratingsSnapshot.size };
+    } catch (err: any) {
+      console.log('[getUserProductRatings] productRatings collection not accessible, trying fallback');
+    }
+
+    // Fallback: check products/{id}/ratings/{userId}
+    let totalRatings = 0;
+    try {
+      const productsSnapshot = await db.collection('products').get();
       
       for (const productDoc of productsSnapshot.docs) {
         try {
-          const ratingRef = doc(db, `products/${productDoc.id}/ratings/${userId}`);
-          const ratingDoc = await getDoc(ratingRef);
-          if (ratingDoc.exists()) {
+          const ratingDoc = await productDoc.ref.collection('ratings').doc(userId).get();
+          if (ratingDoc.exists) {
             totalRatings++;
           }
-        } catch (e) {
+        } catch (err) {
           // Silent
         }
       }
@@ -224,6 +187,9 @@ export async function getUserProductRatings(userId: string): Promise<UserProduct
       console.error('[getUserProductRatings] Fallback error:', fallbackErr.message);
       return { count: 0 };
     }
+  } catch (error: any) {
+    console.error('[getUserProductRatings] Error:', error.message);
+    return { count: 0 };
   }
 }
 
@@ -240,23 +206,31 @@ export async function getUserVotes(userId: string): Promise<{ count: number }> {
   }
 
   try {
-    // Pobierz approved deals (max 200 aby nie przydupić)
-    const dealsSnap = await getDocs(
-      query(collection(db, 'deals'), where('status', '==', 'approved'), limit(200))
-    );
-    console.log('[getUserVotes] Checking votes in', dealsSnap.size, 'approved deals');
+    const db = getAdminFirestore();
+    
+    // Get approved deals (max 200 to be reasonable)
+    const dealsSnapshot = await db.collection('deals')
+      .where('status', '==', 'approved')
+      .limit(200)
+      .get();
+    
+    console.log('[getUserVotes] Checking votes in', dealsSnapshot.size, 'approved deals');
     
     let totalVotes = 0;
     
-    // Dla każdego deala, sprawdź czy user ma vote
-    for (const dealDoc of dealsSnap.docs) {
+    // For each deal, check if user has a vote
+    for (const dealDoc of dealsSnapshot.docs) {
       try {
-        const votesSnap = await getDocs(
-          query(collection(db, `deals/${dealDoc.id}/votes`), where('userId', '==', userId))
-        );
-        totalVotes += votesSnap.docs.length;
+        const votesSnapshot = await dealDoc.ref.collection('votes')
+          .where('userId', '==', userId)
+          .get();
+        
+        totalVotes += votesSnapshot.size;
+        if (votesSnapshot.size > 0) {
+          console.log('[getUserVotes] Found', votesSnapshot.size, 'votes in deal', dealDoc.id);
+        }
       } catch (err) {
-        // Silent - deal może nie mieć votes subkolekcji
+        // Silent - deal may not have votes subkolekcja
       }
     }
     
