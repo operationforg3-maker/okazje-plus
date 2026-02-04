@@ -31,11 +31,15 @@ export interface UserComment {
 export async function getUserComments(): Promise<UserComment[]> {
   const session = await getServerAuthSession();
   
+  console.log('[getUserComments] Session:', session);
+  
   if (!session || !session.uid) {
+    console.error('[getUserComments] No session or uid!');
     throw new Error('Nie jesteś zalogowany');
   }
 
   try {
+    console.log('[getUserComments] Querying comments for uid:', session.uid);
     const commentsQuery = query(
       firestoreCollectionGroup(db, 'comments'),
       where('userId', '==', session.uid),
@@ -44,6 +48,7 @@ export async function getUserComments(): Promise<UserComment[]> {
     );
     
     const commentsSnapshot = await getDocs(commentsQuery);
+    console.log('[getUserComments] Found comments:', commentsSnapshot.docs.length);
 
     const comments: UserComment[] = [];
 
@@ -99,5 +104,69 @@ export async function getUserComments(): Promise<UserComment[]> {
     }
     
     throw error;
+  }
+}
+
+export interface UserForumActivity {
+  forumPostsCount: number;
+  forumRepliesCount: number;
+}
+
+/**
+ * Pobiera forum activity użytkownika
+ */
+export async function getUserForumActivity(): Promise<UserForumActivity> {
+  const session = await getServerAuthSession();
+  
+  console.log('[getUserForumActivity] Session:', session?.uid);
+  
+  if (!session || !session.uid) {
+    console.error('[getUserForumActivity] No session or uid!');
+    return { forumPostsCount: 0, forumRepliesCount: 0 };
+  }
+
+  try {
+    // Pobierz posty użytkownika
+    let forumPostsCount = 0;
+    try {
+      const postsQuery = query(
+        collection(db, 'forumPosts'),
+        where('authorId', '==', session.uid),
+        limit(100)
+      );
+      const postsSnapshot = await getDocs(postsQuery);
+      forumPostsCount = postsSnapshot.docs.length;
+      console.log('[getUserForumActivity] Forum posts:', forumPostsCount);
+    } catch (err) {
+      console.warn('Error fetching forum posts:', err);
+    }
+
+    // Pobierz replies użytkownika (z subkolekcji)
+    let forumRepliesCount = 0;
+    try {
+      const postsSnapshot = await getDocs(
+        query(collection(db, 'forumPosts'), limit(100))
+      );
+      
+      for (const postDoc of postsSnapshot.docs) {
+        try {
+          const repliesSnapshot = await getDocs(
+            query(collection(db, `forumPosts/${postDoc.id}/replies`), 
+                  where('authorId', '==', session.uid))
+          );
+          forumRepliesCount += repliesSnapshot.docs.length;
+        } catch (e) {
+          // Silent fail
+        }
+      }
+      console.log('[getUserForumActivity] Forum replies:', forumRepliesCount);
+    } catch (err) {
+      console.warn('Error fetching forum replies:', err);
+    }
+
+    return { forumPostsCount, forumRepliesCount };
+  } catch (error: any) {
+    console.error('Error fetching forum activity:', error);
+    return { forumPostsCount: 0, forumRepliesCount: 0 };
   }
 }

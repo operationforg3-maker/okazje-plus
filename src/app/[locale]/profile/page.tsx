@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { collection, query, where, getDocs, getDoc, orderBy, limit, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getUserComments } from './actions';
+import { getUserComments, getUserForumActivity } from './actions';
 import { Comment, Deal, Product } from '@/lib/types';
 import Link from 'next/link';
 import { getFavoriteDeals, getFavoriteProducts, getDealById, getProductById } from '@/lib/data';
@@ -57,6 +57,8 @@ type UserActivity = {
   comments: number;
   dealsPosted: number;
   productsReviewed: number;
+  forumPosts?: number;
+  forumReplies?: number;
   memberSince: string;
 };
 
@@ -71,6 +73,8 @@ function ProfilePage() {
     comments: 0,
     dealsPosted: 0,
     productsReviewed: 0,
+    forumPosts: 0,
+    forumReplies: 0,
     memberSince: 'Styczeń 2024'
   });
   const [recentComments, setRecentComments] = useState<Comment[]>([]);
@@ -184,11 +188,25 @@ function ProfilePage() {
           console.warn('Error fetching user deals:', err);
         }
 
+        // Pobierz forum activity
+        let forumPostsCount = 0;
+        let forumRepliesCount = 0;
+        try {
+          const forumActivity = await getUserForumActivity();
+          forumPostsCount = forumActivity.forumPostsCount;
+          forumRepliesCount = forumActivity.forumRepliesCount;
+          console.log('Forum posts:', forumPostsCount, 'replies:', forumRepliesCount);
+        } catch (err) {
+          console.warn('Error fetching forum activity:', err);
+        }
+
         setActivity({
           votes: votesCount,
           comments: (userComments || []).length,
           dealsPosted: userDeals,
           productsReviewed: ratingsCount,
+          forumPosts: forumPostsCount,
+          forumReplies: forumRepliesCount,
           memberSince: 'Styczeń 2024'
         });
 
@@ -332,11 +350,13 @@ function ProfilePage() {
       <Separator className="mb-8" />
 
       {/* Statystyki */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
         <StatCard icon={ThumbsUp} label="Głosy oddane" value={activity.votes} />
         <StatCard icon={MessageSquare} label={t('commentsLabel')} value={activity.comments} />
         <StatCard icon={Flame} label="Dodane okazje" value={activity.dealsPosted} />
         <StatCard icon={Award} label="Oceny produktów" value={activity.productsReviewed} />
+        <StatCard icon={MessageSquare} label="Posty forum" value={activity.forumPosts || 0} />
+        <StatCard icon={MessageSquare} label="Odpowiedzi forum" value={activity.forumReplies || 0} />
       </div>
 
       {/* Zakładki */}
