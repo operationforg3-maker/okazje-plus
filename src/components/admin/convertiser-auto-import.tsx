@@ -49,6 +49,11 @@ export default function ConvertiserAutoImport() {
 
       const data = await response.json();
 
+      if (!response.ok) {
+        const errorMsg = data.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMsg);
+      }
+
       if (!data.success) {
         throw new Error(data.error || 'Failed to start auto-import');
       }
@@ -109,19 +114,23 @@ export default function ConvertiserAutoImport() {
   };
 
   return (
-    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-6 border border-purple-200">
+    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow-md p-6 border-2 border-purple-300 mb-6">
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0 w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+        <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
           <Download className="text-white" size={24} />
         </div>
         
         <div className="flex-1">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Auto Import ALL - Convertiser
-          </h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Automatycznie pobierz wszystkie produkty z katalogu Convertiser (21k+ items) 
-            bez podawania keywords. System automatycznie wzbogaci produkty o opisy i kategoryzuje je.
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-2xl font-bold text-gray-900">
+              🚀 Auto Import - Convertiser
+            </h3>
+            <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-semibold">NOWE</span>
+          </div>
+          <p className="text-sm text-gray-600 mb-4 font-medium">
+            ⚡ Pobierz WSZYSTKIE produkty z katalogu Convertiser (21k+ items) BEZ podawania słów kluczowych.
+            <br/>
+            System automatycznie: paginuje katalog → deduplikuje → kategoryzuje AI → wzbogaca opisy
           </p>
 
           {/* Configuration */}
@@ -166,24 +175,24 @@ export default function ConvertiserAutoImport() {
 
           {/* Progress Display */}
           {progress.status && (
-            <div className="mb-4 p-4 bg-white rounded-lg border border-gray-200">
+            <div className="mb-4 p-4 bg-white rounded-lg border-2 border-purple-200">
               <div className="flex items-center gap-2 mb-2">
                 {progress.status === 'running' && (
                   <>
                     <Loader2 className="animate-spin text-purple-600" size={20} />
-                    <span className="font-medium text-gray-900">Import w toku...</span>
+                    <span className="font-semibold text-gray-900">⏳ Import w toku (możesz zamknąć tę kartę)...</span>
                   </>
                 )}
                 {progress.status === 'completed' && (
                   <>
                     <CheckCircle className="text-green-600" size={20} />
-                    <span className="font-medium text-green-900">Import zakończony!</span>
+                    <span className="font-semibold text-green-900">✅ Import zakończony!</span>
                   </>
                 )}
                 {progress.status === 'failed' && (
                   <>
                     <AlertCircle className="text-red-600" size={20} />
-                    <span className="font-medium text-red-900">Import nie powiódł się</span>
+                    <span className="font-semibold text-red-900">❌ Import nie powiódł się</span>
                   </>
                 )}
               </div>
@@ -249,10 +258,18 @@ export default function ConvertiserAutoImport() {
             )}
           </button>
 
-          <div className="mt-3 text-xs text-gray-500">
-            <strong>Jak to działa:</strong> System automatycznie paginuje cały katalog Convertiser, 
-            deduplikuje produkty, kategoryzuje ich przez AI (batch processing) i wzbogaca opisy 
-            przez Deal-Refiner. Wszystko odbywa się w tle - możesz zamknąć tę kartę.
+          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+            <div className="font-semibold mb-2">📋 Jak to działa:</div>
+            <ul className="space-y-1 list-disc list-inside">
+              <li><strong>Paginacja:</strong> Pobiera całą katalog Convertiser (100 items/strona) aż do limitu</li>
+              <li><strong>Deduplikacja:</strong> Automatycznie unika duplikatów za pomocą identity matching</li>
+              <li><strong>AI Kategoryzacja:</strong> Batch processing przypisuje produkty do kategorii</li>
+              <li><strong>Wzbogacanie:</strong> Deal-Refiner dodaje opisy i normalizuje specs</li>
+              <li><strong>Asynchroniczne:</strong> Wszystko w tle - możesz zamknąć przeglądarkę!</li>
+            </ul>
+            <div className="mt-2 pt-2 border-t border-blue-200">
+              Tracking links: <strong>Generowane automatycznie</strong> dla każdej oferty (mode: Offers)
+            </div>
           </div>
         </div>
       </div>
