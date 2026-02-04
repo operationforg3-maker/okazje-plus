@@ -21,6 +21,7 @@ import { searchProductsForLinking, getCategories } from '@/lib/data';
 import { linkDealToProduct } from '@/lib/data';
 import { toast } from 'sonner';
 import { Loader2, Image as ImageIcon, Link2, Tag, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { createNewDeal } from './actions';
 
 // Typ dla danych nowej okazji wysyłanych do API endpoint
 interface NewDealData {
@@ -214,20 +215,7 @@ export default function AddDealPage() {
     toast.info(t('processing'));
 
     try {
-        const response = await fetch('/api/admin/deals', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(newDealData),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || t('errorMessage'));
-        }
-
-        const result = await response.json();
+        const result = await createNewDeal(newDealData);
         const dealId = result.id;
         
         // Linkowanie z produktem jeśli wybrano
