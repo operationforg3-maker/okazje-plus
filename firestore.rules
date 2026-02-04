@@ -198,6 +198,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && stringMax('content',2000);
       allow update: if isOwner('userId') && stringMax('content',2000);
       allow delete: if isOwner('userId') || isAdmin();
+      
+      // Comment likes - users can like/unlike comments
+      match /likes/{likeId} {
+        allow read: if true; // count likes publicly
+        allow create, delete: if isSignedIn() && request.auth.uid == likeId; // user can only like as themselves
+      }
     }
 
     // Oceny produktów: każdy może czytać, tylko właściciel może dodawać/edytować swoją ocenę
@@ -219,6 +225,12 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && stringMax('content',2000);
       allow update: if isOwner('userId') && stringMax('content',2000);
       allow delete: if isOwner('userId') || isAdmin();
+      
+      // Comment likes - users can like/unlike comments
+      match /likes/{likeId} {
+        allow read: if true; // count likes publicly
+        allow create, delete: if isSignedIn() && request.auth.uid == likeId; // user can only like as themselves
+      }
     }
 
     
