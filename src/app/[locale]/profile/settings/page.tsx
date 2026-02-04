@@ -94,12 +94,19 @@ function SettingsPage() {
       return;
     }
     
+    // Walidacja długości URL zdjęcia
+    if (avatarUrl.trim() && avatarUrl.trim().length > 2048) {
+      toast.error('URL zdjęcia jest za długi. UżyjURL zewnętrznego serwera zamiast data URL.');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Aktualizuj Firebase Auth profile
+      // Aktualizuj Firebase Auth profile - ale TYLKO displayName (photoURL ma limit)
+      // Zdjęcie przechowujemy w Firestore
       await updateProfile(firebaseUser, {
         displayName: displayName.trim() || null,
-        photoURL: avatarUrl.trim() || null,
+        photoURL: avatarUrl.trim().length <= 2048 ? avatarUrl.trim() || null : null,
       });
 
       // Aktualizuj dane w Firestore (users collection)
@@ -114,7 +121,13 @@ function SettingsPage() {
       toast.success('Profil został zaktualizowany!');
     } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Błąd podczas aktualizacji profilu: ' + error.message);
+      
+      // Lepszy komunikat błędu
+      if (error.code === 'auth/invalid-profile-attribute') {
+        toast.error('URL zdjęcia jest zbyt długi. Użyj krótkiego URL zewnętrznego serwera.');
+      } else {
+        toast.error('Błąd podczas aktualizacji profilu: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -321,17 +334,12 @@ function SettingsPage() {
                           
                           setLoading(true);
                           try {
-                            // Konwertuj do data URL dla tymczasowego podglądu
-                            const reader = new FileReader();
-                            reader.onload = async (event: any) => {
-                              const dataUrl = event.target.result;
-                              setAvatarUrl(dataUrl);
-                              toast.info('Zdjęcie zostanie zapisane po kliknięciu "Zapisz zmiany"');
-                            };
-                            reader.readAsDataURL(file);
+                            // Zamiast data URL, powiadamiamy użytkownika że musi wgrać do storage
+                            // Na razie: podaj URL zdjęcia z internetu
+                            toast.info('Przesyłanie zdjęć do Firebase Storage jest w przygotowaniu. Na razie wklej URL zdjęcia z zewnętrznego serwera (np. Google Photos, Imgur).');
+                            setLoading(false);
                           } catch (error: any) {
-                            toast.error('Błąd przy wczytywaniu zdjęcia: ' + error.message);
-                          } finally {
+                            toast.error('Błąd: ' + error.message);
                             setLoading(false);
                           }
                         };
@@ -342,7 +350,7 @@ function SettingsPage() {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Wklej URL swojego zdjęcia lub użyj przycisku do uploadu
+                    Wklej URL swojegoobrazka z Imgur, Google Photos lub innego serwera. Aby przesyłać własne pliki, skorzystaj z Firebase Storage (wkrótce).
                   </p>
                 </div>
               </div>
