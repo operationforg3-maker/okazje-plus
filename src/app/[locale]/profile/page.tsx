@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import { collection, query, where, getDocs, getDoc, orderBy, limit, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getUserComments, getUserForumActivity, getUserProductRatings } from './actions';
+import { getUserComments, getUserForumActivity, getUserProductRatings, getUserVotes } from './actions';
 import { Comment, Deal, Product } from '@/lib/types';
 import Link from 'next/link';
 import { getFavoriteDeals, getFavoriteProducts, getDealById, getProductById } from '@/lib/data';
@@ -115,22 +115,11 @@ function ProfilePage() {
           itemType: uc.parentCollection as 'deal' | 'product',
           itemId: uc.parentId,
         } as any)) as Array<Comment & { itemTitle?: string; itemType?: 'deal' | 'product'; itemId?: string }>;
-
-        // Pobierz głosy użytkownika - votes są w subkolekcjach deals/{dealId}/votes
+        // Pobierz ALL głosy użytkownika (na wszystkich dealach, nie tylko own) via server action
         let votesCount = 0;
         try {
-          const userDealsSnapshot = await getDocs(
-            query(collection(db, 'deals'), where('createdBy', '==', user.uid))
-          );
-          
-          let totalVotes = 0;
-          for (const dealDoc of userDealsSnapshot.docs) {
-            const votesSnapshot = await getDocs(
-              collection(db, `deals/${dealDoc.id}/votes`)
-            );
-            totalVotes += votesSnapshot.docs.length;
-          }
-          votesCount = totalVotes;
+          const votes = await getUserVotes(user.uid);
+          votesCount = votes.count;
         } catch (err) {
           console.warn('Error fetching votes:', err);
         }

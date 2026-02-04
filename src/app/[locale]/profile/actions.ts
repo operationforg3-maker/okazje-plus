@@ -226,3 +226,44 @@ export async function getUserProductRatings(userId: string): Promise<UserProduct
     }
   }
 }
+
+/**
+ * Pobiera liczbę ALL votes dla użytkownika (niezależnie od tego czy stworzył deal czy nie)
+ * Liczy wszystkie votes w deals/{dealId}/votes gdzie userId = user.uid
+ */
+export async function getUserVotes(userId: string): Promise<{ count: number }> {
+  console.log('[getUserVotes] Called with userId:', userId);
+  
+  if (!userId) {
+    console.error('[getUserVotes] No userId provided!');
+    return { count: 0 };
+  }
+
+  try {
+    // Pobierz approved deals (max 200 aby nie przydupić)
+    const dealsSnap = await getDocs(
+      query(collection(db, 'deals'), where('status', '==', 'approved'), limit(200))
+    );
+    console.log('[getUserVotes] Checking votes in', dealsSnap.size, 'approved deals');
+    
+    let totalVotes = 0;
+    
+    // Dla każdego deala, sprawdź czy user ma vote
+    for (const dealDoc of dealsSnap.docs) {
+      try {
+        const votesSnap = await getDocs(
+          query(collection(db, `deals/${dealDoc.id}/votes`), where('userId', '==', userId))
+        );
+        totalVotes += votesSnap.docs.length;
+      } catch (err) {
+        // Silent - deal może nie mieć votes subkolekcji
+      }
+    }
+    
+    console.log('[getUserVotes] Total votes found:', totalVotes);
+    return { count: totalVotes };
+  } catch (error: any) {
+    console.error('[getUserVotes] Error:', error.message);
+    return { count: 0 };
+  }
+}
