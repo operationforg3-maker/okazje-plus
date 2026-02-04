@@ -28,21 +28,19 @@ export interface UserComment {
  * Pobiera komentarze napisane przez zalogowanego użytkownika
  * Używa Admin SDK na serwerze aby ominąć problemy z collectionGroup permissions w Firestore
  */
-export async function getUserComments(): Promise<UserComment[]> {
-  const session = await getServerAuthSession();
+export async function getUserComments(userId: string): Promise<UserComment[]> {
+  console.log('[getUserComments] Called with userId:', userId);
   
-  console.log('[getUserComments] Session:', session);
-  
-  if (!session || !session.uid) {
-    console.error('[getUserComments] No session or uid!');
+  if (!userId) {
+    console.error('[getUserComments] No userId provided!');
     throw new Error('Nie jesteś zalogowany');
   }
 
   try {
-    console.log('[getUserComments] Querying comments for uid:', session.uid);
+    console.log('[getUserComments] Querying comments for userId:', userId);
     const commentsQuery = query(
       firestoreCollectionGroup(db, 'comments'),
-      where('userId', '==', session.uid),
+      where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
@@ -115,13 +113,11 @@ export interface UserForumActivity {
 /**
  * Pobiera forum activity użytkownika
  */
-export async function getUserForumActivity(): Promise<UserForumActivity> {
-  const session = await getServerAuthSession();
+export async function getUserForumActivity(userId: string): Promise<UserForumActivity> {
+  console.log('[getUserForumActivity] Called with userId:', userId);
   
-  console.log('[getUserForumActivity] Session:', session?.uid);
-  
-  if (!session || !session.uid) {
-    console.error('[getUserForumActivity] No session or uid!');
+  if (!userId) {
+    console.error('[getUserForumActivity] No userId provided!');
     return { forumPostsCount: 0, forumRepliesCount: 0 };
   }
 
@@ -131,7 +127,7 @@ export async function getUserForumActivity(): Promise<UserForumActivity> {
     try {
       const postsQuery = query(
         collection(db, 'forumPosts'),
-        where('authorId', '==', session.uid),
+        where('authorId', '==', userId),
         limit(100)
       );
       const postsSnapshot = await getDocs(postsQuery);
@@ -152,7 +148,7 @@ export async function getUserForumActivity(): Promise<UserForumActivity> {
         try {
           const repliesSnapshot = await getDocs(
             query(collection(db, `forumPosts/${postDoc.id}/replies`), 
-                  where('authorId', '==', session.uid))
+                  where('authorId', '==', userId))
           );
           forumRepliesCount += repliesSnapshot.docs.length;
         } catch (e) {

@@ -100,8 +100,8 @@ function ProfilePage() {
       setLoading(true);
       try {
         // Pobierz komentarze za pomocą server action
-        // To ominięcie problemy z permissions dla collectionGroup queries
-        const userComments = await getUserComments();
+        // Pass user.uid bezpośrednio zamiast polegać na getServerAuthSession()
+        const userComments = await getUserComments(user.uid);
 
         const comments = (userComments || []).slice(0, 10).map(uc => ({
           id: uc.id,
@@ -192,7 +192,7 @@ function ProfilePage() {
         let forumPostsCount = 0;
         let forumRepliesCount = 0;
         try {
-          const forumActivity = await getUserForumActivity();
+          const forumActivity = await getUserForumActivity(user.uid);
           forumPostsCount = forumActivity.forumPostsCount;
           forumRepliesCount = forumActivity.forumRepliesCount;
           console.log('Forum posts:', forumPostsCount, 'replies:', forumRepliesCount);
