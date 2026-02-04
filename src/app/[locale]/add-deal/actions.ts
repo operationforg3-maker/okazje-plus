@@ -48,9 +48,9 @@ export async function createNewDeal(data: NewDealData) {
     mainCategorySlug,
     subCategorySlug,
     subSubCategorySlug: subSubCategorySlug || null,
-    createdBy: session.email,
+    createdBy: session.uid,
     createdAt: new Date().toISOString(),
-    postedBy: session.email,
+    postedBy: session.email || session.uid,
     postedAt: new Date().toISOString(),
     status: 'draft' as const, // Wymaga moderacji
     votes: 0,

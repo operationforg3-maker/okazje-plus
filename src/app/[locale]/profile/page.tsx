@@ -117,6 +117,7 @@ function ProfilePage() {
           const userDealsSnapshot = await getDocs(
             query(collection(db, 'deals'), where('createdBy', '==', user.uid))
           );
+          console.log('User deals found:', userDealsSnapshot.docs.length, 'for user:', user.uid);
           
           let totalVotes = 0;
           for (const dealDoc of userDealsSnapshot.docs) {
@@ -126,6 +127,7 @@ function ProfilePage() {
             totalVotes += votesSnapshot.docs.length;
           }
           votesCount = totalVotes;
+          console.log('Total votes:', votesCount);
         } catch (err) {
           console.warn('Error fetching votes:', err);
         }
@@ -141,6 +143,7 @@ function ProfilePage() {
           );
           const ratingsSnapshot = await getDocs(ratingsQuery);
           ratingsCount = ratingsSnapshot.docs.length;
+          console.log('Product ratings found:', ratingsCount);
         } catch (err) {
           console.warn('productRatings collection not found or error:', err);
           // Fallback: szukaj ratings w subkolekcjach produktów
@@ -148,6 +151,7 @@ function ProfilePage() {
             const productsSnapshot = await getDocs(
               query(collection(db, 'products'), where('status', '==', 'approved'), limit(100))
             );
+            console.log('Products found for ratings check:', productsSnapshot.docs.length);
             let totalRatings = 0;
             for (const productDoc of productsSnapshot.docs) {
               try {
@@ -160,6 +164,7 @@ function ProfilePage() {
               }
             }
             ratingsCount = totalRatings;
+            console.log('Total ratings (fallback):', ratingsCount);
           } catch (err2) {
             console.warn('Error fetching product ratings fallback:', err2);
           }
@@ -174,6 +179,7 @@ function ProfilePage() {
           );
           const userDealsSnapshot = await getDocs(userDealsQuery);
           userDeals = userDealsSnapshot.docs.length;
+          console.log('User deals posted:', userDeals);
         } catch (err) {
           console.warn('Error fetching user deals:', err);
         }
