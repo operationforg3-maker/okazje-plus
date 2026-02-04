@@ -8,7 +8,7 @@ import { Comment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Trash2, AlertTriangle, Reply, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, AlertTriangle, Reply, ChevronDown, ChevronUp, Heart } from 'lucide-react';
 import { trackFirestoreComment } from '@/lib/analytics';
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import DOMPurify from 'isomorphic-dompurify';
 import { useTranslations } from 'next-intl';
+import { likeComment, unlikeComment, hasUserLikedComment } from '@/app/[locale]/profile/actions';
 
 interface CommentSectionProps {
   collectionName: 'products' | 'deals';
@@ -48,6 +49,8 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
     editingId: null as string | null,
     editContent: {} as Record<string, string>,
   });
+  // Track likes state: { "commentId": { liked: boolean, count: number } }
+  const [likesState, setLikesState] = useState<Record<string, { liked: boolean; count: number }>>({});
 
   // Sprawdź czy user jest adminem (prawdziwa rola z User doc)
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
@@ -59,9 +62,24 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
     async function fetchComments() {
       const comments = await getComments(collectionName, docId, 100);
       setCommentState(prev => ({ ...prev, comments }));
+      
+      // Load like status for all comments
+      if (user) {
+        for (const comment of comments) {
+          try {
+            const likeStatus = await hasUserLikedComment(docId, comment.id, user.uid);
+            setLikesState(prev => ({
+              ...prev,
+              [comment.id]: likeStatus,
+            }));
+          } catch (err) {
+            console.error('Error loading like status:', err);
+          }
+        }
+      }
     }
     fetchComments();
-  }, [collectionName, docId]);
+  }, [collectionName, docId, user]);
 
   // Organizuj komentarze w strukturę parent-child
   const organizeComments = (allComments: Comment[]) => {
@@ -233,6 +251,67 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
     });
   };
 
+  const handleToggleLike = async (commentId: string) => {
+    if (!user) {
+      toast.error(t('comments.mustBeLoggedIn'));
+      return;
+    }
+
+    const currentLikeState = likesState[commentId];
+    const isCurrentlyLiked = currentLikeState?.liked || false;
+    const currentCount = currentLikeState?.count || 0;
+
+    // Optimistic update
+    setLikesState(prev => ({
+      ...prev,
+      [commentId]: {
+        liked: !isCurrentlyLiked,
+        count: isCurrentlyLiked ? Math.max(0, currentCount - 1) : currentCount + 1,
+      },
+    }));
+
+    try {
+      let result;
+      if (isCurrentlyLiked) {
+        result = await unlikeComment(docId, commentId, user.uid);
+      } else {
+        result = await likeComment(docId, commentId, user.uid);
+      }
+
+      if (result.success && result.likeCount !== undefined) {
+        setLikesState(prev => ({
+          ...prev,
+          [commentId]: {
+            liked: !isCurrentlyLiked,
+            count: result.likeCount || 0,
+          },
+        }));
+        toast.success(isCurrentlyLiked ? 'Usunięty like' : 'Polubiono!');
+      } else {
+        // Rollback on error
+        setLikesState(prev => ({
+          ...prev,
+          [commentId]: {
+            liked: isCurrentlyLiked,
+            count: currentCount,
+          },
+        }));
+        toast.error(result.error || 'Błąd podczas obsługi like\'a');
+      }
+    } catch (error: any) {
+      // Rollback on error
+      setLikesState(prev => ({
+        ...prev,
+        [commentId]: {
+          liked: isCurrentlyLiked,
+          count: currentCount,
+        },
+      }));
+      toast.error('Błąd podczas obsługi like\'a');
+      console.error('Like toggle error:', error);
+    }
+  };
+
   const renderComment = (comment: Comment & { replies?: Comment[] }, level: number = 0) => {
     const hasReplies = (comment.repliesCount || 0) > 0 || (comment.replies && comment.replies.length > 0);
     const isExpanded = replyState.expandedReplies.has(comment.id);
@@ -309,7 +388,25 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
               )}
               
               {/* Actions */}
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                {user && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleToggleLike(comment.id)}
+                    className={`h-7 px-2 text-xs transition-colors ${
+                      likesState[comment.id]?.liked 
+                        ? 'text-red-500 hover:text-red-600' 
+                        : 'text-muted-foreground hover:text-red-500'
+                    }`}
+                  >
+                    <Heart 
+                      className={`h-3 w-3 mr-1 ${likesState[comment.id]?.liked ? 'fill-current' : ''}`}
+                    />
+                    {likesState[comment.id]?.count || 0}
+                  </Button>
+                )}
+
                 {user && (
                   <Button
                     variant="ghost"

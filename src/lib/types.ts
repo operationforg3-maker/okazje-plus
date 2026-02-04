@@ -609,6 +609,17 @@ export interface ProductRating {
   createdAt: string; // ISO string
 }
 
+export interface UserStats {
+  voteCount: number;              // Total votes user has cast on deals
+  commentCount: number;           // Total comments user has posted (on deals + products)
+  forumPostCount: number;         // Total forum posts (threads) created
+  forumReplyCount: number;        // Total replies in forum threads
+  ratingCount: number;            // Total product ratings
+  totalLikesReceived: number;     // Total likes on user's comments + posts
+  dealsPostedCount: number;       // Total deals posted by user
+  lastUpdated: string;            // ISO timestamp of last stats update
+}
+
 export interface User {
   uid: string;
   email: string | null;
@@ -618,6 +629,7 @@ export interface User {
   betaRole?: 'pioneer' | 'beta'; // Rola z pre-rejestracji (opcjonalna)
   betaNumber?: number; // Numer rejestracji (opcjonalny)
   createdAt?: string; // Data utworzenia konta
+  stats?: UserStats; // Cached user statistics - updated by Cloud Functions
 }
 
 // Import/Seeding profiles and AI prompt configuration

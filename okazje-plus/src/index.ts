@@ -38,6 +38,9 @@ import {
 // Import price update functions
 import { updatePricesDaily, manualPriceUpdate } from "./scheduled-price-update";
 
+// Import user stats Cloud Functions
+import * as userStats from "./user-stats";
+
 // --- Typy pomocnicze dla danych wejściowych ---
 // Używamy Partial<T> aby pozwolić na niepełne dane z CSV
 type ImportDealData = Partial<
@@ -2363,4 +2366,16 @@ export const createForumThreadCloudFunction = onCall(
     }
   }
 );
+
+// ============================================================================
+// EXPORT USER STATS CLOUD FUNCTIONS
+// ============================================================================
+export const onVoteCreated = userStats.onVoteCreated;
+export const onVoteDeleted = userStats.onVoteDeleted;
+export const onCommentCreated = userStats.onCommentCreated;
+export const onCommentDeleted = userStats.onCommentDeleted;
+export const onCommentLikeCreated = userStats.onCommentLikeCreated;
+export const onCommentLikeDeleted = userStats.onCommentLikeDeleted;
+export const onForumPostCreated = userStats.onForumPostCreated;
+export const onForumPostDeleted = userStats.onForumPostDeleted;
 

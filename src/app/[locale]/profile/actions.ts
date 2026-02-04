@@ -247,3 +247,163 @@ export async function getUserVotes(userId: string): Promise<{ count: number }> {
     return { count: 0 };
   }
 }
+
+// ============================================================================
+// COMMENT LIKES - Gamification System
+// ============================================================================
+
+export interface LikeCommentResponse {
+  success: boolean;
+  error?: string;
+  likeCount?: number;
+}
+
+/**
+ * Dodaje like'a na komentarz
+ * Cloud Functions automatycznie aktualizuje comment.likeCount i user.stats.totalLikesReceived
+ */
+export async function likeComment(
+  dealId: string,
+  commentId: string,
+  userId: string
+): Promise<LikeCommentResponse> {
+  if (!userId || !dealId || !commentId) {
+    return { success: false, error: 'Missing userId, dealId, or commentId' };
+  }
+
+  try {
+    const db = getAdminFirestore();
+    
+    // Create a like document in deals/{dealId}/comments/{commentId}/likes/{userId}
+    await db
+      .collection('deals')
+      .doc(dealId)
+      .collection('comments')
+      .doc(commentId)
+      .collection('likes')
+      .doc(userId)
+      .set(
+        {
+          userId,
+          createdAt: new Date(),
+        },
+        { merge: true }
+      );
+
+    // Get updated like count
+    const likesSnapshot = await db
+      .collection('deals')
+      .doc(dealId)
+      .collection('comments')
+      .doc(commentId)
+      .collection('likes')
+      .get();
+
+    console.log('[likeComment] Like added for user:', userId, 'on comment:', commentId);
+
+    return {
+      success: true,
+      likeCount: likesSnapshot.size,
+    };
+  } catch (error: any) {
+    console.error('[likeComment] Error:', error.message);
+    return {
+      success: false,
+      error: error.message || 'Failed to like comment',
+    };
+  }
+}
+
+/**
+ * Usuwa like'a z komentarza
+ * Cloud Functions automatycznie aktualizuje comment.likeCount i user.stats.totalLikesReceived
+ */
+export async function unlikeComment(
+  dealId: string,
+  commentId: string,
+  userId: string
+): Promise<LikeCommentResponse> {
+  if (!userId || !dealId || !commentId) {
+    return { success: false, error: 'Missing userId, dealId, or commentId' };
+  }
+
+  try {
+    const db = getAdminFirestore();
+    
+    // Delete the like document
+    await db
+      .collection('deals')
+      .doc(dealId)
+      .collection('comments')
+      .doc(commentId)
+      .collection('likes')
+      .doc(userId)
+      .delete();
+
+    // Get updated like count
+    const likesSnapshot = await db
+      .collection('deals')
+      .doc(dealId)
+      .collection('comments')
+      .doc(commentId)
+      .collection('likes')
+      .get();
+
+    console.log('[unlikeComment] Like removed for user:', userId, 'on comment:', commentId);
+
+    return {
+      success: true,
+      likeCount: likesSnapshot.size,
+    };
+  } catch (error: any) {
+    console.error('[unlikeComment] Error:', error.message);
+    return {
+      success: false,
+      error: error.message || 'Failed to unlike comment',
+    };
+  }
+}
+
+/**
+ * Sprawdza czy user już like'ował komentarz
+ */
+export async function hasUserLikedComment(
+  dealId: string,
+  commentId: string,
+  userId: string
+): Promise<{ liked: boolean; count: number }> {
+  if (!userId || !dealId || !commentId) {
+    return { liked: false, count: 0 };
+  }
+
+  try {
+    const db = getAdminFirestore();
+    
+    // Check if user's like document exists
+    const likeDoc = await db
+      .collection('deals')
+      .doc(dealId)
+      .collection('comments')
+      .doc(commentId)
+      .collection('likes')
+      .doc(userId)
+      .get();
+
+    // Get total like count
+    const likesSnapshot = await db
+      .collection('deals')
+      .doc(dealId)
+      .collection('comments')
+      .doc(commentId)
+      .collection('likes')
+      .get();
+
+    return {
+      liked: likeDoc.exists,
+      count: likesSnapshot.size,
+    };
+  } catch (error: any) {
+    console.error('[hasUserLikedComment] Error:', error.message);
+    return { liked: false, count: 0 };
+  }
+}
