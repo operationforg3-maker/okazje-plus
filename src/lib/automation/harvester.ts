@@ -26,6 +26,7 @@ import { assignProductCategory } from '@/ai/flows/convertiser-auto-category';
  */
 interface RawProduct {
   title: string;
+  description?: string;
   imageUrl: string;
   price: number;
   originalPrice?: number; // Price before discount (for strikethrough display)
@@ -936,6 +937,7 @@ export class SmartHarvester {
 
             return {
               title,
+              description: product.description || product.desc || product.short_description || '',
               imageUrl,
               price,
               originalPrice: originalPrice > price ? originalPrice : undefined,

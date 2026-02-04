@@ -11,6 +11,7 @@ import { gemini20Flash } from '@genkit-ai/vertexai';
 import { ai } from '../genkit';
 import { z } from 'zod';
 import { logger } from '@/lib/logging';
+import { parseJsonFromResponse } from '@/lib/vertex';
 
 /**
  * Schema for category mapping result
@@ -31,7 +32,6 @@ type CategoryAssignment = z.infer<typeof CategoryAssignmentSchema>;
 export const assignProductCategory = ai.defineFlow(
   {
     name: 'assignProductCategory',
-    description: 'Automatically assign the correct category to a Convertiser product',
     inputSchema: z.object({
       productTitle: z.string().describe('Product title'),
       productDescription: z.string().optional().describe('Product description'),
@@ -90,27 +90,20 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
   "reasoning": "explanation"
 }`;
 
-      const response = await gemini20Flash.generate({
+      const response = await ai.generate({
+        model: gemini20Flash,
         prompt,
         config: {
-          temperature: 0.3, // Low temperature for consistent categorization
+          temperature: 0.3,
           topK: 1,
         },
       });
 
-      // Parse AI response
-      const responseText = response.text();
+      const responseText = response.text ?? '';
       logger.info('AI categorization response', { responseText });
 
-      // Extract JSON from response
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        logger.warn('No valid JSON found in AI response', { responseText });
-        throw new Error('Invalid AI response format');
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
-      const result = CategoryAssignmentSchema.parse(parsed);
+      const parsed = parseJsonFromResponse(responseText);
+      const result = CategoryAssignmentSchema.parse(parsed || {});
 
       // Validate that the assigned category exists in availableCategories
       const categoryExists = input.availableCategories.some((cat) => {
@@ -173,7 +166,6 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
 export const batchAssignCategories = ai.defineFlow(
   {
     name: 'batchAssignCategories',
-    description: 'Assign categories to multiple products',
     inputSchema: z.object({
       products: z.array(
         z.object({
