@@ -815,19 +815,6 @@ export default function M6ImportDashboard() {
           </Card>
         </div>
 
-        {/* Bulk Refiner Panel */}
-        <Card className="bg-white border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-purple-600" />
-              Bulk AI Refiner
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BulkRefinerPanel authToken={authToken} />
-          </CardContent>
-        </Card>
-
         {/* Danger Controls (Kill All / WIPE) */}
         <Card className="bg-white border-2 border-red-200">
           <CardContent className="pt-6">
@@ -1556,6 +1543,15 @@ function HarvesterWizard({
             </pre>
           </div>
         )}
+
+        <div className="border-t pt-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="w-4 h-4 text-purple-600" />
+            <p className="text-sm font-semibold text-slate-900">Bulk AI Refiner</p>
+            <span className="text-xs text-slate-500">(masowe wzbogacanie)</span>
+          </div>
+          <BulkRefinerPanel authToken={authToken} />
+        </div>
       </CardContent>
     </Card>
   );
