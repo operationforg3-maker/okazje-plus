@@ -28,8 +28,26 @@ export async function GET(request: NextRequest) {
 
     // 2. Get query params
     const searchParams = request.nextUrl.searchParams;
+    const jobId = searchParams.get('jobId');
     const statusFilter = searchParams.get('status');
     const limitParam = Math.min(100, parseInt(searchParams.get('limit') || '50'));
+
+    // If jobId provided, fetch single job
+    if (jobId) {
+      const jobDoc = await adminDb.collection('harvester_jobs').doc(jobId).get();
+      if (!jobDoc.exists) {
+        return NextResponse.json(
+          { success: false, error: 'Job not found' },
+          { status: 404 }
+        );
+      }
+      
+      const job = { id: jobDoc.id, ...jobDoc.data() } as HarvesterJob;
+      return NextResponse.json({
+        success: true,
+        job,
+      });
+    }
 
     // 3. Build Firestore query (Admin SDK)
     let q: FirebaseFirestore.Query = adminDb.collection('harvester_jobs');
