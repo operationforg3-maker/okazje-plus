@@ -155,13 +155,12 @@ export const assignProductCategory = ai.defineFlow(
     outputSchema: CategoryAssignmentSchema,
   },
   async (input) => {
+    const availableCategories = input.availableCategories as AvailableCategory[];
     try {
       logger.info('Starting auto-category assignment', {
         productTitle: input.productTitle,
         availableCategoriesCount: input.availableCategories.length,
       });
-
-      const availableCategories = input.availableCategories as AvailableCategory[];
 
       // Format categories for prompt
       const categoryList = availableCategories
