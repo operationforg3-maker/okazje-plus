@@ -1225,13 +1225,13 @@ function ConvertiserAutoBrowsePanel({
               type="number"
               value={maxResults}
               onChange={(e) => setMaxResults(parseInt(e.target.value) || 10000)}
-              min={100}
+              min={1000}
               max={50000}
               step={1000}
               disabled={isImporting}
               className="w-full"
             />
-            <p className="text-xs text-slate-500">Maksymalna liczba produktów</p>
+            <p className="text-xs text-slate-500">Maksymalna liczba produktów (1000-50000)</p>
           </div>
 
           <div className="space-y-2">
