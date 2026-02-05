@@ -1848,6 +1848,15 @@ function ModerationPanel({
     }
   }, [authToken]);
 
+  const getProductTitle = (title: any): string => {
+    if (!title) return 'Bez tytułu';
+    if (typeof title === 'string') return title;
+    if (typeof title === 'object') {
+      return title.pl || title.en || title.de || 'Bez tytułu';
+    }
+    return 'Bez tytułu';
+  };
+
   const loadDraftProducts = async () => {
     if (!authToken) return;
     setLoading(true);
@@ -2066,12 +2075,12 @@ function ModerationPanel({
                     checked={selectedIds.has(product.id)}
                     onChange={() => toggleSelect(product.id)}
                     className="w-4 h-4 rounded mt-1"
-                    aria-label={`Wybierz produkt: ${product.title?.pl || product.title || 'Bez tytułu'}`}
+                    aria-label={`Wybierz produkt: ${getProductTitle(product.title)}`}
                     title="Kliknij aby wybrać ten produkt do moderacji"
                   />
                   <div className="flex-1">
                     <h3 className="font-semibold text-slate-900">
-                      {product.title?.pl || product.title || 'Bez tytułu'}
+                      {getProductTitle(product.title)}
                     </h3>
                     <p className="text-xs text-slate-500 mt-1 font-mono">
                       ID: {product.id}
