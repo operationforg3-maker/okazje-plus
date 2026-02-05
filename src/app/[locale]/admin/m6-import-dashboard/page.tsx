@@ -925,13 +925,6 @@ export default function M6ImportDashboard() {
           {/* TAB: Nowy Harvester */}
           <TabsContent value="harvester">
             <div className="space-y-4">
-              {/* Convertiser Auto-Browse */}
-              <ConvertiserAutoBrowsePanel
-                onJobCreated={refreshJobs}
-                authToken={authToken}
-                setAuthError={setAuthError}
-              />
-              
               <HarvesterWizard
                 onJobCreated={refreshJobs}
                 authToken={authToken}
@@ -1083,319 +1076,6 @@ function CategoryTreeBuilder({
   );
 }
 
-/* ==================== CONVERTISER AUTO-BROWSE PANEL ==================== */
-function ConvertiserAutoBrowsePanel({
-  onJobCreated,
-  authToken,
-  setAuthError,
-}: {
-  onJobCreated: () => void;
-  authToken: string | null;
-  setAuthError: (message: string | null) => void;
-}) {
-  const [isImporting, setIsImporting] = useState(false);
-  const [maxResults, setMaxResults] = useState(10000);
-  const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('offers');
-  const [progress, setProgress] = useState<{
-    jobId?: string;
-    productsFound?: number;
-    productsCreated?: number;
-    dealsCreated?: number;
-    status?: string;
-    error?: string;
-  }>({});
-
-  const handleAutoImport = async () => {
-    if (!authToken) {
-      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
-      return;
-    }
-
-    try {
-      setIsImporting(true);
-      setProgress({});
-
-      const response = await fetch('/api/admin/harvester/run', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          source: 'convertiser',
-          query: '',
-          maxResults,
-          convertiserMode,
-          autoBrowse: true,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = data.error || `HTTP ${response.status}: ${response.statusText}`;
-        throw new Error(errorMsg);
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to start auto-import');
-      }
-
-      const jobId = data.job?.id;
-      if (!jobId) {
-        throw new Error('No job ID returned');
-      }
-
-      setProgress({ jobId, status: 'running' });
-
-      // Poll for job status every 5 seconds
-      let pollAttempts = 0;
-      const maxPollAttempts = 12; // ~1 min
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await fetch(`/api/admin/harvester-jobs?jobId=${jobId}`, {
-            headers: { Authorization: `Bearer ${authToken}` },
-          });
-
-          if (statusResponse.status === 401 || statusResponse.status === 403) {
-            clearInterval(pollInterval);
-            setProgress(prev => ({
-              ...prev,
-              status: 'failed',
-              error: 'Brak uprawnień (401/403) do odczytu statusu joba.',
-            }));
-            setIsImporting(false);
-            return;
-          }
-
-          const statusData = await statusResponse.json();
-
-          if (!statusData.success || !statusData.job) {
-            pollAttempts += 1;
-
-            // Fallback: spróbuj pobrać listę i znaleźć job po ID
-            const listResponse = await fetch('/api/admin/harvester-jobs?limit=50', {
-              headers: { Authorization: `Bearer ${authToken}` },
-            });
-
-            if (listResponse.ok) {
-              const listData = await listResponse.json();
-              const fallbackJob = (listData.jobs || []).find((j: any) => j.id === jobId);
-              if (fallbackJob) {
-                setProgress({
-                  jobId,
-                  productsFound: fallbackJob.productsFound || 0,
-                  productsCreated: fallbackJob.productsCreated || 0,
-                  dealsCreated: fallbackJob.dealsCreated || 0,
-                  status: fallbackJob.status,
-                });
-
-                if (fallbackJob.status === 'completed' || fallbackJob.status === 'failed') {
-                  clearInterval(pollInterval);
-                  setIsImporting(false);
-                  onJobCreated();
-                }
-                return;
-              }
-            }
-
-            if (pollAttempts <= maxPollAttempts) {
-              setProgress(prev => ({
-                ...prev,
-                status: 'running',
-                error: 'Czekam na zapis joba w bazie...'
-              }));
-              return;
-            }
-
-            clearInterval(pollInterval);
-            setProgress(prev => ({
-              ...prev,
-              status: 'failed',
-              error: statusData.error || 'Nie udało się pobrać statusu joba.'
-            }));
-            setIsImporting(false);
-            return;
-          }
-
-          const job = statusData.job;
-          setProgress({
-            jobId,
-            productsFound: job.productsFound || 0,
-            productsCreated: job.productsCreated || 0,
-            dealsCreated: job.dealsCreated || 0,
-            status: job.status,
-          });
-
-          if (job.status === 'completed' || job.status === 'failed') {
-            clearInterval(pollInterval);
-            setIsImporting(false);
-            onJobCreated();
-          }
-        } catch (pollError) {
-          console.error('Failed to poll job status:', pollError);
-          clearInterval(pollInterval);
-          setProgress(prev => ({
-            ...prev,
-            status: 'failed',
-            error: 'Błąd sieci podczas odczytu statusu joba.'
-          }));
-          setIsImporting(false);
-        }
-      }, 5000);
-
-    } catch (error) {
-      console.error('Auto-import error:', error);
-      setProgress(prev => ({
-        ...prev,
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      }));
-      setIsImporting(false);
-    }
-  };
-
-  return (
-    <Card className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-              <Download className="text-white" size={20} />
-            </div>
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                🚀 Auto Import - Convertiser
-                <Badge className="bg-purple-600">NOWE</Badge>
-              </CardTitle>
-              <p className="text-xs text-slate-600 mt-1">
-                Pobierz WSZYSTKIE produkty z katalogu Convertiser (21k+ items) bez słów kluczowych
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Configuration */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="max-results">Max Results</Label>
-            <Input
-              id="max-results"
-              type="number"
-              value={maxResults}
-              onChange={(e) => setMaxResults(parseInt(e.target.value) || 10000)}
-              min={1000}
-              max={50000}
-              step={1000}
-              disabled={isImporting}
-              className="w-full"
-            />
-            <p className="text-xs text-slate-500">Maksymalna liczba produktów (1000-50000)</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="mode">Mode</Label>
-            <Select value={convertiserMode} onValueChange={(v) => setConvertiserMode(v as 'products' | 'offers')} disabled={isImporting}>
-              <SelectTrigger id="mode">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="offers">Offers (tracking links)</SelectItem>
-                <SelectItem value="products">Products</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-slate-500">Offers generuje tracking linki</p>
-          </div>
-        </div>
-
-        {/* Progress Display */}
-        {progress.status && (
-          <div className="p-4 bg-white rounded-lg border-2 border-purple-200">
-            <div className="flex items-center gap-2 mb-3">
-              {progress.status === 'running' && (
-                <>
-                  <div className="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full" />
-                  <span className="font-semibold text-gray-900">⏳ Import w toku...</span>
-                </>
-              )}
-              {progress.status === 'completed' && (
-                <>
-                  <CheckCircle2 className="text-green-600" size={20} />
-                  <span className="font-semibold text-green-900">✅ Import zakończony!</span>
-                </>
-              )}
-              {progress.status === 'failed' && (
-                <>
-                  <AlertCircle className="text-red-600" size={20} />
-                  <span className="font-semibold text-red-900">❌ Import nie powiódł się</span>
-                </>
-              )}
-            </div>
-
-            {progress.jobId && (
-              <p className="text-xs text-gray-500 mb-3">Job ID: {progress.jobId}</p>
-            )}
-
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div className="bg-blue-50 rounded p-2">
-                <div className="text-blue-600 font-medium text-xs">Znaleziono</div>
-                <div className="text-2xl font-bold text-blue-900">{progress.productsFound || 0}</div>
-              </div>
-              <div className="bg-green-50 rounded p-2">
-                <div className="text-green-600 font-medium text-xs">Produkty</div>
-                <div className="text-2xl font-bold text-green-900">{progress.productsCreated || 0}</div>
-              </div>
-              <div className="bg-purple-50 rounded p-2">
-                <div className="text-purple-600 font-medium text-xs">Oferty</div>
-                <div className="text-2xl font-bold text-purple-900">{progress.dealsCreated || 0}</div>
-              </div>
-            </div>
-
-            {progress.error && (
-              <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                {progress.error}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Action Button */}
-        <Button
-          onClick={handleAutoImport}
-          disabled={isImporting}
-          size="lg"
-          className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
-        >
-          {isImporting ? (
-            <>
-              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              Importowanie...
-            </>
-          ) : (
-            <>
-              <Download size={20} />
-              Uruchom Auto Import
-            </>
-          )}
-        </Button>
-
-        {/* Info */}
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 space-y-2">
-          <div className="font-semibold">📋 Jak to działa:</div>
-          <ul className="space-y-1 list-disc list-inside">
-            <li><strong>Paginacja:</strong> Pobiera katalog Convertisera (100 items/strona)</li>
-            <li><strong>Deduplikacja:</strong> Automatycznie unika duplikatów</li>
-            <li><strong>AI Kategoryzacja:</strong> Przypisuje kategorie batch processing</li>
-            <li><strong>Wzbogacanie:</strong> Deal-Refiner dodaje opisy i normalizuje specs</li>
-            <li><strong>Asynchroniczne:</strong> Wszystko w tle - możesz zamknąć przeglądarkę!</li>
-          </ul>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 /* ==================== HARVESTER WIZARD ==================== */
 function HarvesterWizard({
   onJobCreated,
@@ -1415,6 +1095,17 @@ function HarvesterWizard({
   const [result, setResult] = useState<any>(null);
   const [useCategoryTree, setUseCategoryTree] = useState(false);
   const [rootCategorySlug, setRootCategorySlug] = useState("");
+  const [autoIsImporting, setAutoIsImporting] = useState(false);
+  const [autoMaxResults, setAutoMaxResults] = useState(10000);
+  const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('offers');
+  const [autoProgress, setAutoProgress] = useState<{
+    jobId?: string;
+    productsFound?: number;
+    productsCreated?: number;
+    dealsCreated?: number;
+    status?: string;
+    error?: string;
+  }>({});
 
   const handleRun = async () => {
     if (!useCategoryTree && !query.trim()) return;
@@ -1466,6 +1157,153 @@ function HarvesterWizard({
     }
   };
 
+  const handleAutoImport = async () => {
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      return;
+    }
+
+    try {
+      setAutoIsImporting(true);
+      setAutoProgress({});
+
+      const response = await fetch('/api/admin/harvester/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          source: 'convertiser',
+          query: '',
+          maxResults: autoMaxResults,
+          convertiserMode,
+          autoBrowse: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = data.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMsg);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to start auto-import');
+      }
+
+      const jobId = data.job?.id;
+      if (!jobId) {
+        throw new Error('No job ID returned');
+      }
+
+      setAutoProgress({ jobId, status: 'running' });
+
+      let pollAttempts = 0;
+      const maxPollAttempts = 12; // ~1 min
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/admin/harvester-jobs?jobId=${jobId}`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+
+          if (statusResponse.status === 401 || statusResponse.status === 403) {
+            clearInterval(pollInterval);
+            setAutoProgress(prev => ({
+              ...prev,
+              status: 'failed',
+              error: 'Brak uprawnień (401/403) do odczytu statusu joba.',
+            }));
+            setAutoIsImporting(false);
+            return;
+          }
+
+          const statusData = await statusResponse.json();
+
+          if (!statusData.success || !statusData.job) {
+            pollAttempts += 1;
+
+            const listResponse = await fetch('/api/admin/harvester-jobs?limit=50', {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            if (listResponse.ok) {
+              const listData = await listResponse.json();
+              const fallbackJob = (listData.jobs || []).find((j: any) => j.id === jobId);
+              if (fallbackJob) {
+                setAutoProgress({
+                  jobId,
+                  productsFound: fallbackJob.productsFound || 0,
+                  productsCreated: fallbackJob.productsCreated || 0,
+                  dealsCreated: fallbackJob.dealsCreated || 0,
+                  status: fallbackJob.status,
+                });
+
+                if (fallbackJob.status === 'completed' || fallbackJob.status === 'failed') {
+                  clearInterval(pollInterval);
+                  setAutoIsImporting(false);
+                  onJobCreated();
+                }
+                return;
+              }
+            }
+
+            if (pollAttempts <= maxPollAttempts) {
+              setAutoProgress(prev => ({
+                ...prev,
+                status: 'running',
+                error: 'Czekam na zapis joba w bazie...'
+              }));
+              return;
+            }
+
+            clearInterval(pollInterval);
+            setAutoProgress(prev => ({
+              ...prev,
+              status: 'failed',
+              error: statusData.error || 'Nie udało się pobrać statusu joba.'
+            }));
+            setAutoIsImporting(false);
+            return;
+          }
+
+          const job = statusData.job;
+          setAutoProgress({
+            jobId,
+            productsFound: job.productsFound || 0,
+            productsCreated: job.productsCreated || 0,
+            dealsCreated: job.dealsCreated || 0,
+            status: job.status,
+          });
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(pollInterval);
+            setAutoIsImporting(false);
+            onJobCreated();
+          }
+        } catch (pollError) {
+          console.error('Failed to poll job status:', pollError);
+          clearInterval(pollInterval);
+          setAutoProgress(prev => ({
+            ...prev,
+            status: 'failed',
+            error: 'Błąd sieci podczas odczytu statusu joba.'
+          }));
+          setAutoIsImporting(false);
+        }
+      }, 5000);
+    } catch (error) {
+      console.error('Auto-import error:', error);
+      setAutoProgress(prev => ({
+        ...prev,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }));
+      setAutoIsImporting(false);
+    }
+  };
+
   return (
     <Card className="bg-white border-0 shadow-sm">
       <CardHeader>
@@ -1496,6 +1334,123 @@ function HarvesterWizard({
             ))}
           </div>
         </div>
+
+        {source === 'convertiser' && (
+          <div className="space-y-4 rounded-lg border-2 border-purple-200 bg-purple-50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                  <Download className="text-white" size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Auto Import Convertiser (bez słów kluczowych)</p>
+                  <p className="text-xs text-slate-600">Pobiera cały katalog Convertiser z paginacją</p>
+                </div>
+              </div>
+              <Badge className="bg-purple-600">AUTO</Badge>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="auto-max-results">Max Results</Label>
+                <Input
+                  id="auto-max-results"
+                  type="number"
+                  value={autoMaxResults}
+                  onChange={(e) => setAutoMaxResults(parseInt(e.target.value) || 10000)}
+                  min={1000}
+                  max={50000}
+                  step={1000}
+                  disabled={autoIsImporting}
+                  className="w-full"
+                />
+                <p className="text-xs text-slate-500">Maksymalna liczba produktów (1000-50000)</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="auto-mode">Mode</Label>
+                <Select value={convertiserMode} onValueChange={(v) => setConvertiserMode(v as 'products' | 'offers')} disabled={autoIsImporting}>
+                  <SelectTrigger id="auto-mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="offers">Offers (tracking links)</SelectItem>
+                    <SelectItem value="products">Products</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">Offers generuje tracking linki</p>
+              </div>
+            </div>
+
+            {autoProgress.status && (
+              <div className="rounded-lg border border-purple-200 bg-white p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  {autoProgress.status === 'running' && (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full" />
+                      <span className="text-sm font-semibold text-slate-900">⏳ Import w toku...</span>
+                    </>
+                  )}
+                  {autoProgress.status === 'completed' && (
+                    <>
+                      <CheckCircle2 className="text-green-600" size={18} />
+                      <span className="text-sm font-semibold text-green-900">✅ Import zakończony!</span>
+                    </>
+                  )}
+                  {autoProgress.status === 'failed' && (
+                    <>
+                      <AlertCircle className="text-red-600" size={18} />
+                      <span className="text-sm font-semibold text-red-900">❌ Import nie powiódł się</span>
+                    </>
+                  )}
+                </div>
+
+                {autoProgress.jobId && (
+                  <p className="text-xs text-gray-500 mb-2">Job ID: {autoProgress.jobId}</p>
+                )}
+
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="bg-blue-50 rounded p-2">
+                    <div className="text-blue-600 font-medium">Znaleziono</div>
+                    <div className="text-lg font-bold text-blue-900">{autoProgress.productsFound || 0}</div>
+                  </div>
+                  <div className="bg-green-50 rounded p-2">
+                    <div className="text-green-600 font-medium">Produkty</div>
+                    <div className="text-lg font-bold text-green-900">{autoProgress.productsCreated || 0}</div>
+                  </div>
+                  <div className="bg-purple-50 rounded p-2">
+                    <div className="text-purple-600 font-medium">Oferty</div>
+                    <div className="text-lg font-bold text-purple-900">{autoProgress.dealsCreated || 0}</div>
+                  </div>
+                </div>
+
+                {autoProgress.error && (
+                  <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                    {autoProgress.error}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Button
+              onClick={handleAutoImport}
+              disabled={autoIsImporting}
+              className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+            >
+              {autoIsImporting ? (
+                <>
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                  Importowanie...
+                </>
+              ) : (
+                <>
+                  <Download size={18} />
+                  Uruchom Auto Import
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Step 2: Query input */}
         <div className="space-y-3">
