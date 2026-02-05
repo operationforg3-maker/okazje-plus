@@ -1149,16 +1149,71 @@ function ConvertiserAutoBrowsePanel({
       setProgress({ jobId, status: 'running' });
 
       // Poll for job status every 5 seconds
+      let pollAttempts = 0;
+      const maxPollAttempts = 12; // ~1 min
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse = await fetch(`/api/admin/harvester-jobs?jobId=${jobId}`, {
             headers: { Authorization: `Bearer ${authToken}` },
           });
+
+          if (statusResponse.status === 401 || statusResponse.status === 403) {
+            clearInterval(pollInterval);
+            setProgress(prev => ({
+              ...prev,
+              status: 'failed',
+              error: 'Brak uprawnień (401/403) do odczytu statusu joba.',
+            }));
+            setIsImporting(false);
+            return;
+          }
+
           const statusData = await statusResponse.json();
 
           if (!statusData.success || !statusData.job) {
+            pollAttempts += 1;
+
+            // Fallback: spróbuj pobrać listę i znaleźć job po ID
+            const listResponse = await fetch('/api/admin/harvester-jobs?limit=50', {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            if (listResponse.ok) {
+              const listData = await listResponse.json();
+              const fallbackJob = (listData.jobs || []).find((j: any) => j.id === jobId);
+              if (fallbackJob) {
+                setProgress({
+                  jobId,
+                  productsFound: fallbackJob.productsFound || 0,
+                  productsCreated: fallbackJob.productsCreated || 0,
+                  dealsCreated: fallbackJob.dealsCreated || 0,
+                  status: fallbackJob.status,
+                });
+
+                if (fallbackJob.status === 'completed' || fallbackJob.status === 'failed') {
+                  clearInterval(pollInterval);
+                  setIsImporting(false);
+                  onJobCreated();
+                }
+                return;
+              }
+            }
+
+            if (pollAttempts <= maxPollAttempts) {
+              setProgress(prev => ({
+                ...prev,
+                status: 'running',
+                error: 'Czekam na zapis joba w bazie...'
+              }));
+              return;
+            }
+
             clearInterval(pollInterval);
-            setProgress(prev => ({ ...prev, status: 'failed', error: 'Failed to fetch job status' }));
+            setProgress(prev => ({
+              ...prev,
+              status: 'failed',
+              error: statusData.error || 'Nie udało się pobrać statusu joba.'
+            }));
             setIsImporting(false);
             return;
           }
@@ -1180,6 +1235,11 @@ function ConvertiserAutoBrowsePanel({
         } catch (pollError) {
           console.error('Failed to poll job status:', pollError);
           clearInterval(pollInterval);
+          setProgress(prev => ({
+            ...prev,
+            status: 'failed',
+            error: 'Błąd sieci podczas odczytu statusu joba.'
+          }));
           setIsImporting(false);
         }
       }, 5000);
