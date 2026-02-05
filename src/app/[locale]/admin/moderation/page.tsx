@@ -318,6 +318,15 @@ function ModerationPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loadingReports, setLoadingReports] = useState(false);
 
+  const getLocalizedTitle = (value: any): string => {
+    if (!value) return 'Bez tytułu';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      return value.pl || value.en || value.de || 'Bez tytułu';
+    }
+    return 'Bez tytułu';
+  };
+
   const handleFixAdminClaims = async () => {
     setCheckingClaims(true);
     try {
@@ -826,7 +835,7 @@ function ModerationPage() {
                       {/* Metadane i akcje po prawej */}
                       <div className="flex-1 min-w-0 space-y-3 w-full">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate">{deal.title}</h3>
+                          <h3 className="font-semibold truncate">{getLocalizedTitle(deal.title)}</h3>
                           <Badge variant={
                             deal.status === 'approved' ? 'default' :
                             deal.status === 'pending' ? 'secondary' :
