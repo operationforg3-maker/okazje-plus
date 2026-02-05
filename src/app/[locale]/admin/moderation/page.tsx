@@ -259,7 +259,7 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
   );
 }
 
-import { getPendingDeals, getPendingProducts, getRecentlyModerated, getDealsForModeration, getProductCoresForModeration, getCategories } from '@/lib/data';
+import { getCategories } from '@/lib/data';
 import { Deal, Product, Category } from '@/lib/types';
 import DealCard from '@/components/deal-card';
 import ProductListCard from '@/components/product-list-card';
@@ -507,12 +507,33 @@ function ModerationPage() {
       
       console.log('[Moderation] Deal statuses:', dealStatuses, 'Product statuses:', productStatuses)
       
-      let [deals, products, approved, rejected] = await Promise.all([
-        getDealsForModeration(dealStatuses, 200),
-        getProductCoresForModeration(productStatuses, 200),
-        getRecentlyModerated('approved', 7),
-        getRecentlyModerated('rejected', 7),
-      ]);
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setLoading(false);
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+      const qs = new URLSearchParams();
+      if (dealStatuses) qs.set('dealStatuses', dealStatuses.join(','));
+      if (productStatuses) qs.set('productStatuses', productStatuses.join(','));
+      qs.set('limit', '200');
+      qs.set('includeRecent', '1');
+
+      const res = await fetch(`/api/admin/moderation/data?${qs.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setLoading(false);
+        return;
+      }
+
+      const payload = await res.json();
+      let deals = payload.deals || [];
+      let products = payload.products || [];
+      let approved = payload.approved || [];
+      let rejected = payload.rejected || [];
       
       console.log('[Moderation] Got deals:', deals.length, 'products:', products.length, 'approved:', approved.length, 'rejected:', rejected.length)
       

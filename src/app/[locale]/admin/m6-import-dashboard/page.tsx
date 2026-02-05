@@ -1090,6 +1090,8 @@ function HarvesterWizard({
     productsFound?: number;
     productsCreated?: number;
     dealsCreated?: number;
+    dbProducts?: number;
+    dbDeals?: number;
     status?: string;
     error?: string;
   }>({});
@@ -1268,6 +1270,24 @@ function HarvesterWizard({
             clearInterval(pollInterval);
             setAutoIsImporting(false);
             onJobCreated();
+
+            if (job.status === 'completed') {
+              try {
+                const verifyRes = await fetch(`/api/admin/harvester/verify?jobId=${jobId}`, {
+                  headers: { Authorization: `Bearer ${authToken}` },
+                });
+                if (verifyRes.ok) {
+                  const verifyData = await verifyRes.json();
+                  setAutoProgress(prev => ({
+                    ...prev,
+                    dbProducts: verifyData.productsInDb || 0,
+                    dbDeals: verifyData.dealsInDb || 0,
+                  }));
+                }
+              } catch (verifyErr) {
+                console.error('Verify DB counts failed:', verifyErr);
+              }
+            }
           }
         } catch (pollError) {
           console.error('Failed to poll job status:', pollError);
@@ -1410,6 +1430,12 @@ function HarvesterWizard({
                     <div className="text-lg font-bold text-purple-900">{autoProgress.dealsCreated || 0}</div>
                   </div>
                 </div>
+
+                {(autoProgress.dbProducts !== undefined || autoProgress.dbDeals !== undefined) && (
+                  <div className="mt-2 text-xs text-slate-600">
+                    Zapisane w bazie: produkty {autoProgress.dbProducts ?? 0}, oferty {autoProgress.dbDeals ?? 0}
+                  </div>
+                )}
 
                 {autoProgress.error && (
                   <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">

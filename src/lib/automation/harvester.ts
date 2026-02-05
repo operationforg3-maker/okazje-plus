@@ -1542,6 +1542,7 @@ export class SmartHarvester {
         source: source as any,
         originalId: sourceProduct.sourceProductId,
         importedAt: now,
+        harvesterJobId: this.jobId,
         // Save original raw data for moderation/comparison
         originalTitle: sourceProduct.title,
         originalDescription: sourceProduct.description || '',
@@ -1705,6 +1706,7 @@ export class SmartHarvester {
       tags: product?.searchTags || [],
       // M6 ADDITION: Store original currency and price for auto-price-updates (Cloud Function)
       metadata: {
+        harvesterJobId: this.jobId,
         originalPriceUSD: sourceProduct.currency === 'USD' ? sourceProduct.price : undefined,
         originalPriceCurrency: sourceProduct.currency,
         exchangeRateAtImport: sourceProduct.currency === 'USD' 
