@@ -764,7 +764,7 @@ export class AIRefiner {
   private async isJobActive(): Promise<boolean> {
     try {
       const doc = await adminDb.collection('refiner_jobs').doc(this.jobId).get();
-      if (!doc.exists) return false;
+      if (!doc.exists) return true;
       const status = doc.data()?.status;
       return status === 'running';
     } catch (e) {

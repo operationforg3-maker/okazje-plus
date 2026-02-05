@@ -115,6 +115,8 @@ function DealCard({ deal, product }: DealCardProps) {
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   const { currency } = useCurrency();
   const { addDeal } = useSmartCart();
+  const isPromotionDeal = deal?.dealType === 'coupon' || deal?.metadata?.promotionType === 'offer';
+  const offerPreviewUrl = deal?.metadata?.offerPreviewUrl || deal?.metadata?.previewUrl || deal?.sourceUrl || deal?.link;
   
   // Format prices using state to fix Intl.NumberFormat hydration mismatch
   const [priceData, setPriceData] = useState<{
@@ -842,16 +844,25 @@ function DealCard({ deal, product }: DealCardProps) {
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-2xl sm:text-3xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
-          {priceData.formattedOriginal && <span className="text-sm sm:text-base text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
-          {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-            <Badge variant="destructive" className="text-sm px-2 py-0.5">-{priceData.discount}%</Badge>
-          )}
-          {priceData.formattedSavings && (
-            <span className="ml-auto text-sm font-semibold text-green-600">Oszczędzasz {priceData.formattedSavings}</span>
-          )}
-        </div>
+        {isPromotionDeal ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="text-sm px-2 py-0.5">Promocja / Kupon</Badge>
+            {deal?.metadata?.hasCoupons && (
+              <Badge variant="outline" className="text-xs px-2 py-0.5">Kupony dostępne</Badge>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-2xl sm:text-3xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
+            {priceData.formattedOriginal && <span className="text-sm sm:text-base text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
+            {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+              <Badge variant="destructive" className="text-sm px-2 py-0.5">-{priceData.discount}%</Badge>
+            )}
+            {priceData.formattedSavings && (
+              <span className="ml-auto text-sm font-semibold text-green-600">Oszczędzasz {priceData.formattedSavings}</span>
+            )}
+          </div>
+        )}
 
         {/* Temperature bar */}
         <div className="space-y-1">
@@ -942,6 +953,22 @@ function DealCard({ deal, product }: DealCardProps) {
         </div>
         
         <div className="flex flex-wrap items-center gap-1 justify-center sm:justify-end">
+          {isPromotionDeal && offerPreviewUrl && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+            >
+              <a
+                href={offerPreviewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Podgląd oferty
+              </a>
+            </Button>
+          )}
           <Button 
             variant={isFavorited ? "default" : "outline"} 
             size="icon"

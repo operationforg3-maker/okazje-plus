@@ -18,6 +18,7 @@ import { startDealRefinerJob } from './deal-refiner';
 import { convertToPLN } from '@/lib/currency-exchange';
 import { addToModerationQueue } from '@/lib/moderation';
 import { batchAssignCategories } from '@/ai/flows/convertiser-auto-category';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
 
@@ -56,6 +57,12 @@ interface RawProduct {
   gtin?: string;
   upc?: string;
   mpn?: string;
+  offerMeta?: {
+    promotionType?: 'offer';
+    terms?: string;
+    previewUrl?: string;
+    hasCoupons?: boolean;
+  };
 }
 
 /**
@@ -68,6 +75,47 @@ export class SmartHarvester {
 
   constructor(jobId: string) {
     this.jobId = jobId;
+  }
+
+  private getFallbackImageUrl(): string {
+    return PlaceHolderImages?.[0]?.imageUrl || '/placeholder.png';
+  }
+
+  private mapConvertiserOfferToRawProduct(offer: any): RawProduct | null {
+    try {
+      const title = offer.title || offer.name || '';
+      if (!title) return null;
+
+      const imageUrl = offer.logo_thumbnail || offer.logo || offer.image || this.getFallbackImageUrl();
+      const previewUrl = offer.preview_url || offer.offer_display_url || offer.url || '';
+
+      return {
+        title,
+        description: offer.description || offer.excerpt || '',
+        imageUrl,
+        price: 0,
+        originalPrice: undefined,
+        currency: 'PLN',
+        shippingCost: 0,
+        shippingDays: 0,
+        sourceProductId: String(offer.id || offer.uuid || ''),
+        sourceUrl: previewUrl,
+        merchantName: offer.title || offer.advertiser_name || 'Convertiser',
+        merchantRating: 0,
+        specs: {},
+        rating: 0,
+        ratingCount: 0,
+        images: [imageUrl],
+        offerMeta: {
+          promotionType: 'offer',
+          terms: offer.terms || undefined,
+          previewUrl: previewUrl || undefined,
+          hasCoupons: Boolean(offer.has_coupons),
+        },
+      } as RawProduct;
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -1035,18 +1083,41 @@ export class SmartHarvester {
       const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
       const client = getConvertiserClient();
 
-      this.addLog('info', `Fetching offers from Convertiser: "${searchQuery}"`);
+      this.addLog('info', `Fetching offers from Convertiser: "${searchQuery || 'all'}"`);
 
-      // Use findOffers endpoint with search filters
-      const response = await client.findOffers({
-        q: searchQuery,
-        country: 'PL',
-        status: 'active',
-        page: 1,
-        page_size: Math.min(maxResults, 50),
-      });
+      let offers: any[] = [];
+      if (searchQuery && searchQuery.trim()) {
+        const response = await client.findOffers({
+          q: searchQuery,
+          country: 'PL',
+          status: 'active',
+          page: 1,
+          page_size: Math.min(maxResults, 50),
+        });
 
-      const offers = response.results || [];
+        const minimal = response.results || [];
+        offers = await Promise.all(
+          minimal.map(async (offer: any) => {
+            try {
+              return await client.getOfferDetail(offer.id || offer.uuid || offer.offer_id);
+            } catch {
+              return offer;
+            }
+          })
+        );
+      } else {
+        const response = await client.listOffers(
+          {
+            page: 1,
+            page_size: Math.min(maxResults, 50),
+          },
+          {
+            status: 'active',
+            country: 'PL',
+          }
+        );
+        offers = response.results || [];
+      }
 
       if (!offers || offers.length === 0) {
         this.addLog('warn', `Convertiser Offers: No offers found for "${searchQuery}"`);
@@ -1055,86 +1126,11 @@ export class SmartHarvester {
 
       this.addLog('info', `Found ${offers.length} offers from Convertiser`);
 
-      // Transform Convertiser offers to RawProduct format
-      const rawProducts = await Promise.all(
-        offers.map(async (offer: any) => {
-          try {
-            const title = offer.name || offer.title || '';
-            if (!title) return null;
+      const rawProducts = offers
+        .map((offer: any) => this.mapConvertiserOfferToRawProduct(offer))
+        .filter((p: any): p is RawProduct => p !== null);
 
-            // Get offer image
-            const imageUrl = offer.image_url || offer.logo_url || '';
-            if (!imageUrl || imageUrl.trim() === '') {
-              return null;
-            }
-
-            // Generate tracking link for monetization
-            let trackingUrl = offer.url || '';
-            try {
-              const trackingResponse = await client.generateOfferTrackingLink(offer.uuid, {
-                subid: `harvester_${this.jobId}`,
-              });
-              trackingUrl = trackingResponse.tracking_link || trackingUrl;
-              this.addLog('info', `Generated tracking link for offer: ${offer.uuid}`);
-            } catch (trackErr) {
-              this.addLog('warn', `Failed to generate tracking link for offer ${offer.uuid}: ${trackErr instanceof Error ? trackErr.message : 'Unknown'}`);
-            }
-
-            // Parse price (Convertiser returns in various formats)
-            const parsePriceWithCurrency = (priceStr: string): { amount: number, currency: string } => {
-              if (!priceStr) return { amount: 0, currency: 'PLN' };
-              const str = String(priceStr);
-              const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
-              if (currencyMatch) {
-                return {
-                  currency: currencyMatch[1],
-                  amount: parseFloat(currencyMatch[2].replace(',', '.'))
-                };
-              }
-              const match = str.match(/[\d.,]+/);
-              return {
-                amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
-                currency: 'PLN'
-              };
-            };
-
-            const priceParsed = parsePriceWithCurrency(offer.price || '0');
-            
-            // Convert to PLN if needed
-            const price = priceParsed.currency !== 'PLN' 
-              ? await convertToPLN(priceParsed.amount, priceParsed.currency)
-              : priceParsed.amount;
-
-            return {
-              title,
-              description: offer.description || offer.short_description || '',
-              imageUrl,
-              price,
-              originalPrice: undefined, // Offers don't have original price
-              currency: 'PLN',
-              shippingCost: 0, // Usually included in offer price
-              shippingDays: 7,
-              sourceProductId: String(offer.uuid || offer.id),
-              sourceUrl: trackingUrl, // Use tracking link for affiliate revenue
-              merchantName: offer.advertiser_name || offer.advertiser || 'Convertiser',
-              merchantRating: 0,
-              specs: {},
-              rating: 0,
-              ratingCount: 0,
-              images: [imageUrl],
-              ean: undefined,
-              gtin: undefined,
-              upc: undefined,
-              mpn: undefined,
-            };
-          } catch (e) {
-            this.addLog('warn', `Failed to map Convertiser offer: ${e instanceof Error ? e.message : 'Unknown error'}`);
-            return null;
-          }
-        })
-      );
-      
-      return rawProducts.filter((p: any): p is RawProduct => p !== null);
+      return rawProducts;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       
@@ -1154,7 +1150,7 @@ export class SmartHarvester {
 
   /**
    * AUTO-BROWSE: Pobierz cały katalog Convertiser bez keywords.
-   * Używa listOffers + paginacja, z limitem maxResults.
+   * products -> products v2, offers -> listOffers, z paginacją.
    */
   private async fetchFromConvertiserAutoBrowse(
     maxResults: number = 10000,
@@ -1162,14 +1158,15 @@ export class SmartHarvester {
   ): Promise<RawProduct[]> {
     try {
       if (!process.env.CONVERTISER_API_TOKEN) {
-        this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
-        return [];
+        this.addLog('error', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
+        throw new Error('CONVERTISER_API_TOKEN missing');
       }
 
       const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
       const client = getConvertiserClient();
 
-      this.addLog('info', `AUTO-BROWSE: Fetching ALL ${mode} (target: ${maxResults})`);
+      const effectiveMode: 'products' | 'offers' = mode;
+      this.addLog('info', `AUTO-BROWSE: Fetching ALL ${effectiveMode} (target: ${maxResults})`);
 
       let allProducts: RawProduct[] = [];
       let currentPage = 1;
@@ -1178,97 +1175,130 @@ export class SmartHarvester {
 
       while (hasMore && allProducts.length < maxResults) {
         try {
-          const response = await client.listOffers(
-            {
-              page: currentPage,
-              page_size: Math.min(pageSize, maxResults - allProducts.length),
-            },
-            {
-              country: 'PL',
-            }
-          );
-
-          const offers = response.results || [];
-          if (offers.length === 0) {
-            hasMore = false;
-            break;
-          }
-
-          const rawProducts = await Promise.all(
-            offers.map(async (offer: any) => {
-              try {
-                const title = offer.name || offer.title || '';
-                if (!title) return null;
-
-                const imageUrl = offer.image_url || offer.image_link || offer.images?.default || '';
-                if (!imageUrl || imageUrl.trim() === '') return null;
-
-                let trackingUrl = offer.link || offer.url || '';
-                if (offer.uuid) {
-                  try {
-                    trackingUrl = await client.generateOfferTrackingLink(offer.uuid);
-                  } catch (e) {
-                    this.addLog('warn', `Tracking link error for ${offer.uuid}`);
-                  }
-                }
-
-                const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
-                  if (!priceStr) return { amount: 0, currency: 'PLN' };
-                  const str = String(priceStr);
-                  const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
-                  if (currencyMatch) {
-                    return {
-                      amount: parseFloat(currencyMatch[2].replace(',', '.')),
-                      currency: currencyMatch[1],
-                    };
-                  }
-                  const match = str.match(/[\d.,]+/);
-                  return {
-                    amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
-                    currency: 'PLN',
-                  };
-                };
-
-                const priceParsed = parsePriceWithCurrency(offer.price || '0');
-                const price = priceParsed.currency !== 'PLN'
-                  ? await convertToPLN(priceParsed.amount, priceParsed.currency as any)
-                  : priceParsed.amount;
-
-                return {
-                  title,
-                  description: offer.description || offer.short_description || '',
-                  imageUrl,
-                  price,
-                  originalPrice: undefined,
-                  currency: 'PLN',
-                  shippingCost: 0,
-                  shippingDays: 7,
-                  sourceProductId: String(offer.uuid || offer.id),
-                  sourceUrl: trackingUrl,
-                  merchantName: offer.advertiser_name || offer.advertiser || 'Convertiser',
-                  merchantRating: 0,
-                  specs: {},
-                  rating: 0,
-                  ratingCount: 0,
-                  images: [imageUrl],
-                  ean: undefined,
-                  gtin: undefined,
-                  upc: undefined,
-                  mpn: undefined,
-                } as RawProduct;
-              } catch {
-                return null;
+          if (effectiveMode === 'offers') {
+            const response: any = await client.listOffers(
+              {
+                page: currentPage,
+                page_size: Math.min(pageSize, maxResults - allProducts.length),
+              },
+              {
+                status: 'active',
+                country: 'PL',
               }
-            })
-          );
+            );
 
-          allProducts = allProducts.concat(rawProducts.filter((p: any): p is RawProduct => p !== null));
+            const offers = response.results || [];
+            if (offers.length === 0) {
+              hasMore = false;
+              break;
+            }
 
-          if (!response.next || offers.length < pageSize) {
-            hasMore = false;
+            const rawProducts = offers
+              .map((offer: any) => this.mapConvertiserOfferToRawProduct(offer))
+              .filter((p: any): p is RawProduct => p !== null);
+
+            allProducts = allProducts.concat(rawProducts);
+
+            if (!response.next || offers.length < pageSize) {
+              hasMore = false;
+            } else {
+              currentPage++;
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
           } else {
-            currentPage++;
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const response: any = await client.searchProductsV2(
+              {
+                country: 'PL',
+              },
+              {
+                page: currentPage,
+                page_size: Math.min(pageSize, maxResults - allProducts.length),
+              }
+            );
+
+            const products = response.data || response.results || [];
+            if (products.length === 0) {
+              hasMore = false;
+              break;
+            }
+
+            const rawProducts = await Promise.all(
+              products.map(async (product: any) => {
+                try {
+                  const title = product.title || product.name || '';
+                  if (!title) return null;
+
+                  const imageUrl = product.images?.default || product.image_link || product.image_url || '';
+                  if (!imageUrl || imageUrl.trim() === '') return null;
+
+                  const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
+                    if (!priceStr) return { amount: 0, currency: 'PLN' };
+                    const str = String(priceStr);
+                    const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
+                    if (currencyMatch) {
+                      return {
+                        amount: parseFloat(currencyMatch[2].replace(',', '.')),
+                        currency: currencyMatch[1],
+                      };
+                    }
+                    const match = str.match(/[\d.,]+/);
+                    return {
+                      amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
+                      currency: 'PLN',
+                    };
+                  };
+
+                  const salePriceParsed = parsePriceWithCurrency(product.sale_price || product.price);
+                  const regularPriceParsed = parsePriceWithCurrency(product.price);
+
+                  const price = salePriceParsed.currency !== 'PLN'
+                    ? await convertToPLN(salePriceParsed.amount, salePriceParsed.currency as any)
+                    : salePriceParsed.amount;
+
+                  const originalPrice = regularPriceParsed.amount > salePriceParsed.amount
+                    ? (regularPriceParsed.currency !== 'PLN'
+                        ? await convertToPLN(regularPriceParsed.amount, regularPriceParsed.currency as any)
+                        : regularPriceParsed.amount)
+                    : 0;
+
+                  return {
+                    title,
+                    description: product.description || product.desc || product.short_description || '',
+                    imageUrl,
+                    price,
+                    originalPrice: originalPrice > price ? originalPrice : undefined,
+                    currency: 'PLN',
+                    shippingCost: product.shipping_cost ? parseFloat(product.shipping_cost) : 0,
+                    shippingDays: product.shipping_days || 7,
+                    sourceProductId: String(product.id || product.sku || ''),
+                    sourceUrl: product.direct_link || product.link || product.url || '',
+                    merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+                    merchantRating: product.merchant_rating ? parseFloat(product.merchant_rating) : 0,
+                    specs: extractDimensionsFromTitle(title),
+                    rating: product.rating ? parseFloat(product.rating) : 0,
+                    ratingCount: product.review_count || product.reviews || 0,
+                    images: [imageUrl],
+                    sku: product.sku || undefined,
+                    ean: product.ean || product.barcode || product.gtin || undefined,
+                    gtin: product.gtin || undefined,
+                    upc: product.upc || undefined,
+                    mpn: product.mpn || undefined,
+                  } as RawProduct;
+                } catch {
+                  return null;
+                }
+              })
+            );
+
+            allProducts = allProducts.concat(rawProducts.filter((p: any): p is RawProduct => p !== null));
+
+            const nextPage = response.pagination?.next_page;
+            if (!nextPage || products.length < pageSize) {
+              hasMore = false;
+            } else {
+              currentPage = nextPage;
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
           }
         } catch (pageError) {
           this.addLog('error', `Auto-browse page ${currentPage} failed`, pageError);
@@ -1606,6 +1636,7 @@ export class SmartHarvester {
     let mainCategorySlug = product?.mainCategorySlug || 'uncategorized';
     let subCategorySlug = product?.subCategorySlug || 'uncategorized';
     let subSubCategorySlug = product?.subSubCategorySlug;
+    const isOfferPromotion = sourceProduct.offerMeta?.promotionType === 'offer';
 
     // If product has no category, attempt to map and persist
     if (!product || !product.mainCategorySlug || product.mainCategorySlug === 'uncategorized') {
@@ -1702,10 +1733,14 @@ export class SmartHarvester {
       imageHint: sourceProduct.imageUrl || primaryImage,
       gallery: product?.images || [primaryImage],
       linkedProductIds: [productId],
-      dealType: 'sale',
+      dealType: isOfferPromotion ? 'coupon' : 'sale',
       tags: product?.searchTags || [],
       // M6 ADDITION: Store original currency and price for auto-price-updates (Cloud Function)
       metadata: {
+        promotionType: isOfferPromotion ? 'offer' : undefined,
+        offerTerms: sourceProduct.offerMeta?.terms,
+        offerPreviewUrl: sourceProduct.offerMeta?.previewUrl,
+        hasCoupons: sourceProduct.offerMeta?.hasCoupons,
         harvesterJobId: this.jobId,
         originalPriceUSD: sourceProduct.currency === 'USD' ? sourceProduct.price : undefined,
         originalPriceCurrency: sourceProduct.currency,

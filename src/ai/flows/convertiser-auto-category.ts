@@ -19,12 +19,123 @@ import { parseJsonFromResponse } from '@/lib/vertex';
 const CategoryAssignmentSchema = z.object({
   mainCategorySlug: z.string().describe('Main category slug (e.g., "elektronika")'),
   subCategorySlug: z.string().describe('Sub-category slug (e.g., "telefony")'),
-  subSubCategorySlug: z.string().optional().describe('Sub-sub-category slug (e.g., "flagship")'),
+  subSubCategorySlug: z.string().nullable().optional().describe('Sub-sub-category slug (e.g., "flagship")'),
   confidence: z.number().min(0).max(1).describe('Confidence score 0-1'),
   reasoning: z.string().describe('Explanation of why this category was chosen'),
 });
 
 type CategoryAssignment = z.infer<typeof CategoryAssignmentSchema>;
+
+const normalizeKey = (value?: string | null) => (value || '').trim().toLowerCase();
+
+const getFallbackCategory = (available: Array<{ mainSlug: string; subSlug: string; subSubSlug?: string }>) =>
+  available.find(cat => cat.mainSlug === 'uncategorized' && cat.subSlug === 'uncategorized') || available[0];
+
+const resolveCategoryAssignment = (
+  assignment: CategoryAssignment,
+  available: Array<{
+    mainSlug: string;
+    mainName: string;
+    subSlug: string;
+    subName: string;
+    subSubSlug?: string;
+    subSubName?: string;
+  }>
+) => {
+  const main = normalizeKey(assignment.mainCategorySlug);
+  const sub = normalizeKey(assignment.subCategorySlug);
+  const subSub = normalizeKey(assignment.subSubCategorySlug || undefined);
+
+  // 1) Exact slug match
+  let candidates = available.filter(
+    (cat) =>
+      normalizeKey(cat.mainSlug) === main &&
+      normalizeKey(cat.subSlug) === sub
+  );
+
+  if (subSub) {
+    candidates = candidates.filter(cat => normalizeKey(cat.subSubSlug) === subSub);
+  }
+
+  if (candidates.length > 0) {
+    const preferred = subSub ? candidates[0] : (candidates.find(cat => !cat.subSubSlug) || candidates[0]);
+    return {
+      mainCategorySlug: preferred.mainSlug,
+      subCategorySlug: preferred.subSlug,
+      subSubCategorySlug: preferred.subSubSlug,
+    };
+  }
+
+  // 2) Name match (AI sometimes returns names instead of slugs)
+  candidates = available.filter(
+    (cat) =>
+      normalizeKey(cat.mainName) === main &&
+      normalizeKey(cat.subName) === sub
+  );
+
+  if (subSub) {
+    candidates = candidates.filter(cat => normalizeKey(cat.subSubName) === subSub);
+  }
+
+  if (candidates.length > 0) {
+    const preferred = subSub ? candidates[0] : (candidates.find(cat => !cat.subSubSlug) || candidates[0]);
+    return {
+      mainCategorySlug: preferred.mainSlug,
+      subCategorySlug: preferred.subSlug,
+      subSubCategorySlug: preferred.subSubSlug,
+    };
+  }
+
+  return null;
+};
+
+const getSlugOnlyList = (available: Array<{ mainSlug: string; subSlug: string; subSubSlug?: string }>) =>
+  available
+    .map((cat) => `${cat.mainSlug}/${cat.subSlug}${cat.subSubSlug ? '/' + cat.subSubSlug : ''}`)
+    .join('\n');
+
+const reassignWithStrictSlugs = async (
+  input: {
+    productTitle: string;
+    productDescription?: string;
+  },
+  available: Array<{
+    mainSlug: string;
+    mainName: string;
+    subSlug: string;
+    subName: string;
+    subSubSlug?: string;
+    subSubName?: string;
+  }>
+) => {
+  const slugList = getSlugOnlyList(available);
+  const prompt = `Choose EXACTLY ONE category from the list below.
+
+Product:
+- Title: "${input.productTitle}"
+${input.productDescription ? `- Description: "${input.productDescription.substring(0, 400)}"` : ''}
+
+Allowed category slugs (pick one line exactly as-is):
+${slugList}
+
+Return JSON ONLY in this format:
+{
+  "mainCategorySlug": "string",
+  "subCategorySlug": "string",
+  "subSubCategorySlug": "string or null",
+  "confidence": 0.0-1.0,
+  "reasoning": "short"
+}`;
+
+  const response = await ai.generate({
+    model: gemini20Flash,
+    prompt,
+    config: { temperature: 0.0, topK: 1 },
+  });
+
+  const parsed = parseJsonFromResponse(response.text ?? '');
+  return CategoryAssignmentSchema.parse(parsed || {});
+};
 
 /**
  * Auto-assign category for a product
@@ -105,23 +216,39 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
       const parsed = parseJsonFromResponse(responseText);
       const result = CategoryAssignmentSchema.parse(parsed || {});
 
-      // Validate that the assigned category exists in availableCategories
-      const categoryExists = input.availableCategories.some((cat) => {
-        const matches =
-          cat.mainSlug === result.mainCategorySlug &&
-          cat.subSlug === result.subCategorySlug &&
-          (result.subSubCategorySlug === undefined ||
-            result.subSubCategorySlug === null ||
-            cat.subSubSlug === result.subSubCategorySlug);
-        return matches;
-      });
+      let resolved = resolveCategoryAssignment(result, input.availableCategories);
 
-      if (!categoryExists) {
-        logger.warn('AI assigned non-existent category, falling back to first category', {
+      if (!resolved) {
+        try {
+          logger.warn('AI assigned invalid category, retrying with strict slugs', {
+            assignedCategory: result,
+          });
+          const strictResult = await reassignWithStrictSlugs(
+            {
+              productTitle: input.productTitle,
+              productDescription: input.productDescription,
+            },
+            input.availableCategories
+          );
+          resolved = resolveCategoryAssignment(strictResult, input.availableCategories);
+          if (resolved) {
+            return {
+              ...strictResult,
+              ...resolved,
+            };
+          }
+        } catch (strictErr) {
+          logger.warn('Strict slug retry failed', {
+            error: strictErr instanceof Error ? strictErr.message : String(strictErr),
+          });
+        }
+
+        const fallback = getFallbackCategory(input.availableCategories);
+        logger.warn('AI assigned non-existent category, falling back to safe category', {
           assignedCategory: result,
+          fallback: fallback ? `${fallback.mainSlug}/${fallback.subSlug}` : 'none',
         });
-        // Fallback to first category
-        const fallback = input.availableCategories[0];
+
         return {
           mainCategorySlug: fallback.mainSlug,
           subCategorySlug: fallback.subSlug,
@@ -132,11 +259,14 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
       }
 
       logger.info('Category assignment successful', {
-        assignedCategory: result.mainCategorySlug + '/' + result.subCategorySlug,
+        assignedCategory: `${resolved.mainCategorySlug}/${resolved.subCategorySlug}`,
         confidence: result.confidence,
       });
 
-      return result;
+      return {
+        ...result,
+        ...resolved,
+      };
     } catch (error) {
       logger.error('Category assignment failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -145,7 +275,7 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
 
       // Return first category as fallback
       if (input.availableCategories.length > 0) {
-        const fallback = input.availableCategories[0];
+        const fallback = getFallbackCategory(input.availableCategories);
         return {
           mainCategorySlug: fallback.mainSlug,
           subCategorySlug: fallback.subSlug,
@@ -214,7 +344,7 @@ export const batchAssignCategories = ai.defineFlow(
         });
 
         // Add fallback for failed product
-        const fallback = input.availableCategories[0];
+        const fallback = getFallbackCategory(input.availableCategories);
         results.push({
           productId: product.id,
           assignment: {
