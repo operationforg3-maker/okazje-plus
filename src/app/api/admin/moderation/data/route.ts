@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
 
       const mapRecent = (snap: FirebaseFirestore.QuerySnapshot, type: 'deal' | 'product') =>
         snap.docs
-          .map(doc => ({ id: doc.id, type, ...doc.data() }))
-          .filter(item => {
+          .map(doc => ({ id: doc.id, type, ...doc.data() } as any))
+          .filter((item: any) => {
             const updatedAt = item.updatedAt?.toDate?.() || (item.updatedAt ? new Date(item.updatedAt) : new Date(0));
             return updatedAt.getTime() >= cutoffMs;
           });

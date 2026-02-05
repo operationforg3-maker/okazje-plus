@@ -26,21 +26,23 @@ const CategoryAssignmentSchema = z.object({
 
 type CategoryAssignment = z.infer<typeof CategoryAssignmentSchema>;
 
+type AvailableCategory = {
+  mainSlug: string;
+  mainName: string;
+  subSlug: string;
+  subName: string;
+  subSubSlug?: string;
+  subSubName?: string;
+};
+
 const normalizeKey = (value?: string | null) => (value || '').trim().toLowerCase();
 
-const getFallbackCategory = (available: Array<{ mainSlug: string; subSlug: string; subSubSlug?: string }>) =>
+const getFallbackCategory = (available: AvailableCategory[]) =>
   available.find(cat => cat.mainSlug === 'uncategorized' && cat.subSlug === 'uncategorized') || available[0];
 
 const resolveCategoryAssignment = (
   assignment: CategoryAssignment,
-  available: Array<{
-    mainSlug: string;
-    mainName: string;
-    subSlug: string;
-    subName: string;
-    subSubSlug?: string;
-    subSubName?: string;
-  }>
+  available: AvailableCategory[]
 ) => {
   const main = normalizeKey(assignment.mainCategorySlug);
   const sub = normalizeKey(assignment.subCategorySlug);
@@ -89,7 +91,7 @@ const resolveCategoryAssignment = (
   return null;
 };
 
-const getSlugOnlyList = (available: Array<{ mainSlug: string; subSlug: string; subSubSlug?: string }>) =>
+const getSlugOnlyList = (available: AvailableCategory[]) =>
   available
     .map((cat) => `${cat.mainSlug}/${cat.subSlug}${cat.subSubSlug ? '/' + cat.subSubSlug : ''}`)
     .join('\n');
@@ -99,14 +101,7 @@ const reassignWithStrictSlugs = async (
     productTitle: string;
     productDescription?: string;
   },
-  available: Array<{
-    mainSlug: string;
-    mainName: string;
-    subSlug: string;
-    subName: string;
-    subSubSlug?: string;
-    subSubName?: string;
-  }>
+  available: AvailableCategory[]
 ) => {
   const slugList = getSlugOnlyList(available);
   const prompt = `Choose EXACTLY ONE category from the list below.
@@ -166,8 +161,10 @@ export const assignProductCategory = ai.defineFlow(
         availableCategoriesCount: input.availableCategories.length,
       });
 
+      const availableCategories = input.availableCategories as AvailableCategory[];
+
       // Format categories for prompt
-      const categoryList = input.availableCategories
+      const categoryList = availableCategories
         .map((cat) => {
           const path = cat.subSubName
             ? `${cat.mainName} → ${cat.subName} → ${cat.subSubName}`
@@ -216,7 +213,7 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
       const parsed = parseJsonFromResponse(responseText);
       const result = CategoryAssignmentSchema.parse(parsed || {});
 
-      let resolved = resolveCategoryAssignment(result, input.availableCategories);
+      let resolved = resolveCategoryAssignment(result, availableCategories);
 
       if (!resolved) {
         try {
@@ -228,9 +225,9 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
               productTitle: input.productTitle,
               productDescription: input.productDescription,
             },
-            input.availableCategories
+            availableCategories
           );
-          resolved = resolveCategoryAssignment(strictResult, input.availableCategories);
+          resolved = resolveCategoryAssignment(strictResult, availableCategories);
           if (resolved) {
             return {
               ...strictResult,
@@ -243,7 +240,7 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
           });
         }
 
-        const fallback = getFallbackCategory(input.availableCategories);
+        const fallback = getFallbackCategory(availableCategories);
         logger.warn('AI assigned non-existent category, falling back to safe category', {
           assignedCategory: result,
           fallback: fallback ? `${fallback.mainSlug}/${fallback.subSlug}` : 'none',
@@ -274,8 +271,8 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
       });
 
       // Return first category as fallback
-      if (input.availableCategories.length > 0) {
-        const fallback = getFallbackCategory(input.availableCategories);
+      if (availableCategories.length > 0) {
+        const fallback = getFallbackCategory(availableCategories);
         return {
           mainCategorySlug: fallback.mainSlug,
           subCategorySlug: fallback.subSlug,
@@ -324,13 +321,14 @@ export const batchAssignCategories = ai.defineFlow(
   },
   async (input) => {
     const results = [];
+    const availableCategories = input.availableCategories as AvailableCategory[];
 
     for (const product of input.products) {
       try {
         const assignment = await assignProductCategory({
           productTitle: product.title,
           productDescription: product.description,
-          availableCategories: input.availableCategories,
+          availableCategories,
         });
 
         results.push({
@@ -344,7 +342,7 @@ export const batchAssignCategories = ai.defineFlow(
         });
 
         // Add fallback for failed product
-        const fallback = getFallbackCategory(input.availableCategories);
+        const fallback = getFallbackCategory(availableCategories);
         results.push({
           productId: product.id,
           assignment: {
