@@ -34,7 +34,7 @@ export interface AliExpressError {
 function generateSign(
   params: Record<string, string | number | boolean>,
   appSecret: string,
-  method: "hmac_md5" | "md5" = "hmac_md5"
+  method: "hmac_md5" | "md5" = "md5"
 ): string {
   // Posortuj klucze alfabetycznie
   const sortedKeys = Object.keys(params).sort();
@@ -48,7 +48,7 @@ function generateSign(
     }
   }
 
-  // Sygnatury: HMAC-MD5(string + appSecret)
+  // HMAC-MD5 (opcjonalnie)
   if (method === "hmac_md5") {
     return crypto
       .createHmac("md5", appSecret)
@@ -57,13 +57,19 @@ function generateSign(
       .toUpperCase();
   }
 
-  // MD5 (starszy algorytm)
-  return crypto.createHash("md5").update(stringToSign + appSecret).digest("hex").toUpperCase();
+  // MD5 (AOP): appSecret + params + appSecret
+  return crypto
+    .createHash("md5")
+    .update(appSecret + stringToSign + appSecret)
+    .digest("hex")
+    .toUpperCase();
 }
 
 // ===== Timestamp formatter =====
 function formatTimestamp(): string {
-  return new Date().toISOString().split(".")[0]; // yyyy-MM-ddTHH:mm:ss
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
 }
 
 // ===== AliExpress Client =====
@@ -115,7 +121,7 @@ export class AliExpressClient {
       refresh_token: this.refreshToken,
       method: "aliexpress.oauth.token",
       timestamp: formatTimestamp(),
-      sign_method: "hmac_md5",
+      sign_method: "md5",
       v: "1.0",
     };
 
@@ -164,7 +170,7 @@ export class AliExpressClient {
       app_key: this.config.appKey,
       method,
       timestamp: formatTimestamp(),
-      sign_method: "hmac_md5",
+      sign_method: "md5",
       v: "1.0",
       format: "json",
     };
@@ -230,11 +236,18 @@ export class AliExpressClient {
       body: body.toString(),
     });
 
+    const contentType = response.headers.get("content-type") || "";
+    const rawText = await response.text();
+
     if (!response.ok) {
-      throw new Error(`AliExpress API error: ${response.status}`);
+      throw new Error(`AliExpress API error: ${response.status} - ${rawText.substring(0, 300)}`);
     }
 
-    const data = await response.json();
+    if (!contentType.includes("application/json") && !rawText.trim().startsWith("{")) {
+      throw new Error(`AliExpress API non-JSON response: ${rawText.substring(0, 300)}`);
+    }
+
+    const data = JSON.parse(rawText);
 
     // Sprawdź AliExpress error response
     if (data.error_code) {
