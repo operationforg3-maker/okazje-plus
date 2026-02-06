@@ -775,7 +775,7 @@ function ModerationPage() {
                   <SelectItem value="all">Wszystkie kategorie</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat.slug} value={cat.slug}>
-                      {cat.name}
+                      {getLocalizedTitle(cat.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -794,7 +794,7 @@ function ModerationPage() {
                       <SelectItem value="all">Wszystkie podkategorie</SelectItem>
                       {categories.find(c => c.slug === selectedMainCategory)?.subcategories?.map((sub) => (
                         <SelectItem key={sub.slug} value={sub.slug}>
-                          {sub.name}
+                          {getLocalizedTitle(sub.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -812,7 +812,7 @@ function ModerationPage() {
                           ?.subcategories?.find(s => s.slug === selectedSubCategory)
                           ?.subcategories?.map((subsub) => (
                             <SelectItem key={subsub.slug} value={subsub.slug}>
-                              {subsub.name}
+                              {getLocalizedTitle(subsub.name)}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -874,7 +874,7 @@ function ModerationPage() {
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          <span>{deal.category}</span>
+                          <span>{getLocalizedTitle(deal.category)}</span>
                           <span className="hidden sm:inline">•</span>
                           <span>Dodane przez {deal.postedBy || deal.createdBy || 'Użytkownik'}</span>
                           <span className="hidden sm:inline">•</span>
@@ -896,7 +896,7 @@ function ModerationPage() {
                             </DialogTrigger>
                             <DialogContent className="w-full max-w-4xl h-screen md:h-auto max-h-[90vh] overflow-hidden flex flex-col">
                               <DialogHeader className="flex-shrink-0 overflow-hidden">
-                                <DialogTitle className="truncate">Moderacja Deal: {deal.title}</DialogTitle>
+                                <DialogTitle className="truncate">Moderacja Deal: {getLocalizedTitle(deal.title)}</DialogTitle>
                               </DialogHeader>
                               <div className="flex-1 overflow-y-auto">
                                 <ModerationDetailView item={deal} itemType="deal" />
@@ -968,7 +968,7 @@ function ModerationPage() {
                   <SelectItem value="all">Wszystkie kategorie</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat.slug} value={cat.slug}>
-                      {cat.name}
+                      {getLocalizedTitle(cat.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -987,7 +987,7 @@ function ModerationPage() {
                       <SelectItem value="all">Wszystkie podkategorie</SelectItem>
                       {categories.find(c => c.slug === selectedMainCategory)?.subcategories?.map((sub) => (
                         <SelectItem key={sub.slug} value={sub.slug}>
-                          {sub.name}
+                          {getLocalizedTitle(sub.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1005,7 +1005,7 @@ function ModerationPage() {
                           ?.subcategories?.find(s => s.slug === selectedSubCategory)
                           ?.subcategories?.map((subsub) => (
                             <SelectItem key={subsub.slug} value={subsub.slug}>
-                              {subsub.name}
+                              {getLocalizedTitle(subsub.name)}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -1038,7 +1038,10 @@ function ModerationPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pendingProducts.map((product) => (
+                  {pendingProducts.map((product) => {
+                    const productTitle = getLocalizedTitle(product.title || product.name);
+                    const productCategory = getLocalizedTitle(product.category);
+                    return (
                     <div key={product.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
                       {/* Podgląd karty ProductCore - responsive width */}
                       <div className="w-full lg:w-[300px] lg:shrink-0">
@@ -1048,10 +1051,8 @@ function ModerationPage() {
                       {/* Metadane i akcje po prawej */}
                       <div className="flex-1 min-w-0 space-y-3 w-full">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate max-w-[300px]" title={
-                              typeof product.title === 'object' ? product.title.pl : (product.name || product.title)
-                          }>
-                              {typeof product.title === 'object' ? product.title.pl : (product.name || product.title)}
+                          <h3 className="font-semibold truncate max-w-[300px]" title={productTitle}>
+                              {productTitle}
                           </h3>
                           <Badge variant={
                             product.status === 'approved' ? 'default' :
@@ -1061,7 +1062,7 @@ function ModerationPage() {
                           }>{product.status}</Badge>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          <span>{product.category}</span>
+                          <span>{productCategory}</span>
                           <span className="hidden sm:inline">•</span>
                           <span className="font-semibold">
                             {Number.isFinite(product.price) 
@@ -1093,9 +1094,7 @@ function ModerationPage() {
                             </DialogTrigger>
                             <DialogContent className="w-full max-w-4xl h-screen md:h-auto max-h-[90vh] overflow-hidden flex flex-col">
                               <DialogHeader className="flex-shrink-0 overflow-hidden">
-                                <DialogTitle className="truncate">Moderacja ProductCore: {
-                                    typeof product.title === 'object' ? product.title?.pl : (product.title || 'Unknown')
-                                }</DialogTitle>
+                                <DialogTitle className="truncate">Moderacja ProductCore: {productTitle || 'Unknown'}</DialogTitle>
                               </DialogHeader>
                               <div className="flex-1 overflow-y-auto">
                                 <ModerationDetailView item={product} itemType="product" />
@@ -1124,7 +1123,8 @@ function ModerationPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               )}
             </CardContent>
@@ -1170,7 +1170,7 @@ function ModerationPage() {
                             {comment.status && <Badge variant="secondary">{comment.status}</Badge>}
                           </div>
                           <p className="text-sm font-medium mb-1">
-                            Pod: {comment.parentTitle || 'Nieznany tytuł'}
+                            Pod: {getLocalizedTitle(comment.parentTitle) || 'Nieznany tytuł'}
                           </p>
                           <p className="text-sm text-muted-foreground mb-2">
                             {formatDate(comment.createdAt)}
