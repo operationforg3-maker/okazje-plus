@@ -123,22 +123,26 @@ export class AliExpressClient {
    * 4. app_secret is trimmed to remove trailing whitespace
    * 5. Exact format: SECRET + key1 + value1 + key2 + value2 + ... + SECRET
    */
-  private generateSignature(params: Record<string, any>): string {
+  private generateSignature(params: Record<string, any>, method: 'md5' | 'sha256' = 'md5'): string {
     // Get app secret and TRIM to remove trailing whitespace
     const appSecret = (this.config.appSecret || '').trim();
     
     // Sort parameters alphabetically (critical for signature match)
     const sortedKeys = Object.keys(params).sort();
     
-    // Build signature string: SECRET + key1 + value1 + key2 + value2 + ... + SECRET
+    // Build signature string
+    // - MD5: SECRET + key1 + value1 + ... + SECRET
+    // - HMAC-SHA256: key1 + value1 + ... (no secret prefix)
     // CRITICAL: Values MUST NOT be URL-encoded at this stage
-    let signString = appSecret;
+    let signString = method === 'md5' ? appSecret : '';
     for (const key of sortedKeys) {
       // Convert value to string without URL encoding
       const value = String(params[key]);
       signString += key + value;
     }
-    signString += appSecret;
+    if (method === 'md5') {
+      signString += appSecret;
+    }
     
     // Debug log the raw signature string (first 200 chars only for security)
     logger.debug('Signature calculation', {
@@ -149,6 +153,12 @@ export class AliExpressClient {
       signStringLength: signString.length
     });
     
+    // Generate signature
+    if (method === 'sha256') {
+      const hash = createHmac('sha256', appSecret).update(signString).digest('hex');
+      return hash.toUpperCase();
+    }
+
     // Generate plain MD5 signature (not HMAC)
     const hash = createHash('md5').update(signString).digest('hex');
     return hash.toUpperCase();
@@ -213,6 +223,7 @@ export class AliExpressClient {
     const useOAuth = !!this.token;
     const apiBase = this.config.apiEndpoint || process.env.ALIEXPRESS_API_BASE || 'https://openapi.aliexpress.com/gateway.do';
     const isSingaporeEndpoint = apiBase.includes('api-sg.aliexpress.com');
+    const isSyncEndpoint = apiBase.includes('/sync');
     
     if (useOAuth) {
       // New API with OAuth
@@ -255,16 +266,18 @@ export class AliExpressClient {
       // CRITICAL: AliExpress TOP API requires exact format for signature validation
       // Must NOT be URL-encoded before signature calculation
       const now = new Date();
-      // Format as UTC: YYYY-MM-DD HH:mm:ss
-      const timestamp = now.toISOString()
-        .replace('T', ' ')
-        .substring(0, 19); // Exact format: 2026-02-01 05:10:21
+      // Format timestamp based on endpoint requirements:
+      // - TOP API (gateway.do): "YYYY-MM-DD HH:mm:ss" UTC
+      // - Singapore router/rest: milliseconds since epoch (string)
+      const timestamp = isSingaporeEndpoint
+        ? String(now.getTime())
+        : now.toISOString().replace('T', ' ').substring(0, 19); // Exact format: 2026-02-01 05:10:21
       
       // Build base parameters (system params)
       const requestParams: Record<string, any> = {
         method,
         app_key: this.config.appKey,
-        sign_method: 'md5',
+        sign_method: isSyncEndpoint ? 'sha256' : 'md5',
         timestamp: timestamp,
         format: 'json',
         v: '2.0',
@@ -283,7 +296,7 @@ export class AliExpressClient {
         // For Singapore: business params are merged with system params
         // ALL parameters go into signature (including business params)
         const paramsForSigning = Object.entries(requestParams)
-          .filter(([key]) => key !== 'sign' && key !== 'sign_method')
+          .filter(([key]) => key !== 'sign')
           .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
         
         // Merge business params into the signing params
@@ -291,7 +304,7 @@ export class AliExpressClient {
         Object.assign(paramsForSigning, params);
         
         // Calculate signature with ALL parameters sorted
-        const sign = this.generateSignature(paramsForSigning);
+        const sign = this.generateSignature(paramsForSigning, isSyncEndpoint ? 'sha256' : 'md5');
         requestParams.sign = sign;
         
         // Merge business params into request params for sending
@@ -300,7 +313,7 @@ export class AliExpressClient {
         logger.info('Singapore API Signature Debug', {
           appKey: this.config.appKey,
           timestamp: timestamp,
-          signMethod: 'md5',
+          signMethod: requestParams.sign_method,
           allParamsForSigning: Object.keys(paramsForSigning).sort().join(', '),
           paramsCount: Object.keys(paramsForSigning).length,
           generatedSign: sign.substring(0, 16) + '...'
@@ -357,10 +370,10 @@ export class AliExpressClient {
       // CRITICAL: signature must be calculated BEFORE URL encoding
       // Only system params + business params are signed (not sign itself)
       const paramsForSigning = Object.entries(requestParams)
-        .filter(([key]) => key !== 'sign' && key !== 'sign_method')
+        .filter(([key]) => key !== 'sign')
         .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
       
-      const sign = this.generateSignature(paramsForSigning);
+      const sign = this.generateSignature(paramsForSigning, isSyncEndpoint ? 'sha256' : 'md5');
       requestParams.sign = sign;
       
       // Debug: log signature parameters and raw signature string
