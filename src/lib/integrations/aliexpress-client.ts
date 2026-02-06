@@ -432,6 +432,7 @@ export function getAliExpressClient(): AliExpressClient {
     clientInstance = new AliExpressClient({
       appKey,
       appSecret,
+      baseUrl: process.env.ALIEXPRESS_API_ENDPOINT || process.env.ALIEXPRESS_API_BASE || undefined,
       region: (process.env.ALIEXPRESS_REGION as any) || "eu",
     });
   }
