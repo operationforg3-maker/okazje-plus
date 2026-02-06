@@ -246,7 +246,10 @@ async function fetchAliExpressProducts(keywords: string[], limit: number) {
   for (const keyword of keywords) {
     if (results.length >= limit) break;
 
-    const response = await client.searchAffiliateProducts(keyword, Math.min(20, limit - results.length));
+    const response = await client.searchAffiliateProducts({
+      keywords: keyword,
+      page_size: Math.min(20, limit - results.length),
+    });
     const items = response?.products || response?.result?.products || response?.data?.products || [];
     results.push(...items);
   }
