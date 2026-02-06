@@ -232,6 +232,8 @@ export class AliExpressClient {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "User-Agent": "OkazjePlusAPI/1.0",
       },
       body: body.toString(),
     });
