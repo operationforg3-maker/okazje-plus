@@ -282,6 +282,7 @@ export class SmartHarvester {
     const errors: HarvesterJob['errors'] = [];
     let processedCount = 0; // Counter for periodic updates
     const dealsToRefine: string[] = [];
+    const productsToRefine: string[] = [];
 
     try {
       // Iterate through all provided queries/categories
@@ -343,7 +344,7 @@ export class SmartHarvester {
           
           // For category-tree mode: Filter by rating/quality (top products only)
           let filteredProducts = sourceProducts;
-          if (isTreeMode && sourceProducts.length > 0) {
+          if (isTreeMode && !autoBrowse && sourceProducts.length > 0) {
             filteredProducts = this.filterTopQualityProducts(sourceProducts, Math.ceil(maxResults * 0.6));
           }
           
@@ -519,6 +520,9 @@ export class SmartHarvester {
                 );
                 productsCreated++;
                 categoryProductsCreated++;
+                if (source === 'convertiser') {
+                  productsToRefine.push(productId);
+                }
 
                 // Create associated deal
                 const dealId = await this.createDeal(
@@ -686,6 +690,19 @@ export class SmartHarvester {
           })
           .catch((err) => {
             this.addLog('error', 'Deal Refiner nie powiódł się w tle', err);
+          });
+      }
+
+      if (productsToRefine.length > 0) {
+        const refinerJobId = `refiner_${this.jobId}`;
+        this.addLog('info', `Uruchamiam AI Refiner dla ${productsToRefine.length} produktów (async)`);
+        const productRefiner = new AIRefiner(refinerJobId);
+        productRefiner.refineProducts(productsToRefine, 'full_enrichment')
+          .then((result) => {
+            this.addLog('info', `AI Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+          })
+          .catch((err) => {
+            this.addLog('error', 'AI Refiner nie powiódł się w tle', err);
           });
       }
 
@@ -1559,6 +1576,22 @@ export class SmartHarvester {
         count: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
         provider: 'mixed' as any, // Harvester sources are external
       },
+      ratingSources: (sourceProduct.rating || sourceProduct.ratingCount || sourceProduct.evaluateCount) ? {
+        external: {
+          average: sourceProduct.rating || 0,
+          count: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
+          source: source,
+          updatedAt: now,
+        },
+      } : undefined,
+      ratingCard: {
+        average: sourceProduct.rating || 0,
+        count: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
+        durability: 0,
+        easeOfUse: 0,
+        valueForMoney: 0,
+        versatility: 0,
+      },
       bestPrice: {
         amount: sourceProduct.price,
         currency: sourceProduct.currency || 'PLN', // M6: sourceProduct.currency is now PLN after conversion
@@ -1637,6 +1670,25 @@ export class SmartHarvester {
     let subCategorySlug = product?.subCategorySlug || 'uncategorized';
     let subSubCategorySlug = product?.subSubCategorySlug;
     const isOfferPromotion = sourceProduct.offerMeta?.promotionType === 'offer';
+    let affiliateLink = sourceProduct.sourceUrl;
+
+    if (source === 'convertiser' && sourceProduct.sourceProductId) {
+      try {
+        const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
+        const client = getConvertiserClient();
+        const tracking = isOfferPromotion
+          ? await client.generateOfferTrackingLink(sourceProduct.sourceProductId)
+          : await client.generateProductTrackingLink(sourceProduct.sourceProductId);
+        const resolved = (tracking as any)?.tracking_link
+          || (tracking as any)?.url
+          || (tracking as any)?.link;
+        if (resolved) {
+          affiliateLink = resolved;
+        }
+      } catch (err) {
+        this.addLog('warn', `Nie udało się wygenerować linku afiliacyjnego Convertiser dla ${sourceProduct.sourceProductId}`, err);
+      }
+    }
 
     // If product has no category, attempt to map and persist
     if (!product || !product.mainCategorySlug || product.mainCategorySlug === 'uncategorized') {
@@ -1675,8 +1727,8 @@ export class SmartHarvester {
       },
       shippingCost: sourceProduct.shippingCost || 0,
       source: source as any,
-      affiliateLink: sourceProduct.sourceUrl,
-      link: sourceProduct.sourceUrl,
+      affiliateLink,
+      link: affiliateLink,
       merchantName: sourceProduct.merchantName || source,
       merchant: sourceProduct.merchantName || source,
       merchantRating: sourceProduct.merchantRating,
@@ -1720,7 +1772,7 @@ export class SmartHarvester {
       commentsCount: 0,
       status: 'draft', // Harvested deals require moderation before approval
       sourceProductId: sourceProduct.sourceProductId,
-      sourceUrl: sourceProduct.sourceUrl,
+      sourceUrl: affiliateLink,
       createdAt: now,
       updatedAt: now,
       postedAt: now,
@@ -1750,6 +1802,7 @@ export class SmartHarvester {
         lastPriceUpdate: now,
         importedAt: now,
         source: source,
+        originalUrl: sourceProduct.sourceUrl,
         // Spójne metadane z ProductCore
         store: {
           name: sourceProduct.merchantName || source,

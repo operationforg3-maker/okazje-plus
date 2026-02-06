@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { ProductCore, RefinerJob, LocalizedText } from '@/lib/types';
 import { formatProductDescription, formatSpecs, specsToFeatures } from '@/ai/flows/product-formatting';
+import { extractDimensionsFromTitle } from '@/lib/automation/identity-matcher';
 
 /**
  * AI Refiner - Enriches draft ProductCores with AI-generated content
@@ -263,8 +264,29 @@ export class AIRefiner {
     } catch (_) {}
 
     if (refinationType === 'full_enrichment' || refinationType === 'specs_cleanup') {
+      // Build best-effort specs seed
+      let specsSeed: Record<string, string> = {};
+      const rawSpecs = product.specs || {};
+      if (Object.keys(rawSpecs).length > 0) {
+        specsSeed = { ...rawSpecs };
+      } else if (product.metadata?.specifications && Object.keys(product.metadata.specifications).length > 0) {
+        specsSeed = Object.fromEntries(
+          Object.entries(product.metadata.specifications).map(([key, value]) => [key, String(value ?? '').trim()])
+        );
+      }
+
+      if (Object.keys(specsSeed).length === 0) {
+        const titleText = typeof product.title === 'object'
+          ? (product.title.pl || product.title.en || product.title.de || '')
+          : (product.title || '');
+        const extracted = extractDimensionsFromTitle(titleText);
+        if (Object.keys(extracted).length > 0) {
+          specsSeed = extracted;
+        }
+      }
+
       // Clean up specs using AI
-      refined.specs = await this.cleanupSpecs(product.specs);
+      refined.specs = await this.cleanupSpecs(specsSeed);
     }
     
     // M6 UPGRADE: Use intelligent generator instead of iterative translation
@@ -301,6 +323,25 @@ export class AIRefiner {
           ...(refinedContent.seo.keywords || []),
           ...(await this.extractSearchTags(refined.title, refined.specs))
         ];
+
+        // Ensure we extract specs even when creative flow runs
+        if (!refined.specs || Object.keys(refined.specs).length === 0) {
+          try {
+            const { cleanProductTitle } = await import('@/ai/flows/enrichment');
+            const titleResult = await cleanProductTitle({
+              originalTitle,
+              specs: refined.specs || product.specs || {}
+            });
+            if (titleResult?.specsExtracted && Object.keys(titleResult.specsExtracted).length > 0) {
+              refined.specs = {
+                ...(refined.specs || product.specs || {}),
+                ...titleResult.specsExtracted
+              };
+            }
+          } catch (specErr) {
+            this.addLog('warn', 'Specyfikacje nie zostały wyekstrahowane z tytułu', specErr);
+          }
+        }
 
         // M6+ Market Price Estimation
         if (refinedContent.averageMarketPrice && refinedContent.averageMarketPrice.amount && refinedContent.averageMarketPrice.currency) {

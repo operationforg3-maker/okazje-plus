@@ -595,6 +595,8 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     images: sanitizeImages((raw as any).images),
     reviewsSummary: sanitizeLocalizedText((raw as any).reviewsSummary),
     rating: sanitizeRating((raw as any).rating),
+    ratingCard: sanitizeRatingCard((raw as any).ratingCard),
+    ratingSources: sanitizeRatingSources((raw as any).ratingSources),
     bestPrice: sanitizeBestPrice((raw as any).bestPrice),
     linkedDealIds: ensureStringArray((raw as any).linkedDealIds, 100),
     searchTags: sanitizeSearchTags((raw as any).searchTags),

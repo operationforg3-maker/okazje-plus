@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // 3. Validate input
     const isQueryValid = query && typeof query === 'string' && query.trim().length > 0 && query.trim() !== 'category-tree';
-    const isCategoryTreeMode = mode === 'category-tree' || (query?.trim() === '' && mode === 'single') || (query?.trim() === 'category-tree');
+    const isCategoryTreeMode = mode === 'category-tree' || (query?.trim() === '' && mode === 'single' && !autoBrowse) || (query?.trim() === 'category-tree');
     
     if (!source) {
       return NextResponse.json(
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       : query;
 
     // 6. Initialize job record (for immediate response to UI)
-    const isTreeMode = isCategoryTreeMode || (categories && categories.length > 0);
+    const isTreeMode = (isCategoryTreeMode || (categories && categories.length > 0)) && !autoBrowse;
     const initialJob = {
       id: jobId,
       status: 'running' as const,

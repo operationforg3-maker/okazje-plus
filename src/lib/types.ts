@@ -2216,6 +2216,8 @@ export interface ProductCore {
     count: number; // Number of reviews/ratings
     provider: 'mixed' | 'aliexpress' | 'amazon' | 'allegro' | 'users' | 'editorial';
   };
+  ratingCard?: ProductRatingCard;
+  ratingSources?: ProductRatingSources;
   /**
    * Optional structured features, pros, cons (per locale)
    */

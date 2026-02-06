@@ -148,9 +148,17 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
   const displayTitle = titleText || product.name || 'Produkt';
   
   // Rating & Stats
-  const productRating = (product as any).rating || 0;
+  const ratingValue = (product as any).rating;
+  const productRating = typeof ratingValue === 'number'
+    ? ratingValue
+    : (ratingValue?.score ?? (product as any).ratingCard?.average ?? (product as any).ratingSources?.external?.average ?? (product as any).ratingSources?.users?.average ?? 0);
   const merchantRating = (product as any).merchantRating || 0;
-  const ratingCount = (product as any).ratingCount || 0;
+  const ratingCount = (product as any).ratingCount
+    ?? (ratingValue?.count)
+    ?? (product as any).ratingCard?.count
+    ?? (product as any).ratingSources?.external?.count
+    ?? (product as any).ratingSources?.users?.count
+    ?? 0;
   const ordersCount = (product as any).ordersCount || 0;
 
   // Metadata

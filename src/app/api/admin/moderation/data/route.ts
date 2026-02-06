@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     );
 
     const deals = dealQueries
-      .flatMap(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      .flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id })))
       .sort((a, b) => toMillis(b.postedAt || b.createdAt) - toMillis(a.postedAt || a.createdAt))
       .slice(0, limit);
 
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     );
 
     const products = productQueries
-      .flatMap(snap => snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      .flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id })))
       .sort((a, b) => toMillis(b.metadata?.importedAt || b.createdAt) - toMillis(a.metadata?.importedAt || a.createdAt))
       .slice(0, limit);
 
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
 
       const mapRecent = (snap: FirebaseFirestore.QuerySnapshot, type: 'deal' | 'product') =>
         snap.docs
-          .map(doc => ({ id: doc.id, type, ...doc.data() } as any))
+          .map(doc => ({ ...doc.data(), id: doc.id, type } as any))
           .filter((item: any) => {
             const updatedAt = item.updatedAt?.toDate?.() || (item.updatedAt ? new Date(item.updatedAt) : new Date(0));
             return updatedAt.getTime() >= cutoffMs;

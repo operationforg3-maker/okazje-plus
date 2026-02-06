@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { GalleryItem } from '@/lib/schema';
 import { Play, Pause, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -132,6 +132,10 @@ export function MediaGallery({ gallery, images, videoUrl, productTitle = 'Produc
       {/* Lightbox */}
       <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
         <DialogContent className="max-w-[90vw] max-h-[90vh] p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Podgląd multimediów produktu</DialogTitle>
+            <DialogDescription>Podgląd zdjęć i wideo w powiększeniu.</DialogDescription>
+          </DialogHeader>
           <div className="relative w-full h-[80vh]">
             {isVideo ? (
               <video
