@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/auth-helpers';
 import { adminDb } from '@/lib/firebase-admin';
-import { getAliExpressClient } from '@/lib/integrations/aliexpress-client';
+import { createAliExpressClient } from '@/integrations/aliexpress/client';
 import { logger } from '@/lib/logger';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -240,17 +240,20 @@ export async function POST(req: NextRequest) {
 }
 
 async function fetchAliExpressProducts(keywords: string[], limit: number) {
-  const client = getAliExpressClient();
+  const client = createAliExpressClient();
 
   const results: any[] = [];
   for (const keyword of keywords) {
     if (results.length >= limit) break;
 
-    const response = await client.searchAffiliateProducts({
-      keywords: keyword,
-      page_size: Math.min(20, limit - results.length),
+    const response = await client.searchProducts({
+      q: keyword,
+      limit: Math.min(20, limit - results.length),
+      targetCurrency: 'PLN',
+      targetLanguage: 'PL',
+      shipToCountry: 'PL',
     });
-    const items = response?.products || response?.result?.products || response?.data?.products || [];
+    const items = response?.products || [];
     results.push(...items);
   }
 
