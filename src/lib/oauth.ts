@@ -843,6 +843,7 @@ export function generateAuthorizationUrl(
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: clientId,
+    app_key: clientId, // AliExpress OAuth (TOP) expects app_key
     redirect_uri: redirectUri,
     scope: scope.join(' '),
     state: state || Math.random().toString(36).substring(7),

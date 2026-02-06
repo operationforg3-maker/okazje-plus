@@ -61,6 +61,7 @@ async function generateOAuthUrl() {
     // Build authorization URL
     const params = new URLSearchParams({
       client_id: clientId,
+      app_key: clientId, // AliExpress OAuth (TOP) expects app_key
       response_type: 'code',
       redirect_uri: redirectUri,
       state: state,
