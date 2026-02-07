@@ -40,6 +40,7 @@ interface RawProduct {
   merchantName?: string;
   merchantRating?: number;
   specs?: Record<string, string>;
+  discountPercent?: number; // Procentowa obniżka ceny
   rating?: number;
   ratingCount?: number; // Number of reviews/ratings
   evaluateCount?: number; // AliExpress: Liczba opinii (alternatywa dla ratingCount)
@@ -83,18 +84,37 @@ export class SmartHarvester {
 
   private mapConvertiserOfferToRawProduct(offer: any): RawProduct | null {
     try {
-      const title = offer.title || offer.name || '';
+      const title = offer.title || offer.product_title || offer.name || offer.product_name || '';
       if (!title) return null;
 
-      const imageUrl = offer.logo_thumbnail || offer.logo || offer.image || this.getFallbackImageUrl();
-      const previewUrl = offer.preview_url || offer.offer_display_url || offer.url || '';
+      const imageUrl = offer.logo_thumbnail || offer.logo || offer.image || offer.image_url || offer.product_image || this.getFallbackImageUrl();
+      const previewUrl = offer.preview_url || offer.offer_display_url || offer.url || offer.tracking_url || '';
+
+      const parsePrice = (value: any): number => {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === 'number') return value;
+        const str = String(value);
+        const match = str.match(/[\d.,]+/);
+        return match ? parseFloat(match[0].replace(',', '.')) : 0;
+      };
+
+      const price = parsePrice(offer.sale_price || offer.price || offer.current_price || offer.offer_price);
+      const originalPrice = parsePrice(offer.original_price || offer.regular_price || offer.list_price || offer.old_price);
+      const discountPercent = originalPrice > price && price > 0
+        ? Math.round(100 - (price / originalPrice) * 100)
+        : undefined;
+
+      const description = offer.description || offer.product_description || offer.excerpt || offer.short_description || '';
+      const specsFromTitle = extractDimensionsFromTitle(title);
+      const specsFromDesc = description ? extractDimensionsFromTitle(description) : {};
+      const mergedSpecs = { ...specsFromTitle, ...specsFromDesc };
 
       return {
         title,
-        description: offer.description || offer.excerpt || '',
+        description,
         imageUrl,
-        price: 0,
-        originalPrice: undefined,
+        price,
+        originalPrice: originalPrice > price ? originalPrice : undefined,
         currency: 'PLN',
         shippingCost: 0,
         shippingDays: 0,
@@ -102,7 +122,8 @@ export class SmartHarvester {
         sourceUrl: previewUrl,
         merchantName: offer.title || offer.advertiser_name || 'Convertiser',
         merchantRating: 0,
-        specs: {},
+        specs: mergedSpecs,
+        discountPercent,
         rating: 0,
         ratingCount: 0,
         images: [imageUrl],
@@ -503,13 +524,21 @@ export class SmartHarvester {
                     };
                   }
                 } else {
-                  // Other sources: parse from query path
-                  const categoryParts = currentQuery.split('/');
-                  categoryInfo = {
-                    mainCategorySlug: categoryParts[0] || 'uncategorized',
-                    subCategorySlug: categoryParts[1] || 'uncategorized',
-                    subSubCategorySlug: categoryParts[2],
-                  };
+                  // Other sources: parse from query path only when path-like
+                  if (currentQuery.includes('/')) {
+                    const categoryParts = currentQuery.split('/');
+                    categoryInfo = {
+                      mainCategorySlug: categoryParts[0] || 'uncategorized',
+                      subCategorySlug: categoryParts[1] || 'uncategorized',
+                      subSubCategorySlug: categoryParts[2],
+                    };
+                  } else {
+                    // Free-text query: let category mapper decide
+                    categoryInfo = {
+                      mainCategorySlug: 'uncategorized',
+                      subCategorySlug: 'uncategorized',
+                    };
+                  }
                 }
 
                 const productId = await this.createProductCore(
@@ -520,9 +549,7 @@ export class SmartHarvester {
                 );
                 productsCreated++;
                 categoryProductsCreated++;
-                if (source === 'convertiser') {
-                  productsToRefine.push(productId);
-                }
+                productsToRefine.push(productId);
 
                 // Create associated deal
                 const dealId = await this.createDeal(
@@ -1454,9 +1481,18 @@ export class SmartHarvester {
       mpn: sourceProduct.mpn ? normalizeProductIdentifier(sourceProduct.mpn) : undefined,
     };
 
-    // Extract specs from title (fallback if not provided by source)
-    const extractedSpecs = extractDimensionsFromTitle(sourceProduct.title);
-    const specs = sourceProduct.specs || extractedSpecs;
+    // Extract specs from title/description (fallback if not provided by source)
+    const extractedSpecsFromTitle = extractDimensionsFromTitle(sourceProduct.title);
+    const extractedSpecsFromDesc = sourceProduct.description
+      ? extractDimensionsFromTitle(sourceProduct.description)
+      : {};
+    const extractedSpecs = { ...extractedSpecsFromTitle, ...extractedSpecsFromDesc };
+    const specs = (sourceProduct.specs && Object.keys(sourceProduct.specs).length > 0)
+      ? sourceProduct.specs
+      : extractedSpecs;
+    if (!specs || Object.keys(specs).length === 0) {
+      specs.info = 'Brak danych specyfikacji';
+    }
 
     // Add variants to specs if available (temporary solution until schema supports variants)
     if (sourceProduct.variants && Array.isArray(sourceProduct.variants) && sourceProduct.variants.length > 0) {
@@ -1469,18 +1505,44 @@ export class SmartHarvester {
       });
     }
 
-    // Try to auto-map category from product title when categoryInfo is missing/uncategorized
+    // Try to auto-map category from product text when categoryInfo is missing/uncategorized
     let mappedCategory = categoryInfo;
     let categoryMetadata: any = {}; // Store aliexpressCategoryIds & searchKeywords
+    const stripHtml = (value: string) => (value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const specsText = specs && typeof specs === 'object'
+      ? Object.entries(specs)
+          .map(([key, value]) => `${key} ${Array.isArray(value) ? value.join(' ') : String(value ?? '')}`)
+          .join(' ')
+      : '';
+    const categoryText = [sourceProduct.title, stripHtml(sourceProduct.description || ''), specsText]
+      .filter(Boolean)
+      .join(' ');
+
     try {
+      const { matchCategoryByText, validateCategoryPath } = await import('@/lib/category-mapper');
+      const hasCategory = mappedCategory?.mainCategorySlug && mappedCategory.mainCategorySlug !== 'uncategorized';
+      if (hasCategory) {
+        const isValid = await validateCategoryPath(
+          mappedCategory?.mainCategorySlug,
+          mappedCategory?.subCategorySlug,
+          mappedCategory?.subSubCategorySlug
+        );
+        if (!isValid) {
+          this.addLog('warn', `Invalid category path detected: ${mappedCategory?.mainCategorySlug}/${mappedCategory?.subCategorySlug}/${mappedCategory?.subSubCategorySlug || ''}`);
+          mappedCategory = {
+            mainCategorySlug: 'uncategorized',
+            subCategorySlug: 'uncategorized',
+          };
+        }
+      }
+
       const needsMapping = !mappedCategory || !mappedCategory.mainCategorySlug || mappedCategory.mainCategorySlug === 'uncategorized';
       if (needsMapping) {
-        const { matchCategoryByText } = await import('@/lib/category-mapper');
-        const match = await matchCategoryByText(sourceProduct.title || '');
+        const match = await matchCategoryByText(categoryText);
         if (match) {
           mappedCategory = {
             mainCategorySlug: match.mainCategorySlug,
-            subCategorySlug: match.subCategorySlug || 'general',
+            subCategorySlug: match.subCategorySlug || 'uncategorized',
             subSubCategorySlug: match.subSubCategorySlug,
           };
           this.addLog('info', `Auto-mapped category: ${mappedCategory.mainCategorySlug}/${mappedCategory.subCategorySlug}/${mappedCategory.subSubCategorySlug || ''}`);
@@ -1537,6 +1599,7 @@ export class SmartHarvester {
       }
     }
 
+    const baseDescription = (sourceProduct.description || '').trim() || `Produkt z ${source}`;
     const product: ProductCore = {
       id: '', // Will be set by Firestore
       identityHash,
@@ -1546,13 +1609,19 @@ export class SmartHarvester {
         de: sourceProduct.title, // TODO: Translate via AI
       },
       shortDescription: {
-        pl: `Product from ${source}`,
-        en: `Product from ${source}`,
-        de: `Product from ${source}`,
+        pl: baseDescription,
+        en: baseDescription,
+        de: baseDescription,
       },
       fullDescription: {
-        pl: '',
-        en: '',
+        pl: baseDescription,
+        en: baseDescription,
+        de: baseDescription,
+      },
+      description: {
+        pl: baseDescription,
+        en: baseDescription,
+        de: baseDescription,
       },
       specs,
       
@@ -1621,8 +1690,8 @@ export class SmartHarvester {
           url: sourceProduct.sourceUrl,
         },
         shipping: {
-          cost: sourceProduct.shippingCost,
-          days: sourceProduct.shippingDays,
+          cost: sourceProduct.shippingCost ?? 0,
+          days: sourceProduct.shippingDays ?? 7,
           shipsFrom: (sourceProduct as any).shipsFrom,
         },
         specifications: specs,
@@ -1694,7 +1763,12 @@ export class SmartHarvester {
     if (!product || !product.mainCategorySlug || product.mainCategorySlug === 'uncategorized') {
       try {
         const { ensureProductCategory } = await import('@/lib/category-mapper');
-        const mapped = await ensureProductCategory(productId, sourceProduct.title);
+        const dealSpecsText = sourceProduct?.specs && typeof sourceProduct.specs === 'object'
+          ? Object.entries(sourceProduct.specs)
+              .map(([key, value]) => `${key} ${Array.isArray(value) ? value.join(' ') : String(value ?? '')}`)
+              .join(' ')
+          : '';
+        const mapped = await ensureProductCategory(productId, [sourceProduct.title, sourceProduct.description || '', dealSpecsText]);
         if (mapped) {
           mainCategorySlug = mapped.mainCategorySlug;
           subCategorySlug = mapped.subCategorySlug || subCategorySlug;
@@ -1707,6 +1781,11 @@ export class SmartHarvester {
     }
 
     // Przechowujemy pola M6 oraz legacy, aby UI nie dostawał pustych/mocked rekordów
+    const dealDescriptionText = (sourceProduct.description || '').trim()
+      || (typeof product?.shortDescription === 'object'
+        ? (product.shortDescription.pl || product.shortDescription.en || product.shortDescription.de || '')
+        : (product?.shortDescription || ''))
+      || sourceProduct.title;
     const deal: any = {
       // M6 fields
       productCoreId: productId,  // M6: Link to ProductCore
@@ -1754,9 +1833,12 @@ export class SmartHarvester {
         en: product.title.en,
         de: product.title.de,
       } as LocalizedText,
-      description: typeof product?.shortDescription === 'object' 
-        ? (product.shortDescription.pl || product.shortDescription.en || '') 
-        : (product?.shortDescription || ''),
+      description: {
+        pl: dealDescriptionText,
+        en: dealDescriptionText,
+        de: dealDescriptionText,
+      } as LocalizedText,
+      discountPercent: sourceProduct.discountPercent,
       stockStatus: 'in_stock',
       isActive: true,
       priceHistory: [

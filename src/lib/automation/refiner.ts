@@ -248,46 +248,38 @@ export class AIRefiner {
   ): Promise<Partial<ProductCore>> {
     const refined: Partial<ProductCore> = {};
 
-    // Ensure ProductCore has deepest possible category (prefer sub-sub) before content enrichment
-    try {
-      const needsCategory = !product.mainCategorySlug || product.mainCategorySlug === 'uncategorized' || !product.subSubCategorySlug;
-      if (needsCategory) {
-        const { matchCategoryByText } = await import('@/lib/category-mapper');
-        const baseText = `${product.title?.pl || ''} ${Object.keys(product.specs || {}).join(' ')}`;
-        const match = await matchCategoryByText(baseText);
-        if (match) {
-          refined.mainCategorySlug = match.mainCategorySlug;
-          refined.subCategorySlug = match.subCategorySlug || product.subCategorySlug || 'general';
-          refined.subSubCategorySlug = match.subSubCategorySlug || product.subSubCategorySlug;
-        }
-      }
-    } catch (_) {}
-
-    if (refinationType === 'full_enrichment' || refinationType === 'specs_cleanup') {
-      // Build best-effort specs seed
-      let specsSeed: Record<string, string> = {};
-      const rawSpecs = product.specs || {};
-      if (Object.keys(rawSpecs).length > 0) {
-        specsSeed = { ...rawSpecs };
-      } else if (product.metadata?.specifications && Object.keys(product.metadata.specifications).length > 0) {
-        specsSeed = Object.fromEntries(
-          Object.entries(product.metadata.specifications).map(([key, value]) => [key, String(value ?? '').trim()])
-        );
-      }
-
-      if (Object.keys(specsSeed).length === 0) {
-        const titleText = typeof product.title === 'object'
-          ? (product.title.pl || product.title.en || product.title.de || '')
-          : (product.title || '');
-        const extracted = extractDimensionsFromTitle(titleText);
-        if (Object.keys(extracted).length > 0) {
-          specsSeed = extracted;
-        }
-      }
-
-      // Clean up specs using AI
-      refined.specs = await this.cleanupSpecs(specsSeed);
+    // Build best-effort specs seed
+    let specsSeed: Record<string, string> = {};
+    const rawSpecs = product.specs || {};
+    if (Object.keys(rawSpecs).length > 0) {
+      specsSeed = { ...rawSpecs };
+    } else if (product.metadata?.specifications && Object.keys(product.metadata.specifications).length > 0) {
+      specsSeed = Object.fromEntries(
+        Object.entries(product.metadata.specifications).map(([key, value]) => [key, String(value ?? '').trim()])
+      );
     }
+
+    if (Object.keys(specsSeed).length === 0) {
+      const titleText = typeof product.title === 'object'
+        ? (product.title.pl || product.title.en || product.title.de || '')
+        : (product.title || '');
+      const descriptionText = typeof product.fullDescription === 'object'
+        ? (product.fullDescription.pl || product.fullDescription.en || product.fullDescription.de || '')
+        : (product.fullDescription || '');
+      const fallbackText = `${titleText} ${descriptionText}`.trim();
+      const extracted = fallbackText ? extractDimensionsFromTitle(fallbackText) : {};
+      if (Object.keys(extracted).length > 0) {
+        specsSeed = extracted;
+      }
+    }
+
+    if (Object.keys(specsSeed).length === 0) {
+      specsSeed = { info: 'Brak danych specyfikacji' };
+      this.addLog('warn', `Missing specs for product ${product.id} - using placeholder specs`);
+    }
+
+    // Clean up specs using AI
+    refined.specs = await this.cleanupSpecs(specsSeed);
     
     // M6 UPGRADE: Use intelligent generator instead of iterative translation
     // This addresses "AI should improve, not just translate"

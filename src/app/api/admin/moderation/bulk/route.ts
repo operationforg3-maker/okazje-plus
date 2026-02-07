@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
+import { startRefinerJob } from '@/lib/automation/refiner';
+import { startDealRefinerJob } from '@/lib/automation/deal-refiner';
 
 /**
  * Bulk moderation endpoint
@@ -105,6 +107,27 @@ export async function POST(req: NextRequest) {
       newStatus = targetStatus;
     } else {
       newStatus = action === 'approve' ? 'approved' : 'rejected';
+    }
+
+    // Jeśli zatwierdzamy, uruchom AI Refiner dla produktów/ofert (tylko nowe importy)
+    if (newStatus === 'approved') {
+      const productIds = items.filter((item: any) => item?.type === 'product').map((item: any) => item.id);
+      const dealIds = items.filter((item: any) => item?.type === 'deal').map((item: any) => item.id);
+
+      if (productIds.length > 0) {
+        try {
+          await startRefinerJob(productIds, 'full_enrichment');
+        } catch (err) {
+          console.error('[bulk moderation] Product Refiner failed', err);
+        }
+      }
+      if (dealIds.length > 0) {
+        try {
+          await startDealRefinerJob(dealIds);
+        } catch (err) {
+          console.error('[bulk moderation] Deal Refiner failed', err);
+        }
+      }
     }
 
     let processed = 0;

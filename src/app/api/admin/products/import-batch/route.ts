@@ -14,9 +14,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAdminAuth } from '@/lib/auth-helpers';
 import { adminDb } from '@/lib/firebase-admin';
-import { createAliExpressClient } from '@/integrations/aliexpress/client';
+import { SmartHarvester } from '@/lib/automation/harvester';
 import { logger } from '@/lib/logger';
-import { v4 as uuidv4 } from 'uuid';
 
 interface ImportConfig {
   source: 'aliexpress' | 'allegro' | 'amazon' | 'ebay' | 'convertiser';
@@ -143,91 +142,57 @@ export async function POST(req: NextRequest) {
       itemCount: config.itemsPerCategory,
     });
 
-    // ===== FETCH FROM SOURCE =====
-    let products: any[] = [];
-    let importErrors: Array<{ item: string; error: string }> = [];
+    // ===== HARVEST VIA M6 PIPELINE =====
+    const categoryPath = `${mainCatData.slug}/${subCatData.slug}/${subSubCatData.slug}`;
+    const harvesterJobId = `import_${config.source}_${Date.now()}`;
+    const harvester = new SmartHarvester(harvesterJobId);
 
-    switch (config.source) {
-      case 'aliexpress':
-        try {
-          products = await fetchAliExpressProducts(searchKeywords, config.itemsPerCategory);
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          importErrors.push({
-            item: 'AliExpress',
-            error: errorMsg,
-          });
-          logger.warn('AliExpress fetch failed', { error: errorMsg });
-          // Don't throw - continue to store as empty result
-        }
-        break;
-
-      case 'allegro':
-      case 'amazon':
-      case 'ebay':
-      case 'convertiser':
-        logger.warn('Import source not implemented yet', { source: config.source });
-        break;
-
-      default:
-        return NextResponse.json(
-          { error: `Unsupported source: ${config.source}` },
-          { status: 400 }
-        );
+    let jobResult;
+    if (config.source === 'aliexpress') {
+      jobResult = await harvester.harvestProducts(
+        'aliexpress',
+        categoryPath,
+        config.itemsPerCategory,
+        undefined,
+        true
+      );
+    } else if (config.source === 'convertiser') {
+      const keyword = Array.isArray(searchKeywords) && searchKeywords.length > 0 ? String(searchKeywords[0]) : categoryPath;
+      jobResult = await harvester.harvestProducts(
+        'convertiser',
+        keyword,
+        config.itemsPerCategory,
+        undefined,
+        false,
+        'offers',
+        false
+      );
+    } else {
+      return NextResponse.json(
+        { error: `Unsupported source for M6 import: ${config.source}` },
+        { status: 400 }
+      );
     }
 
-    // ===== STORE PRODUCTS =====
     const result: ImportResult = {
-      totalProcessed: products.length,
-      created: 0,
-      skipped: 0,
-      errors: importErrors.length,
-      durationMs: 0,
+      totalProcessed: jobResult.productsFound || 0,
+      created: jobResult.productsCreated || 0,
+      skipped: jobResult.duplicatesSkipped || 0,
+      errors: jobResult.errors?.length || 0,
+      durationMs: Date.now() - startTime,
     };
-
-    for (const product of products) {
-      try {
-        const productId = uuidv4();
-        const data = {
-          id: productId,
-          name: product.title || product.product_title || 'Produkt z AliExpress',
-          description: product.description || product.product_description || '',
-          price: parseFloat(product.sale_price || product.target_sale_price || product.min_price || '0'),
-          originalPrice: parseFloat(product.original_price || product.original_price || '0') || undefined,
-          image: product.image_url || product.product_main_image_url || '',
-          affiliateUrl: product.promotion_link || product.product_url || '',
-          mainCategorySlug: mainCatData.slug,
-          subCategorySlug: subCatData.slug,
-          subSubCategorySlug: subSubCatData.slug,
-          status: config.draftStatus || 'pending_ai',
-          source: config.source,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          metadata: {
-            originalId: product.product_id || product.productId || product.product_id_str,
-            source: config.source,
-            merchantName: product.shop_title || product.shop_name,
-            rating: product.evaluate_rate || product.evaluate_rate_star,
-            evaluateRate: product.evaluate_rate,
-            evaluateCount: product.evaluate_count || product.order_count,
-          },
-        };
-
-        await adminDb.collection('products').doc(productId).set(data);
-        result.created++;
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        result.errors++;
-        logger.error('Failed to store product', { error: errorMsg });
-      }
-    }
-
-    result.durationMs = Date.now() - startTime;
 
     return NextResponse.json({
       success: true,
+      job: {
+        id: jobResult.id,
+        source: jobResult.source,
+        status: jobResult.status,
+        productsCreated: jobResult.productsCreated,
+        dealsCreated: jobResult.dealsCreated,
+      },
       result,
-      errors: importErrors,
+      errors: jobResult.errors || [],
     });
 
   } catch (error) {
@@ -239,23 +204,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function fetchAliExpressProducts(keywords: string[], limit: number) {
-  const client = createAliExpressClient();
-
-  const results: any[] = [];
-  for (const keyword of keywords) {
-    if (results.length >= limit) break;
-
-    const response = await client.searchProducts({
-      q: keyword,
-      limit: Math.min(20, limit - results.length),
-      targetCurrency: 'PLN',
-      targetLanguage: 'PL',
-      shipToCountry: 'PL',
-    });
-    const items = response?.products || [];
-    results.push(...items);
-  }
-
-  return results.slice(0, limit);
-}

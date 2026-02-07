@@ -27,7 +27,7 @@ export default function ConvertiserAutoImport() {
     error?: string;
   }>({});
   const [maxResults, setMaxResults] = useState(10000);
-  const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('offers');
+  const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('products');
 
   const handleAutoImport = async () => {
     try {
@@ -164,11 +164,11 @@ export default function ConvertiserAutoImport() {
                 disabled={isImporting}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               >
-                <option value="offers">Offers (Recommended - tracking links)</option>
-                <option value="products">Products</option>
+                <option value="products">Produkty (pełniejsze dane)</option>
+                <option value="offers">Oferty (mniej danych, ale linki trackingowe)</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                Offers mode generuje linki trackingowe
+                Produkty = więcej danych; Oferty = tracking linki, ale uboższy opis
               </p>
             </div>
           </div>

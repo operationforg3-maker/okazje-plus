@@ -214,6 +214,25 @@ export class DealRefiner {
       return true;
     }
 
+    // Description must be localized (PL/EN/DE). String or missing fields -> refine
+    if (!deal.description) {
+      return true;
+    }
+    if (typeof deal.description === 'string') {
+      return true;
+    }
+    if (typeof deal.description === 'object' && deal.description) {
+      if (!deal.description.pl || !deal.description.en || !deal.description.de) {
+        return true;
+      }
+    }
+
+    // Selling points should exist for UI (metadata.sellingPoints)
+    const sellingPoints = (deal.metadata as any)?.sellingPoints;
+    if (!sellingPoints || !sellingPoints.pl || !sellingPoints.en || !sellingPoints.de) {
+      return true;
+    }
+
     // Deal is fully refined
     return false;
   }

@@ -71,7 +71,7 @@ const CATEGORY_STRUCTURE: MainCategory[] = [
           { name: 'Smartfony', slug: 'smartfony', aliexpressKeywords: ['smartphone', 'mobile phone'] },
           { name: 'Telefony podstawowe', slug: 'telefony-podstawowe', aliexpressKeywords: ['feature phone', 'basic phone'] },
           { name: 'Akcesoria GSM', slug: 'akcesoria-gsm', aliexpressKeywords: ['phone accessories', 'phone case'] },
-          { name: 'Ładowarki i kable', slug: 'ladowarki-kable', aliexpressKeywords: ['phone charger', 'usb cable'] },
+          { name: 'Ładowarki i kable', slug: 'ladowarki-kable', aliexpressKeywords: ['phone charger', 'usb cable', 'charger', 'fast charger', 'usb charger', 'usb c charger', 'gan charger'] },
           { name: 'Powerbanki', slug: 'powerbanki', aliexpressKeywords: ['power bank', 'portable charger'] },
         ],
       },
@@ -449,6 +449,8 @@ async function seedCategories() {
       slug: englishMainSlug,
       icon: mainCat.icon || '📦',
       sortOrder: mainCat.sortOrder,
+      importKeywords: Array.from(new Set([englishMainName, englishMainSlug, mainCat.name])),
+      searchKeywords: Array.from(new Set([englishMainName, englishMainSlug, mainCat.name])),
       translations: {
         pl: { name: mainCat.name },
         en: { name: englishMainName },
@@ -469,6 +471,18 @@ async function seedCategories() {
         name: englishSubName,
         slug: englishSubSlug,
         sortOrder: 10,
+        importKeywords: Array.from(new Set([
+          englishSubName,
+          englishSubSlug,
+          subCat.name,
+          ...((subCat as any).aliexpressKeywords || []),
+        ])),
+        searchKeywords: Array.from(new Set([
+          englishSubName,
+          englishSubSlug,
+          subCat.name,
+          ...((subCat as any).aliexpressKeywords || []),
+        ])),
         subcategories: subCat.subcategories.map((sub, idx) => ({
           name: toTitleCase((sub.aliexpressKeywords?.[0] || sub.slug).replace(/-/g, ' ')),
           slug: slugify(sub.aliexpressKeywords?.[0] || sub.slug),
@@ -494,6 +508,18 @@ async function seedCategories() {
           name: englishSubSubName,
           slug: englishSubSubSlug,
           aliexpressKeywords: subSubCat.aliexpressKeywords || [],
+          importKeywords: Array.from(new Set([
+            englishSubSubName,
+            englishSubSubSlug,
+            subSubCat.name,
+            ...(subSubCat.aliexpressKeywords || []),
+          ])),
+          searchKeywords: Array.from(new Set([
+            englishSubSubName,
+            englishSubSubSlug,
+            subSubCat.name,
+            ...(subSubCat.aliexpressKeywords || []),
+          ])),
           translations: {
             pl: { name: subSubCat.name },
             en: { name: englishSubSubName },
