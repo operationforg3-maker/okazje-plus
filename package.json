@@ -20,6 +20,7 @@
     "seed:categories": "tsx src/scripts/seed-categories-full.ts",
     "seed:import-profiles": "tsx src/scripts/seed-import-profiles.ts",
     "auto-import": "tsx src/scripts/auto-import-products.ts",
+    "report:tools": "node scripts/generate-tools-inventory.mjs",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts",
     "postinstall": "node ./scripts/apply-react-hooks-shim.js || true && patch-package",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
