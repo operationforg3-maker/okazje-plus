@@ -15,7 +15,7 @@ import {
   limit,
   orderBy 
 } from 'firebase/firestore';
-import { Deal, Product, User } from './types';
+import { Deal } from './types';
 
 export interface TestResult {
   id: string;
@@ -131,7 +131,7 @@ async function testFirestoreConnection(): Promise<{ status: 'pass' | 'fail'; mes
 }
 
 async function testCollectionsExist(): Promise<{ status: 'pass' | 'fail' | 'warning'; message: string; details?: any }> {
-  const collections = ['deals', 'products', 'users', 'categories', 'notifications'];
+  const collections = ['deals', 'product_cores', 'users', 'categories', 'notifications'];
   const results: Record<string, boolean> = {};
   
   for (const collName of collections) {
@@ -228,9 +228,9 @@ async function testDealsCRUD(): Promise<{ status: 'pass' | 'fail' | 'warning'; m
 
 async function testProductsCRUD(): Promise<{ status: 'pass' | 'fail' | 'warning'; message: string; details?: any }> {
   try {
-    const productsQuery = query(collection(db, 'products'), where('status','==','approved'), limit(10));
+    const productsQuery = query(collection(db, 'product_cores'), where('status','==','approved'), limit(10));
     const productsSnapshot = await getDocs(productsQuery);
-    const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
     
     if (products.length === 0) {
       return { 
@@ -242,8 +242,12 @@ async function testProductsCRUD(): Promise<{ status: 'pass' | 'fail' | 'warning'
     
     // Validate product structure
     const sampleProduct = products[0];
-    const requiredFields = ['name', 'price', 'affiliateUrl', 'mainCategorySlug', 'ratingCard'];
+    const requiredFields = ['identityHash', 'mainCategorySlug', 'status', 'title'];
     const missingFields = requiredFields.filter(field => !(field in sampleProduct));
+    const hasLocalizedTitle = typeof sampleProduct.title === 'object'
+      ? Boolean(sampleProduct.title?.pl || sampleProduct.title?.en || sampleProduct.title?.de)
+      : Boolean(sampleProduct.title);
+    if (!hasLocalizedTitle) missingFields.push('title[pl|en|de]');
     
     if (missingFields.length > 0) {
       return {
@@ -255,11 +259,143 @@ async function testProductsCRUD(): Promise<{ status: 'pass' | 'fail' | 'warning'
     
     return {
       status: 'pass',
-      message: `Products CRUD OK (${products.length} products found)`,
-      details: { count: products.length, sample: sampleProduct.name }
+      message: `ProductCores CRUD OK (${products.length} products found)`,
+      details: { count: products.length, sample: sampleProduct.title?.pl || sampleProduct.title?.en || sampleProduct.title?.de || sampleProduct.id }
     };
   } catch (error: any) {
     return { status: 'fail', message: `Products test failed: ${error.message}` };
+  }
+}
+
+function hasLocalizedText(value: any): boolean {
+  if (!value) return false;
+  if (typeof value !== 'object') return false;
+  return Boolean(value.pl || value.en || value.de);
+}
+
+function hasAllLocales(value: any): boolean {
+  if (!value || typeof value !== 'object') return false;
+  return Boolean(value.pl && value.en && value.de);
+}
+
+async function testHarvesterLinkage(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const dealsQuery = query(collection(db, 'deals'), where('status','==','approved'), limit(10));
+    const dealsSnapshot = await getDocs(dealsQuery);
+    if (dealsSnapshot.empty) {
+      return { status: 'warning', message: 'No approved deals to verify harvester linkage' };
+    }
+
+    const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+    const linkedDeal = deals.find(d => d.productCoreId);
+    if (!linkedDeal) {
+      return { status: 'warning', message: 'No deals linked to product cores (productCoreId missing)' };
+    }
+
+    const productSnap = await getDoc(doc(db, 'product_cores', linkedDeal.productCoreId));
+    if (!productSnap.exists()) {
+      return { status: 'fail', message: 'Deal linked to missing product core', details: { dealId: linkedDeal.id, productCoreId: linkedDeal.productCoreId } };
+    }
+
+    const product = productSnap.data() as any;
+    const hasIdentity = Boolean(product.identityHash);
+    const hasTitle = hasLocalizedText(product.title) || Boolean(product.title);
+
+    if (!hasIdentity || !hasTitle) {
+      return {
+        status: 'fail',
+        message: 'Product core missing identity or title',
+        details: { productCoreId: linkedDeal.productCoreId, identityHash: product.identityHash, title: product.title }
+      };
+    }
+
+    return {
+      status: 'pass',
+      message: 'Harvester linkage OK (deal -> product core)',
+      details: { dealId: linkedDeal.id, productCoreId: linkedDeal.productCoreId }
+    };
+  } catch (error: any) {
+    return { status: 'fail', message: `Harvester linkage test failed: ${error.message}` };
+  }
+}
+
+async function testRefinerProductLocalization(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const productsQuery = query(collection(db, 'product_cores'), where('status','==','approved'), limit(10));
+    const productsSnapshot = await getDocs(productsQuery);
+    if (productsSnapshot.empty) {
+      return { status: 'warning', message: 'No approved product cores to verify refiner output' };
+    }
+
+    const products = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+    const product = products[0];
+    const description = product.description || product.fullDescription;
+    const hasLocalizedDescription = hasAllLocales(description);
+    const hasSpecs = product.specs && typeof product.specs === 'object' && Object.keys(product.specs).length > 0;
+
+    if (!hasLocalizedDescription) {
+      return {
+        status: 'fail',
+        message: 'Product core missing localized description (pl/en/de)',
+        details: { productCoreId: product.id, description }
+      };
+    }
+
+    if (!hasSpecs) {
+      return {
+        status: 'warning',
+        message: 'Product core missing specs after refiner',
+        details: { productCoreId: product.id }
+      };
+    }
+
+    return {
+      status: 'pass',
+      message: 'Refiner product output OK (localized description + specs)',
+      details: { productCoreId: product.id }
+    };
+  } catch (error: any) {
+    return { status: 'fail', message: `Refiner product test failed: ${error.message}` };
+  }
+}
+
+async function testRefinerDealLocalization(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const dealsQuery = query(collection(db, 'deals'), where('status','==','approved'), limit(10));
+    const dealsSnapshot = await getDocs(dealsQuery);
+    if (dealsSnapshot.empty) {
+      return { status: 'warning', message: 'No approved deals to verify refiner output' };
+    }
+
+    const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+    const deal = deals[0];
+    const hasLocalizedDescription = hasAllLocales(deal.description);
+    const sellingPoints = deal?.metadata?.sellingPoints;
+    const hasSellingPoints = hasAllLocales(sellingPoints);
+
+    if (!hasLocalizedDescription) {
+      return {
+        status: 'fail',
+        message: 'Deal missing localized description (pl/en/de)',
+        details: { dealId: deal.id, description: deal.description }
+      };
+    }
+
+    if (!hasSellingPoints) {
+      return {
+        status: 'warning',
+        message: 'Deal missing sellingPoints localization (pl/en/de)',
+        details: { dealId: deal.id, sellingPoints }
+      };
+    }
+
+    return {
+      status: 'pass',
+      message: 'Refiner deal output OK (localized description + sellingPoints)',
+      details: { dealId: deal.id }
+    };
+  } catch (error: any) {
+    return { status: 'fail', message: `Refiner deal test failed: ${error.message}` };
   }
 }
 
@@ -370,17 +506,17 @@ async function testCategoriesStructure(): Promise<{ status: TestResult['status']
     
     const categories = categoriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
     let totalSubcategories = 0;
-    
-    categories.forEach((cat: any) => {
-      if (cat.subcategories && Array.isArray(cat.subcategories)) {
-        totalSubcategories += cat.subcategories.length;
-      }
-    });
+    const sampleCats = categories.slice(0, 5);
+    const subCounts = await Promise.all(sampleCats.map(async (cat: any) => {
+      const subSnap = await getDocs(collection(db, `categories/${cat.id}/subcategories`));
+      return subSnap.size;
+    }));
+    totalSubcategories = subCounts.reduce((sum, v) => sum + v, 0);
     
     return {
       status: 'pass',
-      message: `Categories OK (${categories.length} main, ${totalSubcategories} sub)`,
-      details: { mainCategories: categories.length, subcategories: totalSubcategories }
+      message: `Categories OK (${categories.length} main, ${totalSubcategories} sub in sample)`,
+      details: { mainCategories: categories.length, subcategoriesSample: totalSubcategories }
     };
   } catch (error: any) {
     return { status: 'fail', message: `Categories test failed: ${error.message}` };
@@ -397,7 +533,7 @@ async function testApprovedContent(): Promise<{ status: 'pass' | 'fail' | 'warni
   try {
     const [dealsCount, productsCount] = await Promise.all([
       getCountFromServer(query(collection(db, 'deals'), where('status', '==', 'approved'))),
-      getCountFromServer(query(collection(db, 'products'), where('status', '==', 'approved')))
+      getCountFromServer(query(collection(db, 'product_cores'), where('status', '==', 'approved')))
     ]);
     
     const approvedDeals = dealsCount.data().count;
@@ -413,8 +549,8 @@ async function testApprovedContent(): Promise<{ status: 'pass' | 'fail' | 'warni
     
     return {
       status: 'pass',
-      message: `Approved content OK (${approvedDeals} deals, ${approvedProducts} products)`,
-      details: { deals: approvedDeals, products: approvedProducts }
+      message: `Approved content OK (${approvedDeals} deals, ${approvedProducts} product cores)`,
+      details: { deals: approvedDeals, productCores: approvedProducts }
     };
   } catch (error: any) {
     return { status: 'fail', message: `Approved content test failed: ${error.message}` };
@@ -432,7 +568,7 @@ async function testPendingModeration(opts?: TestAuthOptions): Promise<{ status: 
   try {
     const [dealsCount, productsCount] = await Promise.all([
       getCountFromServer(query(collection(db, 'deals'), where('status', 'in', ['draft', 'pending']))),
-      getCountFromServer(query(collection(db, 'products'), where('status', 'in', ['draft', 'pending'])))
+      getCountFromServer(query(collection(db, 'product_cores'), where('status', 'in', ['draft', 'pending'])))
     ]);
     
     const pendingDeals = dealsCount.data().count;
@@ -445,14 +581,14 @@ async function testPendingModeration(opts?: TestAuthOptions): Promise<{ status: 
       return {
         status: 'warning',
         message: `High moderation queue: ${total} items waiting`,
-        details: { deals: pendingDeals, products: pendingProducts }
+        details: { deals: pendingDeals, productCores: pendingProducts }
       };
     }
     
     return {
       status: 'pass',
       message: `Moderation queue OK (${total} items)`,
-      details: { deals: pendingDeals, products: pendingProducts }
+      details: { deals: pendingDeals, productCores: pendingProducts }
     };
   } catch (error: any) {
     await authLogout();
@@ -840,13 +976,13 @@ async function securityProductRatingOwnDoc(opts?: TestAuthOptions): Promise<Secu
   const login = await authLogin(opts?.userEmail, opts?.userPassword);
   if (!login.ok) return { status:'skip', message:'No user credentials' };
   await ensureTestUser(login.uid,'user');
-  // find approved product
-  const q = query(collection(db,'products'), where('status','==','approved'), limit(1));
+  // find approved product core
+  const q = query(collection(db,'product_cores'), where('status','==','approved'), limit(1));
   const snap = await getDocs(q);
-  if (snap.empty) { await authLogout(); return { status:'skip', message:'No approved product' }; }
+  if (snap.empty) { await authLogout(); return { status:'skip', message:'No approved product core' }; }
   const productId = snap.docs[0].id;
   try {
-    await setDoc(doc(db,`products/${productId}/ratings/${login.uid}`), { value:5, updatedAt:new Date().toISOString() }, { merge:true });
+    await setDoc(doc(db,`product_cores/${productId}/ratings/${login.uid}`), { value:5, updatedAt:new Date().toISOString() }, { merge:true });
     await authLogout();
     return { status:'pass', message:'User set own rating' };
   } catch (e:any) {
@@ -872,10 +1008,13 @@ export async function runAllTests(options?: TestAuthOptions): Promise<TestSuiteR
   // FUNCTIONAL TESTS
   console.log('🔧 Running functional tests...');
   results.push(await runTest('func-001', 'Deals CRUD Operations', 'functional', () => withOptionalAuth(testDealsCRUD, options)));
-  results.push(await runTest('func-002', 'Products CRUD Operations', 'functional', () => withOptionalAuth(testProductsCRUD, options)));
-  results.push(await runTest('func-003', 'Comments Counter Accuracy', 'functional', () => withOptionalAuth(testCommentsCount, options)));
-  results.push(await runTest('func-004', 'Voting System Logic', 'functional', () => withOptionalAuth(testVotingSystem, options)));
-  results.push(await runTest('func-005', 'Categories Structure', 'functional', testCategoriesStructure));
+  results.push(await runTest('func-002', 'ProductCores CRUD Operations', 'functional', () => withOptionalAuth(testProductsCRUD, options)));
+  results.push(await runTest('func-003', 'Harvester Linkage (Deal -> ProductCore)', 'functional', () => withOptionalAuth(testHarvesterLinkage, options)));
+  results.push(await runTest('func-004', 'Refiner Product Localization', 'functional', () => withOptionalAuth(testRefinerProductLocalization, options)));
+  results.push(await runTest('func-005', 'Refiner Deal Localization', 'functional', () => withOptionalAuth(testRefinerDealLocalization, options)));
+  results.push(await runTest('func-006', 'Comments Counter Accuracy', 'functional', () => withOptionalAuth(testCommentsCount, options)));
+  results.push(await runTest('func-007', 'Voting System Logic', 'functional', () => withOptionalAuth(testVotingSystem, options)));
+  results.push(await runTest('func-008', 'Categories Structure', 'functional', testCategoriesStructure));
   
   // BUSINESS TESTS
   console.log('💼 Running business logic tests...');
