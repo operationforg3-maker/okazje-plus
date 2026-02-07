@@ -170,6 +170,14 @@ service cloud.firestore {
       // Updates tylko dla administratora; pola są immutable poza statusem/bestPrice/linkedDealIds
       allow update: if isAdmin();
       allow delete: if isAdmin();
+
+      // Oceny produktów (M6): tylko właściciel może dodawać/edytować swoją ocenę
+      match /ratings/{userId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.auth.uid == userId && !request.resource.data.keys().hasAny(['average','count']);
+        allow update: if isSignedIn() && request.auth.uid == userId;
+        allow delete: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      }
     }
 
     // Ustawienia globalne (np. konfiguracja nawigacji): dostępne do odczytu dla wszystkich, edycja tylko dla administracji.
