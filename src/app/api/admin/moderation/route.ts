@@ -1,31 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/firebase";
-import { doc, updateDoc, Timestamp, getDoc } from "firebase/firestore";
 import { requestDealIndexing } from "@/lib/google-indexing";
-import { getAuth } from "firebase-admin/auth";
-import { initializeApp, applicationDefault, getApps } from "firebase-admin/app";
-
-if (getApps().length === 0) {
-  initializeApp({ credential: applicationDefault() });
-}
+import { adminDb } from "@/lib/firebase-admin";
+import { requireAdmin } from "@/lib/auth-server";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(request: NextRequest) {
-  // Weryfikacja tokena i uprawnień admina
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Brak nagłówka autoryzacji" }, { status: 401 });
-  }
-  const idToken = authHeader.substring("Bearer ".length);
-  let decoded;
   try {
-    decoded = await getAuth().verifyIdToken(idToken);
-  } catch (e) {
-    return NextResponse.json({ error: "Nieprawidłowy token" }, { status: 401 });
-  }
-  if (!decoded.admin) {
-    return NextResponse.json({ error: "Brak uprawnień admina" }, { status: 403 });
-  }
-  try {
+    // Weryfikacja tokena i uprawnień admina
+    const session = await requireAdmin();
     const { itemId, itemType, action } = await request.json();
 
     if (!itemId || !itemType || !action) {
@@ -51,28 +33,30 @@ export async function POST(request: NextRequest) {
 
     // M6: Określ nazwę kolekcji (product -> product_cores)
     const collectionName = itemType === "deal" ? "deals" : "product_cores";
-    const itemRef = doc(db, collectionName, itemId);
+    const itemRef = adminDb.collection(collectionName).doc(itemId);
+
+    // Pobierz obecny status przed aktualizacją
+    const beforeSnap = await itemRef.get();
+    const previousStatus = beforeSnap.exists ? beforeSnap.data()?.status : 'unknown';
 
     // Zaktualizuj status
     const newStatus = action === "approve" ? "approved" : "rejected";
-    await updateDoc(itemRef, {
+    await itemRef.update({
       status: newStatus,
-      updatedAt: Timestamp.now(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     // Log moderation action
     try {
-      const { getFirestore } = await import('firebase-admin/firestore');
-      const adminFirestore = getFirestore();
-      await adminFirestore.collection('moderation_log').add({
+      await adminDb.collection('moderation_log').add({
         action,
         targetType: itemType,
         targetId: itemId,
-        moderatorId: decoded.uid,
-        moderatorEmail: decoded.email || 'unknown',
+        moderatorId: session.uid,
+        moderatorEmail: session.email || 'unknown',
         timestamp: new Date().toISOString(),
         metadata: {
-          previousStatus: (await getDoc(itemRef))?.data()?.status || 'unknown',
+          previousStatus,
         },
       });
     } catch (err: any) {
@@ -111,8 +95,14 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Błąd podczas moderacji:", error);
+    if (String(error?.message || '').includes('Unauthorized')) {
+      return NextResponse.json({ error: "Brak autoryzacji" }, { status: 401 });
+    }
+    if (String(error?.message || '').includes('Forbidden')) {
+      return NextResponse.json({ error: "Brak uprawnień admina" }, { status: 403 });
+    }
     return NextResponse.json(
       { success: false, message: "Wystąpił błąd podczas przetwarzania żądania" },
       { status: 500 }
