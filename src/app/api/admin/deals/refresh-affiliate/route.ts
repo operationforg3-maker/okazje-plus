@@ -18,7 +18,12 @@ const shouldRefresh = (deal: any): boolean => {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    const internalSecret = request.headers.get('x-internal-secret');
+    const cronSecret = process.env.CRON_SECRET;
+    const isInternalRequest = internalSecret && cronSecret && internalSecret === cronSecret;
+    if (!isInternalRequest) {
+      await requireAdmin();
+    }
 
     const body = (await request.json().catch(() => ({}))) as RefreshAffiliateRequest;
     const dryRun = body.dryRun !== undefined ? Boolean(body.dryRun) : true;
