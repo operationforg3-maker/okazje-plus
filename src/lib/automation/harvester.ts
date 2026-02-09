@@ -80,6 +80,7 @@ interface RawProduct {
 export class SmartHarvester {
   private jobId: string;
   private logs: HarvesterJob['logs'] = [];
+  private currentJob: HarvesterJob | null = null;
 
   constructor(jobId: string) {
     this.jobId = jobId;
@@ -726,7 +727,7 @@ export class SmartHarvester {
         });
         
         // Force update after category finish
-        await this.updateJobRecord({
+          await this.updateJobRecord({
            id: this.jobId,
            status: 'running',
            source,
@@ -1325,6 +1326,11 @@ export class SmartHarvester {
 
             allProducts = allProducts.concat(rawProducts);
 
+            await this.updateJobProgress({
+              productsFound: allProducts.length,
+              currentCategory: `AUTO-BROWSE (offers) • strona ${currentPage}`,
+            });
+
             if (!response.next || offers.length < pageSize) {
               hasMore = false;
             } else {
@@ -1417,6 +1423,11 @@ export class SmartHarvester {
             );
 
             allProducts = allProducts.concat(rawProducts.filter((p: any): p is RawProduct => p !== null));
+
+            await this.updateJobProgress({
+              productsFound: allProducts.length,
+              currentCategory: `AUTO-BROWSE (products) • strona ${currentPage}`,
+            });
 
             const nextPage = response.pagination?.next_page;
             if (!nextPage || products.length < pageSize) {
@@ -2130,6 +2141,22 @@ export class SmartHarvester {
       lastUpdatedAt: job.lastUpdatedAt,
       logs: job.logs || [],
     }, { merge: true });
+    this.currentJob = job;
+  }
+
+  /**
+   * Update job progress with partial data (keeps current values)
+   */
+  private async updateJobProgress(partial: Partial<HarvesterJob>): Promise<void> {
+    if (!this.currentJob) return;
+    const now = new Date().toISOString();
+    const nextJob: HarvesterJob = {
+      ...this.currentJob,
+      ...partial,
+      lastUpdatedAt: now,
+      logs: this.logs,
+    } as HarvesterJob;
+    await this.updateJobRecord(nextJob);
   }
 }
 

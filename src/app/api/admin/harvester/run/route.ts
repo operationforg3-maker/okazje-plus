@@ -72,6 +72,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (source === 'convertiser' && !process.env.CONVERTISER_API_TOKEN) {
+      return NextResponse.json(
+        { error: 'Convertiser API token nie jest skonfigurowany (CONVERTISER_API_TOKEN)' },
+        { status: 400 }
+      );
+    }
+
     const max = Math.max(10, Math.min(200, maxResults || 50));
 
     // 4. Resolve categories when running full tree mode
