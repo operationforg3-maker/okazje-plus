@@ -2028,6 +2028,9 @@ export class SmartHarvester {
     let bestPrice = Infinity;
     let bestCurrency = 'PLN';
     let bestDealId: string | null = null;
+    let bestDealType: string | undefined;
+    let bestDealCouponCode: string | undefined;
+    let couponDealsCount = 0;
     let validDealsCount = 0;
 
     for (const dealDoc of dealsSnapshot.docs) {
@@ -2054,11 +2057,21 @@ export class SmartHarvester {
       
       validDealsCount++;
       
+      const isCouponDeal =
+        (deal as any)?.dealType === 'coupon' ||
+        Boolean((deal as any)?.couponCode) ||
+        (deal as any)?.metadata?.promotionType === 'offer';
+      if (isCouponDeal) {
+        couponDealsCount++;
+      }
+
       // TODO: Normalize currency to PLN for comparison
       if (totalPrice < bestPrice) {
         bestPrice = totalPrice;
         bestCurrency = priceCurrency;
         bestDealId = dealDoc.id;
+        bestDealType = (deal as any)?.dealType || ((deal as any)?.metadata?.promotionType === 'offer' ? 'coupon' : undefined);
+        bestDealCouponCode = (deal as any)?.couponCode || undefined;
       }
     }
 
@@ -2073,6 +2086,10 @@ export class SmartHarvester {
       },
       bestTotalPrice: bestPrice !== Infinity ? bestPrice : 0,
       bestDealId: bestDealId || null,
+      bestDealType: bestDealType || null,
+      bestDealCouponCode: bestDealCouponCode || null,
+      hasCoupons: couponDealsCount > 0,
+      couponDealsCount,
       linkedDealIds: dealsSnapshot.docs.map(d => d.id),
       updatedAt: new Date().toISOString(),
     });

@@ -174,6 +174,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
   const isHotDeal = product.meta?.isHotDeal || tags.includes('hot_deal');
   const isBestsellerTag = tags.includes('bestseller');
   const isNewArrival = tags.includes('new_arrival');
+  const hasCoupons = Boolean((product as any).hasCoupons || (product as any).metadata?.hasCoupons);
   const hasVariants = variants.length > 0;
   const inCart = isInCart(product.id);
   const hasRealShipping = shippingInfo.cost !== undefined;
@@ -374,6 +375,12 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
             <Badge className="badge-hot badge-trust text-sm font-bold shadow-md">
               <TrendingDown className="w-3 h-3 mr-1" />
               -{priceData.discount}%
+            </Badge>
+          )}
+
+          {hasCoupons && (
+            <Badge className="bg-purple-600 text-white shadow-md">
+              🎟️ Kupon
             </Badge>
           )}
 

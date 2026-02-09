@@ -2242,6 +2242,22 @@ export interface ProductCore {
    */
   bestDealId?: string;
   /**
+   * Typ najlepszej oferty (np. kupon)
+   */
+  bestDealType?: 'sale' | 'coupon' | 'freebie' | 'pricing-error' | 'cashback' | 'bundle' | string;
+  /**
+   * Czy produkt ma dostępne kupony/oferty promocyjne
+   */
+  hasCoupons?: boolean;
+  /**
+   * Liczba ofert kuponowych
+   */
+  couponDealsCount?: number;
+  /**
+   * Kod kuponu z najlepszej oferty (jeśli dostępny)
+   */
+  bestDealCouponCode?: string;
+  /**
    * Najniższa łączna cena (produkt + dostawa) w PLN dla najlepszej oferty
    * Ułatwia szybkie wyświetlenie ceny bez dodatkowych zapytań
    */

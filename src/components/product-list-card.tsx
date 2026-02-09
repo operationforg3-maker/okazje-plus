@@ -79,6 +79,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   });
   const [bestDeal, setBestDeal] = useState<any | null>(null);
   const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? product?.bestPrice?.amount ?? null);
+  const hasCoupons = Boolean((product as any).hasCoupons || (product as any).metadata?.hasCoupons || (bestDeal && ((bestDeal.dealType === 'coupon') || bestDeal.couponCode)));
 
   // Get title in current language (ProductCore has multilingual title)
   const displayTitle = getText(product.title) || 'Produkt';
@@ -176,6 +177,11 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           {isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg text-xs">
               {t('card.new', { default: 'Nowość' } as any)}
+            </Badge>
+          )}
+          {hasCoupons && (
+            <Badge className="bg-purple-600 text-white shadow-lg text-xs">
+              🎟️ Kupon
             </Badge>
           )}
         </div>
