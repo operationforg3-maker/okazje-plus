@@ -18,10 +18,7 @@ import { ProductCore } from '@/lib/types';
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireAdmin();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await requireAdmin();
 
     const body = await request.json();
     const { productIds } = body;
@@ -109,8 +106,14 @@ export async function POST(request: NextRequest) {
       message: `Approved ${results.approved}/${productIds.length} products`,
       results,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error approving products:', error);
+    if (String(error?.message || '').includes('Unauthorized')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (String(error?.message || '').includes('Forbidden')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     return NextResponse.json(
       { error: 'Failed to approve products', details: (error as Error).message },
       { status: 500 }
