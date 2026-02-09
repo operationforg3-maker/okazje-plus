@@ -1844,18 +1844,40 @@ export class SmartHarvester {
       try {
         const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
         const client = getConvertiserClient();
+        const websiteUuid = process.env.CONVERTISER_WEBSITE_UUID || process.env.CONVERTISER_WEBSITE_ID;
+        const trackingParams = websiteUuid ? { website_uuid: websiteUuid } : undefined;
         const tracking = isOfferPromotion
-          ? await client.generateOfferTrackingLink(sourceProduct.sourceProductId)
-          : await client.generateProductTrackingLink(sourceProduct.sourceProductId);
+          ? await client.generateOfferTrackingLink(sourceProduct.sourceProductId, trackingParams)
+          : await client.generateProductTrackingLink(sourceProduct.sourceProductId, trackingParams);
         const resolved = (tracking as any)?.tracking_link
           || (tracking as any)?.url
           || (tracking as any)?.link;
         if (resolved) {
           affiliateLink = resolved;
+        } else if (!affiliateLink) {
+          try {
+            const detail = await client.getOfferDetail(sourceProduct.sourceProductId);
+            const detailLink = (detail as any)?.tracking_link
+              || (detail as any)?.tracking_url
+              || (detail as any)?.affiliate_url
+              || (detail as any)?.aff_link
+              || (detail as any)?.preview_url
+              || (detail as any)?.offer_display_url
+              || (detail as any)?.url;
+            if (detailLink) {
+              affiliateLink = detailLink;
+            }
+          } catch (detailErr) {
+            this.addLog('warn', `Nie udało się pobrać detali oferty Convertiser dla ${sourceProduct.sourceProductId}`, detailErr);
+          }
         }
       } catch (err) {
         this.addLog('warn', `Nie udało się wygenerować linku afiliacyjnego Convertiser dla ${sourceProduct.sourceProductId}`, err);
       }
+    }
+
+    if (!affiliateLink) {
+      affiliateLink = sourceProduct.offerMeta?.previewUrl || sourceProduct.sourceUrl;
     }
 
     // If product has no category, attempt to map and persist
