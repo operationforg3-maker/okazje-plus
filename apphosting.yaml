@@ -130,6 +130,10 @@ env:
     secret: CONVERTISER_API_TOKEN
     availability:
       - RUNTIME
+  - variable: CONVERTISER_WEBSITE_UUID
+    value: 3bc0a4fd6e7289720f9c2784de4b87f345bcca47
+    availability:
+      - RUNTIME
 
   # Cron job security (background task processing)
   - variable: CRON_SECRET
