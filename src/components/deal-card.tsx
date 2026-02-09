@@ -187,12 +187,14 @@ function DealCard({ deal, product }: DealCardProps) {
       shipping = CurrencyManager.formatPrice(shippingInPLN, userCurrency);
     }
 
+    const fallbackDiscount = typeof deal.discountPercent === 'number' ? deal.discountPercent : null;
+
     setPriceData({
       formattedPrice: formatted,
       formattedOriginal: formattedOrig,
       formattedSavings: savings,
       formattedShippingCost: shipping,
-      discount: calculatedDiscount,
+      discount: calculatedDiscount ?? fallbackDiscount,
     });
   }, [currency, deal.price, deal.originalPrice, deal.shippingCost]);
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
@@ -858,8 +860,12 @@ function DealCard({ deal, product }: DealCardProps) {
             {typeof priceData.discount === 'number' && priceData.discount > 0 && (
               <Badge variant="destructive" className="text-sm px-2 py-0.5">-{priceData.discount}%</Badge>
             )}
-            {priceData.formattedSavings && (
+            {priceData.formattedSavings ? (
               <span className="ml-auto text-sm font-semibold text-green-600">Oszczędzasz {priceData.formattedSavings}</span>
+            ) : (
+              typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                <span className="ml-auto text-sm font-semibold text-green-600">Zniżka {priceData.discount}%</span>
+              )
             )}
           </div>
         )}

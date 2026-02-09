@@ -23,8 +23,10 @@ export async function GET(request: NextRequest) {
 
     const products: ProductCore[] = [];
     snapshot.forEach(doc => {
+      const data = doc.data() as ProductCore;
+      if ((data as any)?.metadata?.offerOnly) return;
       products.push({
-        ...(doc.data() as ProductCore),
+        ...data,
         id: doc.id,
       });
     });

@@ -176,12 +176,14 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
       minOrder = CurrencyManager.formatPrice(minOrderInPLN, userCurrency);
     }
     
+    const fallbackDiscount = typeof deal.discountPercent === 'number' ? deal.discountPercent : null;
+
     setPriceData({
       formattedPrice: formatted,
       formattedOriginal: formattedOrig,
       formattedSavings: savings,
       formattedMinOrder: minOrder,
-      discount: calculatedDiscount,
+      discount: calculatedDiscount ?? fallbackDiscount,
     });
   }, [deal.price, deal.originalPrice, deal.minOrderValue, currency]);
 
@@ -683,10 +685,16 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                   <Badge variant="destructive" className="mb-1 text-lg">-{priceData.discount}%</Badge>
                 )}
               </div>
-              {priceData.formattedSavings && (
+              {priceData.formattedSavings ? (
                 <p className="text-green-600 font-semibold mb-4 text-lg">
                   💰 Oszczędzasz {priceData.formattedSavings}
                 </p>
+              ) : (
+                typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                  <p className="text-green-600 font-semibold mb-4 text-lg">
+                    💰 Zniżka {priceData.discount}%
+                  </p>
+                )
               )}
               <div className="flex gap-2">
                 {deal.metadata?.isExpired ? (

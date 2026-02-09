@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
 
     const products = productQueries
       .flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id })))
+      .filter((item: any) => !(item?.metadata?.offerOnly))
       .sort((a, b) => toMillis(b.metadata?.importedAt || b.createdAt) - toMillis(a.metadata?.importedAt || a.createdAt))
       .slice(0, limit);
 
@@ -84,8 +85,10 @@ export async function GET(request: NextRequest) {
             return updatedAt.getTime() >= cutoffMs;
           });
 
-      approved = [...mapRecent(approvedDealsSnap, 'deal'), ...mapRecent(approvedProductsSnap, 'product')];
-      rejected = [...mapRecent(rejectedDealsSnap, 'deal'), ...mapRecent(rejectedProductsSnap, 'product')];
+      const approvedProducts = mapRecent(approvedProductsSnap, 'product').filter((item: any) => !(item?.metadata?.offerOnly));
+      const rejectedProducts = mapRecent(rejectedProductsSnap, 'product').filter((item: any) => !(item?.metadata?.offerOnly));
+      approved = [...mapRecent(approvedDealsSnap, 'deal'), ...approvedProducts];
+      rejected = [...mapRecent(rejectedDealsSnap, 'deal'), ...rejectedProducts];
     }
 
     return NextResponse.json({
