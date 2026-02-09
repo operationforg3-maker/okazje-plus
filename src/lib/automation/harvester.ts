@@ -41,6 +41,13 @@ interface RawProduct {
   merchantRating?: number;
   specs?: Record<string, string>;
   discountPercent?: number; // Procentowa obniżka ceny
+  couponCode?: string;
+  expiryDate?: string;
+  conditions?: string[];
+  freeShipping?: boolean;
+  minOrderValue?: number;
+  limitPerUser?: number;
+  requiresMembership?: string;
   rating?: number;
   ratingCount?: number; // Number of reviews/ratings
   evaluateCount?: number; // AliExpress: Liczba opinii (alternatywa dla ratingCount)
@@ -112,6 +119,45 @@ export class SmartHarvester {
         ? Math.round(100 - (price / originalPrice) * 100)
         : undefined;
 
+      const couponCodeRaw =
+        offer.coupon_code ||
+        offer.couponCode ||
+        offer.code ||
+        offer.promo_code ||
+        offer.voucher_code ||
+        offer.discount_code ||
+        '';
+      const couponCode = String(couponCodeRaw || '').trim() || undefined;
+
+      const toIsoDate = (value: any): string | undefined => {
+        if (!value) return undefined;
+        if (value instanceof Date) return value.toISOString();
+        if (typeof value === 'number') return new Date(value).toISOString();
+        const parsed = Date.parse(String(value));
+        return Number.isNaN(parsed) ? undefined : new Date(parsed).toISOString();
+      };
+
+      const expiryDate = toIsoDate(
+        offer.expiry_date ||
+        offer.expiration_date ||
+        offer.valid_until ||
+        offer.valid_to ||
+        offer.ends_at ||
+        offer.end_date
+      );
+
+      const rawConditions = offer.terms || offer.conditions || offer.condition || offer.rules;
+      const conditions = Array.isArray(rawConditions)
+        ? rawConditions.map((c: any) => String(c).trim()).filter(Boolean)
+        : String(rawConditions || '')
+            .split(/\n|\r|•|;|\|/g)
+            .map((c) => c.trim())
+            .filter(Boolean);
+      const freeShipping = Boolean(offer.free_shipping || offer.freeShipping || offer.shipping_free || offer.shipping_cost === 0);
+      const minOrderValue = parsePrice(offer.min_order_value || offer.minimum_order_value || offer.minimum_purchase);
+      const limitPerUser = parsePrice(offer.limit_per_user || offer.max_per_user || offer.user_limit);
+      const requiresMembership = offer.requires_membership || offer.membership || offer.membership_required;
+
       const description = offer.description || offer.product_description || offer.excerpt || offer.short_description || '';
       const specsFromTitle = extractDimensionsFromTitle(title);
       const specsFromDesc = description ? extractDimensionsFromTitle(description) : {};
@@ -138,6 +184,13 @@ export class SmartHarvester {
         merchantRating: 0,
         specs: mergedSpecs,
         discountPercent,
+        couponCode,
+        expiryDate,
+        conditions: conditions.length > 0 ? conditions : undefined,
+        freeShipping,
+        minOrderValue: minOrderValue > 0 ? minOrderValue : undefined,
+        limitPerUser: limitPerUser > 0 ? limitPerUser : undefined,
+        requiresMembership: requiresMembership ? String(requiresMembership) : undefined,
         rating: 0,
         ratingCount: 0,
         images: [imageUrl],
@@ -145,7 +198,7 @@ export class SmartHarvester {
           promotionType: 'offer',
           terms: offer.terms || undefined,
           previewUrl: previewUrl || undefined,
-          hasCoupons: Boolean(offer.has_coupons),
+          hasCoupons: Boolean(offer.has_coupons || couponCode),
         },
       } as RawProduct;
     } catch {
@@ -1868,6 +1921,17 @@ export class SmartHarvester {
         de: dealDescriptionText,
       } as LocalizedText,
       discountPercent: sourceProduct.discountPercent,
+      couponCode: sourceProduct.couponCode,
+      expiryDate: sourceProduct.expiryDate,
+      conditions: sourceProduct.conditions,
+      freeShipping: sourceProduct.freeShipping,
+      minOrderValue: typeof sourceProduct.minOrderValue === 'number' && sourceProduct.minOrderValue > 0
+        ? sourceProduct.minOrderValue
+        : undefined,
+      limitPerUser: typeof sourceProduct.limitPerUser === 'number' && sourceProduct.limitPerUser > 0
+        ? sourceProduct.limitPerUser
+        : undefined,
+      requiresMembership: sourceProduct.requiresMembership,
       stockStatus: 'in_stock',
       isActive: true,
       priceHistory: [

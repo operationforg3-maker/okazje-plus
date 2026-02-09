@@ -158,13 +158,16 @@ export async function POST(req: NextRequest) {
       );
     } else if (config.source === 'convertiser') {
       const keyword = Array.isArray(searchKeywords) && searchKeywords.length > 0 ? String(searchKeywords[0]) : categoryPath;
+      const convertiserMode = config.importType === 'deals' || config.importType === 'coupons'
+        ? 'offers'
+        : 'products';
       jobResult = await harvester.harvestProducts(
         'convertiser',
         keyword,
         config.itemsPerCategory,
         undefined,
         false,
-        'offers',
+        convertiserMode,
         false
       );
     } else {
