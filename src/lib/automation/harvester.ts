@@ -91,6 +91,41 @@ export class SmartHarvester {
     return PlaceHolderImages?.[0]?.imageUrl || '/placeholder.png';
   }
 
+  private async recordDiscardedItem(params: {
+    source: string;
+    type: 'product' | 'deal' | 'unknown';
+    reason: string;
+    reasonCode: string;
+    item?: Partial<RawProduct> & { title?: string };
+    query?: string;
+    categoryPath?: string;
+  }): Promise<void> {
+    try {
+      const now = new Date().toISOString();
+      const item = params.item || {};
+      await adminDb.collection('import_discarded').add({
+        source: params.source,
+        type: params.type,
+        reason: params.reason,
+        reasonCode: params.reasonCode,
+        title: item.title || '',
+        imageUrl: item.imageUrl || '',
+        price: item.price ?? null,
+        originalPrice: item.originalPrice ?? null,
+        currency: item.currency || null,
+        sourceProductId: item.sourceProductId || null,
+        sourceUrl: item.sourceUrl || null,
+        merchantName: item.merchantName || null,
+        query: params.query || null,
+        categoryPath: params.categoryPath || null,
+        jobId: this.jobId,
+        createdAt: now,
+      });
+    } catch (err) {
+      this.addLog('warn', 'Nie udało się zapisać odfiltrowanego importu', err);
+    }
+  }
+
   private mapConvertiserOfferToRawProduct(offer: any): RawProduct | null {
     try {
       const title = offer.title || offer.product_title || offer.name || offer.product_name || '';
@@ -490,6 +525,23 @@ export class SmartHarvester {
           let filteredProducts = sourceProducts;
           if (isTreeMode && !autoBrowse && sourceProducts.length > 0) {
             filteredProducts = this.filterTopQualityProducts(sourceProducts, Math.ceil(maxResults * 0.6));
+
+            const keptIds = new Set(filteredProducts.map((p) => p.sourceProductId || p.title));
+            const discarded = sourceProducts.filter((p) => !keptIds.has(p.sourceProductId || p.title));
+
+            await Promise.all(
+              discarded.map((item) =>
+                this.recordDiscardedItem({
+                  source,
+                  type: 'product',
+                  reason: 'Odrzucone przez filtr jakości (rating/oceny).',
+                  reasonCode: 'quality_filter',
+                  item,
+                  query: currentQuery,
+                  categoryPath: currentQuery,
+                })
+              )
+            );
           }
           
           productsFound += sourceProducts.length;
@@ -1222,12 +1274,40 @@ export class SmartHarvester {
         products.map(async (product: any) => {
           try {
             const title = product.title || product.name || '';
-            if (!title) return null;
+            if (!title) {
+              await this.recordDiscardedItem({
+                source: 'convertiser',
+                type: 'product',
+                reason: 'Brak tytułu produktu w danych źródłowych.',
+                reasonCode: 'missing_title',
+                item: {
+                  title: '',
+                  sourceProductId: String(product.id || product.uuid || product.product_id || product.offer_id || product.sku || ''),
+                  sourceUrl: product.direct_link || product.link || product.url || '',
+                  merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+                },
+                query: searchQuery,
+              });
+              return null;
+            }
 
             // Convertiser images are in 'images.default' or 'image_link'
             const imageUrl = product.images?.default || product.image_link || product.image_url || '';
             // Skip products without valid image URL (required for identity hash)
             if (!imageUrl || imageUrl.trim() === '') {
+              await this.recordDiscardedItem({
+                source: 'convertiser',
+                type: 'product',
+                reason: 'Brak zdjęcia produktu w danych źródłowych.',
+                reasonCode: 'missing_image',
+                item: {
+                  title,
+                  sourceProductId: String(product.id || product.uuid || product.product_id || product.offer_id || product.sku || ''),
+                  sourceUrl: product.direct_link || product.link || product.url || '',
+                  merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+                },
+                query: searchQuery,
+              });
               return null;
             }
 
@@ -1494,10 +1574,40 @@ export class SmartHarvester {
               products.map(async (product: any) => {
                 try {
                   const title = product.title || product.name || '';
-                  if (!title) return null;
+                  if (!title) {
+                    await this.recordDiscardedItem({
+                      source: 'convertiser',
+                      type: 'product',
+                      reason: 'Brak tytułu produktu w danych źródłowych.',
+                      reasonCode: 'missing_title',
+                      item: {
+                        title: '',
+                        sourceProductId: String(product.id || product.sku || ''),
+                        sourceUrl: product.direct_link || product.link || product.url || '',
+                        merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+                      },
+                      query: '__AUTO_BROWSE__',
+                    });
+                    return null;
+                  }
 
                   const imageUrl = product.images?.default || product.image_link || product.image_url || '';
-                  if (!imageUrl || imageUrl.trim() === '') return null;
+                  if (!imageUrl || imageUrl.trim() === '') {
+                    await this.recordDiscardedItem({
+                      source: 'convertiser',
+                      type: 'product',
+                      reason: 'Brak zdjęcia produktu w danych źródłowych.',
+                      reasonCode: 'missing_image',
+                      item: {
+                        title,
+                        sourceProductId: String(product.id || product.sku || ''),
+                        sourceUrl: product.direct_link || product.link || product.url || '',
+                        merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+                      },
+                      query: '__AUTO_BROWSE__',
+                    });
+                    return null;
+                  }
 
                   const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
                     if (!priceStr) return { amount: 0, currency: 'PLN' };

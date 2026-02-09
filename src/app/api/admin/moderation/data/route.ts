@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
 
     let approved: any[] = [];
     let rejected: any[] = [];
+    let discarded: any[] = [];
 
     if (includeRecent) {
       const cutoff = new Date();
@@ -91,12 +92,21 @@ export async function GET(request: NextRequest) {
       rejected = [...mapRecent(rejectedDealsSnap, 'deal'), ...rejectedProducts];
     }
 
+    const discardedSnap = await adminDb
+      .collection('import_discarded')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get();
+
+    discarded = discardedSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
     return NextResponse.json({
       success: true,
       deals,
       products,
       approved,
       rejected,
+      discarded,
     });
   } catch (error: any) {
     console.error('[Moderation Data API] Error:', error);

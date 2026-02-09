@@ -298,6 +298,7 @@ function ModerationPage() {
   const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
   const [approvedItems, setApprovedItems] = useState<any[]>([]);
   const [rejectedItems, setRejectedItems] = useState<any[]>([]);
+  const [discardedItems, setDiscardedItems] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [checkingClaims, setCheckingClaims] = useState(false);
   
@@ -534,6 +535,7 @@ function ModerationPage() {
       let products = payload.products || [];
       let approved = payload.approved || [];
       let rejected = payload.rejected || [];
+      let discarded = payload.discarded || [];
       
       console.log('[Moderation] Got deals:', deals.length, 'products:', products.length, 'approved:', approved.length, 'rejected:', rejected.length)
       
@@ -557,6 +559,7 @@ function ModerationPage() {
       setPendingProducts(products);
       setApprovedItems(approved);
       setRejectedItems(rejected);
+      setDiscardedItems(discarded);
     } catch (error) {
       console.error('Błąd podczas pobierania danych moderacji:', error);
       toast({
@@ -737,6 +740,9 @@ function ModerationPage() {
           </TabsTrigger>
           <TabsTrigger value="rejected">
             Odrzucone
+          </TabsTrigger>
+          <TabsTrigger value="discarded">
+            Odfiltrowane importy ({discardedItems.length})
           </TabsTrigger>
         </TabsList>
 
@@ -1125,6 +1131,87 @@ function ModerationPage() {
                     </div>
                   );
                 })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="discarded" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Odfiltrowane importy</CardTitle>
+              <CardDescription>
+                Pozycje znalezione przez import, ale odrzucone przez filtr jakości lub brak danych.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              ) : discardedItems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Brak odfiltrowanych importów</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {discardedItems.map((item: any) => (
+                    <div key={item.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                      <div className="w-full lg:w-[160px] lg:shrink-0">
+                        <div className="w-full h-[120px] bg-muted rounded-md overflow-hidden border">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} className="w-full h-full object-cover" alt="" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                              Brak zdjęcia
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold truncate" title={item.title || 'Bez tytułu'}>
+                            {item.title || 'Bez tytułu'}
+                          </h3>
+                          <Badge variant="outline">{item.source || 'źródło'}</Badge>
+                          {item.type && <Badge variant="secondary">{item.type}</Badge>}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.reason || 'Brak powodu odrzucenia'}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                          {item.price ? (
+                            <span className="font-semibold">
+                              {Number(item.price).toFixed(2)} {item.currency || 'PLN'}
+                            </span>
+                          ) : (
+                            <span className="font-semibold">—</span>
+                          )}
+                          {item.query && (
+                            <>
+                              <span className="hidden sm:inline">•</span>
+                              <span>Query: {item.query}</span>
+                            </>
+                          )}
+                          {item.createdAt && (
+                            <>
+                              <span className="hidden sm:inline">•</span>
+                              <span>{new Date(item.createdAt).toLocaleString('pl-PL')}</span>
+                            </>
+                          )}
+                        </div>
+                        {item.sourceUrl && (
+                          <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
+                            Podgląd źródła
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
