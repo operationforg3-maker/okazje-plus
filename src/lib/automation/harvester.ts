@@ -88,7 +88,15 @@ export class SmartHarvester {
       if (!title) return null;
 
       const imageUrl = offer.logo_thumbnail || offer.logo || offer.image || offer.image_url || offer.product_image || this.getFallbackImageUrl();
-      const previewUrl = offer.preview_url || offer.offer_display_url || offer.url || offer.tracking_url || '';
+      const previewUrl =
+        offer.tracking_link ||
+        offer.tracking_url ||
+        offer.affiliate_url ||
+        offer.aff_link ||
+        offer.preview_url ||
+        offer.offer_display_url ||
+        offer.url ||
+        '';
 
       const parsePrice = (value: any): number => {
         if (value === null || value === undefined) return 0;
@@ -118,7 +126,13 @@ export class SmartHarvester {
         currency: 'PLN',
         shippingCost: 0,
         shippingDays: 0,
-        sourceProductId: String(offer.id || offer.uuid || ''),
+        sourceProductId: String(
+          offer.uuid ||
+          offer.offer_uuid ||
+          offer.offer_id ||
+          offer.id ||
+          ''
+        ),
         sourceUrl: previewUrl,
         merchantName: offer.title || offer.advertiser_name || 'Convertiser',
         merchantRating: 0,
@@ -1070,8 +1084,23 @@ export class SmartHarvester {
               currency: 'PLN', // Always PLN after conversion
               shippingCost: product.shipping_cost ? parseFloat(product.shipping_cost) : 0,
               shippingDays: product.shipping_days || 7,
-              sourceProductId: String(product.id || product.sku || ''),
-              sourceUrl: product.direct_link || product.link || product.url || '',
+              sourceProductId: String(
+                product.id ||
+                product.uuid ||
+                product.product_id ||
+                product.offer_id ||
+                product.sku ||
+                ''
+              ),
+              sourceUrl:
+                product.tracking_link ||
+                product.tracking_url ||
+                product.affiliate_url ||
+                product.aff_link ||
+                product.direct_link ||
+                product.link ||
+                product.url ||
+                '',
               merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
               merchantRating: product.merchant_rating ? parseFloat(product.merchant_rating) : 0,
               specs: extractDimensionsFromTitle(title),
