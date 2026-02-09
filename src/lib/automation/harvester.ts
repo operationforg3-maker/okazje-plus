@@ -48,6 +48,7 @@ interface RawProduct {
   minOrderValue?: number;
   limitPerUser?: number;
   requiresMembership?: string;
+  isOfferOnly?: boolean;
   rating?: number;
   ratingCount?: number; // Number of reviews/ratings
   evaluateCount?: number; // AliExpress: Liczba opinii (alternatywa dla ratingCount)
@@ -164,6 +165,9 @@ export class SmartHarvester {
       const specsFromDesc = description ? extractDimensionsFromTitle(description) : {};
       const mergedSpecs = { ...specsFromTitle, ...specsFromDesc };
 
+      const domainRegex = /\b[a-z0-9-]+\.(pl|com|net|org|eu|store|shop|co|io|de|fr|it|es|cz|sk|uk)\b/i;
+      const isOfferOnly = domainRegex.test(title) && !/\d/.test(title);
+
       return {
         title,
         description,
@@ -192,6 +196,7 @@ export class SmartHarvester {
         minOrderValue: minOrderValue > 0 ? minOrderValue : undefined,
         limitPerUser: limitPerUser > 0 ? limitPerUser : undefined,
         requiresMembership: requiresMembership ? String(requiresMembership) : undefined,
+        isOfferOnly,
         rating: 0,
         ratingCount: 0,
         images: [imageUrl],
@@ -1760,7 +1765,7 @@ export class SmartHarvester {
       },
       linkedDealIds: [],
       searchTags: categoryMetadata.searchKeywords || [],
-      status: 'draft', // Harvested products require moderation before approval
+      status: sourceProduct.isOfferOnly ? 'rejected' : 'draft', // Offer-only from Convertiser should not appear as products
       createdAt: now,
       updatedAt: now,
       metadata: {
@@ -1788,6 +1793,7 @@ export class SmartHarvester {
           shipsFrom: (sourceProduct as any).shipsFrom,
         },
         specifications: specs,
+        offerOnly: sourceProduct.isOfferOnly || false,
       } as any,
     };
 
