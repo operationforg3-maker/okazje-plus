@@ -121,6 +121,14 @@ export class SmartHarvester {
         ? Math.round(100 - (price / originalPrice) * 100)
         : undefined;
 
+      const stripHtml = (value: any): string => {
+        if (!value) return '';
+        return String(value)
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
       const couponCodeRaw =
         offer.coupon_code ||
         offer.couponCode ||
@@ -150,8 +158,10 @@ export class SmartHarvester {
 
       const rawConditions = offer.terms || offer.conditions || offer.condition || offer.rules;
       const conditions = Array.isArray(rawConditions)
-        ? rawConditions.map((c: any) => String(c).trim()).filter(Boolean)
-        : String(rawConditions || '')
+        ? rawConditions
+            .map((c: any) => stripHtml(c))
+            .filter(Boolean)
+        : stripHtml(rawConditions || '')
             .split(/\n|\r|•|;|\|/g)
             .map((c) => c.trim())
             .filter(Boolean);
@@ -160,7 +170,8 @@ export class SmartHarvester {
       const limitPerUser = parsePrice(offer.limit_per_user || offer.max_per_user || offer.user_limit);
       const requiresMembership = offer.requires_membership || offer.membership || offer.membership_required;
 
-      const description = offer.description || offer.product_description || offer.excerpt || offer.short_description || '';
+      const descriptionRaw = offer.description || offer.product_description || offer.excerpt || offer.short_description || '';
+      const description = stripHtml(descriptionRaw);
       const specsFromTitle = extractDimensionsFromTitle(title);
       const specsFromDesc = description ? extractDimensionsFromTitle(description) : {};
       const mergedSpecs = { ...specsFromTitle, ...specsFromDesc };
@@ -202,7 +213,7 @@ export class SmartHarvester {
         images: [imageUrl],
         offerMeta: {
           promotionType: 'offer',
-          terms: offer.terms || undefined,
+          terms: stripHtml(offer.terms || '') || undefined,
           previewUrl: previewUrl || undefined,
           hasCoupons: Boolean(offer.has_coupons || couponCode),
         },
