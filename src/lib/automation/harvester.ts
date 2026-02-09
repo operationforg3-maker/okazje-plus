@@ -133,6 +133,10 @@ export class SmartHarvester {
       if (discountPercent > 0 && discountPercent <= 1) {
         discountPercent = Math.round(discountPercent * 100);
       }
+      if (originalPrice > 0 && price > 0 && originalPrice < price) {
+        this.addLog('warn', 'Convertiser: oryginalna cena wygląda na różnicę (mniejsza od bieżącej) - pomijam');
+        originalPrice = 0;
+      }
       if (!discountPercent && originalPrice > price && price > 0) {
         discountPercent = Math.round(100 - (price / originalPrice) * 100);
       }
@@ -1012,42 +1016,123 @@ export class SmartHarvester {
         })
       );
       
-      // Transform to RawProduct format (already in PLN from API)
-      return detailedProducts.map((p: any) => ({
-        title: p.title || p.product_title || '',
-        description: p.product_description || '', // RAW HTML from Deep Fetch
-        imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : (p.product_main_image_url || ''),
-        price: p.price?.current || p.target_sale_price || 0,
-        originalPrice: p.price?.original || p.original_price || undefined, // Price before discount
-        currency: p.price?.currency || p.target_sale_price_currency || 'PLN', // Should be PLN from API
-        shippingCost: p.shipping?.free ? 0 : (p.shipping?.cost || 0),
-        shippingDays: p.ship_to_days || 7, // Default estimate
-        sourceProductId: String(p.item_id || p.product_id || ''),
-        sourceUrl: p.product_url || p.promotion_link || '',
-        videoUrl: p.product_video_url || p.video_url || undefined,
-        merchantName: p.store_info?.store_name || 'AliExpress',
-        merchantRating: p.store_info?.score || 4.0,
-        specs: extractDimensionsFromTitle(p.title || p.product_title || ''), // TODO: Parse p.product_props if available
-        rating: (() => {
-          // Robust rating parser handling 0-5 and 0-100 scales
-          if (p.rating?.score) return Number(p.rating.score);
-          if (p.evaluate_rate) {
-            const parsed = parseFloat(String(p.evaluate_rate).replace('%', ''));
-            // If likely 0-100 scale (e.g. "95", "4.8/5" parsed as 4.8)
-            // Heuristic: If > 5, assumes 0-100 scale -> divide by 20.
-            if (!isNaN(parsed)) return parsed > 5 ? parsed / 20 : parsed;
+      // Transform to RawProduct format
+      return await Promise.all(detailedProducts.map(async (p: any) => {
+        const rawPrice = Number(p.price?.current ?? p.target_sale_price ?? 0);
+        const rawOriginal = Number(p.price?.original ?? p.original_price ?? 0);
+        const rawCurrency = String(p.price?.currency || p.target_sale_price_currency || 'PLN').toUpperCase();
+        const rawShipping = Number(p.shipping?.cost ?? 0);
+        const shippingCurrency = String(p.shipping?.currency || rawCurrency || 'PLN').toUpperCase();
+
+        const normalizePrice = async (amount: number, currency: string, label: string) => {
+          if (!currency || currency === 'PLN') {
+            return { amount, currency: 'PLN' };
           }
-          return 0;
-        })(),
-        ratingCount: p.rating?.count || p.volume || 0,
-        images: Array.isArray(p.image_urls) ? p.image_urls : (p.all_images || []), // Full gallery
-        variants: Array.isArray(p.variants) ? p.variants : (p.sku_list || undefined), // Product variants (colors, sizes)
-        // Product identifiers (for robust deduplication & SEO)
-        sku: p.sku || undefined,
-        ean: p.ean || p.barcode || undefined,
-        gtin: p.gtin || undefined,
-        upc: p.upc || undefined,
-        mpn: p.mpn || p.manufacturer_part_number || undefined,
+          try {
+            const pln = await convertToPLN(amount, currency as any);
+            return { amount: pln, currency: 'PLN' };
+          } catch (e) {
+            this.addLog('warn', `AliExpress: nie udało się przeliczyć ${label} z ${currency} na PLN`, e);
+            return { amount, currency };
+          }
+        };
+
+        const priceResult = await normalizePrice(rawPrice, rawCurrency, 'ceny');
+        const originalResult = rawOriginal > 0
+          ? await normalizePrice(rawOriginal, rawCurrency, 'ceny bazowej')
+          : { amount: 0, currency: priceResult.currency };
+        const shippingResult = await normalizePrice(rawShipping, shippingCurrency, 'wysyłki');
+
+        const originalPrice = rawOriginal > 0 && originalResult.currency === priceResult.currency
+          ? originalResult.amount
+          : undefined;
+
+        if (rawOriginal > 0 && originalResult.currency !== priceResult.currency) {
+          this.addLog('warn', 'AliExpress: pomijam cenę bazową z inną walutą niż cena główna');
+        }
+
+        const parsePercent = (value: any): number | undefined => {
+          if (value === null || value === undefined || value === '') return undefined;
+          const num = Number(String(value).replace('%', '').trim());
+          if (!Number.isFinite(num) || num <= 0) return undefined;
+          return num > 0 && num <= 1 ? Math.round(num * 100) : Math.round(num);
+        };
+
+        const discountPercent = parsePercent(
+          (p.discount_percent ?? p.discount ?? p.discount_rate ?? p.promotion_discount)
+        );
+
+        const couponCodeRaw =
+          p.coupon_code ||
+          p.couponCode ||
+          p.promo_code ||
+          p.promotion_code ||
+          p.voucher_code ||
+          '';
+        const couponCode = String(couponCodeRaw || '').trim() || undefined;
+
+        const parseAmount = (value: any): number | undefined => {
+          if (value === null || value === undefined || value === '') return undefined;
+          const match = String(value).match(/[-]?[\d.,]+/);
+          if (!match) return undefined;
+          const num = Number(match[0].replace(',', '.'));
+          return Number.isFinite(num) ? num : undefined;
+        };
+
+        const minOrderValue = parseAmount(
+          p.coupon_min_spend ||
+          p.min_spend ||
+          p.min_order_amount ||
+          p.min_order_value
+        );
+
+        const hasCoupons = Boolean(couponCode || parseAmount(p.coupon_amount || p.coupon_discount || p.coupon_value));
+
+        return {
+          title: p.title || p.product_title || '',
+          description: p.product_description || '', // RAW HTML from Deep Fetch
+          imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : (p.product_main_image_url || ''),
+          price: priceResult.amount,
+          originalPrice,
+          currency: priceResult.currency,
+          shippingCost: shippingResult.amount,
+          shippingDays: p.ship_to_days || 7, // Default estimate
+          sourceProductId: String(p.item_id || p.product_id || ''),
+          sourceUrl: p.product_url || p.promotion_link || '',
+          videoUrl: p.product_video_url || p.video_url || undefined,
+          merchantName: p.store_info?.store_name || 'AliExpress',
+          merchantRating: p.store_info?.score || 4.0,
+          specs: extractDimensionsFromTitle(p.title || p.product_title || ''), // TODO: Parse p.product_props if available
+          discountPercent,
+          couponCode,
+          freeShipping: p.shipping?.free === true || shippingResult.amount === 0,
+          minOrderValue: typeof minOrderValue === 'number' && minOrderValue > 0 ? minOrderValue : undefined,
+          offerMeta: hasCoupons ? {
+            promotionType: 'offer',
+            previewUrl: p.promotion_link || p.product_url || undefined,
+            hasCoupons: true,
+          } : undefined,
+          rating: (() => {
+            // Robust rating parser handling 0-5 and 0-100 scales
+            if (p.rating?.score) return Number(p.rating.score);
+            if (p.evaluate_rate) {
+              const parsed = parseFloat(String(p.evaluate_rate).replace('%', ''));
+              // If likely 0-100 scale (e.g. "95", "4.8/5" parsed as 4.8)
+              // Heuristic: If > 5, assumes 0-100 scale -> divide by 20.
+              if (!isNaN(parsed)) return parsed > 5 ? parsed / 20 : parsed;
+            }
+            return 0;
+          })(),
+          ratingCount: p.rating?.count || p.volume || 0,
+          images: Array.isArray(p.image_urls) ? p.image_urls : (p.all_images || []), // Full gallery
+          variants: Array.isArray(p.variants) ? p.variants : (p.sku_list || undefined), // Product variants (colors, sizes)
+          // Product identifiers (for robust deduplication & SEO)
+          sku: p.sku || undefined,
+          ean: p.ean || p.barcode || undefined,
+          gtin: p.gtin || undefined,
+          upc: p.upc || undefined,
+          mpn: p.mpn || p.manufacturer_part_number || undefined,
+        };
       }));
     } catch (error) {
       this.addLog('error', `AliExpress API error: ${error instanceof Error ? error.message : 'Unknown error'}`);

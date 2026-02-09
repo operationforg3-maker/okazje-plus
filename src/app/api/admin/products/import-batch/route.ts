@@ -76,6 +76,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (config.source === 'aliexpress' && config.importType !== 'products') {
+      return NextResponse.json(
+        { error: 'AliExpress obsługuje wyłącznie import produktów (importType=products).' },
+        { status: 400 }
+      );
+    }
+
     // ===== LOAD CATEGORY & KEYWORDS =====
     // Load from Firebase Firestore categories collection
     const mainCatDocs = await adminDb
