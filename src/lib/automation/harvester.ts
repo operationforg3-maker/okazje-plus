@@ -116,10 +116,32 @@ export class SmartHarvester {
       };
 
       const price = parsePrice(offer.sale_price || offer.price || offer.current_price || offer.offer_price);
-      const originalPrice = parsePrice(offer.original_price || offer.regular_price || offer.list_price || offer.old_price);
-      const discountPercent = originalPrice > price && price > 0
-        ? Math.round(100 - (price / originalPrice) * 100)
-        : undefined;
+      let originalPrice = parsePrice(offer.original_price || offer.regular_price || offer.list_price || offer.old_price);
+      const discountValue = parsePrice(
+        offer.discount_value ||
+        offer.discount_amount ||
+        offer.saving ||
+        offer.savings ||
+        offer.cashback_value
+      );
+      let discountPercent = parsePrice(
+        offer.discount_percent ||
+        offer.discountPercentage ||
+        offer.percent_off ||
+        offer.rebate_percent
+      );
+      if (discountPercent > 0 && discountPercent <= 1) {
+        discountPercent = Math.round(discountPercent * 100);
+      }
+      if (!discountPercent && originalPrice > price && price > 0) {
+        discountPercent = Math.round(100 - (price / originalPrice) * 100);
+      }
+      if (!originalPrice && discountValue > 0 && price > 0) {
+        originalPrice = price + discountValue;
+      }
+      if (discountPercent && !originalPrice && price > 0) {
+        originalPrice = Math.round((price / (1 - discountPercent / 100)) * 100) / 100;
+      }
 
       const stripHtml = (value: any): string => {
         if (!value) return '';
@@ -171,7 +193,20 @@ export class SmartHarvester {
       const requiresMembership = offer.requires_membership || offer.membership || offer.membership_required;
 
       const descriptionRaw = offer.description || offer.product_description || offer.excerpt || offer.short_description || '';
-      const description = stripHtml(descriptionRaw);
+      let description = stripHtml(descriptionRaw);
+      if (!description) {
+        const pieces: string[] = [];
+        if (typeof discountPercent === 'number' && discountPercent > 0) {
+          pieces.push(`Zniżka ${discountPercent}%`);
+        }
+        if (couponCode) {
+          pieces.push(`Kod: ${couponCode}`);
+        }
+        if (conditions.length > 0) {
+          pieces.push(conditions.join(' • '));
+        }
+        description = pieces.join(' • ');
+      }
       const specsFromTitle = extractDimensionsFromTitle(title);
       const specsFromDesc = description ? extractDimensionsFromTitle(description) : {};
       const mergedSpecs = { ...specsFromTitle, ...specsFromDesc };
@@ -199,7 +234,7 @@ export class SmartHarvester {
         merchantName: offer.title || offer.advertiser_name || 'Convertiser',
         merchantRating: 0,
         specs: mergedSpecs,
-        discountPercent,
+        discountPercent: typeof discountPercent === 'number' && discountPercent > 0 ? discountPercent : undefined,
         couponCode,
         expiryDate,
         conditions: conditions.length > 0 ? conditions : undefined,

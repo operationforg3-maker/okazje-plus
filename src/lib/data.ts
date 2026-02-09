@@ -2512,8 +2512,14 @@ export async function getBestDealForProduct(productId: string): Promise<any | nu
     const deals = await getDealsForProduct(productId);
     if (deals.length === 0) return null;
 
+    const withAffiliate = deals.filter((deal) => {
+      const link = deal?.affiliateLink || deal?.link || deal?.sourceUrl;
+      return typeof link === 'string' && link.trim().length > 0;
+    });
+    const candidates = withAffiliate.length > 0 ? withAffiliate : deals;
+
     // Find the deal with the lowest total price (product + shipping)
-    const bestDeal = deals.reduce((best, current) => {
+    const bestDeal = candidates.reduce((best, current) => {
       const bestTotal = (best.price?.amount || 0) + (best.shipping?.cost || 0);
       const currentTotal = (current.price?.amount || 0) + (current.shipping?.cost || 0);
       return currentTotal < bestTotal ? current : best;
