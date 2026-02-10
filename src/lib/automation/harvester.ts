@@ -1070,7 +1070,42 @@ export class SmartHarvester {
       
       // Transform to RawProduct format
       return await Promise.all(detailedProducts.map(async (p: any) => {
-        const rawPrice = Number(p.price?.current ?? p.target_sale_price ?? 0);
+        const parsePriceNumber = (value: any): number => {
+          if (value === null || value === undefined || value === '') return 0;
+          const num = Number(String(value).replace(',', '.'));
+          return Number.isFinite(num) ? num : 0;
+        };
+
+        const getMinSkuPrice = (skuList: any): number => {
+          if (!Array.isArray(skuList) || skuList.length === 0) return 0;
+          let min = Infinity;
+          for (const sku of skuList) {
+            const candidate = parsePriceNumber(
+              sku?.sku_price ??
+              sku?.price ??
+              sku?.offer_price ??
+              sku?.sale_price ??
+              sku?.sku_sale_price
+            );
+            if (candidate > 0 && candidate < min) {
+              min = candidate;
+            }
+          }
+          return min === Infinity ? 0 : min;
+        };
+
+        const baseCandidates = [
+          p.price?.current,
+          p.target_sale_price,
+          p.sale_price,
+          p.app_sale_price,
+        ].map(parsePriceNumber).filter((v) => v > 0);
+
+        let rawPrice = baseCandidates.length > 0 ? Math.min(...baseCandidates) : 0;
+        const skuMin = getMinSkuPrice(p.sku_list || p.variants);
+        if (skuMin > 0 && (rawPrice === 0 || skuMin < rawPrice)) {
+          rawPrice = skuMin;
+        }
         const rawOriginal = Number(p.price?.original ?? p.original_price ?? 0);
         const rawCurrency = String(p.price?.currency || p.target_sale_price_currency || 'PLN').toUpperCase();
         const rawShipping = Number(p.shipping?.cost ?? 0);
