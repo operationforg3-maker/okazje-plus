@@ -109,26 +109,6 @@ export async function POST(req: NextRequest) {
       newStatus = action === 'approve' ? 'approved' : 'rejected';
     }
 
-    // Jeśli zatwierdzamy, uruchom AI Refiner dla produktów/ofert (tylko nowe importy)
-    if (newStatus === 'approved') {
-      const productIds = items.filter((item: any) => item?.type === 'product').map((item: any) => item.id);
-      const dealIds = items.filter((item: any) => item?.type === 'deal').map((item: any) => item.id);
-
-      if (productIds.length > 0) {
-        try {
-          await startRefinerJob(productIds, 'full_enrichment');
-        } catch (err) {
-          console.error('[bulk moderation] Product Refiner failed', err);
-        }
-      }
-      if (dealIds.length > 0) {
-        try {
-          await startDealRefinerJob(dealIds);
-        } catch (err) {
-          console.error('[bulk moderation] Deal Refiner failed', err);
-        }
-      }
-    }
 
     let processed = 0;
     for (const batchItems of batches) {
@@ -142,6 +122,21 @@ export async function POST(req: NextRequest) {
         processed++;
       }
       await batch.commit();
+    }
+
+    // Jeśli zatwierdzamy, uruchom AI Refiner asynchronicznie (nie blokuj odpowiedzi)
+    if (newStatus === 'approved') {
+      const productIds = items.filter((item: any) => item?.type === 'product').map((item: any) => item.id);
+      const dealIds = items.filter((item: any) => item?.type === 'deal').map((item: any) => item.id);
+
+      if (productIds.length > 0) {
+        startRefinerJob(productIds, 'full_enrichment')
+          .catch((err) => console.error('[bulk moderation] Product Refiner failed', err));
+      }
+      if (dealIds.length > 0) {
+        startDealRefinerJob(dealIds)
+          .catch((err) => console.error('[bulk moderation] Deal Refiner failed', err));
+      }
     }
 
     return NextResponse.json({ 
