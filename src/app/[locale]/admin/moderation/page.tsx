@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { withImageProxy } from '@/lib/image-proxy';
 import { ModerationDetailView } from '@/components/admin/moderation-detail-view';
 import { 
   CheckSquare, 
@@ -246,7 +247,7 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
               
               {imageSrc && (
                 <div className="w-6 h-6 rounded bg-slate-100 border overflow-hidden shrink-0">
-                   <img src={imageSrc} className="w-full h-full object-cover" alt="" />
+                   <img src={withImageProxy(imageSrc)} className="w-full h-full object-cover" alt="" />
                 </div>
               )}
               
@@ -1164,7 +1165,7 @@ function ModerationPage() {
                       <div className="w-full lg:w-[160px] lg:shrink-0">
                         <div className="w-full h-[120px] bg-muted rounded-md overflow-hidden border">
                           {item.imageUrl ? (
-                            <img src={item.imageUrl} className="w-full h-full object-cover" alt="" />
+                            <img src={withImageProxy(item.imageUrl)} className="w-full h-full object-cover" alt="" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
                               Brak zdjęcia
