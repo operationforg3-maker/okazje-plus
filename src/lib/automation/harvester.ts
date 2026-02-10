@@ -512,8 +512,9 @@ export class SmartHarvester {
            logs: this.logs,
         });
         
+        const productsToRecalculate = new Set<string>();
+
         try {
-          const productsToRecalculate = new Set<string>();
           // Step 1: Fetch products from source API
           // For tree mode: extract category name from path (e.g., 'electronics/phones/flagship' -> 'flagship')
           const searchTerm = isTreeMode 
