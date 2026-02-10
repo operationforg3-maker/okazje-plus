@@ -513,6 +513,7 @@ export class SmartHarvester {
         });
         
         try {
+          const productsToRecalculate = new Set<string>();
           // Step 1: Fetch products from source API
           // For tree mode: extract category name from path (e.g., 'electronics/phones/flagship' -> 'flagship')
           const searchTerm = isTreeMode 
@@ -668,8 +669,8 @@ export class SmartHarvester {
                   this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
                 }
 
-                // Update product's best price
-                await this.updateProductBestPrice(existingProduct.id);
+                // Mark for best price recalculation (batch later)
+                productsToRecalculate.add(existingProduct.id);
                 duplicatesSkipped++;
               } else {
                 // New product: Create ProductCore + Deal
@@ -743,8 +744,8 @@ export class SmartHarvester {
                   this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
                 }
 
-                // Update product's best price (M6: CRITICAL - was missing for new products!)
-                await this.updateProductBestPrice(productId);
+                // Mark for best price recalculation (batch later)
+                productsToRecalculate.add(productId);
 
                 // Record identity match for future lookups
                 await this.recordIdentityMatch(
@@ -826,7 +827,15 @@ export class SmartHarvester {
           });
         }
         
-        // Log finished category
+          // Batch update best prices for this category
+          if (productsToRecalculate.size > 0) {
+            this.addLog('info', `Aktualizuję bestPrice dla ${productsToRecalculate.size} produktów (batch po kategorii)`);
+            for (const productId of productsToRecalculate) {
+              await this.updateProductBestPrice(productId);
+            }
+          }
+
+          // Log finished category
         processedCategoriesLog.push({
           category: currentQuery,
           count: categoryProductsCreated,
@@ -1038,9 +1047,9 @@ export class SmartHarvester {
       
       this.addLog('info', `Found ${response.products.length} products from AliExpress. Fetching deep details for top items...`);
       
-      // DEEP FETCH: Get detailed info (HTML descriptions) for top 10 items
-      // We can't do all 50 due to rate limits/performance, but top 10 is good for quality
-      const productsToEnrich = response.products.slice(0, 50); // M6: Try more? No, stick to batch to avoid timeout
+      // DEEP FETCH: Get detailed info (HTML descriptions) for top items
+      // Keep small batch to avoid long tail latency and rate limits
+      const productsToEnrich = response.products.slice(0, 10);
       
       const detailedProducts = await Promise.all(
         productsToEnrich.map(async (p: any) => {
