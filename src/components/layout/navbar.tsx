@@ -29,6 +29,7 @@ import { MiniCartBadge } from '@/components/smart-cart-widget';
 import { LogoSVGWrapper } from './logo-svg-wrapper';
 import { useSmartCart } from '@/lib/cart-context';
 import { useCurrency } from '@/lib/unified-currency';
+import { withImageProxy } from '@/lib/image-proxy';
 import { getPriceAmount, getTotalPrice, isFreeShipping } from '@/lib/i18n-utils';
 import Image from 'next/image';
 
@@ -210,7 +211,7 @@ export function Navbar() {
                             return (
                               <div key={keyId} className="flex items-center gap-3">
                                 <div className="relative h-12 w-12 flex-shrink-0">
-                                  <Image src={imageUrl} alt={title} fill sizes="48px" className="object-cover rounded" />
+                                  <Image src={withImageProxy(imageUrl)} alt={title} fill sizes="48px" className="object-cover rounded" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{title}</p>

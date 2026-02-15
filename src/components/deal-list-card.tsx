@@ -16,6 +16,7 @@ import { extractPriceInfo } from '@/lib/i18n-utils';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import ShareButton from '@/components/share-button';
 import { toast } from 'sonner';
+import { withImageProxy } from '@/lib/image-proxy';
 
 interface DealListCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -182,7 +183,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
       <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
         <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted/50">
           <Image
-            src={typeof deal.image === 'string' ? deal.image : '/placeholder.png'}
+            src={withImageProxy(typeof deal.image === 'string' ? deal.image : '/placeholder.png')}
             alt={safeText(deal.title) || 'Okazja'}
             data-ai-hint={safeText(deal.imageHint)}
             fill

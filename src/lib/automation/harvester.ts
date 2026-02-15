@@ -19,6 +19,8 @@ import { convertToPLN } from '@/lib/currency-exchange';
 import { addToModerationQueue } from '@/lib/moderation';
 import { batchAssignCategories } from '@/ai/flows/convertiser-auto-category';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { chunkArray } from '@/lib/utils';
+import { load as loadHtml } from 'cheerio';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
 
@@ -89,6 +91,283 @@ export class SmartHarvester {
 
   private getFallbackImageUrl(): string {
     return PlaceHolderImages?.[0]?.imageUrl || '/placeholder.png';
+  }
+
+  /**
+   * Phase 1A: Extract specs from AliExpress product properties
+   * Handles both array format {attr_name, attr_value} and JSON strings
+   */
+  private extractPropsFromProductProps(props: any): Record<string, string> {
+    const specs: Record<string, string> = {};
+
+    if (!props) return specs;
+
+    // Props can be: array of {attr_name, attr_value} OR JSON string OR HTML string
+    let propsArray: any[] = [];
+    if (Array.isArray(props)) {
+      propsArray = props;
+    } else if (typeof props === 'string' && props.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(props);
+        propsArray = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        // Property is not valid JSON, skip
+        return specs;
+      }
+    }
+
+    // Map common attribute name aliases to standard keys for Polish UI
+    const standardKeys: Record<string, string[]> = {
+      memory: ['memory', 'ram', 'memorystyle', 'pamięć', 'memory size'],
+      storage: [
+        'storage',
+        'storage capacity',
+        'hard disk',
+        'dysk',
+        'pojemność',
+      ],
+      color: ['color', 'colours', 'color classification', 'kolor', 'kolory'],
+      brand: ['brand', 'brand name', 'marka'],
+      screen: [
+        'screen',
+        'screen size',
+        'display size',
+        'screen type',
+        'ekran',
+        'rozmiar ekranu',
+      ],
+      battery: ['battery', 'battery capacity', 'bateria', 'pojemność baterii'],
+      processor: ['cpu', 'processor', 'processor type', 'procesor'],
+      os: ['operating system', 'os', 'system type', 'system', 'system'],
+      weight: ['weight', 'item weight', 'waga'],
+      material: ['material', 'material type', 'materiał'],
+      connector: ['connector', 'port', 'złącze'],
+      waterproof: ['waterproof', 'water resistant', 'ipx'],
+      warranty: ['warranty', 'gwarancja'],
+    };
+
+    // Extract and normalize properties
+    propsArray.forEach(prop => {
+      const name = String(prop.attr_name || '').toLowerCase().trim();
+      const value = String(prop.attr_value || '').trim();
+
+      if (!name || !value) return;
+
+      // Match against standard keys with aliases
+      for (const [standardKey, aliases] of Object.entries(standardKeys)) {
+        if (aliases.some(alias => name.includes(alias))) {
+          specs[standardKey] = value;
+          break;
+        }
+      }
+    });
+
+    return specs;
+  }
+
+  /**
+   * Phase 1B: Extract min/max price range from SKU variants
+   * Returns object with min/max or undefined if insufficient data
+   */
+  private extractSkuPriceRange(
+    skuList: any[]
+  ): {
+    minPrice: number;
+    maxPrice: number;
+  } | null {
+    if (!Array.isArray(skuList) || skuList.length === 0) return null;
+
+    const prices = skuList
+      .map(sku => {
+        const priceStr = String(
+          sku.sku_sale_price ?? sku.sku_price ?? sku.offer_price ?? '0'
+        );
+        return parseFloat(priceStr.replace(',', '.')) || 0;
+      })
+      .filter(p => p > 0);
+
+    if (prices.length === 0) return null;
+
+    return {
+      minPrice: Math.min(...prices),
+      maxPrice: Math.max(...prices),
+    };
+  }
+
+  /**
+   * Phase 1D: Consolidate images from multiple AliExpress fields
+   */
+  private consolidateImageGallery(
+    product: any
+  ): { images: string[]; mainImage: string } {
+    const imageSet = new Set<string>();
+
+    // Primary main image (from different possible sources)
+    const primaryFields = [
+      product.product_main_image_url,
+      product.imageUrl,
+      product.image_url,
+      product.preview_image_url,
+    ];
+    
+    primaryFields.forEach(field => {
+      if (typeof field === 'string' && field.trim() && field.startsWith('http')) {
+        imageSet.add(field);
+      }
+    });
+
+    // Gallery/secondary images (multiple sources)
+    const galleryFields = [
+      product.product_small_image_urls,
+      product.all_images,
+      product.image_urls,
+      product.images,
+      product.second_level_image_url,
+      product.first_level_image_url,
+      product.other_image_urls,
+    ];
+
+    galleryFields.forEach(field => {
+      if (Array.isArray(field)) {
+        field.forEach(url => {
+          if (typeof url === 'string' && url.trim() && url.startsWith('http')) {
+            imageSet.add(url);
+          }
+        });
+      } else if (typeof field === 'string' && field.trim() && field.startsWith('http')) {
+        imageSet.add(field);
+      }
+    });
+
+    // Convert to array, filter valid URLs, limit to 15
+    const validImages = Array.from(imageSet)
+      .filter(url => url && url.length > 0)
+      .slice(0, 15);
+
+    const mainImage = validImages[0] || '';
+
+    return {
+      images: validImages,
+      mainImage,
+    };
+  }
+
+  private async scrapeAliExpressPage(url: string): Promise<{
+    description?: string;
+    specs?: Record<string, string>;
+    images?: string[];
+    mainImage?: string;
+  }> {
+    if (!url || !url.startsWith('http')) {
+      return {};
+    }
+
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8,de;q=0.7',
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!response.ok) {
+        return {};
+      }
+
+      const html = await response.text();
+      if (!html || html.length < 200) {
+        return {};
+      }
+
+      const $ = loadHtml(html);
+      const specs: Record<string, string> = {};
+      const images: string[] = [];
+
+      let description = $('meta[property="og:description"]').attr('content')
+        || $('meta[name="description"]').attr('content')
+        || '';
+
+      const metaImage = $('meta[property="og:image"]').attr('content')
+        || $('meta[property="og:image:secure_url"]').attr('content')
+        || '';
+
+      if (metaImage && metaImage.startsWith('http')) {
+        images.push(metaImage);
+      }
+
+      $('script[type="application/ld+json"]').each((_, el) => {
+        const jsonText = $(el).text();
+        if (!jsonText) return;
+
+        try {
+          const parsed = JSON.parse(jsonText);
+          const candidates = Array.isArray(parsed) ? parsed : [parsed];
+          candidates.forEach((entry) => {
+            const product = entry?.['@type'] === 'Product'
+              ? entry
+              : entry?.['@graph']?.find((item: any) => item?.['@type'] === 'Product');
+
+            if (!product) return;
+
+            const brand = typeof product.brand === 'string'
+              ? product.brand
+              : product.brand?.name;
+            if (brand) specs.brand = String(brand);
+
+            if (product.sku) specs.sku = String(product.sku);
+            if (product.mpn) specs.mpn = String(product.mpn);
+            if (product.model) specs.model = String(product.model);
+
+            const productImages = product.image;
+            if (Array.isArray(productImages)) {
+              productImages
+                .filter((img) => typeof img === 'string' && img.startsWith('http'))
+                .forEach((img) => images.push(img));
+            } else if (typeof productImages === 'string' && productImages.startsWith('http')) {
+              images.push(productImages);
+            }
+
+            if (!description && product.description) {
+              description = String(product.description);
+            }
+          });
+        } catch {
+          return;
+        }
+      });
+
+      const dedupedImages = Array.from(new Set(images)).slice(0, 15);
+
+      return {
+        description: description || undefined,
+        specs: Object.keys(specs).length > 0 ? specs : undefined,
+        images: dedupedImages.length > 0 ? dedupedImages : undefined,
+        mainImage: dedupedImages[0],
+      };
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Phase 1E: Extract minimum available quantity across SKUs
+   */
+  private getMinimumAvailableQuantity(skuList: any[]): number | undefined {
+    if (!Array.isArray(skuList) || skuList.length === 0) return undefined;
+
+    const quantities = skuList
+      .map(sku => {
+        const qty = parseInt(
+          String(sku.sku_available_quantity || sku.availability || '0')
+        );
+        return qty > 0 ? qty : 0;
+      })
+      .filter(q => q > 0);
+
+    return quantities.length > 0
+      ? Math.min(...quantities)
+      : undefined;
   }
 
   private async recordDiscardedItem(params: {
@@ -397,6 +676,392 @@ export class SmartHarvester {
   }
 
   /**
+   * Check if job is still active (not paused/cancelled)
+   */
+  private async isJobActive(): Promise<boolean> {
+    try {
+      const doc = await adminDb.collection('harvester_jobs').doc(this.jobId).get();
+      if (!doc.exists) return true;
+      const status = doc.data()?.status;
+      return status === 'running';
+    } catch (e) {
+      console.error('[Harvester] Failed to check job status', e);
+      return true; // Keep running on temporary DB error
+    }
+  }
+
+  /**
+   * Update job record in Firestore
+   * Limits logs to last 200 entries to avoid Firestore 1MB document size limit
+   */
+  private async updateJobRecord(job: HarvesterJob): Promise<void> {
+    const jobRef = adminDb.collection('harvester_jobs').doc(this.jobId);
+    
+    // Limit logs to prevent Firestore 1MB document size limit
+    // Keep only last 200 entries (approximately 800KB with details)
+    const logsToSave = job.logs.slice(-200);
+    
+    await jobRef.set(
+      {
+        status: job.status,
+        source: job.source,
+        query: job.query,
+        maxResults: job.maxResults,
+        productsFound: job.productsFound,
+        productsCreated: job.productsCreated,
+        dealsCreated: job.dealsCreated,
+        dealsLinked: job.dealsLinked,
+        duplicatesSkipped: job.duplicatesSkipped,
+        errors: job.errors,
+        currentCategory: job.currentCategory,
+        totalCategories: job.totalCategories,
+        processedCategories: job.processedCategories,
+        startedAt: job.startedAt,
+        completedAt: job.completedAt,
+        lastUpdatedAt: job.lastUpdatedAt,
+        logs: logsToSave,
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Run a function with a timeout (per category protection)
+   */
+  private async runWithTimeout<T>(
+    fn: () => Promise<T>,
+    timeoutMs: number,
+    label: string
+  ): Promise<T> {
+    let timeoutId: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`Przekroczono limit czasu (${timeoutMs} ms) dla: ${label}`));
+      }, timeoutMs);
+    });
+
+    try {
+      return await Promise.race([fn(), timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  private toLocalizedText(value: string): LocalizedText {
+    const safe = String(value || '').trim();
+    return {
+      pl: safe,
+      en: safe,
+      de: safe,
+    };
+  }
+
+  private normalizeSpecs(specs: any): Record<string, string> {
+    if (!specs) return {};
+    if (Array.isArray(specs)) {
+      const mapped: Record<string, string> = {};
+      specs.forEach((item) => {
+        const key = String(item?.key || item?.name || '').trim();
+        const value = String(item?.value || '').trim();
+        if (key && value) mapped[key] = value;
+      });
+      return mapped;
+    }
+    if (typeof specs === 'object') {
+      const mapped: Record<string, string> = {};
+      Object.entries(specs).forEach(([key, value]) => {
+        const k = String(key || '').trim();
+        const v = String(value || '').trim();
+        if (k && v) mapped[k] = v;
+      });
+      return mapped;
+    }
+    return {};
+  }
+
+  private async findProductByIdentity(identityHash: string): Promise<ProductCore | null> {
+    if (!identityHash) return null;
+
+    const matchSnap = await adminDb
+      .collection('identity_matches')
+      .where('combinedHash', '==', identityHash)
+      .limit(1)
+      .get();
+
+    if (matchSnap.empty) return null;
+    const match = matchSnap.docs[0].data() as IdentityMatch;
+    if (!match?.productId) return null;
+
+    const productSnap = await adminDb.collection('product_cores').doc(match.productId).get();
+    if (!productSnap.exists) return null;
+
+    return {
+      id: productSnap.id,
+      ...(productSnap.data() as ProductCore),
+    } as ProductCore;
+  }
+
+  private async findProductByIdentifiers(identifiers: {
+    ean?: string;
+    gtin?: string;
+    upc?: string;
+    mpn?: string;
+  }): Promise<ProductCore | null> {
+    const checks: Array<{ field: string; value?: string }> = [
+      { field: 'metadata.identifiers.ean', value: identifiers.ean },
+      { field: 'metadata.identifiers.gtin', value: identifiers.gtin },
+      { field: 'metadata.identifiers.upc', value: identifiers.upc },
+      { field: 'metadata.identifiers.mpn', value: identifiers.mpn },
+    ];
+
+    for (const check of checks) {
+      if (!check.value) continue;
+      const normalized = normalizeProductIdentifier(check.value);
+      if (!normalized) continue;
+
+      const snap = await adminDb
+        .collection('product_cores')
+        .where(check.field, '==', normalized)
+        .limit(1)
+        .get();
+
+      if (!snap.empty) {
+        const doc = snap.docs[0];
+        return {
+          id: doc.id,
+          ...(doc.data() as ProductCore),
+        } as ProductCore;
+      }
+    }
+
+    return null;
+  }
+
+  private prepareIdentityMatch(
+    combinedHash: string,
+    productId: string,
+    source: string,
+    title: string,
+    imageUrl: string,
+    sourceProductId?: string
+  ) {
+    const titleHash = calculateTitleHash(title || productId);
+    const primaryImageHash = calculateImageHash(imageUrl || '');
+    const identityMatchRef = adminDb.collection('identity_matches').doc();
+    const identityMatchData: IdentityMatch = {
+      id: identityMatchRef.id,
+      titleHash,
+      primaryImageHash,
+      combinedHash,
+      productId,
+      source,
+      sourceProductId,
+      confidence: 0.9,
+      createdAt: new Date().toISOString(),
+    };
+
+    return { identityMatchData, identityMatchRef };
+  }
+
+  private async prepareProductCore(
+    sourceProduct: RawProduct,
+    identityHash: string,
+    source: string,
+    categoryInfo: {
+      mainCategorySlug: string;
+      subCategorySlug: string;
+      subSubCategorySlug?: string;
+    }
+  ) {
+    const now = new Date().toISOString();
+    const title = String(sourceProduct.title || '').trim();
+    const description = String(sourceProduct.description || '').trim();
+    const shortDescription = description || title;
+    const images = Array.isArray(sourceProduct.images) && sourceProduct.images.length > 0
+      ? sourceProduct.images
+      : (sourceProduct.imageUrl ? [sourceProduct.imageUrl] : []);
+    const primaryImage = images[0] || this.getFallbackImageUrl();
+    const specs = this.normalizeSpecs(sourceProduct.specs);
+
+    const identifiers = {
+      ean: sourceProduct.ean ? normalizeProductIdentifier(sourceProduct.ean) : undefined,
+      gtin: sourceProduct.gtin ? normalizeProductIdentifier(sourceProduct.gtin) : undefined,
+      upc: sourceProduct.upc ? normalizeProductIdentifier(sourceProduct.upc) : undefined,
+      mpn: sourceProduct.mpn ? normalizeProductIdentifier(sourceProduct.mpn) : undefined,
+      sku: sourceProduct.sku ? normalizeProductIdentifier(sourceProduct.sku) : undefined,
+    };
+
+    const productRef = adminDb.collection('product_cores').doc();
+    const productData: ProductCore = {
+      id: productRef.id,
+      identityHash,
+      title: this.toLocalizedText(title || 'Brak tytulu'),
+      shortDescription: this.toLocalizedText(shortDescription || 'Brak opisu'),
+      fullDescription: this.toLocalizedText(description || shortDescription || ''),
+      specs,
+      mainCategorySlug: categoryInfo.mainCategorySlug,
+      subCategorySlug: categoryInfo.subCategorySlug,
+      subSubCategorySlug: categoryInfo.subSubCategorySlug,
+      imageUrl: primaryImage,
+      images: images.length > 0 ? images : [primaryImage],
+      primaryImageHash: calculateImageHash(primaryImage),
+      videoUrl: sourceProduct.videoUrl,
+      reviewsSummary: this.toLocalizedText('Brak podsumowania opinii'),
+      rating: {
+        score: Number(sourceProduct.rating || 0),
+        count: Number(sourceProduct.ratingCount || 0),
+        provider: source === 'aliexpress' ? 'aliexpress' : 'mixed',
+      },
+      bestPrice: {
+        amount: Number(sourceProduct.price || 0),
+        currency: (sourceProduct.currency as any) || 'PLN',
+      },
+      bestTotalPrice: Number(sourceProduct.price || 0) + Number(sourceProduct.shippingCost || 0),
+      linkedDealIds: [],
+      searchTags: Array.from(new Set(
+        `${title} ${categoryInfo.mainCategorySlug} ${categoryInfo.subCategorySlug}`
+          .toLowerCase()
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 12)
+      )),
+      status: 'pending_approval',
+      createdAt: now,
+      updatedAt: now,
+      metadata: {
+        source,
+        originalId: sourceProduct.sourceProductId,
+        importedAt: now,
+        identifiers,
+      },
+    };
+
+    return { productData, productRef };
+  }
+
+  private async prepareDeal(
+    productId: string,
+    sourceProduct: RawProduct,
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser'
+  ) {
+    const now = new Date().toISOString();
+    const dealRef = adminDb.collection('deals').doc();
+
+    const priceAmount = Number(sourceProduct.price || 0);
+    const shippingCost = Number(sourceProduct.shippingCost || 0);
+    const originalPrice = Number(sourceProduct.originalPrice || 0);
+    const discountAmount = originalPrice > priceAmount ? originalPrice - priceAmount : 0;
+    const discountPercent = discountAmount > 0
+      ? Math.round((discountAmount / originalPrice) * 100)
+      : undefined;
+
+    const dealData: DealM6 = {
+      id: dealRef.id,
+      productId,
+      productCoreId: productId,
+      price: {
+        amount: priceAmount,
+        currency: (sourceProduct.currency as any) || 'PLN',
+      },
+      originalPrice: originalPrice > 0 ? originalPrice : undefined,
+      discount: discountAmount > 0 ? { amount: discountAmount, percentage: discountPercent } : undefined,
+      discountPercent: discountPercent,
+      shipping: {
+        cost: shippingCost,
+        timeDays: Number(sourceProduct.shippingDays || 0) || 7,
+        method: 'Standard',
+      },
+      source,
+      affiliateLink: sourceProduct.sourceUrl || '',
+      affiliateUrl: sourceProduct.sourceUrl || '',
+      dealUrl: sourceProduct.sourceUrl || '',
+      merchantName: sourceProduct.merchantName,
+      merchantRating: sourceProduct.merchantRating,
+      title: this.toLocalizedText(sourceProduct.title || ''),
+      description: sourceProduct.description ? this.toLocalizedText(sourceProduct.description) : undefined,
+      dealType: sourceProduct.couponCode ? 'coupon' : (discountPercent ? 'sale' : 'regular'),
+      couponCode: sourceProduct.couponCode,
+      stockStatus: 'in_stock',
+      stockLevel: (sourceProduct as any).offerMeta?.minimumAvailableQuantity,
+      isActive: true,
+      priceHistory: [
+        {
+          date: now.substring(0, 10),
+          price: priceAmount,
+          currency: (sourceProduct.currency as any) || 'PLN',
+        },
+      ],
+      voteCount: 0,
+      temperature: 0,
+      commentsCount: 0,
+      status: 'draft',
+      createdAt: now,
+      updatedAt: now,
+      sourceProductId: sourceProduct.sourceProductId,
+      sourceUrl: sourceProduct.sourceUrl || '',
+    };
+
+    return { dealData, dealRef };
+  }
+
+  private async batchUpdateProductBestPrices(productIds: string[]): Promise<void> {
+    const uniqueIds = Array.from(new Set(productIds.filter(Boolean)));
+    if (uniqueIds.length === 0) return;
+
+    let batch = adminDb.batch();
+    let batchCount = 0;
+
+    for (const productId of uniqueIds) {
+      const dealsSnap = await adminDb
+        .collection('deals')
+        .where('productId', '==', productId)
+        .get();
+
+      if (dealsSnap.empty) {
+        this.addLog('warn', `Brak ofert do przeliczenia bestPrice dla produktu: ${productId}`);
+        continue;
+      }
+
+      const deals = dealsSnap.docs.map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as DealM6),
+      }));
+
+      const bestDeal = deals.reduce((best, current) => {
+        const bestPrice = Number(best.price?.amount || 0) + Number(best.shipping?.cost || 0);
+        const currentPrice = Number(current.price?.amount || 0) + Number(current.shipping?.cost || 0);
+        return currentPrice < bestPrice ? current : best;
+      });
+
+      const bestTotalPrice = Number(bestDeal.price?.amount || 0) + Number(bestDeal.shipping?.cost || 0);
+      const bestCurrency = (bestDeal.price?.currency as any) || 'PLN';
+
+      const productRef = adminDb.collection('product_cores').doc(productId);
+      batch.update(productRef, {
+        bestPrice: {
+          amount: bestTotalPrice,
+          currency: bestCurrency,
+        },
+        bestTotalPrice: bestTotalPrice,
+        bestDealId: bestDeal.id,
+        linkedDealIds: deals.map((deal) => deal.id),
+        updatedAt: new Date().toISOString(),
+      });
+
+      batchCount += 1;
+      if (batchCount >= 450) {
+        await batch.commit();
+        batch = adminDb.batch();
+        batchCount = 0;
+      }
+    }
+
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+  }
+
+  /**
    * Main entry point: Harvest products from a source
    * Returns the harvester job with results
    * 
@@ -443,6 +1108,7 @@ export class SmartHarvester {
       productsFound: 0,
       productsCreated: 0,
       dealsCreated: 0,
+      dealsLinked: 0,
       duplicatesSkipped: 0,
       errors: [],
       currentCategory: queries[0] || '',
@@ -457,64 +1123,105 @@ export class SmartHarvester {
     let productsFound = 0;
     let productsCreated = 0;
     let dealsCreated = 0;
+    let dealsLinked = 0;
     let duplicatesSkipped = 0;
     const errors: HarvesterJob['errors'] = [];
     let processedCount = 0; // Counter for periodic updates
+    let lastProgressUpdate = Date.now();
+    const progressUpdateIntervalMs = 5000;
+    const categoryAttempts = new Map<string, number>();
+    const processedCategorySet = new Set<string>();
+    const maxCategoryAttempts = 2; // 1 retry per category
+    const categoryTimeoutMs = 120_000; // 120s timeout per category
     const dealsToRefine: string[] = [];
     const productsToRefine: string[] = [];
+    let lastDealRefinerAt = 0;
+    const dealRefinerBatchSize = 50;
+    const dealRefinerMinIntervalMs = 30_000;
 
     try {
       // Iterate through all provided queries/categories
       for (const currentQuery of queries) {
-        // Check if we should stop
-        if (!(await this.isJobActive())) {
-           this.addLog('warn', 'Job stopped externally (paused/cancelled)');
-           return {
-             id: this.jobId,
-             status: 'paused',
-             source,
-             query: queries.join(', '),
-             maxResults,
-             productsFound,
-             productsCreated,
-             dealsCreated,
-             duplicatesSkipped,
-             errors,
-             currentCategory: currentQuery,
-             totalCategories: queries.length,
-             processedCategories: processedCategoriesLog,
-             startedAt: jobStartTime,
-             lastUpdatedAt: new Date().toISOString(),
-             logs: this.logs,
-           };
+        if (processedCategorySet.has(currentQuery)) {
+          this.addLog('warn', `Pomijam zduplikowaną kategorię: ${currentQuery}`);
+          processedCategoriesLog.push({
+            category: currentQuery,
+            count: 0,
+            status: 'skipped',
+          });
+          continue;
         }
 
-        this.addLog('info', `Processing query/category: ${currentQuery}`);
+        let categoryCompleted = false;
         let categoryProductsCreated = 0; // Local counter for this category
 
-        // Update current category in status
-        await this.updateJobRecord({
-           id: this.jobId,
-           status: 'running',
-           source,
-           query: queries.join(', '),
-           maxResults,
-           productsFound,
-           productsCreated,
-           dealsCreated,
-           duplicatesSkipped,
-           errors,
-           currentCategory: currentQuery,
-           totalCategories: queries.length,
-           processedCategories: processedCategoriesLog,
-           startedAt: jobStartTime,
-           lastUpdatedAt: new Date().toISOString(),
-           logs: this.logs,
-        });
-        
-        const productsToRecalculate = new Set<string>();
+        while (!categoryCompleted) {
+          const attempt = (categoryAttempts.get(currentQuery) || 0) + 1;
+          categoryAttempts.set(currentQuery, attempt);
 
-        try {
+          if (attempt > maxCategoryAttempts) {
+            this.addLog('warn', `Przekroczono limit prób dla kategorii: ${currentQuery}`);
+            processedCategoriesLog.push({
+              category: currentQuery,
+              count: categoryProductsCreated,
+              status: 'skipped',
+            });
+            processedCategorySet.add(currentQuery);
+            break;
+          }
+
+          // Check if we should stop
+          if (!(await this.isJobActive())) {
+            this.addLog('warn', 'Job stopped externally (paused/cancelled)');
+            return {
+              id: this.jobId,
+              status: 'paused',
+              source,
+              query: queries.join(', '),
+              maxResults,
+              productsFound,
+              productsCreated,
+              dealsCreated,
+              dealsLinked,
+              duplicatesSkipped,
+              errors,
+              currentCategory: currentQuery,
+              totalCategories: queries.length,
+              processedCategories: processedCategoriesLog,
+              startedAt: jobStartTime,
+              lastUpdatedAt: new Date().toISOString(),
+              logs: this.logs,
+            };
+          }
+
+          const categoryStartTime = Date.now();
+          this.addLog('info', `Processing query/category: ${currentQuery} (attempt ${attempt}/${maxCategoryAttempts})`);
+
+          // Update current category in status
+          await this.updateJobRecord({
+            id: this.jobId,
+            status: 'running',
+            source,
+            query: queries.join(', '),
+            maxResults,
+            productsFound,
+            productsCreated,
+            dealsCreated,
+            dealsLinked,
+            duplicatesSkipped,
+            errors,
+            currentCategory: currentQuery,
+            totalCategories: queries.length,
+            processedCategories: processedCategoriesLog,
+            startedAt: jobStartTime,
+            lastUpdatedAt: new Date().toISOString(),
+            logs: this.logs,
+          });
+
+          const productsToRecalculate = new Set<string>();
+
+          try {
+            await this.runWithTimeout(async () => {
           // Step 1: Fetch products from source API
           // For tree mode: extract category name from path (e.g., 'electronics/phones/flagship' -> 'flagship')
           const searchTerm = isTreeMode 
@@ -608,170 +1315,203 @@ export class SmartHarvester {
             }
           }
 
-          // Step 2: Process each product (create or link)
-          for (const sourceProduct of filteredProducts) {
-            try {
-              // PRIORITY 1: Check for existing product by standard identifiers (EAN/GTIN/UPC/MPN)
-              let existingProduct = null;
-              let identityHash = '';
-              
-              // Type-safe access to identifiers
-              const productEan = sourceProduct.ean;
-              const productGtin = sourceProduct.gtin;
-              const productUpc = sourceProduct.upc;
-              const productMpn = sourceProduct.mpn;
-              
-              if (productEan || productGtin || productUpc || productMpn) {
-                existingProduct = await this.findProductByIdentifiers({
-                  ean: productEan,
-                  gtin: productGtin,
-                  upc: productUpc,
-                  mpn: productMpn,
-                });
+          // Step 2: Process each product (create or link) in batches
+          const chunks = chunkArray(filteredProducts, 500); // Firestore batch limit
+          this.addLog('info', `Processing ${filteredProducts.length} products in ${chunks.length} batches.`);
+
+          for (const chunk of chunks) {
+            const batch = adminDb.batch();
+            const productsToRecalculate = new Set<string>();
+            const newProductsForCache = [];
+
+            for (const sourceProduct of chunk) {
+              try {
+                // PRIORITY 1: Check for existing product by standard identifiers (EAN/GTIN/UPC/MPN)
+                let existingProduct = null;
+                let identityHash = '';
                 
-                if (existingProduct) {
-                  this.addLog('info', `Found existing product by identifier (EAN/GTIN): ${existingProduct.id}`);
-                }
-              }
-              
-              // PRIORITY 2: Fallback to identity hash (title + image)
-              if (!existingProduct) {
-                identityHash = calculateIdentityHash(
-                  sourceProduct.title,
-                  sourceProduct.imageUrl
-                );
-                existingProduct = await this.findProductByIdentity(identityHash);
+                // Type-safe access to identifiers
+                const productEan = sourceProduct.ean;
+                const productGtin = sourceProduct.gtin;
+                const productUpc = sourceProduct.upc;
+                const productMpn = sourceProduct.mpn;
                 
-                if (existingProduct) {
-                  this.addLog('info', `Found existing product by identity hash: ${existingProduct.id}`);
-                }
-              }
-
-              if (existingProduct) {
-                // Existing product: Create new Deal
-                this.addLog(
-                  'info',
-                  `Found existing product ${existingProduct.id}, creating new deal`
-                );
-
-                if (!existingProduct.id || typeof existingProduct.id !== 'string') {
-                  throw new Error('Existing product missing valid id');
-                }
-
-                const dealId = await this.createDeal(existingProduct.id, sourceProduct, source);
-                dealsCreated++;
-                dealsToRefine.push(dealId);
-
-                // Add deal to moderation queue for admin review
-                try {
-                  await addToModerationQueue(dealId, 'deal', 'import', 'harvester', 'high');
-                  this.addLog('info', `Deal ${dealId} added to moderation queue`);
-                } catch (err) {
-                  this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
-                }
-
-                // Mark for best price recalculation (batch later)
-                productsToRecalculate.add(existingProduct.id);
-                duplicatesSkipped++;
-              } else {
-                // New product: Create ProductCore + Deal
-                this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
-
-                // Parse category hierarchy from query (e.g., 'electronics/phones/flagship')
-                // CONVERTISER: AI auto-maps category from title (no moderator needed!)
-                // OTHER SOURCES: Parse category from query path
-                let categoryInfo: any;
-                
-                if (source === 'convertiser') {
-                  // Batch AI categorization is done before the loop - use cached result
-                  const cachedAssignment = (sourceProduct as any).__categoryAssignment;
-                  if (cachedAssignment) {
-                    categoryInfo = {
-                      mainCategorySlug: cachedAssignment.mainCategorySlug,
-                      subCategorySlug: cachedAssignment.subCategorySlug,
-                      subSubCategorySlug: cachedAssignment.subSubCategorySlug,
-                    };
-                    this.addLog('info', `✅ Using batch-assigned category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}`);
-                  } else {
-                    // Fallback: uncategorized if batch failed
-                    this.addLog('warn', 'Batch categorization result missing, using uncategorized');
-                    categoryInfo = {
-                      mainCategorySlug: 'uncategorized',
-                      subCategorySlug: 'uncategorized',
-                    };
+                if (productEan || productGtin || productUpc || productMpn) {
+                  existingProduct = await this.findProductByIdentifiers({
+                    ean: productEan,
+                    gtin: productGtin,
+                    upc: productUpc,
+                    mpn: productMpn,
+                  });
+                  
+                  if (existingProduct) {
+                    this.addLog('info', `Found existing product by identifier (EAN/GTIN): ${existingProduct.id}`);
                   }
+                }
+                
+                // PRIORITY 2: Fallback to identity hash (title + image)
+                if (!existingProduct) {
+                  identityHash = calculateIdentityHash(
+                    sourceProduct.title,
+                    sourceProduct.imageUrl
+                  );
+                  existingProduct = await this.findProductByIdentity(identityHash);
+                  
+                  if (existingProduct) {
+                    this.addLog('info', `Found existing product by identity hash: ${existingProduct.id}`);
+                  }
+                }
+
+                if (existingProduct) {
+                  // Existing product: Create new Deal
+                  this.addLog(
+                    'info',
+                    `Found existing product ${existingProduct.id}, creating new deal`
+                  );
+
+                  if (!existingProduct.id || typeof existingProduct.id !== 'string') {
+                    throw new Error('Existing product missing valid id');
+                  }
+
+                  const { dealData, dealRef } = await this.prepareDeal(existingProduct.id, sourceProduct, source);
+                  batch.set(dealRef, dealData);
+                  dealsCreated++;
+                  dealsToRefine.push(dealRef.id);
+
+                  // Add deal to moderation queue for admin review
+                  try {
+                    await addToModerationQueue(dealRef.id, 'deal', 'import', 'harvester', 'high');
+                    this.addLog('info', `Deal ${dealRef.id} added to moderation queue`);
+                  } catch (err) {
+                    this.addLog('warn', `Failed to add deal ${dealRef.id} to moderation queue`, err);
+                  }
+
+                  // Mark for best price recalculation (batch later)
+                  productsToRecalculate.add(existingProduct.id);
+                  dealsLinked++;
                 } else {
-                  // Other sources: parse from query path only when path-like
-                  if (currentQuery.includes('/')) {
-                    const categoryParts = currentQuery.split('/');
-                    categoryInfo = {
-                      mainCategorySlug: categoryParts[0] || 'uncategorized',
-                      subCategorySlug: categoryParts[1] || 'uncategorized',
-                      subSubCategorySlug: categoryParts[2],
-                    };
+                  // New product: Create ProductCore + Deal
+                  this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
+
+                  // Parse category hierarchy from query (e.g., 'electronics/phones/flagship')
+                  let categoryInfo: any;
+                  
+                  if (source === 'convertiser') {
+                    const cachedAssignment = (sourceProduct as any).__categoryAssignment;
+                    if (cachedAssignment) {
+                      categoryInfo = {
+                        mainCategorySlug: cachedAssignment.mainCategorySlug,
+                        subCategorySlug: cachedAssignment.subCategorySlug,
+                        subSubCategorySlug: cachedAssignment.subSubCategorySlug,
+                      };
+                      this.addLog('info', `✅ Using batch-assigned category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}`);
+                    } else {
+                      this.addLog('warn', 'Batch categorization result missing, using uncategorized');
+                      categoryInfo = {
+                        mainCategorySlug: 'uncategorized',
+                        subCategorySlug: 'uncategorized',
+                      };
+                    }
                   } else {
-                    // Free-text query: let category mapper decide
-                    categoryInfo = {
-                      mainCategorySlug: 'uncategorized',
-                      subCategorySlug: 'uncategorized',
+                    if (currentQuery.includes('/')) {
+                      const categoryParts = currentQuery.split('/');
+                      categoryInfo = {
+                        mainCategorySlug: categoryParts[0] || 'uncategorized',
+                        subCategorySlug: categoryParts[1] || 'uncategorized',
+                        subSubCategorySlug: categoryParts[2],
+                      };
+                    } else {
+                      categoryInfo = {
+                        mainCategorySlug: 'uncategorized',
+                        subCategorySlug: 'uncategorized',
+                      };
+                    }
+                  }
+
+                  const { productData, productRef } = await this.prepareProductCore(
+                    sourceProduct,
+                    identityHash,
+                    source,
+                    categoryInfo
+                  );
+                  batch.set(productRef, productData);
+                  const productId = productRef.id;
+                  productsCreated++;
+                  categoryProductsCreated++;
+                  productsToRefine.push(productId);
+
+                  // Create associated deal
+                  const { dealData, dealRef } = await this.prepareDeal(
+                    productId,
+                    sourceProduct,
+                    source
+                  );
+                  batch.set(dealRef, dealData);
+                  const dealId = dealRef.id;
+                  dealsCreated++;
+                  dealsToRefine.push(dealId);
+
+                  // Add deal to moderation queue for admin review
+                  try {
+                    await addToModerationQueue(dealId, 'deal', 'import', 'harvester', 'high');
+                    this.addLog('info', `Deal ${dealId} added to moderation queue`);
+                  } catch (err) {
+                    this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
+                  }
+
+                  // Mark for best price recalculation (batch later)
+                  productsToRecalculate.add(productId);
+
+                  // Record identity match for future lookups
+                  const { identityMatchData, identityMatchRef } = this.prepareIdentityMatch(
+                    identityHash,
+                    productId,
+                    source,
+                    sourceProduct.title,
+                    sourceProduct.imageUrl,
+                    sourceProduct.sourceProductId
+                  );
+                  batch.set(identityMatchRef, identityMatchData);
+                }
+
+                // Periodic update: Update job status co 5 produktów
+                processedCount++;
+                const now = Date.now();
+                if (processedCount % 20 === 0 || now - lastProgressUpdate >= progressUpdateIntervalMs) { // Throttled updates
+                  if (!(await this.isJobActive())) {
+                    this.addLog('warn', 'Job stopped externally (paused/cancelled)');
+                    // Don't commit the batch if job is stopped.
+                    return {
+                      id: this.jobId,
+                      status: 'paused',
+                      source,
+                      query: queries.join(', '),
+                      maxResults,
+                      productsFound,
+                      productsCreated,
+                      dealsCreated,
+                      dealsLinked,
+                      duplicatesSkipped,
+                      errors,
+                      currentCategory: currentQuery,
+                      totalCategories: queries.length,
+                      processedCategories: processedCategoriesLog,
+                      startedAt: jobStartTime,
+                      lastUpdatedAt: new Date().toISOString(),
+                      logs: this.logs,
                     };
                   }
-                }
 
-                const productId = await this.createProductCore(
-                  sourceProduct,
-                  identityHash,
-                  source,
-                  categoryInfo
-                );
-                productsCreated++;
-                categoryProductsCreated++;
-                productsToRefine.push(productId);
-
-                // Create associated deal
-                const dealId = await this.createDeal(
-                  productId,
-                  sourceProduct,
-                  source
-                );
-                dealsCreated++;
-                dealsToRefine.push(dealId);
-
-                // Add deal to moderation queue for admin review
-                try {
-                  await addToModerationQueue(dealId, 'deal', 'import', 'harvester', 'high');
-                  this.addLog('info', `Deal ${dealId} added to moderation queue`);
-                } catch (err) {
-                  this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
-                }
-
-                // Mark for best price recalculation (batch later)
-                productsToRecalculate.add(productId);
-
-                // Record identity match for future lookups
-                await this.recordIdentityMatch(
-                  identityHash,
-                  productId,
-                  source,
-                  sourceProduct.sourceProductId
-                );
-              }
-
-              // Periodic update: Update job status co 5 produktów
-              processedCount++;
-              if (processedCount % 5 === 0) {
-                // Check if we should stop
-                if (!(await this.isJobActive())) {
-                  this.addLog('warn', 'Job stopped externally (paused/cancelled)');
-                  return {
+                  await this.updateJobRecord({
                     id: this.jobId,
-                    status: 'paused',
+                    status: 'running',
                     source,
                     query: queries.join(', '),
                     maxResults,
                     productsFound,
                     productsCreated,
                     dealsCreated,
+                    dealsLinked,
                     duplicatesSkipped,
                     errors,
                     currentCategory: currentQuery,
@@ -780,88 +1520,158 @@ export class SmartHarvester {
                     startedAt: jobStartTime,
                     lastUpdatedAt: new Date().toISOString(),
                     logs: this.logs,
-                  };
+                  });
+                  lastProgressUpdate = now;
                 }
-
-                await this.updateJobRecord({
-                  id: this.jobId,
-                  status: 'running',
-                  source,
-                  query: queries.join(', '),
-                  maxResults,
-                  productsFound,
-                  productsCreated,
-                  dealsCreated,
-                  duplicatesSkipped,
-                  errors,
-                  currentCategory: currentQuery,
-                  totalCategories: queries.length,
-                  processedCategories: processedCategoriesLog,
-                  startedAt: jobStartTime,
-                  lastUpdatedAt: new Date().toISOString(),
-                  logs: this.logs,
+              } catch (err) {
+                this.addLog(
+                  'error',
+                  `Failed to process product: ${sourceProduct.title}`,
+                  err
+                );
+                errors.push({
+                  productId: sourceProduct.sourceProductId,
+                  message: (err as Error).message,
+                  timestamp: new Date().toISOString(),
                 });
               }
-            } catch (err) {
-              this.addLog(
-                'error',
-                `Failed to process product: ${sourceProduct.title}`,
-                err
-              );
-              errors.push({
-                productId: sourceProduct.sourceProductId,
-                message: (err as Error).message,
-                timestamp: new Date().toISOString(),
-              });
             }
-          }
-        } catch (queryErr) {
-          this.addLog(
-            'error',
-            `Failed to harvest from query "${currentQuery}"`,
-            queryErr
-          );
-          errors.push({
-            productId: `query_${currentQuery}`,
-            message: (queryErr as Error).message,
-            timestamp: new Date().toISOString(),
-          });
-        }
-        
-          // Batch update best prices for this category
-          if (productsToRecalculate.size > 0) {
-            this.addLog('info', `Aktualizuję bestPrice dla ${productsToRecalculate.size} produktów (batch po kategorii)`);
-            for (const productId of productsToRecalculate) {
-              await this.updateProductBestPrice(productId);
+
+            this.addLog('info', `Committing batch of ${chunk.length} products.`);
+            await batch.commit();
+            this.addLog('info', 'Batch committed successfully.');
+
+            // Batch update best prices for this chunk
+            if (productsToRecalculate.size > 0) {
+              this.addLog('info', `Updating bestPrice for ${productsToRecalculate.size} products in batch.`);
+              await this.batchUpdateProductBestPrices(Array.from(productsToRecalculate));
+            }
+
+            if (dealsToRefine.length >= dealRefinerBatchSize || Date.now() - lastDealRefinerAt >= dealRefinerMinIntervalMs) {
+              const batchIds = dealsToRefine.splice(0, dealRefinerBatchSize);
+              if (batchIds.length > 0) {
+                lastDealRefinerAt = Date.now();
+                this.addLog('info', `Uruchamiam Deal Refiner dla ${batchIds.length} ofert (batch/auto)`);
+                startDealRefinerJob(batchIds)
+                  .then((result) => {
+                    this.addLog('info', `Deal Refiner zakończony (batch/auto): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+                  })
+                  .catch((err) => {
+                    this.addLog('error', 'Deal Refiner nie powiódł się (batch/auto)', err);
+                  });
+              }
             }
           }
 
-          // Log finished category
-        processedCategoriesLog.push({
-          category: currentQuery,
-          count: categoryProductsCreated,
-          status: 'ok' // If we caught an error above, we could set 'error', but generally we continued
-        });
-        
-        // Force update after category finish
-          await this.updateJobRecord({
-           id: this.jobId,
-           status: 'running',
-           source,
-           query: queries.join(', '),
-           maxResults,
-           productsFound,
-           productsCreated,
-           dealsCreated,
-           duplicatesSkipped,
-           errors,
-           currentCategory: currentQuery,
-           totalCategories: queries.length,
-           processedCategories: processedCategoriesLog,
-           startedAt: jobStartTime,
-           lastUpdatedAt: new Date().toISOString(),
-           logs: this.logs,
-        });
+            }, categoryTimeoutMs, currentQuery);
+
+            // Log finished category
+            processedCategoriesLog.push({
+              category: currentQuery,
+              count: categoryProductsCreated,
+              status: 'ok',
+            });
+            processedCategorySet.add(currentQuery);
+            const durationSec = Math.round((Date.now() - categoryStartTime) / 1000);
+            this.addLog('info', `Category completed: ${currentQuery} (${categoryProductsCreated} products) in ${durationSec}s`);
+
+            // Force update after category finish
+            await this.updateJobRecord({
+              id: this.jobId,
+              status: 'running',
+              source,
+              query: queries.join(', '),
+              maxResults,
+              productsFound,
+              productsCreated,
+              dealsCreated,
+              dealsLinked,
+              duplicatesSkipped,
+              errors,
+              currentCategory: currentQuery,
+              totalCategories: queries.length,
+              processedCategories: processedCategoriesLog,
+              startedAt: jobStartTime,
+              lastUpdatedAt: new Date().toISOString(),
+              logs: this.logs,
+            });
+
+            categoryCompleted = true;
+          } catch (err) {
+            this.addLog('warn', `Category attempt failed: ${currentQuery} (${attempt}/${maxCategoryAttempts})`, err);
+
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            if (errorMessage.includes('InvalidApiPath')) {
+              this.addLog('warn', `Pomijam kategorię z InvalidApiPath: ${currentQuery}`);
+              processedCategoriesLog.push({
+                category: currentQuery,
+                count: categoryProductsCreated,
+                status: 'skipped',
+              });
+              processedCategorySet.add(currentQuery);
+              await this.updateJobRecord({
+                id: this.jobId,
+                status: 'running',
+                source,
+                query: queries.join(', '),
+                maxResults,
+                productsFound,
+                productsCreated,
+                dealsCreated,
+                dealsLinked,
+                duplicatesSkipped,
+                errors,
+                currentCategory: currentQuery,
+                totalCategories: queries.length,
+                processedCategories: processedCategoriesLog,
+                startedAt: jobStartTime,
+                lastUpdatedAt: new Date().toISOString(),
+                logs: this.logs,
+              });
+              categoryCompleted = true;
+              continue;
+            }
+
+            if (attempt < maxCategoryAttempts) {
+              this.addLog('info', `Retrying category: ${currentQuery}`);
+              continue;
+            }
+
+            this.addLog('error', `Category processing failed: ${currentQuery}`, err);
+            errors.push({
+              productId: currentQuery,
+              message: (err as Error).message,
+              timestamp: new Date().toISOString(),
+            });
+            processedCategoriesLog.push({
+              category: currentQuery,
+              count: categoryProductsCreated,
+              status: 'error',
+            });
+            processedCategorySet.add(currentQuery);
+            await this.updateJobRecord({
+              id: this.jobId,
+              status: 'running',
+              source,
+              query: queries.join(', '),
+              maxResults,
+              productsFound,
+              productsCreated,
+              dealsCreated,
+              dealsLinked,
+              duplicatesSkipped,
+              errors,
+              currentCategory: currentQuery,
+              totalCategories: queries.length,
+              processedCategories: processedCategoriesLog,
+              startedAt: jobStartTime,
+              lastUpdatedAt: new Date().toISOString(),
+              logs: this.logs,
+            });
+
+            categoryCompleted = true;
+          }
+        }
       }
 
       // Step 3: Update job record
@@ -875,6 +1685,7 @@ export class SmartHarvester {
         productsFound,
         productsCreated,
         dealsCreated,
+        dealsLinked,
         duplicatesSkipped,
         errors,
         currentCategory: queries[queries.length - 1] || '',
@@ -890,7 +1701,7 @@ export class SmartHarvester {
 
       this.addLog(
         'info',
-        `Harvest completed: Created ${productsCreated} products, ${dealsCreated} deals, Skipped ${duplicatesSkipped} duplicates`
+        `Harvest completed: Created ${productsCreated} products, ${dealsCreated} deals (${dealsLinked} linked to existing products)`
       );
 
       // Trigger asynchronous Deal Refiner for freshly created deals
@@ -932,6 +1743,7 @@ export class SmartHarvester {
         productsFound,
         productsCreated,
         dealsCreated,
+        dealsLinked,
         duplicatesSkipped,
         errors,
         startedAt: jobStartTime,
@@ -1185,29 +1997,88 @@ export class SmartHarvester {
 
         const hasCoupons = Boolean(couponCode || parseAmount(p.coupon_amount || p.coupon_discount || p.coupon_value));
 
+        const scrapeTarget = p.product_detail_url || p.product_url || p.promotion_link || '';
+        const shouldScrape = (!p.product_description || !p.product_props) && Boolean(scrapeTarget);
+        const scraped = shouldScrape ? await this.scrapeAliExpressPage(scrapeTarget) : {};
+
+        // Phase 1A: Extract specs from title + product properties + SKU
+        const specsFromTitle = extractDimensionsFromTitle(p.title || p.product_title || '');
+        const specsFromProps = this.extractPropsFromProductProps(p.product_props);
+        const skuPriceRange = this.extractSkuPriceRange(p.sku_list);
+        
+        // Consolidate specs - add fallback to variants/sku_list if no props
+        const specs: Record<string, string> = {
+          ...specsFromTitle,
+          ...specsFromProps,
+        };
+
+        if (scraped?.specs) {
+          Object.entries(scraped.specs).forEach(([key, value]) => {
+            if (!specs[key]) {
+              specs[key] = value;
+            }
+          });
+        }
+        
+        // Fallback: extract specs from variant sizes if available
+        if (Object.keys(specs).length === 0 && Array.isArray(p.sku_list) && p.sku_list.length > 0) {
+          const firstSku = p.sku_list[0];
+          if (firstSku?.sku_code) {
+            specs['Wariant'] = firstSku.sku_code;
+          }
+          if (firstSku?.sku_name) {
+            specs['Typ'] = firstSku.sku_name;
+          }
+        }
+        
+        // Add price range if multiple variants exist
+        if (skuPriceRange && skuPriceRange.minPrice < skuPriceRange.maxPrice) {
+          specs.priceRange = `${Math.floor(skuPriceRange.minPrice)}-${Math.floor(skuPriceRange.maxPrice)} PLN`;
+        }
+
+        // Phase 1D: Consolidate image gallery from multiple sources
+        const consolidated = this.consolidateImageGallery(p);
+        const scrapedImages = Array.isArray(scraped?.images) ? scraped.images : [];
+        const scrapedMainImage = scraped?.mainImage || '';
+        const images = consolidated.images.length > 0 ? consolidated.images : scrapedImages;
+        const mainImage = consolidated.mainImage || scrapedMainImage || images[0] || '';
+        
+        // Fallback image sources if consolidation returns empty
+        const fallbackImageUrl = mainImage
+          || (Array.isArray(images) && images.length > 0 ? images[0] : '');
+
+        // Phase 1E: Get minimum available quantity across variants
+        const minAvailableQty = this.getMinimumAvailableQuantity(p.sku_list || []);
+
+        const finalImages = Array.isArray(images) && images.length > 0
+          ? images
+          : (fallbackImageUrl ? [fallbackImageUrl] : []);
+
         return {
           title: p.title || p.product_title || '',
-          description: p.product_description || '', // RAW HTML from Deep Fetch
-          imageUrl: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls[0] : (p.product_main_image_url || ''),
+          description: p.product_description || scraped?.description || '', // RAW HTML from Deep Fetch or scrape fallback
+          imageUrl: fallbackImageUrl,
+          images: finalImages,
           price: priceResult.amount,
           originalPrice,
           currency: priceResult.currency,
           shippingCost: shippingResult.amount,
           shippingDays: p.ship_to_days || 7, // Default estimate
           sourceProductId: String(p.item_id || p.product_id || ''),
-          sourceUrl: p.product_url || p.promotion_link || '',
+          sourceUrl: p.product_url || p.product_detail_url || p.promotion_link || '',
           videoUrl: p.product_video_url || p.video_url || undefined,
           merchantName: p.store_info?.store_name || 'AliExpress',
           merchantRating: p.store_info?.score || 4.0,
-          specs: extractDimensionsFromTitle(p.title || p.product_title || ''), // TODO: Parse p.product_props if available
+          specs,
           discountPercent,
           couponCode,
           freeShipping: p.shipping?.free === true || shippingResult.amount === 0,
           minOrderValue: typeof minOrderValue === 'number' && minOrderValue > 0 ? minOrderValue : undefined,
-          offerMeta: hasCoupons ? {
+          offerMeta: hasCoupons || minAvailableQty ? {
             promotionType: 'offer',
             previewUrl: p.promotion_link || p.product_url || undefined,
-            hasCoupons: true,
+            hasCoupons: hasCoupons,
+            minimumAvailableQuantity: minAvailableQty,
           } : undefined,
           rating: (() => {
             // Robust rating parser handling 0-5 and 0-100 scales
@@ -1221,7 +2092,6 @@ export class SmartHarvester {
             return 0;
           })(),
           ratingCount: p.rating?.count || p.volume || 0,
-          images: Array.isArray(p.image_urls) ? p.image_urls : (p.all_images || []), // Full gallery
           variants: Array.isArray(p.variants) ? p.variants : (p.sku_list || undefined), // Product variants (colors, sizes)
           // Product identifiers (for robust deduplication & SEO)
           sku: p.sku || undefined,
@@ -1347,7 +2217,7 @@ export class SmartHarvester {
                 reasonCode: 'missing_image',
                 item: {
                   title,
-                  sourceProductId: String(product.id || product.uuid || product.product_id || product.offer_id || product.sku || ''),
+                  sourceProductId: String(product.id || product.sku || ''),
                   sourceUrl: product.direct_link || product.link || product.url || '',
                   merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
                 },
@@ -1357,7 +2227,7 @@ export class SmartHarvester {
             }
 
             // Parse price and currency from "PLN 199.99" or "USD 199.99" format
-            const parsePriceWithCurrency = (priceStr: string): { amount: number, currency: string } => {
+            const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
               if (!priceStr) return { amount: 0, currency: 'PLN' };
               const str = String(priceStr);
               // Try to extract currency code (3 letters at start)
@@ -1365,40 +2235,68 @@ export class SmartHarvester {
               if (currencyMatch) {
                 return {
                   currency: currencyMatch[1],
-                  amount: parseFloat(currencyMatch[2].replace(',', '.'))
+                  amount: parseFloat(currencyMatch[2].replace(',', '.')),
                 };
               }
-              // Fallback: just extract number, assume PLN
-              const match = str.match(/[\d.,]+/);
+
+              const amountMatch = str.match(/([\d.,]+)/);
+              const fallbackAmount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
+              const fallbackCurrency = String(product.currency || 'PLN').toUpperCase();
               return {
-                amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
-                currency: 'PLN'
+                currency: fallbackCurrency,
+                amount: fallbackAmount,
               };
             };
 
-            const salePriceParsed = parsePriceWithCurrency(product.sale_price || product.price);
-            const regularPriceParsed = parsePriceWithCurrency(product.price);
-            
-            // Convert to PLN if needed (async)
-            const price = salePriceParsed.currency !== 'PLN' 
-              ? await convertToPLN(salePriceParsed.amount, salePriceParsed.currency)
-              : salePriceParsed.amount;
-            
-            const originalPrice = regularPriceParsed.amount > salePriceParsed.amount 
-              ? (regularPriceParsed.currency !== 'PLN' 
-                  ? await convertToPLN(regularPriceParsed.amount, regularPriceParsed.currency)
-                  : regularPriceParsed.amount)
+            const priceRaw =
+              product.sale_price ||
+              product.price ||
+              product.current_price ||
+              product.offer_price ||
+              product.price_value ||
+              product.price_amount ||
+              '';
+
+            const originalPriceRaw =
+              product.original_price ||
+              product.regular_price ||
+              product.old_price ||
+              product.list_price ||
+              '';
+
+            const shippingRaw =
+              product.shipping_cost ||
+              product.shipping_price ||
+              product.shipping ||
+              '';
+
+            const parsedPrice = parsePriceWithCurrency(priceRaw);
+            const parsedOriginal = parsePriceWithCurrency(originalPriceRaw);
+            const parsedShipping = parsePriceWithCurrency(shippingRaw);
+
+            const pricePLN = await convertToPLN(parsedPrice.amount, parsedPrice.currency);
+            const originalPricePLN = parsedOriginal.amount > 0
+              ? await convertToPLN(parsedOriginal.amount, parsedOriginal.currency)
               : 0;
+            const shippingPLN = parsedShipping.amount > 0
+              ? await convertToPLN(parsedShipping.amount, parsedShipping.currency)
+              : 0;
+
+            const description = product.description || product.short_description || '';
+            const specs = product.specs || product.attributes || product.parameters || undefined;
+
+            const ratingRaw = product.rating || product.rating_score || product.evaluate_rate || 0;
+            const ratingCountRaw = product.rating_count || product.evaluate_count || product.review_count || 0;
 
             return {
               title,
-              description: product.description || product.desc || product.short_description || '',
+              description,
               imageUrl,
-              price,
-              originalPrice: originalPrice > price ? originalPrice : undefined,
-              currency: 'PLN', // Always PLN after conversion
-              shippingCost: product.shipping_cost ? parseFloat(product.shipping_cost) : 0,
-              shippingDays: product.shipping_days || 7,
+              price: pricePLN,
+              originalPrice: originalPricePLN > pricePLN ? originalPricePLN : undefined,
+              currency: 'PLN',
+              shippingCost: shippingPLN,
+              shippingDays: Number(product.shipping_days || product.delivery_days || 0),
               sourceProductId: String(
                 product.id ||
                 product.uuid ||
@@ -1407,62 +2305,41 @@ export class SmartHarvester {
                 product.sku ||
                 ''
               ),
-              sourceUrl:
-                product.tracking_link ||
-                product.tracking_url ||
-                product.affiliate_url ||
-                product.aff_link ||
-                product.direct_link ||
-                product.link ||
-                product.url ||
-                '',
-              merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
-              merchantRating: product.merchant_rating ? parseFloat(product.merchant_rating) : 0,
-              specs: extractDimensionsFromTitle(title),
-              rating: product.rating ? parseFloat(product.rating) : 0,
-              ratingCount: product.review_count || product.reviews || 0,
-              images: [imageUrl], // Use main image
+              sourceUrl: product.direct_link || product.link || product.url || '',
+              merchantName: product.offer || product.merchant || product.store_name || product.brand || 'Convertiser',
+              merchantRating: Number(product.merchant_rating || 0),
+              specs,
+              rating: Number(ratingRaw) || 0,
+              ratingCount: Number(ratingCountRaw) || 0,
+              images: Array.isArray(product.images)
+                ? product.images
+                : (product.image_urls || [imageUrl]),
+              variants: Array.isArray(product.variants) ? product.variants : (product.sku_list || undefined),
               sku: product.sku || undefined,
-              ean: product.ean || product.barcode || product.gtin || undefined,
+              ean: product.ean || product.barcode || undefined,
               gtin: product.gtin || undefined,
               upc: product.upc || undefined,
-              mpn: product.mpn || undefined,
-            };
-          } catch (e) {
-            this.addLog('warn', `Failed to map Convertiser product: ${e instanceof Error ? e.message : 'Unknown error'}`);
+              mpn: product.mpn || product.manufacturer_part_number || undefined,
+            } as RawProduct;
+          } catch (error) {
+            this.addLog('warn', `Convertiser product parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
             return null;
           }
         })
       );
-      
-      // Filter out null results
-      return rawProducts.filter((p: any): p is RawProduct => p !== null);
+
+      return (rawProducts.filter(Boolean) as RawProduct[]).slice(0, maxResults);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      
-      // Log different error types with context
-      if (errorMsg.includes('token') || errorMsg.includes('Token') || errorMsg.includes('CONVERTISER_API_TOKEN')) {
-        this.addLog('error', `Convertiser API authentication error: ${errorMsg} - Check CONVERTISER_API_TOKEN environment variable`);
-      } else if (errorMsg.includes('404') || errorMsg.includes('not found')) {
-        this.addLog('error', `Convertiser API endpoint not found (404): ${errorMsg} - API endpoint may have changed`);
-      } else if (errorMsg.includes('timeout') || errorMsg.includes('ECONNRESET')) {
-        this.addLog('error', `Convertiser API connection error: ${errorMsg} - API server may be unreachable`);
-      } else {
-        this.addLog('error', `Convertiser API error: ${errorMsg}`);
-      }
-      
+      this.addLog('error', `Convertiser API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
     }
   }
 
   /**
-   * Fetch offers from Convertiser
-   * Convertiser Offers API provides direct merchant offers with tracking links
-   * Use this mode for direct affiliate monetization
+   * Fetch offers from Convertiser (affiliate offers)
    */
   private async fetchFromConvertiserOffers(searchQuery: string, maxResults: number) {
     try {
-      // Check if token is available before importing client
       if (!process.env.CONVERTISER_API_TOKEN) {
         this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
         return [];
@@ -1471,1056 +2348,162 @@ export class SmartHarvester {
       const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
       const client = getConvertiserClient();
 
-      this.addLog('info', `Fetching offers from Convertiser: "${searchQuery || 'all'}"`);
+      this.addLog('info', `Fetching Convertiser offers: "${searchQuery}"`);
 
-      let offers: any[] = [];
-      if (searchQuery && searchQuery.trim()) {
-        const response = await client.findOffers({
+      let response: any;
+      try {
+        response = await client.findOffers({
+          query: searchQuery,
           q: searchQuery,
           country: 'PL',
-          status: 'active',
-          page: 1,
-          page_size: Math.min(maxResults, 50),
         });
-
-        const minimal = response.results || [];
-        offers = await Promise.all(
-          minimal.map(async (offer: any) => {
-            try {
-              return await client.getOfferDetail(offer.id || offer.uuid || offer.offer_id);
-            } catch {
-              return offer;
-            }
-          })
+      } catch (err) {
+        this.addLog('warn', `Convertiser offers find failed: ${err instanceof Error ? err.message : 'Unknown'} - falling back to listOffers`);
+        response = await client.listOffers(
+          { page: 1, page_size: Math.min(maxResults, 50) },
+          { country: 'PL' }
         );
-      } else {
-        const response = await client.listOffers(
-          {
-            page: 1,
-            page_size: Math.min(maxResults, 50),
-          },
-          {
-            status: 'active',
-            country: 'PL',
-          }
-        );
-        offers = response.results || [];
       }
 
+      const offers = (response as any).results || (response as any).data || [];
       if (!offers || offers.length === 0) {
-        this.addLog('warn', `Convertiser Offers: No offers found for "${searchQuery}"`);
+        this.addLog('warn', `Convertiser: No offers found for "${searchQuery}"`);
         return [];
       }
 
-      this.addLog('info', `Found ${offers.length} offers from Convertiser`);
-
-      const rawProducts = offers
+      const mapped = offers
         .map((offer: any) => this.mapConvertiserOfferToRawProduct(offer))
-        .filter((p: any): p is RawProduct => p !== null);
+        .filter(Boolean) as RawProduct[];
 
-      return rawProducts;
+      return mapped.slice(0, maxResults);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      
-      if (errorMsg.includes('token') || errorMsg.includes('Token')) {
-        this.addLog('error', `Convertiser API authentication error: ${errorMsg} - Check CONVERTISER_API_TOKEN`);
-      } else if (errorMsg.includes('404')) {
-        this.addLog('error', `Convertiser API endpoint not found: ${errorMsg}`);
-      } else if (errorMsg.includes('timeout') || errorMsg.includes('ECONNRESET')) {
-        this.addLog('error', `Convertiser API connection error: ${errorMsg}`);
-      } else {
-        this.addLog('error', `Convertiser Offers API error: ${errorMsg}`);
-      }
-      
+      this.addLog('error', `Convertiser offers API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
     }
   }
 
   /**
-   * AUTO-BROWSE: Pobierz cały katalog Convertiser bez keywords.
-   * products -> products v2, offers -> listOffers, z paginacją.
+   * Fetch Convertiser catalog without keyword filtering
    */
-  private async fetchFromConvertiserAutoBrowse(
-    maxResults: number = 10000,
-    mode: 'products' | 'offers' = 'offers'
-  ): Promise<RawProduct[]> {
+  private async fetchFromConvertiserAutoBrowse(maxResults: number, mode: 'products' | 'offers') {
+    if (mode === 'offers') {
+      return this.fetchFromConvertiserOffers('', maxResults);
+    }
+
     try {
       if (!process.env.CONVERTISER_API_TOKEN) {
-        this.addLog('error', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
-        throw new Error('CONVERTISER_API_TOKEN missing');
+        this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
+        return [];
       }
 
       const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
       const client = getConvertiserClient();
 
-      const effectiveMode: 'products' | 'offers' = mode;
-      this.addLog('info', `AUTO-BROWSE: Fetching ALL ${effectiveMode} (target: ${maxResults})`);
+      this.addLog('info', 'Auto-browse Convertiser catalog (products)');
 
-      let allProducts: RawProduct[] = [];
-      let currentPage = 1;
-      const pageSize = 100;
-      let hasMore = true;
-
-      while (hasMore && allProducts.length < maxResults) {
-        try {
-          if (effectiveMode === 'offers') {
-            const response: any = await client.listOffers(
-              {
-                page: currentPage,
-                page_size: Math.min(pageSize, maxResults - allProducts.length),
-              },
-              {
-                status: 'active',
-                country: 'PL',
-              }
-            );
-
-            const offers = response.results || [];
-            if (offers.length === 0) {
-              hasMore = false;
-              break;
-            }
-
-            const rawProducts = offers
-              .map((offer: any) => this.mapConvertiserOfferToRawProduct(offer))
-              .filter((p: any): p is RawProduct => p !== null);
-
-            allProducts = allProducts.concat(rawProducts);
-
-            await this.updateJobProgress({
-              productsFound: allProducts.length,
-              currentCategory: `AUTO-BROWSE (offers) • strona ${currentPage}`,
-            });
-
-            if (!response.next || offers.length < pageSize) {
-              hasMore = false;
-            } else {
-              currentPage++;
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
-          } else {
-            const response: any = await client.searchProductsV2(
-              {
-                country: 'PL',
-              },
-              {
-                page: currentPage,
-                page_size: Math.min(pageSize, maxResults - allProducts.length),
-              }
-            );
-
-            const products = response.data || response.results || [];
-            if (products.length === 0) {
-              hasMore = false;
-              break;
-            }
-
-            const rawProducts = await Promise.all(
-              products.map(async (product: any) => {
-                try {
-                  const title = product.title || product.name || '';
-                  if (!title) {
-                    await this.recordDiscardedItem({
-                      source: 'convertiser',
-                      type: 'product',
-                      reason: 'Brak tytułu produktu w danych źródłowych.',
-                      reasonCode: 'missing_title',
-                      item: {
-                        title: '',
-                        sourceProductId: String(product.id || product.sku || ''),
-                        sourceUrl: product.direct_link || product.link || product.url || '',
-                        merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
-                      },
-                      query: '__AUTO_BROWSE__',
-                    });
-                    return null;
-                  }
-
-                  const imageUrl = product.images?.default || product.image_link || product.image_url || '';
-                  if (!imageUrl || imageUrl.trim() === '') {
-                    await this.recordDiscardedItem({
-                      source: 'convertiser',
-                      type: 'product',
-                      reason: 'Brak zdjęcia produktu w danych źródłowych.',
-                      reasonCode: 'missing_image',
-                      item: {
-                        title,
-                        sourceProductId: String(product.id || product.sku || ''),
-                        sourceUrl: product.direct_link || product.link || product.url || '',
-                        merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
-                      },
-                      query: '__AUTO_BROWSE__',
-                    });
-                    return null;
-                  }
-
-                  const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
-                    if (!priceStr) return { amount: 0, currency: 'PLN' };
-                    const str = String(priceStr);
-                    const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
-                    if (currencyMatch) {
-                      return {
-                        amount: parseFloat(currencyMatch[2].replace(',', '.')),
-                        currency: currencyMatch[1],
-                      };
-                    }
-                    const match = str.match(/[\d.,]+/);
-                    return {
-                      amount: match ? parseFloat(match[0].replace(',', '.')) : 0,
-                      currency: 'PLN',
-                    };
-                  };
-
-                  const salePriceParsed = parsePriceWithCurrency(product.sale_price || product.price);
-                  const regularPriceParsed = parsePriceWithCurrency(product.price);
-
-                  const price = salePriceParsed.currency !== 'PLN'
-                    ? await convertToPLN(salePriceParsed.amount, salePriceParsed.currency as any)
-                    : salePriceParsed.amount;
-
-                  const originalPrice = regularPriceParsed.amount > salePriceParsed.amount
-                    ? (regularPriceParsed.currency !== 'PLN'
-                        ? await convertToPLN(regularPriceParsed.amount, regularPriceParsed.currency as any)
-                        : regularPriceParsed.amount)
-                    : 0;
-
-                  return {
-                    title,
-                    description: product.description || product.desc || product.short_description || '',
-                    imageUrl,
-                    price,
-                    originalPrice: originalPrice > price ? originalPrice : undefined,
-                    currency: 'PLN',
-                    shippingCost: product.shipping_cost ? parseFloat(product.shipping_cost) : 0,
-                    shippingDays: product.shipping_days || 7,
-                    sourceProductId: String(product.id || product.sku || ''),
-                    sourceUrl: product.direct_link || product.link || product.url || '',
-                    merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
-                    merchantRating: product.merchant_rating ? parseFloat(product.merchant_rating) : 0,
-                    specs: extractDimensionsFromTitle(title),
-                    rating: product.rating ? parseFloat(product.rating) : 0,
-                    ratingCount: product.review_count || product.reviews || 0,
-                    images: [imageUrl],
-                    sku: product.sku || undefined,
-                    ean: product.ean || product.barcode || product.gtin || undefined,
-                    gtin: product.gtin || undefined,
-                    upc: product.upc || undefined,
-                    mpn: product.mpn || undefined,
-                  } as RawProduct;
-                } catch {
-                  return null;
-                }
-              })
-            );
-
-            allProducts = allProducts.concat(rawProducts.filter((p: any): p is RawProduct => p !== null));
-
-            await this.updateJobProgress({
-              productsFound: allProducts.length,
-              currentCategory: `AUTO-BROWSE (products) • strona ${currentPage}`,
-            });
-
-            const nextPage = response.pagination?.next_page;
-            if (!nextPage || products.length < pageSize) {
-              hasMore = false;
-            } else {
-              currentPage = nextPage;
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
-          }
-        } catch (pageError) {
-          this.addLog('error', `Auto-browse page ${currentPage} failed`, pageError);
-          hasMore = false;
-        }
+      let response: any;
+      try {
+        response = await client.searchProductsV2(
+          { country: 'PL' },
+          { page: 1, page_size: Math.min(maxResults, 50) }
+        );
+      } catch (v2Error) {
+        this.addLog('warn', `Convertiser v2 auto-browse failed: ${v2Error instanceof Error ? v2Error.message : 'Unknown'} - Trying v1`);
+        response = await client.searchProducts(
+          { country: 'PL' },
+          { page: 1, page_size: Math.min(maxResults, 50) }
+        );
       }
 
-      this.addLog('info', `AUTO-BROWSE COMPLETE: ${allProducts.length} items`);
-      return allProducts;
+      const products = (response as any).data || response.results || [];
+      if (!products || products.length === 0) {
+        this.addLog('warn', 'Convertiser auto-browse: no products found');
+        return [];
+      }
+
+      const rawProducts = await Promise.all(
+        products.map(async (product: any) => {
+          try {
+            const title = product.title || product.name || '';
+            if (!title) return null;
+            const imageUrl = product.images?.default || product.image_link || product.image_url || '';
+            if (!imageUrl || imageUrl.trim() === '') return null;
+
+            const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
+              if (!priceStr) return { amount: 0, currency: 'PLN' };
+              const str = String(priceStr);
+              const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
+              if (currencyMatch) {
+                return {
+                  currency: currencyMatch[1],
+                  amount: parseFloat(currencyMatch[2].replace(',', '.')),
+                };
+              }
+              const amountMatch = str.match(/([\d.,]+)/);
+              const fallbackAmount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
+              const fallbackCurrency = String(product.currency || 'PLN').toUpperCase();
+              return {
+                currency: fallbackCurrency,
+                amount: fallbackAmount,
+              };
+            };
+
+            const priceRaw = product.sale_price || product.price || product.current_price || '';
+            const parsedPrice = parsePriceWithCurrency(priceRaw);
+            const pricePLN = await convertToPLN(parsedPrice.amount, parsedPrice.currency);
+
+            return {
+              title,
+              description: product.description || product.short_description || '',
+              imageUrl,
+              price: pricePLN,
+              currency: 'PLN',
+              shippingCost: 0,
+              shippingDays: Number(product.shipping_days || product.delivery_days || 0),
+              sourceProductId: String(product.id || product.uuid || product.product_id || product.sku || ''),
+              sourceUrl: product.direct_link || product.link || product.url || '',
+              merchantName: product.offer || product.merchant || product.store_name || product.brand || 'Convertiser',
+              merchantRating: Number(product.merchant_rating || 0),
+              specs: product.specs || product.attributes || product.parameters || undefined,
+              rating: Number(product.rating || product.rating_score || 0),
+              ratingCount: Number(product.rating_count || product.evaluate_count || 0),
+              images: Array.isArray(product.images) ? product.images : (product.image_urls || [imageUrl]),
+              variants: Array.isArray(product.variants) ? product.variants : (product.sku_list || undefined),
+              sku: product.sku || undefined,
+              ean: product.ean || product.barcode || undefined,
+              gtin: product.gtin || undefined,
+              upc: product.upc || undefined,
+              mpn: product.mpn || product.manufacturer_part_number || undefined,
+            } as RawProduct;
+          } catch (error) {
+            this.addLog('warn', `Convertiser auto-browse parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            return null;
+          }
+        })
+      );
+
+      return (rawProducts.filter(Boolean) as RawProduct[]).slice(0, maxResults);
     } catch (error) {
-      this.addLog('error', 'Convertiser auto-browse error', error);
+      this.addLog('error', `Convertiser auto-browse API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
     }
-  }
-
-  /**
-   * Extract specs from product title using pattern matching
-   */
-  private extractSpecsFromTitle(title: string): Record<string, string> {
-    const { extractDimensionsFromTitle } = require('@/lib/automation/identity-matcher');
-    return extractDimensionsFromTitle(title);
-  }
-
-  /**
-   * Find product by identity hash
-   */
-  private async findProductByIdentity(
-    identityHash: string
-  ): Promise<ProductCore | null> {
-    try {
-      const snapshot = await adminDb
-        .collection('product_cores')
-        .where('identityHash', '==', identityHash)
-        .limit(1)
-        .get();
-
-      if (snapshot.empty) return null;
-      return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as ProductCore;
-    } catch (err) {
-      this.addLog('error', 'Error finding product by identity', err);
-      return null;
-    }
-  }
-
-  /**
-   * Find product by standard identifiers (EAN/GTIN/UPC/MPN)
-   * PRIORITY MATCHING: Checks identifiers in order: EAN -> GTIN -> UPC -> MPN
-   * Returns first match found
-   */
-  private async findProductByIdentifiers(
-    identifiers: { ean?: string; gtin?: string; upc?: string; mpn?: string }
-  ): Promise<ProductCore | null> {
-    try {
-      const { normalizeProductIdentifier } = await import('./identity-matcher');
-      
-      // Check EAN (most common in Europe)
-      if (identifiers.ean) {
-        const normalizedEan = normalizeProductIdentifier(identifiers.ean);
-        const snapshot = await adminDb
-          .collection('product_cores')
-          .where('metadata.ean', '==', normalizedEan)
-          .limit(1)
-          .get();
-        if (!snapshot.empty) {
-          this.addLog('info', `Found product by EAN: ${normalizedEan}`);
-          return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as ProductCore;
-        }
-      }
-      
-      // Check GTIN (global standard)
-      if (identifiers.gtin) {
-        const normalizedGtin = normalizeProductIdentifier(identifiers.gtin);
-        const snapshot = await adminDb
-          .collection('product_cores')
-          .where('metadata.gtin', '==', normalizedGtin)
-          .limit(1)
-          .get();
-        if (!snapshot.empty) {
-          this.addLog('info', `Found product by GTIN: ${normalizedGtin}`);
-          return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as ProductCore;
-        }
-      }
-      
-      // Check UPC (North America)
-      if (identifiers.upc) {
-        const normalizedUpc = normalizeProductIdentifier(identifiers.upc);
-        const snapshot = await adminDb
-          .collection('product_cores')
-          .where('metadata.upc', '==', normalizedUpc)
-          .limit(1)
-          .get();
-        if (!snapshot.empty) {
-          this.addLog('info', `Found product by UPC: ${normalizedUpc}`);
-          return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as ProductCore;
-        }
-      }
-      
-      // Check MPN (Manufacturer Part Number)
-      if (identifiers.mpn) {
-        const normalizedMpn = normalizeProductIdentifier(identifiers.mpn);
-        const snapshot = await adminDb
-          .collection('product_cores')
-          .where('metadata.mpn', '==', normalizedMpn)
-          .limit(1)
-          .get();
-        if (!snapshot.empty) {
-          this.addLog('info', `Found product by MPN: ${normalizedMpn}`);
-          return { ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as ProductCore;
-        }
-      }
-      
-      return null;
-    } catch (err) {
-      this.addLog('error', 'Error finding product by identifiers', err);
-      return null;
-    }
-  }
-
-  /**
-   * Create a new ProductCore document with Deep Data enrichment
-   */
-  private async createProductCore(
-    sourceProduct: any,
-    identityHash: string,
-    source: string,
-    categoryInfo?: { mainCategorySlug: string; subCategorySlug: string; subSubCategorySlug?: string }
-  ): Promise<string> {
-    const now = new Date().toISOString();
-
-    // Normalize identifiers for consistent matching
-    const normalizedIdentifiers = {
-      sku: sourceProduct.sku ? normalizeProductIdentifier(sourceProduct.sku) : undefined,
-      ean: sourceProduct.ean ? normalizeProductIdentifier(sourceProduct.ean) : undefined,
-      gtin: sourceProduct.gtin ? normalizeProductIdentifier(sourceProduct.gtin) : undefined,
-      upc: sourceProduct.upc ? normalizeProductIdentifier(sourceProduct.upc) : undefined,
-      mpn: sourceProduct.mpn ? normalizeProductIdentifier(sourceProduct.mpn) : undefined,
-    };
-
-    // Extract specs from title/description (fallback if not provided by source)
-    const extractedSpecsFromTitle = extractDimensionsFromTitle(sourceProduct.title);
-    const extractedSpecsFromDesc = sourceProduct.description
-      ? extractDimensionsFromTitle(sourceProduct.description)
-      : {};
-    const extractedSpecs = { ...extractedSpecsFromTitle, ...extractedSpecsFromDesc };
-    const specs = (sourceProduct.specs && Object.keys(sourceProduct.specs).length > 0)
-      ? sourceProduct.specs
-      : extractedSpecs;
-    if (!specs || Object.keys(specs).length === 0) {
-      specs.info = 'Brak danych specyfikacji';
-    }
-
-    // Add variants to specs if available (temporary solution until schema supports variants)
-    if (sourceProduct.variants && Array.isArray(sourceProduct.variants) && sourceProduct.variants.length > 0) {
-      sourceProduct.variants.forEach((variant: any, idx: number) => {
-        const variantKey = `variant_${idx}_${variant.name?.toLowerCase() || 'option'}`;
-        specs[variantKey] = Array.isArray(variant.values) ? variant.values.join(', ') : '';
-        if (variant.sku) {
-          specs[`${variantKey}_sku`] = variant.sku;
-        }
-      });
-    }
-
-    // Try to auto-map category from product text when categoryInfo is missing/uncategorized
-    let mappedCategory = categoryInfo;
-    let categoryMetadata: any = {}; // Store aliexpressCategoryIds & searchKeywords
-    const stripHtml = (value: string) => (value || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    const specsText = specs && typeof specs === 'object'
-      ? Object.entries(specs)
-          .map(([key, value]) => `${key} ${Array.isArray(value) ? value.join(' ') : String(value ?? '')}`)
-          .join(' ')
-      : '';
-    const categoryText = [sourceProduct.title, stripHtml(sourceProduct.description || ''), specsText]
-      .filter(Boolean)
-      .join(' ');
-
-    try {
-      const { matchCategoryByText, validateCategoryPath } = await import('@/lib/category-mapper');
-      const hasCategory = mappedCategory?.mainCategorySlug && mappedCategory.mainCategorySlug !== 'uncategorized';
-      if (hasCategory) {
-        const isValid = await validateCategoryPath(
-          mappedCategory?.mainCategorySlug,
-          mappedCategory?.subCategorySlug,
-          mappedCategory?.subSubCategorySlug
-        );
-        if (!isValid) {
-          this.addLog('warn', `Invalid category path detected: ${mappedCategory?.mainCategorySlug}/${mappedCategory?.subCategorySlug}/${mappedCategory?.subSubCategorySlug || ''}`);
-          mappedCategory = {
-            mainCategorySlug: 'uncategorized',
-            subCategorySlug: 'uncategorized',
-          };
-        }
-      }
-
-      const needsMapping = !mappedCategory || !mappedCategory.mainCategorySlug || mappedCategory.mainCategorySlug === 'uncategorized';
-      if (needsMapping) {
-        const match = await matchCategoryByText(categoryText);
-        if (match) {
-          mappedCategory = {
-            mainCategorySlug: match.mainCategorySlug,
-            subCategorySlug: match.subCategorySlug || 'uncategorized',
-            subSubCategorySlug: match.subSubCategorySlug,
-          };
-          this.addLog('info', `Auto-mapped category: ${mappedCategory.mainCategorySlug}/${mappedCategory.subCategorySlug}/${mappedCategory.subSubCategorySlug || ''}`);
-        }
-      }
-
-      // Fetch category metadata (aliexpressCategoryIds, searchKeywords) from Firestore
-      if (mappedCategory?.mainCategorySlug && mappedCategory.mainCategorySlug !== 'uncategorized') {
-        try {
-          const mainCatRef = adminDb.collection('categories').doc(mappedCategory.mainCategorySlug);
-          const subCatRef = mainCatRef.collection('subcategories').doc(mappedCategory.subCategorySlug);
-          
-          // Try to get sub-subcategory metadata if available
-          if (mappedCategory.subSubCategorySlug) {
-            const subSubRef = subCatRef.collection('subcategories').doc(mappedCategory.subSubCategorySlug);
-            const subSubDoc = await subSubRef.get();
-            if (subSubDoc.exists) {
-              const subSubData = subSubDoc.data();
-              categoryMetadata.aliexpressCategoryIds = subSubData?.aliexpressCategoryIds || [];
-              categoryMetadata.searchKeywords = subSubData?.searchKeywords || [];
-            }
-          } else {
-            // Fallback to sub-category level
-            const subDoc = await subCatRef.get();
-            if (subDoc.exists) {
-              const subData = subDoc.data();
-              categoryMetadata.aliexpressCategoryIds = subData?.aliexpressCategoryIds || [];
-              categoryMetadata.searchKeywords = subData?.searchKeywords || [];
-            }
-          }
-          
-          if (categoryMetadata.aliexpressCategoryIds?.length > 0) {
-            this.addLog('info', `Category enriched with AliExpress IDs: ${categoryMetadata.aliexpressCategoryIds.join(', ')}`);
-          }
-        } catch (e) {
-          this.addLog('warn', 'Failed to fetch category metadata from Firestore', e);
-        }
-      }
-    } catch (e) {
-      this.addLog('warn', 'Category auto-mapping failed', e);
-    }
-
-    // ========================================================================
-    // DEEP DATA ENRICHMENT - Extract structured data from AliExpress
-    // ========================================================================
-    let deepData: Partial<ProductCore> = {};
-    
-    if (source === 'aliexpress' && sourceProduct.sourceProductId) {
-      try {
-        // Deep Data mapper deprecated (consolidated). Skipping AliExpress deep extraction here.
-        this.addLog('info', 'Deep Data mapper deprecated for AliExpress in harvester – skipping.');
-      } catch (err) {
-        this.addLog('warn', 'Deep Data mapper error', err);
-      }
-    }
-
-    const baseDescription = (sourceProduct.description || '').trim() || `Produkt z ${source}`;
-    const product: ProductCore = {
-      id: '', // Will be set by Firestore
-      identityHash,
-      title: {
-        pl: sourceProduct.title,
-        en: sourceProduct.title, // TODO: Translate via AI
-        de: sourceProduct.title, // TODO: Translate via AI
-      },
-      shortDescription: {
-        pl: baseDescription,
-        en: baseDescription,
-        de: baseDescription,
-      },
-      fullDescription: {
-        pl: baseDescription,
-        en: baseDescription,
-        de: baseDescription,
-      },
-      description: {
-        pl: baseDescription,
-        en: baseDescription,
-        de: baseDescription,
-      },
-      specs,
-      
-      // Deep Data fields (if extracted)
-      ...deepData,
-      
-      mainCategorySlug: mappedCategory?.mainCategorySlug || 'uncategorized',
-      subCategorySlug: mappedCategory?.subCategorySlug || 'uncategorized',
-      subSubCategorySlug: mappedCategory?.subSubCategorySlug,
-      images: sourceProduct.images && sourceProduct.images.length > 0 ? sourceProduct.images : [sourceProduct.imageUrl],
-      primaryImageHash: calculateImageHash(sourceProduct.imageUrl),
-      videoUrl: sourceProduct.videoUrl,
-      reviewsSummary: {
-        pl: 'No reviews yet',
-        en: 'No reviews yet',
-        de: 'No reviews yet',
-      },
-      rating: {
-        score: sourceProduct.rating || 0,
-        // Polepszenie: użyj evaluateCount jeśli ratingCount nie dostępny (AliExpress API)
-        count: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
-        provider: 'mixed' as any, // Harvester sources are external
-      },
-      ratingSources: (sourceProduct.rating || sourceProduct.ratingCount || sourceProduct.evaluateCount) ? {
-        external: {
-          average: sourceProduct.rating || 0,
-          count: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
-          source: source,
-          updatedAt: now,
-        },
-      } : undefined,
-      ratingCard: {
-        average: sourceProduct.rating || 0,
-        count: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
-        durability: 0,
-        easeOfUse: 0,
-        valueForMoney: 0,
-        versatility: 0,
-      },
-      bestPrice: {
-        amount: sourceProduct.price,
-        currency: sourceProduct.currency || 'PLN', // M6: sourceProduct.currency is now PLN after conversion
-      },
-      linkedDealIds: [],
-      searchTags: categoryMetadata.searchKeywords || [],
-      status: sourceProduct.isOfferOnly ? 'rejected' : 'draft', // Offer-only from Convertiser should not appear as products
-      createdAt: now,
-      updatedAt: now,
-      metadata: {
-        source: source as any,
-        originalId: sourceProduct.sourceProductId,
-        importedAt: now,
-        harvesterJobId: this.jobId,
-        // Save original raw data for moderation/comparison
-        originalTitle: sourceProduct.title,
-        originalDescription: sourceProduct.description || '',
-        originalUrl: sourceProduct.sourceUrl,
-        // NEW: AliExpress category IDs for hot-products mode
-        aliexpressCategoryIds: categoryMetadata.aliexpressCategoryIds || [],
-        // Product identifiers (critical for deduplication & SEO)
-        ...normalizedIdentifiers,
-        // Spójne metadane dla kart Product/Deal
-        store: {
-          name: sourceProduct.merchantName || source,
-          rating: sourceProduct.merchantRating,
-          url: sourceProduct.sourceUrl,
-        },
-        shipping: {
-          cost: sourceProduct.shippingCost ?? 0,
-          days: sourceProduct.shippingDays ?? 7,
-          shipsFrom: (sourceProduct as any).shipsFrom,
-        },
-        specifications: specs,
-        offerOnly: sourceProduct.isOfferOnly || false,
-      } as any,
-    };
-
-    const docRef = await adminDb.collection('product_cores').add(product);
-    const productId = docRef.id;
-
-    // ========================================================================
-    // NO AI REFINEMENT FOR DRAFT PRODUCTS
-    // ========================================================================
-    // Draft products require moderation (admin approval) before AI enrichment.
-    // Refinement will be triggered AFTER admin approval via separate endpoint.
-    // This allows admins to review raw product data before AI transformation.
-    
-    this.addLog('info', `Created draft product ${productId} - awaiting moderation before AI refinement`);
-
-    return productId;
-  }
-
-  /**
-   * Create a new Deal document using M6 Deal schema
-   */
-  private async createDeal(
-    productId: string,
-    sourceProduct: RawProduct,
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser'
-  ): Promise<string> {
-    if (!productId || typeof productId !== 'string') {
-      throw new Error('Invalid productId for deal creation');
-    }
-
-    // Pobierz ProductCore aby uzupełnić pola legacy wymagane przez UI
-    const productSnap = await adminDb.collection('product_cores').doc(productId).get();
-    const product = productSnap.exists ? (productSnap.data() as ProductCore) : null;
-    const primaryImage = sourceProduct.imageUrl || product?.images?.[0];
-
-    if (!primaryImage) {
-      throw new Error('Cannot create deal without image');
-    }
-
-    const now = new Date().toISOString();
-    let mainCategorySlug = product?.mainCategorySlug || 'uncategorized';
-    let subCategorySlug = product?.subCategorySlug || 'uncategorized';
-    let subSubCategorySlug = product?.subSubCategorySlug;
-    const isOfferPromotion = sourceProduct.offerMeta?.promotionType === 'offer';
-    let affiliateLink = sourceProduct.sourceUrl;
-
-    if (source === 'convertiser' && sourceProduct.sourceProductId) {
-      try {
-        const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
-        const client = getConvertiserClient();
-        const websiteUuid = process.env.CONVERTISER_WEBSITE_UUID || process.env.CONVERTISER_WEBSITE_ID;
-        const trackingParams = websiteUuid ? { website_uuid: websiteUuid } : undefined;
-        const tracking = isOfferPromotion
-          ? await client.generateOfferTrackingLink(sourceProduct.sourceProductId, trackingParams)
-          : await client.generateProductTrackingLink(sourceProduct.sourceProductId, trackingParams);
-        const resolved = (tracking as any)?.tracking_link
-          || (tracking as any)?.url
-          || (tracking as any)?.link;
-        if (resolved) {
-          affiliateLink = resolved;
-        } else if (!affiliateLink) {
-          try {
-            const detail = await client.getOfferDetail(sourceProduct.sourceProductId);
-            const detailLink = (detail as any)?.tracking_link
-              || (detail as any)?.tracking_url
-              || (detail as any)?.affiliate_url
-              || (detail as any)?.aff_link
-              || (detail as any)?.preview_url
-              || (detail as any)?.offer_display_url
-              || (detail as any)?.url;
-            if (detailLink) {
-              affiliateLink = detailLink;
-            }
-          } catch (detailErr) {
-            this.addLog('warn', `Nie udało się pobrać detali oferty Convertiser dla ${sourceProduct.sourceProductId}`, detailErr);
-          }
-        }
-      } catch (err) {
-        this.addLog('warn', `Nie udało się wygenerować linku afiliacyjnego Convertiser dla ${sourceProduct.sourceProductId}`, err);
-      }
-    }
-
-    if (!affiliateLink) {
-      affiliateLink = sourceProduct.offerMeta?.previewUrl || sourceProduct.sourceUrl;
-    }
-
-    // If product has no category, attempt to map and persist
-    if (!product || !product.mainCategorySlug || product.mainCategorySlug === 'uncategorized') {
-      try {
-        const { ensureProductCategory } = await import('@/lib/category-mapper');
-        const dealSpecsText = sourceProduct?.specs && typeof sourceProduct.specs === 'object'
-          ? Object.entries(sourceProduct.specs)
-              .map(([key, value]) => `${key} ${Array.isArray(value) ? value.join(' ') : String(value ?? '')}`)
-              .join(' ')
-          : '';
-        const mapped = await ensureProductCategory(productId, [sourceProduct.title, sourceProduct.description || '', dealSpecsText]);
-        if (mapped) {
-          mainCategorySlug = mapped.mainCategorySlug;
-          subCategorySlug = mapped.subCategorySlug || subCategorySlug;
-          subSubCategorySlug = mapped.subSubCategorySlug || subSubCategorySlug;
-          this.addLog('info', `Deal category mapped: ${mainCategorySlug}/${subCategorySlug}/${subSubCategorySlug || ''}`);
-        }
-      } catch (e) {
-        this.addLog('warn', 'Deal category mapping failed', e);
-      }
-    }
-
-    // Przechowujemy pola M6 oraz legacy, aby UI nie dostawał pustych/mocked rekordów
-    const dealDescriptionText = (sourceProduct.description || '').trim()
-      || (typeof product?.shortDescription === 'object'
-        ? (product.shortDescription.pl || product.shortDescription.en || product.shortDescription.de || '')
-        : (product?.shortDescription || ''))
-      || sourceProduct.title;
-    const deal: any = {
-      // M6 fields
-      productCoreId: productId,  // M6: Link to ProductCore
-      price: {
-        amount: sourceProduct.price,
-        currency: sourceProduct.currency || 'PLN',
-      },
-      // Legacy fields for compatibility
-      priceV2: {
-        amount: sourceProduct.price,
-        currency: sourceProduct.currency || 'PLN',
-      },
-      legacyPrice: sourceProduct.price, // for old code
-      originalPrice: sourceProduct.originalPrice ?? sourceProduct.price,
-      shipping: {
-        cost: sourceProduct.shippingCost || 0,
-        timeDays: sourceProduct.shippingDays || 7,
-      },
-      shippingCost: sourceProduct.shippingCost || 0,
-      source: source as any,
-      affiliateLink,
-      link: affiliateLink,
-      merchantName: sourceProduct.merchantName || source,
-      merchant: sourceProduct.merchantName || source,
-      merchantRating: sourceProduct.merchantRating,
-      seller: {
-        name: sourceProduct.merchantName || source,
-        url: sourceProduct.sourceUrl,
-        rating: sourceProduct.merchantRating,
-      },
-      salesMetrics: {
-        // Polepszenie: użyj soldCount z AliExpress (dla popularity sorting)
-        soldCount: sourceProduct.soldCount || sourceProduct.evaluateCount || 0,
-        // Polepszenie: użyj evaluateCount jeśli ratingCount nie dostępny
-        reviewCount: sourceProduct.ratingCount || sourceProduct.evaluateCount || 0,
-        avgRating: sourceProduct.rating || 0,
-      },
-      // M6: Use sourceProduct title if available, otherwise fallback to ProductCore title (NEVER empty)
-      title: sourceProduct.title && sourceProduct.title.trim() ? {
-        pl: sourceProduct.title,
-        en: sourceProduct.title,
-        de: sourceProduct.title,
-      } : {
-        pl: product.title.pl,
-        en: product.title.en,
-        de: product.title.de,
-      } as LocalizedText,
-      description: {
-        pl: dealDescriptionText,
-        en: dealDescriptionText,
-        de: dealDescriptionText,
-      } as LocalizedText,
-      discountPercent: sourceProduct.discountPercent,
-      couponCode: sourceProduct.couponCode,
-      expiryDate: sourceProduct.expiryDate,
-      conditions: sourceProduct.conditions,
-      freeShipping: sourceProduct.freeShipping,
-      minOrderValue: typeof sourceProduct.minOrderValue === 'number' && sourceProduct.minOrderValue > 0
-        ? sourceProduct.minOrderValue
-        : undefined,
-      limitPerUser: typeof sourceProduct.limitPerUser === 'number' && sourceProduct.limitPerUser > 0
-        ? sourceProduct.limitPerUser
-        : undefined,
-      requiresMembership: sourceProduct.requiresMembership,
-      stockStatus: 'in_stock',
-      isActive: true,
-      priceHistory: [
-        {
-          date: new Date().toISOString().split('T')[0],
-          price: sourceProduct.price,
-          currency: sourceProduct.currency || 'PLN',
-          lowestPrice: sourceProduct.price,
-        },
-      ],
-      voteCount: 0,
-      temperature: 0,
-      commentsCount: 0,
-      status: 'draft', // Harvested deals require moderation before approval
-      sourceProductId: sourceProduct.sourceProductId,
-      sourceUrl: affiliateLink,
-      createdAt: now,
-      updatedAt: now,
-      postedAt: now,
-      postedBy: 'harvester',
-      category: `${mainCategorySlug}${subCategorySlug ? '/' + subCategorySlug : ''}${subSubCategorySlug ? '/' + subSubCategorySlug : ''}`,
-      mainCategorySlug,
-      subCategorySlug,
-      subSubCategorySlug,
-      image: primaryImage,
-      imageHint: sourceProduct.imageUrl || primaryImage,
-      gallery: product?.images || [primaryImage],
-      linkedProductIds: [productId],
-      dealType: isOfferPromotion ? 'coupon' : 'sale',
-      tags: product?.searchTags || [],
-      // M6 ADDITION: Store original currency and price for auto-price-updates (Cloud Function)
-      metadata: {
-        promotionType: isOfferPromotion ? 'offer' : undefined,
-        offerTerms: sourceProduct.offerMeta?.terms,
-        offerPreviewUrl: sourceProduct.offerMeta?.previewUrl,
-        hasCoupons: sourceProduct.offerMeta?.hasCoupons,
-        harvesterJobId: this.jobId,
-        originalPriceUSD: sourceProduct.currency === 'USD' ? sourceProduct.price : undefined,
-        originalPriceCurrency: sourceProduct.currency,
-        exchangeRateAtImport: sourceProduct.currency === 'USD' 
-          ? (sourceProduct.price > 0 ? sourceProduct.price / sourceProduct.price : 1.0)
-          : undefined,
-        lastPriceUpdate: now,
-        importedAt: now,
-        source: source,
-        originalUrl: sourceProduct.sourceUrl,
-        // Spójne metadane z ProductCore
-        store: {
-          name: sourceProduct.merchantName || source,
-          rating: sourceProduct.merchantRating,
-          url: sourceProduct.sourceUrl,
-        },
-        shipping: {
-          cost: sourceProduct.shippingCost,
-          days: sourceProduct.shippingDays,
-          shipsFrom: (sourceProduct as any).shipsFrom,
-        },
-        specifications: (product as any)?.specs || sourceProduct.specs,
-      },
-    };
-
-    const docRef = await adminDb.collection('deals').add(deal);
-    return docRef.id;
-  }
-
-  /**
-   * Update ProductCore with new deal reference and recalculate best price
-   */
-  private async updateProductBestPrice(productId: string): Promise<void> {
-    if (!productId || typeof productId !== 'string') return;
-    // Fetch all deals for this product (don't filter by isActive - might not exist)
-    const dealsSnapshot = await adminDb
-      .collection('deals')
-      .where('productCoreId', '==', productId)
-      .get();
-
-    if (dealsSnapshot.empty) {
-      this.addLog('warn', `No deals found for product ${productId}, setting bestPrice to 0`);
-      return;
-    }
-
-    // Find the best (lowest) total price (product price + shipping)
-    let bestPrice = Infinity;
-    let bestCurrency = 'PLN';
-    let bestDealId: string | null = null;
-    let bestDealType: string | undefined;
-    let bestDealCouponCode: string | undefined;
-    let couponDealsCount = 0;
-    let validDealsCount = 0;
-
-    for (const dealDoc of dealsSnapshot.docs) {
-      const deal = dealDoc.data() as DealM6;
-      
-      // Support both M6 format {amount, currency} and legacy format (number)
-      let priceAmount = 0;
-      let priceCurrency = 'PLN';
-      
-      if (deal.price?.amount !== undefined) {
-        // M6 format: {amount, currency}
-        priceAmount = deal.price.amount;
-        priceCurrency = deal.price.currency || 'PLN';
-      } else if (typeof deal.price === 'number') {
-        // Legacy format: number
-        priceAmount = deal.price;
-      }
-      
-      const shippingCost = (deal.shipping?.cost as any) || 0;
-      const totalPrice = priceAmount + shippingCost;
-      
-      // Skip deals with 0 price
-      if (totalPrice <= 0) continue;
-      
-      validDealsCount++;
-      
-      const isCouponDeal =
-        (deal as any)?.dealType === 'coupon' ||
-        Boolean((deal as any)?.couponCode) ||
-        (deal as any)?.metadata?.promotionType === 'offer';
-      if (isCouponDeal) {
-        couponDealsCount++;
-      }
-
-      // TODO: Normalize currency to PLN for comparison
-      if (totalPrice < bestPrice) {
-        bestPrice = totalPrice;
-        bestCurrency = priceCurrency;
-        bestDealId = dealDoc.id;
-        bestDealType = (deal as any)?.dealType || ((deal as any)?.metadata?.promotionType === 'offer' ? 'coupon' : undefined);
-        bestDealCouponCode = (deal as any)?.couponCode || undefined;
-      }
-    }
-
-    this.addLog('info', `Product ${productId}: ${dealsSnapshot.size} deals total, ${validDealsCount} valid, best price: ${bestPrice !== Infinity ? bestPrice : 0}`);
-
-    // Update product with new best price (M6: bestPrice is {amount, currency})
-    const productRef = adminDb.collection('product_cores').doc(productId);
-    await productRef.update({
-      bestPrice: {
-        amount: bestPrice !== Infinity ? bestPrice : 0,
-        currency: bestCurrency, // should be PLN
-      },
-      bestTotalPrice: bestPrice !== Infinity ? bestPrice : 0,
-      bestDealId: bestDealId || null,
-      bestDealType: bestDealType || null,
-      bestDealCouponCode: bestDealCouponCode || null,
-      hasCoupons: couponDealsCount > 0,
-      couponDealsCount,
-      linkedDealIds: dealsSnapshot.docs.map(d => d.id),
-      updatedAt: new Date().toISOString(),
-    });
-  }
-
-  /**
-   * Record identity match for future lookups
-   */
-  private async recordIdentityMatch(
-    identityHash: string,
-    productId: string,
-    source: string,
-    sourceProductId?: string
-  ): Promise<void> {
-    const match: IdentityMatch = {
-      id: '', // Will be set by Firestore
-      titleHash: identityHash.slice(0, 32), // First 32 chars
-      primaryImageHash: identityHash.slice(32, 64), // Next 32 chars (simulated)
-      combinedHash: identityHash,
-      productId,
-      source,
-      sourceProductId,
-      confidence: 1.0,
-      createdAt: new Date().toISOString(),
-    };
-
-    await adminDb.collection('identity_matches').add(match);
-  }
-
-  /**
-   * Check if job is still active (not paused/cancelled)
-   */
-  private async isJobActive(): Promise<boolean> {
-    try {
-      const doc = await adminDb.collection('harvester_jobs').doc(this.jobId).get();
-      if (!doc.exists) return false;
-      const status = doc.data()?.status;
-      return status === 'running';
-    } catch (e) {
-      console.error('Failed to check job status', e);
-      return true; // Keep running on temporary DB error
-    }
-  }
-
-  /**
-   * Update the harvester job record in Firestore
-   */
-  private async updateJobRecord(job: HarvesterJob): Promise<void> {
-    const jobRef = adminDb.collection('harvester_jobs').doc(this.jobId);
-    await jobRef.set({
-      id: job.id,
-      source: job.source,
-      query: job.query,
-      maxResults: job.maxResults,
-      status: job.status,
-      productsFound: job.productsFound,
-      productsCreated: job.productsCreated,
-      dealsCreated: job.dealsCreated,
-      duplicatesSkipped: job.duplicatesSkipped,
-      errors: job.errors || [],
-      processedCategories: job.processedCategories || [],
-      currentCategory: job.currentCategory || null,
-      totalCategories: job.totalCategories || 0,
-      startedAt: job.startedAt,
-      completedAt: job.completedAt || null,
-      lastUpdatedAt: job.lastUpdatedAt,
-      logs: job.logs || [],
-    }, { merge: true });
-    this.currentJob = job;
-  }
-
-  /**
-   * Update job progress with partial data (keeps current values)
-   */
-  private async updateJobProgress(partial: Partial<HarvesterJob>): Promise<void> {
-    if (!this.currentJob) return;
-    const now = new Date().toISOString();
-    const nextJob: HarvesterJob = {
-      ...this.currentJob,
-      ...partial,
-      lastUpdatedAt: now,
-      logs: this.logs,
-    } as HarvesterJob;
-    await this.updateJobRecord(nextJob);
   }
 }
 
 /**
- * Helper: Start a new harvest job
+ * Helper function to start a new harvester job
+ * Creates a SmartHarvester instance and runs it
  */
 export async function startHarvesterJob(
-  source: 'aliexpress' | 'amazon' | 'allegro',
+  source: string,
   query: string,
   maxResults: number = 50
 ): Promise<HarvesterJob> {
-  const jobId = `job_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-
-  // Create job record
-  const jobRecord: HarvesterJob = {
-    id: jobId,
-    status: 'running',
-    source,
-    query,
-    maxResults,
-    productsFound: 0,
-    productsCreated: 0,
-    dealsCreated: 0,
-    duplicatesSkipped: 0,
-    errors: [],
-    startedAt: new Date().toISOString(),
-    lastUpdatedAt: new Date().toISOString(),
-    logs: [],
-  };
-
-  await adminDb.collection('harvester_jobs').add(jobRecord);
-
-  // Run harvester
+  const jobId = `harvest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   const harvester = new SmartHarvester(jobId);
-  return await harvester.harvestProducts(source, query, maxResults);
+  return harvester.harvestProducts(
+    source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+    query,
+    maxResults
+  );
 }

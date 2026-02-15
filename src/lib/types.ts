@@ -2202,6 +2202,7 @@ export interface ProductCore {
   subSubCategorySlug?: string;
   
   // Media
+  imageUrl?: string; // Primary image URL (convenience field)
   images: string[]; // Gallery URLs (high-res)
   primaryImageHash?: string; // Hash of primary image for identity matching
   /**
@@ -2541,14 +2542,15 @@ export interface HarvesterJob {
   processedCategories?: Array<{
     category: string;
     count: number;
-    status: 'ok' | 'error';
+    status: 'ok' | 'error' | 'skipped';
   }>;
 
   // Results
   productsFound: number;
   productsCreated: number;
   dealsCreated: number;
-  duplicatesSkipped: number;
+  dealsLinked: number; // Deals linked to existing products (not true duplicates)
+  duplicatesSkipped: number; // True duplicates (same deal already exists)
   errors: Array<{
     productId?: string;
     message: string;

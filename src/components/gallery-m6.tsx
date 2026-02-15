@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { withImageProxy } from '@/lib/image-proxy';
 
 interface GalleryM6Props {
   images: string[];
@@ -22,7 +23,8 @@ export default function GalleryM6({ images, title }: GalleryM6Props) {
     );
   }
 
-  const currentImage = images[selectedIndex];
+  const proxiedImages = images.map((img) => withImageProxy(img));
+  const currentImage = proxiedImages[selectedIndex];
   const hasMultipleImages = images.length > 1;
 
   const handlePrevious = () => {
@@ -96,7 +98,7 @@ export default function GalleryM6({ images, title }: GalleryM6Props) {
         {/* Thumbnails */}
         {hasMultipleImages && (
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {images.map((image, index) => (
+            {proxiedImages.map((image, index) => (
               <button
                 key={index}
                 onClick={() => handleThumbnailClick(index)}

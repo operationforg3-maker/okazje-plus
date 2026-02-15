@@ -24,6 +24,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
+import { withImageProxy } from '@/lib/image-proxy';
 import {
   Dialog,
   DialogContent,
@@ -190,7 +191,7 @@ export function SmartCartWidget() {
                 {/* Product Image */}
                 <div className="relative h-20 w-20 flex-shrink-0">
                   <Image
-                    src={(item.product as any)?.image || (item.product as any)?.imageUrl || (item.deal as any)?.image || (item.deal as any)?.imageUrl || '/placeholder.png'}
+                    src={withImageProxy((item.product as any)?.image || (item.product as any)?.imageUrl || (item.deal as any)?.image || (item.deal as any)?.imageUrl || '/placeholder.png')}
                     alt={title}
                     fill
                     className="object-cover rounded"

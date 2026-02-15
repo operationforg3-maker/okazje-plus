@@ -46,12 +46,11 @@ export function SimilarItemsCarousel({
   const fetchSimilarItems = async () => {
     setLoading(true);
     try {
-      const collectionName = itemType === 'deal' ? 'deals' : 'products';
+      const collectionName = itemType === 'deal' ? 'deals' : 'product_cores';
       let q = query(
         collection(db, collectionName),
         where('status', '==', 'approved'),
-        orderBy('temperature', 'desc'),
-        limit(maxItems * 2) // Fetch more to filter later
+        limit(maxItems * 3) // Fetch more to filter and sort later
       );
 
       // Filter by category if provided (prefer deepest level)
@@ -61,24 +60,21 @@ export function SimilarItemsCarousel({
           where('status', '==', 'approved'),
           where('subCategorySlug', '==', subcategory),
           where('subSubCategorySlug', '==', subsubcategory),
-          orderBy('temperature', 'desc'),
-          limit(maxItems * 2)
+          limit(maxItems * 3)
         );
       } else if (subcategory) {
         q = query(
           collection(db, collectionName),
           where('status', '==', 'approved'),
           where('subCategorySlug', '==', subcategory),
-          orderBy('temperature', 'desc'),
-          limit(maxItems * 2)
+          limit(maxItems * 3)
         );
       } else if (category) {
         q = query(
           collection(db, collectionName),
           where('status', '==', 'approved'),
           where('mainCategorySlug', '==', category),
-          orderBy('temperature', 'desc'),
-          limit(maxItems * 2)
+          limit(maxItems * 3)
         );
       }
 
@@ -110,12 +106,27 @@ export function SimilarItemsCarousel({
             return bMatchingTags - aMatchingTags;
           }
           
-          // Fall back to temperature
-          const aTemp = (a as Deal).temperature || 0;
-          const bTemp = (b as Deal).temperature || 0;
-          return bTemp - aTemp;
+          // Fall back to temperature / rating
+          const aScore = itemType === 'deal'
+            ? ((a as Deal).temperature || 0)
+            : ((a as any).rating?.score || 0);
+          const bScore = itemType === 'deal'
+            ? ((b as Deal).temperature || 0)
+            : ((b as any).rating?.score || 0);
+          return bScore - aScore;
         });
       }
+
+      // Final sort by temperature / rating
+      similarItems.sort((a, b) => {
+        const aScore = itemType === 'deal'
+          ? ((a as Deal).temperature || 0)
+          : ((a as any).rating?.score || 0);
+        const bScore = itemType === 'deal'
+          ? ((b as Deal).temperature || 0)
+          : ((b as any).rating?.score || 0);
+        return bScore - aScore;
+      });
 
       setItems(similarItems.slice(0, maxItems));
     } catch (error) {

@@ -48,7 +48,11 @@ async function generateOAuthUrl() {
     const config = configDoc.data()!;
     const clientId = config.clientId;
     const authUrl = config.authorizationUrl;
-    const redirectUri = config.redirectUri || 'https://okazjeplus.pl/api/auth/aliexpress/callback';
+    const redirectUri =
+      config.redirectUri ||
+      config.callbackUrl ||
+      config.callbackURL ||
+      'https://okazjeplus.pl/api/auth/aliexpress/callback';
     const state = crypto.randomBytes(32).toString('hex');
     
     // Save state for verification

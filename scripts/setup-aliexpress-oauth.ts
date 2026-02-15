@@ -57,16 +57,19 @@ async function setupAliExpressOAuth() {
   // 3. For Affiliate API (portals API), you can use APP_KEY + APP_SECRET directly
   // 4. No OAuth flow needed for public product search
   
+  const baseUrlRaw = process.env.OAUTH_REDIRECT_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
+  const baseUrl = baseUrlRaw.includes('localhost') ? 'https://okazjeplus.pl' : baseUrlRaw;
+  const redirectUri = `${baseUrl.replace(/\/$/, '')}/api/auth/aliexpress/callback`;
+
   const config = {
     enabled: true,
     vendorId: 'aliexpress',
     clientId: appKey,
     clientSecret: appSecret,
     
-    // AliExpress TOP API endpoints
-    // Note: These are for reference. Affiliate API doesn't require OAuth flow.
+    // AliExpress AOP OAuth endpoints
     authorizationUrl: 'https://oauth.aliexpress.com/authorize',
-    tokenUrl: 'https://oauth.aliexpress.com/token',
+    tokenUrl: 'https://oauth.aliexpress.com/auth/token/create',
     
     // API endpoints
     apiEndpoint: 'https://api-sg.aliexpress.com/sync', // Singapore endpoint (fastest for EU)
@@ -79,12 +82,14 @@ async function setupAliExpressOAuth() {
       'aliexpress.affiliate.order.list',
     ],
     
-    // Callback URL (not needed for Affiliate API but required for merchant APIs)
-    callbackUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002'}/api/admin/oauth/callback`,
+    // Callback URL (required for OAuth flow)
+    redirectUri,
+    callbackUrl: redirectUri,
     
     // Additional config
-    requiresManualAuth: false, // Affiliate API works with APP_KEY/SECRET
-    authType: 'signature', // Uses HMAC-MD5 signature instead of OAuth token
+    requiresManualAuth: true,
+    authType: 'aop-oauth',
+    signMethod: 'sha256',
     
     // Rate limits
     rateLimitPerMinute: 60,

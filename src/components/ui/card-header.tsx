@@ -14,6 +14,7 @@ import Image from 'next/image';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { withImageProxy } from '@/lib/image-proxy';
 
 export interface CardHeaderProps {
   image: string;
@@ -51,7 +52,7 @@ export function CardHeader({
       {/* Image */}
       <div className={cn('relative h-40 w-full overflow-hidden bg-gradient-to-b from-muted-foreground/5 to-muted', imageContainerClassName)}>
         <Image
-          src={image}
+          src={withImageProxy(image)}
           alt={altText}
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"

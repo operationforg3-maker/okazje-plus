@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { withImageProxy } from '@/lib/image-proxy';
 
 interface ProductGalleryProps {
   images: { src: string; alt?: string }[];
@@ -18,7 +19,12 @@ export function ProductGallery({ images }: ProductGalleryProps) {
   
   if (validImages.length === 0) return null;
   
-  const currentImage = validImages[currentIndex] || validImages[0];
+  const proxiedImages = validImages.map((img) => ({
+    ...img,
+    src: withImageProxy(img.src),
+  }));
+
+  const currentImage = proxiedImages[currentIndex] || proxiedImages[0];
   const hasMultiple = validImages.length > 1;
   
   const handlePrev = (e: React.MouseEvent) => {
@@ -85,7 +91,7 @@ export function ProductGallery({ images }: ProductGalleryProps) {
       {/* Miniaturki (tylko jeśli jest więcej niż 1 zdjęcie) */}
       {hasMultiple && (
         <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
-          {validImages.map((img, index) => (
+          {proxiedImages.map((img, index) => (
             <button
               key={index}
               onClick={(e) => handleThumbnailClick(e, index)}

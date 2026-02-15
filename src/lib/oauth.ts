@@ -449,7 +449,10 @@ export async function refreshOAuthToken(
 
     if (isAopSystemInterface(config)) {
       const signMethod = (config.signMethod || 'sha256').toLowerCase();
-      const path = config.systemPath || getSystemInterfacePath(config.tokenUrl, '/auth/token/refresh');
+      const refreshUrl = config.tokenUrl.includes('/auth/token/create')
+        ? config.tokenUrl.replace('/auth/token/create', '/auth/token/refresh')
+        : config.tokenUrl;
+      const path = config.systemPath || getSystemInterfacePath(refreshUrl, '/auth/token/refresh');
 
       const params: Record<string, any> = {
         app_key: config.clientId,
@@ -463,7 +466,7 @@ export async function refreshOAuthToken(
 
       const sign = generateSystemSignature(path, params, config.clientSecret, signMethod);
 
-      response = await fetch(config.tokenUrl, {
+      response = await fetch(refreshUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',

@@ -190,6 +190,22 @@ service cloud.firestore {
     }
 
     ////////////////////////////////
+    // SOCIAL MEDIA AUTOMATION
+    ////////////////////////////////
+    match /socialConfig/{platformId} {
+      allow read, write: if isAdmin();
+    }
+    match /socialTemplates/{templateId} {
+      allow read, write: if isAdmin();
+    }
+    match /socialPosts/{postId} {
+      allow read, write: if isAdmin();
+    }
+    match /socialPostLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    ////////////////////////////////
     // ADMIN SETTINGS (kursy walut, konfiguracja panelu)
     ////////////////////////////////
     match /admin/{docId} {

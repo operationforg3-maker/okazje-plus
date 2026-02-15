@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Share2, Facebook, Twitter, Link as LinkIcon, Check } from "lucide-react";
+import { Share2, Facebook, Twitter, Link as LinkIcon, Check, MessageCircle, Send } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { trackShare } from "@/lib/analytics";
@@ -21,7 +21,7 @@ interface ShareButtonProps {
   url: string;
   variant?: 'default' | 'ghost' | 'outline';
   size?: 'default' | 'sm' | 'lg' | 'icon';
-  onShared?: (method: 'facebook' | 'twitter' | 'copy_link') => void;
+  onShared?: (method: 'facebook' | 'twitter' | 'copy_link' | 'whatsapp' | 'telegram') => void;
 }
 
 export default function ShareButton({ 
@@ -36,7 +36,7 @@ export default function ShareButton({
   const isIconOnly = size === 'icon';
   const [copied, setCopied] = useState(false);
 
-  const handleShare = async (method: 'facebook' | 'twitter' | 'copy_link') => {
+  const handleShare = async (method: 'facebook' | 'twitter' | 'copy_link' | 'whatsapp' | 'telegram') => {
     // Analytics tracking (client-side)
     trackShare(type, itemId, method);
     if (onShared) onShared(method);
@@ -78,6 +78,24 @@ export default function ShareButton({
         toast.success("Otwarto okno udostępniania X (Twitter)");
         break;
 
+      case 'whatsapp':
+        window.open(
+          `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
+          '_blank',
+          'width=600,height=400'
+        );
+        toast.success("Otwarto okno udostępniania WhatsApp");
+        break;
+
+      case 'telegram':
+        window.open(
+          `https://t.me/share/url?url=${encodedUrl}&text=${encodedTitle}`,
+          '_blank',
+          'width=600,height=400'
+        );
+        toast.success("Otwarto okno udostępniania Telegram");
+        break;
+
       case 'copy_link':
         navigator.clipboard.writeText(fullUrl).then(() => {
           setCopied(true);
@@ -106,6 +124,14 @@ export default function ShareButton({
         <DropdownMenuItem onClick={() => handleShare('twitter')}>
           <Twitter className="h-4 w-4 mr-2 text-sky-500" />
           X (Twitter)
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+          <MessageCircle className="h-4 w-4 mr-2 text-green-600" />
+          WhatsApp
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleShare('telegram')}>
+          <Send className="h-4 w-4 mr-2 text-blue-500" />
+          Telegram
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleShare('copy_link')}>
           {copied ? (

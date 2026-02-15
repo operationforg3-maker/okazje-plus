@@ -4,6 +4,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { withImageProxy } from "@/lib/image-proxy";
 import {
   NavigationMenuItem,
   NavigationMenuTrigger,
@@ -143,11 +144,11 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
           className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm"
         >
           <Image
-            src={activeCategory.heroImage}
+            src={proxyImage(activeCategory.heroImage)}
             alt={getName(activeCategory.name)}
             width={960}
             height={320}
-            className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-80 w-full object-cover transition-transform group-hover:scale-110"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-background/10" />
           <div className="absolute inset-0 flex flex-col justify-end gap-2 p-6">
@@ -187,7 +188,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                 >
                   {subcategory.image ? (
                     <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
-                      <Image src={subcategory.image} alt={subcategory.name} fill sizes="64px" className="object-cover transition-transform duration-300 group-hover:scale-110" />
+                          <Image src={proxyImage(subcategory.image)} alt={subcategory.name} fill sizes="64px" className="object-cover transition-transform duration-300 group-hover:scale-110" />
                     </div>
                   ) : (
                     <div className="h-16 w-16 flex-shrink-0 rounded-md bg-muted" />
@@ -252,7 +253,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
             </div>
             {activeCategory.promo.image ? (
               <div className="relative h-40 w-full max-w-xs overflow-hidden rounded-xl">
-                <Image src={activeCategory.promo.image} alt={activeCategory.promo.title} fill sizes="(max-width: 768px) 60vw, 240px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                <Image src={proxyImage(activeCategory.promo.image)} alt={activeCategory.promo.title} fill sizes="(max-width: 768px) 60vw, 240px" className="object-cover transition-transform duration-500 group-hover:scale-105" />
               </div>
             ) : null}
           </div>
@@ -293,6 +294,7 @@ export function MegaMenu() {
     hotDeals: [] as Deal[],
     loading: false,
   });
+  const proxyImage = (src?: string) => (src ? withImageProxy(src) : src);
 
   React.useEffect(() => {
     let mounted = true;
@@ -715,7 +717,7 @@ export function MegaMenu() {
                     {activeCategory.promo.image ? (
                       <div className="relative h-40 w-full max-w-xs overflow-hidden rounded-xl">
                         <Image
-                          src={activeCategory.promo.image}
+                          src={proxyImage(activeCategory.promo.image)}
                           alt={activeCategory.promo.title}
                           fill
                           sizes="(max-width: 768px) 60vw, 240px"
@@ -736,7 +738,7 @@ export function MegaMenu() {
                       <div className="flex items-center gap-3">
                         <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                           {tile.image ? (
-                            <Image src={tile.image} alt={tile.title} fill sizes="56px" className="object-cover" />
+                            <Image src={proxyImage(tile.image)} alt={tile.title} fill sizes="56px" className="object-cover" />
                           ) : null}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -811,7 +813,7 @@ export function MegaMenu() {
                         {smartState.topProducts.map((p) => (
                           <Link key={p.id} href={`/products/${p.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
                             <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
-                              {p.image ? <Image src={p.image} alt={p.name} fill sizes="48px" className="object-cover" /> : null}
+                              {p.image ? <Image src={proxyImage(p.image)} alt={p.name} fill sizes="48px" className="object-cover" /> : null}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium">{p.name}</p>
@@ -832,7 +834,7 @@ export function MegaMenu() {
                         {smartState.hotDeals.map((d) => (
                           <Link key={d.id} href={`/deals/${d.id}`} className="flex items-center gap-3 rounded-md p-2 hover:bg-muted/50">
                             <div className="relative h-12 w-12 overflow-hidden rounded bg-muted">
-                              {d.image ? <Image src={d.image} alt={d.title} fill sizes="48px" className="object-cover" /> : null}
+                              {d.image ? <Image src={proxyImage(d.image)} alt={d.title} fill sizes="48px" className="object-cover" /> : null}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium">{d.title}</p>
@@ -945,7 +947,7 @@ export function MegaMenu() {
                           <div className="h-16 w-16 overflow-hidden rounded-md bg-muted">
                             {item.image ? (
                               <Image
-                                src={item.image}
+                                src={proxyImage(item.image)}
                                 alt={item.title}
                                 width={64}
                                 height={64}
@@ -984,7 +986,7 @@ export function MegaMenu() {
                     <div className="group relative overflow-hidden rounded-xl border border-border/60 bg-card/90 shadow-sm">
                       {menuState.dealOfTheDay.image ? (
                         <Image
-                          src={menuState.dealOfTheDay.image}
+                          src={proxyImage(menuState.dealOfTheDay.image)}
                           alt={menuState.dealOfTheDay.title}
                           width={280}
                           height={160}

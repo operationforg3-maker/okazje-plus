@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { GalleryItem } from '@/lib/schema';
 import { Play, Pause, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { withImageProxy } from '@/lib/image-proxy';
 
 interface MediaGalleryProps {
   gallery?: GalleryItem[]; // ProductCore.gallery
@@ -20,10 +21,14 @@ export function MediaGallery({ gallery, images, videoUrl, productTitle = 'Produc
   const [isMuted, setIsMuted] = useState(false);
   
   // Build gallery from either structured gallery or legacy images/videoUrl
-  const galleryItems = gallery || [
+  const galleryItems = (gallery || [
     ...(videoUrl ? [{ url: videoUrl, type: 'VIDEO' as const, thumbnail: images?.[0], alt: 'Video' }] : []),
     ...(images || []).map((url, i) => ({ url, type: 'IMAGE' as const, alt: `${productTitle} ${i + 1}` }))
-  ];
+  ]).map((item) => ({
+    ...item,
+    url: item.type === 'IMAGE' ? withImageProxy(item.url) : item.url,
+    thumbnail: item.thumbnail ? withImageProxy(item.thumbnail) : item.thumbnail,
+  }));
   
   if (!galleryItems || galleryItems.length === 0) {
     return (

@@ -220,10 +220,15 @@ export class AliExpressClient {
     logger.debug('Making API request', { method, params });
     
     // Determine authentication method
-    const useOAuth = !!this.token;
+    const isPathMethod = method.startsWith('/');
+    const useOAuth = Boolean(this.token && isPathMethod);
     const apiBase = this.config.apiEndpoint || process.env.ALIEXPRESS_API_BASE || 'https://openapi.aliexpress.com/gateway.do';
     const isSingaporeEndpoint = apiBase.includes('api-sg.aliexpress.com');
     const isSyncEndpoint = apiBase.includes('/sync');
+    
+    // AFFILIATE API: Singapore /sync IS the correct endpoint for Affiliate API
+    // Methods like 'aliexpress.affiliate.productdetail.get' ONLY work on Singapore /sync
+    // TOP API (gateway.do) returns errors for Affiliate API app category
     
     if (useOAuth) {
       // New API with OAuth
@@ -260,6 +265,58 @@ export class AliExpressClient {
     } else {
       // TOP API with signature auth (fallback)
       logger.debug('Using signature authentication (TOP API)');
+
+      if (this.token?.accessToken && !params.session) {
+        params.session = this.token.accessToken;
+      }
+
+      const forceRestMethods = new Set([
+        'aliexpress.hot.product.query',
+      ]);
+
+      if (isSingaporeEndpoint && isSyncEndpoint && forceRestMethods.has(method)) {
+        const restBase = apiBase.replace('/sync', '/rest');
+        logger.warn('Routing method to Singapore /rest instead of /sync', {
+          method,
+          apiBase,
+          restBase,
+        });
+
+        try {
+          const data = await this.executeRestApiRequest(method, params, restBase, false, method);
+          const errorCode = data?.error_response?.code || data?.code;
+          if (errorCode === 'InvalidApiPath' || errorCode === 'IllegalTimestamp' || data?.type === 'ISV') {
+            throw new Error(`Singapore rest path error: ${errorCode || 'ISV'}`);
+          }
+          return data;
+        } catch (error) {
+          logger.warn('Singapore /rest path attempt failed, retrying with method param', {
+            method,
+            restBase,
+            error: error instanceof Error ? error.message : String(error),
+          });
+
+          try {
+            const data = await this.executeRestApiRequest(method, params, restBase, true);
+            const errorCode = data?.error_response?.code || data?.code;
+            if (errorCode === 'InvalidApiPath' || errorCode === 'IllegalTimestamp' || data?.type === 'ISV') {
+              throw new Error(`Singapore rest param error: ${errorCode || 'ISV'}`);
+            }
+            return data;
+          } catch (err) {
+            logger.warn('Singapore /rest failed, falling back to TOP API gateway', {
+              method,
+              apiBase: restBase,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            return this.executeTopApiRequest(method, params, 'https://openapi.aliexpress.com/gateway.do');
+          }
+        }
+      }
+
+      if (isSingaporeEndpoint && process.env.ALIEXPRESS_FORCE_SIGNATURE_AUTH === 'true') {
+        return this.executeTopApiRequest(method, params, 'https://openapi.aliexpress.com/gateway.do');
+      }
       
       // Build request params
       // Timestamp format: yyyy-MM-dd HH:mm:ss (STRING in UTC)
@@ -277,7 +334,7 @@ export class AliExpressClient {
       const requestParams: Record<string, any> = {
         method,
         app_key: this.config.appKey,
-        sign_method: isSyncEndpoint ? 'sha256' : 'md5',
+        sign_method: 'md5', // Always use md5 for signature auth (both /sync and gateway.do)
         timestamp: timestamp,
         format: 'json',
         v: '2.0',
@@ -291,153 +348,373 @@ export class AliExpressClient {
         paramKeys: Object.keys(requestParams).sort().slice(0, 10)
       });
       
-      // Singapore endpoint requires different parameter structure
+      // Singapore /sync endpoint uses direct POST with signature (no /rest conversion)
+      if (isSingaporeEndpoint && isSyncEndpoint) {
+        return await this.executeSyncApiRequest(method, params, apiBase);
+      }
+      
+      // Singapore endpoint with /rest path requires different parameter structure
       if (isSingaporeEndpoint) {
-        // For Singapore: business params are merged with system params
-        // ALL parameters go into signature (including business params)
-        const paramsForSigning = Object.entries(requestParams)
-          .filter(([key]) => key !== 'sign')
-          .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
-        
-        // Merge business params into the signing params
-        // They will be sorted alphabetically by generateSignature
-        Object.assign(paramsForSigning, params);
-        
-        // Calculate signature with ALL parameters sorted
-        const sign = this.generateSignature(paramsForSigning, isSyncEndpoint ? 'sha256' : 'md5');
-        requestParams.sign = sign;
-        
-        // Merge business params into request params for sending
-        Object.assign(requestParams, params);
-        
-        logger.info('Singapore API Signature Debug', {
-          appKey: this.config.appKey,
-          timestamp: timestamp,
-          signMethod: requestParams.sign_method,
-          allParamsForSigning: Object.keys(paramsForSigning).sort().join(', '),
-          paramsCount: Object.keys(paramsForSigning).length,
-          generatedSign: sign.substring(0, 16) + '...'
-        });
-        
-        // Singapore endpoint uses POST with JSON body
-        const url = apiBase;
-        logger.info('Singapore API Request', { 
-          url, 
-          method: 'POST',
-          contentType: 'application/json'
-        });
-        
+        // Use /rest endpoint for system APIs per AliExpress docs
+        const restBase = apiBase.includes('/rest')
+          ? apiBase
+          : apiBase.replace('/sync', '/rest');
+
         try {
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=utf-8',
-            },
-            body: JSON.stringify(requestParams),
-            signal: AbortSignal.timeout(this.config.timeout || 30000),
-          });
-          
-          logger.info('Singapore API Response', { 
-            status: response.status, 
-            contentType: response.headers.get('content-type')
-          });
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            logger.error('Singapore API request failed', {
-              status: response.status,
-              errorPreview: errorText.substring(0, 500),
-              sign: sign.substring(0, 16) + '...'
-            });
-            throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
+          // Attempt 1: /rest/{api_path} with method in URL path
+          let data = await this.executeRestApiRequest(method, params, restBase, false, method);
+          const errorCode1 = data?.error_response?.code || data?.code;
+          if (errorCode1 === 'InvalidApiPath' || errorCode1 === 'IllegalTimestamp' || data?.type === 'ISV') {
+            throw new Error(`Singapore rest path error: ${errorCode1 || 'ISV'}`);
           }
-          
-          const responseText = await response.text();
-          logger.debug('Singapore API raw response', { 
-            text: responseText.substring(0, 500) 
-          });
-          
-          const data = JSON.parse(responseText);
-          logger.debug('Singapore API request successful', { data });
           return data;
         } catch (error) {
-          logger.error('Singapore API request error', { method, error });
-          throw error;
-        }
-      }
-      
-      // Standard gateway.do endpoint
-      // CRITICAL: signature must be calculated BEFORE URL encoding
-      // Only system params + business params are signed (not sign itself)
-      const paramsForSigning = Object.entries(requestParams)
-        .filter(([key]) => key !== 'sign')
-        .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
-      
-      const sign = this.generateSignature(paramsForSigning, isSyncEndpoint ? 'sha256' : 'md5');
-      requestParams.sign = sign;
-      
-      // Debug: log signature parameters and raw signature string
-      logger.info('TOP API Signature Debug', {
-        appKey: this.config.appKey,
-        timestamp: timestamp,
-        signMethod: 'md5',
-        paramsForSigning: Object.keys(paramsForSigning).sort().join(', '),
-        generatedSign: sign.substring(0, 16) + '...',
-        totalParams: Object.keys(requestParams).length
-      });
-      
-      const url = `${apiBase}`;
-      
-      // Build request body with URL encoding (encoding happens AFTER signature)
-      const body = Object.keys(requestParams)
-        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(requestParams[key]))}`)
-        .join('&');
-      
-      logger.info('TOP API Request', { 
-        url, 
-        method: 'POST',
-        contentType: 'application/x-www-form-urlencoded',
-        paramCount: Object.keys(requestParams).length
-      });
-      
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-          },
-          body: body,
-          signal: AbortSignal.timeout(this.config.timeout || 30000),
-        });
-        
-        logger.info('TOP API Response', { 
-          status: response.status, 
-          contentType: response.headers.get('content-type')
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          logger.error('TOP API request failed', {
-            status: response.status,
-            errorPreview: errorText.substring(0, 500),
-            sign: sign.substring(0, 16) + '...'
+          logger.warn('Singapore API path attempt failed, retrying with method param', {
+            method,
+            restBase,
+            error: error instanceof Error ? error.message : String(error),
           });
-          throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
+
+          try {
+            // Attempt 2: /rest with method param
+            const data = await this.executeRestApiRequest(method, params, restBase, true);
+            const errorCode2 = data?.error_response?.code || data?.code;
+            if (errorCode2 === 'InvalidApiPath' || errorCode2 === 'IllegalTimestamp' || data?.type === 'ISV') {
+              throw new Error(`Singapore rest param error: ${errorCode2 || 'ISV'}`);
+            }
+            return data;
+          } catch (err) {
+            logger.warn('Singapore API returned error, falling back to TOP API gateway', {
+              method,
+              apiBase: restBase,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            return await this.executeTopApiRequest(
+              method,
+              params,
+              'https://openapi.aliexpress.com/gateway.do'
+            );
+          }
         }
-        
-        const responseText = await response.text();
-        logger.debug('TOP API raw response', { 
-          text: responseText.substring(0, 500) 
+      }
+      
+      return this.executeTopApiRequest(method, params, apiBase);
+    }
+  }
+
+  /**
+   * Execute Singapore /sync API request (signature auth, md5)
+   * Used by api-sg.aliexpress.com/sync endpoint
+   */
+  private async executeSyncApiRequest(
+    method: string,
+    params: Record<string, any>,
+    syncBase: string
+  ): Promise<any> {
+    const now = new Date();
+    const timestamp = String(now.getTime()); // Milliseconds since epoch for Singapore
+    
+    const requestParams: Record<string, any> = {
+      method,
+      app_key: this.config.appKey,
+      sign_method: 'md5',
+      timestamp: timestamp,
+      format: 'json',
+      v: '2.0',
+      simplify: 'true',
+      ...params,
+    };
+
+    // Add tracking ID if available
+    if (this.config.trackingId || this.config.affiliateId) {
+      requestParams.tracking_id = this.config.trackingId || this.config.affiliateId;
+    }
+
+    // Signature must be calculated BEFORE URL encoding
+    const paramsForSigning = Object.entries(requestParams)
+      .filter(([key]) => key !== 'sign')
+      .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
+
+    const sign = this.generateSignature(paramsForSigning, 'md5');
+    requestParams.sign = sign;
+
+    logger.info('Singapore /sync API Signature Debug', {
+      appKey: this.config.appKey,
+      timestamp: timestamp,
+      signMethod: 'md5',
+      paramsForSigning: Object.keys(paramsForSigning).sort().join(', '),
+      generatedSign: sign.substring(0, 16) + '...',
+      totalParams: Object.keys(requestParams).length,
+      apiBase: syncBase,
+    });
+
+    const body = new URLSearchParams(
+      Object.entries(requestParams).map(([key, value]) => [key, String(value)])
+    ).toString();
+
+    logger.info('Singapore /sync API Request', {
+      url: syncBase,
+      method: 'POST',
+      contentType: 'application/x-www-form-urlencoded',
+      paramCount: Object.keys(requestParams).length,
+    });
+
+    const response = await fetch(syncBase, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+      },
+      body: body,
+      signal: AbortSignal.timeout(this.config.timeout || 30000),
+    });
+
+    logger.info('Singapore /sync API Response', {
+      status: response.status,
+      contentType: response.headers.get('content-type'),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('Singapore /sync API request failed', {
+        status: response.status,
+        errorPreview: errorText.substring(0, 500),
+      });
+      throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
+    }
+
+    const responseText = await response.text();
+    logger.debug('Singapore /sync API raw response', {
+      text: responseText.substring(0, 500),
+    });
+
+    // Check if response is HTML (error page) instead of JSON
+    if (responseText.trim().startsWith('<') || responseText.includes('<!DOCTYPE')) {
+      logger.error('Singapore /sync API returned HTML instead of JSON', {
+        method,
+        statusCode: response.status,
+        contentType: response.headers.get('content-type'),
+        responsePreview: responseText.substring(0, 200),
+      });
+      
+      return {
+        error_response: {
+          code: 'HTML_RESPONSE',
+          msg: 'API returned HTML instead of JSON. Endpoint may be incorrect or method not supported.',
+          sub_code: 'isv.invalid-endpoint',
+        },
+      };
+    }
+
+    const data = JSON.parse(responseText);
+    logger.debug('Singapore /sync API request successful', { data });
+    return data;
+  }
+
+  /**
+   * Execute TOP API request via gateway.do (signature auth)
+   */
+  private async executeTopApiRequest(
+    method: string,
+    params: Record<string, any>,
+    apiBaseOverride?: string
+  ): Promise<any> {
+    const now = new Date();
+    const timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+    const apiBase = apiBaseOverride || this.config.apiEndpoint || 'https://openapi.aliexpress.com/gateway.do';
+
+    const requestParams: Record<string, any> = {
+      method,
+      app_key: this.config.appKey,
+      sign_method: 'md5',
+      timestamp: timestamp,
+      format: 'json',
+      v: '2.0',
+      simplify: 'true',
+      ...params,
+    };
+
+    // Signature must be calculated BEFORE URL encoding
+    const paramsForSigning = Object.entries(requestParams)
+      .filter(([key]) => key !== 'sign')
+      .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
+
+    const sign = this.generateSignature(paramsForSigning, 'md5');
+    requestParams.sign = sign;
+
+    logger.info('TOP API Signature Debug', {
+      appKey: this.config.appKey,
+      timestamp: timestamp,
+      signMethod: 'md5',
+      paramsForSigning: Object.keys(paramsForSigning).sort().join(', '),
+      generatedSign: sign.substring(0, 16) + '...',
+      totalParams: Object.keys(requestParams).length,
+      apiBase,
+    });
+
+    const body = Object.keys(requestParams)
+      .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(requestParams[key]))}`)
+      .join('&');
+
+    logger.info('TOP API Request', {
+      url: apiBase,
+      method: 'POST',
+      contentType: 'application/x-www-form-urlencoded',
+      paramCount: Object.keys(requestParams).length,
+    });
+
+    try {
+      const response = await fetch(apiBase, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        },
+        body,
+        signal: AbortSignal.timeout(this.config.timeout || 30000),
+      });
+
+      logger.info('TOP API Response', {
+        status: response.status,
+        contentType: response.headers.get('content-type'),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('TOP API request failed', {
+          status: response.status,
+          errorPreview: errorText.substring(0, 500),
+          sign: sign.substring(0, 16) + '...'
+        });
+        throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
+      }
+
+      const responseText = await response.text();
+      logger.debug('TOP API raw response', {
+        text: responseText.substring(0, 500),
+      });
+
+      // Check if response is HTML (404 page) instead of JSON
+      if (responseText.trim().startsWith('<') || responseText.includes('<!DOCTYPE')) {
+        logger.error('TOP API returned HTML instead of JSON', {
+          method,
+          statusCode: response.status,
+          contentType: response.headers.get('content-type'),
+          responsePreview: responseText.substring(0, 200),
         });
         
-        const data = JSON.parse(responseText);
-        logger.debug('TOP API request successful', { data });
-        return data;
-      } catch (error) {
-        logger.error('TOP API request error', { method, error });
-        throw error;
+        // Return error response in expected format instead of throwing
+        return {
+          error_response: {
+            code: 'HTML_RESPONSE',
+            msg: 'API returned HTML (404 page) instead of JSON. Method may not exist or APP_KEY lacks permissions.',
+            sub_code: 'isv.invalid-method',
+            sub_msg: `Method ${method} not available or APP_KEY unauthorized`,
+          },
+        };
       }
+
+      const data = JSON.parse(responseText);
+      logger.debug('TOP API request successful', { data });
+      return data;
+    } catch (error) {
+      logger.error('TOP API request error', { method, error });
+      // Return error response instead of throwing to allow graceful handling
+      return {
+        error_response: {
+          code: 'EXCEPTION',
+          msg: error instanceof Error ? error.message : 'Unknown error',
+          sub_code: 'isv.request-failed',
+        },
+      };
     }
+  }
+
+  private async executeRestApiRequest(
+    method: string,
+    params: Record<string, any>,
+    restBase: string,
+    includeMethodParam: boolean,
+    apiPath?: string
+  ): Promise<any> {
+    const useEpochTimestamp = restBase.includes('api-sg.aliexpress.com');
+    const restTimestamp = useEpochTimestamp
+      ? String(Date.now())
+      : new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const requestParams: Record<string, any> = {
+      app_key: this.config.appKey,
+      sign_method: 'md5',
+      timestamp: restTimestamp,
+      format: 'json',
+      v: '2.0',
+      simplify: 'true',
+      ...params,
+    };
+
+    if (includeMethodParam) {
+      requestParams.method = method;
+    }
+
+    const paramsForSigning = Object.entries(requestParams)
+      .filter(([key]) => key !== 'sign')
+      .reduce((acc, [key, val]) => ({ ...acc, [key]: val }), {});
+
+    const sign = this.generateSignature(paramsForSigning, 'md5');
+    requestParams.sign = sign;
+
+    const url = apiPath
+      ? `${restBase.replace(/\/$/, '')}/${apiPath}`
+      : restBase;
+
+    logger.info('Singapore API Signature Debug', {
+      appKey: this.config.appKey,
+      timestamp: restTimestamp,
+      signMethod: requestParams.sign_method,
+      allParamsForSigning: Object.keys(paramsForSigning).sort().join(', '),
+      paramsCount: Object.keys(paramsForSigning).length,
+      restBase: url,
+    });
+
+    const body = new URLSearchParams(
+      Object.entries(requestParams).map(([key, value]) => [key, String(value)])
+    ).toString();
+
+    logger.info('Singapore API Request', {
+      url,
+      method: 'POST',
+      contentType: 'application/x-www-form-urlencoded',
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+      },
+      body: body,
+      signal: AbortSignal.timeout(this.config.timeout || 30000),
+    });
+
+    logger.info('Singapore API Response', {
+      status: response.status,
+      contentType: response.headers.get('content-type'),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error('Singapore API request failed', {
+        status: response.status,
+        errorPreview: errorText.substring(0, 500),
+        sign: sign.substring(0, 16) + '...'
+      });
+      throw new Error(`API request failed: ${response.status} - ${errorText.substring(0, 200)}`);
+    }
+
+    const responseText = await response.text();
+    logger.debug('Singapore API raw response', {
+      text: responseText.substring(0, 500)
+    });
+
+    const data = JSON.parse(responseText);
+    logger.debug('Singapore API request successful', { data });
+    return data;
   }
 
   /**
@@ -615,6 +892,27 @@ export class AliExpressClient {
       // M6 Update: Use correct Affiliate API endpoint
       const result = await this.request<any>('aliexpress.affiliate.product.query', topApiParams);
       
+      // Check for error_response from API (including HTML_RESPONSE case)
+      if (result && result.error_response) {
+        logger.error('API returned error', {
+          code: result.error_response.code,
+          msg: result.error_response.msg,
+          sub_code: result.error_response.sub_code,
+        });
+        
+        return {
+          success: false,
+          total: 0,
+          page: topApiParams.page_no,
+          page_size: topApiParams.page_size,
+          products: [],
+          error: {
+            code: result.error_response.code,
+            message: result.error_response.msg || result.error_response.sub_msg || 'API error',
+          },
+        };
+      }
+      
       // Transform TOP API response to our format
       // TOP API response structure: { aliexpress_affiliate_product_query_response: { resp_result: { result: { products: [] } } } }
       logger.debug('Raw API response', { result });
@@ -662,7 +960,7 @@ export class AliExpressClient {
         'product_main_image_url',
         'all_images',
         'product_small_image_urls',   // Additional gallery images
-        'product_props',              // M6+: Technical attributes
+        'product_props',              // M6+: Technical attributes (limited by Affiliate API)
         'target_sale_price',
         'original_price',
         'discount',
@@ -676,7 +974,7 @@ export class AliExpressClient {
         'sku_list',                   // M6+: Variant pricing for real price ranges
         'second_level_image_url',     // Additional images
         'first_level_image_url',      // Additional images
-        'product_description',        // User Request: Fetch raw HTML description for AI context
+        'product_description',        // Fetch HTML description for scraping
       ].join(','),
     };
 
@@ -686,8 +984,11 @@ export class AliExpressClient {
     }
 
     try {
-      // Prefer OAuth endpoint if available; fallback to TOP API method
-      if (this.token) {
+      // NOTE: Affiliate API app category does NOT support OAuth
+      // Always use Singapore /sync with signature auth for Affiliate API
+      // Use only if you have Oversea Solution / Dropshipping app category
+      if (this.token && process.env.ALIEXPRESS_USE_OAUTH === 'true') {
+        logger.debug('Attempting OAuth endpoint (only if app supports it)');
         const body = {
           product_id: params.productId,
           ...baseParams,
@@ -695,12 +996,36 @@ export class AliExpressClient {
         return await this.request<AliExpressProductDetailsResponse>('/product/details', body);
       }
 
-      // TOP API fallback method name for product details
+      // Singapore /sync with signature auth (PRIMARY for Affiliate API)
       const topParams = {
         product_id: params.productId,
         ...baseParams,
       };
-      return await this.request<AliExpressProductDetailsResponse>('aliexpress.affiliate.product.detail.get', topParams);
+
+      const methodCandidates = [
+        'aliexpress.affiliate.productdetail.get',  // Singapore /sync compatible (PRIMARY)
+        'aliexpress.affiliate.product.detail.get', // TOP API style (fallback, may not work on /sync)
+      ];
+
+      const isApiError = (result: any) => {
+        const errorCode = result?.error_response?.code || result?.code;
+        return Boolean(errorCode) || result?.type === 'ISV';
+      };
+
+      let lastResponse: AliExpressProductDetailsResponse | null = null;
+      for (const method of methodCandidates) {
+        const response = await this.request<AliExpressProductDetailsResponse>(method, topParams);
+        lastResponse = response;
+        if (!isApiError(response)) {
+          return response;
+        }
+        logger.warn('Product details method failed, trying fallback', {
+          method,
+          error: (response as any)?.error_response?.code || (response as any)?.code || (response as any)?.type,
+        });
+      }
+
+      return lastResponse as AliExpressProductDetailsResponse;
     } catch (error) {
       logger.error('Product details fetch failed', { error });
       throw error;

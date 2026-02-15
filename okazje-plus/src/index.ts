@@ -1237,7 +1237,7 @@ export const sendEmailOnNotification = onDocumentCreated(
  */
 export const trackShareStats = onCall(
   {
-    region: "us-central1",
+    region: "europe-west1",
     cors: true,
   },
   async (request: CallableRequest<{
@@ -1255,7 +1255,7 @@ export const trackShareStats = onCall(
     }
 
     try {
-      const collection = itemType === "deal" ? "deals" : "products";
+      const collection = itemType === "deal" ? "deals" : "product_cores";
       const docRef = db.collection(collection).doc(itemId);
       const doc = await docRef.get();
 

@@ -38,8 +38,22 @@ export function calculateTitleHash(title: string): string {
  */
 export function calculateImageHash(imageUrl: string): string {
   // Normalize URL (remove query params, protocols)
-  const normalized = new URL(imageUrl).pathname + new URL(imageUrl).search;
-  return sha256(normalized);
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    return sha256('missing-image');
+  }
+
+  const trimmed = imageUrl.trim();
+  if (!trimmed) {
+    return sha256('missing-image');
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const normalized = parsed.pathname + parsed.search;
+    return sha256(normalized);
+  } catch {
+    return sha256(`invalid-image:${trimmed}`);
+  }
 }
 
 /**

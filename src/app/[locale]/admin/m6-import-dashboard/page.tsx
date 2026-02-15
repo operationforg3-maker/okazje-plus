@@ -132,6 +132,50 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
     }
   };
 
+  const runBulkTest = async (params: {
+    refinementType: 'full_enrichment' | 'specs_cleanup';
+    limit?: number;
+    status?: string;
+  }) => {
+    if (!authToken) return alert('Brak tokenu autoryzacji');
+
+    const nextLimit = params.limit ?? 5;
+    const nextStatus = params.status ?? 'draft';
+
+    setRefinementType(params.refinementType);
+    setLimit(nextLimit);
+    setStatus(nextStatus);
+
+    setRunning(true);
+    setJobId(null);
+    try {
+      const res = await fetch('/api/admin/refiner/bulk', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: nextStatus === 'all' ? undefined : nextStatus,
+          limit: nextLimit,
+          refinementType: params.refinementType,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setJobId(data.jobId);
+        alert(`✅ Test refinera uruchomiony!\nJob ID: ${data.jobId}`);
+      } else {
+        alert(`❌ Błąd: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`❌ Błąd: ${err?.message || err}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -206,6 +250,36 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
             Znaleziono: <span className="font-semibold text-slate-900">{preview.totalProducts}</span> produktów
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-slate-900">Szybkie testy (lokalnie)</p>
+          <Badge variant="outline" className="text-xs">TEST</Badge>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => runBulkTest({ refinementType: 'full_enrichment', limit: 5, status: 'draft' })}
+            disabled={running}
+          >
+            Refiner full (5)
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => runBulkTest({ refinementType: 'specs_cleanup', limit: 5, status: 'draft' })}
+            disabled={running}
+          >
+            Refiner specs (5)
+          </Button>
+        </div>
+        <p className="text-xs text-slate-600 mt-2">
+          Testy uruchamiają się na statusie "draft" z limitem 5.
+        </p>
       </div>
 
       {/* Job ID Display */}
@@ -451,6 +525,8 @@ export default function M6ImportDashboard() {
   const [wiping, setWiping] = useState(false);
   const [showDuplicatesDialog, setShowDuplicatesDialog] = useState(false);
   const [pendingCounts, setPendingCounts] = useState<{ products: number; deals: number; draft: number } | null>(null);
+  const [stoppingJobs, setStoppingJobs] = useState<Record<string, boolean>>({});
+  const [deletingJobs, setDeletingJobs] = useState<Record<string, boolean>>({});
 
   // Critical: Prevent hydration mismatch
   useEffect(() => {
@@ -614,6 +690,68 @@ export default function M6ImportDashboard() {
       alert(`❌ Błąd WIPE: ${e?.message || e}`);
     } finally {
       setWiping(false);
+    }
+  };
+
+  const stopJob = async (jobId: string) => {
+    if (!authToken) return setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+    if (!confirm('Zatrzymać to zadanie?')) return;
+
+    setStoppingJobs(prev => ({ ...prev, [jobId]: true }));
+    try {
+      const res = await fetch(`/api/admin/harvester-jobs/${jobId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Nie udało się zatrzymać zadania');
+      }
+
+      await refreshJobs();
+      alert('✅ Zadanie zostało zatrzymane');
+    } catch (e: any) {
+      alert(`❌ Błąd zatrzymywania: ${e?.message || e}`);
+    } finally {
+      setStoppingJobs(prev => {
+        const next = { ...prev };
+        delete next[jobId];
+        return next;
+      });
+    }
+  };
+
+  const deleteJob = async (jobId: string) => {
+    if (!authToken) return setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+    if (!confirm('Usunąć to zadanie z historii?')) return;
+
+    setDeletingJobs(prev => ({ ...prev, [jobId]: true }));
+    try {
+      const res = await fetch(`/api/admin/harvester-jobs/${jobId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || 'Nie udało się usunąć zadania');
+      }
+
+      await refreshJobs();
+      alert('✅ Zadanie usunięte z historii');
+    } catch (e: any) {
+      alert(`❌ Błąd usuwania: ${e?.message || e}`);
+    } finally {
+      setDeletingJobs(prev => {
+        const next = { ...prev };
+        delete next[jobId];
+        return next;
+      });
     }
   };
 
@@ -901,7 +1039,14 @@ export default function M6ImportDashboard() {
                 ) : (
                   <div className="space-y-3">
                     {jobs.map((job) => (
-                      <JobItem key={job.id} job={job} />
+                      <JobItem
+                        key={job.id}
+                        job={job}
+                        onStop={stopJob}
+                        onDelete={deleteJob}
+                        isStopping={!!stoppingJobs[job.id]}
+                        isDeleting={!!deletingJobs[job.id]}
+                      />
                     ))}
                   </div>
                 )}
@@ -1146,6 +1291,65 @@ function HarvesterWizard({
     }
   };
 
+  const runHarvesterTest = async (params: {
+    source: 'convertiser' | 'aliexpress' | 'amazon' | 'allegro';
+    query: string;
+    maxResults: number;
+    convertiserMode?: 'products' | 'offers';
+  }) => {
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      setResult({ error: "Brak tokenu administratora" });
+      return;
+    }
+
+    setSource(params.source);
+    setQuery(params.query);
+    setMaxResults(params.maxResults);
+    setUseCategoryTree(false);
+    if (params.source === 'convertiser' && params.convertiserMode) {
+      setConvertiserMode(params.convertiserMode);
+    }
+
+    setLoading(true);
+    setResult(null);
+    try {
+      const payload: Record<string, any> = {
+        source: params.source,
+        query: params.query,
+        maxResults: params.maxResults,
+        mode: 'single',
+      };
+
+      if (params.source === 'convertiser' && params.convertiserMode) {
+        payload.convertiserMode = params.convertiserMode;
+      }
+
+      const res = await fetch("/api/admin/harvester/run", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setAuthError("Brak uprawnień administratora do uruchomienia harvestera.");
+        setResult({ error: "Brak uprawnień administratora" });
+        return;
+      }
+
+      const data = await res.json();
+      setResult(data);
+      onJobCreated();
+    } catch (err) {
+      setResult({ error: (err as Error).message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAutoImport = async () => {
     if (!authToken) {
       setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
@@ -1339,6 +1543,62 @@ function HarvesterWizard({
                 {s}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Szybkie testy (lokalnie)</p>
+              <p className="text-xs text-slate-600">Małe batchy do weryfikacji jakości importu</p>
+            </div>
+            <Badge variant="outline" className="text-xs">TEST</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => runHarvesterTest({
+                source: 'convertiser',
+                query: 'laptop',
+                maxResults: 10,
+                convertiserMode: 'offers',
+              })}
+              disabled={loading}
+              className="gap-2"
+            >
+              Convertiser offers (10)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => runHarvesterTest({
+                source: 'convertiser',
+                query: 'smartwatch',
+                maxResults: 10,
+                convertiserMode: 'products',
+              })}
+              disabled={loading}
+              className="gap-2"
+            >
+              Convertiser products (10)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => runHarvesterTest({
+                source: 'aliexpress',
+                query: 'usb c charger',
+                maxResults: 10,
+              })}
+              disabled={loading}
+              className="gap-2"
+            >
+              AliExpress (10)
+            </Button>
           </div>
         </div>
 
@@ -2160,7 +2420,19 @@ function ModerationPanel({
 
 /* ==================== UI COMPONENTS ==================== */
 
-function JobItem({ job }: { job: HarvesterJob }) {
+function JobItem({
+  job,
+  onStop,
+  onDelete,
+  isStopping,
+  isDeleting,
+}: {
+  job: HarvesterJob;
+  onStop: (jobId: string) => void;
+  onDelete: (jobId: string) => void;
+  isStopping?: boolean;
+  isDeleting?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   
   const isTreeMode = (job.totalCategories || 0) > 0;
@@ -2279,66 +2551,98 @@ function JobItem({ job }: { job: HarvesterJob }) {
           </div>
         </div>
 
-        <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-4">
-                  Szczegóły
-                </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-              <DialogHeader>
-                <DialogTitle>Szczegóły Zadania: {job.id}</DialogTitle>
-              </DialogHeader>
-              <div className="flex-1 overflow-hidden flex flex-col gap-4">
-                {/* Header Stats */}
-                <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg shrink-0 border">
-                    <div>
-                      <p className="text-xs text-slate-500 uppercase font-medium">Status</p>
-                      <Badge className={cn("mt-1", getStatusColor(job.status))}>{job.status}</Badge>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 uppercase font-medium">Source</p>
-                      <p className="font-mono font-bold text-slate-700">{job.source}</p>
-                    </div>
-                     <div>
-                      <p className="text-xs text-slate-500 uppercase font-medium">Found</p>
-                      <p className="font-bold text-slate-900">{job.productsFound}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 uppercase font-medium">New</p>
-                      <span className="font-bold text-green-600">+{job.productsCreated}</span>
-                      <span className="text-slate-400 mx-1">/</span>
-                      <span className="font-bold text-blue-600">Deal +{job.dealsCreated}</span>
-                    </div>
-                </div>
+        <div className="ml-4 flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onStop(job.id)}
+            disabled={job.status !== 'running' || isStopping}
+            className="gap-2"
+            title={job.status !== 'running' ? 'Zatrzymaj tylko aktywne zadania' : 'Zatrzymaj zadanie'}
+          >
+            {isStopping ? (
+              <div className="animate-spin w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full" />
+            ) : (
+              <Pause className="w-4 h-4" />
+            )}
+            Zatrzymaj
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDelete(job.id)}
+            disabled={isDeleting}
+            className="gap-2 text-slate-600 hover:text-red-600"
+            title="Usuń zadanie z historii"
+          >
+            {isDeleting ? (
+              <div className="animate-spin w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full" />
+            ) : (
+              <Trash2 className="w-4 h-4" />
+            )}
+            Usuń
+          </Button>
+          <Dialog>
+              <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Szczegóły
+                  </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>Szczegóły Zadania: {job.id}</DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 overflow-hidden flex flex-col gap-4">
+                  {/* Header Stats */}
+                  <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg shrink-0 border">
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase font-medium">Status</p>
+                        <Badge className={cn("mt-1", getStatusColor(job.status))}>{job.status}</Badge>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase font-medium">Source</p>
+                        <p className="font-mono font-bold text-slate-700">{job.source}</p>
+                      </div>
+                       <div>
+                        <p className="text-xs text-slate-500 uppercase font-medium">Found</p>
+                        <p className="font-bold text-slate-900">{job.productsFound}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase font-medium">New</p>
+                        <span className="font-bold text-green-600">+{job.productsCreated}</span>
+                        <span className="text-slate-400 mx-1">/</span>
+                        <span className="font-bold text-blue-600">Deal +{job.dealsCreated}</span>
+                      </div>
+                  </div>
 
-                 {/* Main Content: Tree View */}
-                {job.processedCategories && job.processedCategories.length > 0 ? (
-                  <div className="flex-1 border rounded-lg overflow-hidden flex flex-col bg-white">
-                     <div className="px-4 py-2 border-b bg-slate-50 flex justify-between items-center">
-                        <span className="font-semibold text-slate-700 flex items-center gap-2">
-                           <ListTree className="w-4 h-4" />
-                           Struktura i Postęp Kategorii
-                        </span>
-                        <Badge variant="outline" className="bg-white">
-                           {job.processedCategories.length} przetworzonych
-                        </Badge>
-                     </div>
-                     <div className="flex-1 overflow-y-auto bg-white">
-                        <JobCategoryTree categories={job.processedCategories} />
-                     </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center border rounded-lg bg-slate-50 border-dashed">
-                     <div className="text-center text-slate-500">
-                        <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>Brak danych o strukturze kategorii dla tego zadania.</p>
-                     </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-        </Dialog>
+                   {/* Main Content: Tree View */}
+                  {job.processedCategories && job.processedCategories.length > 0 ? (
+                    <div className="flex-1 border rounded-lg overflow-hidden flex flex-col bg-white">
+                       <div className="px-4 py-2 border-b bg-slate-50 flex justify-between items-center">
+                          <span className="font-semibold text-slate-700 flex items-center gap-2">
+                             <ListTree className="w-4 h-4" />
+                             Struktura i Postęp Kategorii
+                          </span>
+                          <Badge variant="outline" className="bg-white">
+                             {job.processedCategories.length} przetworzonych
+                          </Badge>
+                       </div>
+                       <div className="flex-1 overflow-y-auto bg-white">
+                          <JobCategoryTree categories={job.processedCategories} />
+                       </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center border rounded-lg bg-slate-50 border-dashed">
+                       <div className="text-center text-slate-500">
+                          <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p>Brak danych o strukturze kategorii dla tego zadania.</p>
+                       </div>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
   );
