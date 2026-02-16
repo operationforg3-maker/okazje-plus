@@ -747,6 +747,26 @@ export class SmartHarvester {
     }
   }
 
+  private getQueryTimeoutMs(params: {
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser';
+    isTreeMode: boolean;
+    autoBrowse: boolean;
+  }): number {
+    if (params.source === 'convertiser' && params.autoBrowse) {
+      return 600_000;
+    }
+
+    if (params.isTreeMode) {
+      return 300_000;
+    }
+
+    if (params.source === 'aliexpress') {
+      return 240_000;
+    }
+
+    return 180_000;
+  }
+
   private toLocalizedText(value: string): LocalizedText {
     const safe = String(value || '').trim();
     return {
@@ -1140,12 +1160,21 @@ export class SmartHarvester {
     const categoryAttempts = new Map<string, number>();
     const processedCategorySet = new Set<string>();
     const maxCategoryAttempts = 2; // 1 retry per category
-    const categoryTimeoutMs = 120_000; // 120s timeout per category
+    const queryTimeoutMs = this.getQueryTimeoutMs({
+      source,
+      isTreeMode,
+      autoBrowse,
+    });
     const dealsToRefine: string[] = [];
     const productsToRefine: string[] = [];
     let lastDealRefinerAt = 0;
     const dealRefinerBatchSize = 50;
     const dealRefinerMinIntervalMs = 30_000;
+
+    this.addLog(
+      'info',
+      `Timeout per query ustawiony na ${Math.round(queryTimeoutMs / 1000)}s (source=${source}, treeMode=${isTreeMode}, autoBrowse=${autoBrowse})`
+    );
 
     try {
       // Iterate through all provided queries/categories
@@ -1578,7 +1607,7 @@ export class SmartHarvester {
             }
           }
 
-            }, categoryTimeoutMs, currentQuery);
+            }, queryTimeoutMs, currentQuery);
 
             // Log finished category
             processedCategoriesLog.push({
