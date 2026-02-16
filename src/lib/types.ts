@@ -2404,6 +2404,10 @@ export interface ProductCore {
  */
 export interface DealM6 {
   id: string;
+
+  // Primary media
+  image?: string;
+  images?: string[];
   
   // Foreign Key
   productId: string; // References ProductCore.id (required)
