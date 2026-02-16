@@ -2,6 +2,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { DealM6, RefinerJob, LocalizedText } from '@/lib/types';
 import { enrichDeal } from '@/ai/flows/deal-enrichment';
 import { ensureLocalizedTitle } from '@/ai/flows/translation';
+import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
 
 /**
  * Deal Refiner - Enriches Deal documents with AI-generated content
@@ -321,7 +322,7 @@ export class DealRefiner {
 
         // Ensure title is fully localized with guaranteed Polish
         // Priority: explicit > enriched > fallback
-        const fullyLocalizedTitle = ensureLocalizedTitle({
+        let fullyLocalizedTitle = ensureLocalizedTitle({
           pl: pickLocalizedTitle(titlePL, enriched.titlePL || '', 'pl'),
           en: pickLocalizedTitle(titleEN, enriched.titleEN || '', 'en'),
           de: pickLocalizedTitle(titleDE, enriched.titleDE || '', 'de'),
@@ -329,6 +330,24 @@ export class DealRefiner {
           es: pickLocalizedTitle(titleES, enriched.titleES || '', 'es'),
           uk: pickLocalizedTitle(titleUK, enriched.titleUK || '', 'uk'),
         });
+
+        if (
+          sourceLocale === 'en' &&
+          deal.source === 'aliexpress' &&
+          fullyLocalizedTitle.pl === titleForAI
+        ) {
+          try {
+            const normalizedPL = await aiNormalizeTitlePL({ rawTitle: titleForAI });
+            if (normalizedPL && normalizedPL !== fullyLocalizedTitle.pl) {
+              fullyLocalizedTitle = {
+                ...fullyLocalizedTitle,
+                pl: normalizedPL,
+              };
+            }
+          } catch (normalizeErr) {
+            this.addLog('warn', `Deal ${dealId} fallback PL normalization failed`, normalizeErr);
+          }
+        }
 
         refined.title = fullyLocalizedTitle as LocalizedText;
 
