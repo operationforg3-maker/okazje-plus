@@ -65,7 +65,7 @@ export default function ProductDetailM6Client({
   const [recentRatings, setRecentRatings] = useState<ProductRating[]>(initialRatings);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews' | 'rate'>('description');
   const { addItem, isInCart } = useSmartCart();
-  const { currency, formatPrice, formatPriceCustom } = useCurrency();
+  const { formatPrice } = useCurrency();
 
   // Use productCore if M6, otherwise use product
   const productData = isM6 ? productCore : product;
@@ -121,16 +121,25 @@ export default function ProductDetailM6Client({
         ? product?.gallery.map(g => g.src) 
         : [product?.image || '']);
 
-  // Price - M6 has bestPrice, legacy has price
-  const priceAmount = isM6 ? (productCore?.bestPrice?.amount || 0) : (product?.price || 0);
-  const price = formatPriceCustom(priceAmount, 'PLN');
+  const bestDealTotal = isM6 && Array.isArray(deals) && deals.length > 0
+    ? deals.reduce((bestTotal, current) => {
+        const shipping = 'shipping' in current ? (current.shipping?.cost || 0) : ((current as any).shippingCost || 0);
+        const total = (current.price?.amount || 0) + shipping;
+        return total < bestTotal ? total : bestTotal;
+      }, Number.POSITIVE_INFINITY)
+    : null;
+
+  // Price - for M6 use only active approved deals (bestDeal derived from deals prop)
+  const priceAmount = isM6
+    ? bestDealTotal
+    : (product?.price || 0);
 
   // Re-render when currency changes for reactive UI
-  const formattedPriceWithCurrency = formatPrice(priceAmount);
+  const formattedPriceWithCurrency = priceAmount !== null ? formatPrice(priceAmount) : '—';
 
   // M6+ Market Price Estimation Display
   const marketPriceInfo = (() => {
-    if (!isM6 || !productCore?.averageMarketPrice) return null;
+    if (!isM6 || !productCore?.averageMarketPrice || priceAmount === null) return null;
     const mp = productCore.averageMarketPrice;
     if (!mp.amount || mp.amount <= priceAmount) return null; // Only show if we are cheaper
     
@@ -185,7 +194,7 @@ export default function ProductDetailM6Client({
       id: productId,
       name: getLocalizedText(productData.title, 'Produkt'),
       image: imageUrls?.[0] || (product as any)?.image || '',
-      price: { amount: priceAmount, currency: 'PLN' } as any,
+      price: { amount: priceAmount ?? (productCore?.bestPrice?.amount || 0), currency: 'PLN' } as any,
       affiliateUrl: bestDeal?.affiliateLink || (bestDeal as any)?.sourceUrl || (productData as any)?.affiliateUrl,
     } as unknown as Product;
   };
@@ -268,6 +277,12 @@ export default function ProductDetailM6Client({
               <div className="text-4xl font-bold text-green-600 mb-4">
                 {formattedPriceWithCurrency}
               </div>
+
+              {isM6 && !bestDeal && (
+                <div className="mb-4 p-3 bg-muted/40 rounded-lg text-sm border border-muted text-muted-foreground">
+                  {t('productDetail.priceComparison.empty')}
+                </div>
+              )}
               
               {marketPriceInfo && (
                 <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm border border-muted">

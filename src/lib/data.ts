@@ -2426,7 +2426,7 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
     const dealsRef = collection(db, "deals");
     const q = query(dealsRef, where("productCoreId", "==", productId), where("status", "==", "approved"));
     const dealsSnap = await getDocs(q);
-    const deals = dealsSnap.docs.map(d => {
+    const deals: any[] = dealsSnap.docs.map(d => {
       const data = d.data();
       return {
         ...data,
@@ -2437,7 +2437,35 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
       };
     });
 
-    return { product, deals };
+    const bestDeal = deals.length > 0
+      ? deals.reduce((best, current) => {
+          const bestShipping = best?.shipping?.cost || best?.shippingCost || 0;
+          const currentShipping = current?.shipping?.cost || current?.shippingCost || 0;
+          const bestTotal = (best?.price?.amount || best?.price || 0) + bestShipping;
+          const currentTotal = (current?.price?.amount || current?.price || 0) + currentShipping;
+          return currentTotal < bestTotal ? current : best;
+        }, deals[0])
+      : null;
+
+    const resolvedProduct = bestDeal
+      ? {
+          ...product,
+          bestPrice: {
+            amount: (bestDeal?.price?.amount || bestDeal?.price || 0) + (bestDeal?.shipping?.cost || bestDeal?.shippingCost || 0),
+            currency: bestDeal?.price?.currency || 'PLN',
+          },
+          bestTotalPrice: (bestDeal?.price?.amount || bestDeal?.price || 0) + (bestDeal?.shipping?.cost || bestDeal?.shippingCost || 0),
+          bestDealId: bestDeal.id,
+          linkedDealIds: deals.map((deal) => deal.id),
+        }
+      : {
+          ...product,
+          bestPrice: undefined,
+          bestTotalPrice: undefined,
+          bestDealId: undefined,
+        };
+
+    return { product: resolvedProduct, deals };
   } catch (err) {
     console.error("Error fetching product with deals:", err);
     return null;

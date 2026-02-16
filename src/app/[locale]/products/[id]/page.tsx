@@ -180,7 +180,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
   
-  const { product, productCore, isM6 } = data;
+  const { product, productCore, deals, isM6 } = data;
   
   // Safe destructuring - check which mode we're in
   if (isM6 && !productCore) {
@@ -196,10 +196,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: 'Produkt legacy nie ma product data',
     };
   }
+
+  const bestDealFromApprovedDeals = isM6 && Array.isArray(deals) && deals.length > 0
+    ? deals.reduce((best, current) => {
+        const bestShipping = best?.shipping?.cost || best?.shippingCost || 0;
+        const currentShipping = current?.shipping?.cost || current?.shippingCost || 0;
+        const bestTotal = (best?.price?.amount || best?.price || 0) + bestShipping;
+        const currentTotal = (current?.price?.amount || current?.price || 0) + currentShipping;
+        return currentTotal < bestTotal ? current : best;
+      }, deals[0])
+    : null;
   
   const productData = isM6 ? productCore! : product!;
-  const priceAmount = isM6 ? (productCore?.bestPrice?.amount ?? 0) : (product?.price ?? 0);
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(priceAmount ?? 0);
+  const priceAmount = isM6
+    ? (bestDealFromApprovedDeals
+        ? ((bestDealFromApprovedDeals?.price?.amount || bestDealFromApprovedDeals?.price || 0) + (bestDealFromApprovedDeals?.shipping?.cost || bestDealFromApprovedDeals?.shippingCost || 0))
+        : null)
+    : (product?.price ?? 0);
+  const price = priceAmount !== null
+    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(priceAmount)
+    : 'sprawdź oferty';
   const originalPrice = !isM6 && product?.originalPrice 
     ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(product.originalPrice)
     : null;
@@ -275,14 +291,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       canonical: canonicalUrl,
     },
     other: {
-      'product:price:amount': priceAmount.toString(),
-      'product:price:currency': 'PLN',
+      ...(priceAmount !== null && {
+        'product:price:amount': priceAmount.toString(),
+        'product:price:currency': 'PLN',
+        'og:price:amount': priceAmount.toString(),
+        'og:price:currency': 'PLN',
+      }),
       'product:availability': stockStatus,
       'product:condition': 'new',
       'product:brand': brandName,
       ...(originalPrice && { 'product:original_price:amount': originalPrice.replace(/[^0-9.,]/g, '') }),
-      'og:price:amount': priceAmount.toString(),
-      'og:price:currency': 'PLN',
     },
   };
 }
