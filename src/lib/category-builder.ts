@@ -144,6 +144,16 @@ const enrichTranslations = async (
     }
   }
 
+  for (const locale of REQUIRED_TRANSLATION_LOCALES) {
+    const existingLocale = translations[locale] || {};
+    translations[locale] = {
+      name: existingLocale.name || baseName,
+      description: baseDescription
+        ? (existingLocale.description || baseDescription)
+        : existingLocale.description,
+    };
+  }
+
   return translations;
 };
 
