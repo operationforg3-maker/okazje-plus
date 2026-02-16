@@ -1,0 +1,29 @@
+{
+  "title": "Фільтри",
+  "clear": "Очистити",
+  "sort": "Сортування",
+  "price": "Ціна",
+  "min": "Від",
+  "max": "робити",
+  "rating": "Оцінка",
+  "ratingStars": "{зірки}+ Зірок",
+  "availability": "Доступність",
+  "onlyAvailable": "Лише в наявності",
+  "promotions": "Акції",
+  "onlyDiscount": "Тільки знижки",
+  "freeShipping": "Безкоштовна доставка",
+  "brands": "Бренди",
+  "sources": "Магазини",
+  "activeFilters": "Активні фільтри",
+  "sortOptions": {
+    "relevance": "Найкраще прилягання",
+    "price_asc": "Ціна: за зростанням",
+    "price_desc": "Ціна: за спаданням",
+    "rating_desc": "Найвища оцінка",
+    "newest": "Останні",
+    "hot": "Гаряче",
+    "discount_desc": "Найбільша знижка",
+    "reviews_count": "Найбільш коментовані",
+    "popularity": "Найпопулярніші"
+  }
+}

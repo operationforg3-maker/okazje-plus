@@ -5,7 +5,7 @@
 
 import { LocalizedText } from './types';
 
-export type SupportedLocale = 'pl' | 'en' | 'de';
+export type SupportedLocale = 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk';
 
 /**
  * Get localized text with fallback chain: requested locale → Polish → English → first available

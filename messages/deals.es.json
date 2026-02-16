@@ -1,0 +1,90 @@
+{
+  "title": "Ofertas",
+  "subtitle": "Las mejores ofertas verificadas por la comunidad.",
+  "min": "Mínimo",
+  "max": "Máximo",
+  "stats": {
+    "avgDiscount": "Descuento medio",
+    "bestDeal": "Lo mejor"
+  },
+  "filtersTitle": "Filtros y ordenación",
+  "filtersSubtitle": "Acceso rápido al precio, tipo y envío gratuito.",
+  "priceLabel": "Precio:",
+  "filters": {
+    "search": "Busca oportunidades...",
+    "sort": "Ordenar",
+    "filterButtonText": "Categorías y filtros",
+    "sortOptions": {
+      "hottest": "Lo más candente",
+      "newest": "Lo último",
+      "price_asc": "Precio: de menor a mayor",
+      "price_desc": "Precio: de mayor a menor",
+      "discount": "El mayor descuento"
+    },
+    "type": "Tipo",
+    "priceRange": "Rango de precios",
+    "min": "Mínimo",
+    "max": "Máximo",
+    "priceLimits": "Límites de rango",
+    "minLimit": "Límite mínimo:",
+    "maxLimit": "Límite máximo:",
+    "quickFilters": {
+      "freeShipping": "Envío gratuito",
+      "bigDiscount": "Gran Descuento",
+      "today": "Hoy",
+      "verified": "Verificado",
+      "couponOnly": "Solo cupones",
+      "freebies": "Gratis",
+      "todayOnly": "Solo hoy",
+      "verifiedStores": "Tiendas verificadas"
+    },
+    "clearAll": "Borrar filtros",
+    "saveFilter": "Guardar filtro",
+    "saveFilterCurrent": "Guardar filtros actuales",
+    "savedLabel": "Guardado:"
+  },
+  "recommendations": "Panel de recomendaciones",
+  "heading": "Ofertas",
+  "viewMode": {
+    "list": "Lista",
+    "grid": "Red"
+  },
+  "viewToggle": {
+    "grid": "Vista de cuadrícula",
+    "list": "Vista de la lista"
+  },
+  "empty": {
+    "title": "Sin oportunidades",
+    "description": "No se encontraron ofertas que coincidan con tus criterios. Intenta modificar los filtros.",
+    "inCategory": "No hay ofertas disponibles en esta categoría.",
+    "cta": "Volver a todas las ocasiones"
+  },
+  "loading": "Cargando ofertas...",
+  "loadingMore": "Cargando más ofertas...",
+  "showing": "Se han mostrado todas las {{count}} ofertas.",
+  "productOfDay": {
+    "badge": "Producto del Día",
+    "viewProduct": "Ver producto"
+  },
+  "hotDealsQuick": "Ofertas imperdibles",
+  "hotDealsDesc": "Consulta los productos con las mejores valoraciones y opiniones.",
+  "viewProducts": "Ver productos",
+  "seeMore": "Ver más",
+  "sidebar": {
+    "categories": "Categorías",
+    "allDeals": "Todos",
+    "showAll": "Mostrar todo",
+    "hideEmpty": "Ocultar vacíos"
+  },
+  "card": {
+    "price": "Precio",
+    "shippingWith": "+ envío: {cost}",
+    "favorite": "Favoritos",
+    "favoriteAdd": "Añadir a favoritos",
+    "favoriteRemove": "Eliminar de favoritos",
+    "alert": "Alerta",
+    "compare": "Comparar",
+    "compareTitle": "Añadir a la comparación",
+    "go": "Ir"
+  }
+}

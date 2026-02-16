@@ -1,0 +1,15 @@
+{
+  "title": "Ranking de Usuarios",
+  "subtitle": "Los mejores cazadores de gangas de la comunidad de Chollometro",
+  "leaderboard": "Tabla de clasificación",
+  "leaderboardDesc": "Gana puntos por añadir ofertas, comentar y participar en la comunidad.",
+  "rank": "Lugar",
+  "user": "Usuario",
+  "points": "Puntos",
+  "kingOfDeals": "👑 El Rey de las Ofertas",
+  "viceChampion": "🥈 Subcampeón",
+  "thirdPlace": "🥉 3er puesto",
+  "topTen": "Top 10",
+  "loading": "Cargando...",
+  "noData": "Sin datos de clasificación"
+}

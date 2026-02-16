@@ -1,0 +1,38 @@
+{
+  "title": "Politique de Cookies",
+  "lastUpdated": "Dernière mise à jour : 29 janvier 2026",
+  "intro": {
+    "title": "Que sont les cookies ?",
+    "description": "Les cookies sont de petits fichiers texte enregistrés sur votre appareil (ordinateur, tablette, smartphone) lorsque vous visitez des sites web. Ils permettent à un site de mémoriser vos actions et préférences pendant une certaine durée."
+  },
+  "usage": {
+    "title": "Comment utilisons-nous les cookies ?",
+    "description": "Nous utilisons des cookies aux fins suivantes :",
+    "categories": {
+      "necessary": {
+        "title": "Indispensable",
+        "description": "Ces cookies sont essentiels au fonctionnement du site web. Ils comprennent la session utilisateur, la sécurité et les fonctionnalités de base.",
+        "examples": "Authentification, préférences linguistiques, sécurité"
+      },
+      "analytics": {
+        "title": "Analytique",
+        "description": "Ils nous aident à comprendre comment les visiteurs utilisent notre site web afin que nous puissions l'améliorer.",
+        "examples": "Google Analytics, statistiques de visites, comportement des utilisateurs"
+      },
+      "marketing": {
+        "title": "Marketing",
+        "description": "Utilisés pour afficher des publicités adaptées à vos centres d'intérêt.",
+        "examples": "Cookies de remarketing, publicités personnalisées"
+      }
+    }
+  },
+  "control": {
+    "title": "Comment gérer les cookies ?",
+    "description": "Vous pouvez contrôler et/ou supprimer les cookies à votre guise. Vous pouvez supprimer tous les cookies déjà stockés sur votre ordinateur et la plupart des navigateurs vous permettent de bloquer leur enregistrement.",
+    "settings": "Pour modifier vos préférences en matière de cookies sur ce site, veuillez cliquer sur le bouton \"Gérer les préférences\" dans la bannière de cookies ou dans le pied de page."
+  },
+  "more": {
+    "title": "Plus d'informations",
+    "description": "Si vous avez des questions concernant notre politique de cookies, n'hésitez pas à nous contacter via le formulaire de contact."
+  }
+}

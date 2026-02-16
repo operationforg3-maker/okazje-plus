@@ -1,0 +1,59 @@
+{
+  "loading": "Cargando...",
+  "accessDenied": "Acceso denegado. Se requieren permisos de administrador.",
+  "title": "Importación Inteligente",
+  "subtitle": "Gestión de importaciones de productos y perfiles",
+  "startCard": {
+    "title": "Iniciar importación",
+    "description": "Elige perfil y ajustes de importación",
+    "profileLabel": "ID de perfil",
+    "profilePlaceholder": "aliexpress_es",
+    "maxLabel": "Máximo (opcional)",
+    "maxPlaceholder": "ej. 100",
+    "modeLabel": "Modo",
+    "dryRun": "Prueba",
+    "real": "Real",
+    "start": "Iniciar importación",
+    "refresh": "Actualizar"
+  },
+  "listCard": {
+    "title": "Historial de importaciones",
+    "description": "Los últimos {limit} importaciones",
+    "loading": "Cargando historial...",
+    "empty": "Sin historial de importaciones"
+  },
+  "details": {
+    "title": "Detalles de la importación",
+    "runId": "ID de inicio",
+    "profileVendor": "Perfil / Proveedor",
+    "status": "Estado",
+    "time": "Tiempo",
+    "noData": "Sin datos",
+    "stats": {
+      "fetched": "Descargado",
+      "created": "Creado",
+      "updated": "Actualizado",
+      "skipped": "Omitido.",
+      "errors": "Errores",
+      "duplicates": "Duplicados"
+    },
+    "errorsTitle": "Errores de importación",
+    "item": "Elemento"
+  },
+  "dryRunSuffix": "(prueba)",
+  "statusMap": {
+    "queued": "En la fila",
+    "pending": "Pendiente",
+    "running": "En curso",
+    "completed": "Completado",
+    "failed": "Fallido",
+    "cancelled": "Anulado",
+    "paused": "Detenido"
+  },
+  "errors": {
+    "loadRuns": "No se pudieron cargar los historiales de importación.",
+    "loadRunDetail": "No se pudieron cargar los detalles de la importación.",
+    "startImport": "No se pudo iniciar la importación.",
+    "profileRequired": "El campo ID de perfil es obligatorio."
+  }
+}

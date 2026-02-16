@@ -1,0 +1,19 @@
+{
+  "title": "Foro de la Comunidad",
+  "subtitle": "Ofertas imperdibles, consejos para comprar y mucho más.",
+  "newThread": "Nuevo hilo",
+  "searchPlaceholder": "Buscar hilos...",
+  "sortBy": "Ordenar",
+  "filterBy": "Filtrar",
+  "newest": "Lo último",
+  "popular": "Popular",
+  "unanswered": "Sin respuesta",
+  "all": "Todos",
+  "answered": "Con respuesta",
+  "pinned": "Fijado",
+  "replies": "respuestas",
+  "views": "vistas",
+  "solved": "Resuelto",
+  "noThreads": "No hay temas.",
+  "noThreadsDesc": "No se encontraron hilos que coincidan con los criterios de búsqueda."
+}

@@ -6,7 +6,7 @@ import { extractDimensionsFromTitle } from '@/lib/automation/identity-matcher';
 /**
  * AI Refiner - Enriches draft ProductCores with AI-generated content
  * - Cleans up specs from raw data
- * - Generates multilingual descriptions (PL/EN/DE)
+ * - Generates multilingual descriptions (PL/EN/DE/FR/ES/UK)
  * - Creates review summaries based on ratings
  * - Updates status to pending_approval
  */
@@ -370,7 +370,7 @@ export class AIRefiner {
              const tr = await translateContent({
                text: titleResult.titleEN,
                sourceLocale: 'en',
-               targetLocales: ['pl', 'de']
+               targetLocales: ['pl', 'de', 'fr', 'es', 'uk']
              });
              // Only override if translation produced something different
              if (tr.translations['pl'] && tr.translations['pl'] !== titleResult.titlePL) {
@@ -378,6 +378,15 @@ export class AIRefiner {
              }
              if (tr.translations['de']) {
                titleResult.titleDE = tr.translations['de'];
+             }
+             if (tr.translations['fr']) {
+               (titleResult as any).titleFR = tr.translations['fr'];
+             }
+             if (tr.translations['es']) {
+               (titleResult as any).titleES = tr.translations['es'];
+             }
+             if (tr.translations['uk']) {
+               (titleResult as any).titleUK = tr.translations['uk'];
              }
            } catch(err) {
              console.error('[Refiner] Failsafe translation failed', err);
@@ -389,6 +398,9 @@ export class AIRefiner {
           pl: titleResult.titlePL,
           en: titleResult.titleEN,
           de: titleResult.titleDE,
+          fr: (titleResult as any).titleFR || titleResult.titleEN,
+          es: (titleResult as any).titleES || titleResult.titleEN,
+          uk: (titleResult as any).titleUK || titleResult.titleEN,
         };
 
         // Merge extracted specs
@@ -440,6 +452,24 @@ export class AIRefiner {
           specs: refined.specs || {},
           features: features,
         }),
+        fr: formatProductDescription({
+          title: typeof refined.title === 'object' ? refined.title.fr || refined.title.en : title,
+          plainDescription: refined.fullDescription?.fr || '',
+          specs: refined.specs || {},
+          features: features,
+        }),
+        es: formatProductDescription({
+          title: typeof refined.title === 'object' ? refined.title.es || refined.title.en : title,
+          plainDescription: refined.fullDescription?.es || '',
+          specs: refined.specs || {},
+          features: features,
+        }),
+        uk: formatProductDescription({
+          title: typeof refined.title === 'object' ? refined.title.uk || refined.title.en : title,
+          plainDescription: refined.fullDescription?.uk || '',
+          specs: refined.specs || {},
+          features: features,
+        }),
       };
 
       // M6 Update: Sync shortDescription with SEO description for Cards/Deals
@@ -448,6 +478,9 @@ export class AIRefiner {
           pl: refined.seoDescription,
           en: product.shortDescription?.en || product.shortDescription?.pl || '',
           de: product.shortDescription?.de || product.shortDescription?.pl || '',
+          fr: product.shortDescription?.fr || product.shortDescription?.pl || '',
+          es: product.shortDescription?.es || product.shortDescription?.pl || '',
+          uk: product.shortDescription?.uk || product.shortDescription?.pl || '',
         };
       }
     }
@@ -556,7 +589,9 @@ export class AIRefiner {
       // We must detect if we should treat the "PL" input as actually English.
       const isEnSource = metadata?.source === 'aliexpress' || metadata?.source === 'amazon';
       const sourceLocale = isEnSource ? 'en' : 'pl';
-      const targetLocales = isEnSource ? ['pl', 'de'] : ['en', 'de'];
+      const targetLocales = isEnSource
+        ? ['pl', 'de', 'fr', 'es', 'uk']
+        : ['en', 'de', 'fr', 'es', 'uk'];
 
       // Use the appropriate title base
       const baseTitle = isEnSource ? (title.en || title.pl || '') : (title.pl || '');
@@ -579,17 +614,26 @@ export class AIRefiner {
       const result: LocalizedText = {
         pl: '',
         en: '',
-        de: ''
+        de: '',
+        fr: '',
+        es: '',
+        uk: ''
       };
 
       if (sourceLocale === 'en') {
         result.en = baseDescription;
         result.pl = translationResult.translations['pl'] || `[AI] ${baseTitle}`;
         result.de = translationResult.translations['de'] || `[AI] ${baseTitle}`;
+        result.fr = translationResult.translations['fr'] || `[AI] ${baseTitle}`;
+        result.es = translationResult.translations['es'] || `[AI] ${baseTitle}`;
+        result.uk = translationResult.translations['uk'] || `[AI] ${baseTitle}`;
       } else {
         result.pl = baseDescription;
         result.en = translationResult.translations['en'] || `[AI] ${baseTitle}`;
         result.de = translationResult.translations['de'] || `[AI] ${baseTitle}`;
+        result.fr = translationResult.translations['fr'] || `[AI] ${baseTitle}`;
+        result.es = translationResult.translations['es'] || `[AI] ${baseTitle}`;
+        result.uk = translationResult.translations['uk'] || `[AI] ${baseTitle}`;
       }
 
       return result;
@@ -604,6 +648,9 @@ export class AIRefiner {
         pl: `${title.pl}. Specyfikacja: ${specsText}`,
         en: `${title.en}. Specifications: ${specsText}`,
         de: `${title.de}. Spezifikation: ${specsText}`,
+        fr: `${title.fr || title.en || title.pl}. Spécifications: ${specsText}`,
+        es: `${title.es || title.en || title.pl}. Especificaciones: ${specsText}`,
+        uk: `${title.uk || title.en || title.pl}. Характеристики: ${specsText}`,
       };
     }
   }
@@ -619,13 +666,16 @@ export class AIRefiner {
         const res = await translateContent({
           text: title.pl,
           sourceLocale: 'pl',
-          targetLocales: ['en', 'de']
+          targetLocales: ['en', 'de', 'fr', 'es', 'uk']
         });
         
         return {
           pl: title.pl,
           en: res.translations['en'] || title.en,
-          de: res.translations['de'] || title.de || ''
+          de: res.translations['de'] || title.de || '',
+          fr: res.translations['fr'] || title.fr || '',
+          es: res.translations['es'] || title.es || '',
+          uk: res.translations['uk'] || title.uk || ''
         };
       }
       return title;
@@ -700,11 +750,33 @@ export class AIRefiner {
       sentiment = 'Poor reviews. Quality and durability issues reported.';
     }
 
-    return {
-      pl: sentiment, // TODO: Translate
-      en: sentiment,
-      de: sentiment, // TODO: Translate
-    };
+    try {
+      const { translateContent } = await import('@/ai/flows/enrichment');
+      const res = await translateContent({
+        text: sentiment,
+        sourceLocale: 'en',
+        targetLocales: ['pl', 'de', 'fr', 'es', 'uk']
+      });
+
+      return {
+        pl: res.translations['pl'] || sentiment,
+        en: sentiment,
+        de: res.translations['de'] || sentiment,
+        fr: res.translations['fr'] || sentiment,
+        es: res.translations['es'] || sentiment,
+        uk: res.translations['uk'] || sentiment,
+      };
+    } catch (err) {
+      console.error('[Refiner] Review summary translation failed:', err);
+      return {
+        pl: sentiment,
+        en: sentiment,
+        de: sentiment,
+        fr: sentiment,
+        es: sentiment,
+        uk: sentiment,
+      };
+    }
   }
 
   /**

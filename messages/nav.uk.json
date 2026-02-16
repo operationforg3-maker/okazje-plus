@@ -1,0 +1,22 @@
+{
+  "openMenu": "Відкрити меню",
+  "home": "Головна сторінка",
+  "deals": "Пропозиції",
+  "products": "Продукти",
+  "forum": "Форум",
+  "addDeal": "Додати пропозицію",
+  "seasonalHits": "Хіти сезону",
+  "hottest": "Najгарячіші",
+  "newest": "Останні",
+  "trending": "Трендовий",
+  "profile": "Профіль",
+  "favorites": "Улюблене",
+  "notifications": "Сповіщення",
+  "settings": "Налаштування",
+  "admin": "Панель адміністратора",
+  "logout": "Вийти",
+  "login": "Увійти",
+  "changeLanguage": "Змінити мову",
+  "changeCurrency": "Змінити валюту",
+  "changeTheme": "Змінити тему"
+}

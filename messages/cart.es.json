@@ -1,0 +1,29 @@
+{
+  "title": "Tu carrito",
+  "subtitle": "Tus productos seleccionados",
+  "empty": {
+    "title": "Tu carrito está vacío.",
+    "description": "Añade productos al carrito para generar enlaces de compra más tarde.",
+    "cta": "Explorar Productos"
+  },
+  "item": {
+    "remove": "Eliminar",
+    "quantity": "Cantidad"
+  },
+  "summary": {
+    "title": "Resumen",
+    "subtotal": "Suma parcial",
+    "shipping": "Entrega",
+    "free": "Gratis",
+    "total": "Juntos",
+    "finalize": "Ir de compras"
+  },
+  "toast": {
+    "added": "Añadido al carrito",
+    "removed": "Eliminado del carrito",
+    "updated": "Cantidad actualizada",
+    "error": "Ocurrió un error."
+  },
+  "loading": "Cargando el carrito...",
+  "clearCart": "Vaciar carrito"
+}

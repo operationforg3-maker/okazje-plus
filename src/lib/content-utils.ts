@@ -62,10 +62,10 @@ export function getAvailableLanguages(
   text: LocalizedText | string | undefined
 ): SupportedLanguage[] {
   if (!text) return [];
-  if (typeof text === 'string') return ['pl', 'en', 'de']; // Legacy strings available in all
+  if (typeof text === 'string') return ['pl', 'en', 'de', 'fr', 'es', 'uk']; // Legacy strings available in all
   
   const languages: SupportedLanguage[] = [];
-  const supportedLangs: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es'];
+  const supportedLangs: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
   
   for (const lang of supportedLangs) {
     if (hasLanguage(text, lang)) {
@@ -89,6 +89,7 @@ export function createLocalizedText(
     de: language === 'de' ? text : '',
     fr: language === 'fr' ? text : '',
     es: language === 'es' ? text : '',
+    uk: language === 'uk' ? text : '',
   };
 }
 
@@ -126,6 +127,7 @@ export function getLanguageName(language: SupportedLanguage): string {
     de: 'Deutsch',
     fr: 'Français',
     es: 'Español',
+    uk: 'Українська',
   };
   return names[language] || language.toUpperCase();
 }
@@ -140,6 +142,7 @@ export function getLanguageFlag(language: SupportedLanguage): string {
     de: '🇩🇪',
     fr: '🇫🇷',
     es: '🇪🇸',
+    uk: '🇺🇦',
   };
   return flags[language] || '🌐';
 }
@@ -154,7 +157,7 @@ export function useContentLanguage(): SupportedLanguage {
   useEffect(() => {
     // Map Next.js locale to supported language
     const lang = locale as SupportedLanguage;
-    if (['pl', 'en', 'de', 'fr', 'es'].includes(lang)) {
+    if (['pl', 'en', 'de', 'fr', 'es', 'uk'].includes(lang)) {
       setContentLang(lang);
     }
   }, [locale]);

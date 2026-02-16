@@ -6,7 +6,7 @@
 
 import { Product, Category, Subcategory, SubSubcategory } from './types';
 
-export type SupportedLanguage = 'pl' | 'en' | 'de';
+export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk';
 
 /**
  * Get translated product name
@@ -125,6 +125,9 @@ export function getAllProductTranslations(product: Product) {
     },
     en: product.translations?.en,
     de: product.translations?.de,
+    fr: product.translations?.fr,
+    es: product.translations?.es,
+    uk: product.translations?.uk,
   };
 }
 
@@ -155,13 +158,16 @@ export function getProductSupportedLanguages(product: Product): SupportedLanguag
   
   if (product.translations?.en) languages.push('en');
   if (product.translations?.de) languages.push('de');
+  if (product.translations?.fr) languages.push('fr');
+  if (product.translations?.es) languages.push('es');
+  if (product.translations?.uk) languages.push('uk');
   
   return languages;
 }
 
 /**
  * Get language-specific product URL slug
- * Format: /pl/products/... or /en/products/... or /de/products/...
+ * Format: /pl/products/... or /en/products/... or /de/products/... or /fr/products/... or /es/products/... or /uk/products/...
  */
 export function getProductUrl(productId: string, lang: SupportedLanguage = 'pl'): string {
   return `/${lang}/products/${productId}`;

@@ -1,0 +1,29 @@
+{
+  "title": "Filtres",
+  "clear": "Nettoyer",
+  "sort": "Tri",
+  "price": "Prix",
+  "min": "À partir de",
+  "max": "Faire.",
+  "rating": "Évaluation",
+  "ratingStars": "{stars}+ Étoiles",
+  "availability": "Accessibilité",
+  "onlyAvailable": "Seulement disponible",
+  "promotions": "Promotions",
+  "onlyDiscount": "Seulement les soldes",
+  "freeShipping": "Livraison gratuite",
+  "brands": "Marques",
+  "sources": "Magasins",
+  "activeFilters": "Filtres actifs",
+  "sortOptions": {
+    "relevance": "Meilleur ajustement",
+    "price_asc": "Prix : croissant",
+    "price_desc": "Prix : décroissant",
+    "rating_desc": "Meilleure note",
+    "newest": "Dernières",
+    "hot": "Chaud",
+    "discount_desc": "La plus grande réduction",
+    "reviews_count": "Les plus commentés",
+    "popularity": "Le plus populaire"
+  }
+}

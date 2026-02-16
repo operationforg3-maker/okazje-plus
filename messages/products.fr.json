@@ -1,0 +1,151 @@
+{
+  "title": "Produits",
+  "subtitle": "Meilleurs produits AliExpress",
+  "recommendations": "Panneau de recommandations",
+  "viewToggle": {
+    "grid": "Vue en grille",
+    "list": "Vue de la liste"
+  },
+  "filters": {
+    "search": "Rechercher des produits...",
+    "title": "Catégories et filtres",
+    "sort": "Trier",
+    "sortOptions": {
+      "popular": "Le plus populaire",
+      "newest": "Dernières",
+      "price_asc": "Prix : croissant",
+      "price_desc": "Prix : décroissant",
+      "rating": "Meilleures ventes"
+    },
+    "category": "Catégorie",
+    "priceRange": "Gamme de prix",
+    "min": "Minute",
+    "max": "Max",
+    "priceLimits": "Limites de portée",
+    "minLimit": "Limite minimale :",
+    "maxLimit": "Limite maximale :",
+    "quickFilters": {
+      "freeShipping": "Livraison gratuite",
+      "highRating": "Notes élevées",
+      "topRated": "Très bien noté (4.5+)",
+      "newArrivals": "Nouveautés",
+      "onSale": "Promotion",
+      "bestsellers": "Meilleures ventes"
+    },
+    "clearAll": "Effacer les filtres",
+    "savedLabel": "Filtres enregistrés :",
+    "saveFilter": "Enregistrer les filtres actuels"
+  },
+  "viewMode": {
+    "list": "Liste",
+    "grid": "Filet"
+  },
+  "density": {
+    "standard": "Standard",
+    "compact": "Compact"
+  },
+  "categories": {
+    "title": "Catégories",
+    "showAll": "Afficher tout",
+    "hideEmpty": "Masquer les vides",
+    "allProducts": "Tous les produits"
+  },
+  "breadcrumbs": {
+    "home": "Accueil",
+    "catalog": "Catalogue de produits"
+  },
+  "empty": {
+    "title": "Aucun produit",
+    "description": "Aucun produit ne correspond à vos critères de recherche.",
+    "inCategory": "Aucun produit dans cette catégorie.",
+    "cta": "Retour à tous les produits"
+  },
+  "loading": "Chargement des produits...",
+  "loadingMore": "Chargement des produits suivants...",
+  "addToCart": "Ajouter au panier",
+  "list": {
+    "titleWithCount": "Produits ({count})"
+  },
+  "showing": "Affichage de tous les {count} produits",
+  "card": {
+    "new": "Nouveau",
+    "price": "Prix",
+    "go": "Aller",
+    "offer": "Offre",
+    "details": "Détails",
+    "info": "Info",
+    "cart": "Panier",
+    "inCart": "Dans le panier",
+    "toCart": "Ajouter au panier",
+    "favorite": "Favoris",
+    "favoriteAdd": "Ajouter aux favoris",
+    "favoriteRemove": "Supprimer des favoris",
+    "compare": "Comparer",
+    "compareTitle": "Comparer les prix"
+  },
+  "productDetail": {
+    "m6": {
+      "dealsAvailable": "{count, plural, one {# offre disponible} few {# offres disponibles} many {# offres disponibles} other {# offres disponibles}}",
+      "compareHint": "Comparez les prix de différents vendeurs ci-dessous",
+      "videoTitle": "Vidéo du produit",
+      "videoDesc": "Vidéo source (AliExpress)"
+    },
+    "simple": {
+      "loading": "Chargement du produit...",
+      "notFound": "Produit introuvable",
+      "error": "Impossible de charger le produit.",
+      "reviews": "{count, plural, one {# avis} few {# avis} many {# avis} other {# avis}}",
+      "verified": "Approuvé",
+      "bestPriceAt": "Meilleure offre à",
+      "totalPrice": "Ensemble",
+      "productPrice": "Prix du produit",
+      "shipping": "Livraison",
+      "freeShipping": "GRATUIT",
+      "estimatedDelivery": "Livraison en {days, plural, one {# jour} few {# jours} many {# jours} other {# jours}}",
+      "buyNow": "Acheter maintenant",
+      "whatUsersSay": "Ce qu'en disent les utilisateurs",
+      "overview": "Description rapide",
+      "details": "Détails"
+    },
+    "priceComparison": {
+      "title": "Comparaison de prix",
+      "storesCount": "{count, plural, one {# magasin} few {# magasins} many {# magasins} other {# magasins}}",
+      "store": "Magasin",
+      "price": "Prix",
+      "shipping": "Livraison",
+      "total": "Ensemble",
+      "delivery": "Livraison",
+      "rating": "Évaluation",
+      "action": "Action",
+      "bestPriceBadge": "Meilleur prix",
+      "freeShipping": "GRATUIT",
+      "deliveryDays": "{count, plural, one {# jour} few {# jours} many {# jours} other {# jours}}",
+      "deliveryDash": "—",
+      "buy": "Acheter",
+      "lowestInfo": "Prix le plus bas : vous économisez par rapport aux autres magasins. Livraison gratuite possible.",
+      "marketPrice": {
+        "label": "Moyenne du marché",
+        "savings": "Vous économisez",
+        "note": "Prix moyen estimé basé sur d'autres plateformes (Allegro/Amazon)"
+      },
+      "loading": "Chargement des offres...",
+      "empty": "Aucune offre disponible pour ce produit."
+    },
+    "priceHistory": {
+      "title": "Historique des prix (30 jours)",
+      "noDataTitle": "Pas d'historique de prix disponible.",
+      "noDataDescription": "Données insuffisantes pour afficher l'historique des prix.",
+      "description": "Prix le plus bas constaté sur 30 jours ({points} points de données) - devise : {currency}",
+      "stats": {
+        "min": "Prix le plus bas",
+        "max": "Le prix le plus élevé",
+        "avg": "Prix moyen",
+        "change": "Changement"
+      },
+      "axisLabel": "Prix ({currency})",
+      "omnibusTitle": "Directive Omnibus",
+      "omnibusText": "Le graphique affiche le prix le plus bas constaté au cours des 30 derniers jours, garantissant une transparence des prix conforme à la réglementation européenne.",
+      "price": "Prix"
+    }
+  }
+}

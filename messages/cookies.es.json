@@ -1,0 +1,38 @@
+{
+  "title": "Política de Cookies",
+  "lastUpdated": "Última actualización: 29 de enero de 2026",
+  "intro": {
+    "title": "¿Qué son las cookies?",
+    "description": "Las cookies son pequeños archivos de texto que se guardan en tu dispositivo (ordenador, tableta, smartphone) cuando visitas páginas web. Permiten que la página recuerde tus acciones y preferencias durante un período de tiempo determinado."
+  },
+  "usage": {
+    "title": "¿Cómo utilizamos las cookies?",
+    "description": "Utilizamos cookies con los siguientes fines:",
+    "categories": {
+      "necessary": {
+        "title": "Esencial",
+        "description": "Estas cookies son esenciales para el funcionamiento del sitio web. Incluyen la sesión del usuario, la seguridad y las funcionalidades básicas.",
+        "examples": "Autenticación, preferencias de idioma, seguridad"
+      },
+      "analytics": {
+        "title": "Analíticas",
+        "description": "Nos ayudan a comprender cómo los visitantes utilizan nuestro sitio web, para que podamos mejorarlo.",
+        "examples": "Google Analytics, estadísticas de visitas, comportamiento del usuario"
+      },
+      "marketing": {
+        "title": "Marketing",
+        "description": "Utilizadas para mostrar anuncios adaptados a tus intereses.",
+        "examples": "Cookies de remarketing, anuncios personalizados"
+      }
+    }
+  },
+  "control": {
+    "title": "¿Cómo controlar las cookies?",
+    "description": "Puedes controlar y/o eliminar las cookies a tu gusto. Puedes eliminar todas las cookies que ya están en tu ordenador y la mayoría de los navegadores te permiten bloquear que se guarden nuevas.",
+    "settings": "Para cambiar tus preferencias de cookies en este sitio web, haz clic en el botón \"Gestionar preferencias\" en el banner de cookies o en el pie de página."
+  },
+  "more": {
+    "title": "Más información",
+    "description": "Si tiene alguna pregunta sobre nuestra política de cookies, póngase en contacto con nosotros a través del formulario de contacto."
+  }
+}

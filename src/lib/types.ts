@@ -102,6 +102,7 @@ export interface LocalizedText {
   de?: string; // German (optional)
   fr?: string; // French (optional)
   es?: string; // Spanish (optional)
+  uk?: string; // Ukrainian (optional)
   [key: string]: string | undefined; // Extensible for future languages
 }
 
@@ -2499,18 +2500,27 @@ export interface DealM6 {
       pl: string[];
       en: string[];
       de: string[];
+      fr?: string[];
+      es?: string[];
+      uk?: string[];
     };
     // Deal highlights (key features/advantages)
     highlights?: {
       pl: string[];
       en: string[];
       de: string[];
+      fr?: string[];
+      es?: string[];
+      uk?: string[];
     };
     // Offer summary per language
     offerSummary?: {
       pl: string;
       en: string;
       de: string;
+      fr?: string;
+      es?: string;
+      uk?: string;
     };
     // Other metadata
     [key: string]: any;

@@ -1,0 +1,47 @@
+{
+  "title": "Bienvenido de nuevo",
+  "subtitle": "Inicia sesión o crea una cuenta para descubrir las mejores ofertas.",
+  "noAccount": "¿Aún no tienes una cuenta?",
+  "signUp": "Regístrate",
+  "forgotPassword": "¿Olvidaste tu contraseña?",
+  "termsText": "Al hacer clic en Continuar, aceptas nuestros",
+  "termsLink": "Reglamento",
+  "and": "Yo.",
+  "privacyLink": "Política de Privacidad",
+  "brand": {
+    "kicker": "Mercado comparador de precios",
+    "title": "Inicia sesión en nuestra identidad de marca, Ofertas Plus.",
+    "subtitle": "Una sola cuenta para comparar ofertas, alertas de precios y búsquedas guardadas.",
+    "points": {
+      "quality": "Calidad comprobada en ofertas y reseñas.",
+      "secure": "Inicio de sesión seguro y protección de la cuenta",
+      "fast": "Acceso rápido a las últimas ofertas"
+    },
+    "footer": "Okazje Plus: la elección inteligente, todo en un solo lugar."
+  },
+  "tabs": {
+    "login": "Iniciar sesión",
+    "register": "Registro"
+  },
+  "labels": {
+    "email": "Correo electrónico",
+    "password": "Contraseña"
+  },
+  "placeholders": {
+    "email": "nombre@ejemplo.com",
+    "password": "Contraseña"
+  },
+  "buttons": {
+    "login": "Iniciar sesión",
+    "register": "Crear cuenta"
+  },
+  "social": {
+    "continueWith": "O continúa con",
+    "continueGoogle": "Continuar con Google",
+    "google": "Google",
+    "github": "GitHub"
+  },
+  "errors": {
+    "title": "Error"
+  }
+}

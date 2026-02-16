@@ -6,6 +6,7 @@
  */
 
 import { adminDb } from '../lib/firebase-admin';
+import { translateContent } from '../ai/flows/enrichment';
 
 interface SubSubCategory {
   name: string;
@@ -53,6 +54,35 @@ const toTitleCase = (text: string): string =>
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
+
+const buildDescriptionEn = (name: string): string =>
+  `Deals and products in the ${name} category.`;
+
+const buildDescriptionPl = (name: string): string =>
+  `Oferty i produkty w kategorii ${name}.`;
+
+const translationCache = new Map<string, Record<string, string>>();
+
+const translateText = async (text: string) => {
+  if (translationCache.has(text)) {
+    return translationCache.get(text) as Record<string, string>;
+  }
+
+  try {
+    const result = await translateContent({
+      text,
+      sourceLocale: 'en',
+      targetLocales: ['de', 'fr', 'es', 'uk'],
+    });
+    const translations = result.translations || {};
+    translationCache.set(text, translations);
+    return translations;
+  } catch {
+    const fallback = {} as Record<string, string>;
+    translationCache.set(text, fallback);
+    return fallback;
+  }
+};
 
 /**
  * Complete category structure for Polish market
@@ -433,10 +463,26 @@ const CATEGORY_STRUCTURE: MainCategory[] = [
 async function seedCategories() {
   console.log('🌱 Starting category seeding...\n');
 
-  const batch = adminDb.batch();
+  let batch = adminDb.batch();
+  let batchOps = 0;
   let categoriesCount = 0;
   let subCategoriesCount = 0;
   let subSubCategoriesCount = 0;
+
+  const commitBatch = async () => {
+    if (batchOps === 0) return;
+    await batch.commit();
+    batch = adminDb.batch();
+    batchOps = 0;
+  };
+
+  const queueSet = async (ref: any, data: Record<string, any>) => {
+    batch.set(ref, data);
+    batchOps += 1;
+    if (batchOps >= 450) {
+      await commitBatch();
+    }
+  };
 
   for (const mainCat of CATEGORY_STRUCTURE) {
     const englishMainSlug = MAIN_SLUG_MAP[mainCat.slug] || slugify(mainCat.slug);
@@ -444,17 +490,38 @@ async function seedCategories() {
     console.log(`📁 Creating main category: ${mainCat.name} (${mainCat.slug} -> ${englishMainSlug})`);
     
     const mainCatRef = adminDb.collection('categories').doc(englishMainSlug);
-    batch.set(mainCatRef, {
+    const mainDescEn = buildDescriptionEn(englishMainName);
+    const mainDescPl = buildDescriptionPl(mainCat.name);
+    const mainNameTranslations = await translateText(englishMainName);
+    const mainDescTranslations = await translateText(mainDescEn);
+
+    await queueSet(mainCatRef, {
       name: englishMainName,
       slug: englishMainSlug,
       icon: mainCat.icon || '📦',
       sortOrder: mainCat.sortOrder,
+      description: mainDescEn,
       importKeywords: Array.from(new Set([englishMainName, englishMainSlug, mainCat.name])),
       searchKeywords: Array.from(new Set([englishMainName, englishMainSlug, mainCat.name])),
       translations: {
-        pl: { name: mainCat.name },
-        en: { name: englishMainName },
-        de: { name: englishMainName },
+        pl: { name: mainCat.name, description: mainDescPl },
+        en: { name: englishMainName, description: mainDescEn },
+        de: {
+          name: mainNameTranslations.de || englishMainName,
+          description: mainDescTranslations.de || mainDescEn,
+        },
+        fr: {
+          name: mainNameTranslations.fr || englishMainName,
+          description: mainDescTranslations.fr || mainDescEn,
+        },
+        es: {
+          name: mainNameTranslations.es || englishMainName,
+          description: mainDescTranslations.es || mainDescEn,
+        },
+        uk: {
+          name: mainNameTranslations.uk || englishMainName,
+          description: mainDescTranslations.uk || mainDescEn,
+        },
       },
       subcategories: [],
       createdAt: new Date().toISOString(),
@@ -467,10 +534,16 @@ async function seedCategories() {
       console.log(`  📂 Creating subcategory: ${subCat.name} (${subCat.slug} -> ${englishSubSlug})`);
       
       const subCatRef = mainCatRef.collection('subcategories').doc(englishSubSlug);
-      batch.set(subCatRef, {
+      const subDescEn = buildDescriptionEn(englishSubName);
+      const subDescPl = buildDescriptionPl(subCat.name);
+      const subNameTranslations = await translateText(englishSubName);
+      const subDescTranslations = await translateText(subDescEn);
+
+      await queueSet(subCatRef, {
         name: englishSubName,
         slug: englishSubSlug,
         sortOrder: 10,
+        description: subDescEn,
         importKeywords: Array.from(new Set([
           englishSubName,
           englishSubSlug,
@@ -489,9 +562,24 @@ async function seedCategories() {
           sortOrder: (idx + 1) * 10,
         })),
         translations: {
-          pl: { name: subCat.name },
-          en: { name: englishSubName },
-          de: { name: englishSubName },
+          pl: { name: subCat.name, description: subDescPl },
+          en: { name: englishSubName, description: subDescEn },
+          de: {
+            name: subNameTranslations.de || englishSubName,
+            description: subDescTranslations.de || subDescEn,
+          },
+          fr: {
+            name: subNameTranslations.fr || englishSubName,
+            description: subDescTranslations.fr || subDescEn,
+          },
+          es: {
+            name: subNameTranslations.es || englishSubName,
+            description: subDescTranslations.es || subDescEn,
+          },
+          uk: {
+            name: subNameTranslations.uk || englishSubName,
+            description: subDescTranslations.uk || subDescEn,
+          },
         },
         createdAt: new Date().toISOString(),
       });
@@ -504,9 +592,15 @@ async function seedCategories() {
         console.log(`    📄 Creating sub-subcategory: ${subSubCat.name} (${subSubCat.slug} -> ${englishSubSubSlug})`);
         
         const subSubCatRef = subCatRef.collection('subcategories').doc(englishSubSubSlug);
-        batch.set(subSubCatRef, {
+        const subSubDescEn = buildDescriptionEn(englishSubSubName);
+        const subSubDescPl = buildDescriptionPl(subSubCat.name);
+        const subSubNameTranslations = await translateText(englishSubSubName);
+        const subSubDescTranslations = await translateText(subSubDescEn);
+
+        await queueSet(subSubCatRef, {
           name: englishSubSubName,
           slug: englishSubSubSlug,
+          description: subSubDescEn,
           aliexpressKeywords: subSubCat.aliexpressKeywords || [],
           importKeywords: Array.from(new Set([
             englishSubSubName,
@@ -521,9 +615,24 @@ async function seedCategories() {
             ...(subSubCat.aliexpressKeywords || []),
           ])),
           translations: {
-            pl: { name: subSubCat.name },
-            en: { name: englishSubSubName },
-            de: { name: englishSubSubName },
+            pl: { name: subSubCat.name, description: subSubDescPl },
+            en: { name: englishSubSubName, description: subSubDescEn },
+            de: {
+              name: subSubNameTranslations.de || englishSubSubName,
+              description: subSubDescTranslations.de || subSubDescEn,
+            },
+            fr: {
+              name: subSubNameTranslations.fr || englishSubSubName,
+              description: subSubDescTranslations.fr || subSubDescEn,
+            },
+            es: {
+              name: subSubNameTranslations.es || englishSubSubName,
+              description: subSubDescTranslations.es || subSubDescEn,
+            },
+            uk: {
+              name: subSubNameTranslations.uk || englishSubSubName,
+              description: subSubDescTranslations.uk || subSubDescEn,
+            },
           },
           createdAt: new Date().toISOString(),
         });
@@ -533,7 +642,7 @@ async function seedCategories() {
   }
 
   console.log('\n💾 Committing batch write...');
-  await batch.commit();
+  await commitBatch();
 
   console.log('\n✅ Category seeding completed!');
   console.log(`   Main categories: ${categoriesCount}`);

@@ -3,7 +3,7 @@
 /**
  * Language Switcher Component
  * 
- * Allows users to switch between supported languages (PL/EN/DE)
+ * Allows users to switch between supported languages (PL/EN/DE/FR/ES/UK)
  * Uses next-intl routing for language switching
  */
 
@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Globe } from 'lucide-react';
 
-const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de'];
+const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
 
 export function LanguageSwitcher() {
   const locale = useLocale() as SupportedLanguage;
@@ -29,12 +29,10 @@ export function LanguageSwitcher() {
 
   const switchLanguage = (newLocale: SupportedLanguage) => {
     // Remove current locale prefix from pathname
-    const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de)(\/|$)/, '/');
+    const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de|fr|es|uk)(\/|$)/, '/');
     
     // Build new path with locale prefix
-    const newPath = newLocale === 'pl' 
-      ? pathnameWithoutLocale || '/'  // Polish is default, no prefix needed
-      : `/${newLocale}${pathnameWithoutLocale || '/'}`;
+    const newPath = `/${newLocale}${pathnameWithoutLocale || '/'}`;
     
     router.push(newPath);
   };

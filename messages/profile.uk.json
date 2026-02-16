@@ -1,0 +1,22 @@
+{
+  "title": "Мій профіль",
+  "overview": "Огляд",
+  "favorites": "Улюблене",
+  "comments": "Коментарі",
+  "activity": "Активність",
+  "settings": "Налаштування",
+  "notifications": "Сповіщення",
+  "memberSince": "Член від",
+  "votes": "Голоси",
+  "commentsCount": "Коментарі",
+  "commentsLabel": "Коментарі",
+  "dealsPosted": "Додані пропозиції",
+  "productsReviewed": "Оцінені продукти",
+  "favoriteDeals": "Улюблені пропозиції",
+  "favoriteProducts": "Улюблені товари",
+  "recentComments": "Останні коментарі",
+  "noFavorites": "Немає обраних",
+  "noComments": "Немає коментарів",
+  "loading": "Завантаження...",
+  "logout": "Вийти"
+}

@@ -196,6 +196,150 @@ export function CookieConsentBanner() {
               ],
             },
           },
+          fr: {
+            consentModal: {
+              title: '🍪 Nous utilisons des cookies',
+              description:
+                'Ce site utilise des cookies pour vous offrir la meilleure experience. En continuant a naviguer, vous acceptez leur utilisation. Vous pouvez modifier les parametres a tout moment.',
+              acceptAllBtn: 'Tout accepter',
+              acceptNecessaryBtn: 'Tout refuser',
+              showPreferencesBtn: 'Gerar les preferences',
+            },
+            preferencesModal: {
+              title: 'Gerer les preferences de cookies',
+              acceptAllBtn: 'Tout accepter',
+              acceptNecessaryBtn: 'Tout refuser',
+              savePreferencesBtn: 'Enregistrer les parametres',
+              closeIconLabel: 'Fermer',
+              serviceCounterLabel: 'Services',
+              sections: [
+                {
+                  title: 'Utilisation des cookies',
+                  description:
+                    'Nous utilisons des cookies pour assurer les fonctions essentielles du site et ameliorer votre experience en ligne. Vous pouvez choisir pour chaque categorie si vous souhaitez accepter ou refuser.',
+                },
+                {
+                  title: 'Necessaires <span class="pm__badge">Toujours actifs</span>',
+                  description:
+                    'Ces cookies sont indispensables au bon fonctionnement du site. Sans eux, le site ne fonctionnera pas correctement.',
+                  linkedCategory: 'necessary',
+                },
+                {
+                  title: 'Analytique',
+                  description:
+                    'Ces cookies collectent des informations sur la maniere dont vous utilisez notre site. Toutes les donnees sont anonymisees et ne permettent pas de vous identifier.',
+                  linkedCategory: 'analytics',
+                },
+                {
+                  title: 'Marketing',
+                  description:
+                    'Ces cookies sont utilises pour afficher des publicites adaptees a vos centres d interet.',
+                  linkedCategory: 'marketing',
+                },
+                {
+                  title: 'Plus d informations',
+                  description:
+                    'Pour toute question concernant notre politique de cookies, contactez-nous via le <a href="/fr/contact">formulaire de contact</a>.',
+                },
+              ],
+            },
+          },
+          es: {
+            consentModal: {
+              title: '🍪 Usamos cookies',
+              description:
+                'Este sitio utiliza cookies para ofrecerte la mejor experiencia. Al continuar navegando, aceptas su uso. Puedes cambiar la configuracion en cualquier momento.',
+              acceptAllBtn: 'Aceptar todo',
+              acceptNecessaryBtn: 'Rechazar todo',
+              showPreferencesBtn: 'Gestionar preferencias',
+            },
+            preferencesModal: {
+              title: 'Gestionar preferencias de cookies',
+              acceptAllBtn: 'Aceptar todo',
+              acceptNecessaryBtn: 'Rechazar todo',
+              savePreferencesBtn: 'Guardar configuracion',
+              closeIconLabel: 'Cerrar',
+              serviceCounterLabel: 'Servicios',
+              sections: [
+                {
+                  title: 'Uso de cookies',
+                  description:
+                    'Usamos cookies para proporcionar funciones basicas del sitio y mejorar tu experiencia en linea. Puedes elegir para cada categoria si deseas aceptar o rechazar.',
+                },
+                {
+                  title: 'Necesarias <span class="pm__badge">Siempre activas</span>',
+                  description:
+                    'Estas cookies son esenciales para el correcto funcionamiento del sitio. Sin ellas, el sitio no funcionara correctamente.',
+                  linkedCategory: 'necessary',
+                },
+                {
+                  title: 'Analiticas',
+                  description:
+                    'Estas cookies recopilan informacion sobre como utilizas nuestro sitio. Todos los datos son anonimizados y no pueden usarse para identificarte.',
+                  linkedCategory: 'analytics',
+                },
+                {
+                  title: 'Marketing',
+                  description:
+                    'Estas cookies se utilizan para mostrar anuncios adaptados a tus intereses.',
+                  linkedCategory: 'marketing',
+                },
+                {
+                  title: 'Mas informacion',
+                  description:
+                    'Si tienes preguntas sobre nuestra politica de cookies, contactanos mediante el <a href="/es/contact">formulario de contacto</a>.',
+                },
+              ],
+            },
+          },
+          uk: {
+            consentModal: {
+              title: '🍪 My vykorystovuiemo cookies',
+              description:
+                'Tsei sait vykorystovuie cookies, shchob nadaty naikrashchyi dosvid. Prodovzhuiuchy perehliad, vy pohodzhuietes na yikh vykorystannia. Nalash­tuvannia mozhna zminyty u bud yakyi moment.',
+              acceptAllBtn: 'Pryiniaty vsi',
+              acceptNecessaryBtn: 'Vidkhylyty vsi',
+              showPreferencesBtn: 'Keruvaty nalashtuvanniamy',
+            },
+            preferencesModal: {
+              title: 'Keruvannia nalashtuvanniamy cookies',
+              acceptAllBtn: 'Pryiniaty vsi',
+              acceptNecessaryBtn: 'Vidkhylyty vsi',
+              savePreferencesBtn: 'Zberehty nalashtuvannia',
+              closeIconLabel: 'Zakryty',
+              serviceCounterLabel: 'Sluzhby',
+              sections: [
+                {
+                  title: 'Vykorystannia cookies',
+                  description:
+                    'My vykorystovuemo cookies dlia bazovoi roboty saitу ta pokrashchennia vashoho dosvidu. Vy mozhete obraty dlia kozhnoi katehorii, chy bazhaiete nadaty zghodu, chy vidmovytysia.',
+                },
+                {
+                  title: 'Neobkhidni <span class="pm__badge">Zavzhdy aktyvni</span>',
+                  description:
+                    'Tsi cookies neobkhidni dlia korektnoi roboty saitu. Bez nykh sait ne bude pratsiuvaty nalежno.',
+                  linkedCategory: 'necessary',
+                },
+                {
+                  title: 'Analityka',
+                  description:
+                    'Tsi cookies zbiraiut informatsiiu pro te, yak vy korystuietes sajtom. Vsi dany zanonimizovani ta ne mozhut buty vykorystani dlia vashoi identyfikatsii.',
+                  linkedCategory: 'analytics',
+                },
+                {
+                  title: 'Marketynh',
+                  description:
+                    'Tsi cookies vykorystovuiutsia dlia pokazу reklam, adaptovanykh do vashykh interesiv.',
+                  linkedCategory: 'marketing',
+                },
+                {
+                  title: 'Bilʹshe informatsii',
+                  description:
+                    'Yakshcho u vas ye pytannia shchodo nashoi polityky cookies, zviazhitsia z namy cherez <a href="/uk/contact">formu kontaktu</a>.',
+                },
+              ],
+            },
+          },
         },
       },
     });

@@ -1,0 +1,59 @@
+{
+  "loading": "Chargement...",
+  "accessDenied": "Accès refusé. Autorisations d'administrateur requises.",
+  "title": "Importation intelligente",
+  "subtitle": "Gestion des importations de produits et de profils",
+  "startCard": {
+    "title": "Lancer l'importation",
+    "description": "Sélectionnez le profil et les paramètres d'importation",
+    "profileLabel": "ID du profil",
+    "profilePlaceholder": "par exemple, aliexpress_pl",
+    "maxLabel": "Au maximum (facultatif)",
+    "maxPlaceholder": "par exemple 100",
+    "modeLabel": "Mode",
+    "dryRun": "Essai",
+    "real": "Réel",
+    "start": "Lancer l'importation",
+    "refresh": "Rafraîchir"
+  },
+  "listCard": {
+    "title": "Historique des importations",
+    "description": "Les {limit} dernières importations",
+    "loading": "Chargement de l'historique...",
+    "empty": "Aucun import dans l'historique"
+  },
+  "details": {
+    "title": "Détails de l'importation",
+    "runId": "ID de lancement",
+    "profileVendor": "Profil / Fournisseur",
+    "status": "Statut",
+    "time": "Temps",
+    "noData": "Absence de données",
+    "stats": {
+      "fetched": "Téléchargé",
+      "created": "Créé",
+      "updated": "Mis à jour",
+      "skipped": "Oublié",
+      "errors": "Erreurs",
+      "duplicates": "Doublons"
+    },
+    "errorsTitle": "Erreurs d'importation",
+    "item": "Élément"
+  },
+  "dryRunSuffix": "(essai)",
+  "statusMap": {
+    "queued": "À la queue leu leu",
+    "pending": "En attente",
+    "running": "En cours",
+    "completed": "Terminé",
+    "failed": "Raté",
+    "cancelled": "Annulé",
+    "paused": "En attente"
+  },
+  "errors": {
+    "loadRuns": "Impossible de charger l'historique des importations.",
+    "loadRunDetail": "Impossible de charger les détails de l'importation.",
+    "startImport": "Impossible de démarrer l'importation",
+    "profileRequired": "L'identifiant de profil est obligatoire."
+  }
+}

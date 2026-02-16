@@ -1,0 +1,151 @@
+{
+  "title": "Продукти",
+  "subtitle": "Найкращі товари з AliExpress",
+  "recommendations": "Панель рекомендацій",
+  "viewToggle": {
+    "grid": "Вигляд сітки",
+    "list": "Вигляд списку"
+  },
+  "filters": {
+    "search": "Шукати товари...",
+    "title": "Категорії та фільтри",
+    "sort": "Сортувати",
+    "sortOptions": {
+      "popular": "Найпопулярніші",
+      "newest": "Останні",
+      "price_asc": "Ціна: за зростанням",
+      "price_desc": "Ціна: за спаданням",
+      "rating": "Найвище оцінені"
+    },
+    "category": "Категорія",
+    "priceRange": "Діапазон цін",
+    "min": "Хв.",
+    "max": "Макс",
+    "priceLimits": "Обмеження діапазону",
+    "minLimit": "Мін. ліміт:",
+    "maxLimit": "Максимальний ліміт:",
+    "quickFilters": {
+      "freeShipping": "Безкоштовна доставка",
+      "highRating": "Високі оцінки",
+      "topRated": "Високий рейтинг (4.5+)",
+      "newArrivals": "Новини",
+      "onSale": "Акція",
+      "bestsellers": "Бестселери"
+    },
+    "clearAll": "Очистити фільтри",
+    "savedLabel": "Збережені фільтри:",
+    "saveFilter": "Зберегти поточні фільтри"
+  },
+  "viewMode": {
+    "list": "Список",
+    "grid": "Сітка"
+  },
+  "density": {
+    "standard": "Стандарт",
+    "compact": "Компактний"
+  },
+  "categories": {
+    "title": "Категорії",
+    "showAll": "Показати все",
+    "hideEmpty": "Приховати порожні",
+    "allProducts": "Всі товари"
+  },
+  "breadcrumbs": {
+    "home": "Головна сторінка",
+    "catalog": "Каталог товарів"
+  },
+  "empty": {
+    "title": "Немає товарів",
+    "description": "Не знайдено продуктів, які відповідають вашим критеріям.",
+    "inCategory": "Немає товарів у цій категорії.",
+    "cta": "Повернутися до всіх продуктів"
+  },
+  "loading": "Завантаження продуктів...",
+  "loadingMore": "Завантаження наступних продуктів...",
+  "addToCart": "Додати до кошика",
+  "list": {
+    "titleWithCount": "Продукти ({count})"
+  },
+  "showing": "Показано всі {count} товарів",
+  "card": {
+    "new": "Новинка",
+    "price": "Ціна",
+    "go": "Перейти",
+    "offer": "Пропозиція",
+    "details": "Деталі",
+    "info": "Інфо",
+    "cart": "Кошик",
+    "inCart": "У кошику",
+    "toCart": "До кошика",
+    "favorite": "Улюблене",
+    "favoriteAdd": "Додати до улюблених",
+    "favoriteRemove": "Видалити з улюблених",
+    "compare": "Порівняти",
+    "compareTitle": "Порівняти ціни"
+  },
+  "productDetail": {
+    "m6": {
+      "dealsAvailable": "{count, plural, one {# пропозиція доступна} few {# пропозиції доступні} many {# пропозицій доступно} other {# пропозицій доступно}}",
+      "compareHint": "Порівняйте ціни від різних продавців нижче.",
+      "videoTitle": "Відео продукту",
+      "videoDesc": "Вихідний відеоматеріал (AliExpress)"
+    },
+    "simple": {
+      "loading": "Завантаження продукту...",
+      "notFound": "Товар не знайдено",
+      "error": "Не вдалося завантажити продукт.",
+      "reviews": "{count, plural, one {# відгук} few {# відгуки} many {# відгуків} other {# відгуків}}",
+      "verified": "Затверджено",
+      "bestPriceAt": "Найкраща пропозиція в",
+      "totalPrice": "Разом",
+      "productPrice": "Ціна продукту",
+      "shipping": "Доставка",
+      "freeShipping": "БЕЗКОШТОВНО",
+      "estimatedDelivery": "Доставка за {days, plural, one {# день} few {# дні} many {# днів} other {# дні}}",
+      "buyNow": "Купити зараз",
+      "whatUsersSay": "Що кажуть користувачі",
+      "overview": "Короткий опис",
+      "details": "Деталі"
+    },
+    "priceComparison": {
+      "title": "Порівняння цін",
+      "storesCount": "{count, plural, one {# магазин} few {# магазини} many {# магазинів} other {# магазинів}}",
+      "store": "Магазин",
+      "price": "Ціна",
+      "shipping": "Доставка",
+      "total": "Разом",
+      "delivery": "Доставка",
+      "rating": "Оцінка",
+      "action": "Акція",
+      "bestPriceBadge": "Найкраща ціна",
+      "freeShipping": "БЕЗКОШТОВНО",
+      "deliveryDays": "{count, plural, one {# день} few {# дні} many {# днів} other {# дні}}",
+      "deliveryDash": "—",
+      "buy": "Купити",
+      "lowestInfo": "Найнижча ціна: економія в порівнянні з іншими магазинами. Можлива безкоштовна доставка.",
+      "marketPrice": {
+        "label": "Середнє ринкове значення",
+        "savings": "Ти заощаджуєш",
+        "note": "*Szaкована середня ціна з інших платформ (Allegro/Amazon)"
+      },
+      "loading": "Завантаження пропозицій...",
+      "empty": "Немає пропозицій для цього продукту."
+    },
+    "priceHistory": {
+      "title": "Історія цін (30 днів)",
+      "noDataTitle": "Немає історії цін",
+      "noDataDescription": "Недостатньо даних для відображення історії цін.",
+      "description": "Найнижча ціна за день - останні 30 днів ({points} точок даних) - валюта: {currency}",
+      "stats": {
+        "min": "Найнижча ціна",
+        "max": "Найвища ціна",
+        "avg": "Середня ціна",
+        "change": "Зміна"
+      },
+      "axisLabel": "Ціна ({currency})",
+      "omnibusTitle": "Директива Omnibus",
+      "omnibusText": "Графік показує найнижчу ціну за останні 30 днів, що забезпечує прозорість цін відповідно до регулювань ЄС.",
+      "price": "Ціна"
+    }
+  }
+}

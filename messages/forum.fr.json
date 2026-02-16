@@ -1,0 +1,19 @@
+{
+  "title": "Forum communautaire",
+  "subtitle": "Discussions sur les bonnes affaires, conseils d'achat et plus encore.",
+  "newThread": "Nouveau sujet",
+  "searchPlaceholder": "Rechercher des discussions...",
+  "sortBy": "Trier",
+  "filterBy": "Filtrer",
+  "newest": "Dernières",
+  "popular": "Populaire",
+  "unanswered": "Sans réponse",
+  "all": "Tous",
+  "answered": "Avec une réponse",
+  "pinned": "Épinglé",
+  "replies": "réponses",
+  "views": "vues",
+  "solved": "Résolu",
+  "noThreads": "Aucun sujet.",
+  "noThreadsDesc": "Aucun sujet ne correspond aux critères de recherche."
+}

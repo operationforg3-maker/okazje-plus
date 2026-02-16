@@ -11,7 +11,7 @@ import { db } from "../firebase";
 import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
 import { generateText } from "../vertex";
 
-export type SupportedLocale = "pl" | "en" | "de" | "fr" | "es";
+export type SupportedLocale = "pl" | "en" | "de" | "fr" | "es" | "uk";
 
 export const SUPPORTED_LOCALES: Record<SupportedLocale, string> = {
   pl: "Polish",
@@ -19,6 +19,7 @@ export const SUPPORTED_LOCALES: Record<SupportedLocale, string> = {
   de: "German",
   fr: "French",
   es: "Spanish",
+  uk: "Ukrainian",
 };
 
 export interface TranslationResult {

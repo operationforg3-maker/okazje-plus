@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { translateContent } from '@/ai/flows/enrichment';
 
 /**
  * Deal enrichment schema and utilities
@@ -14,31 +15,47 @@ export const dealEnrichmentInputSchema = z.object({
   price: z.number().describe('Price in PLN'),
   shippingCost: z.number().describe('Shipping cost in PLN'),
   shippingDays: z.number().describe('Estimated delivery days'),
+  sourceLocale: z.string().optional().describe('Source locale for title/description'),
 });
 
 export const dealEnrichmentOutputSchema = z.object({
   titlePL: z.string().optional().describe('Title in Polish (if translation needed)'),
   titleEN: z.string().describe('Title in English'),
   titleDE: z.string().describe('Title in German'),
+  titleFR: z.string().describe('Title in French'),
+  titleES: z.string().describe('Title in Spanish'),
+  titleUK: z.string().describe('Title in Ukrainian'),
   sellingPoints: z.object({
     pl: z.array(z.string()),
     en: z.array(z.string()),
     de: z.array(z.string()),
+    fr: z.array(z.string()),
+    es: z.array(z.string()),
+    uk: z.array(z.string()),
   }).describe('Key selling points per language'),
   offerSummary: z.object({
     pl: z.string(),
     en: z.string(),
     de: z.string(),
+    fr: z.string(),
+    es: z.string(),
+    uk: z.string(),
   }).describe('Short offer summary per language'),
   description: z.object({
     pl: z.string().describe('Formatted HTML description (Polish)'),
     en: z.string().describe('Formatted HTML description (English)'),
     de: z.string().describe('Formatted HTML description (German)'),
+    fr: z.string().describe('Formatted HTML description (French)'),
+    es: z.string().describe('Formatted HTML description (Spanish)'),
+    uk: z.string().describe('Formatted HTML description (Ukrainian)'),
   }).optional().describe('Rich formatted deal description with HTML markup'),
   highlights: z.object({
     pl: z.array(z.string()),
     en: z.array(z.string()),
     de: z.array(z.string()),
+    fr: z.array(z.string()),
+    es: z.array(z.string()),
+    uk: z.array(z.string()),
   }).optional().describe('Key highlights/features of this specific offer'),
 });
 
@@ -52,37 +69,72 @@ export type DealEnrichmentOutput = z.infer<typeof dealEnrichmentOutputSchema>;
 export async function enrichDeal(
   input: DealEnrichmentInput
 ): Promise<DealEnrichmentOutput> {
-  // TODO: Integrate with Genkit flow for full AI translation
+  const sourceLocale = (input.sourceLocale || 'pl').toLowerCase();
+  const targetLocales = ['pl', 'en', 'de', 'fr', 'es', 'uk'].filter((lang) => lang !== sourceLocale);
+
+  let translatedTitles: Record<string, string> = {};
+  try {
+    const translation = await translateContent({
+      text: input.dealTitle,
+      sourceLocale,
+      targetLocales,
+    });
+    translatedTitles = translation.translations || {};
+  } catch {
+    translatedTitles = {};
+  }
+
+  const titlePL = sourceLocale === 'pl' ? input.dealTitle : translatedTitles.pl || input.dealTitle;
+  const titleEN = sourceLocale === 'en' ? input.dealTitle : translatedTitles.en || input.dealTitle;
+  const titleDE = sourceLocale === 'de' ? input.dealTitle : translatedTitles.de || input.dealTitle;
+  const titleFR = sourceLocale === 'fr' ? input.dealTitle : translatedTitles.fr || input.dealTitle;
+  const titleES = sourceLocale === 'es' ? input.dealTitle : translatedTitles.es || input.dealTitle;
+  const titleUK = sourceLocale === 'uk' ? input.dealTitle : translatedTitles.uk || input.dealTitle;
+
   // For now, return structured data based on rules
-  
   return {
-    titlePL: undefined, // Not translating to Polish, we already have it
-    titleEN: input.dealTitle, // Placeholder for translation
-    titleDE: input.dealTitle, // Placeholder for translation
+    titlePL,
+    titleEN,
+    titleDE,
+    titleFR,
+    titleES,
+    titleUK,
     sellingPoints: {
       pl: generateSellingPoints(input, 'pl'),
       en: generateSellingPoints(input, 'en'),
       de: generateSellingPoints(input, 'de'),
+      fr: generateSellingPoints(input, 'fr'),
+      es: generateSellingPoints(input, 'es'),
+      uk: generateSellingPoints(input, 'uk'),
     },
     offerSummary: {
       pl: generateSummary(input, 'pl'),
       en: generateSummary(input, 'en'),
       de: generateSummary(input, 'de'),
+      fr: generateSummary(input, 'fr'),
+      es: generateSummary(input, 'es'),
+      uk: generateSummary(input, 'uk'),
     },
     description: {
       pl: generateRichDescription(input, 'pl'),
       en: generateRichDescription(input, 'en'),
       de: generateRichDescription(input, 'de'),
+      fr: generateRichDescription(input, 'fr'),
+      es: generateRichDescription(input, 'es'),
+      uk: generateRichDescription(input, 'uk'),
     },
     highlights: {
       pl: generateHighlights(input, 'pl'),
       en: generateHighlights(input, 'en'),
       de: generateHighlights(input, 'de'),
+      fr: generateHighlights(input, 'fr'),
+      es: generateHighlights(input, 'es'),
+      uk: generateHighlights(input, 'uk'),
     },
   };
 }
 
-function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de'): string[] {
+function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string[] {
   const points: string[] = [];
 
   const translations: Record<string, Record<string, string>> = {
@@ -106,6 +158,27 @@ function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' |
       fastShipping: `Schnelle Lieferung (${context.shippingDays} Tage)`,
       lowPrice: 'Wettbewerbsfähiger Preis',
       flashDeal: 'Flash-Angebot - begrenzte Menge',
+    },
+    fr: {
+      highRating: `Vendeur bien noté sur ${context.source} (${context.merchantRating}/5)`,
+      freeShipping: 'Livraison gratuite',
+      fastShipping: `Livraison rapide (${context.shippingDays} jours)`,
+      lowPrice: 'Prix compétitif',
+      flashDeal: 'Vente flash - stock limité',
+    },
+    es: {
+      highRating: `Vendedor bien valorado en ${context.source} (${context.merchantRating}/5)`,
+      freeShipping: 'Envío gratis',
+      fastShipping: `Entrega rápida (${context.shippingDays} días)`,
+      lowPrice: 'Precio competitivo',
+      flashDeal: 'Oferta flash - stock limitado',
+    },
+    uk: {
+      highRating: `Продавець з високим рейтингом на ${context.source} (${context.merchantRating}/5)`,
+      freeShipping: 'Безкоштовна доставка',
+      fastShipping: `Швидка доставка (${context.shippingDays} днів)`,
+      lowPrice: 'Конкурентна ціна',
+      flashDeal: 'Flash-розпродаж — обмежена кількість',
     },
   };
 
@@ -132,11 +205,14 @@ function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' |
   return points;
 }
 
-function generateSummary(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de'): string {
+function generateSummary(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string {
   const translations: Record<string, string> = {
     pl: `${context.dealTitle} od ${context.merchantName}. ${context.shippingCost === 0 ? 'Darmowa dostawa.' : `Dostawa: ${context.shippingDays} dni.`} Cena: ${context.price} PLN.`,
     en: `${context.dealTitle} from ${context.merchantName}. ${context.shippingCost === 0 ? 'Free shipping.' : `Delivery: ${context.shippingDays} days.`} Price: ${context.price} PLN.`,
     de: `${context.dealTitle} von ${context.merchantName}. ${context.shippingCost === 0 ? 'Versand frei.' : `Lieferung: ${context.shippingDays} Tage.`} Preis: ${context.price} PLN.`,
+    fr: `${context.dealTitle} par ${context.merchantName}. ${context.shippingCost === 0 ? 'Livraison gratuite.' : `Livraison: ${context.shippingDays} jours.`} Prix: ${context.price} PLN.`,
+    es: `${context.dealTitle} de ${context.merchantName}. ${context.shippingCost === 0 ? 'Envío gratis.' : `Entrega: ${context.shippingDays} días.`} Precio: ${context.price} PLN.`,
+    uk: `${context.dealTitle} від ${context.merchantName}. ${context.shippingCost === 0 ? 'Безкоштовна доставка.' : `Доставка: ${context.shippingDays} днів.`} Ціна: ${context.price} PLN.`,
   };
 
   return translations[lang] || translations.pl;
@@ -146,7 +222,7 @@ function generateSummary(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de')
  * Generate rich HTML description for deal
  * Formats with headings, key info, and call-to-action
  */
-function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de'): string {
+function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string {
   const labels: Record<string, Record<string, string>> = {
     pl: {
       heading: 'Szczegóły Oferty',
@@ -171,6 +247,30 @@ function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en'
       sprzedawca: 'Verkäufer:',
       bezpłatna: 'Versand frei',
       dni: 'Tage',
+    },
+    fr: {
+      heading: 'Détails de l’offre',
+      cena: 'Prix :',
+      dostawa: 'Livraison :',
+      sprzedawca: 'Vendeur :',
+      bezpłatna: 'Livraison gratuite',
+      dni: 'jours',
+    },
+    es: {
+      heading: 'Detalles de la oferta',
+      cena: 'Precio:',
+      dostawa: 'Entrega:',
+      sprzedawca: 'Vendedor:',
+      bezpłatna: 'Envío gratis',
+      dni: 'días',
+    },
+    uk: {
+      heading: 'Деталі пропозиції',
+      cena: 'Ціна:',
+      dostawa: 'Доставка:',
+      sprzedawca: 'Продавець:',
+      bezpłatna: 'Безкоштовна доставка',
+      dni: 'днів',
     },
   };
 
@@ -197,7 +297,7 @@ function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en'
 /**
  * Generate deal-specific highlights/features
  */
-function generateHighlights(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de'): string[] {
+function generateHighlights(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string[] {
   const highlights: string[] = [];
 
   const translations: Record<string, Record<string, string>> = {
@@ -224,6 +324,30 @@ function generateHighlights(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'd
       topSeller: `✓ Vertrauenswürdiger Verkäufer (${context.merchantRating}/5)`,
       officialStore: '✓ Offizieller Shop',
       flash: '✓ Zeitlich begrenztes Angebot',
+    },
+    fr: {
+      bestPrice: '✓ Meilleur prix disponible',
+      freeShipping: '✓ Livraison gratuite',
+      fastShipping: `✓ Livraison rapide (${context.shippingDays} jours)`,
+      topSeller: `✓ Vendeur de confiance (${context.merchantRating}/5)`,
+      officialStore: '✓ Boutique officielle',
+      flash: '✓ Offre limitée dans le temps',
+    },
+    es: {
+      bestPrice: '✓ Mejor precio disponible',
+      freeShipping: '✓ Envío gratis',
+      fastShipping: `✓ Entrega rápida (${context.shippingDays} días)`,
+      topSeller: `✓ Vendedor de confianza (${context.merchantRating}/5)`,
+      officialStore: '✓ Tienda oficial',
+      flash: '✓ Oferta por tiempo limitado',
+    },
+    uk: {
+      bestPrice: '✓ Найкраща ціна',
+      freeShipping: '✓ Безкоштовна доставка',
+      fastShipping: `✓ Швидка доставка (${context.shippingDays} днів)`,
+      topSeller: `✓ Надійний продавець (${context.merchantRating}/5)`,
+      officialStore: '✓ Офіційний магазин',
+      flash: '✓ Обмежена в часі пропозиція',
     },
   };
 

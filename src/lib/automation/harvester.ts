@@ -955,10 +955,17 @@ export class SmartHarvester {
       ? Math.round((discountAmount / originalPrice) * 100)
       : undefined;
 
+    const primaryImage = sourceProduct.imageUrl || this.getFallbackImageUrl();
+    const galleryImages = Array.isArray(sourceProduct.images) && sourceProduct.images.length > 0
+      ? sourceProduct.images
+      : [primaryImage];
+
     const dealData: DealM6 = {
       id: dealRef.id,
       productId,
       productCoreId: productId,
+      image: primaryImage,
+      images: galleryImages,
       price: {
         amount: priceAmount,
         currency: (sourceProduct.currency as any) || 'PLN',

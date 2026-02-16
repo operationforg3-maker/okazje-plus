@@ -8,7 +8,7 @@
 import type { LocalizedText, SmartPrice } from './types';
 
 export type { LocalizedText, SmartPrice };
-export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es';
+export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk';
 
 /**
  * Get localized text with fallback chain
@@ -99,7 +99,7 @@ export function getAvailableLanguages(text: LocalizedText | undefined): Supporte
   if (!text) return [];
   
   const languages: SupportedLanguage[] = [];
-  const supportedLangs: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es'];
+  const supportedLangs: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
   
   for (const lang of supportedLangs) {
     if (hasTranslation(text, lang)) {
@@ -156,6 +156,7 @@ export function getLanguageLabel(lang: SupportedLanguage): string {
     de: 'Deutsch',
     fr: 'Français',
     es: 'Español',
+    uk: 'Українська',
   };
   
   return labels[lang];
@@ -171,6 +172,7 @@ export function getLanguageFlag(lang: SupportedLanguage): string {
     de: '🇩🇪',
     fr: '🇫🇷',
     es: '🇪🇸',
+    uk: '🇺🇦',
   };
   
   return flags[lang];

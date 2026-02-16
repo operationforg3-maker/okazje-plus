@@ -71,6 +71,12 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  # Gemini/GenAI API key (optional fallback for non-Vertex flows)
+  - variable: GOOGLE_GENAI_API_KEY
+    secret: GOOGLE_GENAI_API_KEY
+    availability:
+      - RUNTIME
   
   - variable: FIREBASE_PROJECT_ID
     value: okazje-plus

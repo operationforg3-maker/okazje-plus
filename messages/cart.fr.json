@@ -1,0 +1,29 @@
+{
+  "title": "Votre Panier",
+  "subtitle": "Vos produits sélectionnés",
+  "empty": {
+    "title": "Votre panier est vide",
+    "description": "Ajoutez des produits à votre panier pour générer des liens d'achat plus tard.",
+    "cta": "Parcourir les Produits"
+  },
+  "item": {
+    "remove": "Supprimer",
+    "quantity": "Quantité"
+  },
+  "summary": {
+    "title": "Résumé",
+    "subtotal": "Somme partielle",
+    "shipping": "Livraison",
+    "free": "Gratuit",
+    "total": "Ensemble",
+    "finalize": "Aller faire du shopping"
+  },
+  "toast": {
+    "added": "Ajouté au panier",
+    "removed": "Supprimé du panier",
+    "updated": "Quantité mise à jour",
+    "error": "Une erreur s'est produite."
+  },
+  "loading": "Chargement du panier...",
+  "clearCart": "Vider le panier"
+}

@@ -5,7 +5,7 @@ import { ensureLocalizedTitle } from '@/ai/flows/translation';
 
 /**
  * Deal Refiner - Enriches Deal documents with AI-generated content
- * - Translates deal titles and descriptions to PL/EN/DE
+ * - Translates deal titles and descriptions to PL/EN/DE/FR/ES/UK
  * - Generates offer-specific selling points (e.g., "Fast shipping from X", "Cashback available")
  * - Creates review summaries specific to this seller/deal
  * - Extracts key offer metrics
@@ -189,7 +189,7 @@ export class DealRefiner {
    * Criteria:
    * - title is not localized (plain string)
    * - title is missing Polish translation (title.pl)
-   * - title lacks English or German translations
+  * - title lacks English, German, French, Spanish, or Ukrainian translations
    */
   private dealNeedsRefinement(deal: DealM6): boolean {
     // If title is a plain string (old format), needs refinement
@@ -203,8 +203,8 @@ export class DealRefiner {
       if (!deal.title.pl) {
         return true;
       }
-      // Also refine if missing English or German
-      if (!deal.title.en || !deal.title.de) {
+      // Also refine if missing English, German, French, Spanish, or Ukrainian
+      if (!deal.title.en || !deal.title.de || !deal.title.fr || !deal.title.es || !deal.title.uk) {
         return true;
       }
     }
@@ -214,7 +214,7 @@ export class DealRefiner {
       return true;
     }
 
-    // Description must be localized (PL/EN/DE). String or missing fields -> refine
+    // Description must be localized (PL/EN/DE/FR/ES/UK). String or missing fields -> refine
     if (!deal.description) {
       return true;
     }
@@ -222,14 +222,14 @@ export class DealRefiner {
       return true;
     }
     if (typeof deal.description === 'object' && deal.description) {
-      if (!deal.description.pl || !deal.description.en || !deal.description.de) {
+      if (!deal.description.pl || !deal.description.en || !deal.description.de || !deal.description.fr || !deal.description.es || !deal.description.uk) {
         return true;
       }
     }
 
     // Selling points should exist for UI (metadata.sellingPoints)
     const sellingPoints = (deal.metadata as any)?.sellingPoints;
-    if (!sellingPoints || !sellingPoints.pl || !sellingPoints.en || !sellingPoints.de) {
+    if (!sellingPoints || !sellingPoints.pl || !sellingPoints.en || !sellingPoints.de || !sellingPoints.fr || !sellingPoints.es || !sellingPoints.uk) {
       return true;
     }
 
@@ -240,7 +240,7 @@ export class DealRefiner {
   /**
    * Refine a single deal:
    * 1. ENSURE Polish title exists (critical!)
-   * 2. Ensure title is localized (PL/EN/DE)
+  * 2. Ensure title is localized (PL/EN/DE/FR/ES/UK)
    * 3. Generate seller-specific selling points
    * 4. Create offer summary (combining merchant rating + deal type)
    */
@@ -255,31 +255,42 @@ export class DealRefiner {
     let titlePL = '';
     let titleEN = '';
     let titleDE = '';
+    let titleFR = '';
+    let titleES = '';
+    let titleUK = '';
 
     if (typeof deal.title === 'object' && deal.title) {
       titlePL = deal.title.pl || '';
       titleEN = deal.title.en || '';
       titleDE = deal.title.de || '';
+      titleFR = deal.title.fr || '';
+      titleES = deal.title.es || '';
+      titleUK = deal.title.uk || '';
     } else if (typeof deal.title === 'string') {
       // Old format: title is a plain string - treat as Polish fallback
       titlePL = deal.title;
       titleEN = deal.title;
       titleDE = deal.title;
+      titleFR = deal.title;
+      titleES = deal.title;
+      titleUK = deal.title;
     }
 
     // If we somehow have nothing, skip
-    if (!titlePL && !titleEN && !titleDE) {
+    if (!titlePL && !titleEN && !titleDE && !titleFR && !titleES && !titleUK) {
       this.addLog('warn', `Deal ${dealId} has no extractable title, skipping`);
       return null;
     }
 
     // Use whatever is available as base for refinement (prefer Polish)
-    const titleForAI = titlePL || titleEN || titleDE;
+    const titleForAI = titlePL || titleEN || titleDE || titleFR || titleES || titleUK;
+    const sourceLocale = deal.source === 'aliexpress' || deal.source === 'amazon' ? 'en' : 'pl';
 
     // Step 1: Call AI to translate and enhance
     try {
       const enriched = await this.generateDealEnrichment({
         dealTitle: titleForAI,
+        sourceLocale,
         merchantName: deal.merchantName || deal.source,
         merchantRating: deal.merchantRating || 0,
         dealType: deal.dealType || 'regular',
@@ -296,11 +307,14 @@ export class DealRefiner {
           pl: titlePL || enriched.titlePL || titleForAI, // CRITICAL: Always have Polish
           en: titleEN || enriched.titleEN || titleForAI,
           de: titleDE || enriched.titleDE || titleForAI,
+          fr: titleFR || enriched.titleFR || titleForAI,
+          es: titleES || enriched.titleES || titleForAI,
+          uk: titleUK || enriched.titleUK || titleForAI,
         });
 
         refined.title = fullyLocalizedTitle as LocalizedText;
 
-        this.addLog('info', `Deal ${dealId} title localized: PL="${fullyLocalizedTitle.pl}" EN="${fullyLocalizedTitle.en}" DE="${fullyLocalizedTitle.de}"`);
+        this.addLog('info', `Deal ${dealId} title localized: PL="${fullyLocalizedTitle.pl}" EN="${fullyLocalizedTitle.en}" DE="${fullyLocalizedTitle.de}" FR="${fullyLocalizedTitle.fr}" ES="${fullyLocalizedTitle.es}" UK="${fullyLocalizedTitle.uk}"`);
 
         // Store AI-generated selling points for UI display
         if (enriched.sellingPoints) {
@@ -310,6 +324,9 @@ export class DealRefiner {
               pl: enriched.sellingPoints.pl || [],
               en: enriched.sellingPoints.en || [],
               de: enriched.sellingPoints.de || [],
+              fr: enriched.sellingPoints.fr || [],
+              es: enriched.sellingPoints.es || [],
+              uk: enriched.sellingPoints.uk || [],
             },
           };
         }
@@ -330,6 +347,9 @@ export class DealRefiner {
               pl: enriched.highlights.pl || [],
               en: enriched.highlights.en || [],
               de: enriched.highlights.de || [],
+              fr: enriched.highlights.fr || [],
+              es: enriched.highlights.es || [],
+              uk: enriched.highlights.uk || [],
             },
           };
         }
@@ -341,7 +361,7 @@ export class DealRefiner {
           }
           refined.metadata = {
             ...refined.metadata,
-            offerSummary: enriched.offerSummary as { pl: string; en: string; de: string },
+            offerSummary: enriched.offerSummary as { pl: string; en: string; de: string; fr: string; es: string; uk: string },
           };
         }
       }
@@ -361,6 +381,7 @@ export class DealRefiner {
    */
   private async generateDealEnrichment(context: {
     dealTitle: string;
+    sourceLocale?: string;
     merchantName: string;
     merchantRating: number;
     dealType: string;

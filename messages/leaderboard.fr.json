@@ -1,0 +1,15 @@
+{
+  "title": "Classement des utilisateurs",
+  "subtitle": "Les meilleurs chasseurs de bonnes affaires de la communauté Dealabs",
+  "leaderboard": "Classement",
+  "leaderboardDesc": "Gagnez des points en ajoutant des bons plans, en commentant et en participant activement à la communauté.",
+  "rank": "Lieu",
+  "user": "Utilisateur",
+  "points": "Points",
+  "kingOfDeals": "👑 Le Roi des Bonnes Affaires",
+  "viceChampion": "🥈 Vice-champion",
+  "thirdPlace": "🥉 3ème place",
+  "topTen": "Top 10",
+  "loading": "Chargement...",
+  "noData": "Pas de données de classement disponibles."
+}

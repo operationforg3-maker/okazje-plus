@@ -1,0 +1,98 @@
+{
+  "hero": {
+    "badge": "Les meilleures affaires en Pologne",
+    "title": {
+      "discover": "Découvrez",
+      "best": "le meilleur",
+      "deals": "bonnes affaires"
+    },
+    "subtitle": "Une communauté qui partage les meilleures trouvailles, promotions et produits. Économisez intelligemment ! 💰",
+    "searchPlaceholder": "Que recherchez-vous ? (par exemple, iPhone, chaussures de sport, électroménager...)",
+    "searchButton": "Rechercher"
+  },
+  "stats": {
+    "hotDealsCount": "Offres exceptionnelles",
+    "products": "Produits",
+    "community": "Communauté",
+    "savings": "Économies"
+  },
+  "categories": {
+    "title": "Parcourir les catégories",
+    "subtitle": "Trouvez ce que vous cherchez",
+    "subcategories": "sous-catégories",
+    "viewAll": "Voir toutes les catégories",
+    "empty": "Les catégories seront bientôt disponibles ici."
+  },
+  "hotDeals": {
+    "title": "Les meilleures offres du moment",
+    "subtitle": "Testé par la communauté",
+    "viewAll": "Voir tout",
+    "empty": "Les meilleures affaires arrivent bientôt !"
+  },
+  "topProducts": {
+    "title": "Meilleurs produits",
+    "subtitle": "Testé et approuvé par notre communauté.",
+    "viewAll": "Consultez le catalogue",
+    "empty": "Bientôt, vous trouverez ici les meilleurs produits !"
+  },
+  "recommendedProducts": "Produits recommandés",
+  "noDeals": "Aucune opportunité d'affichage acceptée.",
+  "noProducts": "Aucun produit approuvé à afficher.",
+  "browseCategories": {
+    "viewSubcategories": "Voir les sous-catégories",
+    "subcategoryCount": "{count, plural, one {# sous-catégorie} other {# sous-catégories}}",
+    "productsCount": "{count, plural, one {# produit} few {# produits} other {# produits}}",
+    "browseAll": "Tout parcourir",
+    "allCategories": "Toutes les catégories",
+    "moreCategories": "+{count} catégorie(s) supplémentaire(s)"
+  },
+  "benefits": {
+    "badge": "Rejoignez la communauté",
+    "title": "Pourquoi s'inscrire ?",
+    "subtitle": "Débloquez tout le potentiel et profitez d'avantages exclusifs.",
+    "items": {
+      "notifications": {
+        "title": "Alertes de bonnes affaires",
+        "description": "Recevez des alertes sur les meilleures promotions dans vos catégories préférées."
+      },
+      "favorites": {
+        "title": "Favoris et listes",
+        "description": "Enregistrez les produits qui vous intéressent et suivez les variations de prix."
+      },
+      "exclusive": {
+        "title": "Offres exclusives",
+        "description": "Accès à des promotions exclusives réservées aux membres"
+      },
+      "community": {
+        "title": "Communauté",
+        "description": "Partagez vos trouvailles, commentez et évaluez les offres."
+      },
+      "points": {
+        "title": "Système de points",
+        "description": "Gagnez des points pour votre activité et recevez des récompenses."
+      },
+      "verified": {
+        "title": "Offres vérifiées",
+        "description": "Accès prioritaire aux offres vérifiées par les modérateurs"
+      }
+    },
+    "joinButton": "Rejoignez-nous gratuitement",
+    "joinSubtext": "L'inscription prend moins d'une minute. Sans engagement."
+  },
+  "forum": {
+    "title": "Participez à la discussion sur le forum",
+    "subtitle": "La communauté partage ses connaissances, ses conseils et ses meilleures trouvailles. Posez une question, aidez les autres ou lisez simplement des discussions intéressantes !",
+    "browseButton": "Parcourir le forum",
+    "createButton": "Créer un fil de discussion",
+    "stats": {
+      "threads": "Threads actifs",
+      "users": "Utilisateurs",
+      "replies": "Réponses par jour"
+    }
+  },
+  "about": {
+    "badge": "Notre mission",
+    "title": "Nous vous aidons à économiser.",
+    "titleHighlight": "intelligemment et efficacement"
+  }
+}

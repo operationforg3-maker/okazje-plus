@@ -1,0 +1,47 @@
+{
+  "title": "Bienvenue !",
+  "subtitle": "Connectez-vous ou créez un compte pour découvrir les meilleures offres.",
+  "noAccount": "Pas encore de compte ?",
+  "signUp": "S'inscrire",
+  "forgotPassword": "Mot de passe oublié ?",
+  "termsText": "En cliquant sur Continuer, vous acceptez nos",
+  "termsLink": "Conditions générales d'utilisation",
+  "and": "Je.",
+  "privacyLink": "Politique de confidentialité",
+  "brand": {
+    "kicker": "Place de marché comparateur de prix",
+    "title": "Connectez-vous à l'identité de marque Okazje Plus",
+    "subtitle": "Un seul compte pour comparer les offres, les alertes de prix et les recherches sauvegardées.",
+    "points": {
+      "quality": "Qualité prouvée des offres et des avis",
+      "secure": "Connexion sécurisée et protection du compte",
+      "fast": "Accédez rapidement aux dernières offres"
+    },
+    "footer": "Okazje Plus : le choix intelligent regroupé au même endroit."
+  },
+  "tabs": {
+    "login": "Connexion",
+    "register": "Inscription"
+  },
+  "labels": {
+    "email": "Courriel",
+    "password": "Mot de passe"
+  },
+  "placeholders": {
+    "email": "name@example.com",
+    "password": "Mot de passe"
+  },
+  "buttons": {
+    "login": "Se connecter",
+    "register": "Créer un compte"
+  },
+  "social": {
+    "continueWith": "Ou continuez avec",
+    "continueGoogle": "Continuer avec Google",
+    "google": "Google",
+    "github": "GitHub"
+  },
+  "errors": {
+    "title": "Erreur"
+  }
+}
