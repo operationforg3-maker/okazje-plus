@@ -301,15 +301,33 @@ export class DealRefiner {
       });
 
       if (enriched) {
+        const pickLocalizedTitle = (
+          existingValue: string,
+          enrichedValue: string,
+          targetLocale: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'
+        ): string => {
+          const existing = String(existingValue || '').trim();
+          const generated = String(enrichedValue || '').trim();
+          if (!existing) return generated || titleForAI;
+          if (!generated) return existing;
+
+          const isFallbackFromSource =
+            sourceLocale !== targetLocale &&
+            existing === titleForAI &&
+            generated !== existing;
+
+          return isFallbackFromSource ? generated : existing;
+        };
+
         // Ensure title is fully localized with guaranteed Polish
         // Priority: explicit > enriched > fallback
         const fullyLocalizedTitle = ensureLocalizedTitle({
-          pl: titlePL || enriched.titlePL || titleForAI, // CRITICAL: Always have Polish
-          en: titleEN || enriched.titleEN || titleForAI,
-          de: titleDE || enriched.titleDE || titleForAI,
-          fr: titleFR || enriched.titleFR || titleForAI,
-          es: titleES || enriched.titleES || titleForAI,
-          uk: titleUK || enriched.titleUK || titleForAI,
+          pl: pickLocalizedTitle(titlePL, enriched.titlePL || '', 'pl'),
+          en: pickLocalizedTitle(titleEN, enriched.titleEN || '', 'en'),
+          de: pickLocalizedTitle(titleDE, enriched.titleDE || '', 'de'),
+          fr: pickLocalizedTitle(titleFR, enriched.titleFR || '', 'fr'),
+          es: pickLocalizedTitle(titleES, enriched.titleES || '', 'es'),
+          uk: pickLocalizedTitle(titleUK, enriched.titleUK || '', 'uk'),
         });
 
         refined.title = fullyLocalizedTitle as LocalizedText;
