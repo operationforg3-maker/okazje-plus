@@ -247,6 +247,62 @@ export class AIRefiner {
     refinationType: string
   ): Promise<Partial<ProductCore>> {
     const refined: Partial<ProductCore> = {};
+    const locales: Array<'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'> = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+
+    const ensureAllLocales = async (
+      value: Partial<LocalizedText> | undefined,
+      preferredSourceLocale: 'pl' | 'en' = 'pl'
+    ): Promise<LocalizedText> => {
+      const normalized: LocalizedText = {
+        pl: String(value?.pl || '').trim(),
+        en: String(value?.en || '').trim(),
+        de: String(value?.de || '').trim(),
+        fr: String((value as any)?.fr || '').trim(),
+        es: String((value as any)?.es || '').trim(),
+        uk: String((value as any)?.uk || '').trim(),
+      };
+
+      const fallbackBase =
+        normalized[preferredSourceLocale] ||
+        normalized.en ||
+        normalized.pl ||
+        normalized.de ||
+        normalized.fr ||
+        normalized.es ||
+        normalized.uk ||
+        '';
+
+      if (!fallbackBase) {
+        return normalized;
+      }
+
+      const missing = locales.filter((locale) => !normalized[locale]);
+      if (missing.length > 0) {
+        try {
+          const { translateContent } = await import('@/ai/flows/enrichment');
+          const sourceLocale = normalized[preferredSourceLocale]
+            ? preferredSourceLocale
+            : (normalized.en ? 'en' : 'pl');
+
+          const translated = await translateContent({
+            text: normalized[sourceLocale] || fallbackBase,
+            sourceLocale,
+            targetLocales: missing,
+          });
+
+          for (const locale of missing) {
+            const candidate = String(translated.translations?.[locale] || '').trim();
+            normalized[locale] = candidate || fallbackBase;
+          }
+        } catch {
+          for (const locale of missing) {
+            normalized[locale] = normalized[locale] || fallbackBase;
+          }
+        }
+      }
+
+      return normalized;
+    };
 
     // Build best-effort specs seed
     let specsSeed: Record<string, string> = {};
@@ -301,12 +357,25 @@ export class AIRefiner {
         });
 
         // Map AI output to ProductCore fields
-        refined.title = refinedContent.title as LocalizedText;
+        const titleLocalized = await ensureAllLocales(
+          refinedContent.title as Partial<LocalizedText>,
+          isEnSource ? 'en' : 'pl'
+        );
+        refined.title = titleLocalized;
         
         // Use HTML descriptions
-        refined.description = refinedContent.fullDescription as LocalizedText;
-        refined.fullDescription = refinedContent.fullDescription as LocalizedText;
-        refined.shortDescription = refinedContent.shortDescription as LocalizedText;
+        const fullDescriptionLocalized = await ensureAllLocales(
+          refinedContent.fullDescription as Partial<LocalizedText>,
+          isEnSource ? 'en' : 'pl'
+        );
+        const shortDescriptionLocalized = await ensureAllLocales(
+          refinedContent.shortDescription as Partial<LocalizedText>,
+          isEnSource ? 'en' : 'pl'
+        );
+
+        refined.description = fullDescriptionLocalized;
+        refined.fullDescription = fullDescriptionLocalized;
+        refined.shortDescription = shortDescriptionLocalized;
         
         // Use SEO output
         refined.seoTitle = refinedContent.seo.title;
@@ -333,6 +402,16 @@ export class AIRefiner {
           } catch (specErr) {
             this.addLog('warn', 'Specyfikacje nie zostały wyekstrahowane z tytułu', specErr);
           }
+        }
+
+        const specsAugmented = (refinedContent as any).specsAugmented;
+        if (specsAugmented && typeof specsAugmented === 'object' && Object.keys(specsAugmented).length > 0) {
+          refined.specs = {
+            ...(refined.specs || product.specs || {}),
+            ...Object.fromEntries(
+              Object.entries(specsAugmented).map(([key, value]) => [key, String(value ?? '').trim()])
+            ),
+          };
         }
 
         // M6+ Market Price Estimation
@@ -491,6 +570,25 @@ export class AIRefiner {
     }
 
     if (refinationType === 'full_enrichment') {
+      const textForSpecInference = [
+        typeof refined.title === 'object' ? (refined.title.pl || refined.title.en || '') : '',
+        typeof refined.fullDescription === 'object' ? (refined.fullDescription.pl || refined.fullDescription.en || '') : '',
+        typeof product.title === 'object' ? (product.title.pl || product.title.en || '') : '',
+        typeof product.fullDescription === 'object' ? (product.fullDescription.pl || product.fullDescription.en || '') : '',
+      ].filter(Boolean).join(' ');
+
+      if (textForSpecInference) {
+        const inferredSpecs = extractDimensionsFromTitle(textForSpecInference);
+        if (Object.keys(inferredSpecs).length > 0) {
+          refined.specs = {
+            ...(refined.specs || product.specs || {}),
+            ...Object.fromEntries(
+              Object.entries(inferredSpecs).filter(([key]) => !(refined.specs || product.specs || {})[key])
+            ),
+          };
+        }
+      }
+
       // Extract search tags
       refined.searchTags = await this.extractSearchTags(product.title, product.specs);
 

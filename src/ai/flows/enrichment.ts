@@ -366,21 +366,33 @@ export const generateMarketingContent = ai.defineFlow(
         pl: z.string(),
         en: z.string(),
         de: z.string(),
+        fr: z.string(),
+        es: z.string(),
+        uk: z.string(),
       }),
       shortDescription: z.object({
         pl: z.string(),
         en: z.string(),
         de: z.string(),
+        fr: z.string(),
+        es: z.string(),
+        uk: z.string(),
       }),
       fullDescription: z.object({
         pl: z.string(), // HTML format
         en: z.string(), // HTML format
         de: z.string(), // HTML format
+        fr: z.string(), // HTML format
+        es: z.string(), // HTML format
+        uk: z.string(), // HTML format
       }),
       features: z.object({
         pl: z.array(z.string()),
         en: z.array(z.string()),
         de: z.array(z.string()),
+        fr: z.array(z.string()),
+        es: z.array(z.string()),
+        uk: z.array(z.string()),
       }),
       seo: z.object({
          title: z.string(), // SEO optimized title
@@ -392,14 +404,15 @@ export const generateMarketingContent = ai.defineFlow(
         currency: z.string(),
         range: z.object({ min: z.number(), max: z.number() }).optional(),
       }).optional(),
+      specsAugmented: z.record(z.string()).optional(),
     }),
   },
   async (input) => {
     try {
       const specsStr = Object.entries(input.specs).map(([k,v]) => `- ${k}: ${v}`).join('\n');
 
-      const prompt = `You are a Senior E-commerce Copywriter and SEO Specialist writing for Polish shoppers.
-Create **original**, sales-focused content in three languages (PL primary, EN, DE) without literal translation. Use the specs and your domain knowledge. Avoid generic fluff.
+      const prompt = `You are a Senior E-commerce Copywriter and SEO Specialist writing for European shoppers.
+    Create **original**, sales-focused content in six languages (PL primary, EN, DE, FR, ES, UK) without literal translation. Use the specs and your domain knowledge. Avoid generic fluff.
 
 INPUT DATA:
 - Source: ${input.source || 'Unknown'}
@@ -414,7 +427,7 @@ GLOBAL RULES:
 - Never invent fake brands/models. If brand missing, omit brand.
 - Keep claims realistic; avoid hype like "best in the world".
 
-TITLES (pl/en/de):
+TITLES (pl/en/de/fr/es/uk):
 - Format: Brand (if known) + Model + 1-2 killer attributes.
 - Length target: 55-70 chars. Remove spammy keywords.
 
@@ -430,11 +443,15 @@ FULL DESCRIPTION (HTML per language):
   <p>Closing reassurance (warranty, compatibility, ease of use)</p>
 - Use concrete details from specs; if missing, use safe, generic but useful benefits (e.g., "Solidna obudowa", "Prosta obsługa").
 
-SHORT DESCRIPTION (pl/en/de):
+SHORT DESCRIPTION (pl/en/de/fr/es/uk):
 - 2-3 sentences, max ~320 chars, focused on key value props.
 
-FEATURES (pl/en/de):
+FEATURES (pl/en/de/fr/es/uk):
 - 4-6 bullet-ready strings, each containing a concrete value (number, material, dimension, or outcome).
+
+SPECS AUGMENTATION:
+- Add/normalize missing specs from title + description context (e.g. RAM, Storage, Screen, Battery, Material, Connectivity, Weight).
+- Do not invent impossible values. If uncertain, omit.
 
 SEO (PL market):
 - seo.title: 55-60 chars, include category keyword if natural.
@@ -446,12 +463,13 @@ MARKET PRICE:
 
 OUTPUT STRICTLY JSON MATCHING:
 {
-  "title": { "pl": "...", "en": "...", "de": "..." },
-  "shortDescription": { "pl": "...", "en": "...", "de": "..." },
-  "fullDescription": { "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>" },
-  "features": { "pl": ["..."], "en": ["..."], "de": ["..."] },
+  "title": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
+  "shortDescription": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
+  "fullDescription": { "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>", "fr": "<p>...</p>", "es": "<p>...</p>", "uk": "<p>...</p>" },
+  "features": { "pl": ["..."], "en": ["..."], "de": ["..."], "fr": ["..."], "es": ["..."], "uk": ["..."] },
   "seo": { "title": "...", "description": "...", "keywords": ["..."] },
-  "averageMarketPrice": { "amount": 123.00, "currency": "PLN", "range": { "min": 100, "max": 150 } }
+  "averageMarketPrice": { "amount": 123.00, "currency": "PLN", "range": { "min": 100, "max": 150 } },
+  "specsAugmented": { "RAM": "8GB", "Battery": "5000mAh" }
 }`;
 
       const response = await ai.generate({
@@ -465,12 +483,13 @@ OUTPUT STRICTLY JSON MATCHING:
 
       // Fallback/Validation defaults
       return {
-        title: parsed.title || { pl: input.originalTitle, en: input.originalTitle, de: input.originalTitle },
-        shortDescription: parsed.shortDescription || { pl: "", en: "", de: "" },
-        fullDescription: parsed.fullDescription || { pl: "", en: "", de: "" },
-        features: parsed.features || { pl: [], en: [], de: [] },
+        title: parsed.title || { pl: input.originalTitle, en: input.originalTitle, de: input.originalTitle, fr: input.originalTitle, es: input.originalTitle, uk: input.originalTitle },
+        shortDescription: parsed.shortDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "" },
+        fullDescription: parsed.fullDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "" },
+        features: parsed.features || { pl: [], en: [], de: [], fr: [], es: [], uk: [] },
         seo: parsed.seo || { title: "", description: "", keywords: [] },
         averageMarketPrice: parsed.averageMarketPrice || undefined,
+        specsAugmented: parsed.specsAugmented || undefined,
       };
 
     } catch (error) {
