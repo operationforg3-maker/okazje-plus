@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
       rootCategorySlug, 
       categories: categoriesFromBody,
       convertiserMode = 'products', // New: 'products' or 'offers' for Convertiser
-      autoBrowse = false // Convertiser: fetch entire catalog without keywords
+      autoBrowse = false, // Convertiser: fetch entire catalog without keywords
+      importStrategy = 'bestsellers'
     } = body;
 
     // 3. Validate input
@@ -68,6 +69,13 @@ export async function POST(request: NextRequest) {
     if (!['aliexpress', 'amazon', 'allegro', 'convertiser'].includes(source)) {
       return NextResponse.json(
         { error: 'Invalid source. Must be aliexpress, amazon, allegro, or convertiser' },
+        { status: 400 }
+      );
+    }
+
+    if (!['bestsellers', 'price_asc'].includes(importStrategy)) {
+      return NextResponse.json(
+        { error: 'Invalid importStrategy. Must be bestsellers or price_asc' },
         { status: 400 }
       );
     }
@@ -139,7 +147,8 @@ export async function POST(request: NextRequest) {
       categories,
       isTreeMode,
       source === 'convertiser' ? convertiserMode : undefined,
-      autoBrowse
+      autoBrowse,
+      source === 'aliexpress' ? importStrategy : 'bestsellers'
     ).catch((err) => {
       console.error(`[Harvester ${jobId}] Background job failed:`, err);
     });

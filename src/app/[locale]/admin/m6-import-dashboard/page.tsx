@@ -1230,6 +1230,7 @@ function HarvesterWizard({
   const [autoIsImporting, setAutoIsImporting] = useState(false);
   const [autoMaxResults, setAutoMaxResults] = useState(10000);
   const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('offers');
+  const [importStrategy, setImportStrategy] = useState<'bestsellers' | 'price_asc'>('bestsellers');
   const [autoProgress, setAutoProgress] = useState<{
     jobId?: string;
     productsFound?: number;
@@ -1257,6 +1258,10 @@ function HarvesterWizard({
         query: query.trim() || "category-tree",
         maxResults,
       };
+
+      if (source === 'aliexpress') {
+        payload.importStrategy = importStrategy;
+      }
 
       if (useCategoryTree) {
         payload.mode = "category-tree";
@@ -1296,6 +1301,7 @@ function HarvesterWizard({
     query: string;
     maxResults: number;
     convertiserMode?: 'products' | 'offers';
+    importStrategy?: 'bestsellers' | 'price_asc';
   }) => {
     if (!authToken) {
       setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
@@ -1310,6 +1316,9 @@ function HarvesterWizard({
     if (params.source === 'convertiser' && params.convertiserMode) {
       setConvertiserMode(params.convertiserMode);
     }
+    if (params.source === 'aliexpress' && params.importStrategy) {
+      setImportStrategy(params.importStrategy);
+    }
 
     setLoading(true);
     setResult(null);
@@ -1323,6 +1332,9 @@ function HarvesterWizard({
 
       if (params.source === 'convertiser' && params.convertiserMode) {
         payload.convertiserMode = params.convertiserMode;
+      }
+      if (params.source === 'aliexpress') {
+        payload.importStrategy = params.importStrategy || importStrategy;
       }
 
       const res = await fetch("/api/admin/harvester/run", {
@@ -1593,6 +1605,7 @@ function HarvesterWizard({
                 source: 'aliexpress',
                 query: 'usb c charger',
                 maxResults: 10,
+                importStrategy: 'bestsellers',
               })}
               disabled={loading}
               className="gap-2"
@@ -1726,6 +1739,26 @@ function HarvesterWizard({
         )}
 
         {/* Step 2: Query input */}
+        {source === 'aliexpress' && (
+          <div className="space-y-2 border border-slate-200 rounded-lg p-4 bg-slate-50">
+            <Label htmlFor="import-strategy" className="text-sm font-semibold text-slate-900">
+              Strategia importu AliExpress
+            </Label>
+            <Select value={importStrategy} onValueChange={(v) => setImportStrategy(v as 'bestsellers' | 'price_asc')}>
+              <SelectTrigger id="import-strategy">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bestsellers">Bestsellery (najpierw największa sprzedaż)</SelectItem>
+                <SelectItem value="price_asc">Najniższa cena (rosnąco)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500">
+              Działa dla AliExpress. W trybie drzewka domyślnie zalecane: Bestsellery.
+            </p>
+          </div>
+        )}
+
         <div className="space-y-3">
           <label className="block text-sm font-semibold text-slate-900">
             2. Wpisz szukany termin

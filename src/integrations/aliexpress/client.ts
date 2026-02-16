@@ -863,6 +863,7 @@ export class AliExpressClient {
       let sort = params.sort || 'LAST_VOLUME_DESC';
       if (sort === 'price_asc') sort = 'SALE_PRICE_ASC';
       if (sort === 'price_desc') sort = 'SALE_PRICE_DESC';
+      if (sort === 'orders') sort = 'LAST_VOLUME_DESC';
       if (sort === 'rating') sort = 'LAST_VOLUME_DESC'; // API logic: Volume is best proxy for rating
 
       // Map params to TOP API format

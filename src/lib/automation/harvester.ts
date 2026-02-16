@@ -1085,7 +1085,8 @@ export class SmartHarvester {
     categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
     isTreeMode: boolean = false, // True when harvesting from category tree
     convertiserMode?: 'products' | 'offers', // Convertiser: fetch products or offers
-    autoBrowse: boolean = false // Convertiser: fetch entire catalog without keywords
+    autoBrowse: boolean = false, // Convertiser: fetch entire catalog without keywords
+    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers'
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
     
@@ -1235,7 +1236,14 @@ export class SmartHarvester {
             ? currentQuery.split('/').pop() || currentQuery 
             : currentQuery;
             
-          const sourceProducts = await this.fetchFromSource(source, searchTerm, maxResults, isTreeMode, convertiserMode);
+          const sourceProducts = await this.fetchFromSource(
+            source,
+            searchTerm,
+            maxResults,
+            isTreeMode,
+            convertiserMode,
+            importStrategy
+          );
           
           // For category-tree mode: Filter by rating/quality (top products only)
           let filteredProducts = sourceProducts;
@@ -1773,7 +1781,8 @@ export class SmartHarvester {
     searchQuery: string,
     maxResults: number,
     isTreeMode: boolean = false,
-    convertiserMode?: 'products' | 'offers'
+    convertiserMode?: 'products' | 'offers',
+    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers'
   ): Promise<
     Array<{
       title: string;
@@ -1798,7 +1807,7 @@ export class SmartHarvester {
   > {
     switch (source) {
       case 'aliexpress':
-        return await this.fetchFromAliExpress(searchQuery, maxResults, isTreeMode);
+        return await this.fetchFromAliExpress(searchQuery, maxResults, isTreeMode, importStrategy);
       case 'amazon':
         return await this.fetchFromAmazon(searchQuery, maxResults);
       case 'allegro':
@@ -1841,7 +1850,12 @@ export class SmartHarvester {
    * Integrated with production AliExpress client
    * M6 FIX: Converts USD prices to PLN using NBP exchange rates
    */
-  private async fetchFromAliExpress(searchQuery: string, maxResults: number, isTreeMode: boolean = false) {
+  private async fetchFromAliExpress(
+    searchQuery: string,
+    maxResults: number,
+    isTreeMode: boolean = false,
+    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers'
+  ) {
     try {
       const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
       const client = createAliExpressClient();
@@ -1851,10 +1865,14 @@ export class SmartHarvester {
       // For tree mode: use higher maxResults to fetch more, then filter by rating
       const fetchSize = isTreeMode ? Math.min(maxResults * 2, 100) : Math.min(maxResults, 50);
       
+      const aliExpressSort = isTreeMode
+        ? (importStrategy === 'price_asc' ? 'price_asc' : 'orders')
+        : 'price_asc';
+
       const response = await client.searchProducts({
         q: searchQuery,
         limit: fetchSize,
-        sort: isTreeMode ? 'rating' : 'price_asc', // For tree mode, sort by rating; otherwise by price
+        sort: aliExpressSort,
         targetLanguage: 'EN', // Fetch in English for better AI translation
         targetCurrency: 'PLN', // Ensure prices are in PLN
         shipToCountry: 'PL'    // Ensure shipping to Poland
@@ -1864,12 +1882,21 @@ export class SmartHarvester {
         this.addLog('error', `AliExpress search failed: ${response.error?.message || 'Unknown error'}`);
         return [];
       }
+
+      const sortedBySalesVolume = [...response.products].sort((a: any, b: any) => {
+        const salesA = Number(a?.sales_volume ?? a?.volume ?? 0) || 0;
+        const salesB = Number(b?.sales_volume ?? b?.volume ?? 0) || 0;
+        return salesB - salesA;
+      });
+      const rankedProducts = (isTreeMode && importStrategy === 'bestsellers')
+        ? sortedBySalesVolume
+        : response.products;
       
       this.addLog('info', `Found ${response.products.length} products from AliExpress. Fetching deep details for top items...`);
       
       // DEEP FETCH: Get detailed info (HTML descriptions) for top items
       // Keep small batch to avoid long tail latency and rate limits
-      const productsToEnrich = response.products.slice(0, 10);
+      const productsToEnrich = rankedProducts.slice(0, 10);
       
       const detailedProducts = await Promise.all(
         productsToEnrich.map(async (p: any) => {
