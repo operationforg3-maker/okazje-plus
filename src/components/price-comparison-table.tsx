@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ExternalLink, TrendingDown } from 'lucide-react';
 import { getDealsForProduct } from '@/lib/data';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface PriceComparisonTableProps {
   productId: string;
@@ -102,6 +103,13 @@ export function PriceComparisonTable({
               
               const totalPrice = productPrice + shippingCost;
               const isBestDeal = deal.id === bestDealId;
+              const externalUrl = getExternalUrl(
+                deal.affiliateLink,
+                deal.affiliateUrl,
+                deal.dealUrl,
+                deal.sourceUrl,
+                deal.link
+              );
 
               return (
                 <TableRow
@@ -177,22 +185,32 @@ export function PriceComparisonTable({
 
                   {/* Buy Button */}
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant={isBestDeal ? 'default' : 'outline'}
-                      onClick={() => onBuyClick?.(deal)}
-                      asChild
-                    >
-                      <a
-                        href={deal.affiliateLink || deal.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2"
+                    {externalUrl ? (
+                      <Button
+                        size="sm"
+                        variant={isBestDeal ? 'default' : 'outline'}
+                        onClick={() => onBuyClick?.(deal)}
+                        asChild
                       >
-                        {t('productDetail.priceComparison.buy')}
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </Button>
+                        <a
+                          href={externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2"
+                        >
+                          {t('productDetail.priceComparison.buy')}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant={isBestDeal ? 'default' : 'outline'}
+                        disabled
+                      >
+                        Brak linku
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               );

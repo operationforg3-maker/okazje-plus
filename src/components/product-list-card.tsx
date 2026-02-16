@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Star, ShoppingCart, ExternalLink, Clock, Tag, Heart, Scale, Flame } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
+import { getExternalUrl } from '@/lib/external-url';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
@@ -158,7 +159,15 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     ? product.images[0]
     : '/placeholder.png';
 
-  const offerUrl = bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl;
+  const offerUrl = bestDeal
+    ? getExternalUrl(
+        bestDeal.affiliateLink,
+        bestDeal.affiliateUrl,
+        bestDeal.dealUrl,
+        bestDeal.sourceUrl,
+        bestDeal.link
+      )
+    : null;
 
   return (
     <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">

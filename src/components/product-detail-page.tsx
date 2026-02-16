@@ -18,6 +18,7 @@ import { PriceComparisonTable } from './price-comparison-table';
 import { ProductPriceHistoryChart } from './product-price-history-chart';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { SpecsTable } from './specs-table';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface ProductDetailPageProps {
   productId: string;
@@ -99,6 +100,15 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   const bestOriginalPLN = bestDeal?.originalPrice ? CurrencyManager.convertToPLN(bestDeal.originalPrice, bestCurrency) : 0;
   const bestProductPricePLN = bestDeal ? CurrencyManager.convertToPLN(bestDeal.price?.amount || 0, bestCurrency) : 0;
   const bestShippingPLN = bestDeal ? CurrencyManager.convertToPLN(bestDeal.shipping?.cost || 0, bestCurrency) : 0;
+  const bestDealUrl = bestDeal
+    ? getExternalUrl(
+        bestDeal.affiliateLink,
+        bestDeal.affiliateUrl,
+        bestDeal.dealUrl,
+        bestDeal.sourceUrl,
+        bestDeal.link
+      )
+    : null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-12">
@@ -229,16 +239,23 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
 
                 {/* CTA Buttons */}
                 <div className="flex gap-3 pt-4">
-                  <Button asChild className="flex-1 h-12 text-lg">
-                    <a
-                      href={bestDeal.affiliateLink || bestDeal.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                  {bestDealUrl ? (
+                    <Button asChild className="flex-1 h-12 text-lg">
+                      <a
+                        href={bestDealUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ShoppingCart className="w-5 h-5 mr-2" />
+                        {t('productDetail.simple.buyNow')}
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button className="flex-1 h-12 text-lg" disabled>
                       <ShoppingCart className="w-5 h-5 mr-2" />
-                      {t('productDetail.simple.buyNow')}
-                    </a>
-                  </Button>
+                      Brak linku zewnętrznego
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="icon"

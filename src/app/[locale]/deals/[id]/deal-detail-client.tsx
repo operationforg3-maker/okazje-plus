@@ -7,6 +7,7 @@ import { extractPriceInfo, isFreeShipping } from '@/lib/i18n-utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
+import { getExternalUrl } from '@/lib/external-url';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -186,6 +187,16 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
       discount: calculatedDiscount ?? fallbackDiscount,
     });
   }, [deal.price, deal.originalPrice, deal.minOrderValue, currency]);
+
+  const outboundUrl = getExternalUrl(
+    deal.link,
+    (deal as any).affiliateLink,
+    (deal as any).affiliateUrl,
+    (deal as any).dealUrl,
+    (deal as any).sourceUrl,
+    deal.metadata?.offerPreviewUrl,
+    deal.metadata?.previewUrl
+  );
 
   // Update countdown every minute
   useEffect(() => {
@@ -705,12 +716,17 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                     variant="button"
                     className="flex-1 h-14 text-base"
                   />
-                ) : (
+                ) : outboundUrl ? (
                   <Button size="lg" asChild className="flex-1 bg-primary hover:bg-primary/90 text-base md:text-lg py-6">
-                    <a href={deal.link} target="_blank" rel="noopener noreferrer">
+                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="mr-2 h-5 w-5" />
                       Przejdź do okazji
                     </a>
+                  </Button>
+                ) : (
+                  <Button size="lg" className="flex-1 text-base md:text-lg py-6" disabled>
+                    <ExternalLink className="mr-2 h-5 w-5" />
+                    Brak linku zewnętrznego
                   </Button>
                 )}
                 <ShareButton 
