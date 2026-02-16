@@ -1,6 +1,7 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { cacheDel } from '@/lib/cache';
 import { Category, Subcategory, SubSubcategory } from '@/lib/types';
+import { translateContent } from '@/ai/flows/enrichment';
 
 // Minimal seed type that keeps translation and import keyword metadata
 export type CategorySeed = Omit<Category, 'id'> & {
@@ -27,6 +28,9 @@ export interface BuildCategoriesResult {
   total: number;
 }
 
+const REQUIRED_TRANSLATION_LOCALES = ['en', 'de', 'fr', 'es', 'uk'] as const;
+const translationCache = new Map<string, Record<string, string>>();
+
 const slugifyEn = (value: string | undefined): string => {
   if (!value) return '';
   return value
@@ -46,6 +50,103 @@ const resolveSlug = (seedSlug: string | undefined, translations?: Record<string,
   return { slug: slug || seedSlug || '', legacySlug };
 };
 
+const dedupeKeywords = (items: string[]): string[] => {
+  const normalized = items
+    .map((item) => String(item || '').trim())
+    .filter(Boolean);
+  return Array.from(new Set(normalized));
+};
+
+const ensureImportKeywords = (
+  rawKeywords: unknown,
+  fallbackEn?: string,
+  fallbackPl?: string
+): string[] => {
+  const raw = Array.isArray(rawKeywords)
+    ? rawKeywords.map((item) => String(item || '').trim()).filter(Boolean)
+    : [];
+
+  if (raw.length > 0) {
+    return dedupeKeywords(raw);
+  }
+
+  return dedupeKeywords([fallbackEn || '', fallbackPl || '']);
+};
+
+const translateText = async (
+  text: string,
+  targetLocales: string[]
+): Promise<Record<string, string>> => {
+  const normalizedText = String(text || '').trim();
+  if (!normalizedText || targetLocales.length === 0) return {};
+
+  const cacheKey = `${normalizedText}::${targetLocales.slice().sort().join(',')}`;
+  if (translationCache.has(cacheKey)) {
+    return translationCache.get(cacheKey) as Record<string, string>;
+  }
+
+  try {
+    const result = await translateContent({
+      text: normalizedText,
+      sourceLocale: 'pl',
+      targetLocales,
+    });
+    const translations = result?.translations || {};
+    translationCache.set(cacheKey, translations);
+    return translations;
+  } catch {
+    const fallback: Record<string, string> = {};
+    translationCache.set(cacheKey, fallback);
+    return fallback;
+  }
+};
+
+const enrichTranslations = async (
+  baseName: string,
+  baseDescription: string | undefined,
+  existing?: Record<string, { name?: string; description?: string }>
+): Promise<Record<string, { name?: string; description?: string }>> => {
+  const translations: Record<string, { name?: string; description?: string }> = {
+    ...(existing || {}),
+    pl: {
+      name: baseName,
+      description: baseDescription || existing?.pl?.description,
+    },
+  };
+
+  const missingNameLocales = REQUIRED_TRANSLATION_LOCALES.filter(
+    (locale) => !translations[locale]?.name
+  );
+
+  if (missingNameLocales.length > 0) {
+    const translatedNames = await translateText(baseName, [...missingNameLocales]);
+    for (const locale of missingNameLocales) {
+      translations[locale] = {
+        ...(translations[locale] || {}),
+        name: translatedNames[locale] || translations[locale]?.name,
+      };
+    }
+  }
+
+  if (baseDescription) {
+    const missingDescriptionLocales = REQUIRED_TRANSLATION_LOCALES.filter(
+      (locale) => !translations[locale]?.description
+    );
+
+    if (missingDescriptionLocales.length > 0) {
+      const translatedDescriptions = await translateText(baseDescription, [...missingDescriptionLocales]);
+      for (const locale of missingDescriptionLocales) {
+        translations[locale] = {
+          ...(translations[locale] || {}),
+          description: translatedDescriptions[locale] || translations[locale]?.description,
+        };
+      }
+    }
+  }
+
+  return translations;
+};
+
 // Writes CATEGORY_SEEDS (or any compatible seed list) into Firestore using slug as the document id.
 export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<BuildCategoriesResult> {
   let mainCount = 0;
@@ -53,7 +154,8 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
   let subSubCount = 0;
 
   for (const main of seeds) {
-    const { slug: mainSlug, legacySlug: legacyMainSlug } = resolveSlug(main.slug, main.translations, main.name);
+    const mainTranslations = await enrichTranslations(main.name, main.description, main.translations);
+    const { slug: mainSlug, legacySlug: legacyMainSlug } = resolveSlug(main.slug, mainTranslations, main.name);
     if (!mainSlug) continue;
 
     const mainRef = adminDb.collection('categories').doc(mainSlug);
@@ -66,7 +168,7 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
         description: main.description ?? '',
         icon: main.icon ?? '📂',
         sortOrder: main.sortOrder ?? 0,
-        translations: main.translations ?? {},
+        translations: mainTranslations,
         updatedAt: new Date(),
       },
       { merge: true }
@@ -75,8 +177,16 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
 
     const subcategories = main.subcategories ?? [];
     for (const sub of subcategories) {
-      const { slug: subSlug, legacySlug: legacySubSlug } = resolveSlug(sub.slug, sub.translations, sub.name);
+      const subTranslations = await enrichTranslations(sub.name, sub.description, sub.translations);
+      const { slug: subSlug, legacySlug: legacySubSlug } = resolveSlug(sub.slug, subTranslations, sub.name);
       if (!subSlug) continue;
+
+      const subEnName = subTranslations?.en?.name || sub.name;
+      const subImportKeywords = ensureImportKeywords(
+        (sub as any).importKeywords ?? (sub as any).aliexpressKeywords,
+        subEnName,
+        sub.name
+      );
 
       const subRef = mainRef.collection('subcategories').doc(subSlug);
       await subRef.set(
@@ -87,8 +197,8 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
           description: sub.description ?? '',
           icon: sub.icon ?? '',
           sortOrder: sub.sortOrder ?? 0,
-          translations: sub.translations ?? {},
-          importKeywords: (sub as any).importKeywords ?? (sub as any).aliexpressKeywords ?? [],
+          translations: subTranslations,
+          importKeywords: subImportKeywords,
           updatedAt: new Date(),
         },
         { merge: true }
@@ -97,24 +207,27 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
 
       const subSubs = sub.subcategories ?? [];
       for (const subsub of subSubs) {
-        const { slug: subSubSlug, legacySlug: legacySubSubSlug } = resolveSlug(subsub.slug, subsub.translations, subsub.name);
+        const subSubTranslations = await enrichTranslations(subsub.name, subsub.description, subsub.translations);
+        const { slug: subSubSlug, legacySlug: legacySubSubSlug } = resolveSlug(subsub.slug, subSubTranslations, subsub.name);
         if (!subSubSlug) continue;
 
-        const importKeywordsRaw = (subsub as any).importKeywords ?? (subsub as any).aliexpressKeywords ?? [];
-        const importKeywords = Array.isArray(importKeywordsRaw)
-          ? importKeywordsRaw.filter(Boolean)
-          : [];
-        const finalKeywords = importKeywords.length > 0 ? importKeywords : subsub.name ? [subsub.name] : [];
+        const subSubEnName = subSubTranslations?.en?.name || subsub.name;
+        const finalKeywords = ensureImportKeywords(
+          (subsub as any).importKeywords ?? (subsub as any).aliexpressKeywords,
+          subSubEnName,
+          subsub.name
+        );
 
         // NEW: AliExpress category IDs
         const aliexpressCategoryIds = (subsub as any).aliexpressCategoryIds ?? [];
 
         // NEW: Generate searchKeywords from EN translation + importKeywords
-        const enName = (subsub as any).translations?.en?.name || subsub.name || '';
+        const enName = subSubEnName || '';
         const searchKeywords = [
           enName,
           ...finalKeywords,
         ].filter(Boolean);
+        const uniqueSearchKeywords = dedupeKeywords(searchKeywords);
 
         const subSubRef = subRef.collection('subcategories').doc(subSubSlug);
         await subSubRef.set(
@@ -125,10 +238,10 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
             description: subsub.description ?? '',
             icon: subsub.icon ?? '',
             sortOrder: subsub.sortOrder ?? 0,
-            translations: subsub.translations ?? {},
+            translations: subSubTranslations,
             importKeywords: finalKeywords,
             aliexpressCategoryIds,
-            searchKeywords,
+            searchKeywords: uniqueSearchKeywords,
             updatedAt: new Date(),
           },
           { merge: true }
