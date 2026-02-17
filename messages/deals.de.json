@@ -60,6 +60,16 @@
     "cta": "Zurück zu allen Angeboten"
   },
   "loading": "Angebote werden geladen...",
+  "loadingMore": "Weitere Angebote werden geladen...",
+  "showing": "Alle {{count}} Angebote werden angezeigt",
+  "productOfDay": {
+    "badge": "Produkt des Tages",
+    "viewProduct": "Produkt anzeigen"
+  },
+  "hotDealsQuick": "Heiße Angebote",
+  "hotDealsDesc": "Prüfen Sie Produkte mit den höchsten Bewertungen und Rezensionen",
+  "viewProducts": "Produkte anzeigen",
+  "seeMore": "Mehr anzeigen",
   "sidebar": {
     "categories": "Kategorien",
     "allDeals": "Alle",

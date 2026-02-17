@@ -58,6 +58,7 @@ import { useComparison } from '@/components/deal-comparison-tool';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface Props {
   product: Product;
@@ -76,6 +77,11 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(product.id, 'product');
   const { addItem, isInCart } = useSmartCart();
   const [activeTab, setActiveTab] = useState<'description' | 'reviews' | 'rate' | 'external-reviews'>('description');
+  const outboundUrl = getExternalUrl(
+    (product as any)?.affiliateUrl,
+    (product as any)?.sourceUrl,
+    (product as any)?.link
+  );
 
   const fetchRatings = async () => {
     if (user) {
@@ -447,17 +453,28 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  size="lg" 
-                  asChild 
-                  className="flex-1 bg-primary hover:bg-primary/90 w-full sm:w-auto text-base md:text-lg py-6"
-                  disabled={isOutOfStock}
-                >
-                  <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer">
+                {outboundUrl ? (
+                  <Button 
+                    size="lg" 
+                    asChild 
+                    className="flex-1 bg-primary hover:bg-primary/90 w-full sm:w-auto text-base md:text-lg py-6"
+                    disabled={isOutOfStock}
+                  >
+                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-5 w-5" />
+                      {isOutOfStock ? 'Wyprzedane' : 'Kup teraz'}
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="flex-1 bg-primary w-full sm:w-auto text-base md:text-lg py-6 opacity-80"
+                    disabled
+                  >
                     <ExternalLink className="mr-2 h-5 w-5" />
-                    {isOutOfStock ? 'Wyprzedane' : 'Kup teraz'}
-                  </a>
-                </Button>
+                    Brak linku zewnętrznego
+                  </Button>
+                )}
                 <ShareButton 
                   type="product"
                   itemId={product.id}
@@ -881,12 +898,19 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                   <p className="text-muted-foreground">
                     Opinie pochodzą z platformy AliExpress. Pełne recenzje dostępne są na stronie sprzedawcy.
                   </p>
-                  <Button asChild variant="outline" className="mt-4">
-                    <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer">
+                  {outboundUrl ? (
+                    <Button asChild variant="outline" className="mt-4">
+                      <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Zobacz opinie na AliExpress
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="mt-4" disabled>
                       <ExternalLink className="mr-2 h-4 w-4" />
-                      Zobacz opinie na AliExpress
-                    </a>
-                  </Button>
+                      Brak linku zewnętrznego
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

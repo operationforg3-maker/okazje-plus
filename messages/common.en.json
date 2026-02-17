@@ -5,6 +5,12 @@
     "system": "Theme: System",
     "hint": "click to change"
   },
+  "time": {
+    "days": "Days",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "seconds": "Seconds"
+  },
   "search": {
     "placeholder": "Search for products or deals...",
     "noSuggestions": "No suggestions",
@@ -30,6 +36,10 @@
     "clearAll": "Clear all",
     "apply": "Apply",
     "reset": "Reset",
+    "min": "Min",
+    "max": "Max",
+    "from": "From",
+    "to": "To",
     "loading": "Loading...",
     "saving": "Saving...",
     "deleting": "Deleting...",

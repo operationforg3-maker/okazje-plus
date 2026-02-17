@@ -60,6 +60,16 @@
     "cta": "Back to All Deals"
   },
   "loading": "Loading deals...",
+  "loadingMore": "Loading more deals...",
+  "showing": "Showing all {{count}} deals",
+  "productOfDay": {
+    "badge": "Product of the Day",
+    "viewProduct": "View product"
+  },
+  "hotDealsQuick": "Hot deals",
+  "hotDealsDesc": "Check products with the highest ratings and reviews",
+  "viewProducts": "View products",
+  "seeMore": "See more",
   "sidebar": {
     "categories": "Categories",
     "allDeals": "All",

@@ -4,6 +4,12 @@
     "dark": "Thema: Dunkel",
     "system": "Thema: System",
     "hint": "klicken zum Ändern"  },
+  "time": {
+    "days": "Tage",
+    "hours": "Std",
+    "minutes": "Min",
+    "seconds": "Sek"
+  },
   "search": {
     "placeholder": "Suche nach Produkten oder Angeboten...",
     "noSuggestions": "Keine Vorschläge",
@@ -29,6 +35,10 @@
     "clearAll": "Alles löschen",
     "apply": "Anwenden",
     "reset": "Zurücksetzen",
+    "min": "Min",
+    "max": "Max",
+    "from": "Von",
+    "to": "Bis",
     "loading": "Lädt...",
     "saving": "Speichert...",
     "deleting": "Wird gelöscht...",

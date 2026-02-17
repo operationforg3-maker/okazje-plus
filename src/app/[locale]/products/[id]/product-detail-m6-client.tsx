@@ -38,6 +38,7 @@ import { useSmartCart } from '@/lib/cart-context';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCurrency } from '@/lib/unified-currency';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface Props {
   productCore?: ProductCore;
@@ -188,6 +189,22 @@ export default function ProductDetailM6Client({
     }
   })();
 
+  const bestDealOutboundUrl = bestDeal
+    ? getExternalUrl(
+        bestDeal.affiliateLink,
+        (bestDeal as any).affiliateUrl,
+        (bestDeal as any).dealUrl,
+        (bestDeal as any).sourceUrl,
+        (bestDeal as any).link
+      )
+    : null;
+  const productOutboundUrl = getExternalUrl(
+    (productData as any)?.affiliateUrl,
+    (productData as any)?.sourceUrl,
+    (productData as any)?.link
+  );
+  const outboundUrl = bestDealOutboundUrl || productOutboundUrl;
+
   // Helper: map ProductCore -> minimal Product for SmartCart
   const asLegacyProduct = (): Product => {
     return {
@@ -195,7 +212,7 @@ export default function ProductDetailM6Client({
       name: getLocalizedText(productData.title, 'Produkt'),
       image: imageUrls?.[0] || (product as any)?.image || '',
       price: { amount: priceAmount ?? (productCore?.bestPrice?.amount || 0), currency: 'PLN' } as any,
-      affiliateUrl: bestDeal?.affiliateLink || (bestDeal as any)?.sourceUrl || (productData as any)?.affiliateUrl,
+      affiliateUrl: outboundUrl || '',
     } as unknown as Product;
   };
 
@@ -319,9 +336,9 @@ export default function ProductDetailM6Client({
           {/* Actions */}
           <div className="flex gap-3">
             {/* Kup teraz */}
-            {bestDeal && (
+            {outboundUrl && (
               <Button asChild size="lg" className="flex-1">
-                <a href={bestDeal.affiliateLink || (bestDeal as any).sourceUrl} target="_blank" rel="noopener noreferrer">
+                <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   {t('productDetail.simple.buyNow')}
                 </a>

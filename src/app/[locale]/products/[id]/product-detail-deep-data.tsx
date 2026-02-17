@@ -16,6 +16,7 @@ import { Star, ShoppingCart, Heart, Share2, ExternalLink, Zap, Globe } from 'luc
 import { useCurrency } from '@/lib/unified-currency';
 import Link from 'next/link';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface ProductDetailDeepDataProps {
   productCore: ProductCore;
@@ -58,6 +59,15 @@ export default function ProductDetailDeepData({ productCore, deals }: ProductDet
   const discount = selectedDeal?.originalPrice && selectedDeal.price.amount < selectedDeal.originalPrice
     ? Math.round(((selectedDeal.originalPrice - selectedDeal.price.amount) / selectedDeal.originalPrice) * 100)
     : productCore.metadata?.discount;
+  const selectedDealOutboundUrl = selectedDeal
+    ? getExternalUrl(
+        selectedDeal.affiliateLink,
+        (selectedDeal as any).affiliateUrl,
+        (selectedDeal as any).dealUrl,
+        (selectedDeal as any).sourceUrl,
+        (selectedDeal as any).link
+      )
+    : null;
   
   return (
     <div className="container mx-auto px-4 py-8">
@@ -190,21 +200,28 @@ export default function ProductDetailDeepData({ productCore, deals }: ProductDet
                 
                 {/* CTAs */}
                 <div className="flex gap-2">
-                  <Button 
-                    size="lg" 
-                    className="flex-1"
-                    asChild
-                  >
-                    <a 
-                      href={selectedDeal?.affiliateLink || selectedDeal?.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                  {selectedDealOutboundUrl ? (
+                    <Button 
+                      size="lg" 
+                      className="flex-1"
+                      asChild
                     >
+                      <a 
+                        href={selectedDealOutboundUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        Kup teraz
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button size="lg" className="flex-1" disabled>
                       <ShoppingCart className="mr-2 h-5 w-5" />
-                      Kup teraz
-                      <ExternalLink className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
+                      Brak linku zewnętrznego
+                    </Button>
+                  )}
                   
                   <Button size="lg" variant="outline">
                     <Heart className="h-5 w-5" />

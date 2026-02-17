@@ -30,6 +30,7 @@ import { extractPriceInfo, getDiscountPercent } from '@/lib/i18n-utils';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import { CardHeader } from '@/components/ui/card-header';
+import { getExternalUrl } from '@/lib/external-url';
 // TEMPORARILY REMOVED FOR DEBUGGING React #418:
 // import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 // import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
@@ -232,6 +233,15 @@ function DealCard({ deal, product }: DealCardProps) {
     (typeof deal?.product?.id === 'string' && deal.product.id) ||
     (Array.isArray(deal?.linkedProductIds) && typeof deal.linkedProductIds[0] === 'string' ? deal.linkedProductIds[0] : '');
   const productPageUrl = linkedProductId ? `${prefix}/products/${linkedProductId}` : null;
+  const dealExternalUrl = getExternalUrl(
+    deal?.link,
+    deal?.affiliateLink,
+    deal?.affiliateUrl,
+    deal?.dealUrl,
+    deal?.sourceUrl,
+    deal?.metadata?.offerPreviewUrl,
+    deal?.metadata?.previewUrl
+  );
 
   // ========================================
   // 🚀 ENHANCED METADATA FROM AUTO-IMPORT
@@ -1063,8 +1073,14 @@ function DealCard({ deal, product }: DealCardProps) {
               checkedAt={deal.metadata?.expiryCheckedAt}
               variant="button"
             />
+          ) : dealExternalUrl ? (
+            <Button asChild size="icon" className="h-8 w-8 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
+              <a href={dealExternalUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                <ArrowUp className="h-4 w-4 rotate-90" />
+              </a>
+            </Button>
           ) : (
-            <Button size="icon" className="h-8 w-8 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
+            <Button size="icon" className="h-8 w-8 bg-emerald-600 text-white opacity-80" aria-label={t('actions.goTo')} disabled>
               <ArrowUp className="h-4 w-4 rotate-90" />
             </Button>
           )}
