@@ -101,6 +101,7 @@ export default function DealsPage() {
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
   const categoryInitialized = useRef(false);
+  const selectedMainCategorySlug = selectedCategory?.slug || selectedCategory?.id;
 
   // Helper: unify postedAt to timestamp (ms)
   const toTimestamp = (value: any): number => {
@@ -208,9 +209,9 @@ export default function DealsPage() {
               setSelectedSubSubcategory(matchingSubSub.slug || matchingSubSub.id || subSubParam);
             }
           } else if (subParam) {
-            const hasSub = byId.subcategories?.some(s => s.slug === subParam || s.id === subParam);
-            if (hasSub) {
-              setSelectedSubcategory(subParam);
+            const matchedSub = byId.subcategories?.find(s => s.slug === subParam || s.id === subParam);
+            if (matchedSub) {
+              setSelectedSubcategory(matchedSub.slug || matchedSub.id);
               setSelectedSubSubcategory(null);
             }
           }
@@ -220,7 +221,7 @@ export default function DealsPage() {
       // Jeśli brak query params – fallback do localStorage
       const savedCatId = localStorage.getItem('deals_selected_category');
       if (savedCatId) {
-        const found = categories.find(c => c.id === savedCatId);
+        const found = categories.find(c => c.id === savedCatId || c.slug === savedCatId);
         if (found) {
           setSelectedCategory(found);
           const savedSub = localStorage.getItem('deals_selected_subcategory');
@@ -237,7 +238,8 @@ export default function DealsPage() {
             }
           }
           if (savedSub) {
-            setSelectedSubcategory(savedSub);
+            const matchedSub = found.subcategories?.find(s => s.slug === savedSub || s.id === savedSub);
+            setSelectedSubcategory((matchedSub?.slug || matchedSub?.id || savedSub) as string);
             setSelectedSubSubcategory(null);
           }
         }
@@ -258,7 +260,7 @@ export default function DealsPage() {
   useEffect(() => {
     try {
       if (selectedCategory) {
-        localStorage.setItem('deals_selected_category', selectedCategory.id);
+        localStorage.setItem('deals_selected_category', selectedCategory.slug || selectedCategory.id);
       } else {
         localStorage.removeItem('deals_selected_category');
       }
@@ -358,7 +360,7 @@ export default function DealsPage() {
         if (q.length > 1) {
           // Wyszukiwanie
           const results = await retryWithBackoff(() => searchDealsTypesense(q, {
-            mainCategorySlug: selectedCategory?.id,
+            mainCategorySlug: selectedMainCategorySlug,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
             limit: 100,
@@ -368,7 +370,7 @@ export default function DealsPage() {
           // Użyj zunifiowanych filtrów do pobierania dealów
           const filterConfig = {
             ...unifiedFilters,
-            categoryId: selectedCategory?.id || selectedCategory?.slug || unifiedFilters.categoryId,
+            categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
           };
@@ -387,7 +389,7 @@ export default function DealsPage() {
     }
     const t = setTimeout(fetchDeals, 250); // debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
 
   useEffect(() => {
     let cancelled = false;
@@ -408,7 +410,7 @@ export default function DealsPage() {
         }
 
         const count = await retryWithBackoff(() => getDealsCount({
-          categoryId: selectedCategory?.id || selectedCategory?.slug,
+          categoryId: selectedMainCategorySlug,
           subCategorySlug: selectedSubcategory || undefined,
           subSubCategorySlug: selectedSubSubcategory || undefined,
         }), 2, 500);
@@ -422,7 +424,7 @@ export default function DealsPage() {
 
     fetchDealsCount();
     return () => { cancelled = true; };
-  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
 
   // Sortowanie i filtrowanie lokalne (po pobraniu z API)
   const filteredAndSortedDeals = useMemo(() => {
@@ -561,7 +563,7 @@ export default function DealsPage() {
       sortBy,
       priceRange,
       quickFilters,
-      categoryId: selectedCategory?.id,
+      categoryId: selectedMainCategorySlug,
       subcategorySlug: selectedSubcategory || undefined,
     };
 
@@ -584,7 +586,7 @@ export default function DealsPage() {
     setQuickFilters(filter.quickFilters);
     
     if (filter.categoryId) {
-      const cat = categories.find(c => c.id === filter.categoryId);
+      const cat = categories.find(c => c.id === filter.categoryId || c.slug === filter.categoryId);
       if (cat) {
         setSelectedCategory(cat);
       }

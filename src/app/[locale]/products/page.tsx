@@ -73,6 +73,7 @@ function ProductsPageContent() {
   const [insightsOpen, setInsightsOpen] = useState(false);
   const { formatPrice } = useCurrency();
   const lang = (locale as SupportedLanguage) || 'pl';
+  const selectedMainCategorySlug = selectedCategory?.slug || selectedCategory?.id;
 
   // Wczytaj kategorie i ustaw z URL
   useEffect(() => {
@@ -101,7 +102,8 @@ function ProductsPageContent() {
                 setSelectedSubSubcategory(matchingSubSub.slug || matchingSubSub.id || subSubCategoryParam);
               }
             } else if (subCategoryParam) {
-              setSelectedSubcategory(subCategoryParam);
+              const matchedSub = foundCategory.subcategories?.find((s) => s.slug === subCategoryParam || s.id === subCategoryParam);
+              setSelectedSubcategory((matchedSub?.slug || matchedSub?.id || subCategoryParam) as string);
               setSelectedSubSubcategory(null);
             }
           }
@@ -146,7 +148,7 @@ function ProductsPageContent() {
         if (q.length > 1) {
           // Wyszukiwanie - szukaj w ProductCore via Typesense
           const results = await searchProductsTypesense(q, {
-            mainCategorySlug: selectedCategory?.slug || selectedCategory?.id,
+            mainCategorySlug: selectedMainCategorySlug,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
             limit: 100,
@@ -156,7 +158,7 @@ function ProductsPageContent() {
           // Użyj zunifiowanych filtrów do pobierania ProductCore
           const filterConfig = {
             ...unifiedFilters,
-            categoryId: selectedCategory?.id || selectedCategory?.slug || unifiedFilters.categoryId,
+            categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
           };
@@ -171,7 +173,7 @@ function ProductsPageContent() {
     }
     const t = setTimeout(fetchProducts, 250); // drobny debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
 
   useEffect(() => {
     try { localStorage.setItem('products_view_mode', viewMode); } catch {}
@@ -264,7 +266,7 @@ function ProductsPageContent() {
       name: filterName,
       sortBy,
       filters: unifiedFilters,
-      categoryId: selectedCategory?.id,
+      categoryId: selectedMainCategorySlug,
       subcategorySlug: selectedSubcategory || undefined,
     };
 
@@ -285,7 +287,7 @@ function ProductsPageContent() {
     setUnifiedFilters(filter.filters || {});
     
     if (filter.categoryId) {
-      const cat = categories.find(c => c.id === filter.categoryId);
+      const cat = categories.find(c => c.id === filter.categoryId || c.slug === filter.categoryId);
       if (cat) {
         setSelectedCategory(cat);
       }
