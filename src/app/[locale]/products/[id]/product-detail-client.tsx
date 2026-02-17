@@ -185,6 +185,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                 src={images[currentImageIndex].src}
                 alt={images[currentImageIndex].alt || product.name}
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-contain p-4 md:p-8"
                 priority
               />
@@ -273,6 +274,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                       src={img.src}
                       alt={img.alt || `${product.name} ${idx + 1}`}
                       fill
+                      sizes="80px"
                       className="object-contain p-1"
                     />
                   </button>
