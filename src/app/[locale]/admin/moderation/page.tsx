@@ -22,7 +22,8 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 
 interface BulkItem { id: string; type: 'deal' | 'product'; }
@@ -302,6 +303,7 @@ function ModerationPage() {
   const [discardedItems, setDiscardedItems] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [checkingClaims, setCheckingClaims] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
   
   // Filtry statusów - domyślnie pending (spójność SSR/client, naprawia hydration)
   const [dealStatusFilter, setDealStatusFilter] = useState<string>('pending');
@@ -379,6 +381,64 @@ function ModerationPage() {
       });
     } finally {
       setCheckingClaims(false);
+    }
+  };
+
+  const handleTriggerBackfill = async () => {
+    setIsBackfilling(true);
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        toast({ title: 'Błąd', description: 'Nie jesteś zalogowany', variant: 'destructive' });
+        return;
+      }
+
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/moderation/backfill', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          dryRun: false,
+          maxScanPerCollection: 2500,
+          maxProcessPerType: 120,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || data?.message || 'Nie udało się uruchomić backfillu');
+      }
+
+      const dealsProcessed = Number(data?.processed?.deals || 0);
+      const productsProcessed = Number(data?.processed?.products || 0);
+      const dealsMissing = Number(data?.missing?.deals || 0);
+      const productsMissing = Number(data?.missing?.products || 0);
+      const hasMoreDeals = Boolean(data?.hasMore?.deals);
+      const hasMoreProducts = Boolean(data?.hasMore?.products);
+
+      const hasMoreText = hasMoreDeals || hasMoreProducts
+        ? ' Wykryto więcej braków — uruchom przycisk ponownie, aby dokończyć kolejną paczkę.'
+        : '';
+
+      toast({
+        title: 'Backfill uruchomiony',
+        description: `Przetworzono: deale ${dealsProcessed}/${dealsMissing}, produkty ${productsProcessed}/${productsMissing}.${hasMoreText}`,
+        duration: 9000,
+      });
+
+      await fetchModerationData();
+    } catch (error: any) {
+      toast({
+        title: 'Błąd backfillu',
+        description: error?.message || 'Nie udało się uruchomić backfillu',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBackfilling(false);
     }
   };
 
@@ -646,15 +706,26 @@ function ModerationPage() {
             Zatwierdzaj i odrzucaj nowe treści
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleFixAdminClaims}
-          disabled={checkingClaims}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${checkingClaims ? 'animate-spin' : ''}`} />
-          {checkingClaims ? 'Sprawdzam...' : 'Napraw uprawnienia'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleTriggerBackfill}
+            disabled={isBackfilling}
+          >
+            <Sparkles className={`h-4 w-4 mr-2 ${isBackfilling ? 'animate-pulse' : ''}`} />
+            {isBackfilling ? 'Backfill w toku...' : 'Uruchom backfill braków'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleFixAdminClaims}
+            disabled={checkingClaims}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${checkingClaims ? 'animate-spin' : ''}`} />
+            {checkingClaims ? 'Sprawdzam...' : 'Napraw uprawnienia'}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
