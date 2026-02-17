@@ -355,7 +355,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({
           items: items.map(item => ({
             productId: item.product?.id,
-            dealId: item.deal?.id,
+            dealId: item.deal?.id || (item.product as any)?.bestDealId,
             quantity: item.quantity,
           })),
         }),
