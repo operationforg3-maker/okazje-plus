@@ -201,6 +201,66 @@ export class AliExpressClient {
     this.lastRequestTime = now;
   }
 
+  private extractApiErrorCode(result: any): string {
+    const code = result?.error_response?.code || result?.code || result?.errorCode;
+    return String(code || '').trim();
+  }
+
+  private extractApiErrorMessage(result: any): string {
+    return String(
+      result?.error_response?.msg ||
+      result?.error_response?.sub_msg ||
+      result?.message ||
+      result?.msg ||
+      ''
+    ).trim();
+  }
+
+  private parseApiBanSeconds(message: string): number {
+    const match = message.match(/ban\s+will\s+last\s+(\d+)\s*seconds?/i);
+    return match ? Number(match[1]) : 0;
+  }
+
+  private async requestWithApiLimitRetry<T>(
+    method: string,
+    params: Record<string, any>,
+    maxAttempts: number = 4
+  ): Promise<T> {
+    let attempt = 0;
+    let lastResult: any = null;
+
+    while (attempt < maxAttempts) {
+      attempt += 1;
+      const result = await this.request<any>(method, params);
+      lastResult = result;
+
+      const errorCode = this.extractApiErrorCode(result);
+      if (errorCode !== 'ApiCallLimit') {
+        return result as T;
+      }
+
+      const errorMessage = this.extractApiErrorMessage(result);
+      const banSeconds = this.parseApiBanSeconds(errorMessage);
+      const waitMs = Math.max((banSeconds > 0 ? banSeconds : 1) * 1000, 1000) + Math.floor(Math.random() * 400);
+
+      logger.warn('AliExpress ApiCallLimit hit, retrying', {
+        method,
+        attempt,
+        maxAttempts,
+        waitMs,
+        errorMessage,
+      });
+
+      if (attempt >= maxAttempts) {
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+
+    return lastResult as T;
+  }
+
   /**
    * Make an API request (M2 Enhanced)
    * 
@@ -1004,8 +1064,7 @@ export class AliExpressClient {
       };
 
       const methodCandidates = [
-        'aliexpress.affiliate.productdetail.get',  // Singapore /sync compatible (PRIMARY)
-        'aliexpress.affiliate.product.detail.get', // TOP API style (fallback, may not work on /sync)
+        'aliexpress.affiliate.productdetail.get',
       ];
 
       const isApiError = (result: any) => {
@@ -1015,7 +1074,7 @@ export class AliExpressClient {
 
       let lastResponse: AliExpressProductDetailsResponse | null = null;
       for (const method of methodCandidates) {
-        const response = await this.request<AliExpressProductDetailsResponse>(method, topParams);
+        const response = await this.requestWithApiLimitRetry<AliExpressProductDetailsResponse>(method, topParams);
         lastResponse = response;
         if (!isApiError(response)) {
           return response;
