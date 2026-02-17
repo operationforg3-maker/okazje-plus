@@ -168,6 +168,18 @@ export async function POST(req: NextRequest) {
                    ) || '';
                  }
                }
+
+               if (!targetUrl) {
+                 const originalId = String(
+                   (product as any)?.metadata?.originalId ||
+                   (product as any)?.originalId ||
+                   ''
+                 ).trim();
+
+                 if (/^\d{8,}$/.test(originalId)) {
+                   targetUrl = `https://www.aliexpress.com/item/${originalId}.html`;
+                 }
+               }
              }
           }
           
