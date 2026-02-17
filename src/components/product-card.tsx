@@ -34,6 +34,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import { CardHeader } from '@/components/ui/card-header';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface ProductCardProps {
   product: Product;
@@ -61,6 +62,12 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const { currency } = useCurrency();
+  const productExternalUrl = getExternalUrl(
+    product?.affiliateUrl,
+    (product as any)?.link,
+    (product as any)?.dealUrl,
+    (product as any)?.sourceUrl
+  );
 
   // Format prices using state to fix hydration mismatch
   const [priceData, setPriceData] = useState<{
@@ -306,11 +313,17 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
             </div>
 
             <div className="flex flex-col gap-2 mt-auto">
-              <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-9 text-xs shadow-sm">
-                <a href={product.affiliateUrl} target="_blank" rel="noopener noreferrer">
+              {productExternalUrl ? (
+                <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-9 text-xs shadow-sm">
+                  <a href={productExternalUrl} target="_blank" rel="noopener noreferrer">
+                    Kup teraz <ExternalLink className="w-3 h-3 ml-2" />
+                  </a>
+                </Button>
+              ) : (
+                <Button disabled className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold h-9 text-xs opacity-80 shadow-sm">
                   Kup teraz <ExternalLink className="w-3 h-3 ml-2" />
-                </a>
-              </Button>
+                </Button>
+              )}
               <div className="flex gap-2">
                 <Button onClick={handleAddToCart} disabled={isAddingToCart || inCart} className={cn("flex-1 h-12 text-xs", inCart ? "bg-green-500 hover:bg-green-600" : "")} aria-label={inCart ? "W koszyku" : "Dodaj do koszyka"}>
                   {inCart ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
@@ -487,23 +500,33 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
       {/* Footer Actions (Matching DealCard style) */}
       <div className="flex flex-col gap-2 border-t bg-muted/30 p-2 sm:p-3">
         {/* Main Action: Buy Now */}
-        <Button
-          asChild
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-9 shadow-sm hover:shadow-md transition-all"
-        >
-          <a 
-            href={product.affiliateUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            onClick={(e) => {
-              e.stopPropagation();
-              trackFirestoreClick(product.id, 'product', 'buy_now_button');
-            }}
+        {productExternalUrl ? (
+          <Button
+            asChild
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-9 shadow-sm hover:shadow-md transition-all"
+          >
+            <a 
+              href={productExternalUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.stopPropagation();
+                trackFirestoreClick(product.id, 'product', 'buy_now_button');
+              }}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Kup teraz
+            </a>
+          </Button>
+        ) : (
+          <Button
+            disabled
+            className="w-full bg-emerald-600 text-white font-bold text-sm h-9 opacity-80 shadow-sm"
           >
             <ExternalLink className="w-4 h-4 mr-2" />
             Kup teraz
-          </a>
-        </Button>
+          </Button>
+        )}
 
         {/* Secondary Actions Row - Icon Only */}
         <div className="flex gap-1.5 justify-center">

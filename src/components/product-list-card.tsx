@@ -366,7 +366,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
               name: getText(product.title) || 'Produkt',
               image: Array.isArray(product.images) ? product.images[0] : '',
               price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
-              affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.dealUrl || bestDeal?.sourceUrl),
+              affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.affiliateUrl || bestDeal?.dealUrl || bestDeal?.sourceUrl || bestDeal?.link),
             } as any, 1);
           }}
         >

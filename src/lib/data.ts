@@ -2,6 +2,7 @@ import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTran
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment, CategorySuggestion } from "@/lib/types";
 import { sanitizeDealRecord, sanitizeProductRecord, sanitizeProductCoreRecord } from '@/lib/sanitizers';
+import { getExternalUrl } from '@/lib/external-url';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
 const _warnedOnce = new Set<string>();
 function warnOnce(key: string, ...args: any[]) {
@@ -2541,7 +2542,15 @@ export async function getBestDealForProduct(productId: string): Promise<any | nu
     if (deals.length === 0) return null;
 
     const withAffiliate = deals.filter((deal) => {
-      const link = deal?.affiliateLink || deal?.link || deal?.sourceUrl;
+      const link = getExternalUrl(
+        deal?.affiliateLink,
+        deal?.affiliateUrl,
+        deal?.dealUrl,
+        deal?.sourceUrl,
+        deal?.link,
+        deal?.metadata?.offerPreviewUrl,
+        deal?.metadata?.previewUrl
+      );
       return typeof link === 'string' && link.trim().length > 0;
     });
     const candidates = withAffiliate.length > 0 ? withAffiliate : deals;

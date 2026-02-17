@@ -17,6 +17,7 @@ import { useCardBaseState } from '@/hooks/use-card-base-state';
 import ShareButton from '@/components/share-button';
 import { toast } from 'sonner';
 import { withImageProxy } from '@/lib/image-proxy';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface DealListCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -176,7 +177,15 @@ export default function DealListCard({ deal }: DealListCardProps) {
     });
   }, [deal.postedAt, deal.price, deal.originalPrice, currency]);
 
-  const dealUrl = typeof deal.link === 'string' ? deal.link : '';
+  const dealUrl = getExternalUrl(
+    deal?.link,
+    deal?.affiliateLink,
+    deal?.affiliateUrl,
+    deal?.dealUrl,
+    deal?.sourceUrl,
+    deal?.metadata?.offerPreviewUrl,
+    deal?.metadata?.previewUrl
+  );
 
   return (
     <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
