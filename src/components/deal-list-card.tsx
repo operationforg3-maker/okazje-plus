@@ -191,8 +191,16 @@ export default function DealListCard({ deal }: DealListCardProps) {
     deal?.affiliateUrl,
     deal?.dealUrl,
     deal?.sourceUrl,
+    deal?.url,
+    deal?.externalUrl,
     deal?.metadata?.offerPreviewUrl,
-    deal?.metadata?.previewUrl
+    deal?.metadata?.previewUrl,
+    deal?.metadata?.offerUrl,
+    deal?.metadata?.externalUrl,
+    deal?.metadata?.url,
+    deal?.product?.link,
+    deal?.product?.affiliateLink,
+    deal?.product?.sourceUrl
   );
 
   const linkedProductId =

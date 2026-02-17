@@ -402,8 +402,9 @@ function ModerationPage() {
         },
         body: JSON.stringify({
           dryRun: false,
-          maxScanPerCollection: 2500,
-          maxProcessPerType: 120,
+          approvedOnly: true,
+          maxScanPerCollection: 10000,
+          maxProcessPerType: 400,
         }),
       });
 
@@ -421,7 +422,7 @@ function ModerationPage() {
       const hasMoreProducts = Boolean(data?.hasMore?.products);
 
       const hasMoreText = hasMoreDeals || hasMoreProducts
-        ? ' Wykryto więcej braków — uruchom przycisk ponownie, aby dokończyć kolejną paczkę.'
+        ? ' Wykryto więcej braków w zatwierdzonych rekordach — uruchom przycisk ponownie, aby dokończyć kolejną paczkę.'
         : '';
 
       toast({

@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
 import { startRefinerJob } from '@/lib/automation/refiner';
 import { DealRefiner } from '@/lib/automation/deal-refiner';
+import { getExternalUrl } from '@/lib/external-url';
 
 const REQUIRED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 
@@ -13,6 +14,7 @@ type BackfillRequest = {
   dryRun?: boolean;
   maxScanPerCollection?: number;
   maxProcessPerType?: number;
+  approvedOnly?: boolean;
 };
 
 function getLocalizedValue(value: any, locale: Locale): string {
@@ -31,6 +33,25 @@ function hasMissingLocalizedField(value: any): boolean {
 
 function dealNeedsBackfill(raw: any): boolean {
   if (!raw) return true;
+
+  const externalUrl = getExternalUrl(
+    raw.link,
+    raw.affiliateLink,
+    raw.affiliateUrl,
+    raw.dealUrl,
+    raw.sourceUrl,
+    raw.url,
+    raw.externalUrl,
+    raw?.metadata?.offerPreviewUrl,
+    raw?.metadata?.previewUrl,
+    raw?.metadata?.offerUrl,
+    raw?.metadata?.externalUrl,
+    raw?.metadata?.url,
+    raw?.product?.link,
+    raw?.product?.affiliateLink,
+    raw?.product?.sourceUrl
+  );
+  if (!externalUrl) return true;
 
   if (hasMissingLocalizedField(raw.title)) return true;
   if (hasMissingLocalizedField(raw.description)) return true;
@@ -71,13 +92,19 @@ function productNeedsBackfill(raw: any): boolean {
   const metaDescription = typeof raw.metaDescription === 'string' ? raw.metaDescription.trim() : '';
   if (!metaTitle || !metaDescription) return true;
 
+  const specs = raw.specs;
+  const specsCount = specs && typeof specs === 'object' ? Object.keys(specs).length : 0;
+  const structuredSpecs = Array.isArray(raw.specificationsStructured) ? raw.specificationsStructured : [];
+  if (specsCount === 0 && structuredSpecs.length === 0) return true;
+
   return false;
 }
 
 async function collectMissingIds(
   collectionName: 'deals' | 'product_cores',
   predicate: (raw: any) => boolean,
-  maxScan: number
+  maxScan: number,
+  approvedOnly: boolean
 ): Promise<{ ids: string[]; scanned: number }> {
   const ids: string[] = [];
   const pageSize = 250;
@@ -87,8 +114,13 @@ async function collectMissingIds(
   while (scanned < maxScan) {
     let query = adminDb
       .collection(collectionName)
-      .orderBy(FieldPath.documentId())
       .limit(Math.min(pageSize, maxScan - scanned));
+
+    if (approvedOnly) {
+      query = query.where('status', '==', 'approved');
+    }
+
+    query = query.orderBy(FieldPath.documentId());
 
     if (lastDocId) {
       query = query.startAfter(lastDocId);
@@ -118,12 +150,13 @@ export async function POST(request: NextRequest) {
     const body = (await request.json().catch(() => ({}))) as BackfillRequest;
 
     const dryRun = body.dryRun === true;
-    const maxScanPerCollection = Math.min(Math.max(Number(body.maxScanPerCollection || 2500), 100), 10000);
-    const maxProcessPerType = Math.min(Math.max(Number(body.maxProcessPerType || 120), 10), 500);
+    const approvedOnly = body.approvedOnly !== false;
+    const maxScanPerCollection = Math.min(Math.max(Number(body.maxScanPerCollection || 10000), 100), 20000);
+    const maxProcessPerType = Math.min(Math.max(Number(body.maxProcessPerType || 400), 10), 1000);
 
     const [dealDiscovery, productDiscovery] = await Promise.all([
-      collectMissingIds('deals', dealNeedsBackfill, maxScanPerCollection),
-      collectMissingIds('product_cores', productNeedsBackfill, maxScanPerCollection),
+      collectMissingIds('deals', dealNeedsBackfill, maxScanPerCollection, approvedOnly),
+      collectMissingIds('product_cores', productNeedsBackfill, maxScanPerCollection, approvedOnly),
     ]);
 
     const dealIdsToProcess = dealDiscovery.ids.slice(0, maxProcessPerType);
@@ -145,6 +178,7 @@ export async function POST(request: NextRequest) {
           deals: dealIdsToProcess.length,
           products: productIdsToProcess.length,
         },
+        approvedOnly,
       });
     }
 
@@ -164,6 +198,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Backfill uruchomiony pomyślnie',
       triggeredBy: session.email || session.uid,
+      approvedOnly,
       scanned: {
         deals: dealDiscovery.scanned,
         products: productDiscovery.scanned,

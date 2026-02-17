@@ -14,18 +14,42 @@ export function getExternalUrl(...candidates: Array<string | null | undefined>):
     }
   }
 
+  const normalizeCandidate = (candidate: string): string | null => {
+    const trimmed = candidate.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('/')) return null;
+    if (/^(javascript|data|mailto|tel):/i.test(trimmed)) return null;
+
+    if (trimmed.startsWith('//')) {
+      return `https:${trimmed}`;
+    }
+
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+
+    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+      return null;
+    }
+
+    if (/^(?:www\.)?[a-z0-9.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(trimmed)) {
+      return `https://${trimmed}`;
+    }
+
+    return null;
+  };
+
   for (const candidate of candidates) {
-    const url = String(candidate || '').trim();
+    const normalized = normalizeCandidate(String(candidate || ''));
+    const url = normalized || '';
     if (!url) continue;
-    if (url.startsWith('/')) continue;
-    if (!/^https?:\/\//i.test(url)) continue;
     try {
       const parsed = new URL(url);
       const host = parsed.hostname.toLowerCase();
       if (internalHosts.has(host) || host.endsWith('.okazjeplus.pl')) {
         continue;
       }
-      return url;
+      return parsed.toString();
     } catch {
       continue;
     }
