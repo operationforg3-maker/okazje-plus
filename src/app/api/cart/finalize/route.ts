@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getProduct, getDealById, getBestDealForProduct } from '@/lib/data';
+import { getProduct, getDealById, getBestDealForProduct, getProductCore } from '@/lib/data';
 import { logger } from '@/lib/logging';
 import { z } from 'zod';
 import { getExternalUrl } from '@/lib/external-url';
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
           // 2. If no URL yet, try Product URL
           if (!targetUrl && productId) {
              // Fallback to product if deal not found or no dealId
-             const product = await getProduct(productId);
+             const product = (await getProduct(productId)) || (await getProductCore(productId));
              if (product) {
                targetUrl = getExternalUrl(
                  product.affiliateUrl,
@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
           
           // Try to get real product if ID exists
           if (item.productId) {
-             productObj = await getProduct(item.productId);
+             productObj = (await getProduct(item.productId)) || (await getProductCore(item.productId));
           }
           
           // If no product found but we have a deal, construct a "Virtual Product" from the deal
