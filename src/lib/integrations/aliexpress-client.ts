@@ -355,8 +355,8 @@ export class AliExpressClient {
           ship_to_country: 'PL'
       };
       
-      // endpoint: aliexpress.affiliate.product.detail.get
-      return this.call("aliexpress.affiliate.product.detail.get", params);
+      // endpoint: aliexpress.affiliate.productdetail.get
+      return this.call("aliexpress.affiliate.productdetail.get", params);
   }
   
   /**
