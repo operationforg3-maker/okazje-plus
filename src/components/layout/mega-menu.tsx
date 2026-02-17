@@ -577,6 +577,7 @@ export function MegaMenu() {
                                 src={subcategory.image}
                                 alt={getName(subcategory.name)}
                                 fill
+                                sizes="64px"
                                 className="object-cover transition-transform duration-300 group-hover:scale-110"
                               />
                             </div>

@@ -6,7 +6,7 @@
   "min": "Від",
   "max": "робити",
   "rating": "Оцінка",
-  "ratingStars": "{зірки}+ Зірок",
+  "ratingStars": "{stars}+ Зірок",
   "availability": "Доступність",
   "onlyAvailable": "Лише в наявності",
   "promotions": "Акції",

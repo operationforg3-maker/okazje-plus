@@ -194,6 +194,7 @@ export function SmartCartWidget() {
                     src={withImageProxy((item.product as any)?.image || (item.product as any)?.imageUrl || (item.deal as any)?.image || (item.deal as any)?.imageUrl || '/placeholder.png')}
                     alt={title}
                     fill
+                    sizes="80px"
                     className="object-cover rounded"
                   />
                 </div>

@@ -73,6 +73,8 @@ export function ProductPreviewDialog({
                 src={images[selectedImage] || product.imageUrl}
                 alt={product.title}
                 fill
+                priority
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-contain"
                 unoptimized
               />
@@ -95,6 +97,7 @@ export function ProductPreviewDialog({
                       src={img}
                       alt={`${product.title} - zdjęcie ${idx + 1}`}
                       fill
+                      sizes="(max-width: 768px) 18vw, 80px"
                       className="object-cover"
                       unoptimized
                     />
