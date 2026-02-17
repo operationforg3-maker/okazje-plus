@@ -169,6 +169,26 @@ export async function POST(req: NextRequest) {
                  }
                }
 
+               if (!targetUrl && typeof (product as any).bestDealId === 'string') {
+                 const bestDealById = await getDealById((product as any).bestDealId);
+                 if (bestDealById) {
+                   targetUrl = getExternalUrl(
+                     bestDealById.link,
+                     (bestDealById as any).affiliateLink,
+                     (bestDealById as any).affiliateUrl,
+                     (bestDealById as any).dealUrl,
+                     (bestDealById as any).sourceUrl,
+                     (bestDealById as any).url,
+                     (bestDealById as any).externalUrl,
+                     (bestDealById as any).metadata?.offerPreviewUrl,
+                     (bestDealById as any).metadata?.previewUrl,
+                     (bestDealById as any).metadata?.offerUrl,
+                     (bestDealById as any).metadata?.externalUrl,
+                     (bestDealById as any).metadata?.url
+                   ) || '';
+                 }
+               }
+
                if (!targetUrl) {
                  const originalId = String(
                    (product as any)?.metadata?.originalId ||
@@ -232,8 +252,14 @@ export async function POST(req: NextRequest) {
           }
 
           if (!productObj) {
-            // Should verify unlikely to happen if targetUrl was found, but safety first
-             return null;
+             productObj = {
+               id: item.productId || item.dealId || 'unknown',
+               name: 'Oferta',
+               image: undefined,
+               price: 0,
+               affiliateUrl: targetUrl,
+               title: { pl: 'Oferta', en: 'Offer' },
+             };
           }
           
           return {
