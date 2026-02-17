@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getProduct, getDealById } from '@/lib/data';
+import { getProduct, getDealById, getBestDealForProduct } from '@/lib/data';
 import { logger } from '@/lib/logging';
 import { z } from 'zod';
 import { getExternalUrl } from '@/lib/external-url';
@@ -137,14 +137,37 @@ export async function POST(req: NextRequest) {
              if (product) {
                targetUrl = getExternalUrl(
                  product.affiliateUrl,
+                 (product as any).affiliateLink,
                  (product as any).link,
                  (product as any).dealUrl,
                  (product as any).sourceUrl,
+                 (product as any).url,
                  (product as any).externalUrl,
+                 (product as any).metadata?.url,
                  (product as any).metadata?.externalUrl,
                  (product as any).sourceLinks?.[0]?.url,
                  (product as any).sourceLinks?.[0]?.link
                ) || '';
+
+               if (!targetUrl) {
+                 const bestDeal = await getBestDealForProduct(productId);
+                 if (bestDeal) {
+                   targetUrl = getExternalUrl(
+                     bestDeal.link,
+                     (bestDeal as any).affiliateLink,
+                     (bestDeal as any).affiliateUrl,
+                     (bestDeal as any).dealUrl,
+                     (bestDeal as any).sourceUrl,
+                     (bestDeal as any).url,
+                     (bestDeal as any).externalUrl,
+                     (bestDeal as any).metadata?.offerPreviewUrl,
+                     (bestDeal as any).metadata?.previewUrl,
+                     (bestDeal as any).metadata?.offerUrl,
+                     (bestDeal as any).metadata?.externalUrl,
+                     (bestDeal as any).metadata?.url
+                   ) || '';
+                 }
+               }
              }
           }
           
