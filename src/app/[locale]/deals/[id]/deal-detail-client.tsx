@@ -98,6 +98,14 @@ function getTimeRemaining(expiryDate: string) {
   return `${minutes}min`;
 }
 
+function stripHtmlTags(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 interface Props {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
   product?: Product | null;
@@ -109,7 +117,25 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
   const { getText } = useContentLanguage();
   const productData = product || null;
   const dealTitle = typeof deal.title === 'object' ? getText(deal.title) : deal.title;
-  const dealDescription = typeof deal.description === 'object' ? getText(deal.description) : deal.description;
+  const dealDescriptionRaw = typeof deal.description === 'object' ? getText(deal.description) : deal.description;
+  const offerSummaryRaw = typeof deal?.metadata?.offerSummary === 'object'
+    ? getText(deal.metadata.offerSummary)
+    : (typeof deal?.metadata?.offerSummary === 'string' ? deal.metadata.offerSummary : '');
+  const sellingPointsRaw = Array.isArray(deal?.metadata?.sellingPoints)
+    ? deal.metadata.sellingPoints
+        .map((point: any) => (typeof point === 'object' ? getText(point) : String(point || '')).trim())
+        .filter(Boolean)
+        .join(' • ')
+    : '';
+  const fallbackDescription = offerSummaryRaw || sellingPointsRaw;
+  const effectiveDescription = dealDescriptionRaw || fallbackDescription || '';
+  const hasHtmlDescription = /<[a-z][\s\S]*>/i.test(effectiveDescription);
+  const plainDescription = stripHtmlTags(effectiveDescription);
+  const linkedProductId =
+    (typeof productData?.id === 'string' && productData.id) ||
+    (typeof (deal as any)?.productCoreId === 'string' && (deal as any).productCoreId) ||
+    (typeof (deal as any)?.product?.id === 'string' && (deal as any).product.id) ||
+    (Array.isArray((deal as any)?.linkedProductIds) && typeof (deal as any).linkedProductIds[0] === 'string' ? (deal as any).linkedProductIds[0] : '');
   const { user } = useAuth();
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -563,14 +589,14 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
             </div>
 
             {/* Description - HTML support for M6 */}
-            {dealDescription && /<[a-z][\s\S]*>/i.test(dealDescription) ? (
+            {effectiveDescription && hasHtmlDescription ? (
               <div 
                 className="text-base text-muted-foreground leading-relaxed prose prose-neutral max-w-none"
-                dangerouslySetInnerHTML={{ __html: dealDescription }}
+                dangerouslySetInnerHTML={{ __html: effectiveDescription }}
               />
             ) : (
               <p className="text-base text-muted-foreground leading-relaxed whitespace-pre-line">
-                {dealDescription}
+                {plainDescription}
               </p>
             )}
 
@@ -738,6 +764,14 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                   variant="outline"
                 />
               </div>
+              {linkedProductId && (
+                <Button asChild variant="outline" className="w-full mt-2">
+                  <Link href={`/products/${linkedProductId}`}>
+                    <Package className="mr-2 h-4 w-4" />
+                    Zobacz stronę produktu
+                  </Link>
+                </Button>
+              )}
 
               {/* Action strip: głosowanie, ulubione, porównanie, komentarze */}
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">

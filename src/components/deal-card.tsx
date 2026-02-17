@@ -51,6 +51,13 @@ const safeText = (value: unknown, fallback = ''): string => {
   }
 };
 
+const stripHtmlTags = (value: string): string =>
+  value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 function toTimestampSafe(value: any): number {
   if (!value) return 0;
   if (typeof value === 'number') {
@@ -211,12 +218,20 @@ function DealCard({ deal, product }: DealCardProps) {
   const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
   
   const dealTitle = getText(titleObj) || (titleObj.pl || '');
-  const dealDescription = getText(descObj) || (descObj.pl || '');
+  const rawDealDescription = getText(descObj) || (descObj.pl || '');
+  const dealDescription = stripHtmlTags(rawDealDescription || '');
   
   const couponCode = safeText(deal.couponCode);
   const deliveryTime = safeText(deal.importMetadata?.deliveryTime);
   const warehouseInfo = safeText(deal.importMetadata?.warehouse);
   const returnPolicy = safeText(deal.importMetadata?.returnPolicy);
+
+  const linkedProductId =
+    (typeof (resolvedProduct as any)?.id === 'string' && (resolvedProduct as any).id) ||
+    (typeof deal?.productCoreId === 'string' && deal.productCoreId) ||
+    (typeof deal?.product?.id === 'string' && deal.product.id) ||
+    (Array.isArray(deal?.linkedProductIds) && typeof deal.linkedProductIds[0] === 'string' ? deal.linkedProductIds[0] : '');
+  const productPageUrl = linkedProductId ? `${prefix}/products/${linkedProductId}` : null;
 
   // ========================================
   // 🚀 ENHANCED METADATA FROM AUTO-IMPORT
@@ -1051,6 +1066,23 @@ function DealCard({ deal, product }: DealCardProps) {
           ) : (
             <Button size="icon" className="h-8 w-8 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
               <ArrowUp className="h-4 w-4 rotate-90" />
+            </Button>
+          )}
+          {productPageUrl && (
+            <Button
+              asChild
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="Zobacz produkt"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <Link href={productPageUrl}>
+                <Package className="h-4 w-4" />
+              </Link>
             </Button>
           )}
         </div>

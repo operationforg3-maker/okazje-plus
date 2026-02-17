@@ -7,7 +7,7 @@ import { useCategoryName } from '@/hooks/use-category-name';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
-import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart, Heart, AlertTriangle, Scale } from 'lucide-react';
+import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart, Heart, AlertTriangle, Scale, Package } from 'lucide-react';
 import { useSmartCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import AdminEditButton from '@/components/admin/admin-edit-button';
@@ -34,6 +34,13 @@ const safeText = (value: unknown, fallback = ''): string => {
     return fallback;
   }
 };
+
+const stripHtmlTags = (value: string): string =>
+  value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 function toTimestampSafe(value: any): number {
   if (!value) return 0;
@@ -111,7 +118,8 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
   
   const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || '');
-  const description = isMounted ? getText(descObj) : (descObj.pl || '');
+  const rawDescription = isMounted ? getText(descObj) : (descObj.pl || '');
+  const description = stripHtmlTags(rawDescription || '');
   
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   const { currency } = useCurrency();
@@ -186,6 +194,12 @@ export default function DealListCard({ deal }: DealListCardProps) {
     deal?.metadata?.offerPreviewUrl,
     deal?.metadata?.previewUrl
   );
+
+  const linkedProductId =
+    (typeof deal?.productCoreId === 'string' && deal.productCoreId) ||
+    (typeof deal?.product?.id === 'string' && deal.product.id) ||
+    (Array.isArray(deal?.linkedProductIds) && typeof deal.linkedProductIds[0] === 'string' ? deal.linkedProductIds[0] : '');
+  const productPageUrl = linkedProductId ? `${prefix}/products/${linkedProductId}` : null;
 
   return (
     <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
@@ -373,17 +387,27 @@ export default function DealListCard({ deal }: DealListCardProps) {
             </Button>
           </div>
 
-          {dealUrl ? (
-            <Button asChild size="lg" className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Link href={dealUrl} target="_blank" rel="noopener noreferrer">
+          <div className="w-full grid grid-cols-1 gap-2">
+            {dealUrl ? (
+              <Button asChild size="lg" className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white">
+                <Link href={dealUrl} target="_blank" rel="noopener noreferrer">
+                  {t('actions.goTo')}
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" className="w-full whitespace-nowrap bg-emerald-600 text-white opacity-80" disabled>
                 {t('actions.goTo')}
-              </Link>
-            </Button>
-          ) : (
-            <Button size="lg" className="w-full whitespace-nowrap bg-emerald-600 text-white opacity-80" disabled>
-              {t('actions.goTo')}
-            </Button>
-          )}
+              </Button>
+            )}
+            {productPageUrl && (
+              <Button asChild size="sm" variant="outline" className="w-full gap-1">
+                <Link href={productPageUrl} onClick={(e) => e.stopPropagation()}>
+                  <Package className="h-4 w-4" />
+                  Zobacz produkt
+                </Link>
+              </Button>
+            )}
+          </div>
           <Button 
             size="sm" 
             variant="outline" 

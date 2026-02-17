@@ -447,11 +447,20 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     }
     // If already a LocalizedText object
     if (typeof value === 'object' && !Array.isArray(value) && ('pl' in value || 'en' in value)) {
-      return {
-        pl: ensureString((value as any).pl, fallback.pl),
-        en: ensureString((value as any).en, fallback.en),
-        de: ensureOptionalString((value as any).de) || fallback.de,
-      } as LocalizedText;
+      const input = value as Record<string, unknown>;
+      const normalized: Record<string, string> = {
+        pl: ensureString(input.pl, fallback.pl),
+        en: ensureString(input.en, fallback.en),
+        de: ensureOptionalString(input.de) || fallback.de || '',
+      };
+
+      for (const [localeKey, localeValue] of Object.entries(input)) {
+        if (localeKey in normalized) continue;
+        const parsed = ensureOptionalString(localeValue);
+        if (parsed) normalized[localeKey] = parsed;
+      }
+
+      return normalized as LocalizedText;
     }
     // If a string (legacy format), convert to LocalizedText
     if (typeof value === 'string' && value.trim()) {
