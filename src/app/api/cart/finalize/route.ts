@@ -57,9 +57,30 @@ async function generateSecureRedirectUrl(
   }
 }
 
+function resolvePublicBaseUrl(req: NextRequest): string {
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedProto = req.headers.get('x-forwarded-proto') || 'https';
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  const host = req.headers.get('host');
+  if (host && !host.startsWith('0.0.0.0')) {
+    const proto = host.includes('localhost') ? 'http' : 'https';
+    return `${proto}://${host}`;
+  }
+
+  const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
+  if (envSiteUrl && /^https?:\/\//i.test(envSiteUrl)) {
+    return envSiteUrl;
+  }
+
+  return req.nextUrl.origin;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const requestOrigin = req.nextUrl.origin;
+    const requestOrigin = resolvePublicBaseUrl(req);
     const body = await req.json();
     
     // Validate request
