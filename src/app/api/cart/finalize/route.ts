@@ -15,6 +15,7 @@ import { getProduct, getDealById, getBestDealForProduct, getProductCore } from '
 import { logger } from '@/lib/logging';
 import { z } from 'zod';
 import { getExternalUrl } from '@/lib/external-url';
+import { adminDb } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -103,6 +104,7 @@ export async function POST(req: NextRequest) {
           let productId = item.productId;
           let targetUrl = '';
           let isDeal = false; // Flag to indicate if we found a Deal
+          let resolvedProduct: any = null;
 
           // 1. Try to load Deal URL if dealId is present
           if (item.dealId) {
@@ -133,8 +135,29 @@ export async function POST(req: NextRequest) {
           // 2. If no URL yet, try Product URL
           if (!targetUrl && productId) {
              // Fallback to product if deal not found or no dealId
-             const product = (await getProduct(productId)) || (await getProductCore(productId));
+             let product = (await getProduct(productId)) || (await getProductCore(productId));
+             if (!product) {
+               try {
+                 const snap = await adminDb.collection('product_cores').doc(productId).get();
+                 if (snap.exists) {
+                   const raw = snap.data() || {};
+                   product = {
+                     id: snap.id,
+                     title: raw.title,
+                     imageUrl: raw.imageUrl,
+                     bestPrice: raw.bestPrice,
+                     bestDealId: raw.bestDealId,
+                     metadata: raw.metadata,
+                     sourceLinks: raw.sourceLinks,
+                     affiliateUrl: raw.affiliateUrl,
+                   };
+                 }
+               } catch {
+                 // ignore admin fallback errors
+               }
+             }
              if (product) {
+               resolvedProduct = product;
                targetUrl = getExternalUrl(
                  product.affiliateUrl,
                  (product as any).affiliateLink,
@@ -170,7 +193,17 @@ export async function POST(req: NextRequest) {
                }
 
                if (!targetUrl && typeof (product as any).bestDealId === 'string') {
-                 const bestDealById = await getDealById((product as any).bestDealId);
+                 let bestDealById = await getDealById((product as any).bestDealId);
+                 if (!bestDealById) {
+                   try {
+                     const dealSnap = await adminDb.collection('deals').doc((product as any).bestDealId).get();
+                     if (dealSnap.exists) {
+                       bestDealById = { id: dealSnap.id, ...(dealSnap.data() || {}) } as any;
+                     }
+                   } catch {
+                     // ignore admin fallback errors
+                   }
+                 }
                  if (bestDealById) {
                    targetUrl = getExternalUrl(
                      bestDealById.link,
@@ -230,7 +263,7 @@ export async function POST(req: NextRequest) {
           
           // Try to get real product if ID exists
           if (item.productId) {
-             productObj = (await getProduct(item.productId)) || (await getProductCore(item.productId));
+             productObj = resolvedProduct || (await getProduct(item.productId)) || (await getProductCore(item.productId));
           }
           
           // If no product found but we have a deal, construct a "Virtual Product" from the deal
