@@ -61,7 +61,25 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [bestDeal, setBestDeal] = useState<any | null>(null);
   const { currency } = useCurrency();
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getBestDealForProduct } = await import('@/lib/data');
+        const deal = await getBestDealForProduct(product.id);
+        if (!cancelled) setBestDeal(deal || null);
+      } catch {
+        if (!cancelled) setBestDeal(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
+
   const productExternalUrl = getExternalUrl(
     product?.affiliateUrl,
     (product as any)?.affiliateLink,
@@ -73,7 +91,18 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
     (product as any)?.metadata?.externalUrl,
     (product as any)?.metadata?.url,
     (product as any)?.sourceLinks?.[0]?.url,
-    (product as any)?.sourceLinks?.[0]?.link
+    (product as any)?.sourceLinks?.[0]?.link,
+    bestDeal?.affiliateLink,
+    bestDeal?.affiliateUrl,
+    bestDeal?.dealUrl,
+    bestDeal?.sourceUrl,
+    bestDeal?.link,
+    bestDeal?.url,
+    bestDeal?.externalUrl,
+    bestDeal?.metadata?.offerPreviewUrl,
+    bestDeal?.metadata?.offerUrl,
+    bestDeal?.metadata?.externalUrl,
+    bestDeal?.metadata?.url
   );
 
   // Format prices using state to fix hydration mismatch
