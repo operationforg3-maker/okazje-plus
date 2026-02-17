@@ -19,6 +19,7 @@ import { getPriceAmount, getTotalPrice } from '@/lib/i18n-utils';
 import { logger } from '@/lib/logging';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getExternalUrl } from '@/lib/external-url';
 
 interface CartItem {
   product?: Product; // legacy/product items
@@ -378,12 +379,34 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
       return {
         links: items.map(item => {
           if (item.product) {
+            const fallbackUrl = getExternalUrl(
+              (item.product as any).affiliateUrl,
+              (item.product as any).link,
+              (item.product as any).dealUrl,
+              (item.product as any).sourceUrl,
+              (item.product as any).externalUrl,
+              (item.product as any).sourceLinks?.[0]?.url,
+              (item.product as any).sourceLinks?.[0]?.link
+            ) || '';
             return {
               product: item.product as Product,
-              affiliateLink: (item.product as any).affiliateUrl || '',
+              affiliateLink: fallbackUrl,
             };
           }
           const d = item.deal as any;
+          const fallbackUrl = getExternalUrl(
+            d?.link,
+            d?.affiliateLink,
+            d?.affiliateUrl,
+            d?.dealUrl,
+            d?.sourceUrl,
+            d?.url,
+            d?.externalUrl,
+            d?.metadata?.offerPreviewUrl,
+            d?.metadata?.offerUrl,
+            d?.metadata?.externalUrl,
+            d?.metadata?.url
+          ) || '';
           const minimalProduct = {
             id: d?.id,
             name: typeof d?.title === 'object' ? d?.title?.pl : (d?.title || 'Okazja'),
@@ -391,7 +414,7 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
           } as Product;
           return {
             product: minimalProduct,
-            affiliateLink: (d?.affiliateLink || d?.dealUrl || d?.sourceUrl || ''),
+            affiliateLink: fallbackUrl,
           };
         }),
       };

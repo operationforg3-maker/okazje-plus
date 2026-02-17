@@ -59,14 +59,20 @@ export function SmartCartWidget() {
     setFinalizeState(prev => ({ ...prev, isFinalizing: true }));
     try {
       const result = await finalizeCart();
-      setFinalizeState(prev => ({ ...prev, generatedLinks: result.links }));
+      const validLinks = (result.links || []).filter((entry) => Boolean(entry?.affiliateLink));
+      setFinalizeState(prev => ({ ...prev, generatedLinks: validLinks }));
       
       // Open links in new tabs
-      result.links.forEach(({ affiliateLink }) => {
+      validLinks.forEach(({ affiliateLink }) => {
         window.open(affiliateLink, '_blank');
       });
+
+      if (validLinks.length === 0) {
+        toast.error('Nie udało się wygenerować poprawnych linków zakupowych.');
+      }
     } catch (error) {
       console.error('Failed to finalize cart', error);
+      toast.error('Wystąpił błąd podczas otwierania linków zakupowych.');
     } finally {
       setFinalizeState(prev => ({ ...prev, isFinalizing: false }));
     }

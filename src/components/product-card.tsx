@@ -64,9 +64,16 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
   const { currency } = useCurrency();
   const productExternalUrl = getExternalUrl(
     product?.affiliateUrl,
+    (product as any)?.affiliateLink,
     (product as any)?.link,
     (product as any)?.dealUrl,
-    (product as any)?.sourceUrl
+    (product as any)?.sourceUrl,
+    (product as any)?.url,
+    (product as any)?.externalUrl,
+    (product as any)?.metadata?.externalUrl,
+    (product as any)?.metadata?.url,
+    (product as any)?.sourceLinks?.[0]?.url,
+    (product as any)?.sourceLinks?.[0]?.link
   );
 
   // Format prices using state to fix hydration mismatch

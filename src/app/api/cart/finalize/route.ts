@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProduct, getDealById } from '@/lib/data';
 import { logger } from '@/lib/logging';
 import { z } from 'zod';
+import { getExternalUrl } from '@/lib/external-url';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,7 @@ const FinalizeCartSchema = z.object({
  * cashback extensions from hijacking the link
  */
 async function generateSecureRedirectUrl(
+  baseUrl: string,
   productId: string,
   productUrl: string,
   userId: string | undefined,
@@ -41,7 +43,6 @@ async function generateSecureRedirectUrl(
 ): Promise<string> {
   try {
     // Call our secure redirect endpoint which returns the final URL
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:9002';
     const params = new URLSearchParams({
       productId,
       productUrl,
@@ -58,6 +59,7 @@ async function generateSecureRedirectUrl(
 
 export async function POST(req: NextRequest) {
   try {
+    const requestOrigin = req.nextUrl.origin;
     const body = await req.json();
     
     // Validate request
@@ -87,7 +89,20 @@ export async function POST(req: NextRequest) {
              if (deal) {
                isDeal = true;
                // Try multiple fields for the link (M6 Deal vs Legacy Deal)
-               targetUrl = deal.link || (deal as any).affiliateLink || (deal as any).dealUrl || (deal as any).sourceUrl || '';
+               targetUrl = getExternalUrl(
+                 deal.link,
+                 (deal as any).affiliateLink,
+                 (deal as any).affiliateUrl,
+                 (deal as any).dealUrl,
+                 (deal as any).sourceUrl,
+                 (deal as any).url,
+                 (deal as any).externalUrl,
+                 (deal as any).metadata?.offerPreviewUrl,
+                 (deal as any).metadata?.previewUrl,
+                 (deal as any).metadata?.offerUrl,
+                 (deal as any).metadata?.externalUrl,
+                 (deal as any).metadata?.url
+               ) || '';
                
                // If item.productId was missing but we have a deal, use dealId as fallback identifier
                if (!productId) productId = item.dealId;
@@ -99,7 +114,16 @@ export async function POST(req: NextRequest) {
              // Fallback to product if deal not found or no dealId
              const product = await getProduct(productId);
              if (product) {
-               targetUrl = product.affiliateUrl || `https://www.aliexpress.com/item/${productId}.html`;
+               targetUrl = getExternalUrl(
+                 product.affiliateUrl,
+                 (product as any).link,
+                 (product as any).dealUrl,
+                 (product as any).sourceUrl,
+                 (product as any).externalUrl,
+                 (product as any).metadata?.externalUrl,
+                 (product as any).sourceLinks?.[0]?.url,
+                 (product as any).sourceLinks?.[0]?.link
+               ) || '';
              }
           }
           
@@ -110,6 +134,7 @@ export async function POST(req: NextRequest) {
           
           // Generate secure redirect URL (prevents cashback hijacking)
           const redirectUrl = await generateSecureRedirectUrl(
+            requestOrigin,
             productId || 'unknown',
             targetUrl,
             userId,

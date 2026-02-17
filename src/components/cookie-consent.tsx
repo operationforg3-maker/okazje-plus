@@ -1,13 +1,220 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import 'vanilla-cookieconsent/dist/cookieconsent.css';
 import * as CookieConsent from 'vanilla-cookieconsent';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { createPortal } from 'react-dom';
+import { trackSignUp, trackWelcomeBannerAction } from '@/lib/analytics';
+
+const WELCOME_AFTER_COOKIES_KEY = 'okp_welcome_after_cookies_seen_v1';
+
+const LANGUAGE_TEXTS: Record<string, {
+  title: string;
+  description: string;
+  sourceLabel: string;
+  languageLabel: string;
+  currencyLabel: string;
+  confirmBtn: string;
+  registerBtn: string;
+  skipBtn: string;
+  closeBtnLabel: string;
+}> = {
+  pl: {
+    title: 'Witamy w Okazje+',
+    description: 'Dopasowaliśmy ustawienia do Twojego wejścia. Możesz je od razu zmienić lub założyć konto.',
+    sourceLabel: 'Źródło wejścia',
+    languageLabel: 'Język',
+    currencyLabel: 'Waluta',
+    confirmBtn: 'Potwierdź wybór',
+    registerBtn: 'Przejdź do rejestracji',
+    skipBtn: 'Pomiń',
+    closeBtnLabel: 'Zamknij',
+  },
+  en: {
+    title: 'Welcome to Okazje+',
+    description: 'We suggested settings based on your entry. You can change them now or create an account.',
+    sourceLabel: 'Entry source',
+    languageLabel: 'Language',
+    currencyLabel: 'Currency',
+    confirmBtn: 'Confirm selection',
+    registerBtn: 'Go to registration',
+    skipBtn: 'Skip',
+    closeBtnLabel: 'Close',
+  },
+  de: {
+    title: 'Willkommen bei Okazje+',
+    description: 'Wir haben Einstellungen anhand deines Einstiegs vorgeschlagen. Du kannst sie jetzt ändern oder ein Konto erstellen.',
+    sourceLabel: 'Einstiegsquelle',
+    languageLabel: 'Sprache',
+    currencyLabel: 'Währung',
+    confirmBtn: 'Auswahl bestätigen',
+    registerBtn: 'Zur Registrierung',
+    skipBtn: 'Überspringen',
+    closeBtnLabel: 'Schließen',
+  },
+  fr: {
+    title: 'Bienvenue sur Okazje+',
+    description: 'Nous avons suggéré des paramètres selon votre entrée. Vous pouvez les modifier ou créer un compte.',
+    sourceLabel: 'Source d’entrée',
+    languageLabel: 'Langue',
+    currencyLabel: 'Devise',
+    confirmBtn: 'Confirmer le choix',
+    registerBtn: 'Aller à l’inscription',
+    skipBtn: 'Ignorer',
+    closeBtnLabel: 'Fermer',
+  },
+  es: {
+    title: 'Bienvenido a Okazje+',
+    description: 'Sugerimos la configuración según tu entrada. Puedes cambiarla ahora o crear una cuenta.',
+    sourceLabel: 'Origen de entrada',
+    languageLabel: 'Idioma',
+    currencyLabel: 'Moneda',
+    confirmBtn: 'Confirmar selección',
+    registerBtn: 'Ir al registro',
+    skipBtn: 'Omitir',
+    closeBtnLabel: 'Cerrar',
+  },
+  uk: {
+    title: 'Ласкаво просимо до Okazje+',
+    description: 'Ми запропонували налаштування на основі вашого входу. Можна змінити їх зараз або створити акаунт.',
+    sourceLabel: 'Джерело входу',
+    languageLabel: 'Мова',
+    currencyLabel: 'Валюта',
+    confirmBtn: 'Підтвердити вибір',
+    registerBtn: 'Перейти до реєстрації',
+    skipBtn: 'Пропустити',
+    closeBtnLabel: 'Закрити',
+  },
+};
+
+const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
+const LANGUAGE_OPTIONS = [
+  { value: 'pl', label: 'Polski' },
+  { value: 'en', label: 'English' },
+  { value: 'de', label: 'Deutsch' },
+  { value: 'fr', label: 'Français' },
+  { value: 'es', label: 'Español' },
+  { value: 'uk', label: 'Українська' },
+] as const;
+const CURRENCY_OPTIONS = [
+  { value: 'PLN', label: 'PLN' },
+  { value: 'EUR', label: 'EUR' },
+  { value: 'USD', label: 'USD' },
+  { value: 'GBP', label: 'GBP' },
+] as const;
+
+function detectSource(): string {
+  if (typeof window === 'undefined') return 'direct';
+  const params = new URLSearchParams(window.location.search);
+  const utmSource = params.get('utm_source');
+  if (utmSource) return utmSource;
+  const gclid = params.get('gclid');
+  if (gclid) return 'google_ads';
+  const fbclid = params.get('fbclid');
+  if (fbclid) return 'facebook_ads';
+  if (!document.referrer) return 'direct';
+  try {
+    return new URL(document.referrer).hostname.replace(/^www\./, '');
+  } catch {
+    return 'external';
+  }
+}
+
+function suggestCurrency(locale: string, source: string): 'PLN' | 'EUR' | 'USD' | 'GBP' {
+  if (source.includes('.co.uk') || source.includes('uk')) return 'GBP';
+  if (locale === 'de' || locale === 'fr' || locale === 'es') return 'EUR';
+  if (locale === 'en') return 'USD';
+  return 'PLN';
+}
+
+function normalizeLocale(input: string): string {
+  const normalized = input.toLowerCase().split('-')[0];
+  return SUPPORTED_LOCALES.includes(normalized as (typeof SUPPORTED_LOCALES)[number]) ? normalized : 'pl';
+}
 
 export function CookieConsentBanner() {
   const params = useParams();
-  const locale = (params?.locale as string) || 'pl';
+  const locale = normalizeLocale((params?.locale as string) || 'pl');
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+  const [entrySource, setEntrySource] = useState('direct');
+  const [selectedLanguage, setSelectedLanguage] = useState(locale);
+  const [selectedCurrency, setSelectedCurrency] = useState<'PLN' | 'EUR' | 'USD' | 'GBP'>('PLN');
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+
+  const syncCookieThemeWithApp = () => {
+    if (typeof document === 'undefined') return;
+    const cookieRoot = document.getElementById('cc-main');
+    if (!cookieRoot) return;
+
+    cookieRoot.style.setProperty('--cc-bg', 'hsl(var(--background))');
+    cookieRoot.style.setProperty('--cc-primary-color', 'hsl(var(--foreground))');
+    cookieRoot.style.setProperty('--cc-secondary-color', 'hsl(var(--muted-foreground))');
+    cookieRoot.style.setProperty('--cc-btn-primary-bg', 'hsl(var(--primary))');
+    cookieRoot.style.setProperty('--cc-btn-primary-color', 'hsl(var(--primary-foreground))');
+    cookieRoot.style.setProperty('--cc-btn-primary-border-color', 'hsl(var(--primary))');
+    cookieRoot.style.setProperty('--cc-btn-primary-hover-bg', 'hsl(var(--primary) / 0.9)');
+    cookieRoot.style.setProperty('--cc-btn-primary-hover-color', 'hsl(var(--primary-foreground))');
+    cookieRoot.style.setProperty('--cc-btn-secondary-bg', 'hsl(var(--secondary))');
+    cookieRoot.style.setProperty('--cc-btn-secondary-color', 'hsl(var(--secondary-foreground))');
+    cookieRoot.style.setProperty('--cc-btn-secondary-border-color', 'hsl(var(--border))');
+    cookieRoot.style.setProperty('--cc-btn-secondary-hover-bg', 'hsl(var(--accent))');
+    cookieRoot.style.setProperty('--cc-btn-secondary-hover-color', 'hsl(var(--accent-foreground))');
+    cookieRoot.style.setProperty('--cc-separator-border-color', 'hsl(var(--border))');
+    cookieRoot.style.setProperty('--cc-cookie-category-block-bg', 'hsl(var(--muted))');
+    cookieRoot.style.setProperty('--cc-link-color', 'hsl(var(--primary))');
+  };
+
+  const activeLanguage = normalizeLocale(selectedLanguage || locale);
+  const texts = useMemo(() => LANGUAGE_TEXTS[activeLanguage] || LANGUAGE_TEXTS.pl, [activeLanguage]);
+
+  const openWelcomeBanner = () => {
+    if (typeof window === 'undefined') return;
+    const alreadySeen = localStorage.getItem(WELCOME_AFTER_COOKIES_KEY);
+    if (alreadySeen) return;
+
+    const source = detectSource();
+    const browserLocale = normalizeLocale(navigator.language || locale);
+    const detectedLocale = normalizeLocale(locale || browserLocale);
+    const suggested = suggestCurrency(detectedLocale, source);
+
+    setEntrySource(source);
+    setSelectedLanguage(detectedLocale);
+    setSelectedCurrency(suggested);
+
+    setShowWelcomeBanner(true);
+    document.documentElement.classList.add('show--consent');
+
+    trackWelcomeBannerAction('view', {
+      source,
+      locale: detectedLocale,
+      suggested_currency: suggested,
+      path: window.location.pathname,
+      referrer: document.referrer || 'direct',
+    });
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const root = document.documentElement;
+    const updateTheme = () => {
+      setIsDarkTheme(root.classList.contains('dark'));
+      syncCookieThemeWithApp();
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    syncCookieThemeWithApp();
+  }, [showWelcomeBanner, selectedLanguage]);
 
   useEffect(() => {
     CookieConsent.run({
@@ -342,8 +549,199 @@ export function CookieConsentBanner() {
           },
         },
       },
+      onFirstConsent: () => {
+        const acceptedAnalytics = CookieConsent.acceptedCategory('analytics');
+        const acceptedMarketing = CookieConsent.acceptedCategory('marketing');
+        if (acceptedAnalytics || acceptedMarketing) {
+          openWelcomeBanner();
+        }
+      },
     });
   }, [locale]);
 
-  return null;
+  const closeWelcomeBanner = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(WELCOME_AFTER_COOKIES_KEY, '1');
+      document.documentElement.classList.remove('show--consent');
+    }
+    trackWelcomeBannerAction('dismiss', {
+      source: entrySource,
+      selected_language: selectedLanguage,
+      selected_currency: selectedCurrency,
+      locale,
+    });
+    setShowWelcomeBanner(false);
+  };
+
+  const handleLanguageChange = (newLocale: string) => {
+    const normalizedLocale = normalizeLocale(newLocale);
+    setSelectedLanguage(normalizedLocale);
+    trackWelcomeBannerAction('language_change', {
+      source: entrySource,
+      selected_language: normalizedLocale,
+      locale,
+    });
+  };
+
+  const handleCurrencyChange = (newCurrency: 'PLN' | 'EUR' | 'USD' | 'GBP') => {
+    setSelectedCurrency(newCurrency);
+    trackWelcomeBannerAction('currency_change', {
+      source: entrySource,
+      selected_currency: newCurrency,
+      locale,
+    });
+  };
+
+  const handleConfirm = () => {
+    if (typeof window === 'undefined') return;
+
+    localStorage.setItem('preferredCurrency', selectedCurrency);
+    localStorage.setItem('preferredLocale', selectedLanguage);
+    localStorage.setItem(WELCOME_AFTER_COOKIES_KEY, '1');
+    window.dispatchEvent(new CustomEvent('currencyChange', { detail: { currency: selectedCurrency } }));
+
+    trackWelcomeBannerAction('confirm', {
+      source: entrySource,
+      selected_language: selectedLanguage,
+      selected_currency: selectedCurrency,
+      locale,
+    });
+
+    document.documentElement.classList.remove('show--consent');
+    setShowWelcomeBanner(false);
+
+    if (selectedLanguage !== locale) {
+      const pathnameWithoutLocale = window.location.pathname.replace(/^\/(pl|en|de|fr|es|uk)(\/|$)/, '/');
+      const query = window.location.search || '';
+      window.location.href = `/${selectedLanguage}${pathnameWithoutLocale}${query}`;
+    }
+  };
+
+  const handleRegisterClick = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('preferredCurrency', selectedCurrency);
+      localStorage.setItem('preferredLocale', selectedLanguage);
+      localStorage.setItem(WELCOME_AFTER_COOKIES_KEY, '1');
+      document.documentElement.classList.remove('show--consent');
+    }
+
+    trackSignUp('cookie_welcome_banner');
+    trackWelcomeBannerAction('register_click', {
+      source: entrySource,
+      selected_language: selectedLanguage,
+      selected_currency: selectedCurrency,
+      locale,
+    });
+  };
+
+  const registerHref = `/${selectedLanguage}/register`;
+  const cookieRoot = typeof document !== 'undefined' ? document.getElementById('cc-main') : null;
+  const unifiedButtonStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '42px',
+    lineHeight: '1.1',
+    textAlign: 'center' as const,
+  };
+
+  const welcomeModal = showWelcomeBanner ? (
+    <div className={`${isDarkTheme ? 'cc--darkmode' : ''} cm-wrapper cc--anim`}>
+      <div className="cm cm--box cm--bottom cm--left cm--inline">
+        <div className="cm__body">
+          <button type="button" className="cm__btn cm__btn--close" onClick={closeWelcomeBanner} aria-label={texts.closeBtnLabel}>
+            <span>×</span>
+          </button>
+          <div className="cm__texts">
+            <h2 className="cm__title">
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <img src="/icon_okazjeplus.svg" alt="Okazje+" style={{ width: '20px', height: '20px' }} />
+                {texts.title}
+              </span>
+            </h2>
+            <p className="cm__desc" style={{ maxHeight: 'unset' }}>
+              {texts.description}
+              <br />
+              <strong>{texts.sourceLabel}:</strong> {entrySource}
+              <br />
+              <label style={{ display: 'block', marginTop: '10px' }}>
+                {texts.languageLabel}
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => handleLanguageChange(e.target.value)}
+                  style={{
+                    marginTop: '6px',
+                    display: 'block',
+                    width: '100%',
+                    border: '1px solid var(--cc-separator-border-color)',
+                    borderRadius: '6px',
+                    padding: '8px',
+                    background: 'var(--cc-bg)',
+                    color: 'var(--cc-primary-color)',
+                    appearance: 'auto',
+                  }}
+                >
+                  {LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'block', marginTop: '10px' }}>
+                {texts.currencyLabel}
+                <select
+                  value={selectedCurrency}
+                  onChange={(e) => handleCurrencyChange(e.target.value as 'PLN' | 'EUR' | 'USD' | 'GBP')}
+                  style={{
+                    marginTop: '6px',
+                    display: 'block',
+                    width: '100%',
+                    border: '1px solid var(--cc-separator-border-color)',
+                    borderRadius: '6px',
+                    padding: '8px',
+                    background: 'var(--cc-bg)',
+                    color: 'var(--cc-primary-color)',
+                    appearance: 'auto',
+                  }}
+                >
+                  {CURRENCY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </p>
+          </div>
+          <div className="cm__btns">
+            <div className="cm__btn-group cm__btn-group--uneven">
+              <button type="button" className="cm__btn" onClick={handleConfirm} style={unifiedButtonStyle}>
+                {texts.confirmBtn}
+              </button>
+              <button type="button" className="cm__btn cm__btn--secondary" onClick={closeWelcomeBanner} style={unifiedButtonStyle}>
+                {texts.skipBtn}
+              </button>
+            </div>
+            <div className="cm__btn-group cm__btn-group--uneven">
+              <Link
+                href={registerHref}
+                className="cm__btn cm__btn--secondary"
+                onClick={handleRegisterClick}
+                style={unifiedButtonStyle}
+              >
+                {texts.registerBtn}
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      {cookieRoot && welcomeModal ? createPortal(welcomeModal, cookieRoot) : null}
+    </>
+  );
 }

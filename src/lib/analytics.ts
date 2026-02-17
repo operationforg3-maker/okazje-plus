@@ -167,6 +167,17 @@ export const trackError = (errorName: string, errorMessage?: string) => {
   });
 };
 
+export const trackWelcomeBannerAction = (
+  action: 'view' | 'dismiss' | 'register_click' | 'language_change' | 'currency_change' | 'confirm',
+  params?: Record<string, string | number | boolean | undefined>
+) => {
+  trackEvent('welcome_banner_action', {
+    action,
+    event_category: 'onboarding',
+    ...(params || {}),
+  });
+};
+
 // ===========================================
 // Firestore Analytics Tracking (for Admin Dashboard)
 // ===========================================
