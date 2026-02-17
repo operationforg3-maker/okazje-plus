@@ -263,7 +263,18 @@ export async function POST(req: NextRequest) {
           
           // Try to get real product if ID exists
           if (item.productId) {
-             productObj = resolvedProduct || (await getProduct(item.productId)) || (await getProductCore(item.productId));
+             try {
+               productObj =
+                 resolvedProduct ||
+                 (await getProduct(item.productId)) ||
+                 (await getProductCore(item.productId));
+             } catch (error) {
+               logger.warn('Failed to resolve product object, falling back to deal payload', {
+                 productId: item.productId,
+                 dealId: item.dealId,
+                 error,
+               });
+             }
           }
           
           // If no product found but we have a deal, construct a "Virtual Product" from the deal
