@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-server';
 import { SmartHarvester } from '@/lib/automation/harvester';
+import { adminDb } from '@/lib/firebase-admin';
+
+const HARVESTER_STALE_MS = 15 * 60 * 1000;
 
 /**
  * POST /api/admin/harvester/run
@@ -45,7 +48,8 @@ export async function POST(request: NextRequest) {
       categories: categoriesFromBody,
       convertiserMode = 'products', // New: 'products' or 'offers' for Convertiser
       autoBrowse = false, // Convertiser: fetch entire catalog without keywords
-      importStrategy = 'bestsellers'
+      importStrategy = 'bestsellers',
+      resumeFromJobId,
     } = body;
 
     // 3. Validate input
@@ -111,6 +115,75 @@ export async function POST(request: NextRequest) {
       }
     } else if (Array.isArray(categoriesFromBody) && categoriesFromBody.length > 0) {
       categories = categoriesFromBody;
+    }
+
+    // 4b. Resume support: continue only remaining categories from previous job
+    if (resumeFromJobId && categories && categories.length > 0) {
+      const previousJobRef = adminDb.collection('harvester_jobs').doc(String(resumeFromJobId));
+      const previousJobSnap = await previousJobRef.get();
+
+      if (!previousJobSnap.exists) {
+        return NextResponse.json(
+          { error: `Nie znaleziono joba do wznowienia: ${resumeFromJobId}` },
+          { status: 404 }
+        );
+      }
+
+      const previousJob = previousJobSnap.data() as any;
+      const processed = Array.isArray(previousJob?.processedCategories)
+        ? previousJob.processedCategories
+        : [];
+
+      const completedCategories = new Set<string>(
+        processed
+          .map((entry: any) => String(entry?.category || '').trim())
+          .filter((entry: string) => entry.length > 0)
+      );
+
+      const remainingCategories = categories.filter((category) => !completedCategories.has(category));
+
+      const lastUpdatedAt = Date.parse(previousJob?.lastUpdatedAt || '');
+      const isStaleRunning =
+        previousJob?.status === 'running' &&
+        Number.isFinite(lastUpdatedAt) &&
+        Date.now() - lastUpdatedAt > HARVESTER_STALE_MS;
+
+      if (isStaleRunning) {
+        const existingLogs = Array.isArray(previousJob?.logs) ? previousJob.logs : [];
+        await previousJobRef.set(
+          {
+            status: 'failed',
+            completedAt: new Date().toISOString(),
+            lastUpdatedAt: new Date().toISOString(),
+            orphaned: true,
+            orphanedReason: `Brak heartbeat > ${Math.round(HARVESTER_STALE_MS / 60000)} min`,
+            logs: [
+              ...existingLogs.slice(-199),
+              {
+                level: 'error',
+                message: `Job oznaczony jako osierocony podczas wznawiania: brak heartbeat > ${Math.round(HARVESTER_STALE_MS / 60000)} min`,
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          },
+          { merge: true }
+        );
+      }
+
+      if (remainingCategories.length === 0) {
+        return NextResponse.json(
+          {
+            success: true,
+            resumed: true,
+            message: 'Brak kategorii do wznowienia — wszystkie zostały już oznaczone jako przetworzone.',
+            previousJobId: resumeFromJobId,
+            remainingCategories: 0,
+          },
+          { status: 200 }
+        );
+      }
+
+      categories = remainingCategories;
     }
 
     // 5. Create job ID and run harvester

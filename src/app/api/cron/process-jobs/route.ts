@@ -40,6 +40,7 @@ interface Job {
 const CRON_SECRET = process.env.CRON_SECRET || 'dev-secret-change-in-production';
 const MAX_JOBS_PER_RUN = 10;
 const MAX_RETRIES = 3;
+const HARVESTER_STALE_MS = 15 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
@@ -91,10 +92,59 @@ export async function POST(req: NextRequest) {
       ...doc.data(),
     }));
 
+    // ===== WATCHDOG: MARK STALE HARVESTER JOBS AS FAILED =====
+    const runningHarvesterSnapshot = await adminDb
+      .collection('harvester_jobs')
+      .where('status', '==', 'running')
+      .limit(50)
+      .get();
+
+    const now = Date.now();
+    let staleHarvesterJobsDetected = 0;
+    let staleHarvesterJobsMarked = 0;
+
+    for (const doc of runningHarvesterSnapshot.docs) {
+      const data = doc.data() as any;
+      const lastUpdatedAtMs = Date.parse(data?.lastUpdatedAt || '');
+      if (!Number.isFinite(lastUpdatedAtMs)) {
+        continue;
+      }
+
+      if (now - lastUpdatedAtMs <= HARVESTER_STALE_MS) {
+        continue;
+      }
+
+      staleHarvesterJobsDetected += 1;
+      const existingLogs = Array.isArray(data?.logs) ? data.logs : [];
+
+      await doc.ref.set(
+        {
+          status: 'failed',
+          completedAt: new Date().toISOString(),
+          lastUpdatedAt: new Date().toISOString(),
+          orphaned: true,
+          orphanedReason: `Brak heartbeat > ${Math.round(HARVESTER_STALE_MS / 60000)} min`,
+          logs: [
+            ...existingLogs.slice(-199),
+            {
+              level: 'error',
+              message: `Watchdog: job oznaczony jako osierocony (brak heartbeat > ${Math.round(HARVESTER_STALE_MS / 60000)} min)`,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        },
+        { merge: true }
+      );
+
+      staleHarvesterJobsMarked += 1;
+    }
+
     logger.info('Cron job processor started', {
       jobsFound: jobs.length,
       importJobsQueued: importJobsToResume.length,
       uiImportJobsPending: uiImportJobsToProcess.length,
+      staleHarvesterJobsDetected,
+      staleHarvesterJobsMarked,
       maxPerRun: MAX_JOBS_PER_RUN,
     });
 
@@ -147,6 +197,8 @@ export async function POST(req: NextRequest) {
       uiImportJobsProcessed: uiImportJobsToProcess.length,
       uiImportSuccessful,
       uiImportFailed,
+      staleHarvesterJobsDetected,
+      staleHarvesterJobsMarked,
       durationMs,
     });
 
@@ -161,6 +213,8 @@ export async function POST(req: NextRequest) {
       uiImportJobsProcessed: uiImportJobsToProcess.length,
       uiImportSuccessful,
       uiImportFailed,
+      staleHarvesterJobsDetected,
+      staleHarvesterJobsMarked,
       durationMs,
       timestamp: new Date().toISOString(),
     });

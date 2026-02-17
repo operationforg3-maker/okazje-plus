@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { HarvesterJob } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+const HARVESTER_STALE_MS = 15 * 60 * 1000;
 
 /**
  * GET /api/admin/harvester-jobs
@@ -43,9 +44,19 @@ export async function GET(request: NextRequest) {
       }
       
       const job = { id: jobDoc.id, ...jobDoc.data() } as HarvesterJob;
+      const lastUpdatedAtMs = Date.parse((job as any).lastUpdatedAt || '');
+      const isStaleRunning =
+        job.status === 'running' &&
+        Number.isFinite(lastUpdatedAtMs) &&
+        Date.now() - lastUpdatedAtMs > HARVESTER_STALE_MS;
+
       return NextResponse.json({
         success: true,
         job,
+        diagnostics: {
+          isStaleRunning,
+          staleAfterMinutes: Math.round(HARVESTER_STALE_MS / 60000),
+        },
       });
     }
 
