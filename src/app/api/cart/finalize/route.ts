@@ -135,7 +135,15 @@ export async function POST(req: NextRequest) {
           // 2. If no URL yet, try Product URL
           if (!targetUrl && productId) {
              // Fallback to product if deal not found or no dealId
-             let product = (await getProduct(productId)) || (await getProductCore(productId));
+             let product: any = null;
+             try {
+               product = (await getProduct(productId)) || (await getProductCore(productId));
+             } catch (error) {
+               logger.warn('Failed to resolve product via data layer, trying admin fallback', {
+                 productId,
+                 error,
+               });
+             }
              if (!product) {
                try {
                  const snap = await adminDb.collection('product_cores').doc(productId).get();
@@ -173,7 +181,15 @@ export async function POST(req: NextRequest) {
                ) || '';
 
                if (!targetUrl) {
-                 const bestDeal = await getBestDealForProduct(productId);
+                 let bestDeal: any = null;
+                 try {
+                   bestDeal = await getBestDealForProduct(productId);
+                 } catch (error) {
+                   logger.warn('Failed to resolve best deal via data layer, trying direct deal lookup', {
+                     productId,
+                     error,
+                   });
+                 }
                  if (bestDeal) {
                    targetUrl = getExternalUrl(
                      bestDeal.link,
