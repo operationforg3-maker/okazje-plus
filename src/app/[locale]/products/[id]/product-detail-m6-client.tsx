@@ -767,7 +767,7 @@ export default function ProductDetailM6Client({
             {relatedProducts.filter(p => p.id).map((relatedProduct, index) => (
               <Link
                 key={relatedProduct.id || `related-${index}`}
-                href={`/products/${relatedProduct.id}`}
+                href={`/${locale}/products/${relatedProduct.id}`}
                 className="group"
               >
                 <Card className="hover:shadow-lg transition-shadow">

@@ -122,7 +122,10 @@ async function getDealData(id: string) {
     return null;
   }
 
-  const productId = (dealDoc as any).productId || (dealDoc as any).linkedProductIds?.[0];
+  const productId =
+    (dealDoc as any).productCoreId ||
+    (dealDoc as any).productId ||
+    (dealDoc as any).linkedProductIds?.[0];
   const product = productId ? await getProductCore(productId) : null;
   const deal = normalizeDealForUi(dealDoc, product);
   if (!deal) return null;
@@ -134,6 +137,24 @@ async function getDealData(id: string) {
       .filter(d => d.id !== id)
       .map(d => normalizeDealForUi(d as any, product))
       .filter(Boolean) as Deal[];
+  }
+
+  if (relatedDeals.length === 0) {
+    const hotDeals = await getHotDeals(60);
+    relatedDeals = hotDeals
+      .filter((d) => d.id !== id)
+      .filter((d) => {
+        if (deal.subSubCategorySlug && d.subSubCategorySlug) {
+          return d.subSubCategorySlug === deal.subSubCategorySlug;
+        }
+        if (deal.subCategorySlug && d.subCategorySlug) {
+          return d.subCategorySlug === deal.subCategorySlug;
+        }
+        return d.mainCategorySlug === deal.mainCategorySlug;
+      })
+      .map((d) => normalizeDealForUi(d as any, product))
+      .filter(Boolean)
+      .slice(0, 6) as Deal[];
   }
 
   return { deal, relatedDeals, product };
