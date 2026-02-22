@@ -196,12 +196,15 @@ export async function importFromAliExpress(
       maxItems
     );
 
-    // Parse response (structure varies by API method)
+    // Parse response
+    // Affiliate API response: { aliexpress_affiliate_hotproduct_query_response: { resp_result: { result: { products: [] } } } }
+    // products is a direct array (not XML-style .product wrapper)
     let products: any[] = [];
-    if (searchResponse?.resp_result?.result?.products?.product) {
-      products = Array.isArray(searchResponse.resp_result.result.products.product)
-        ? searchResponse.resp_result.result.products.product
-        : [searchResponse.resp_result.result.products.product];
+    const rawResult =
+      searchResponse?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result ??
+      searchResponse?.resp_result?.result;
+    if (Array.isArray(rawResult?.products)) {
+      products = rawResult.products;
     }
 
     result.stats.fetched = products.length;
@@ -315,13 +318,11 @@ export async function importFromAliExpress(
         }
 
         // Extract images
+        // product_small_image_urls is string[] per AliExpress Affiliate API types
         const mainImage = rawProduct.product_main_image_url || rawProduct.image_url || '';
         const images: string[] = [mainImage];
-        if (rawProduct.product_small_image_urls?.string) {
-          const additionalImages = Array.isArray(rawProduct.product_small_image_urls.string)
-            ? rawProduct.product_small_image_urls.string
-            : [rawProduct.product_small_image_urls.string];
-          images.push(...additionalImages.filter((url: string) => url && !images.includes(url)));
+        if (Array.isArray(rawProduct.product_small_image_urls)) {
+          images.push(...rawProduct.product_small_image_urls.filter((url: string) => url && !images.includes(url)));
         }
 
         // Build product data
