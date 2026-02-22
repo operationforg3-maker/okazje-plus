@@ -281,6 +281,8 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           withTranslations({ name: 'Sokowirówki', slug: 'sokownirowki', sortOrder: 8 }, 'Juicers', 'Entsafter'),
           withTranslations({ name: 'Miksery', slug: 'miksery', sortOrder: 9 }, 'Mixers', 'Mixer'),
           withTranslations({ name: 'Grille elektryczne', slug: 'grille-elektryczne', sortOrder: 10 }, 'Electric grills', 'Elektrogrills'),
+          withTranslations({ name: 'Odkurzacze', slug: 'odkurzacze', sortOrder: 11 }, 'Vacuum cleaners', 'Staubsauger'),
+          withTranslations({ name: 'Roboty sprzątające', slug: 'roboty-sprzatajace', sortOrder: 12, importKeywords: ['robot vacuum', 'robot mop', 'vacuum cleaner robot'] }, 'Robot vacuums', 'Saugroboter'),
         ]
       }, 'Small appliances', 'Kleine Haushaltsgeräte'),
 
@@ -423,6 +425,19 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           withTranslations({ name: 'Akcesoria kosmetyczne', slug: 'akcesoria-kosmetyczne', sortOrder: 6 }, 'Cosmetic accessories', 'Kosmetikzubehör'),
         ]
       }, 'Cosmetics', 'Kosmetik'),
+
+      withSubTranslations({
+        name: 'Włosy i barber',
+        slug: 'wlosy-barber',
+        icon: '💇',
+        sortOrder: 7,
+        subcategories: [
+          withTranslations({ name: 'Peruki i doczepy', slug: 'peruki-doczepy', sortOrder: 1, importKeywords: ['wigs', 'hair extensions', 'lace wig'] }, 'Wigs and extensions', 'Perücken und Extensions'),
+          withTranslations({ name: 'Trymery i maszynki', slug: 'trymery-maszynki', sortOrder: 2 }, 'Trimmers and clippers', 'Trimmer und Haarschneider'),
+          withTranslations({ name: 'Produkty do stylizacji', slug: 'stylizacja-wlosow', sortOrder: 3 }, 'Hair styling products', 'Haarstyling-Produkte'),
+          withTranslations({ name: 'Akcesoria fryzjerskie', slug: 'akcesoria-fryzjerskie', sortOrder: 4 }, 'Hairdressing accessories', 'Friseurzubehör'),
+        ]
+      }, 'Hair and barber', 'Haare und Barber'),
     ]
   },
   'Fashion and Beauty',
@@ -637,6 +652,32 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           withTranslations({ name: 'Sterylizatory', slug: 'sterylizatory', sortOrder: 4 }, 'Sterilizers', 'Sterilisatoren'),
         ]
       }, 'Feeding', 'Füttern'),
+
+      withSubTranslations({
+        name: 'Edukacyjne i STEM',
+        slug: 'edukacyjne-stem',
+        icon: '🧠',
+        sortOrder: 5,
+        subcategories: [
+          withTranslations({ name: 'Zabawki edukacyjne', slug: 'zabawki-edukacyjne', sortOrder: 1 }, 'Educational toys', 'Lernspielzeug'),
+          withTranslations({ name: 'Roboty i programowanie', slug: 'roboty-programowanie-dzieci', sortOrder: 2, importKeywords: ['coding toys', 'kids robot', 'stem toy'] }, 'Coding and robots', 'Programmierung und Roboter'),
+          withTranslations({ name: 'Zestawy naukowe', slug: 'zestawy-naukowe', sortOrder: 3 }, 'Science kits', 'Wissenschaftssets'),
+          withTranslations({ name: 'RC dla dzieci', slug: 'rc-dla-dzieci', sortOrder: 4, importKeywords: ['rc toy car', 'rc drone kids'] }, 'RC toys for kids', 'RC-Spielzeug für Kinder'),
+        ]
+      }, 'Educational and STEM', 'Lernen und STEM'),
+
+      withSubTranslations({
+        name: 'Ubranka i akcesoria dziecięce',
+        slug: 'ubranka-akcesoria-dzieciece',
+        icon: '👶',
+        sortOrder: 6,
+        subcategories: [
+          withTranslations({ name: 'Body i pajacyki', slug: 'body-pajacyki', sortOrder: 1 }, 'Bodysuits and sleepsuits', 'Bodys und Strampler'),
+          withTranslations({ name: 'Ubranka sezonowe', slug: 'ubranka-sezonowe-dzieci', sortOrder: 2 }, 'Seasonal clothes', 'Saisonkleidung'),
+          withTranslations({ name: 'Buty dziecięce', slug: 'buty-dzieciece', sortOrder: 3 }, 'Kids shoes', 'Kinderschuhe'),
+          withTranslations({ name: 'Akcesoria niemowlęce', slug: 'akcesoria-niemowlece', sortOrder: 4 }, 'Baby accessories', 'Babyzubehör'),
+        ]
+      }, 'Kids clothing and accessories', 'Kinderkleidung und Zubehör'),
     ]
   },
   'Kids and Toys',
@@ -745,6 +786,32 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           withTranslations({ name: 'Dywaniki samochodowe', slug: 'dywaniki-samochodowe', sortOrder: 6 }, 'Car mats', 'Auto-Fußmatten'),
         ]
       }, 'Car accessories', 'Autozubehör'),
+
+      withSubTranslations({
+        name: 'Części samochodowe',
+        slug: 'czesci-samochodowe',
+        icon: '🧰',
+        sortOrder: 4,
+        subcategories: [
+          withTranslations({ name: 'Filtry i oleje', slug: 'filtry-oleje', sortOrder: 1 }, 'Filters and oils', 'Filter und Öle'),
+          withTranslations({ name: 'Hamulce i tarcze', slug: 'hamulce-tarcze', sortOrder: 2 }, 'Brakes and discs', 'Bremsen und Scheiben'),
+          withTranslations({ name: 'Akumulatory', slug: 'akumulatory', sortOrder: 3 }, 'Car batteries', 'Autobatterien'),
+          withTranslations({ name: 'Oświetlenie samochodowe', slug: 'oswietlenie-samochodowe', sortOrder: 4 }, 'Car lighting', 'Autobeleuchtung'),
+        ]
+      }, 'Car parts', 'Autoteile'),
+
+      withSubTranslations({
+        name: 'Motocykle i skutery',
+        slug: 'motocykle-skutery',
+        icon: '🏍️',
+        sortOrder: 5,
+        subcategories: [
+          withTranslations({ name: 'Kaski motocyklowe', slug: 'kaski-motocyklowe', sortOrder: 1 }, 'Motorcycle helmets', 'Motorradhelme'),
+          withTranslations({ name: 'Odzież motocyklowa', slug: 'odziez-motocyklowa', sortOrder: 2 }, 'Motorcycle clothing', 'Motorradbekleidung'),
+          withTranslations({ name: 'Akcesoria do motocykli', slug: 'akcesoria-motocykle', sortOrder: 3 }, 'Motorcycle accessories', 'Motorradzubehör'),
+          withTranslations({ name: 'Części do skuterów', slug: 'czesci-skutery', sortOrder: 4 }, 'Scooter parts', 'Rollerteile'),
+        ]
+      }, 'Motorcycles and scooters', 'Motorräder und Roller'),
     ]
   },
   'Automotive',
@@ -888,6 +955,19 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           withTranslations({ name: 'Akcesoria dla gryzoni', slug: 'akcesoria-gryzonie', sortOrder: 4 }, 'Rodent accessories', 'Nagerzubehör'),
         ]
       }, 'Birds and rodents', 'Vögel und Nagetiere'),
+
+      withSubTranslations({
+        name: 'Smart dla zwierząt',
+        slug: 'smart-dla-zwierzat',
+        icon: '📡',
+        sortOrder: 5,
+        subcategories: [
+          withTranslations({ name: 'Automatyczne karmniki', slug: 'automatyczne-karmniki', sortOrder: 1, importKeywords: ['smart pet feeder', 'automatic pet feeder'] }, 'Automatic feeders', 'Automatische Futterspender'),
+          withTranslations({ name: 'Fontanny i poidła smart', slug: 'fontanny-poidla-smart', sortOrder: 2 }, 'Smart fountains and drinkers', 'Smarte Trinkbrunnen'),
+          withTranslations({ name: 'Lokalizatory GPS', slug: 'lokalizatory-gps-zwierzeta', sortOrder: 3 }, 'GPS trackers', 'GPS-Tracker'),
+          withTranslations({ name: 'Kamery do monitoringu zwierząt', slug: 'kamery-monitoring-zwierzat', sortOrder: 4 }, 'Pet monitoring cameras', 'Haustier-Überwachungskameras'),
+        ]
+      }, 'Smart pet', 'Smartes Haustier'),
     ]
   },
   'Pets',
@@ -1031,6 +1111,18 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           withTranslations({ name: 'Piloty uniwersalne', slug: 'piloty-uniwersalne', sortOrder: 3 }, 'Universal remotes', 'Universale Fernbedienungen'),
         ]
       }, 'Sockets and control', 'Steckdosen und Steuerung'),
+
+      withSubTranslations({
+        name: 'Sprzątanie automatyczne',
+        slug: 'sprzatanie-automatyczne',
+        icon: '🤖',
+        sortOrder: 6,
+        subcategories: [
+          withTranslations({ name: 'Roboty odkurzające', slug: 'roboty-odkurzajace', sortOrder: 1, importKeywords: ['robot vacuum', 'vacuum robot', 'smart vacuum cleaner'] }, 'Robot vacuums', 'Saugroboter'),
+          withTranslations({ name: 'Roboty mopujące', slug: 'roboty-mopujace', sortOrder: 2, importKeywords: ['robot mop', 'mopping robot'] }, 'Robot mops', 'Wischroboter'),
+          withTranslations({ name: 'Akcesoria do robotów', slug: 'akcesoria-roboty-sprzatajace', sortOrder: 3, importKeywords: ['robot vacuum accessories', 'robot mop accessories'] }, 'Robot vacuum accessories', 'Saugroboter-Zubehör'),
+        ]
+      }, 'Automated cleaning', 'Automatisierte Reinigung'),
     ]
   },
   'Smart Home',
@@ -1253,6 +1345,192 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
   'Power tools, safety, industrial accessories',
   'Werkzeuge und Industrie',
   'Elektrowerkzeuge, Arbeitsschutz, Industrie-Zubehör'
+  ),
+
+  withCatTranslations({
+    name: 'Supermarket i codzienne zakupy',
+    slug: 'supermarket-codzienne-zakupy',
+    icon: '🛒',
+    description: 'Artykuły spożywcze, napoje, chemia domowa i higiena',
+    sortOrder: 16,
+    subcategories: [
+      withSubTranslations({
+        name: 'Artykuły spożywcze',
+        slug: 'artykuly-spozywcze',
+        icon: '🥫',
+        sortOrder: 1,
+        subcategories: [
+          withTranslations({ name: 'Kawa i herbata', slug: 'kawa-herbata', sortOrder: 1 }, 'Coffee and tea', 'Kaffee und Tee'),
+          withTranslations({ name: 'Przekąski i słodycze', slug: 'przekaski-slodycze', sortOrder: 2 }, 'Snacks and sweets', 'Snacks und Süßigkeiten'),
+          withTranslations({ name: 'Dania gotowe', slug: 'dania-gotowe', sortOrder: 3 }, 'Ready meals', 'Fertiggerichte'),
+          withTranslations({ name: 'Produkty instant', slug: 'produkty-instant', sortOrder: 4 }, 'Instant products', 'Instantprodukte'),
+          withTranslations({ name: 'Przyprawy i dodatki', slug: 'przyprawy-dodatki', sortOrder: 5 }, 'Spices and additives', 'Gewürze und Zusätze'),
+        ]
+      }, 'Groceries', 'Lebensmittel'),
+
+      withSubTranslations({
+        name: 'Napoje',
+        slug: 'napoje',
+        icon: '🥤',
+        sortOrder: 2,
+        subcategories: [
+          withTranslations({ name: 'Woda i napoje izotoniczne', slug: 'woda-izotoniki', sortOrder: 1 }, 'Water and isotonic drinks', 'Wasser und Isogetränke'),
+          withTranslations({ name: 'Napoje gazowane', slug: 'napoje-gazowane', sortOrder: 2 }, 'Carbonated drinks', 'Kohlensäurehaltige Getränke'),
+          withTranslations({ name: 'Soki', slug: 'soki', sortOrder: 3 }, 'Juices', 'Säfte'),
+          withTranslations({ name: 'Napoje energetyczne', slug: 'napoje-energetyczne', sortOrder: 4 }, 'Energy drinks', 'Energy-Drinks'),
+        ]
+      }, 'Drinks', 'Getränke'),
+
+      withSubTranslations({
+        name: 'Chemia gospodarcza',
+        slug: 'chemia-gospodarcza',
+        icon: '🧴',
+        sortOrder: 3,
+        subcategories: [
+          withTranslations({ name: 'Detergenty do prania', slug: 'detergenty-pranie', sortOrder: 1 }, 'Laundry detergents', 'Waschmittel'),
+          withTranslations({ name: 'Płyny do mycia naczyń', slug: 'plyny-mycie-naczyn', sortOrder: 2 }, 'Dishwashing liquids', 'Spülmittel'),
+          withTranslations({ name: 'Środki do czyszczenia', slug: 'srodki-czyszczenia', sortOrder: 3 }, 'Cleaning products', 'Reinigungsmittel'),
+          withTranslations({ name: 'Akcesoria do sprzątania', slug: 'akcesoria-sprzatanie', sortOrder: 4 }, 'Cleaning accessories', 'Reinigungszubehör'),
+        ]
+      }, 'Household chemicals', 'Haushaltschemie'),
+
+      withSubTranslations({
+        name: 'Higiena codzienna',
+        slug: 'higiena-codzienna',
+        icon: '🧻',
+        sortOrder: 4,
+        subcategories: [
+          withTranslations({ name: 'Mydła i żele', slug: 'mydla-zele', sortOrder: 1 }, 'Soaps and gels', 'Seifen und Gele'),
+          withTranslations({ name: 'Pasty i szczoteczki do zębów', slug: 'pasty-szczoteczki-zeby', sortOrder: 2 }, 'Toothpaste and toothbrushes', 'Zahnpasta und Zahnbürsten'),
+          withTranslations({ name: 'Papier toaletowy i ręczniki', slug: 'papier-reczniki', sortOrder: 3 }, 'Toilet paper and towels', 'Toilettenpapier und Handtücher'),
+          withTranslations({ name: 'Artykuły higieniczne', slug: 'artykuly-higieniczne', sortOrder: 4 }, 'Hygiene products', 'Hygieneprodukte'),
+        ]
+      }, 'Daily hygiene', 'Tägliche Hygiene'),
+    ]
+  },
+  'Supermarket and Daily Shopping',
+  'Groceries, beverages, household chemicals and hygiene essentials',
+  'Supermarkt und tägliche Einkäufe',
+  'Lebensmittel, Getränke, Haushaltschemie und Hygieneartikel'
+  ),
+
+  withCatTranslations({
+    name: 'Ślub i imprezy',
+    slug: 'slub-imprezy',
+    icon: '🎉',
+    description: 'Dekoracje okolicznościowe, akcesoria ślubne i imprezowe',
+    sortOrder: 17,
+    subcategories: [
+      withSubTranslations({
+        name: 'Dekoracje imprezowe',
+        slug: 'dekoracje-imprezowe',
+        icon: '🎈',
+        sortOrder: 1,
+        subcategories: [
+          withTranslations({ name: 'Balony i girlandy', slug: 'balony-girlandy', sortOrder: 1 }, 'Balloons and garlands', 'Ballons und Girlanden'),
+          withTranslations({ name: 'Dekoracje stołu', slug: 'dekoracje-stolu', sortOrder: 2 }, 'Table decorations', 'Tischdekoration'),
+          withTranslations({ name: 'Świece i konfetti', slug: 'swiece-konfetti', sortOrder: 3 }, 'Candles and confetti', 'Kerzen und Konfetti'),
+          withTranslations({ name: 'Banery i ozdoby', slug: 'banery-ozdoby', sortOrder: 4 }, 'Banners and ornaments', 'Banner und Deko'),
+        ]
+      }, 'Party decorations', 'Partydekoration'),
+
+      withSubTranslations({
+        name: 'Akcesoria ślubne',
+        slug: 'akcesoria-slubne',
+        icon: '💍',
+        sortOrder: 2,
+        subcategories: [
+          withTranslations({ name: 'Dekoracje ślubne', slug: 'dekoracje-slubne', sortOrder: 1 }, 'Wedding decorations', 'Hochzeitsdekoration'),
+          withTranslations({ name: 'Akcesoria dla pary młodej', slug: 'akcesoria-para-mloda', sortOrder: 2 }, 'Bride and groom accessories', 'Brautpaar-Accessoires'),
+          withTranslations({ name: 'Upominki dla gości', slug: 'upominki-goscie', sortOrder: 3 }, 'Guest favors', 'Gastgeschenke'),
+          withTranslations({ name: 'Papeteria ślubna', slug: 'papeteria-slubna', sortOrder: 4 }, 'Wedding stationery', 'Hochzeitspapeterie'),
+        ]
+      }, 'Wedding accessories', 'Hochzeitszubehör'),
+
+      withSubTranslations({
+        name: 'Kostiumy i przebrania',
+        slug: 'kostiumy-przebrania',
+        icon: '🦸',
+        sortOrder: 3,
+        subcategories: [
+          withTranslations({ name: 'Kostiumy dla dorosłych', slug: 'kostiumy-dorosli', sortOrder: 1 }, 'Adult costumes', 'Kostüme für Erwachsene'),
+          withTranslations({ name: 'Kostiumy dla dzieci', slug: 'kostiumy-dzieci', sortOrder: 2 }, 'Kids costumes', 'Kostüme für Kinder'),
+          withTranslations({ name: 'Maski i peruki', slug: 'maski-peruki', sortOrder: 3 }, 'Masks and wigs', 'Masken und Perücken'),
+          withTranslations({ name: 'Akcesoria do przebrań', slug: 'akcesoria-przebrania', sortOrder: 4 }, 'Costume accessories', 'Kostümzubehör'),
+        ]
+      }, 'Costumes and outfits', 'Kostüme und Verkleidungen'),
+    ]
+  },
+  'Weddings and Parties',
+  'Party decorations, wedding accessories and costumes',
+  'Hochzeit und Party',
+  'Partydekoration, Hochzeitszubehör und Kostüme'
+  ),
+
+  withCatTranslations({
+    name: 'Bezpieczeństwo i ochrona',
+    slug: 'bezpieczenstwo-ochrona',
+    icon: '🛡️',
+    description: 'Monitoring, kontrola dostępu, alarmy i ochrona osobista',
+    sortOrder: 18,
+    subcategories: [
+      withSubTranslations({
+        name: 'Monitoring i CCTV',
+        slug: 'monitoring-cctv',
+        icon: '📹',
+        sortOrder: 1,
+        subcategories: [
+          withTranslations({ name: 'Kamery zewnętrzne', slug: 'kamery-zewnetrzne', sortOrder: 1, importKeywords: ['outdoor security camera', 'cctv camera'] }, 'Outdoor cameras', 'Außenkameras'),
+          withTranslations({ name: 'Kamery wewnętrzne', slug: 'kamery-wewnetrzne', sortOrder: 2 }, 'Indoor cameras', 'Innenkameras'),
+          withTranslations({ name: 'Rejestratory NVR/DVR', slug: 'rejestratory-nvr-dvr', sortOrder: 3 }, 'NVR/DVR recorders', 'NVR/DVR-Rekorder'),
+          withTranslations({ name: 'Zestawy monitoringu', slug: 'zestawy-monitoringu', sortOrder: 4 }, 'Surveillance kits', 'Überwachungssets'),
+        ]
+      }, 'Monitoring and CCTV', 'Überwachung und CCTV'),
+
+      withSubTranslations({
+        name: 'Kontrola dostępu',
+        slug: 'kontrola-dostepu',
+        icon: '🚪',
+        sortOrder: 2,
+        subcategories: [
+          withTranslations({ name: 'Wideodomofony', slug: 'wideodomofony', sortOrder: 1 }, 'Video intercoms', 'Video-Gegensprechanlagen'),
+          withTranslations({ name: 'Czytniki RFID', slug: 'czytniki-rfid', sortOrder: 2 }, 'RFID readers', 'RFID-Leser'),
+          withTranslations({ name: 'Elektrozaczepy i zamki', slug: 'elektrozaczepy-zamki', sortOrder: 3 }, 'Electric strikes and locks', 'Elektrische Türöffner und Schlösser'),
+          withTranslations({ name: 'Systemy kodowe', slug: 'systemy-kodowe', sortOrder: 4 }, 'Keypad systems', 'Codeschlosssysteme'),
+        ]
+      }, 'Access control', 'Zutrittskontrolle'),
+
+      withSubTranslations({
+        name: 'Alarmy i czujniki',
+        slug: 'alarmy-czujniki',
+        icon: '🚨',
+        sortOrder: 3,
+        subcategories: [
+          withTranslations({ name: 'Centrale alarmowe', slug: 'centrale-alarmowe', sortOrder: 1 }, 'Alarm control panels', 'Alarmzentralen'),
+          withTranslations({ name: 'Czujniki ruchu i otwarcia', slug: 'czujniki-ruchu-otwarcia', sortOrder: 2 }, 'Motion and door sensors', 'Bewegungs- und Türsensoren'),
+          withTranslations({ name: 'Czujniki dymu i gazu', slug: 'czujniki-dymu-gazu', sortOrder: 3 }, 'Smoke and gas detectors', 'Rauch- und Gasmelder'),
+          withTranslations({ name: 'Syreny i moduły GSM', slug: 'syreny-moduly-gsm', sortOrder: 4 }, 'Sirens and GSM modules', 'Sirenen und GSM-Module'),
+        ]
+      }, 'Alarms and sensors', 'Alarme und Sensoren'),
+
+      withSubTranslations({
+        name: 'Ochrona osobista',
+        slug: 'ochrona-osobista',
+        icon: '🦺',
+        sortOrder: 4,
+        subcategories: [
+          withTranslations({ name: 'Latarki taktyczne', slug: 'latarki-taktyczne', sortOrder: 1 }, 'Tactical flashlights', 'Taktische Taschenlampen'),
+          withTranslations({ name: 'Kamizelki i ochraniacze', slug: 'kamizelki-ochraniacze', sortOrder: 2 }, 'Vests and protectors', 'Westen und Schutzausrüstung'),
+          withTranslations({ name: 'Sejfy i skrytki', slug: 'sejfy-skrytki', sortOrder: 3 }, 'Safes and lockboxes', 'Safes und Geldkassetten'),
+          withTranslations({ name: 'Akcesoria bezpieczeństwa', slug: 'akcesoria-bezpieczenstwa', sortOrder: 4 }, 'Safety accessories', 'Sicherheitszubehör'),
+        ]
+      }, 'Personal safety', 'Persönliche Sicherheit'),
+    ]
+  },
+  'Safety and Security',
+  'Monitoring, access control, alarms and personal safety',
+  'Sicherheit und Schutz',
+  'Überwachung, Zutrittskontrolle, Alarmanlagen und persönlicher Schutz'
   ),
 ];
 

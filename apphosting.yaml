@@ -130,6 +130,10 @@ env:
     secret: ALIEXPRESS_REGION
     availability:
       - RUNTIME
+  - variable: ALIEXPRESS_RATE_LIMIT
+    value: '50'
+    availability:
+      - RUNTIME
 
   # Convertiser API (server-side only)
   - variable: CONVERTISER_API_TOKEN

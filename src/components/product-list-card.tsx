@@ -362,10 +362,11 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           onClick={(e) => {
             e.preventDefault();
             addItem({
-              id: bestDeal?.id || productId,
+              id: productId,
               name: getText(product.title) || 'Produkt',
               image: Array.isArray(product.images) ? product.images[0] : '',
               price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
+              bestDealId: bestDeal?.id,
               affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.affiliateUrl || bestDeal?.dealUrl || bestDeal?.sourceUrl || bestDeal?.link),
             } as any, 1);
           }}

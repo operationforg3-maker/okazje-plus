@@ -1927,31 +1927,35 @@ export class SmartHarvester {
       // Keep small batch to avoid long tail latency and rate limits
       const productsToEnrich = rankedProducts.slice(0, 10);
       
-      const detailedProducts = await Promise.all(
-        productsToEnrich.map(async (p: any) => {
-          try {
-            // Only fetch details if we have an ID
-            const pid = String(p.item_id || p.product_id || '');
-            if (!pid) return p;
+      const detailedProducts: any[] = [];
+      const detailDelayMs = 1200;
 
-            // Fetch details (includes HTML description now)
-            const details = await client.getProductDetails({
-              productId: pid,
-              targetCurrency: 'PLN',
-              targetLanguage: 'EN',
-              shipToCountry: 'PL'
-            });
-
-            if (details) {
-              return { ...p, ...details }; // Merge details into product
-            }
-            return p;
-          } catch (e) {
-            // Fail silently on detail fetch, keep basic info
-            return p;
+      for (const p of productsToEnrich) {
+        try {
+          const pid = String(p.item_id || (p as any).product_id || '');
+          if (!pid) {
+            detailedProducts.push(p);
+            continue;
           }
-        })
-      );
+
+          const details = await client.getProductDetails({
+            productId: pid,
+            targetCurrency: 'PLN',
+            targetLanguage: 'EN',
+            shipToCountry: 'PL'
+          });
+
+          if (details) {
+            detailedProducts.push({ ...p, ...details });
+          } else {
+            detailedProducts.push(p);
+          }
+        } catch (e) {
+          detailedProducts.push(p);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, detailDelayMs));
+      }
       
       // Transform to RawProduct format
       return await Promise.all(detailedProducts.map(async (p: any) => {

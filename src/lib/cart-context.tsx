@@ -155,22 +155,55 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    * Add item to cart
    */
   const addItem = (product: Product, quantity: number = 1) => {
+    const toNumber = (value: unknown): number => {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      if (typeof value === 'string') {
+        const parsed = Number(value.replace(',', '.'));
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
+    const normalizedProduct = (() => {
+      const existingPrice = getPriceAmount((product as any).price);
+      if (existingPrice > 0) return product;
+
+      const bestPrice = (product as any).bestPrice;
+      const amount =
+        toNumber(bestPrice?.amount) ||
+        toNumber(bestPrice?.totalPrice) ||
+        toNumber((product as any).priceAmount) ||
+        toNumber((product as any).price);
+
+      if (amount <= 0) return product;
+
+      return {
+        ...product,
+        price: {
+          amount,
+          currency: (bestPrice?.currency || 'PLN'),
+          shippingCost: toNumber(bestPrice?.shippingCost),
+          totalPrice: toNumber(bestPrice?.totalPrice) || (amount + toNumber(bestPrice?.shippingCost)),
+        },
+      } as Product;
+    })();
+
     setItems(prev => {
-      const existingIndex = prev.findIndex(item => item.product?.id === product.id);
+      const existingIndex = prev.findIndex(item => item.product?.id === normalizedProduct.id);
       
       if (existingIndex >= 0) {
         // Update quantity if already in cart
         const updated = [...prev];
         updated[existingIndex].quantity += quantity;
-        logger.info(`Updated cart item quantity: ${product.name}`, {
+        logger.info(`Updated cart item quantity: ${normalizedProduct.name}`, {
           newQuantity: updated[existingIndex].quantity,
         });
         return updated;
       } else {
         // Add new item
-        logger.info(`Added item to cart: ${product.name}`);
+        logger.info(`Added item to cart: ${normalizedProduct.name}`);
         return [...prev, {
-          product,
+          product: normalizedProduct,
           quantity,
           addedAt: new Date().toISOString(),
         }];
@@ -272,12 +305,35 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    * Calculate total amount (products only, no shipping)
    */
   const totalAmount = items.reduce((sum, item) => {
+    const toNumber = (value: unknown): number => {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      if (typeof value === 'string') {
+        const parsed = Number(value.replace(',', '.'));
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
     let price = 0;
     if (item.product) {
       price = getPriceAmount(item.product.price);
+      if (price <= 0) {
+        const bestPrice = (item.product as any).bestPrice;
+        price =
+          toNumber(bestPrice?.amount) ||
+          toNumber(bestPrice?.totalPrice) ||
+          toNumber((item.product as any).priceAmount) ||
+          toNumber((item.product as any).price);
+      }
     } else if (item.deal) {
       const p = item.deal.price;
-      price = typeof p === 'object' ? p.amount : (p || 0);
+      price = typeof p === 'object' ? toNumber((p as any).amount) : toNumber(p);
+      if (price <= 0) {
+        price =
+          toNumber((item.deal as any)?.bestPrice?.amount) ||
+          toNumber((item.deal as any)?.bestPrice?.totalPrice) ||
+          toNumber((item.deal as any)?.totalPrice);
+      }
     }
     return sum + (price * item.quantity);
   }, 0);
@@ -286,14 +342,37 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
    * Calculate total with shipping (total landed cost)
    */
   const totalWithShipping = items.reduce((sum, item) => {
+    const toNumber = (value: unknown): number => {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      if (typeof value === 'string') {
+        const parsed = Number(value.replace(',', '.'));
+        return Number.isFinite(parsed) ? parsed : 0;
+      }
+      return 0;
+    };
+
     let totalPrice = 0;
     if (item.product) {
       totalPrice = getTotalPrice(item.product.price);
+      if (totalPrice <= 0) {
+        const bestPrice = (item.product as any).bestPrice;
+        const amount =
+          toNumber(bestPrice?.amount) ||
+          toNumber((item.product as any).priceAmount) ||
+          toNumber((item.product as any).price);
+        const shipping = toNumber(bestPrice?.shippingCost);
+        totalPrice = toNumber(bestPrice?.totalPrice) || (amount + shipping);
+      }
     } else if (item.deal) {
       const p = item.deal.price;
-      const priceVal = typeof p === 'object' ? p.amount : (p || 0);
-      const shipping = item.deal.shippingCost || 0;
+      const priceVal = typeof p === 'object' ? toNumber((p as any).amount) : toNumber(p);
+      const shipping = toNumber((item.deal as any).shippingCost);
       totalPrice = priceVal + shipping;
+      if (totalPrice <= 0) {
+        totalPrice =
+          toNumber((item.deal as any)?.bestPrice?.totalPrice) ||
+          (toNumber((item.deal as any)?.bestPrice?.amount) + toNumber((item.deal as any)?.bestPrice?.shippingCost));
+      }
     }
     return sum + (totalPrice * item.quantity);
   }, 0);

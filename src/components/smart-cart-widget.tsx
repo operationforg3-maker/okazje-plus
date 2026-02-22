@@ -183,16 +183,56 @@ export function SmartCartWidget() {
       {/* Cart Items */}
       <div className="space-y-4">
         {items.map(item => {
+          const toNumber = (value: unknown): number => {
+            if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+            if (typeof value === 'string') {
+              const parsed = Number(value.replace(',', '.'));
+              return Number.isFinite(parsed) ? parsed : 0;
+            }
+            return 0;
+          };
+
           const priceSource = item.product ? item.product.price : item.deal!.price;
-          const price = getPriceAmount(priceSource);
-          const totalPrice = getTotalPrice(priceSource);
-          const freeShipping = isFreeShipping(priceSource);
+          let price = getPriceAmount(priceSource);
+          let totalPrice = getTotalPrice(priceSource);
+
+          if (item.product && (price <= 0 || totalPrice <= 0)) {
+            const bestPrice = (item.product as any).bestPrice;
+            const fallbackAmount =
+              toNumber(bestPrice?.amount) ||
+              toNumber(bestPrice?.totalPrice) ||
+              toNumber((item.product as any).priceAmount) ||
+              toNumber((item.product as any).price);
+            const fallbackShipping = toNumber(bestPrice?.shippingCost);
+            const fallbackTotal = toNumber(bestPrice?.totalPrice) || (fallbackAmount + fallbackShipping);
+
+            if (price <= 0) price = fallbackAmount;
+            if (totalPrice <= 0) totalPrice = fallbackTotal;
+          }
+
+          if (item.deal && (price <= 0 || totalPrice <= 0)) {
+            const dealPrice = (item.deal as any).price;
+            const fallbackAmount = typeof dealPrice === 'object'
+              ? toNumber(dealPrice?.amount)
+              : toNumber(dealPrice);
+            const fallbackShipping = toNumber((item.deal as any).shippingCost);
+            const fallbackTotal =
+              toNumber((item.deal as any)?.bestPrice?.totalPrice) ||
+              (fallbackAmount + fallbackShipping);
+
+            if (price <= 0) price = fallbackAmount;
+            if (totalPrice <= 0) totalPrice = fallbackTotal;
+          }
+
+          const freeShipping = (totalPrice - price) <= 0 || isFreeShipping(priceSource);
           const title = item.product
             ? (item.product.title ? getText(item.product.title) : (item.product.name || 'Produkt'))
             : (typeof (item.deal as any)?.title === 'object' ? getText((item.deal as any).title) : ((item.deal as any)?.title || 'Okazja'));
 
+          const itemKey = item.product?.id ?? item.deal?.id ?? `${title}-${item.addedAt}`;
+
           return (
-            <Card key={item.product.id} className="p-4">
+            <Card key={itemKey} className="p-4">
               <div className="flex gap-4">
                 {/* Product Image */}
                 <div className="relative h-20 w-20 flex-shrink-0">
