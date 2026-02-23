@@ -787,9 +787,11 @@ export class AliExpressClient {
       const responseData = result[responseKey];
       
       // Check response code (can be string "200" or number 200)
-      // Response structure: { resp_code: 200, resp_msg: "...", result: {...} }
-      const respCode = responseData?.resp_code;
-      if (!responseData || (respCode !== 200 && respCode !== '200')) {
+      // Actual AliExpress Affiliate API response structure (per ae_sdk / official types):
+      // { [method_response_key]: { resp_result: { resp_code: 200, resp_msg: "...", result: { products: [], total_record_count: N } } } }
+      const respResult = responseData?.resp_result;
+      const respCode = respResult?.resp_code;
+      if (!responseData || !respResult || (respCode !== 200 && respCode !== '200')) {
         logger.warn('TOP API returned error', { responseData });
         return {
           success: false,
@@ -798,18 +800,18 @@ export class AliExpressClient {
           page_size: pageSize,
           products: [],
           error: {
-            code: responseData?.resp_code || 'UNKNOWN',
-            message: responseData?.resp_msg || 'API error',
+            code: respResult?.resp_code || 'UNKNOWN',
+            message: respResult?.resp_msg || 'API error',
           },
         };
       }
       
-      // Response structure: { resp_code: 200, result: { products: [...], total_record_count: N } }
-      const resultData = responseData.result;
-      const products = Array.isArray(resultData.products) ? resultData.products : [];
+      // result.products is a direct array (not XML-style .product wrapper)
+      const resultData = respResult.result;
+      const products = Array.isArray(resultData?.products) ? resultData.products : [];
       
       logger.info(`TOP API returned ${products.length} products`, { 
-        total: resultData.total_record_count,
+        total: resultData?.total_record_count,
         page,
       });
       
@@ -883,7 +885,7 @@ export class AliExpressClient {
       
       return {
         success: true,
-        total: resultData.total_record_count || products.length,
+        total: resultData?.total_record_count || products.length,
         page,
         page_size: pageSize,
         products: transformedProducts,
@@ -1318,16 +1320,18 @@ export class AliExpressClient {
       
       const result = await this.request<any>('aliexpress.affiliate.hotproduct.query', params);
       
-      // Parse response
+      // Parse response - same structure as product.query:
+      // { aliexpress_affiliate_hotproduct_query_response: { resp_result: { resp_code, resp_msg, result: { products: [] } } } }
       const responseKey = Object.keys(result)[0];
       const responseData = result[responseKey];
+      const respResult = responseData?.resp_result;
       
-      if (!responseData || responseData.resp_code !== 200) {
-        logger.warn('Hot products fetch failed', { responseData });
+      if (!responseData || !respResult || (respResult.resp_code !== 200 && respResult.resp_code !== '200')) {
+        logger.warn('Hot products fetch failed', { respResult });
         return [];
       }
       
-      const products = responseData.result?.products || [];
+      const products: any[] = Array.isArray(respResult.result?.products) ? respResult.result.products : [];
       
       logger.info(`Fetched ${products.length} hot products`);
       

@@ -247,13 +247,15 @@ export async function fetchProductsFromAliexpress(
         
         let products: any[] = [];
         
-        // Parse Deep Response Structure from Affiliate API
-        // Structure: response.aliexpress_affiliate_product_query_response.resp_result.result.products.product
-        if (response?.aliexpress_affiliate_product_query_response?.resp_result?.result?.products?.product) {
-             products = response.aliexpress_affiliate_product_query_response.resp_result.result.products.product;
+        // Parse Affiliate API response structure (per ae_sdk / official types):
+        // { aliexpress_affiliate_product_query_response: { resp_result: { result: { products: [] } } } }
+        // products is a direct array (NOT XML-style .product wrapper)
+        const respResult = response?.aliexpress_affiliate_product_query_response?.resp_result;
+        if (Array.isArray(respResult?.result?.products)) {
+             products = respResult.result.products;
         } 
         // Fallback or simplified response check
-        else if (response?.products) { 
+        else if (Array.isArray(response?.products)) { 
              products = response.products;
         }
         

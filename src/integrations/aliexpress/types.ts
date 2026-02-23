@@ -216,3 +216,128 @@ export interface AliExpressApiError {
   details?: any;
   timestamp: string;
 }
+
+// ============================================================
+// RAW AFFILIATE API RESPONSE TYPES (source of truth)
+// Based on AliExpress Open Platform types (ae_sdk / official docs)
+// ============================================================
+
+/**
+ * Single product as returned by the Affiliate API
+ * Methods: aliexpress.affiliate.product.query, aliexpress.affiliate.hotproduct.query,
+ *          aliexpress.affiliate.productdetail.get
+ *
+ * Reference: https://openservice.aliexpress.com/doc/api.htm
+ */
+export interface AffiliateProductRaw {
+  product_id?: number | string;
+  product_title?: string;
+  product_main_image_url?: string;
+  /** Gallery thumbnails – direct string array */
+  product_small_image_urls?: string[];
+  product_video_url?: string;
+  product_detail_url?: string;
+  promotion_link?: string;
+
+  /** Price in original seller currency */
+  sale_price?: string;
+  sale_price_currency?: string;
+  original_price?: string;
+  original_price_currency?: string;
+
+  /** Price converted to target_currency requested in the API call */
+  target_sale_price?: string;
+  target_sale_price_currency?: string;
+  target_original_price?: string;
+  target_original_price_currency?: string;
+
+  /** App-exclusive price */
+  app_sale_price?: string;
+  app_sale_price_currency?: string;
+  target_app_sale_price?: string;
+  target_app_sale_price_currency?: string;
+
+  /** Discount percentage as string, e.g. "23" */
+  discount?: string;
+
+  /** Affiliate commission rate, e.g. "0.08" */
+  commission_rate?: string;
+  hot_product_commission_rate?: string;
+  relevant_market_commission_rate?: string;
+
+  /** Rating 0–5 as string, e.g. "4.9" */
+  evaluate_rate?: string;
+
+  /** Sales / order volume – field name is intentional (AliExpress typo in API) */
+  lastest_volume?: number | string;
+
+  shop_id?: number | string;
+  shop_url?: string;
+
+  first_level_category_id?: number;
+  first_level_category_name?: string;
+  second_level_category_id?: number;
+  second_level_category_name?: string;
+
+  /** Estimated delivery days as string */
+  ship_to_days?: string;
+
+  promo_code_info?: {
+    promo_code?: string;
+    code_value?: string;
+    code_mini_spend?: string;
+    code_quantity?: string;
+    code_availabletime_start?: string;
+    code_availabletime_end?: string;
+    code_promotionurl?: string;
+  };
+}
+
+/**
+ * Paginated cursor result – wraps the products array
+ */
+export interface AffiliateProductsCursor {
+  products?: AffiliateProductRaw[];
+  current_record_count?: number;
+  current_page_no?: number;
+  total_page_no?: number;
+  total_record_count?: number;
+  is_finished?: boolean;
+}
+
+/**
+ * Inner resp_result envelope shared by all Affiliate product methods
+ */
+export interface AffiliateRespResult {
+  resp_code?: number | string;
+  resp_msg?: string;
+  result?: AffiliateProductsCursor;
+}
+
+/**
+ * Top-level response for aliexpress.affiliate.product.query
+ */
+export interface AffiliateProductQueryResponse {
+  aliexpress_affiliate_product_query_response?: {
+    resp_result?: AffiliateRespResult;
+  };
+}
+
+/**
+ * Top-level response for aliexpress.affiliate.hotproduct.query
+ */
+export interface AffiliateHotproductQueryResponse {
+  aliexpress_affiliate_hotproduct_query_response?: {
+    resp_result?: AffiliateRespResult;
+  };
+}
+
+/**
+ * Top-level response for aliexpress.affiliate.productdetail.get
+ */
+export interface AffiliateProductDetailResponse {
+  aliexpress_affiliate_productdetail_get_response?: {
+    resp_result?: AffiliateRespResult;
+  };
+}
+
