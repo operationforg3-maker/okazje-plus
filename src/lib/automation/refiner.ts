@@ -45,10 +45,10 @@ export class AIRefiner {
       const totalProducts = snapshot.docs.length;
       this.addLog('info', `Found ${totalProducts} products to refine (limit: ${limit})`);
 
-      let processCount = 0;
+      const docs = snapshot.docs.slice(0, limit);
+      const BATCH_SIZE = 10;
 
-      // Iterate through each product document
-      for (const doc of snapshot.docs) {
+      for (let i = 0; i < docs.length; i += BATCH_SIZE) {
         // Check for stop signal
         if (!(await this.isJobActive())) {
            this.addLog('warn', 'Refiner job stopped externally');
@@ -69,40 +69,43 @@ export class AIRefiner {
             return jobStopped;
         }
 
-        if (processCount >= limit) {
-          this.addLog('info', `Reached limit of ${limit} products. Stopping.`);
-          break;
-        }
+        const batchDocs = docs.slice(i, i + BATCH_SIZE);
+        const promises = batchDocs.map(async (doc) => {
+          const productId = doc.id;
+          const product = doc.data() as ProductCore;
+          processedIds.push(productId);
 
-        const productId = doc.id;
-        const product = doc.data() as ProductCore;
-        processedIds.push(productId);
+          try {
+            this.addLog('info', `Refining product: ${product.title.pl || 'Unknown'}`);
 
-        try {
-          this.addLog('info', `Refining product ${processCount + 1}/${Math.min(limit, totalProducts)}: ${product.title.pl || 'Unknown'}`);
+            // Perform refinement based on type
+            const refined = await this.performRefinement(product, refinationType);
 
-          // Perform refinement based on type
-          const refined = await this.performRefinement(product, refinationType);
-
-          if (!dryRun) {
-            // Update product in Firestore
-            await this.updateProduct(productId, refined);
-            this.addLog('success', `Refined & Saved ${product.title.pl || 'Unknown'}`, { productId, refinationType });
-          } else {
-             this.addLog('info', `[DRY-RUN] Would save changes for ${product.title.pl}`, { refined });
+            if (!dryRun) {
+              // Update product in Firestore
+              await this.updateProduct(productId, refined);
+              this.addLog('success', `Refined & Saved ${product.title.pl || 'Unknown'}`, { productId, refinationType });
+            } else {
+               this.addLog('info', `[DRY-RUN] Would save changes for ${product.title.pl}`, { refined });
+            }
+            return true;
+          } catch (err) {
+            this.addLog(
+              'failed',
+              `Failed to refine ${product.title.pl || 'Unknown'}`,
+              { error: (err as Error).message }
+            );
+            return false;
           }
-          
-          productsSuccessful++;
-        } catch (err) {
-          this.addLog(
-            'failed',
-            `Failed to refine ${product.title.pl || 'Unknown'}`,
-            { error: (err as Error).message }
-          );
-          productsFailed++;
-        }
+        });
 
-        processCount++;
+        const results = await Promise.all(promises);
+        results.forEach(success => {
+          if (success) productsSuccessful++;
+          else productsFailed++;
+        });
+
+        this.addLog('info', `Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(docs.length / BATCH_SIZE)} (${productsSuccessful + productsFailed}/${docs.length})`);
       }
 
       const job: RefinerJob = {
@@ -139,11 +142,12 @@ export class AIRefiner {
     const jobStartTime = new Date().toISOString();
     let productsSuccessful = 0;
     let productsFailed = 0;
+    const BATCH_SIZE = 10; // Process 10 products in parallel
 
     try {
-      console.log(`Starting AI refinement job for ${productIds.length} products (dryRun=${dryRun})`);
+      console.log(`Starting AI refinement job for ${productIds.length} products (dryRun=${dryRun}, batchSize=${BATCH_SIZE})`);
 
-      for (const productId of productIds) {
+      for (let i = 0; i < productIds.length; i += BATCH_SIZE) {
         // Check for stop signal
         if (!(await this.isJobActive())) {
              this.addLog('warn', 'Refinement stopped externally');
@@ -164,47 +168,39 @@ export class AIRefiner {
               return jobStopped;
         }
 
-        try {
-          const product = await this.getProduct(productId);
-          if (!product) {
-            this.addLog(
-              productId,
-              'failed',
-              'Product not found'
-            );
-            productsFailed++;
-            continue;
+        const batchIds = productIds.slice(i, i + BATCH_SIZE);
+        const promises = batchIds.map(async (productId) => {
+          try {
+            const product = await this.getProduct(productId);
+            if (!product) {
+              this.addLog(productId, 'failed', 'Product not found');
+              return false;
+            }
+
+            // Perform refinement based on type
+            const refined = await this.performRefinement(product, refinationType);
+
+            if (!dryRun) {
+              // Update product in Firestore
+              await this.updateProduct(productId, refined);
+              this.addLog(productId, 'success', `Refined with ${refinationType}`);
+            } else {
+              this.addLog(productId, 'success', `[DRY-RUN] Would refine with ${refinationType}`);
+            }
+            return true;
+          } catch (err) {
+            this.addLog(productId, 'failed', (err as Error).message);
+            return false;
           }
+        });
 
-          // Perform refinement based on type
-          const refined = await this.performRefinement(product, refinationType);
+        const results = await Promise.all(promises);
+        results.forEach(success => {
+          if (success) productsSuccessful++;
+          else productsFailed++;
+        });
 
-          if (!dryRun) {
-            // Update product in Firestore
-            await this.updateProduct(productId, refined);
-            this.addLog(
-              productId,
-              'success',
-              `Refined with ${refinationType}`
-            );
-          } else {
-            console.log(`[DRY-RUN] Refined data for ${productId}:`, JSON.stringify(refined, null, 2));
-             this.addLog(
-              productId,
-              'success',
-              `[DRY-RUN] Would refine with ${refinationType}`
-            );
-          }
-
-          productsSuccessful++;
-        } catch (err) {
-          this.addLog(
-            productId,
-            'failed',
-            (err as Error).message
-          );
-          productsFailed++;
-        }
+        this.addLog('info', `Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(productIds.length / BATCH_SIZE)} (${productsSuccessful + productsFailed}/${productIds.length})`);
       }
 
       const job: RefinerJob = {
