@@ -312,6 +312,9 @@ function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
   const deal: DealM6 = {
     id: oldDeal.id,
     productId,
+    mainCategorySlug: oldDeal.mainCategorySlug,
+    subCategorySlug: oldDeal.subCategorySlug,
+    subSubCategorySlug: oldDeal.subSubCategorySlug,
     price: {
       amount: typeof oldDeal.price === 'object' ? (oldDeal.price as any).amount : oldDeal.price || 0,
       currency: oldDeal.importMetadata?.source?.includes('allegro') ? 'PLN' : 'USD',

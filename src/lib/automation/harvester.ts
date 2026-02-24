@@ -827,24 +827,37 @@ export class SmartHarvester {
     upc?: string;
     mpn?: string;
   }): Promise<ProductCore | null> {
-    const checks: Array<{ field: string; value?: string }> = [
-      { field: 'metadata.identifiers.ean', value: identifiers.ean },
-      { field: 'metadata.identifiers.gtin', value: identifiers.gtin },
-      { field: 'metadata.identifiers.upc', value: identifiers.upc },
-      { field: 'metadata.identifiers.mpn', value: identifiers.mpn },
+    const queries: Array<{ field: string; value: string }> = [];
+    const fields = [
+      { name: 'ean', field: 'metadata.identifiers.ean' },
+      { name: 'gtin', field: 'metadata.identifiers.gtin' },
+      { name: 'upc', field: 'metadata.identifiers.upc' },
+      { name: 'mpn', field: 'metadata.identifiers.mpn' },
     ];
 
-    for (const check of checks) {
-      if (!check.value) continue;
-      const normalized = normalizeProductIdentifier(check.value);
-      if (!normalized) continue;
+    for (const f of fields) {
+      const val = (identifiers as any)[f.name];
+      if (val) {
+        const normalized = normalizeProductIdentifier(val);
+        if (normalized) {
+          queries.push({ field: f.field, value: normalized });
+        }
+      }
+    }
 
-      const snap = await adminDb
-        .collection('product_cores')
-        .where(check.field, '==', normalized)
-        .limit(1)
-        .get();
+    if (queries.length === 0) return null;
 
+    // Run all identifier queries in parallel
+    const snapshots = await Promise.all(
+      queries.map(q =>
+        adminDb.collection('product_cores')
+          .where(q.field, '==', q.value)
+          .limit(1)
+          .get()
+      )
+    );
+
+    for (const snap of snapshots) {
       if (!snap.empty) {
         const doc = snap.docs[0];
         return {
@@ -962,7 +975,12 @@ export class SmartHarvester {
   private async prepareDeal(
     productId: string,
     sourceProduct: RawProduct,
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser'
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+    categoryInfo?: {
+      mainCategorySlug: string;
+      subCategorySlug: string;
+      subSubCategorySlug?: string;
+    }
   ) {
     const now = new Date().toISOString();
     const dealRef = adminDb.collection('deals').doc();
@@ -984,6 +1002,9 @@ export class SmartHarvester {
       id: dealRef.id,
       productId,
       productCoreId: productId,
+      mainCategorySlug: categoryInfo?.mainCategorySlug,
+      subCategorySlug: categoryInfo?.subCategorySlug,
+      subSubCategorySlug: categoryInfo?.subSubCategorySlug,
       image: primaryImage,
       images: galleryImages,
       price: {
@@ -1035,55 +1056,53 @@ export class SmartHarvester {
     const uniqueIds = Array.from(new Set(productIds.filter(Boolean)));
     if (uniqueIds.length === 0) return;
 
-    let batch = adminDb.batch();
-    let batchCount = 0;
+    const CHUNK_SIZE = 10;
+    for (let i = 0; i < uniqueIds.length; i += CHUNK_SIZE) {
+      const chunk = uniqueIds.slice(i, i + CHUNK_SIZE);
+      const batch = adminDb.batch();
 
-    for (const productId of uniqueIds) {
-      const dealsSnap = await adminDb
-        .collection('deals')
-        .where('productId', '==', productId)
-        .get();
+      const dealsSnapshots = await Promise.all(
+        chunk.map(id =>
+          adminDb.collection('deals')
+            .where('productId', '==', id)
+            .get()
+        )
+      );
 
-      if (dealsSnap.empty) {
-        this.addLog('warn', `Brak ofert do przeliczenia bestPrice dla produktu: ${productId}`);
-        continue;
-      }
+      chunk.forEach((productId, idx) => {
+        const dealsSnap = dealsSnapshots[idx];
+        if (dealsSnap.empty) {
+          this.addLog('warn', `Brak ofert do przeliczenia bestPrice dla produktu: ${productId}`);
+          return;
+        }
 
-      const deals = dealsSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as DealM6),
-      }));
+        const deals = dealsSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as DealM6),
+        }));
 
-      const bestDeal = deals.reduce((best, current) => {
-        const bestPrice = Number(best.price?.amount || 0) + Number(best.shipping?.cost || 0);
-        const currentPrice = Number(current.price?.amount || 0) + Number(current.shipping?.cost || 0);
-        return currentPrice < bestPrice ? current : best;
+        const bestDeal = deals.reduce((best, current) => {
+          const bestPrice = Number(best.price?.amount || 0) + Number(best.shipping?.cost || 0);
+          const currentPrice = Number(current.price?.amount || 0) + Number(current.shipping?.cost || 0);
+          return currentPrice < bestPrice ? current : best;
+        });
+
+        const bestTotalPrice = Number(bestDeal.price?.amount || 0) + Number(bestDeal.shipping?.cost || 0);
+        const bestCurrency = (bestDeal.price?.currency as any) || 'PLN';
+
+        const productRef = adminDb.collection('product_cores').doc(productId);
+        batch.update(productRef, {
+          bestPrice: {
+            amount: bestTotalPrice,
+            currency: bestCurrency,
+          },
+          bestTotalPrice: bestTotalPrice,
+          bestDealId: bestDeal.id,
+          linkedDealIds: deals.map((deal) => deal.id),
+          updatedAt: new Date().toISOString(),
+        });
       });
 
-      const bestTotalPrice = Number(bestDeal.price?.amount || 0) + Number(bestDeal.shipping?.cost || 0);
-      const bestCurrency = (bestDeal.price?.currency as any) || 'PLN';
-
-      const productRef = adminDb.collection('product_cores').doc(productId);
-      batch.update(productRef, {
-        bestPrice: {
-          amount: bestTotalPrice,
-          currency: bestCurrency,
-        },
-        bestTotalPrice: bestTotalPrice,
-        bestDealId: bestDeal.id,
-        linkedDealIds: deals.map((deal) => deal.id),
-        updatedAt: new Date().toISOString(),
-      });
-
-      batchCount += 1;
-      if (batchCount >= 450) {
-        await batch.commit();
-        batch = adminDb.batch();
-        batchCount = 0;
-      }
-    }
-
-    if (batchCount > 0) {
       await batch.commit();
     }
   }
@@ -1367,6 +1386,7 @@ export class SmartHarvester {
             const batch = adminDb.batch();
             const productsToRecalculate = new Set<string>();
             const newProductsForCache = [];
+            const dealsForModeration: string[] = [];
 
             for (const sourceProduct of chunk) {
               try {
@@ -1417,18 +1437,20 @@ export class SmartHarvester {
                     throw new Error('Existing product missing valid id');
                   }
 
-                  const { dealData, dealRef } = await this.prepareDeal(existingProduct.id, sourceProduct, source);
+                  const { dealData, dealRef } = await this.prepareDeal(
+                    existingProduct.id,
+                    sourceProduct,
+                    source,
+                    {
+                      mainCategorySlug: existingProduct.mainCategorySlug,
+                      subCategorySlug: existingProduct.subCategorySlug,
+                      subSubCategorySlug: existingProduct.subSubCategorySlug,
+                    }
+                  );
                   batch.set(dealRef, dealData);
                   dealsCreated++;
                   dealsToRefine.push(dealRef.id);
-
-                  // Add deal to moderation queue for admin review
-                  try {
-                    await addToModerationQueue(dealRef.id, 'deal', 'import', 'harvester', 'high');
-                    this.addLog('info', `Deal ${dealRef.id} added to moderation queue`);
-                  } catch (err) {
-                    this.addLog('warn', `Failed to add deal ${dealRef.id} to moderation queue`, err);
-                  }
+                  dealsForModeration.push(dealRef.id);
 
                   // Mark for best price recalculation (batch later)
                   productsToRecalculate.add(existingProduct.id);
@@ -1488,20 +1510,14 @@ export class SmartHarvester {
                   const { dealData, dealRef } = await this.prepareDeal(
                     productId,
                     sourceProduct,
-                    source
+                    source,
+                    categoryInfo
                   );
                   batch.set(dealRef, dealData);
                   const dealId = dealRef.id;
                   dealsCreated++;
                   dealsToRefine.push(dealId);
-
-                  // Add deal to moderation queue for admin review
-                  try {
-                    await addToModerationQueue(dealId, 'deal', 'import', 'harvester', 'high');
-                    this.addLog('info', `Deal ${dealId} added to moderation queue`);
-                  } catch (err) {
-                    this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
-                  }
+                  dealsForModeration.push(dealId);
 
                   // Mark for best price recalculation (batch later)
                   productsToRecalculate.add(productId);
@@ -1584,6 +1600,22 @@ export class SmartHarvester {
             this.addLog('info', `Committing batch of ${chunk.length} products.`);
             await batch.commit();
             this.addLog('info', 'Batch committed successfully.');
+
+            // Process moderation queue in parallel (small chunks to avoid AI rate limits)
+            if (dealsForModeration.length > 0) {
+              const MOD_CHUNK_SIZE = 5;
+              for (let i = 0; i < dealsForModeration.length; i += MOD_CHUNK_SIZE) {
+                const modChunk = dealsForModeration.slice(i, i + MOD_CHUNK_SIZE);
+                await Promise.all(modChunk.map(async (dealId) => {
+                  try {
+                    await addToModerationQueue(dealId, 'deal', 'import', 'harvester', 'high');
+                  } catch (err) {
+                    this.addLog('warn', `Failed to add deal ${dealId} to moderation queue`, err);
+                  }
+                }));
+              }
+              this.addLog('info', `Added ${dealsForModeration.length} deals to moderation queue`);
+            }
 
             // Batch update best prices for this chunk
             if (productsToRecalculate.size > 0) {

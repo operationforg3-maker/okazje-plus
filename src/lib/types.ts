@@ -2414,6 +2414,11 @@ export interface DealM6 {
   /** Alias for master schema compatibility */
   productCoreId?: string;
   
+  // Denormalized Taxonomy (for fast queries)
+  mainCategorySlug?: string;
+  subCategorySlug?: string;
+  subSubCategorySlug?: string;
+
   // Pricing (Omnibus Directive Compliance)
   price: {
     amount: number;
