@@ -5,6 +5,7 @@
   "scripts": {
     "predev": "node ./scripts/generate-build-info.js",
     "dev": "next dev -p 9002",
+    "dev:clean": "rm -rf .next && npm run dev",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "dev:deals-flow": "tsx src/ai/dev-deals.ts",

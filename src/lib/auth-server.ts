@@ -12,6 +12,7 @@ export interface ServerAuthSession {
   email: string | undefined;
   role: 'admin' | 'moderator' | 'user';
   emailVerified: boolean;
+  signInProvider?: string;
 }
 
 /**
@@ -64,6 +65,7 @@ export async function getServerAuthSession(): Promise<ServerAuthSession | null> 
       email: decodedToken.email,
       role,
       emailVerified: decodedToken.email_verified || false,
+      signInProvider: (decodedToken as any)?.firebase?.sign_in_provider,
     };
   } catch (error: any) {
     // Suppress expected errors like expired tokens

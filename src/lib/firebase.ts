@@ -1,6 +1,6 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, Firestore } from "firebase/firestore";
 import { getFunctions, Functions } from "firebase/functions";
 
 const isServer = typeof window === 'undefined';
@@ -66,7 +66,15 @@ if (isBuildTime && process.env.NODE_ENV !== 'production') {
 
 app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 auth = getAuth(app);
-db = getFirestore(app);
+
+if (typeof window !== 'undefined') {
+  db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  });
+} else {
+  db = getFirestore(app);
+}
+
 functions = getFunctions(app, 'europe-west1'); // Region zgodny z App Hosting
 
 // Persistence is disabled during development due to issues with deprecated enableIndexedDbPersistence

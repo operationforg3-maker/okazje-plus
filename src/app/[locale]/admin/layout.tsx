@@ -33,7 +33,7 @@ const pathNames: Record<string, string> = {
   '/admin/imports/aliexpress': 'Import AliExpress',
   '/admin/aliexpress-import': 'AliExpress Import',
   '/admin/import-export': 'Import/Export Console',
-  '/admin/social-media': 'Social Media Automation',
+  '/admin/social-media': 'Automatyzacja social mediów',
   '/admin/tools-inventory': 'Inwentarz Narzędzi',
   '/admin/database': 'Zarządzanie Bazą Danych',
   '/admin/m6-import-dashboard': 'M6 Import Dashboard',
@@ -47,8 +47,9 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  
-  const currentPageName = pathNames[pathname] || 'Panel Administratora';
+
+  const normalizedPathname = pathname.replace(/^\/(pl|en|de)(?=\/)/, '');
+  const currentPageName = pathNames[normalizedPathname] || 'Panel Administratora';
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -76,7 +77,7 @@ export default function AdminLayout({
                     <span className="hidden sm:inline">Panel Admina</span>
                     <span className="sm:hidden">Admin</span>
                   </Link>
-                  {pathname !== '/admin' && (
+                  {normalizedPathname !== '/admin' && (
                     <>
                       <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 text-muted-foreground/50 shrink-0" />
                       <span className="font-semibold text-foreground truncate">{currentPageName}</span>

@@ -90,7 +90,7 @@ const navStructure: (NavItem | NavGroup)[] = [
     title: 'Marketing',
     icon: Share2,
     items: [
-      { title: 'Social Media', href: '/admin/social-media', icon: Share2, badge: 'NEW', badgeVariant: 'default' },
+      { title: 'Automatyzacja social mediów', href: '/admin/social-media', icon: Share2, badge: 'NEW', badgeVariant: 'default' },
     ],
   },
   {

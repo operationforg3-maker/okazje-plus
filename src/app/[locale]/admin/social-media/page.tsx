@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import { ManualPublisher } from '@/components/admin/manual-publisher';
 import { CalendarView } from '@/components/admin/calendar-view';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import {
   getAllSocialConfigs,
   saveSocialConfig,
@@ -22,14 +21,12 @@ import {
   cancelSocialPost,
   retrySocialPost,
   getSocialTemplates,
-  saveSocialTemplate,
-  deleteSocialTemplate,
   getSocialPostStats,
   getPlatformDisplayName,
-  getPlatformIcon,
 } from '@/lib/social-automation';
-import type { SocialConfig, SocialPost, SocialTemplate, SocialPlatform } from '@/lib/types';
+import type { SocialConfig, SocialPost, SocialTemplate, SocialPlatform, SocialPostStatus } from '@/lib/types';
 import { toast } from 'sonner';
+import { createAndPublishFacebookTestPostAction } from '@/app/actions/publish-social-post';
 import { 
   Facebook, 
   Instagram, 
@@ -48,13 +45,30 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Sparkles,
   Calendar
 } from 'lucide-react';
 
 const PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok'];
 
-const PLATFORM_ICONS: Record<SocialPlatform, any> = {
+type SocialPostStats = {
+  total: number;
+  pending: number;
+  approved: number;
+  posted: number;
+  failed: number;
+  byPlatform: Record<SocialPlatform, number>;
+};
+
+const STATUS_LABELS: Record<SocialPostStatus, string> = {
+  pending: 'Oczekuje',
+  approved: 'Zatwierdzony',
+  posting: 'Publikowanie',
+  posted: 'Opublikowany',
+  failed: 'Błąd',
+  cancelled: 'Anulowany',
+};
+
+const PLATFORM_ICONS: Record<SocialPlatform, React.ComponentType<{ className?: string }>> = {
   facebook: Facebook,
   instagram: Instagram,
   twitter: Twitter,
@@ -63,55 +77,55 @@ const PLATFORM_ICONS: Record<SocialPlatform, any> = {
 };
 
 export default function SocialMediaAdminPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [configs, setConfigs] = useState<Record<string, SocialConfig>>({});
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [templates, setTemplates] = useState<SocialTemplate[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<SocialPostStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState('config');
   const [editingPlatform, setEditingPlatform] = useState<SocialPlatform | null>(null);
+  const [publishingFacebookTest, setPublishingFacebookTest] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (authLoading) {
+      return;
+    }
 
-  async function loadData() {
+    if (user?.role !== 'admin') {
+      setLoading(false);
+      return;
+    }
+
+    loadData();
+  }, [authLoading, user?.role]);
+
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Permission check - safe fail if not admin
-      try {
-        const [configsData, postsData, templatesData, statsData] = await Promise.all([
-          getAllSocialConfigs(),
-          getSocialPosts(undefined, undefined, 100),
-          getSocialTemplates(),
-          getSocialPostStats(),
-        ]);
-        
-        const configsMap: Record<string, SocialConfig> = {};
-        configsData.forEach(config => {
-          configsMap[config.platform] = config;
-        });
-        setConfigs(configsMap);
-        setPosts(postsData);
-        setTemplates(templatesData);
-        setStats(statsData);
-      } catch (permError: any) {
-        if (permError?.code === 'permission-denied' || permError?.message?.includes('Missing or insufficient permissions')) {
-          console.warn('[SocialMediaAdminPage] Brak uprawnień do ładowania danych social media.');
-          toast.error('Brak uprawnień administratora do sekcji Social Media');
-        } else {
-          throw permError;
-        }
-      }
+      const [configsData, postsData, templatesData, statsData] = await Promise.all([
+        getAllSocialConfigs(),
+        getSocialPosts(undefined, undefined, 100),
+        getSocialTemplates(),
+        getSocialPostStats(),
+      ]);
+
+      const configsMap: Record<string, SocialConfig> = {};
+      configsData.forEach(config => {
+        configsMap[config.platform] = config;
+      });
+      setConfigs(configsMap);
+      setPosts(postsData);
+      setTemplates(templatesData);
+      setStats(statsData);
     } catch (error) {
       console.error('Error loading social media data:', error);
       toast.error('Błąd ładowania danych');
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   async function handleSaveConfig(platform: SocialPlatform, config: Partial<SocialConfig>) {
     try {
@@ -158,6 +172,30 @@ export default function SocialMediaAdminPage() {
     }
   }
 
+  async function handlePublishFacebookTestPost() {
+    try {
+      setPublishingFacebookTest(true);
+      const result = await createAndPublishFacebookTestPostAction();
+
+      if (!result.success) {
+        const errorMessage = typeof result.error === 'string'
+          ? result.error
+          : result.error?.message || 'Nie udało się opublikować testowego posta.';
+        toast.error(errorMessage);
+        return;
+      }
+
+      toast.success('Testowy post na Facebooku został opublikowany.');
+      await loadData();
+      setSelectedTab('queue');
+    } catch (error) {
+      console.error('Error publishing Facebook test post:', error);
+      toast.error('Wystąpił błąd podczas publikacji testowego posta.');
+    } finally {
+      setPublishingFacebookTest(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6">
@@ -168,12 +206,27 @@ export default function SocialMediaAdminPage() {
     );
   }
 
+  if (!authLoading && user?.role !== 'admin') {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Brak dostępu</CardTitle>
+            <CardDescription>
+              Tylko administrator ma dostęp do sekcji automatyzacji social mediów.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Social Media Automation</h1>
+        <h1 className="text-3xl font-bold">Automatyzacja social mediów</h1>
         <p className="text-muted-foreground mt-2">
-          Zarządzaj automatycznym publikowaniem na platformach społecznościowych
+          Zarządzaj automatycznym publikowaniem na platformach społecznościowych.
         </p>
       </div>
 
@@ -259,6 +312,33 @@ export default function SocialMediaAdminPage() {
         <TabsContent value="config" className="space-y-4">
           <Card>
             <CardHeader>
+              <CardTitle>Test publikacji Facebook</CardTitle>
+              <CardDescription>
+                Użyj zapisanej konfiguracji Facebook, aby od razu wysłać testowy post i zweryfikować integrację API.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={handlePublishFacebookTestPost}
+                disabled={publishingFacebookTest}
+              >
+                {publishingFacebookTest ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Publikowanie testu...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Opublikuj testowy post na Facebooku
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Platformy Społecznościowe</CardTitle>
               <CardDescription>
                 Skonfiguruj tokeny dostępu i ustawienia dla każdej platformy
@@ -267,7 +347,6 @@ export default function SocialMediaAdminPage() {
             <CardContent className="space-y-4">
               {PLATFORMS.map(platform => {
                 const config = configs[platform];
-                const Icon = PLATFORM_ICONS[platform];
                 const isEditing = editingPlatform === platform;
 
                 return (
@@ -317,13 +396,8 @@ export default function SocialMediaAdminPage() {
         <TabsContent value="calendar" className="space-y-4">
           <CalendarView
             posts={posts}
-            onPostClick={(post) => {
-              // Scroll to post in queue or show modal
-              console.log('Clicked post:', post);
-            }}
-            onDateClick={(date) => {
-              console.log('Clicked date:', date);
-            }}
+            onPostClick={() => setSelectedTab('queue')}
+            onDateClick={() => setSelectedTab('queue')}
           />
         </TabsContent>
 
@@ -332,10 +406,6 @@ export default function SocialMediaAdminPage() {
           <TemplatesTab templates={templates} onUpdate={loadData} />
         </TabsContent>
 
-        {/* BULK CREATOR TAB - REMOVED */}
-        <TabsContent value="bulk" className="space-y-4">
-           <div className="p-4 text-center text-muted-foreground">Moduł masowego tworzenia przeniesiony do archiwum.</div>
-        </TabsContent>
       </Tabs>
     </div>
   );
@@ -431,7 +501,7 @@ function PlatformConfig({
 
       <div className="space-y-4">
         <div>
-          <Label htmlFor={`${platform}-token`}>Access Token</Label>
+          <Label htmlFor={`${platform}-token`}>Token dostępu</Label>
           <Input
             id={`${platform}-token`}
             type="password"
@@ -449,7 +519,7 @@ function PlatformConfig({
 
         {(platform === 'facebook' || platform === 'instagram') && (
           <div>
-            <Label htmlFor={`${platform}-pageid`}>Page ID</Label>
+            <Label htmlFor={`${platform}-pageid`}>ID strony</Label>
             <Input
               id={`${platform}-pageid`}
               placeholder="ID strony Facebook/Instagram..."
@@ -464,7 +534,7 @@ function PlatformConfig({
 
         {platform === 'linkedin' && (
           <div>
-            <Label htmlFor={`${platform}-orgid`}>Organization ID</Label>
+            <Label htmlFor={`${platform}-orgid`}>ID organizacji</Label>
             <Input
               id={`${platform}-orgid`}
               placeholder="ID organizacji LinkedIn..."
@@ -537,9 +607,10 @@ function PostCard({
   onUpdate?: () => void;
 }) {
   const Icon = PLATFORM_ICONS[post.platform];
-  const statusColors: Record<string, string> = {
+  const statusColors: Record<SocialPostStatus, string> = {
     pending: 'bg-yellow-500',
     approved: 'bg-blue-500',
+    posting: 'bg-sky-500',
     posted: 'bg-green-500',
     failed: 'bg-red-500',
     cancelled: 'bg-gray-500'
@@ -555,7 +626,7 @@ function PostCard({
               <CardTitle className="text-base">{post.itemData.title}</CardTitle>
               <CardDescription className="flex items-center gap-2 mt-1">
                 <Badge className={statusColors[post.status]}>
-                  {post.status.toUpperCase()}
+                  {STATUS_LABELS[post.status]}
                 </Badge>
                 <span className="text-xs">
                   {new Date(post.createdAt).toLocaleString('pl-PL')}
