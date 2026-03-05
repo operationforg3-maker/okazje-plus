@@ -23,6 +23,7 @@ import {
 import {
   onSchedule,
 } from "firebase-functions/v2/scheduler";
+import { defineString } from "firebase-functions/params";
 import * as https from "https";
 import * as jwt from "jsonwebtoken";
 import * as sgMail from "@sendgrid/mail";
@@ -842,6 +843,7 @@ export const processImportJobsTrigger = onRequest(
 
 const AFFILIATE_PURCHASES_COLLECTION = "affiliate_purchases_aliexpress";
 const AFFILIATE_PURCHASES_META_DOC = "aliexpress-affiliate-purchases";
+const convertiserApiTokenParam = defineString("CONVERTISER_API_TOKEN");
 
 type AffiliatePurchaseRecord = {
   id: string;
@@ -1057,7 +1059,7 @@ export const syncAliExpressAffiliatePurchases = onSchedule(
     timeoutSeconds: 300,
   },
   async () => {
-    const token = process.env.CONVERTISER_API_TOKEN;
+    const token = convertiserApiTokenParam.value();
     if (!token) {
       logger.warn("[AffiliatePurchasesSync] Missing CONVERTISER_API_TOKEN, skipping run");
       return;
