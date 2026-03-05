@@ -27,6 +27,7 @@ const pathNames: Record<string, string> = {
   '/admin/pre-registrations': 'Pre-rejestracje',
   '/admin/analytics': 'Analytics Dashboard',
   '/admin/stats': 'Statystyki',
+  '/admin/aliexpress-purchases': 'Zakupy AliExpress',
   '/admin/settings': 'Ustawienia',
   '/admin/harvester': 'Kombajn',
   '/admin/imports': 'Import Monitor',

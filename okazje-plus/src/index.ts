@@ -837,6 +837,306 @@ export const processImportJobsTrigger = onRequest(
 );
 
 // ============================================
+// Affiliate Purchases Sync (Scheduled)
+// ============================================
+
+const AFFILIATE_PURCHASES_COLLECTION = "affiliate_purchases_aliexpress";
+const AFFILIATE_PURCHASES_META_DOC = "aliexpress-affiliate-purchases";
+
+type AffiliatePurchaseRecord = {
+  id: string;
+  transactionId: string;
+  orderId: string | null;
+  advertiser: string;
+  status: string;
+  purchaseAmount: number;
+  commissionAmount: number;
+  currency: string;
+  purchaseDate: string;
+  purchaseDateMs: number;
+  website: string | null;
+  clickId: string | null;
+  source: "convertiser";
+  updatedAt: string;
+};
+
+const parseSyncNumber = (value: unknown): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const normalized = value.replace(",", ".").replace(/[^0-9.-]/g, "");
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const firstSyncString = (raw: Record<string, any>, keys: string[]): string | null => {
+  for (const key of keys) {
+    const value = raw[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+};
+
+const toSyncIsoDate = (value: unknown): string => {
+  if (!value) return new Date(0).toISOString();
+
+  if (typeof value === "number") {
+    const ms = value > 1_000_000_000_000 ? value : value * 1000;
+    const date = new Date(ms);
+    return Number.isNaN(date.getTime()) ? new Date(0).toISOString() : date.toISOString();
+  }
+
+  if (typeof value === "string") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? new Date(0).toISOString() : date.toISOString();
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? new Date(0).toISOString() : value.toISOString();
+  }
+
+  return new Date(0).toISOString();
+};
+
+const hasAliExpressMarker = (raw: Record<string, any>): boolean => {
+  const candidates = [
+    raw.advertiser,
+    raw.advertiser_name,
+    raw.offer_name,
+    raw.campaign_name,
+    raw.merchant,
+    raw.merchant_name,
+    raw.store_name,
+    raw.program_name,
+    raw.offer?.advertiser,
+    raw.offer?.advertiser_name,
+  ]
+    .filter((item) => typeof item === "string")
+    .map((item) => String(item).toLowerCase());
+
+  if (candidates.some((value) => value.includes("aliexpress"))) {
+    return true;
+  }
+
+  try {
+    return JSON.stringify(raw).toLowerCase().includes("aliexpress");
+  } catch {
+    return false;
+  }
+};
+
+const isCompletedAffiliatePurchase = (raw: Record<string, any>): boolean => {
+  const statusRaw = firstSyncString(
+    raw,
+    ["status", "transaction_status", "order_status", "state"]
+  ) || "";
+  const status = statusRaw.toLowerCase();
+
+  if (!status) return true;
+
+  const failedMarkers = ["cancel", "reject", "denied", "failed", "fraud", "void"];
+  if (failedMarkers.some((marker) => status.includes(marker))) return false;
+
+  const pendingMarkers = ["pending", "processing", "new", "open", "hold", "waiting"];
+  if (pendingMarkers.some((marker) => status.includes(marker))) return false;
+
+  const completedMarkers = ["complete", "approved", "accepted", "confirm", "paid", "settled", "done"];
+  if (completedMarkers.some((marker) => status.includes(marker))) return true;
+
+  return true;
+};
+
+const normalizeAffiliatePurchase = (
+  raw: Record<string, any>,
+  index: number
+): AffiliatePurchaseRecord => {
+  const transactionId = String(
+    raw.id ?? raw.uuid ?? raw.transaction_id ?? raw.transactionId ?? `unknown-${Date.now()}-${index}`
+  );
+
+  const orderId = firstSyncString(raw, ["order_id", "orderId", "sale_id", "external_order_id"]);
+  const advertiser =
+    firstSyncString(raw, ["advertiser_name", "advertiser", "merchant_name", "merchant", "offer_name"]) ||
+    "AliExpress";
+  const status = firstSyncString(raw, ["status", "transaction_status", "order_status", "state"]) ||
+    "unknown";
+
+  const purchaseAmount = parseSyncNumber(
+    raw.order_amount ?? raw.sale_amount ?? raw.transaction_amount ?? raw.purchase_amount ?? raw.amount
+  );
+
+  const commissionAmount = parseSyncNumber(
+    raw.commission ?? raw.commission_amount ?? raw.publisher_commission ?? 0
+  );
+
+  const currency =
+    firstSyncString(raw, ["currency", "currency_code", "order_currency", "sale_currency"]) ||
+    "PLN";
+
+  const purchaseDate = toSyncIsoDate(
+    raw.date ?? raw.transaction_date ?? raw.created_at ?? raw.createdAt ?? raw.event_time
+  );
+
+  const purchaseDateMs = new Date(purchaseDate).getTime();
+  const nowIso = new Date().toISOString();
+
+  return {
+    id: transactionId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+    transactionId,
+    orderId,
+    advertiser,
+    status,
+    purchaseAmount,
+    commissionAmount,
+    currency,
+    purchaseDate,
+    purchaseDateMs: Number.isFinite(purchaseDateMs) ? purchaseDateMs : 0,
+    website: firstSyncString(raw, ["website_name", "website", "publisher_website"]),
+    clickId: firstSyncString(raw, ["click_id", "clickId", "subid", "sub_id"]),
+    source: "convertiser",
+    updatedAt: nowIso,
+  };
+};
+
+const fetchConvertiserTransactionsPage = async (
+  token: string,
+  page: number,
+  pageSize: number
+): Promise<Record<string, any>[]> => {
+  const endpoint = new URL("https://api.convertiser.com/publisher/transactions/");
+  endpoint.searchParams.set("page", String(page));
+  endpoint.searchParams.set("page_size", String(pageSize));
+
+  const response = await fetch(endpoint.toString(), {
+    method: "GET",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(`Convertiser error ${response.status}: ${bodyText}`);
+  }
+
+  const payload = await response.json() as { results?: Record<string, any>[] };
+  return Array.isArray(payload?.results) ? payload.results : [];
+};
+
+const saveAffiliatePurchasesBatch = async (
+  purchases: AffiliatePurchaseRecord[]
+): Promise<void> => {
+  if (!purchases.length) return;
+
+  const chunkSize = 400;
+  for (let start = 0; start < purchases.length; start += chunkSize) {
+    const chunk = purchases.slice(start, start + chunkSize);
+    const batch = db.batch();
+
+    for (const purchase of chunk) {
+      const docRef = db.collection(AFFILIATE_PURCHASES_COLLECTION).doc(purchase.id);
+      batch.set(docRef, purchase, {merge: true});
+    }
+
+    await batch.commit();
+  }
+};
+
+export const syncAliExpressAffiliatePurchases = onSchedule(
+  {
+    schedule: "*/15 * * * *",
+    timeZone: "Europe/Warsaw",
+    region: "europe-west1",
+    memory: "512MiB",
+    timeoutSeconds: 300,
+  },
+  async () => {
+    const token = process.env.CONVERTISER_API_TOKEN;
+    if (!token) {
+      logger.warn("[AffiliatePurchasesSync] Missing CONVERTISER_API_TOKEN, skipping run");
+      return;
+    }
+
+    const scanPages = Math.max(1, Math.min(10, Number(process.env.AFFILIATE_SYNC_SCAN_PAGES || "3")));
+    const scanPageSize = Math.max(10, Math.min(100, Number(process.env.AFFILIATE_SYNC_SCAN_PAGE_SIZE || "100")));
+
+    logger.info("[AffiliatePurchasesSync] Starting scheduled sync", {
+      scanPages,
+      scanPageSize,
+    });
+
+    try {
+      const rawRows: Record<string, any>[] = [];
+
+      for (let page = 1; page <= scanPages; page += 1) {
+        const rows = await fetchConvertiserTransactionsPage(token, page, scanPageSize);
+        rawRows.push(...rows);
+
+        if (rows.length < scanPageSize) {
+          break;
+        }
+      }
+
+      const normalized = rawRows
+        .filter((row) => hasAliExpressMarker(row))
+        .filter((row) => isCompletedAffiliatePurchase(row))
+        .map((row, index) => normalizeAffiliatePurchase(row, index))
+        .sort((a, b) => b.purchaseDateMs - a.purchaseDateMs);
+
+      const deduped = new Map<string, AffiliatePurchaseRecord>();
+      for (const item of normalized) {
+        deduped.set(item.id, item);
+      }
+      const uniquePurchases = Array.from(deduped.values());
+
+      await saveAffiliatePurchasesBatch(uniquePurchases);
+
+      const totalPurchaseAmount = uniquePurchases.reduce(
+        (sum, item) => sum + item.purchaseAmount,
+        0
+      );
+      const totalCommissionAmount = uniquePurchases.reduce(
+        (sum, item) => sum + item.commissionAmount,
+        0
+      );
+
+      await db.collection("admin_meta").doc(AFFILIATE_PURCHASES_META_DOC).set(
+        {
+          lastSyncAt: new Date().toISOString(),
+          records: uniquePurchases.length,
+          source: "convertiser-scheduler",
+          schedule: "*/15 * * * *",
+          totals: {
+            purchaseAmount: totalPurchaseAmount,
+            commissionAmount: totalCommissionAmount,
+          },
+        },
+        {merge: true}
+      );
+
+      logger.info("[AffiliatePurchasesSync] Sync completed", {
+        scannedRows: rawRows.length,
+        savedRows: uniquePurchases.length,
+        totalPurchaseAmount,
+        totalCommissionAmount,
+      });
+    } catch (error: unknown) {
+      logger.error(
+        "[AffiliatePurchasesSync] Scheduled sync failed",
+        error instanceof Error ? error.message : error
+      );
+      throw error;
+    }
+  }
+);
+
+// ============================================
 // Price Alerts Monitor (Scheduled)
 // ============================================
 

@@ -84,6 +84,7 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Dashboard Analytics', href: '/admin/analytics', icon: TrendingUp },
       { title: 'Statystyki', href: '/admin/stats', icon: FileBarChart },
+      { title: 'Zakupy AliExpress', href: '/admin/aliexpress-purchases', icon: ShoppingCart, badge: 'NEW', badgeVariant: 'default' },
     ],
   },
   {
