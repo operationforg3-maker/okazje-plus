@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { PaginationControls } from '@/components/ui/pagination-controls';
-import { RefreshCcw, ShoppingBag, Coins, Wallet } from 'lucide-react';
+import { RefreshCcw, ShoppingBag, Coins, Wallet, Activity, Percent } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type PurchaseRow = {
   id: string;
@@ -42,8 +43,22 @@ type PurchasesResponse = {
     totalCount: number;
     totalPurchaseAmount: number;
     totalCommissionAmount: number;
+    averageOrderValue: number;
+    averageCommissionPerOrder: number;
+    effectiveCommissionRate: number;
     primaryCurrency: string;
     statusBreakdown: Record<string, number>;
+    purchases24h: number;
+    purchases7d: number;
+    commission24h: number;
+    commission7d: number;
+    withTrackingIdCount: number;
+    trackingCoveragePercent: number;
+    topTrackingIds: Array<{ id: string; count: number; commission: number; purchaseAmount: number }>;
+  };
+  filters?: {
+    trackingId: string | null;
+    availableTrackingIds: string[];
   };
   pagination: {
     page: number;
@@ -98,8 +113,14 @@ export default function AliExpressPurchasesAdminPage() {
   const [response, setResponse] = useState<PurchasesResponse | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [trackingId, setTrackingId] = useState<string>('all');
 
-  const fetchPurchases = async (forceRefresh = false, targetPage = page, targetPageSize = pageSize) => {
+  const fetchPurchases = async (
+    forceRefresh = false,
+    targetPage = page,
+    targetPageSize = pageSize,
+    targetTrackingId = trackingId
+  ) => {
     const auth = getAuth();
     const user = auth.currentUser;
 
@@ -120,6 +141,9 @@ export default function AliExpressPurchasesAdminPage() {
         page: String(targetPage),
         pageSize: String(targetPageSize),
       });
+      if (targetTrackingId !== 'all') {
+        params.set('trackingId', targetTrackingId);
+      }
       if (forceRefresh) {
         params.set('forceRefresh', '1');
       }
@@ -173,6 +197,7 @@ export default function AliExpressPurchasesAdminPage() {
   const canGoPrev = page > 1;
   const canGoNext = page < (response?.pagination.totalPages || 1);
   const summaryCurrency = response?.summary.primaryCurrency || 'PLN';
+  const availableTrackingIds = response?.filters?.availableTrackingIds || [];
 
   const statusSummary = useMemo(() => {
     const entries = Object.entries(response?.summary.statusBreakdown || {});
@@ -188,13 +213,33 @@ export default function AliExpressPurchasesAdminPage() {
             Realne transakcje zakupowe z naszych linków afiliacyjnych (Convertiser).
           </p>
         </div>
-        <Button onClick={() => fetchPurchases(true, page, pageSize)} disabled={refreshing}>
-          <RefreshCcw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Odświeżam...' : 'Odśwież dane na żywo'}
-        </Button>
+        <div className="flex w-full md:w-auto gap-2">
+          <Select
+            value={trackingId}
+            onValueChange={async (value) => {
+              setTrackingId(value);
+              setPage(1);
+              await fetchPurchases(false, 1, pageSize, value);
+            }}
+          >
+            <SelectTrigger className="w-full md:w-[260px]">
+              <SelectValue placeholder="Wybierz tracking ID" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Wszystkie tracking ID</SelectItem>
+              {availableTrackingIds.map((id) => (
+                <SelectItem key={id} value={id}>{id}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => fetchPurchases(true, page, pageSize, trackingId)} disabled={refreshing}>
+            <RefreshCcw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Odświeżam...' : 'Odśwież dane na żywo'}
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Liczba zakupów</CardDescription>
@@ -225,6 +270,72 @@ export default function AliExpressPurchasesAdminPage() {
             Ostatnia synchronizacja: {response?.sync.lastSyncAt ? formatDate(response.sync.lastSyncAt) : 'brak'}
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Średnia wartość koszyka</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              {loading ? <Skeleton className="h-8 w-28" /> : formatMoney(response?.summary.averageOrderValue || 0, summaryCurrency)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Średnia prowizja / zakup</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Coins className="h-5 w-5" />
+              {loading ? <Skeleton className="h-8 w-28" /> : formatMoney(response?.summary.averageCommissionPerOrder || 0, summaryCurrency)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Efektywna stopa prowizji</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Percent className="h-5 w-5" />
+              {loading ? <Skeleton className="h-8 w-20" /> : `${(response?.summary.effectiveCommissionRate || 0).toFixed(2)}%`}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Zakupy (24h)</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              {loading ? <Skeleton className="h-8 w-16" /> : (response?.summary.purchases24h || 0)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Zakupy (7 dni)</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              {loading ? <Skeleton className="h-8 w-16" /> : (response?.summary.purchases7d || 0)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Prowizja (24h)</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Coins className="h-5 w-5" />
+              {loading ? <Skeleton className="h-8 w-28" /> : formatMoney(response?.summary.commission24h || 0, summaryCurrency)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Prowizja (7 dni)</CardDescription>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <Coins className="h-5 w-5" />
+              {loading ? <Skeleton className="h-8 w-28" /> : formatMoney(response?.summary.commission7d || 0, summaryCurrency)}
+            </CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
       <Card>
@@ -243,6 +354,38 @@ export default function AliExpressPurchasesAdminPage() {
             ))
           ) : (
             <span className="text-sm text-muted-foreground">Brak danych statusów.</span>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Najlepsze tracking ID (wg prowizji)</CardTitle>
+          <CardDescription>Najbardziej dochodowe identyfikatory śledzenia w aktualnym widoku.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {loading ? (
+            <Skeleton className="h-8 w-72" />
+          ) : response?.summary.topTrackingIds?.length ? (
+            response.summary.topTrackingIds.map((item) => (
+              <div key={item.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
+                <div className="min-w-0">
+                  <div className="font-mono truncate">{item.id}</div>
+                  <div className="text-xs text-muted-foreground">Zakupy: {item.count}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">{formatMoney(item.commission, summaryCurrency)}</div>
+                  <div className="text-xs text-muted-foreground">Wartość: {formatMoney(item.purchaseAmount, summaryCurrency)}</div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-sm text-muted-foreground">Brak tracking ID w danych.</div>
+          )}
+          {!loading && (
+            <div className="text-xs text-muted-foreground pt-1">
+              Pokrycie tracking ID: {(response?.summary.trackingCoveragePercent || 0).toFixed(1)}% ({response?.summary.withTrackingIdCount || 0}/{response?.summary.totalCount || 0})
+            </div>
           )}
         </CardContent>
       </Card>
@@ -271,6 +414,7 @@ export default function AliExpressPurchasesAdminPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Kwota zakupu</TableHead>
                     <TableHead>Prowizja</TableHead>
+                    <TableHead>Tracking ID</TableHead>
                     <TableHead>ID zamówienia</TableHead>
                     <TableHead>ID transakcji</TableHead>
                   </TableRow>
@@ -290,6 +434,7 @@ export default function AliExpressPurchasesAdminPage() {
                       </TableCell>
                       <TableCell>{formatMoney(purchase.purchaseAmount, purchase.currency)}</TableCell>
                       <TableCell>{formatMoney(purchase.commissionAmount, purchase.currency)}</TableCell>
+                      <TableCell className="font-mono text-xs">{purchase.clickId || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{purchase.orderId || '—'}</TableCell>
                       <TableCell className="font-mono text-xs">{purchase.transactionId}</TableCell>
                     </TableRow>
@@ -313,31 +458,31 @@ export default function AliExpressPurchasesAdminPage() {
                   canGoNext={canGoNext}
                   onPageChange={async (targetPage) => {
                     setPage(targetPage);
-                    await fetchPurchases(false, targetPage, pageSize);
+                    await fetchPurchases(false, targetPage, pageSize, trackingId);
                   }}
                   onFirstPage={async () => {
                     setPage(1);
-                    await fetchPurchases(false, 1, pageSize);
+                    await fetchPurchases(false, 1, pageSize, trackingId);
                   }}
                   onLastPage={async () => {
                     const lastPage = response.pagination.totalPages;
                     setPage(lastPage);
-                    await fetchPurchases(false, lastPage, pageSize);
+                    await fetchPurchases(false, lastPage, pageSize, trackingId);
                   }}
                   onPrevPage={async () => {
                     const targetPage = Math.max(1, page - 1);
                     setPage(targetPage);
-                    await fetchPurchases(false, targetPage, pageSize);
+                    await fetchPurchases(false, targetPage, pageSize, trackingId);
                   }}
                   onNextPage={async () => {
                     const targetPage = Math.min(response.pagination.totalPages, page + 1);
                     setPage(targetPage);
-                    await fetchPurchases(false, targetPage, pageSize);
+                    await fetchPurchases(false, targetPage, pageSize, trackingId);
                   }}
                   onItemsPerPageChange={async (value) => {
                     setPageSize(value);
                     setPage(1);
-                    await fetchPurchases(false, 1, value);
+                    await fetchPurchases(false, 1, value, trackingId);
                   }}
                 />
               )}

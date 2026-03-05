@@ -7,6 +7,7 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 20;
 const DEFAULT_SCAN_PAGES = 3;
 const DEFAULT_SCAN_PAGE_SIZE = 100;
+const MAX_FALLBACK_RECORDS = 5000;
 
 type NormalizedPurchase = {
   id: string;
@@ -214,22 +215,24 @@ async function savePurchasesToFirestore(purchases: NormalizedPurchase[]): Promis
   );
 }
 
-async function loadPurchasesFromFirestore(page: number, pageSize: number) {
-  const totalCountSnap = await adminDb.collection(COLLECTION_NAME).count().get();
-  const totalCount = totalCountSnap.data().count || 0;
-
-  const limitCount = page * pageSize;
+async function loadAllPurchasesFromFirestore(): Promise<NormalizedPurchase[]> {
   const snap = await adminDb
     .collection(COLLECTION_NAME)
     .orderBy('purchaseDateMs', 'desc')
-    .limit(limitCount)
+    .limit(MAX_FALLBACK_RECORDS)
     .get();
 
-  const docs = snap.docs.map((doc: any) => doc.data() as NormalizedPurchase);
-  const startIndex = (page - 1) * pageSize;
-  const rows = docs.slice(startIndex, startIndex + pageSize);
+  return snap.docs.map((doc: any) => doc.data() as NormalizedPurchase);
+}
 
-  return { rows, totalCount };
+function buildTrackingIds(purchases: NormalizedPurchase[]): string[] {
+  return Array.from(
+    new Set(
+      purchases
+        .map((purchase) => purchase.clickId)
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 }
 
 function buildSummary(purchases: NormalizedPurchase[]) {
@@ -237,6 +240,17 @@ function buildSummary(purchases: NormalizedPurchase[]) {
   const currencyBreakdown: Record<string, number> = {};
   let totalPurchaseAmount = 0;
   let totalCommissionAmount = 0;
+
+  const nowMs = Date.now();
+  const oneDayAgo = nowMs - 24 * 60 * 60 * 1000;
+  const sevenDaysAgo = nowMs - 7 * 24 * 60 * 60 * 1000;
+
+  let purchases24h = 0;
+  let purchases7d = 0;
+  let commission24h = 0;
+  let commission7d = 0;
+  let withTrackingIdCount = 0;
+  const trackingStats: Record<string, { count: number; commission: number; purchaseAmount: number }> = {};
 
   for (const purchase of purchases) {
     const statusKey = purchase.status || 'unknown';
@@ -247,18 +261,62 @@ function buildSummary(purchases: NormalizedPurchase[]) {
 
     totalPurchaseAmount += purchase.purchaseAmount;
     totalCommissionAmount += purchase.commissionAmount;
+
+    if (purchase.purchaseDateMs >= oneDayAgo) {
+      purchases24h += 1;
+      commission24h += purchase.commissionAmount;
+    }
+
+    if (purchase.purchaseDateMs >= sevenDaysAgo) {
+      purchases7d += 1;
+      commission7d += purchase.commissionAmount;
+    }
+
+    if (purchase.clickId) {
+      withTrackingIdCount += 1;
+      if (!trackingStats[purchase.clickId]) {
+        trackingStats[purchase.clickId] = { count: 0, commission: 0, purchaseAmount: 0 };
+      }
+      trackingStats[purchase.clickId].count += 1;
+      trackingStats[purchase.clickId].commission += purchase.commissionAmount;
+      trackingStats[purchase.clickId].purchaseAmount += purchase.purchaseAmount;
+    }
   }
 
   const primaryCurrency = Object.entries(currencyBreakdown).sort((a, b) => b[1] - a[1])[0]?.[0] || 'PLN';
+  const averageOrderValue = purchases.length ? totalPurchaseAmount / purchases.length : 0;
+  const averageCommissionPerOrder = purchases.length ? totalCommissionAmount / purchases.length : 0;
+  const effectiveCommissionRate = totalPurchaseAmount > 0 ? (totalCommissionAmount / totalPurchaseAmount) * 100 : 0;
+  const trackingCoveragePercent = purchases.length ? (withTrackingIdCount / purchases.length) * 100 : 0;
+
+  const topTrackingIds = Object.entries(trackingStats)
+    .map(([id, stats]) => ({ id, ...stats }))
+    .sort((a, b) => b.commission - a.commission)
+    .slice(0, 5);
 
   return {
     totalCount: purchases.length,
     totalPurchaseAmount,
     totalCommissionAmount,
+    averageOrderValue,
+    averageCommissionPerOrder,
+    effectiveCommissionRate,
     primaryCurrency,
     statusBreakdown,
     currencyBreakdown,
+    purchases24h,
+    purchases7d,
+    commission24h,
+    commission7d,
+    withTrackingIdCount,
+    trackingCoveragePercent,
+    topTrackingIds,
   };
+}
+
+function paginatePurchases(purchases: NormalizedPurchase[], page: number, pageSize: number) {
+  const startIndex = (page - 1) * pageSize;
+  return purchases.slice(startIndex, startIndex + pageSize);
 }
 
 export async function GET(request: NextRequest) {
@@ -272,10 +330,12 @@ export async function GET(request: NextRequest) {
   const page = clamp(Number(searchParams.get('page') || DEFAULT_PAGE), 1, 1000);
   const pageSize = clamp(Number(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE), 5, 100);
   const forceRefresh = parseBooleanParam(searchParams.get('forceRefresh'));
+  const trackingId = (searchParams.get('trackingId') || '').trim();
   const scanPages = clamp(Number(searchParams.get('scanPages') || DEFAULT_SCAN_PAGES), 1, 10);
   const scanPageSize = clamp(Number(searchParams.get('scanPageSize') || DEFAULT_SCAN_PAGE_SIZE), 10, 100);
 
   let allPurchases: NormalizedPurchase[] = [];
+  let filteredPurchases: NormalizedPurchase[] = [];
   let source: 'live' | 'firestore' = 'firestore';
   let remoteError: string | null = null;
 
@@ -314,24 +374,39 @@ export async function GET(request: NextRequest) {
   }
 
   if (!allPurchases.length) {
-    const fallback = await loadPurchasesFromFirestore(page, pageSize);
-    allPurchases = fallback.rows;
+    allPurchases = await loadAllPurchasesFromFirestore();
+
+    filteredPurchases = trackingId
+      ? allPurchases.filter((purchase) => purchase.clickId === trackingId)
+      : allPurchases;
+
+    const pagedPurchases = paginatePurchases(filteredPurchases, page, pageSize);
 
     const metaDoc = await adminDb.collection('admin_meta').doc('aliexpress-affiliate-purchases').get();
     const meta = metaDoc.data();
 
-    const totalPages = Math.max(1, Math.ceil((fallback.totalCount || 0) / pageSize));
+    const totalPages = Math.max(1, Math.ceil((filteredPurchases.length || 0) / pageSize));
+    const availableTrackingIds = buildTrackingIds(allPurchases);
+
     return NextResponse.json({
       success: true,
       source,
       remoteError,
-      purchases: allPurchases,
-      summary: buildSummary(allPurchases),
+      filters: {
+        trackingId: trackingId || null,
+        availableTrackingIds,
+      },
+      purchases: pagedPurchases,
+      summary: buildSummary(filteredPurchases),
       pagination: {
         page,
         pageSize,
-        total: fallback.totalCount || 0,
+        total: filteredPurchases.length || 0,
         totalPages,
+      },
+      dataset: {
+        loadedRecords: allPurchases.length,
+        maxRecords: MAX_FALLBACK_RECORDS,
       },
       sync: {
         lastSyncAt: meta?.lastSyncAt || null,
@@ -340,17 +415,24 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const startIndex = (page - 1) * pageSize;
-  const paged = allPurchases.slice(startIndex, startIndex + pageSize);
-  const total = allPurchases.length;
+  filteredPurchases = trackingId
+    ? allPurchases.filter((purchase) => purchase.clickId === trackingId)
+    : allPurchases;
+
+  const paged = paginatePurchases(filteredPurchases, page, pageSize);
+  const total = filteredPurchases.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return NextResponse.json({
     success: true,
     source,
     remoteError,
+    filters: {
+      trackingId: trackingId || null,
+      availableTrackingIds: buildTrackingIds(allPurchases),
+    },
     purchases: paged,
-    summary: buildSummary(allPurchases),
+    summary: buildSummary(filteredPurchases),
     pagination: {
       page,
       pageSize,
