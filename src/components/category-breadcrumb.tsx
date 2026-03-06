@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { useParams } from 'next/navigation';
@@ -116,13 +116,11 @@ export function CategoryBreadcrumb({
     loadLabels();
   }, [mainCategorySlug, subCategorySlug, subSubCategorySlug]);
 
-  if (!mainCategorySlug) return null;
-
   // Get text for current locale
-  const getText = (label?: CategoryLabel) => {
+  const getText = useCallback((label?: CategoryLabel) => {
     if (!label) return '';
     return label[locale as keyof CategoryLabel] || label.pl;
-  };
+  }, [locale]);
 
   // Generate BreadcrumbList JSON-LD for SEO
   useEffect(() => {
@@ -182,7 +180,9 @@ export function CategoryBreadcrumb({
       const script = document.getElementById('breadcrumb-jsonld');
       if (script) script.remove();
     };
-  }, [mainCategorySlug, subCategorySlug, subSubCategorySlug, labels, isLoading, routePrefix, locale, contextType]);
+  }, [mainCategorySlug, subCategorySlug, subSubCategorySlug, labels, isLoading, routePrefix, contextType, getText]);
+
+  if (!mainCategorySlug) return null;
 
   return (
     <div

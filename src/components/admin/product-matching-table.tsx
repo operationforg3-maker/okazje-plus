@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -46,11 +46,7 @@ export function ProductMatchingTable({ onMerge, status }: ProductMatchingTablePr
   const [mergeTargetId, setMergeTargetId] = useState<string>('');
   const [isMerging, setIsMerging] = useState(false);
 
-  useEffect(() => {
-    loadProducts();
-  }, [status]);
-
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getAllProductCores(status, 100);
@@ -72,7 +68,11 @@ export function ProductMatchingTable({ onMerge, status }: ProductMatchingTablePr
     } finally {
       setLoading(false);
     }
-  };
+  }, [status]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   const handleMerge = async () => {
     if (!selectedProduct || !mergeTargetId) return;

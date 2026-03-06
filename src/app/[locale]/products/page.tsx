@@ -39,6 +39,7 @@ const toSearchableText = (value: unknown): string => {
 };
 
 type SortOption = 'recommended' | 'newest' | 'rating' | 'price_asc' | 'price_desc' | 'hot' | 'discount_desc';
+type ProductStatusView = 'approved' | 'waiting_room';
 
 interface SavedFilter {
   name: string;
@@ -56,6 +57,7 @@ function ProductsPageContent() {
   const mainCategoryParam = searchParams.get('mainCategory');
   const subCategoryParam = searchParams.get('subCategory');
   const subSubCategoryParam = searchParams.get('subSubCategory');
+  const statusParam = searchParams.get('status');
   const [products, setProducts] = useState<ProductCore[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -68,6 +70,9 @@ function ProductsPageContent() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [sortBy, setSortBy] = useState<SortBy>('relevance');
+  const [productStatusView, setProductStatusView] = useState<ProductStatusView>(
+    statusParam === 'waiting_room' ? 'waiting_room' : 'approved'
+  );
   const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({});
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
@@ -123,7 +128,22 @@ function ProductsPageContent() {
       }
     }
     fetchData();
-  }, [mainCategoryParam, subCategoryParam]);
+  }, [mainCategoryParam, subCategoryParam, subSubCategoryParam]);
+
+  useEffect(() => {
+    const nextStatus: ProductStatusView = searchParams.get('status') === 'waiting_room'
+      ? 'waiting_room'
+      : 'approved';
+    setProductStatusView(prev => (prev === nextStatus ? prev : nextStatus));
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('status', productStatusView);
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, '', nextUrl);
+  }, [productStatusView, searchParams]);
 
   useEffect(() => {
     try {
@@ -146,14 +166,26 @@ function ProductsPageContent() {
       try {
         const q = searchTerm.trim();
         if (q.length > 1) {
-          // Wyszukiwanie - szukaj w ProductCore via Typesense
-          const results = await searchProductsTypesense(q, {
-            mainCategorySlug: selectedMainCategorySlug,
-            subCategorySlug: selectedSubcategory || undefined,
-            subSubCategorySlug: selectedSubSubcategory || undefined,
-            limit: 100,
-          });
-          if (!cancelled) setProducts(results || []);
+          if (productStatusView === 'approved') {
+            // Wyszukiwanie approved przez Typesense
+            const results = await searchProductsTypesense(q, {
+              mainCategorySlug: selectedMainCategorySlug,
+              subCategorySlug: selectedSubcategory || undefined,
+              subSubCategorySlug: selectedSubSubcategory || undefined,
+              limit: 100,
+            });
+            if (!cancelled) setProducts(results || []);
+          } else {
+            // Dla poczekalni używamy Firestore, aby uwzględnić pending_approval
+            const waitingProducts = await getProductCoresByFilters({
+              categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
+              subCategorySlug: selectedSubcategory || undefined,
+              subSubCategorySlug: selectedSubSubcategory || undefined,
+              searchTerm: q,
+              statusFilter: 'waiting_room',
+            }, sortBy, 100);
+            if (!cancelled) setProducts(waitingProducts || []);
+          }
         } else {
           // Użyj zunifiowanych filtrów do pobierania ProductCore
           const filterConfig = {
@@ -161,6 +193,7 @@ function ProductsPageContent() {
             categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
+            statusFilter: productStatusView,
           };
           const filteredProducts = await getProductCoresByFilters(filterConfig, sortBy, 100);
           if (!cancelled) setProducts(filteredProducts);
@@ -173,7 +206,7 @@ function ProductsPageContent() {
     }
     const t = setTimeout(fetchProducts, 250); // drobny debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy, productStatusView]);
 
   useEffect(() => {
     try { localStorage.setItem('products_view_mode', viewMode); } catch {}
@@ -655,6 +688,17 @@ function ProductsPageContent() {
                         <SelectItem value="price_desc">{t('filters.sortOptions.price_desc')}</SelectItem>
                       </SelectContent>
                     </Select>
+
+                    <Select value={productStatusView} onValueChange={(value: ProductStatusView) => setProductStatusView(value)}>
+                      <SelectTrigger className="w-[220px] h-10">
+                        <Clock className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder="Widoczność" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="approved">Widok: Zatwierdzone</SelectItem>
+                        <SelectItem value="waiting_room">Widok: Poczekalnia</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Quick filters - chipy */}
@@ -821,7 +865,10 @@ function ProductsPageContent() {
                     {/* Status info */}
                     {!hasMore && displayedProducts.length > 0 && (
                       <div className="mt-6 text-center text-sm text-muted-foreground">
-                        <p>{t('showing', { count: filteredProducts.length })}</p>
+                        <p>
+                          {t('showing', { count: filteredProducts.length })}
+                          {productStatusView === 'waiting_room' ? ' (poczekalnia)' : ''}
+                        </p>
                       </div>
                     )}
                   </>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { useTranslations } from 'next-intl';
 import {
@@ -36,11 +36,7 @@ export function PriceComparisonTable({
   const [loading, setLoading] = useState(true);
   const { formatPrice } = useCurrency();
 
-  useEffect(() => {
-    loadDeals();
-  }, [productId]);
-
-  const loadDeals = async () => {
+  const loadDeals = useCallback(async () => {
     setLoading(true);
     try {
       const dealsData = await getDealsForProduct(productId);
@@ -50,7 +46,11 @@ export function PriceComparisonTable({
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
+
+  useEffect(() => {
+    loadDeals();
+  }, [loadDeals]);
 
   if (loading) {
     return <div className="flex items-center justify-center p-8">{t('productDetail.priceComparison.loading')}</div>;

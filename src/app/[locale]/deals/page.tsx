@@ -2,7 +2,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsByFilters, getDealsCount } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib/offline-utils';
@@ -39,6 +39,7 @@ import { extractDealPriceAmount } from '@/lib/price-utils';
 type ViewMode = 'list' | 'grid';
 type SortOption = 'hottest' | 'newest' | 'price_asc' | 'price_desc' | 'discount';
 type DealTypeFilter = 'all' | 'sale' | 'coupon' | 'freebie' | 'pricing-error' | 'cashback' | 'bundle';
+type DealStatusView = 'approved' | 'waiting_room';
 
 interface SavedFilter {
   name: string;
@@ -85,13 +86,14 @@ export default function DealsPage() {
   const sortBy = (searchParams.get('sort') as SortBy) || 'hot';
   const router = useRouter();
   
-  const setSortBy = (val: SortBy) => {
+  const setSortBy = useCallback((val: SortBy) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('sort', val);
       router.push(`${window.location.pathname}?${params.toString()}`);
-  };
+  }, [router, searchParams]);
   
   const [typeFilter, setTypeFilter] = useState<DealTypeFilter>('all');
+  const [dealStatusView, setDealStatusView] = useState<DealStatusView>('approved');
   const [quickFilters, setQuickFilters] = useState({
     freeShipping: false,
     bigDiscount: false,
@@ -175,6 +177,7 @@ export default function DealsPage() {
       const subParam = params.get('subCategory');
       const subSubParam = params.get('subSubCategory');
       const sortParam = params.get('sort');
+      const statusParam = params.get('status');
       const qParam = params.get('q');
       const typeParam = params.get('type');
       const freeShippingParam = params.get('freeShipping');
@@ -182,6 +185,9 @@ export default function DealsPage() {
       if (qParam) setSearchTerm(qParam);
       if (sortParam === 'newest' || sortParam === 'hottest' || sortParam === 'price_asc' || sortParam === 'price_desc' || sortParam === 'discount') {
         setSortBy(sortParam as any);
+      }
+      if (statusParam === 'waiting_room') {
+        setDealStatusView('waiting_room');
       }
       // Ustawienie filtra typu okazji z URL (np. type=coupon|freebie|cashback)
       if (FEATURES.DEALS_TYPE_FILTER && typeParam) {
@@ -245,7 +251,7 @@ export default function DealsPage() {
         }
       }
     } catch {}
-  }, [categories]);
+  }, [categories, setSortBy]);
 
   // Persistuj view mode
   useEffect(() => {
@@ -358,14 +364,26 @@ export default function DealsPage() {
         
         const q = searchTerm.trim();
         if (q.length > 1) {
-          // Wyszukiwanie
-          const results = await retryWithBackoff(() => searchDealsTypesense(q, {
-            mainCategorySlug: selectedMainCategorySlug,
-            subCategorySlug: selectedSubcategory || undefined,
-            subSubCategorySlug: selectedSubSubcategory || undefined,
-            limit: 100,
-          }), 1, 500);
-          if (!cancelled) setDeals(results || []);
+          if (dealStatusView === 'approved') {
+            // Wyszukiwanie approved w Typesense
+            const results = await retryWithBackoff(() => searchDealsTypesense(q, {
+              mainCategorySlug: selectedMainCategorySlug,
+              subCategorySlug: selectedSubcategory || undefined,
+              subSubCategorySlug: selectedSubSubcategory || undefined,
+              limit: 100,
+            }), 1, 500);
+            if (!cancelled) setDeals(results || []);
+          } else {
+            // Dla poczekalni używamy Firestore, żeby uwzględnić status pending
+            const waitingDeals = await retryWithBackoff(() => getDealsByFilters({
+              categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
+              subCategorySlug: selectedSubcategory || undefined,
+              subSubCategorySlug: selectedSubSubcategory || undefined,
+              searchTerm: q,
+              statusFilter: 'waiting_room',
+            }, sortBy, 100), 2, 500);
+            if (!cancelled) setDeals(waitingDeals || []);
+          }
         } else {
           // Użyj zunifiowanych filtrów do pobierania dealów
           const filterConfig = {
@@ -373,6 +391,7 @@ export default function DealsPage() {
             categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
             subCategorySlug: selectedSubcategory || undefined,
             subSubCategorySlug: selectedSubSubcategory || undefined,
+            statusFilter: dealStatusView,
           };
           const filteredDeals = await retryWithBackoff(() => getDealsByFilters(filterConfig, sortBy, 100), 2, 500);
           if (!cancelled) setDeals(filteredDeals || []);
@@ -389,7 +408,7 @@ export default function DealsPage() {
     }
     const t = setTimeout(fetchDeals, 250); // debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy, dealStatusView]);
 
   useEffect(() => {
     let cancelled = false;
@@ -413,6 +432,7 @@ export default function DealsPage() {
           categoryId: selectedMainCategorySlug,
           subCategorySlug: selectedSubcategory || undefined,
           subSubCategorySlug: selectedSubSubcategory || undefined,
+          status: dealStatusView === 'waiting_room' ? 'pending' : 'approved',
         }), 2, 500);
 
         if (!cancelled) setTotalDealsCount(count);
@@ -424,7 +444,7 @@ export default function DealsPage() {
 
     fetchDealsCount();
     return () => { cancelled = true; };
-  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, dealStatusView]);
 
   // Sortowanie i filtrowanie lokalne (po pobraniu z API)
   const filteredAndSortedDeals = useMemo(() => {
@@ -989,6 +1009,20 @@ export default function DealsPage() {
                       {/* Sortowanie */}
                       <div className="flex flex-col sm:flex-row gap-2">
                         <SortSelect />
+                        <Select value={dealStatusView} onValueChange={(value: DealStatusView) => {
+                          setDealStatusView(value);
+                          const params = new URLSearchParams(searchParams.toString());
+                          params.set('status', value);
+                          router.push(`${window.location.pathname}?${params.toString()}`);
+                        }}>
+                          <SelectTrigger className="w-full sm:w-[260px]">
+                            <SelectValue placeholder="Widoczność" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="approved">Widok: Zatwierdzone</SelectItem>
+                            <SelectItem value="waiting_room">Widok: Poczekalnia</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* Quick filters - chipy */}
@@ -1179,7 +1213,10 @@ export default function DealsPage() {
                     {/* Status info */}
                     {!hasMore && displayedDeals.length > 0 && (
                       <div className="mt-6 text-center text-sm text-muted-foreground">
-                        <p>Pokazano wszystkie {filteredAndSortedDeals.length} okazji</p>
+                        <p>
+                          Pokazano wszystkie {filteredAndSortedDeals.length} okazji
+                          {dealStatusView === 'waiting_room' ? ' (poczekalnia)' : ''}
+                        </p>
                       </div>
                     )}
                   </>

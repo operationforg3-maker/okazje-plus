@@ -98,7 +98,7 @@ export default function SocialMediaAdminPage() {
     }
 
     loadData();
-  }, [authLoading, user?.role]);
+  }, [authLoading, user?.role, loadData]);
 
   const loadData = useCallback(async () => {
     try {

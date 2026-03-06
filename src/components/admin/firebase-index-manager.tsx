@@ -27,7 +27,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -94,7 +94,7 @@ export function FirebaseIndexManager({ onConsoleLog }: FirebaseIndexManagerProps
   const [creating, setCreating] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState('overview');
 
-  const diagnoseIndexes = async () => {
+  const diagnoseIndexes = useCallback(async () => {
     try {
       setLoading(true);
       onConsoleLog?.('🔍 Diagnozuję Firebase Indexes...', 'info');
@@ -118,7 +118,7 @@ export function FirebaseIndexManager({ onConsoleLog }: FirebaseIndexManagerProps
     } finally {
       setLoading(false);
     }
-  };
+  }, [onConsoleLog]);
 
   const createIndex = async (indexName: string) => {
     try {
@@ -179,7 +179,7 @@ export function FirebaseIndexManager({ onConsoleLog }: FirebaseIndexManagerProps
 
   useEffect(() => {
     diagnoseIndexes();
-  }, []);
+  }, [diagnoseIndexes]);
 
   if (!diagnosis) {
     return (

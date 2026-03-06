@@ -212,7 +212,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
       formattedMinOrder: minOrder,
       discount: calculatedDiscount ?? fallbackDiscount,
     });
-  }, [deal.price, deal.originalPrice, deal.minOrderValue, currency]);
+  }, [deal.price, deal.originalPrice, deal.minOrderValue, deal.discountPercent, deal.legacyPrice, currency]);
 
   const outboundUrl = getExternalUrl(
     deal.link,

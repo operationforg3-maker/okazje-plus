@@ -25,7 +25,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -120,7 +120,7 @@ export function LinkVerifier({ onConsoleLog }: LinkVerifierProps) {
   const [showUrls, setShowUrls] = useState<Set<string>>(new Set());
 
   // Załaduj linki
-  const loadLinks = async () => {
+  const loadLinks = useCallback(async () => {
     try {
       setLoading(true);
       onConsoleLog?.('🔍 Ładuję linki afiliacyjne...', 'info');
@@ -141,7 +141,7 @@ export function LinkVerifier({ onConsoleLog }: LinkVerifierProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onConsoleLog]);
 
   // Weryfikuj wszystkie linki
   const verifyAllLinks = async () => {
@@ -204,7 +204,7 @@ export function LinkVerifier({ onConsoleLog }: LinkVerifierProps) {
 
   useEffect(() => {
     loadLinks();
-  }, []);
+  }, [loadLinks]);
 
   const toggleUrlVisibility = (linkId: string) => {
     setShowUrls(prev => {

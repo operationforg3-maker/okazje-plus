@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
@@ -78,11 +78,7 @@ export default function ProductDetailM6Client({
   
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(productId, 'product');
 
-  useEffect(() => {
-    fetchRatings();
-  }, [productId, user]);
-
-  const fetchRatings = async () => {
+  const fetchRatings = useCallback(async () => {
     if (user && productId) {
       const rating = await getUserProductRating(productId, user.uid);
       setUserRating(rating);
@@ -91,7 +87,11 @@ export default function ProductDetailM6Client({
       const ratings = await getProductRatings(productId, 5);
       setRecentRatings(ratings);
     }
-  };
+  }, [productId, user]);
+
+  useEffect(() => {
+    fetchRatings();
+  }, [fetchRatings]);
 
   if (!productData) {
     return <div className="page-container py-12 text-center">Loading...</div>;

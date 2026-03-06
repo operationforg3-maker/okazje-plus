@@ -640,7 +640,7 @@ function ModerationPage() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   const handleModeration = async (itemId: string, itemType: 'deal' | 'product', action: 'approve' | 'reject') => {
     setProcessingId(itemId);
@@ -830,10 +830,10 @@ function ModerationPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
-                  <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
-                  <SelectItem value="approved">✅ Approved</SelectItem>
-                  <SelectItem value="draft">📝 Draft</SelectItem>
-                  <SelectItem value="rejected">❌ Rejected</SelectItem>
+                  <SelectItem value="pending">⏳ Poczekalnia (pending + draft)</SelectItem>
+                  <SelectItem value="approved">✅ Zatwierdzone</SelectItem>
+                  <SelectItem value="draft">📝 Szkic</SelectItem>
+                  <SelectItem value="rejected">❌ Odrzucone</SelectItem>
                 </SelectContent>
               </Select>
               <Badge variant="secondary">{pendingDeals.length} deali</Badge>
@@ -908,7 +908,7 @@ function ModerationPage() {
             <CardHeader>
               <CardTitle>Okazje - wszystkie statusy</CardTitle>
               <CardDescription>
-                Moderacja okazji - wszystkie statusy (approved, pending, draft, rejected)
+                Moderacja okazji - wszystkie statusy (zatwierdzone, poczekalnia, szkic, odrzucone)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1022,11 +1022,11 @@ function ModerationPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">🌐 Wszystkie statusy</SelectItem>
-                  <SelectItem value="pending">⏳ Pending + Draft</SelectItem>
-                  <SelectItem value="approved">✅ Approved</SelectItem>
-                  <SelectItem value="draft">📝 Draft</SelectItem>
-                  <SelectItem value="pending_approval">⏰ Pending Approval</SelectItem>
-                  <SelectItem value="rejected">❌ Rejected</SelectItem>
+                  <SelectItem value="pending">⏳ Poczekalnia (pending + draft)</SelectItem>
+                  <SelectItem value="approved">✅ Zatwierdzone</SelectItem>
+                  <SelectItem value="draft">📝 Szkic</SelectItem>
+                  <SelectItem value="pending_approval">⏰ Oczekuje na akceptację</SelectItem>
+                  <SelectItem value="rejected">❌ Odrzucone</SelectItem>
                 </SelectContent>
               </Select>
               <Badge variant="secondary">{pendingProducts.length} produktów</Badge>

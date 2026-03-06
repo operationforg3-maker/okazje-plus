@@ -33,6 +33,21 @@ export function useSmartPoll<T>(
   const [loading, setLoading] = useState(immediate);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Poll function
+  const poll = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await fetchFn();
+      setData(result);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      onError?.(err);
+      console.error('[useSmartPoll] Fetch failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchFn, onError]);
   
   // Track visibility changes
   useEffect(() => {
@@ -48,22 +63,7 @@ export function useSmartPoll<T>(
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-  
-  // Poll function
-  const poll = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await fetchFn();
-      setData(result);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      onError?.(err);
-      console.error('[useSmartPoll] Fetch failed:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchFn, onError]);
+  }, [poll]);
   
   // Setup polling interval
   useEffect(() => {

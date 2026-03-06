@@ -145,7 +145,7 @@ function AdminPage() {
       }
     }
     fetchStats();
-  }, []);
+  }, [getIdToken]);
   const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
   DEBUG && console.log('[AdminPage] Render - loading:', loading, 'hasStats:', !!stats);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,11 +41,7 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   const [isFavorite, setIsFavorite] = useState(false);
   const { formatPrice } = useCurrency();
 
-  useEffect(() => {
-    loadProduct();
-  }, [productId]);
-
-  const loadProduct = async () => {
+  const loadProduct = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -61,7 +57,11 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId, t]);
+
+  useEffect(() => {
+    loadProduct();
+  }, [loadProduct]);
 
   if (loading) {
     return (
