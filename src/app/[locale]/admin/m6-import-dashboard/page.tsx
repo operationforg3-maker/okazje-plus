@@ -2475,6 +2475,24 @@ function JobItem({
   isDeleting?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+
+  const queryLabel = (() => {
+    const rawQuery = (job as any).query;
+    if (typeof rawQuery === "string") {
+      return rawQuery;
+    }
+    if (rawQuery == null) {
+      return "";
+    }
+    if (typeof rawQuery === "number" || typeof rawQuery === "boolean") {
+      return String(rawQuery);
+    }
+    try {
+      return JSON.stringify(rawQuery);
+    } catch {
+      return "[nieprawidlowe zapytanie]";
+    }
+  })();
   
   const isTreeMode = (job.totalCategories || 0) > 0;
   // Fallback for progress percent
@@ -2527,8 +2545,8 @@ function JobItem({
           <div className="text-sm flex items-center">
              <span className="font-semibold text-slate-700 whitespace-nowrap">{job.source}</span>
              <ArrowRight className="mx-1 w-3 h-3 text-slate-400 flex-shrink-0" />
-             <span className="font-mono text-slate-600 bg-slate-100 px-1 rounded truncate max-w-[250px]" title={job.query}>
-               "{job.query}"
+             <span className="font-mono text-slate-600 bg-slate-100 px-1 rounded truncate max-w-[250px]" title={queryLabel}>
+               "{queryLabel}"
              </span>
           </div>
 
@@ -2728,12 +2746,30 @@ function DuplicatesOverviewDialog({
                     l.message.includes("Found existing product")
                  );
 
+                 const queryLabel = (() => {
+                   const rawQuery = (job as any).query;
+                   if (typeof rawQuery === "string") {
+                     return rawQuery;
+                   }
+                   if (rawQuery == null) {
+                     return "";
+                   }
+                   if (typeof rawQuery === "number" || typeof rawQuery === "boolean") {
+                     return String(rawQuery);
+                   }
+                   try {
+                     return JSON.stringify(rawQuery);
+                   } catch {
+                     return "[nieprawidlowe zapytanie]";
+                   }
+                 })();
+
                  return (
                   <AccordionItem key={job.id} value={job.id}>
                     <AccordionTrigger className="hover:no-underline px-1">
                       <div className="flex items-center gap-2 md:gap-4 text-left w-full pr-4">
                         <Badge variant="outline" className="shrink-0">{job.source}</Badge>
-                        <span className="font-mono text-sm truncate max-w-[150px] md:max-w-[300px]" title={job.query}>{job.query}</span>
+                        <span className="font-mono text-sm truncate max-w-[150px] md:max-w-[300px]" title={queryLabel}>{queryLabel}</span>
                         <div className="flex-1" />
                         <span className="text-amber-600 font-bold whitespace-nowrap">
                           {job.duplicatesSkipped} match
