@@ -399,11 +399,19 @@ interface CategoryNode {
 }
 
 function JobCategoryTree({ categories }: { categories: NonNullable<HarvesterJob['processedCategories']> }) {
+  const getCategoryPathParts = (value: unknown): string[] => {
+    if (typeof value !== 'string') return ['unknown'];
+    return value
+      .split('/')
+      .map((part) => part.trim())
+      .filter(Boolean);
+  };
+
   // 1. Build Tree
   const root: Record<string, CategoryNode> = {};
   
   categories.forEach(cat => {
-    const parts = cat.category.split('/');
+    const parts = getCategoryPathParts(cat.category);
     let currentLevel = root;
     
     parts.forEach((part, idx) => {
@@ -2557,7 +2565,7 @@ function JobItem({
               <div className="pt-1 flex gap-2 overflow-x-auto pb-1 max-w-full no-scrollbar">
                 {job.processedCategories.slice(-3).map((cat, i) => (
                   <div key={i} className="flex-shrink-0 text-[10px] px-1.5 py-0.5 bg-white border border-slate-200 rounded text-slate-500 whitespace-nowrap">
-                    {cat.status === 'ok' ? '✅' : '❌'} {cat.category.split('/').pop()} <span className="font-bold">({cat.count})</span>
+                    {cat.status === 'ok' ? '✅' : '❌'} {(typeof cat.category === 'string' ? cat.category.split('/').pop() : 'unknown')} <span className="font-bold">({cat.count})</span>
                   </div>
                 ))}
                 {job.processedCategories.length > 3 && (
