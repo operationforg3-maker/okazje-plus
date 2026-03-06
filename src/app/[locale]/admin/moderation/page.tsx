@@ -1234,6 +1234,23 @@ function ModerationPage() {
                 <div className="space-y-3">
                   {discardedItems.map((item: any) => (
                     <div key={item.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                      {(() => {
+                        const normalizeText = (value: unknown, fallback = ''): string => {
+                          if (typeof value === 'string') return value;
+                          if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+                          if (value == null) return fallback;
+                          try {
+                            return JSON.stringify(value);
+                          } catch {
+                            return fallback;
+                          }
+                        };
+
+                        const safeTitle = normalizeText(item.title, 'Bez tytułu');
+                        const safeQuery = normalizeText(item.query, '');
+
+                        return (
+                          <>
                       <div className="w-full lg:w-[160px] lg:shrink-0">
                         <div className="w-full h-[120px] bg-muted rounded-md overflow-hidden border">
                           {item.imageUrl ? (
@@ -1247,8 +1264,8 @@ function ModerationPage() {
                       </div>
                       <div className="flex-1 min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold truncate" title={item.title || 'Bez tytułu'}>
-                            {item.title || 'Bez tytułu'}
+                          <h3 className="font-semibold truncate" title={safeTitle || 'Bez tytułu'}>
+                            {safeTitle || 'Bez tytułu'}
                           </h3>
                           <Badge variant="outline">{item.source || 'źródło'}</Badge>
                           {item.type && <Badge variant="secondary">{item.type}</Badge>}
@@ -1264,10 +1281,10 @@ function ModerationPage() {
                           ) : (
                             <span className="font-semibold">—</span>
                           )}
-                          {item.query && (
+                          {safeQuery && (
                             <>
                               <span className="hidden sm:inline">•</span>
-                              <span>Query: {item.query}</span>
+                              <span>Query: {safeQuery}</span>
                             </>
                           )}
                           {item.createdAt && (
@@ -1283,6 +1300,9 @@ function ModerationPage() {
                           </a>
                         )}
                       </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
