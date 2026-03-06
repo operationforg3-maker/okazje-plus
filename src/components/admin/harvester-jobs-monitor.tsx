@@ -341,6 +341,19 @@ export function HarvesterJobsMonitor({ onConsoleLog }: HarvesterJobsMonitorProps
 
 function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const toSafeText = (value: unknown, fallback = ''): string => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (value == null) return fallback;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const sourceLabel = toSafeText((job as any)?.source, 'unknown').toUpperCase();
+  const queryLabel = toSafeText((job as any)?.query, '');
   const statusConfig: Record<string, { color: string; icon: any; label: string }> = {
     running: { color: 'bg-blue-100 text-blue-900', icon: Loader2, label: '⏳ W trakcie' },
     completed: { color: 'bg-green-100 text-green-900', icon: CheckCircle, label: '✅ Ukończone' },
@@ -363,7 +376,7 @@ function JobCard({ job, onDelete }: { job: HarvesterJob; onDelete: (id: string) 
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <CardTitle className="text-base">
-                {job.source.toUpperCase()} — {job.query.substring(0, 50)}{job.query.length > 50 ? '...' : ''}
+                {sourceLabel} — {queryLabel.substring(0, 50)}{queryLabel.length > 50 ? '...' : ''}
               </CardTitle>
               <Badge className={config.color}>
                 {job.status === 'running' && <Loader2 className="h-3 w-3 animate-spin mr-1" />}

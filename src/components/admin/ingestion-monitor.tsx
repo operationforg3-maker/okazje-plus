@@ -111,6 +111,20 @@ export function IngestionMonitor() {
  * HarvesterJobCard - Single harvester job status
  */
 function HarvesterJobCard({ job }: { job: any }) {
+  const toSafeText = (value: unknown, fallback = ''): string => {
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (value == null) return fallback;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const sourceLabel = toSafeText(job?.source, 'unknown').toUpperCase();
+  const queryLabel = toSafeText(job?.query, '');
+
   const progress =
     job.productsFound > 0
       ? ((job.productsCreated + job.duplicatesSkipped) / job.productsFound) * 100
@@ -137,7 +151,7 @@ function HarvesterJobCard({ job }: { job: any }) {
           {getStatusIcon()}
           <div>
             <p className="font-semibold">
-              {job.source.toUpperCase()} - {job.query}
+              {sourceLabel} - {queryLabel}
             </p>
             <p className="text-sm text-gray-500">{job.id}</p>
           </div>
