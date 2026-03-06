@@ -87,19 +87,6 @@ export default function SocialMediaAdminPage() {
   const [editingPlatform, setEditingPlatform] = useState<SocialPlatform | null>(null);
   const [publishingFacebookTest, setPublishingFacebookTest] = useState(false);
 
-  useEffect(() => {
-    if (authLoading) {
-      return;
-    }
-
-    if (user?.role !== 'admin') {
-      setLoading(false);
-      return;
-    }
-
-    loadData();
-  }, [authLoading, user?.role, loadData]);
-
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -126,6 +113,19 @@ export default function SocialMediaAdminPage() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (user?.role !== 'admin') {
+      setLoading(false);
+      return;
+    }
+
+    loadData();
+  }, [authLoading, user?.role, loadData]);
 
   async function handleSaveConfig(platform: SocialPlatform, config: Partial<SocialConfig>) {
     try {
