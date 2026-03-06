@@ -70,6 +70,12 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> $GITHUB_ENV
           firebase experiments:enable webframeworks
 
+      - name: Prepare Firebase Functions params
+        run: |
+          cat > "okazje-plus/.env.${{ secrets.FIREBASE_PROJECT_ID }}" <<EOF
+          CONVERTISER_API_TOKEN=${{ secrets.CONVERTISER_API_TOKEN }}
+          EOF
+
       - name: Remove stale frameworks function (ssrokazjeplus)
         run: |
           firebase functions:delete ssrokazjeplus --region europe-west4 --project ${{ secrets.FIREBASE_PROJECT_ID }} --force || true
@@ -91,4 +97,6 @@ jobs:
 
       - name: Cleanup key
         if: always()
-        run: rm -f $HOME/firebase-key.json
+        run: |
+          rm -f $HOME/firebase-key.json
+          rm -f "okazje-plus/.env.${{ secrets.FIREBASE_PROJECT_ID }}"
