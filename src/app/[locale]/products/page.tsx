@@ -67,7 +67,12 @@ function ProductsPageContent() {
   const [dealOfTheDay, setDealOfTheDay] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'list';
+    }
+    return 'grid';
+  });
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [sortBy, setSortBy] = useState<SortBy>('relevance');
   const [productStatusView, setProductStatusView] = useState<ProductStatusView>(
@@ -150,6 +155,9 @@ function ProductsPageContent() {
       const savedView = localStorage.getItem('products_view_mode');
       if (savedView === 'list' || savedView === 'grid') {
         setViewMode(savedView);
+      } else if (typeof window !== 'undefined') {
+        // M6 mobile-first default: list on phones, grid on tablet/desktop.
+        setViewMode(window.innerWidth < 768 ? 'list' : 'grid');
       }
       const savedDensity = localStorage.getItem('products_density');
       if (savedDensity === 'compact' || savedDensity === 'comfortable') {

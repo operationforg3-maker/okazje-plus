@@ -18,9 +18,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List as ListIcon, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { FixedSizeList as VirtualizedList } from 'react-window';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SortSelect } from '@/components/sort-select';
@@ -102,6 +103,8 @@ export default function DealsPage() {
   });
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [insightsOpen, setInsightsOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [mobileListHeight, setMobileListHeight] = useState(520);
   const categoryInitialized = useRef(false);
   const selectedMainCategorySlug = selectedCategory?.slug || selectedCategory?.id;
 
@@ -257,6 +260,20 @@ export default function DealsPage() {
   useEffect(() => {
     try { localStorage.setItem('deals_view_mode', viewMode); } catch {}
   }, [viewMode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateViewportFlags = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobileViewport(mobile);
+      setMobileListHeight(Math.max(380, Math.min(window.innerHeight - 190, 760)));
+    };
+
+    updateViewportFlags();
+    window.addEventListener('resize', updateViewportFlags);
+    return () => window.removeEventListener('resize', updateViewportFlags);
+  }, []);
 
   useEffect(() => {
     try { localStorage.setItem('deals_density', cardDensity); } catch {}
@@ -522,6 +539,10 @@ export default function DealsPage() {
     loadMoreThreshold: 500,
   });
 
+  const shouldUseVirtualizedWaitingRoom =
+    isMobileViewport && dealStatusView === 'waiting_room' && viewMode === 'list';
+  const waitingRoomItemSize = cardDensity === 'compact' ? 300 : 340;
+
   // Statystyki
   const discountStats = filteredAndSortedDeals.reduce(
     (acc, deal) => {
@@ -644,6 +665,7 @@ export default function DealsPage() {
   const categoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
   const subcategoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
   const subSubcategoryButtonRefs = useRef<Record<string, HTMLButtonElement>>({});
+  const swipeStartXRef = useRef<Record<string, number>>({});
 
   // Auto-scroll do wybranej kategorii/podkategorii gdy się zmienia
   useEffect(() => {
@@ -708,6 +730,30 @@ export default function DealsPage() {
     if (!selected) return currentSub.subcategories;
     return [selected, ...currentSub.subcategories.filter(ss => (ss.slug || ss.id) !== selectedSubSubcategory)];
   }, [sortedSubcategories, selectedSubcategory, selectedSubSubcategory]);
+
+  const handleSwipeStart = (dealId: string, touchX: number) => {
+    swipeStartXRef.current[dealId] = touchX;
+  };
+
+  const handleSwipeEnd = (dealId: string, touchX: number) => {
+    const startX = swipeStartXRef.current[dealId];
+    delete swipeStartXRef.current[dealId];
+
+    if (typeof startX !== 'number') return;
+    const deltaX = touchX - startX;
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const isWaitingRoomList = dealStatusView === 'waiting_room' && viewMode === 'list';
+
+    if (!isMobile || !isWaitingRoomList) return;
+
+    // Swipe left to downvote (M6 touch-first waiting room behavior).
+    if (deltaX <= -90 && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('deal-swipe-downvote', { detail: { dealId } })
+      );
+      toast.success('Przesunięto w lewo: oddano głos przeciw');
+    }
+  };
 
   // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
   const SidebarContent = () => (
@@ -1150,7 +1196,7 @@ export default function DealsPage() {
                         onClick={() => setViewMode('list')}
                         className="h-8 px-3"
                       >
-                        <List className="h-4 w-4 mr-1" />
+                        <ListIcon className="h-4 w-4 mr-1" />
                         <span className="hidden sm:inline">{t('viewMode.list')}</span>
                       </Button>
                       <Button
@@ -1181,13 +1227,48 @@ export default function DealsPage() {
                 ) : filteredAndSortedDeals.length > 0 ? (
                   <>
                     {viewMode === 'list' ? (
-                      <div className={listWrapperClass}>
-                        {displayedDeals.map((deal) => (
-                          <div key={deal.id} className={cardWrapperClass}>
-                            <DealListCard deal={deal} />
-                          </div>
-                        ))}
-                      </div>
+                      shouldUseVirtualizedWaitingRoom ? (
+                        <div className="rounded-lg border border-border/60 bg-background/30">
+                          <VirtualizedList
+                            height={mobileListHeight}
+                            width="100%"
+                            itemCount={filteredAndSortedDeals.length}
+                            itemSize={waitingRoomItemSize}
+                            overscanCount={4}
+                          >
+                            {({ index, style }) => {
+                              const deal = filteredAndSortedDeals[index];
+                              if (!deal) return null;
+
+                              return (
+                                <div
+                                  style={style}
+                                  className="px-1 pb-3"
+                                  onTouchStart={(event) => handleSwipeStart(deal.id, event.changedTouches[0]?.clientX ?? 0)}
+                                  onTouchEnd={(event) => handleSwipeEnd(deal.id, event.changedTouches[0]?.clientX ?? 0)}
+                                >
+                                  <div className={cardWrapperClass}>
+                                    <DealListCard deal={deal} />
+                                  </div>
+                                </div>
+                              );
+                            }}
+                          </VirtualizedList>
+                        </div>
+                      ) : (
+                        <div className={listWrapperClass}>
+                          {displayedDeals.map((deal) => (
+                            <div
+                              key={deal.id}
+                              className={cardWrapperClass}
+                              onTouchStart={(event) => handleSwipeStart(deal.id, event.changedTouches[0]?.clientX ?? 0)}
+                              onTouchEnd={(event) => handleSwipeEnd(deal.id, event.changedTouches[0]?.clientX ?? 0)}
+                            >
+                              <DealListCard deal={deal} />
+                            </div>
+                          ))}
+                        </div>
+                      )
                     ) : (
                       <div className={gridWrapperClass}>
                         {displayedDeals.map((deal) => (
@@ -1199,7 +1280,7 @@ export default function DealsPage() {
                     )}
                     
                     {/* Infinite scroll loader */}
-                    {hasMore && (
+                    {hasMore && !shouldUseVirtualizedWaitingRoom && (
                       <div ref={observerTarget} className="mt-6 flex justify-center items-center py-4">
                         {isLoadingMore && (
                           <div className="flex items-center gap-2 text-muted-foreground">

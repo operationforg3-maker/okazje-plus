@@ -2,6 +2,7 @@
 
 import { Navbar } from "./navbar";
 import { Footer } from "./footer";
+import { BottomTabBar } from "./bottom-tab-bar";
 
 export function ConditionalNav({ children }: { children: React.ReactNode }) {
   // Always render navbar and footer - no conditional logic based on auth
@@ -15,10 +16,11 @@ export function ConditionalNav({ children }: { children: React.ReactNode }) {
         Przejdź do głównej zawartości
       </a>
       <Navbar />
-      <main id="main-content" className="flex-1" role="main">
+      <main id="main-content" className="flex-1 pb-20 md:pb-0" role="main">
         {children}
       </main>
       <Footer />
+      <BottomTabBar />
     </div>
   );
 }

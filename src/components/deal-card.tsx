@@ -381,6 +381,10 @@ function DealCard({ deal, product }: DealCardProps) {
       
       trackVote('deal', deal.id, action);
       void trackFirestoreVote('deal', deal.id, user.uid, action);
+
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([50]);
+      }
       
       toast.success(t('messages.thankYouForVote'));
     } catch (error: any) {

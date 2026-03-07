@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
@@ -21,7 +21,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
   // Stan dla licznika głosów będzie potrzebny, jeśli będziemy go aktualizować w czasie rzeczywistym
   // Na razie polegamy na initialVoteCount
 
-  const handleVote = async (direction: 'up' | 'down') => {
+  const handleVote = useCallback(async (direction: 'up' | 'down') => {
     if (!user) {
       toast.error(t('auth.loginToVote'));
       return;
@@ -74,6 +74,9 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       }
       
       trackVote('deal', dealId, direction);
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([50]);
+      }
       toast.success(`Głos ${direction === 'up' ? 'za' : 'przeciw'} został zapisany`);
       
     } catch (error) {
@@ -82,7 +85,22 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dealId, t, user]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onSwipeDownvote = (event: Event) => {
+      const custom = event as CustomEvent<{ dealId?: string }>;
+      if (custom.detail?.dealId !== dealId) return;
+      void handleVote('down');
+    };
+
+    window.addEventListener('deal-swipe-downvote', onSwipeDownvote as EventListener);
+    return () => {
+      window.removeEventListener('deal-swipe-downvote', onSwipeDownvote as EventListener);
+    };
+  }, [dealId, handleVote]);
 
   return (
     <div className="flex items-center space-sm">
