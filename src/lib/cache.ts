@@ -61,7 +61,11 @@ async function initRedis() {
   await redisInitPromise;
 }
 
-const lru = new LRUCache<string, any>({ max: 50, ttl: 1000 * 30 }); // Ultra-minimal cache for 256MB Cloud Run
+const lru = new LRUCache<string, any>({
+  max: 500,
+  ttl: 1000 * 3600,
+  updateAgeOnGet: true,
+});
 
 export async function cacheGet(key: string): Promise<any | null> {
   await initRedis();

@@ -1,0 +1,78 @@
+Import Source of Truth — Deals & ProductCore
+Ostatnia aktualizacja: Luty 2026 | Architektura: M6 Product-Centric (zintegrowana z Category Tree JSON v2)
+Status integracji: AliExpress ✅ aktywny | Convertiser ✅ aktywny | Amazon ⚠️ pending | Allegro ⚠️ pending | eBay ⚠️ pending
+Niniejszy dokument jest jedynym źródłem prawdy dla wszystkich operacji importu ofert i produktów (ProductCore). Zawiera wszystkie API, mapowania pól, wzorce zapisu do bazy danych oraz zasady uspojnienia z plikiem category-tree.json.
+Spis treści
+	•	Architektura danych M6
+	•	Pipeline importu — przegląd
+	•	Pośredni schemat RawProduct
+	•	Integracje API
+	•	Mapowania pól — API → RawProduct
+	•	Zapis do Firestore — schematy kolekcji
+	•	Logika deduplikacji
+	•	Wzbogacanie AI (Deal Refiner & Product Refiner)
+	•	Endpointy API importu (Admin)
+	•	Zmienne środowiskowe
+	•	Walidacja schematów (Zod)
+	•	Integracja z Drzewem Kategorii (JSON)
+1. Architektura danych M6
+M6 używa modelu dwóch encji z separacją odpowiedzialności:
+ProductCore (niemutowalne dane produktu z katalogu)     ↑ productId (FK) DealM6 (mutowalna oferta / aukcja z danego sklepu) 
+Aspekt
+ProductCore
+DealM6
+Kolekcja Firestore
+product_cores
+deals
+Charakter
+Niemutowalny opis produktu (Master Data)
+Mutowalna oferta cenowa (Marketplace)
+Jeden / wiele
+Jeden na unikalny produkt
+Wiele na jeden ProductCore
+Status publiczny
+approved
+approved
+Klucz tożsamości
+identityHash = SHA-256(titleHash + imageHash)
+productId = ID ProductCore
+2. Pipeline importu — przegląd
+┌─────────────────────────────────────────────────────────────────────────┐ │                           PIPELINE IMPORTU                              │ │                                                                         │ │  1. FETCH       2. TRANSFORM & CATEGORIZE  3. DEDUPLIKACJA   4. ZAPIS   │ │                                                                         │ │  API źródła  →  RawProduct + JSON Match →  ProductCore?   →  Firestore  │ │                 (Dopasowanie slugów        istniejący:       batch.set()│ │                 na bazie importKeywords)   tylko Deal                   │ │                                            nowy: PC + Deal              │ │                                                                         │ │  5. RECALKULACJA               6. AI ENRICHMENT (async 6 języków)       │ │                                                                         │ │  batchUpdateProductBestPrices() → Deal Refiner → Product Refiner        │ │                                   (translacje)   (ekstrakcja specs      │ │                                                   na bazie JSON)        │ └─────────────────────────────────────────────────────────────────────────┘ 
+3. Pośredni schemat RawProduct
+Wszystkie źródła API są normalizowane do wspólnego interfejsu RawProduct przed zapisem do Firestore. Został on rozbudowany o obsługę kategorii z nowego JSONa.
+// src/lib/automation/harvester.ts interface RawProduct {   // === WYMAGANE (Dane Ofertowe) ===   title: string;   imageUrl: string;   price: number;   currency: string;   shippingCost: number;   shippingDays: number;   sourceProductId: string;   sourceUrl: string;    // === TAKSONOMIA (Zmapowane na podstawie category-tree.json) ===   matchedL3Slug?: string;           // Najważniejsze! Np. 'smartphones'   matchedL2Slug?: string;           // Np. 'smartphones-accessories'   matchedL1Slug?: string;           // Np. 'electronics-it'   originalCategoryName?: string;    // Oryginalna kategoria z API   googleCategoryId?: number;        // Jeśli API dostarcza (np. Convertiser XML)    // === OPCJONALNE (Szczegóły Produktu) ===   description?: string;   originalPrice?: number;   merchantName?: string;   specs?: Record<string, string>;   // Surowe, nieustrukturyzowane specs   discountPercent?: number;   couponCode?: string;   rating?: number;      // === IDENTYFIKATORY ===   sku?: string;   ean?: string;   gtin?: string;   upc?: string;   mpn?: string; } 
+4. Integracje API
+(Szczegóły logowania do AliExpress, Convertiser, Amazon, Allegro - pozostają bez zmian).
+5. Mapowania pól — API → RawProduct
+Nowa zasada dla Kategoryzacji (Transform Step):
+Każdy mapper API musi przepuścić pole title oraz ewentualnie pole category z oryginalnego API przez silnik CategoryMatcher.
+	•	Skrypt ładuje category-tree.json.
+	•	Skanuje wszystkie tablice importKeywords z poziomu L3.
+	•	Przypisuje matchedL3Slug (np. coffee-machines), jeśli wykryto słowo (np. "Espresso maker").
+	•	Jeśli brak dopasowania, ustawia matchedL3Slug: "uncategorized".
+6. Zapis do Firestore — schematy kolekcji
+6.1 Kolekcja product_cores
+Zaktualizowana o 6 języków (pl, en, de, fr, es, uk) oraz ścisłe powiązanie z JSON.
+// src/lib/types.ts: interface ProductCore {   id: string,   identityHash: string,    // === TREŚĆ W 6 JĘZYKACH (Wymóg Enterprise) ===   title: LocalizedText,            // { pl: "", en: "", de: "", fr: "", es: "", uk: "" }   shortDescription: LocalizedText,   fullDescription: LocalizedText,    // === SPECYFIKACJE ===   // AI Refiner ustrukturyzuje ten obiekt w oparciu o pole    // 'filterableAttributes' z category-tree.json (np. brand, ram, color)   coreSpecs: Record<string, string>,    rawSpecs: Record<string, string>,  // Pozostałe, mniej ważne parametry      // === TAKSONOMIA (Odwołania do JSON) ===   mainCategorySlug: string,      // L1 (np. "electronics-it")   subCategorySlug: string,       // L2 (np. "smartphones-accessories")   subSubCategorySlug: string,    // L3 (np. "smartphones")    // === MEDIA & OCENY ===   imageUrl?: string,   images: string[],   rating: { score: number, count: number, provider: string },    // === WYSZUKIWANIE I SEO ===   // Otrzymuje 'seoKeywords' z JSONa podczas indeksowania Elasticsearch!   searchTags: string[],    // === RELACJE DEAL ===   bestPrice: { amount: number, currency: string },   bestTotalPrice: number,   linkedDealIds: string[],    // === METADANE ===   status: 'pending_approval' | 'approved' | 'rejected' | 'uncategorized',   metadata: { ... } } 
+6.2 Kolekcja deals
+Zaktualizowana o 6 języków w węźle metadata dla sztucznej inteligencji.
+// src/lib/types.ts: interface DealM6 {   id: string,   productId: string,   price: { amount: number, currency: string },   lowestPriceIn30Days?: number,   shipping: { cost: number, timeDays: number },   source: 'aliexpress' | 'convertiser' | 'amazon' | 'allegro',   affiliateLink: string,   dealUrl?: string,    // === WZBOGACENIE AI (Wszystkie 6 Języków) ===   metadata?: {     sellingPoints?: {       pl: string[], en: string[], de: string[],       fr: string[], es: string[], uk: string[]     },     offerSummary?: {       pl: string, en: string, de: string,       fr: string, es: string, uk: string     }   },      status: 'draft' | 'approved' | 'rejected' } 
+7. Logika deduplikacji
+(Hierarchia deduplikacji: 1. EAN/UPC, 2. Identity Hash, 3. Nowy Produkt - bez zmian).
+8. Wzbogacanie AI (Deal Refiner & Product Refiner)
+Wzbogacanie działa asynchronicznie po imporcie. Zostało ściśle zintegrowane z Category Tree JSON.
+Product Refiner (Inteligencja Katalogowa)
+	•	Pobiera ProductCore ze statusem pending_approval.
+	•	Krok JSON: Odczytuje wartość subSubCategorySlug (np. laptops). Odpytuje plik JSON o wartość filterableAttributes dla laptops (wynik: ["brand", "ram", "storage", "gpu"]).
+	•	Wysyła do Gemini AI prompt: "Oto surowe dane laptopa. Wyciągnij i znormalizuj dokładnie te atrybuty: brand, ram, storage, gpu. Zapisz je w 'coreSpecs'."
+	•	Generuje opisy fullDescription w 6 językach (pl, en, de, fr, es, uk).
+Deal Refiner (Inteligencja Sprzedażowa)
+	•	Pobiera DealM6 ze statusem draft.
+	•	Kompresuje warunki oferty, generuje sellingPoints (dlaczego warto kupić tę konkretną ofertę, a nie inną tego samego produktu).
+	•	Zapisuje wyniki wielojęzyczne do deals/{dealId} i zmienia status na approved.
+12. Integracja z Drzewem Kategorii (JSON)
+Aby architektura M6 była w 100% skalowalna do "miliona produktów", plik category-tree-seo-extended.json pełni rolę Headless CMS.
+	•	Routing i Filtrowanie: W bazie danych (Firestore) trzymamy TYLKO pole slug (np. subSubCategorySlug: "smartphones").
+	•	Wyświetlanie: Gdy użytkownik wchodzi na stronę kategorii, Frontend pobiera z pliku JSON strukturę filtrów (filterableAttributes), grafiki banerowe (media.headerBanner) oraz nazwę kategorii w wybranym języku (translations.de.name).
+	•	SEO: Tag <title> jest generowany dynamicznie poprzez wstrzyknięcie zlokalizowanej nazwy kategorii do szablonu zapisanego w JSON: translations.pl.metaTemplate.title.
+	•	Wyszukiwarka: Indeksator Elasticsearch ładuje tablicę translations.[lang].seoKeywords dla każdego produktu pasującego do danego sluga, co rozwiązuje problem literówek i synonimów w wyszukiwaniu na stronie.

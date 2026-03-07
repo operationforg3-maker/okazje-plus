@@ -3,6 +3,17 @@
 import { useAuth } from '@/lib/auth';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import ConvertiserAutoImport from '@/components/admin/convertiser-auto-import';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIEnhancer } from '@/components/admin/ai-enhancer';
 import { withAuth } from '@/components/auth/withAuth';
@@ -22,9 +33,56 @@ interface ConsoleLine {
   timestamp: string;
 }
 
+type HarvesterSource = 'convertiser' | 'aliexpress' | 'amazon' | 'allegro';
+
 function HarvesterPage() {
   const { user, getIdToken } = useAuth();
   const [consoleLogs, setConsoleLogs] = useState<ConsoleLine[]>([]);
+  const [source, setSource] = useState<HarvesterSource>('convertiser');
+  const [query, setQuery] = useState('');
+  const [maxResults, setMaxResults] = useState(50);
+  const [isStartingJob, setIsStartingJob] = useState(false);
+
+  const startHarvesterJob = async () => {
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery && source !== 'convertiser') {
+      addLog('Podaj zapytanie dla wybranego źródła.', 'warning');
+      return;
+    }
+
+    setIsStartingJob(true);
+    try {
+      const token = await getIdToken();
+      const response = await fetch('/api/admin/harvester/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          source,
+          query: source === 'convertiser' && !normalizedQuery ? 'promocje' : normalizedQuery,
+          maxResults,
+          mode: 'single',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Nie udało się uruchomić harvestera');
+      }
+
+      addLog(
+        `Harvester uruchomiony: ${source}, Job ID: ${data?.job?.id || 'brak'}`,
+        'success'
+      );
+    } catch (error: any) {
+      addLog(`Błąd uruchamiania harvestera: ${error?.message || 'Nieznany błąd'}`, 'error');
+    } finally {
+      setIsStartingJob(false);
+    }
+  };
 
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
     const timestamp = new Date().toLocaleTimeString('pl-PL', {
@@ -106,9 +164,58 @@ function HarvesterPage() {
             </TabsContent>
 
             <TabsContent value="import" className="space-y-4">
-              <div className="p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                Ten moduł został zarchiwizowany.
+              <div className="space-y-4 p-4 border rounded-md bg-muted/30">
+                <h3 className="text-lg font-semibold">Uruchom import M6</h3>
+                <p className="text-sm text-muted-foreground">
+                  Import działa asynchronicznie w tle. Status i logi zobaczysz w zakładce „Zadania”.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Źródło</Label>
+                    <Select value={source} onValueChange={(value) => setSource(value as HarvesterSource)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="convertiser">Convertiser</SelectItem>
+                        <SelectItem value="aliexpress">AliExpress</SelectItem>
+                        <SelectItem value="amazon">Amazon</SelectItem>
+                        <SelectItem value="allegro">Allegro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Zapytanie</Label>
+                    <Input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="np. laptop gaming, smartfon 5g, ekspres do kawy"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label>Maksymalna liczba wyników</Label>
+                    <Input
+                      type="number"
+                      min={10}
+                      max={200}
+                      value={maxResults}
+                      onChange={(e) => setMaxResults(Math.max(10, Math.min(200, Number(e.target.value) || 50)))}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Button onClick={startHarvesterJob} disabled={isStartingJob} className="w-full md:w-auto">
+                      {isStartingJob ? 'Uruchamianie...' : 'Uruchom Harvester'}
+                    </Button>
+                  </div>
+                </div>
               </div>
+
+              <ConvertiserAutoImport />
             </TabsContent>
 
             <TabsContent value="enhance" className="space-y-4">

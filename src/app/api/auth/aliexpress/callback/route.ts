@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     // Lazy import Firebase Admin to avoid build-time initialization
     const { adminDb } = await import('@/lib/firebase-admin');
+    const { exchangeCodeForToken } = await import('@/lib/oauth');
     
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
@@ -76,14 +77,30 @@ export async function GET(request: NextRequest) {
     console.log('✅ Callback validation passed');
     console.log(`📝 Authorization code: ${code.substring(0, 30)}...`);
 
-    // Redirect to admin panel with code
-    // User will then manually exchange code using: npx tsx scripts/exchange-oauth-code.ts <code>
-    return NextResponse.redirect(
-      new URL(
-        `/pl/admin/settings/oauth?code=${code}&state=authorized`,
-        request.url
-      )
-    );
+    try {
+      await exchangeCodeForToken(
+        'aliexpress',
+        code,
+        'system-oauth-callback',
+        'default',
+        {
+          authorizationCode: code.substring(0, 32),
+          userAgent: request.headers.get('user-agent') || undefined,
+          ipAddress: request.headers.get('x-forwarded-for') || undefined,
+        }
+      );
+
+      console.log('✅ OAuth token exchanged and stored');
+
+      return NextResponse.redirect(
+        new URL('/pl/admin/settings/oauth?state=authorized&tokenSaved=1', request.url)
+      );
+    } catch (exchangeError) {
+      console.error('❌ Token exchange failed:', exchangeError);
+      return NextResponse.redirect(
+        new URL('/pl/admin/settings/oauth?error=token_exchange_failed', request.url)
+      );
+    }
   } catch (error) {
     console.error('❌ Callback error:', error);
     return NextResponse.redirect(

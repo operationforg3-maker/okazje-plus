@@ -1,0 +1,59 @@
+Architektura Poczekalni i Moderacji Społecznościowej (M6)
+Ten dokument opisuje rozszerzenie architektury M6 o system "Poczekalni" (Waiting Room), w którym zaimportowane przez Harvester produkty i deale są oceniane przez społeczność i administratorów przed trafieniem na Stronę Główną.
+1. Nowy Cykl Życia Produktu i Oferty (Lifecycle)
+Zamiast automatycznego publikowania ofert na stronie głównej, wprowadzamy nowy status: poczekalnia (lub voting).
+Ścieżka (The Flow):
+	•	Harvester: Pobiera 10 000 ofert z API.
+	•	Sito (JSON): 8 000 ofert to śmieci (odrzucone). 2 000 pasuje do drzewa kategorii.
+	•	Zapis: Te 2 000 ofert trafia do bazy ze statusem poczekalnia.
+	•	AI Refiner: Wzbogaca te oferty w tle (tłumaczenia, parametry), przygotowując je do oceny.
+	•	Głosowanie (Poczekalnia): Użytkownicy widzą te oferty w zakładce "Najnowsze / Poczekalnia". Głosują (+ / -).
+	•	Awans (Strona Główna): Gdy "Temperatura" (Score) osiągnie ustalony próg (np. +15), system automatycznie zmienia status na approved i oferta ląduje na Stronie Głównej.
+2. Zmiany w Schematach Bazy Danych
+Musimy rozbudować nasze encje o pola odpowiedzialne za głosowanie (Score).
+Aktualizacja DealM6 (Oferta)
+To deale głównie zbierają głosy ("ale super cena!").
+interface DealM6 {   // ... dotychczasowe pola (price, affiliateLink, metadata itp.)    // === SYSTEM GŁOSOWANIA ===   score: number;          // Aktualny wynik (np. +12)   upvotes: number;        // Ilość plusów   downvotes: number;      // Ilość minusów   temperature: number;    // Złożony algorytm (wynik + czas od dodania), do sortowania "Hot"      // === STATUS ===   // draft -> poczekalnia -> approved -> expired/rejected   status: 'draft' | 'poczekalnia' | 'approved' | 'rejected' | 'expired';      promotedAt?: Date;      // Data wejścia na stronę główną (do sortowania "Nowe na Głównej") } 
+Kolekcja votes (Subkolekcja lub osobna tabela)
+Aby zapobiec podwójnemu głosowaniu, musimy rejestrować kto i na co zagłosował.
+interface Vote {   id: string;             // userId_dealId   userId: string;   dealId: string;   value: 1 | -1;          // +1 (Upvote), -1 (Downvote)   createdAt: Date; } 
+3. System Wag Głosów (Role Base Access Control)
+Nie każdy głos jest sobie równy. Abyś jako Administrator mógł sprawnie zarządzać "Poczekalnią", wprowadzamy mnożniki:
+	•	Zwykły Użytkownik: Waga głosu = +1 / -1.
+	•	Zweryfikowany Łowca (Ekspert): Waga głosu = +2 / -2 (np. użytkownicy z dużą reputacją).
+	•	Administrator (Super User): * Ma przycisk "⚡ Publikuj Natychmiast", który nadaje z urzędu +50 punktów i omija kolejkę.
+	•	Ma przycisk "🗑️ Spal w zarodku", który nadaje statu rejected niezależnie od głosów użytkowników.
+4. Wyzwalacze (Cloud Functions / Triggers) - Magia w Tle
+Mechanizm "przepychania" musi dziać się automatycznie.
+Logika Triggera onVoteAdded:
+	•	Ktoś klika "Plus".
+	•	System dodaje głos i przelicza score na ofercie (DealM6).
+	•	Jeśli newScore >= AUTO_APPROVE_THRESHOLD (np. próg to 15 punktów) ORAZ obecny status to poczekalnia:
+	•	Zmień status DealM6 na approved.
+	•	UWAGA: Upewnij się, że parent ProductCore ma też status approved (oferta nie może być na głównej, jeśli sam produkt jest ukryty).
+	•	Ustaw promotedAt = now().
+	•	Wyzwalacze wtórne: Wyślij powiadomienie Push do użytkowników z "Saved Searches", wrzuć post na Telegrama/Discorda, dodaj do pliku Sitemap.xml.
+5. UI/UX: Jak to ma wyglądać?
+Na platformie powinieneś stworzyć dwie główne ścieżki dla użytkownika:
+A. Zakładka "Okazje" (Strona Główna)
+	•	Pokazuje tylko oferty ze statusem approved.
+	•	Posortowane domyślnie po "Gorące" (największy przyrost temperature w ostatnich 24h).
+	•	Czysto, przejrzyście, tylko sprawdzone hity.
+B. Zakładka "Poczekalnia / Najnowsze"
+	•	Pokazuje oferty ze statusem poczekalnia.
+	•	Infinite scroll (tysiące ofert pobranych z Harvestera).
+	•	Wezwanie do akcji (CTA): "Pomóż nam znaleźć perły! Oceniaj nowe znaleziska."
+	•	Tutaj użytkownicy widzą surowe, często niszowe deale.
+C. Panel Super Usera (Dla Admina z poziomu frontendu)
+	•	Admin wędrując po "Poczekalni" widzi dodatkowe przyciski na karcie oferty: [⚡ Na Główną] oraz [🗑️ Usuń]. Nie musi wchodzić do skomplikowanego panelu Admina, by moderować content w autobusie z telefonu.
+6. Integracja z Wyszukiwarką (Typesense/Elasticsearch)
+To kluczowe z punktu widzenia wydajności!
+Silnik wyszukiwania musi indeksować OBA statusy (approved i poczekalnia), ale w parametrach wyszukiwania domyślnie odfiltrowywać "poczekalnię".
+	•	Global Search (pasek u góry): Szuka wszędzie, ale deale approved mają wyższy ranking w wynikach.
+	•	Filtry na Stronie Głównej: Zapytanie do wyszukiwarki: filter_by: status:='approved'.
+	•	Filtry w Poczekalni: Zapytanie do wyszukiwarki: filter_by: status:='poczekalnia'.
+Dzięki temu Twoja baza Mongo/Firebase nie dławi się przy filtrowaniu tysięcy roboczych ofert.
+7. System Grywalizacji (Motywacja Użytkowników)
+Jeśli Harvester dodaje deala, a użytkownik go wyplusuje na stronę główną, jak go nagrodzić?
+W DealM6 dodaj tablicę: promoters: string[] (tablica ID użytkowników, którzy głosowali na "TAK", gdy deal był w poczekalni).
+Gdy oferta wejdzie na główną, Trigger przechodzi po tablicy promoters i dodaje im do konta np. +5 punktów reputacji (Odkrywca).

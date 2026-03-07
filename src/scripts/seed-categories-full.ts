@@ -1,473 +1,143 @@
 /**
- * Full Category Structure Seed Script
- * 
- * Creates comprehensive 3-level category tree for Okazje Plus
- * Pepper/MyDealz inspired structure
+ * JSON-driven category seeding script.
+ *
+ * Source of truth:
+ *   category-tree.full.json (repo root)
+ *
+ * Usage:
+ *   npm run seed:categories
+ *   CATEGORY_TREE_PATH=./path/to/tree.json npm run seed:categories
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { adminDb } from '../lib/firebase-admin';
-import { translateContent } from '../ai/flows/enrichment';
 
-interface SubSubCategory {
-  name: string;
-  slug: string;
-  aliexpressKeywords?: string[]; // Keywords for AliExpress import
-}
+type LocalePayload = {
+  name?: string;
+  description?: string;
+  seoKeywords?: string[];
+  metaTemplate?: { title?: string; description?: string };
+};
 
-interface SubCategory {
-  name: string;
-  slug: string;
-  subcategories: SubSubCategory[];
-}
-
-interface MainCategory {
-  name: string;
+type CategoryNode = {
+  name?: string;
   slug: string;
   icon?: string;
-  sortOrder: number;
-  subcategories: SubCategory[];
+  description?: string;
+  sortOrder?: number;
+  isHot?: boolean;
+  isAdult?: boolean;
+  media?: Record<string, any>;
+  translations?: Record<string, LocalePayload>;
+  importKeywords?: string[];
+  aliexpressKeywords?: string[];
+  aliexpressCategoryIds?: string[];
+  googleCategoryId?: number;
+  filterableAttributes?: string[];
+  subcategories?: CategoryNode[];
+};
+
+type CategoryTreeFile = {
+  generatedAt?: string;
+  counts?: {
+    main?: number;
+    sub?: number;
+    subSub?: number;
+    total?: number;
+  };
+  tree: CategoryNode[];
+};
+
+const BATCH_LIMIT = 450;
+
+function uniq(values: Array<string | undefined | null>): string[] {
+  return Array.from(
+    new Set(
+      values
+        .filter(Boolean)
+        .map((v) => String(v).trim())
+        .filter((v) => v.length > 0)
+    )
+  );
 }
 
-const MAIN_SLUG_MAP: Record<string, string> = {
-  'elektronika': 'electronics',
-  'dom-ogrod': 'home-garden',
-  'moda': 'fashion',
-  'sport-turystyka': 'sports-outdoors',
-  'dziecko': 'kids-baby',
-  'zdrowie-uroda': 'health-beauty',
-  'motoryzacja': 'automotive',
-  'ksiazki-multimedia': 'books-media',
-};
+function getName(node: CategoryNode): string {
+  return (
+    node.translations?.pl?.name ||
+    node.translations?.en?.name ||
+    node.name ||
+    node.slug
+  );
+}
 
-const slugify = (text: string): string =>
-  text
-    .toString()
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+function getDescription(node: CategoryNode): string {
+  return (
+    node.translations?.pl?.description ||
+    node.translations?.en?.description ||
+    node.description ||
+    ''
+  );
+}
 
-const toTitleCase = (text: string): string =>
-  text
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+function computeCounts(tree: CategoryNode[]) {
+  const main = tree.length;
+  const sub = tree.reduce((acc, m) => acc + (m.subcategories?.length || 0), 0);
+  const subSub = tree.reduce(
+    (acc, m) =>
+      acc +
+      (m.subcategories || []).reduce(
+        (inner, s) => inner + (s.subcategories?.length || 0),
+        0
+      ),
+    0
+  );
+  return { main, sub, subSub, total: main + sub + subSub };
+}
 
-const buildDescriptionEn = (name: string): string =>
-  `Deals and products in the ${name} category.`;
+function loadTreeFromFile(): CategoryTreeFile {
+  const inputPath = process.env.CATEGORY_TREE_PATH || 'category-tree.full.json';
+  const absolutePath = path.isAbsolute(inputPath)
+    ? inputPath
+    : path.resolve(process.cwd(), inputPath);
 
-const buildDescriptionPl = (name: string): string =>
-  `Oferty i produkty w kategorii ${name}.`;
-
-const translationCache = new Map<string, Record<string, string>>();
-
-const translateText = async (text: string) => {
-  if (translationCache.has(text)) {
-    return translationCache.get(text) as Record<string, string>;
+  if (!fs.existsSync(absolutePath)) {
+    throw new Error(`Category tree file not found: ${absolutePath}`);
   }
 
-  try {
-    const result = await translateContent({
-      text,
-      sourceLocale: 'en',
-      targetLocales: ['de', 'fr', 'es', 'uk'],
-    });
-    const translations = result.translations || {};
-    translationCache.set(text, translations);
-    return translations;
-  } catch {
-    const fallback = {} as Record<string, string>;
-    translationCache.set(text, fallback);
-    return fallback;
+  const parsed = JSON.parse(fs.readFileSync(absolutePath, 'utf8')) as CategoryTreeFile;
+  if (!parsed || !Array.isArray(parsed.tree) || parsed.tree.length === 0) {
+    throw new Error(`Invalid category tree JSON in ${absolutePath} (missing non-empty tree[])`);
   }
-};
 
-/**
- * Complete category structure for Polish market
- */
-const CATEGORY_STRUCTURE: MainCategory[] = [
-  {
-    name: 'Elektronika',
-    slug: 'elektronika',
-    icon: '💻',
-    sortOrder: 10,
-    subcategories: [
-      {
-        name: 'Smartfony i telefony',
-        slug: 'smartfony-telefony',
-        subcategories: [
-          { name: 'Smartfony', slug: 'smartfony', aliexpressKeywords: ['smartphone', 'mobile phone'] },
-          { name: 'Telefony podstawowe', slug: 'telefony-podstawowe', aliexpressKeywords: ['feature phone', 'basic phone'] },
-          { name: 'Akcesoria GSM', slug: 'akcesoria-gsm', aliexpressKeywords: ['phone accessories', 'phone case'] },
-          { name: 'Ładowarki i kable', slug: 'ladowarki-kable', aliexpressKeywords: ['phone charger', 'usb cable', 'charger', 'fast charger', 'usb charger', 'usb c charger', 'gan charger'] },
-          { name: 'Powerbanki', slug: 'powerbanki', aliexpressKeywords: ['power bank', 'portable charger'] },
-        ],
-      },
-      {
-        name: 'Komputery',
-        slug: 'komputery',
-        subcategories: [
-          { name: 'Laptopy', slug: 'laptopy', aliexpressKeywords: ['laptop', 'notebook'] },
-          { name: 'Komputery stacjonarne', slug: 'komputery-stacjonarne', aliexpressKeywords: ['desktop pc', 'computer'] },
-          { name: 'Tablety', slug: 'tablety', aliexpressKeywords: ['tablet', 'ipad'] },
-          { name: 'Monitory', slug: 'monitory', aliexpressKeywords: ['monitor', 'display'] },
-          { name: 'Drukarki i skanery', slug: 'drukarki-skanery', aliexpressKeywords: ['printer', 'scanner'] },
-        ],
-      },
-      {
-        name: 'Audio i video',
-        slug: 'audio-video',
-        subcategories: [
-          { name: 'Słuchawki', slug: 'sluchawki', aliexpressKeywords: ['headphones', 'earphones', 'earbuds'] },
-          { name: 'Głośniki', slug: 'glosniki', aliexpressKeywords: ['speaker', 'bluetooth speaker'] },
-          { name: 'Soundbary', slug: 'soundbary', aliexpressKeywords: ['soundbar', 'sound bar'] },
-          { name: 'Mikrofony', slug: 'mikrofony', aliexpressKeywords: ['microphone', 'mic'] },
-          { name: 'Kamery i kamerki', slug: 'kamery', aliexpressKeywords: ['camera', 'webcam'] },
-        ],
-      },
-      {
-        name: 'Fotografia',
-        slug: 'fotografia',
-        subcategories: [
-          { name: 'Aparaty cyfrowe', slug: 'aparaty-cyfrowe', aliexpressKeywords: ['digital camera', 'dslr'] },
-          { name: 'Obiektywy', slug: 'obiektywy', aliexpressKeywords: ['camera lens', 'lens'] },
-          { name: 'Akcesoria fotograficzne', slug: 'akcesoria-foto', aliexpressKeywords: ['camera accessories', 'tripod'] },
-          { name: 'Karty pamięci', slug: 'karty-pamieci', aliexpressKeywords: ['memory card', 'sd card'] },
-        ],
-      },
-      {
-        name: 'Gaming',
-        slug: 'gaming',
-        subcategories: [
-          { name: 'Konsole', slug: 'konsole', aliexpressKeywords: ['game console', 'gaming console'] },
-          { name: 'Gry', slug: 'gry', aliexpressKeywords: ['video game', 'game'] },
-          { name: 'Akcesoria do gier', slug: 'akcesoria-gaming', aliexpressKeywords: ['gaming accessories', 'controller'] },
-          { name: 'Myszki gamingowe', slug: 'myszki-gaming', aliexpressKeywords: ['gaming mouse'] },
-          { name: 'Klawiatury gamingowe', slug: 'klawiatury-gaming', aliexpressKeywords: ['gaming keyboard'] },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Dom i ogród',
-    slug: 'dom-ogrod',
-    icon: '🏡',
-    sortOrder: 20,
-    subcategories: [
-      {
-        name: 'Meble',
-        slug: 'meble',
-        subcategories: [
-          { name: 'Sofy i fotele', slug: 'sofy-fotele', aliexpressKeywords: ['sofa', 'armchair'] },
-          { name: 'Stoły i krzesła', slug: 'stoly-krzesla', aliexpressKeywords: ['table', 'chair'] },
-          { name: 'Łóżka', slug: 'lozka', aliexpressKeywords: ['bed', 'mattress'] },
-          { name: 'Szafy i komody', slug: 'szafy-komody', aliexpressKeywords: ['wardrobe', 'dresser'] },
-          { name: 'Regały', slug: 'regaly', aliexpressKeywords: ['shelf', 'bookshelf'] },
-        ],
-      },
-      {
-        name: 'Oświetlenie',
-        slug: 'oswietlenie',
-        subcategories: [
-          { name: 'Lampy sufitowe', slug: 'lampy-sufitowe', aliexpressKeywords: ['ceiling light', 'chandelier'] },
-          { name: 'Lampy stojące', slug: 'lampy-stojace', aliexpressKeywords: ['floor lamp', 'standing lamp'] },
-          { name: 'Lampki nocne', slug: 'lampki-nocne', aliexpressKeywords: ['night light', 'bedside lamp'] },
-          { name: 'Żarówki LED', slug: 'zarowki-led', aliexpressKeywords: ['led bulb', 'light bulb'] },
-        ],
-      },
-      {
-        name: 'Ogród',
-        slug: 'ogrod',
-        subcategories: [
-          { name: 'Meble ogrodowe', slug: 'meble-ogrodowe', aliexpressKeywords: ['garden furniture', 'outdoor furniture'] },
-          { name: 'Narzędzia ogrodowe', slug: 'narzedzia-ogrodowe', aliexpressKeywords: ['garden tools', 'gardening tools'] },
-          { name: 'Grille', slug: 'grille', aliexpressKeywords: ['bbq', 'grill', 'barbecue'] },
-          { name: 'Dekoracje ogrodowe', slug: 'dekoracje-ogrodowe', aliexpressKeywords: ['garden decoration'] },
-        ],
-      },
-      {
-        name: 'AGD małe',
-        slug: 'agd-male',
-        subcategories: [
-          { name: 'Ekspresy do kawy', slug: 'ekspresy-kawy', aliexpressKeywords: ['coffee maker', 'espresso machine'] },
-          { name: 'Blendery i mikser', slug: 'blendery-miksery', aliexpressKeywords: ['blender', 'mixer'] },
-          { name: 'Roboty kuchenne', slug: 'roboty-kuchenne', aliexpressKeywords: ['food processor', 'kitchen robot'] },
-          { name: 'Odkurzacze', slug: 'odkurzacze', aliexpressKeywords: ['vacuum cleaner', 'robot vacuum'] },
-        ],
-      },
-      {
-        name: 'AGD duże',
-        slug: 'agd-duze',
-        subcategories: [
-          { name: 'Lodówki', slug: 'lodowki', aliexpressKeywords: ['refrigerator', 'fridge'] },
-          { name: 'Pralki', slug: 'pralki', aliexpressKeywords: ['washing machine'] },
-          { name: 'Zmywarki', slug: 'zmywarki', aliexpressKeywords: ['dishwasher'] },
-          { name: 'Kuchenki', slug: 'kuchenki', aliexpressKeywords: ['oven', 'cooker'] },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Moda',
-    slug: 'moda',
-    icon: '👔',
-    sortOrder: 30,
-    subcategories: [
-      {
-        name: 'Odzież damska',
-        slug: 'odziez-damska',
-        subcategories: [
-          { name: 'Sukienki', slug: 'sukienki', aliexpressKeywords: ['dress', 'women dress'] },
-          { name: 'Bluzki i koszule', slug: 'bluzki-koszule', aliexpressKeywords: ['blouse', 'women shirt'] },
-          { name: 'Spodnie i jeansy', slug: 'spodnie-damskie', aliexpressKeywords: ['women pants', 'jeans'] },
-          { name: 'Kurtki i płaszcze', slug: 'kurtki-damskie', aliexpressKeywords: ['women jacket', 'coat'] },
-          { name: 'Bielizna', slug: 'bielizna-damska', aliexpressKeywords: ['lingerie', 'underwear'] },
-        ],
-      },
-      {
-        name: 'Odzież męska',
-        slug: 'odziez-meska',
-        subcategories: [
-          { name: 'Koszule', slug: 'koszule-meskie', aliexpressKeywords: ['men shirt'] },
-          { name: 'T-shirty i polo', slug: 'tshirty-polo', aliexpressKeywords: ['t-shirt', 'polo shirt'] },
-          { name: 'Spodnie męskie', slug: 'spodnie-meskie', aliexpressKeywords: ['men pants', 'trousers'] },
-          { name: 'Kurtki męskie', slug: 'kurtki-meskie', aliexpressKeywords: ['men jacket'] },
-          { name: 'Garnitury', slug: 'garnitury', aliexpressKeywords: ['suit', 'men suit'] },
-        ],
-      },
-      {
-        name: 'Obuwie',
-        slug: 'obuwie',
-        subcategories: [
-          { name: 'Buty sportowe', slug: 'buty-sportowe', aliexpressKeywords: ['sneakers', 'sport shoes'] },
-          { name: 'Buty eleganckie', slug: 'buty-eleganckie', aliexpressKeywords: ['dress shoes', 'formal shoes'] },
-          { name: 'Sandały i klapki', slug: 'sandaly-klapki', aliexpressKeywords: ['sandals', 'slippers'] },
-          { name: 'Kozaki i botki', slug: 'kozaki-botki', aliexpressKeywords: ['boots', 'ankle boots'] },
-        ],
-      },
-      {
-        name: 'Akcesoria',
-        slug: 'akcesoria-moda',
-        subcategories: [
-          { name: 'Torebki', slug: 'torebki', aliexpressKeywords: ['handbag', 'purse'] },
-          { name: 'Portfele', slug: 'portfele', aliexpressKeywords: ['wallet'] },
-          { name: 'Biżuteria', slug: 'bizuteria', aliexpressKeywords: ['jewelry', 'necklace'] },
-          { name: 'Zegarki', slug: 'zegarki', aliexpressKeywords: ['watch', 'wristwatch'] },
-          { name: 'Okulary', slug: 'okulary', aliexpressKeywords: ['sunglasses', 'glasses'] },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Sport i turystyka',
-    slug: 'sport-turystyka',
-    icon: '⚽',
-    sortOrder: 40,
-    subcategories: [
-      {
-        name: 'Fitness',
-        slug: 'fitness',
-        subcategories: [
-          { name: 'Siłownia i crossfit', slug: 'silownia-crossfit', aliexpressKeywords: ['gym equipment', 'dumbbell'] },
-          { name: 'Maty i akcesoria', slug: 'maty-fitness', aliexpressKeywords: ['yoga mat', 'fitness mat'] },
-          { name: 'Odzież sportowa', slug: 'odziez-sportowa', aliexpressKeywords: ['sportswear', 'gym clothes'] },
-          { name: 'Opaski fitness', slug: 'opaski-fitness', aliexpressKeywords: ['fitness band', 'smart band'] },
-        ],
-      },
-      {
-        name: 'Rowery i hulajnogi',
-        slug: 'rowery-hulajnogi',
-        subcategories: [
-          { name: 'Rowery', slug: 'rowery', aliexpressKeywords: ['bicycle', 'bike'] },
-          { name: 'Hulajnogi elektryczne', slug: 'hulajnogi-elektryczne', aliexpressKeywords: ['electric scooter'] },
-          { name: 'Akcesoria rowerowe', slug: 'akcesoria-rowerowe', aliexpressKeywords: ['bike accessories', 'bike light'] },
-          { name: 'Kaski', slug: 'kaski', aliexpressKeywords: ['helmet', 'bike helmet'] },
-        ],
-      },
-      {
-        name: 'Turystyka',
-        slug: 'turystyka',
-        subcategories: [
-          { name: 'Plecaki', slug: 'plecaki', aliexpressKeywords: ['backpack', 'hiking backpack'] },
-          { name: 'Namioty', slug: 'namioty', aliexpressKeywords: ['tent', 'camping tent'] },
-          { name: 'Śpiwory', slug: 'spiwory', aliexpressKeywords: ['sleeping bag'] },
-          { name: 'Termosy i bidony', slug: 'termosy-bidony', aliexpressKeywords: ['thermos', 'water bottle'] },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Dziecko',
-    slug: 'dziecko',
-    icon: '👶',
-    sortOrder: 50,
-    subcategories: [
-      {
-        name: 'Zabawki',
-        slug: 'zabawki',
-        subcategories: [
-          { name: 'Klocki', slug: 'klocki', aliexpressKeywords: ['building blocks', 'lego'] },
-          { name: 'Lalki i pluszaki', slug: 'lalki-pluszaki', aliexpressKeywords: ['doll', 'plush toy'] },
-          { name: 'Gry planszowe', slug: 'gry-planszowe', aliexpressKeywords: ['board game'] },
-          { name: 'Puzzle', slug: 'puzzle', aliexpressKeywords: ['puzzle', 'jigsaw'] },
-          { name: 'Zabawki RC', slug: 'zabawki-rc', aliexpressKeywords: ['rc toy', 'remote control'] },
-        ],
-      },
-      {
-        name: 'Odzież dziecięca',
-        slug: 'odziez-dziecieca',
-        subcategories: [
-          { name: 'Dla niemowląt', slug: 'niemowleta', aliexpressKeywords: ['baby clothes'] },
-          { name: 'Dla chłopców', slug: 'odziez-chlopcow', aliexpressKeywords: ['boys clothes'] },
-          { name: 'Dla dziewczynek', slug: 'odziez-dziewczynek', aliexpressKeywords: ['girls clothes'] },
-          { name: 'Buty dziecięce', slug: 'buty-dzieciece', aliexpressKeywords: ['kids shoes'] },
-        ],
-      },
-      {
-        name: 'Wózki i foteliki',
-        slug: 'wozki-foteliki',
-        subcategories: [
-          { name: 'Wózki spacerowe', slug: 'wozki-spacerowe', aliexpressKeywords: ['stroller', 'baby stroller'] },
-          { name: 'Wózki głębokie', slug: 'wozki-glebokie', aliexpressKeywords: ['baby carriage'] },
-          { name: 'Foteliki samochodowe', slug: 'foteliki-samochodowe', aliexpressKeywords: ['car seat', 'baby car seat'] },
-          { name: 'Nosidełka', slug: 'nosidelka', aliexpressKeywords: ['baby carrier'] },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Zdrowie i uroda',
-    slug: 'zdrowie-uroda',
-    icon: '💄',
-    sortOrder: 60,
-    subcategories: [
-      {
-        name: 'Pielęgnacja twarzy',
-        slug: 'pielegnacja-twarzy',
-        subcategories: [
-          { name: 'Kremy i serum', slug: 'kremy-serum', aliexpressKeywords: ['face cream', 'serum'] },
-          { name: 'Oczyszczanie', slug: 'oczyszczanie-twarzy', aliexpressKeywords: ['facial cleanser', 'face wash'] },
-          { name: 'Maseczki', slug: 'maseczki-twarz', aliexpressKeywords: ['face mask'] },
-          { name: 'Urządzenia do twarzy', slug: 'urzadzenia-twarz', aliexpressKeywords: ['facial device', 'face massager'] },
-        ],
-      },
-      {
-        name: 'Pielęgnacja ciała',
-        slug: 'pielegnacja-ciala',
-        subcategories: [
-          { name: 'Balsamy i mleczka', slug: 'balsamy-mleczka', aliexpressKeywords: ['body lotion', 'body cream'] },
-          { name: 'Mydła i żele', slug: 'mydla-zele', aliexpressKeywords: ['soap', 'shower gel'] },
-          { name: 'Dezodoranty', slug: 'dezodoranty', aliexpressKeywords: ['deodorant'] },
-        ],
-      },
-      {
-        name: 'Makijaż',
-        slug: 'makijaz',
-        subcategories: [
-          { name: 'Podkłady', slug: 'podklady', aliexpressKeywords: ['foundation', 'makeup base'] },
-          { name: 'Cienie i paletki', slug: 'cienie-paletki', aliexpressKeywords: ['eyeshadow', 'makeup palette'] },
-          { name: 'Szminki', slug: 'szminki', aliexpressKeywords: ['lipstick'] },
-          { name: 'Pędzle', slug: 'pedzle', aliexpressKeywords: ['makeup brush'] },
-        ],
-      },
-      {
-        name: 'Pielęgnacja włosów',
-        slug: 'pielegnacja-wlosow',
-        subcategories: [
-          { name: 'Szampony i odżywki', slug: 'szampony-odzywki', aliexpressKeywords: ['shampoo', 'conditioner'] },
-          { name: 'Maski do włosów', slug: 'maski-wlosy', aliexpressKeywords: ['hair mask'] },
-          { name: 'Suszarki i prostownice', slug: 'suszarki-prostownice', aliexpressKeywords: ['hair dryer', 'hair straightener'] },
-          { name: 'Szczotki i grzebienie', slug: 'szczotki-grzebienie', aliexpressKeywords: ['hair brush', 'comb'] },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Motoryzacja',
-    slug: 'motoryzacja',
-    icon: '🚗',
-    sortOrder: 70,
-    subcategories: [
-      {
-        name: 'Elektronika samochodowa',
-        slug: 'elektronika-samochodowa',
-        subcategories: [
-          { name: 'Kamery samochodowe', slug: 'kamery-samochodowe', aliexpressKeywords: ['dash cam', 'car camera'] },
-          { name: 'Nawigacje GPS', slug: 'nawigacje-gps', aliexpressKeywords: ['gps navigation', 'car gps'] },
-          { name: 'Ładowarki samochodowe', slug: 'ladowarki-samochodowe', aliexpressKeywords: ['car charger'] },
-          { name: 'Audio samochodowe', slug: 'audio-samochodowe', aliexpressKeywords: ['car audio', 'car stereo'] },
-        ],
-      },
-      {
-        name: 'Części samochodowe',
-        slug: 'czesci-samochodowe',
-        subcategories: [
-          { name: 'Wycieraczki', slug: 'wycieraczki', aliexpressKeywords: ['wiper blade'] },
-          { name: 'Żarówki', slug: 'zarowki-samochodowe', aliexpressKeywords: ['car bulb', 'led car light'] },
-          { name: 'Filtry', slug: 'filtry-samochodowe', aliexpressKeywords: ['car filter', 'air filter'] },
-          { name: 'Oleje i płyny', slug: 'oleje-plyny', aliexpressKeywords: ['car oil', 'engine oil'] },
-        ],
-      },
-      {
-        name: 'Akcesoria samochodowe',
-        slug: 'akcesoria-samochodowe',
-        subcategories: [
-          { name: 'Pokrowce i dywaniki', slug: 'pokrowce-dywaniki', aliexpressKeywords: ['car seat cover', 'car mat'] },
-          { name: 'Organizery', slug: 'organizery-samochodowe', aliexpressKeywords: ['car organizer'] },
-          { name: 'Uchwyty do telefonu', slug: 'uchwyty-telefon', aliexpressKeywords: ['car phone holder'] },
-          { name: 'Myjnie i kosmetyki', slug: 'myjnie-kosmetyki', aliexpressKeywords: ['car wash', 'car cleaner'] },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Książki i multimedia',
-    slug: 'ksiazki-multimedia',
-    icon: '📚',
-    sortOrder: 80,
-    subcategories: [
-      {
-        name: 'Książki',
-        slug: 'ksiazki',
-        subcategories: [
-          { name: 'Beletrystyka', slug: 'beletrystyka', aliexpressKeywords: ['fiction book', 'novel'] },
-          { name: 'Poradniki', slug: 'poradniki', aliexpressKeywords: ['guide book', 'how to book'] },
-          { name: 'Literatura naukowa', slug: 'literatura-naukowa', aliexpressKeywords: ['science book'] },
-          { name: 'Komiksy', slug: 'komiksy', aliexpressKeywords: ['comic book', 'manga'] },
-        ],
-      },
-      {
-        name: 'Filmy i seriale',
-        slug: 'filmy-seriale',
-        subcategories: [
-          { name: 'DVD', slug: 'dvd', aliexpressKeywords: ['dvd movie'] },
-          { name: 'Blu-ray', slug: 'bluray', aliexpressKeywords: ['blu-ray movie'] },
-          { name: 'Seriale', slug: 'seriale', aliexpressKeywords: ['tv series'] },
-        ],
-      },
-      {
-        name: 'Muzyka',
-        slug: 'muzyka',
-        subcategories: [
-          { name: 'CD', slug: 'cd-muzyka', aliexpressKeywords: ['music cd'] },
-          { name: 'Płyty winylowe', slug: 'plyty-winylowe', aliexpressKeywords: ['vinyl record'] },
-          { name: 'Instrumenty', slug: 'instrumenty', aliexpressKeywords: ['musical instrument'] },
-        ],
-      },
-    ],
-  },
-];
+  const computed = computeCounts(parsed.tree);
+  if (parsed.counts) {
+    const mismatch =
+      parsed.counts.main !== undefined && parsed.counts.main !== computed.main ||
+      parsed.counts.sub !== undefined && parsed.counts.sub !== computed.sub ||
+      parsed.counts.subSub !== undefined && parsed.counts.subSub !== computed.subSub ||
+      parsed.counts.total !== undefined && parsed.counts.total !== computed.total;
+
+    if (mismatch) {
+      console.warn('[seed-categories] WARNING: counts in JSON do not match tree shape.');
+      console.warn('[seed-categories] counts field:', parsed.counts);
+      console.warn('[seed-categories] computed:', computed);
+    }
+  }
+
+  return parsed;
+}
 
 async function seedCategories() {
-  console.log('🌱 Starting category seeding...\n');
+  const source = loadTreeFromFile();
+  const computed = computeCounts(source.tree);
+
+  console.log('Starting category seeding from JSON...');
+  console.log(`generatedAt: ${source.generatedAt || 'n/a'}`);
+  console.log(`counts: main=${computed.main}, sub=${computed.sub}, subSub=${computed.subSub}, total=${computed.total}`);
 
   let batch = adminDb.batch();
   let batchOps = 0;
-  let categoriesCount = 0;
-  let subCategoriesCount = 0;
-  let subSubCategoriesCount = 0;
 
   const commitBatch = async () => {
     if (batchOps === 0) return;
@@ -476,189 +146,160 @@ async function seedCategories() {
     batchOps = 0;
   };
 
-  const queueSet = async (ref: any, data: Record<string, any>) => {
+  const queueSet = async (ref: FirebaseFirestore.DocumentReference, data: Record<string, any>) => {
     batch.set(ref, data);
     batchOps += 1;
-    if (batchOps >= 450) {
-      await commitBatch();
-    }
+    if (batchOps >= BATCH_LIMIT) await commitBatch();
   };
 
-  for (const mainCat of CATEGORY_STRUCTURE) {
-    const englishMainSlug = MAIN_SLUG_MAP[mainCat.slug] || slugify(mainCat.slug);
-    const englishMainName = toTitleCase(englishMainSlug.replace(/-/g, ' '));
-    console.log(`📁 Creating main category: ${mainCat.name} (${mainCat.slug} -> ${englishMainSlug})`);
-    
-    const mainCatRef = adminDb.collection('categories').doc(englishMainSlug);
-    const mainDescEn = buildDescriptionEn(englishMainName);
-    const mainDescPl = buildDescriptionPl(mainCat.name);
-    const mainNameTranslations = await translateText(englishMainName);
-    const mainDescTranslations = await translateText(mainDescEn);
+  const queueDelete = async (ref: FirebaseFirestore.DocumentReference) => {
+    batch.delete(ref);
+    batchOps += 1;
+    if (batchOps >= BATCH_LIMIT) await commitBatch();
+  };
 
-    await queueSet(mainCatRef, {
-      name: englishMainName,
-      slug: englishMainSlug,
-      icon: mainCat.icon || '📦',
-      sortOrder: mainCat.sortOrder,
-      description: mainDescEn,
-      importKeywords: Array.from(new Set([englishMainName, englishMainSlug, mainCat.name])),
-      searchKeywords: Array.from(new Set([englishMainName, englishMainSlug, mainCat.name])),
-      translations: {
-        pl: { name: mainCat.name, description: mainDescPl },
-        en: { name: englishMainName, description: mainDescEn },
-        de: {
-          name: mainNameTranslations.de || englishMainName,
-          description: mainDescTranslations.de || mainDescEn,
-        },
-        fr: {
-          name: mainNameTranslations.fr || englishMainName,
-          description: mainDescTranslations.fr || mainDescEn,
-        },
-        es: {
-          name: mainNameTranslations.es || englishMainName,
-          description: mainDescTranslations.es || mainDescEn,
-        },
-        uk: {
-          name: mainNameTranslations.uk || englishMainName,
-          description: mainDescTranslations.uk || mainDescEn,
-        },
-      },
-      subcategories: [],
+  const mainRef = adminDb.collection('categories');
+
+  const wantedMainSlugs = new Set(source.tree.map((m) => m.slug));
+  const existingMainSnapshot = await mainRef.get();
+  for (const doc of existingMainSnapshot.docs) {
+    if (!wantedMainSlugs.has(doc.id)) {
+      const subSnap = await doc.ref.collection('subcategories').get();
+      for (const subDoc of subSnap.docs) {
+        const subSubSnap = await subDoc.ref.collection('subcategories').get();
+        for (const subSubDoc of subSubSnap.docs) {
+          await queueDelete(subSubDoc.ref);
+        }
+        await queueDelete(subDoc.ref);
+      }
+      await queueDelete(doc.ref);
+      console.log(`Deleted removed main category: ${doc.id}`);
+    }
+  }
+
+  for (const main of source.tree) {
+    const mainDoc = mainRef.doc(main.slug);
+    const mainSub = main.subcategories || [];
+
+    await queueSet(mainDoc, {
+      name: getName(main),
+      slug: main.slug,
+      icon: main.icon || '📦',
+      sortOrder: main.sortOrder || 0,
+      description: getDescription(main),
+      isHot: !!main.isHot,
+      isAdult: !!main.isAdult,
+      media: main.media || {},
+      importKeywords: uniq([...(main.importKeywords || []), ...(main.aliexpressKeywords || []), getName(main), main.slug]),
+      searchKeywords: uniq([...(main.importKeywords || []), ...(main.aliexpressKeywords || []), getName(main), main.slug]),
+      translations: main.translations || {},
+      subcategories: mainSub.map((s, idx) => ({
+        name: getName(s),
+        slug: s.slug,
+        sortOrder: s.sortOrder || (idx + 1) * 10,
+      })),
       createdAt: new Date().toISOString(),
     });
-    categoriesCount++;
 
-    for (const subCat of mainCat.subcategories) {
-      const englishSubSlug = slugify((subCat as any).aliexpressKeywords?.[0] || subCat.slug);
-      const englishSubName = toTitleCase(((subCat as any).aliexpressKeywords?.[0] || englishSubSlug).replace(/-/g, ' '));
-      console.log(`  📂 Creating subcategory: ${subCat.name} (${subCat.slug} -> ${englishSubSlug})`);
-      
-      const subCatRef = mainCatRef.collection('subcategories').doc(englishSubSlug);
-      const subDescEn = buildDescriptionEn(englishSubName);
-      const subDescPl = buildDescriptionPl(subCat.name);
-      const subNameTranslations = await translateText(englishSubName);
-      const subDescTranslations = await translateText(subDescEn);
+    const subCollection = mainDoc.collection('subcategories');
+    const wantedSubSlugs = new Set(mainSub.map((s) => s.slug));
+    const existingSubSnapshot = await subCollection.get();
 
-      await queueSet(subCatRef, {
-        name: englishSubName,
-        slug: englishSubSlug,
-        sortOrder: 10,
-        description: subDescEn,
-        importKeywords: Array.from(new Set([
-          englishSubName,
-          englishSubSlug,
-          subCat.name,
-          ...((subCat as any).aliexpressKeywords || []),
-        ])),
-        searchKeywords: Array.from(new Set([
-          englishSubName,
-          englishSubSlug,
-          subCat.name,
-          ...((subCat as any).aliexpressKeywords || []),
-        ])),
-        subcategories: subCat.subcategories.map((sub, idx) => ({
-          name: toTitleCase((sub.aliexpressKeywords?.[0] || sub.slug).replace(/-/g, ' ')),
-          slug: slugify(sub.aliexpressKeywords?.[0] || sub.slug),
-          sortOrder: (idx + 1) * 10,
+    for (const existingSub of existingSubSnapshot.docs) {
+      if (!wantedSubSlugs.has(existingSub.id)) {
+        const existingSubSub = await existingSub.ref.collection('subcategories').get();
+        for (const subSub of existingSubSub.docs) {
+          await queueDelete(subSub.ref);
+        }
+        await queueDelete(existingSub.ref);
+        console.log(`  Deleted removed subcategory: ${main.slug}/${existingSub.id}`);
+      }
+    }
+
+    for (const sub of mainSub) {
+      const subDoc = subCollection.doc(sub.slug);
+      const subSubList = sub.subcategories || [];
+
+      await queueSet(subDoc, {
+        name: getName(sub),
+        slug: sub.slug,
+        icon: sub.icon || null,
+        sortOrder: sub.sortOrder || 0,
+        description: getDescription(sub),
+        isHot: !!sub.isHot,
+        isAdult: !!sub.isAdult,
+        media: sub.media || {},
+        importKeywords: uniq([...(sub.importKeywords || []), ...(sub.aliexpressKeywords || []), getName(sub), sub.slug]),
+        searchKeywords: uniq([...(sub.importKeywords || []), ...(sub.aliexpressKeywords || []), getName(sub), sub.slug]),
+        translations: sub.translations || {},
+        subcategories: subSubList.map((ss, idx) => ({
+          name: getName(ss),
+          slug: ss.slug,
+          sortOrder: ss.sortOrder || (idx + 1) * 10,
         })),
-        translations: {
-          pl: { name: subCat.name, description: subDescPl },
-          en: { name: englishSubName, description: subDescEn },
-          de: {
-            name: subNameTranslations.de || englishSubName,
-            description: subDescTranslations.de || subDescEn,
-          },
-          fr: {
-            name: subNameTranslations.fr || englishSubName,
-            description: subDescTranslations.fr || subDescEn,
-          },
-          es: {
-            name: subNameTranslations.es || englishSubName,
-            description: subDescTranslations.es || subDescEn,
-          },
-          uk: {
-            name: subNameTranslations.uk || englishSubName,
-            description: subDescTranslations.uk || subDescEn,
-          },
-        },
         createdAt: new Date().toISOString(),
       });
-      subCategoriesCount++;
 
-      // Create sub-subcategories collection
-      for (const subSubCat of subCat.subcategories) {
-        const englishSubSubSlug = slugify(subSubCat.aliexpressKeywords?.[0] || subSubCat.slug);
-        const englishSubSubName = toTitleCase((subSubCat.aliexpressKeywords?.[0] || englishSubSubSlug).replace(/-/g, ' '));
-        console.log(`    📄 Creating sub-subcategory: ${subSubCat.name} (${subSubCat.slug} -> ${englishSubSubSlug})`);
-        
-        const subSubCatRef = subCatRef.collection('subcategories').doc(englishSubSubSlug);
-        const subSubDescEn = buildDescriptionEn(englishSubSubName);
-        const subSubDescPl = buildDescriptionPl(subSubCat.name);
-        const subSubNameTranslations = await translateText(englishSubSubName);
-        const subSubDescTranslations = await translateText(subSubDescEn);
+      const subSubCollection = subDoc.collection('subcategories');
+      const wantedSubSubSlugs = new Set(subSubList.map((ss) => ss.slug));
+      const existingSubSubSnapshot = await subSubCollection.get();
 
-        await queueSet(subSubCatRef, {
-          name: englishSubSubName,
-          slug: englishSubSubSlug,
-          description: subSubDescEn,
-          aliexpressKeywords: subSubCat.aliexpressKeywords || [],
-          importKeywords: Array.from(new Set([
-            englishSubSubName,
-            englishSubSubSlug,
-            subSubCat.name,
-            ...(subSubCat.aliexpressKeywords || []),
-          ])),
-          searchKeywords: Array.from(new Set([
-            englishSubSubName,
-            englishSubSubSlug,
-            subSubCat.name,
-            ...(subSubCat.aliexpressKeywords || []),
-          ])),
-          translations: {
-            pl: { name: subSubCat.name, description: subSubDescPl },
-            en: { name: englishSubSubName, description: subSubDescEn },
-            de: {
-              name: subSubNameTranslations.de || englishSubSubName,
-              description: subSubDescTranslations.de || subSubDescEn,
-            },
-            fr: {
-              name: subSubNameTranslations.fr || englishSubSubName,
-              description: subSubDescTranslations.fr || subSubDescEn,
-            },
-            es: {
-              name: subSubNameTranslations.es || englishSubSubName,
-              description: subSubDescTranslations.es || subSubDescEn,
-            },
-            uk: {
-              name: subSubNameTranslations.uk || englishSubSubName,
-              description: subSubDescTranslations.uk || subSubDescEn,
-            },
-          },
+      for (const existingSubSub of existingSubSubSnapshot.docs) {
+        if (!wantedSubSubSlugs.has(existingSubSub.id)) {
+          await queueDelete(existingSubSub.ref);
+          console.log(`    Deleted removed sub-subcategory: ${main.slug}/${sub.slug}/${existingSubSub.id}`);
+        }
+      }
+
+      for (const subSub of subSubList) {
+        const subSubDoc = subSubCollection.doc(subSub.slug);
+        await queueSet(subSubDoc, {
+          name: getName(subSub),
+          slug: subSub.slug,
+          sortOrder: subSub.sortOrder || 0,
+          description: getDescription(subSub),
+          isHot: !!subSub.isHot,
+          isAdult: !!subSub.isAdult,
+          media: subSub.media || {},
+          googleCategoryId: subSub.googleCategoryId || null,
+          filterableAttributes: subSub.filterableAttributes || [],
+          aliexpressCategoryIds: subSub.aliexpressCategoryIds || [],
+          aliexpressKeywords: subSub.aliexpressKeywords || [],
+          importKeywords: uniq([
+            ...(subSub.importKeywords || []),
+            ...(subSub.aliexpressKeywords || []),
+            getName(subSub),
+            subSub.slug,
+          ]),
+          searchKeywords: uniq([
+            ...(subSub.importKeywords || []),
+            ...(subSub.aliexpressKeywords || []),
+            getName(subSub),
+            subSub.slug,
+          ]),
+          translations: subSub.translations || {},
           createdAt: new Date().toISOString(),
         });
-        subSubCategoriesCount++;
       }
     }
   }
 
-  console.log('\n💾 Committing batch write...');
   await commitBatch();
 
-  console.log('\n✅ Category seeding completed!');
-  console.log(`   Main categories: ${categoriesCount}`);
-  console.log(`   Subcategories: ${subCategoriesCount}`);
-  console.log(`   Sub-subcategories: ${subSubCategoriesCount}`);
-  console.log(`   Total: ${categoriesCount + subCategoriesCount + subSubCategoriesCount}\n`);
+  console.log('Category seeding completed.');
+  console.log(`Main categories: ${computed.main}`);
+  console.log(`Subcategories: ${computed.sub}`);
+  console.log(`Sub-subcategories: ${computed.subSub}`);
+  console.log(`Total: ${computed.total}`);
 }
 
-// Run if called directly
 if (require.main === module) {
   seedCategories()
     .then(() => process.exit(0))
     .catch((error) => {
-      console.error('❌ Error seeding categories:', error);
+      console.error('Error seeding categories:', error);
       process.exit(1);
     });
 }
 
-export { seedCategories, CATEGORY_STRUCTURE };
+export { seedCategories };

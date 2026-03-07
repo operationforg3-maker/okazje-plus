@@ -782,14 +782,15 @@ export class AliExpressClient {
    */
   private transformTopApiResponse(result: any, page: number, pageSize: number): AliExpressSearchResponse {
     try {
-      // TOP API wraps response in method-specific key
-      const responseKey = Object.keys(result)[0]; // e.g., 'aliexpress_affiliate_product_query_response'
-      const responseData = result[responseKey];
-      
-      // Check response code (can be string "200" or number 200)
-      // Actual AliExpress Affiliate API response structure (per ae_sdk / official types):
-      // { [method_response_key]: { resp_result: { resp_code: 200, resp_msg: "...", result: { products: [], total_record_count: N } } } }
-      const respResult = responseData?.resp_result;
+      // TOP API can return two shapes:
+      // 1) Wrapped: { [method_response_key]: { resp_result: { ... } } }
+      // 2) Direct:  { resp_result: { ... } }
+      const responseKey = Object.keys(result || {})[0];
+      const responseData = responseKey ? result[responseKey] : null;
+
+      // Prefer explicit top-level resp_result when available (direct /sync response)
+      // and fall back to wrapped shape used by some endpoints/clients.
+      const respResult = result?.resp_result || responseData?.resp_result;
       const respCode = respResult?.resp_code;
       if (!responseData || !respResult || (respCode !== 200 && respCode !== '200')) {
         logger.warn('TOP API returned error', { responseData });
@@ -1343,6 +1344,52 @@ export class AliExpressClient {
   }
 
   /**
+   * Get affiliate orders (earnings source) from AliExpress Affiliate API
+   *
+   * Method: aliexpress.affiliate.order.list
+   * Docs permissions are already present in setup script.
+   */
+  async getAffiliateOrders(params?: {
+    pageNo?: number;
+    pageSize?: number;
+    startTime?: string;
+    endTime?: string;
+    status?: string;
+    trackingId?: string;
+  }): Promise<any> {
+    logger.info('Fetching affiliate orders', {
+      pageNo: params?.pageNo || 1,
+      pageSize: params?.pageSize || 50,
+      startTime: params?.startTime,
+      endTime: params?.endTime,
+      status: params?.status,
+    });
+
+    const queryParams: Record<string, any> = {
+      page_no: params?.pageNo || 1,
+      page_size: Math.min(params?.pageSize || 50, 50),
+      status: params?.status || 'all',
+    };
+
+    if (params?.startTime) {
+      queryParams.start_time = params.startTime;
+    }
+    if (params?.endTime) {
+      queryParams.end_time = params.endTime;
+    }
+    const effectiveTrackingId =
+      params?.trackingId || this.config.trackingId || this.config.affiliateId;
+    if (effectiveTrackingId) {
+      queryParams.tracking_id = effectiveTrackingId;
+    }
+
+    return this.requestWithApiLimitRetry<any>(
+      'aliexpress.affiliate.order.list',
+      queryParams
+    );
+  }
+
+  /**
    * Get client configuration (for debugging)
    */
   getConfig(): AliExpressClientConfig {
@@ -1368,6 +1415,7 @@ export class AliExpressClient {
 export function createAliExpressClient(accountName?: string): AliExpressClient {
   const appKey = process.env.ALIEXPRESS_APP_KEY;
   const appSecret = process.env.ALIEXPRESS_APP_SECRET;
+  const apiEndpoint = process.env.ALIEXPRESS_API_ENDPOINT || DEFAULT_CONFIG.apiEndpoint;
   // Do NOT hard-fail here: OAuth token may be available via getValidToken()
   // If APP_KEY/APP_SECRET are missing, we will attempt OAuth and only fail
   // if signature auth is required without credentials.
@@ -1378,7 +1426,7 @@ export function createAliExpressClient(accountName?: string): AliExpressClient {
   const config: AliExpressClientConfig = {
     appKey: appKey || '',
     appSecret: appSecret || '',
-    apiEndpoint: process.env.ALIEXPRESS_API_ENDPOINT,
+    apiEndpoint,
     affiliateId: process.env.ALIEXPRESS_AFFILIATE_ID || process.env.ALIEXPRESS_TRACKING_ID,
     trackingId: process.env.ALIEXPRESS_TRACKING_ID || process.env.ALIEXPRESS_AFFILIATE_ID,
     region: process.env.ALIEXPRESS_REGION,

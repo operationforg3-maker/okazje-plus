@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PaginationControls } from '@/components/ui/pagination-controls';
 import { RefreshCcw, ShoppingBag, Coins, Wallet, Activity, Percent } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 type PurchaseRow = {
   id: string;
@@ -114,6 +115,8 @@ export default function AliExpressPurchasesAdminPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [trackingId, setTrackingId] = useState<string>('all');
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [importingCsv, setImportingCsv] = useState(false);
 
   const fetchPurchases = async (
     forceRefresh = false,
@@ -164,7 +167,7 @@ export default function AliExpressPurchasesAdminPage() {
       if (payload.remoteError) {
         toast({
           title: 'Uwaga',
-          description: `Nie udało się odświeżyć danych na żywo. Pokazuję zapisane dane. (${payload.remoteError})`,
+          description: `Nie udało się odświeżyć danych na żywo z AliExpress API. Pokazuję zapisane dane. (${payload.remoteError})`,
           variant: 'destructive',
         });
       }
@@ -187,12 +190,70 @@ export default function AliExpressPurchasesAdminPage() {
         setLoading(false);
         return;
       }
-      await fetchPurchases(false, page, pageSize);
+      await fetchPurchases(true, page, pageSize);
     });
 
     return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const importCsv = async () => {
+    if (!csvFile) {
+      toast({
+        title: 'Brak pliku',
+        description: 'Wybierz plik CSV z raportem afiliacyjnym.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (!user) {
+      toast({
+        title: 'Brak autoryzacji',
+        description: 'Zaloguj się jako administrator.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setImportingCsv(true);
+    try {
+      const token = await user.getIdToken();
+      const formData = new FormData();
+      formData.append('file', csvFile);
+
+      const response = await fetch('/api/admin/convertiser/purchases', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.error || 'Import CSV nie powiódł się');
+      }
+
+      toast({
+        title: 'Import zakończony',
+        description: `Zaimportowano ${payload.imported || 0} rekordów z CSV.`,
+      });
+
+      setCsvFile(null);
+      await fetchPurchases(false, 1, pageSize, trackingId);
+    } catch (error) {
+      toast({
+        title: 'Błąd importu CSV',
+        description: (error as Error).message || 'Nie udało się zaimportować pliku CSV',
+        variant: 'destructive',
+      });
+    } finally {
+      setImportingCsv(false);
+    }
+  };
 
   const canGoPrev = page > 1;
   const canGoNext = page < (response?.pagination.totalPages || 1);
@@ -210,10 +271,22 @@ export default function AliExpressPurchasesAdminPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Zakupy afiliacyjne AliExpress</h1>
           <p className="text-muted-foreground mt-1">
-            Realne transakcje zakupowe z naszych linków afiliacyjnych (Convertiser).
+            Realne transakcje zakupowe z naszych linków afiliacyjnych (AliExpress API).
           </p>
         </div>
         <div className="flex w-full md:w-auto gap-2">
+          <Input
+            type="file"
+            accept=".csv,text/csv"
+            className="w-full md:w-[260px]"
+            onChange={(event) => {
+              const file = event.target.files?.[0] || null;
+              setCsvFile(file);
+            }}
+          />
+          <Button onClick={importCsv} disabled={importingCsv} variant="outline">
+            {importingCsv ? 'Importuję CSV...' : 'Importuj CSV'}
+          </Button>
           <Select
             value={trackingId}
             onValueChange={async (value) => {
@@ -394,7 +467,7 @@ export default function AliExpressPurchasesAdminPage() {
         <CardHeader>
           <CardTitle>Lista zakupów</CardTitle>
           <CardDescription>
-            Źródło danych: {response?.source === 'live' ? 'odświeżenie na żywo (Convertiser)' : 'zapisane dane (Firestore)'}
+            Źródło danych: {response?.source === 'live' ? 'odświeżenie na żywo (AliExpress API)' : 'zapisane dane (Firestore / CSV)'}
           </CardDescription>
         </CardHeader>
         <CardContent>

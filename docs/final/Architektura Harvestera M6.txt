@@ -1,0 +1,40 @@
+Architektura Harvestera M6 (Podejście Bulk / Firehose)
+W związku z celem obsługi milionów produktów i zapobiegania blokadom API (Rate Limits), Harvester w architekturze M6 odchodzi od iterowania po kategoriach na rzecz pobierania masowego (Bulk Fetch) i lokalnego trasowania (Local Routing).
+1. Paradygmat: Odpytuj ogólnie, filtruj lokalnie
+	•	ZŁE PODEJŚCIE: Harvester czyta JSON, widzi 400 kategorii L3, robi 400 osobnych zapytań do API po 50 produktów. Wynik: Blokada API.
+	•	DOBRE PODEJŚCIE (M6): Harvester robi 1 zapytanie do API o 20 000 najlepiej konwertujących ofert (lub pobiera pełny plik XML). Następnie lokalny skrypt mapuje te 20 000 produktów do naszych 400 kategorii L3 używając importKeywords.
+2. Etapy Harvestera (Zaktualizowany Pipeline)
+ETAP 1: The Firehose (Pobieranie)
+Źródła są odpytywane o najszersze możliwe zbiory danych:
+	•	Convertiser: Pobranie pełnego pliku XML/CSV dla danego sklepu z użyciem strumieni (Streams).
+	•	AliExpress: Wywołanie endpointów typu getPromotedProducts, getSuperDeals bez przekazywania ścisłych categoryId.
+	•	Wynik: Tablica tysięcy surowych obiektów (tylko w pamięci RAM).
+ETAP 2: Kategoryzacja Lokalna (The Sieve)
+Każdy produkt z ETAPU 1 przechodzi przez silnik CategoryRouter.
+	•	Silnik ładuje category-tree-seo-extended.json do pamięci.
+	•	Analizuje title (i oryginalną kategorię z API) pobranego produktu.
+	•	Dopasowuje słowa z użyciem Regex/inkluzji do tablic importKeywords.
+	•	Sukces: Produkt otrzymuje matchedL3Slug (np. laptops).
+	•	Porażka (Odrzut): Jeśli produkt nie pasuje do ŻADNEGO słowa kluczowego z naszego drzewa, zostaje ODRZUCONY (nie trafia do bazy Firestore, nie marnujemy na niego tokenów AI).
+Wyjątek: Możemy mieć "Catch-All" dla wyjątkowo tanich deali z wysokim rabatem, które wysyłamy do ręcznej moderacji.
+ETAP 3: Hierarchiczna Deduplikacja (EAN/UPC & Identity Hash)
+System weryfikuje, czy pobrany produkt już istnieje w naszym katalogu (ProductCore). Aby zapewnić maksymalną dokładność przy milionach ofert, stosujemy podejście kaskadowe:
+	•	Dopasowanie Twarde (Strong Match): W pierwszej kolejności system sprawdza unikalne kody kreskowe lub identyfikatory producenta (EAN, UPC, GTIN, MPN, SKU), jeśli API je dostarczyło. Jeśli znajdzie takie same kody w naszej bazie, system wie ze 100% pewnością, że to ten sam produkt.
+	•	Dopasowanie Miękkie (Fallback / Identity Hash): Gdy feed (np. z AliExpress) nie zawiera kodów EAN, system generuje unikalny identityHash (wyliczany na podstawie znormalizowanego tytułu i głównego obrazka). Jeśli hash pasuje do istniejącego produktu, system traktuje to jako dopasowanie.
+W oparciu o powyższe kroki system podejmuje decyzję:
+	•	Jeśli ProductCore już istnieje: -> Zapisujemy tylko nową ofertę cenową (DealM6) i podpinamy pod istniejący produkt (łączy to oferty z wielu sklepów pod jednym produktem).
+	•	Jeśli ProductCore nie istnieje: -> Tworzymy zupełnie nowy ProductCore w katalogu i przypisujemy do niego pierwszą ofertę (DealM6).
+ETAP 4: AI Enrichment (Lazy Loading)
+Po zapisie do Firestore, asynchroniczny Worker widzi nowy produkt.
+Ponieważ na Etapie 2 ustaliliśmy, że to laptops, AI wie z pliku JSON, że musi wyodrębnić parametry: ram, gpu, processor.
+3. Typy Zadań (Harvester Jobs)
+Mimo że domyślnie pobieramy "wszystko", panel admina powinien obsługiwać 2 typy Jobów:
+	•	Global Sync (Codziennie o 02:00)
+	•	Pobiera masowo feedy XML i top deale z API.
+	•	Filtruje je przez drzewo kategorii (odrzucając tysiące niepasujących).
+	•	Utrzymuje aktualność cen.
+	•	Targeted Fill (Manualne zadanie z Admina)
+	•	Uruchamiane tylko, gdy jakaś kategoria "świeci pustkami" (np. utworzyłeś nową kategorię "Namioty").
+	•	Wtedy, i tylko wtedy, robimy zapytanie do API AliExpress search("camping tents"), aby szybko zapełnić tę jedną dziurę. To jednak wyjątek, a nie reguła.
+4. Przykładowy pseudo-kod dla Routera (TypeScript)
+import categoryTree from '@/data/category-tree-seo-extended.json';  export function routeProductToCategory(rawTitle: string): string | null {   const normalizedTitle = rawTitle.toLowerCase();      // Szukamy po L3 (najniższy poziom)   for (const mainCat of categoryTree.tree) {     for (const subCat of mainCat.subcategories) {       for (const leaf of subCat.subcategories) {                  // Sprawdzamy słowa z importKeywords         if (leaf.importKeywords) {           for (const keyword of leaf.importKeywords) {             if (normalizedTitle.includes(keyword.toLowerCase())) {               return leaf.slug; // BINGO! Znalazł się.             }           }         }       }     }   }      // Zwracamy null, jeśli produkt to śmieć, którego nie chcemy w sklepie   return null;  }  

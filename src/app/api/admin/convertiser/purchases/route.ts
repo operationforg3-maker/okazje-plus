@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase-admin';
-import { getConvertiserClient } from '@/lib/integrations/convertiser-client';
+import { createAliExpressClient } from '@/integrations/aliexpress/client';
+import Papa from 'papaparse';
 
 const COLLECTION_NAME = 'affiliate_purchases_aliexpress';
 const DEFAULT_PAGE = 1;
@@ -22,7 +23,7 @@ type NormalizedPurchase = {
   purchaseDateMs: number;
   website: string | null;
   clickId: string | null;
-  source: 'convertiser';
+  source: 'aliexpress';
   updatedAt: string;
 };
 
@@ -103,47 +104,55 @@ function hasAliExpressMarker(raw: Record<string, any>): boolean {
   }
 }
 
-function isCompletedPurchase(raw: Record<string, any>): boolean {
-  const statusRaw = firstString(raw, ['status', 'transaction_status', 'order_status', 'state']) || '';
-  const status = statusRaw.toLowerCase();
-
-  if (!status) return true;
-
-  const failedMarkers = ['cancel', 'reject', 'denied', 'failed', 'fraud', 'void'];
-  if (failedMarkers.some((marker) => status.includes(marker))) return false;
-
-  const pendingMarkers = ['pending', 'processing', 'new', 'open', 'hold', 'waiting'];
-  if (pendingMarkers.some((marker) => status.includes(marker))) return false;
-
-  const completedMarkers = ['complete', 'approved', 'accepted', 'confirm', 'paid', 'settled', 'done'];
-  if (completedMarkers.some((marker) => status.includes(marker))) return true;
-
-  return true;
-}
-
 function normalizePurchase(raw: Record<string, any>, index: number): NormalizedPurchase {
   const transactionId = String(
-    raw.id ?? raw.uuid ?? raw.transaction_id ?? raw.transactionId ?? `unknown-${Date.now()}-${index}`
+    raw.id ??
+      raw.uuid ??
+      raw.transaction_id ??
+      raw.transactionId ??
+      raw.order_id ??
+      raw.orderId ??
+      raw.order_no ??
+      `unknown-${Date.now()}-${index}`
   );
 
-  const orderId = firstString(raw, ['order_id', 'orderId', 'sale_id', 'external_order_id']);
-  const advertiser =
-    firstString(raw, ['advertiser_name', 'advertiser', 'merchant_name', 'merchant', 'offer_name']) ||
-    'AliExpress';
-  const status = firstString(raw, ['status', 'transaction_status', 'order_status', 'state']) || 'unknown';
+  const orderId = firstString(raw, ['order_id', 'orderId', 'order_no', 'sale_id', 'external_order_id']);
+  const advertiser = 'AliExpress';
+  const status =
+    firstString(raw, ['order_status', 'status', 'transaction_status', 'state']) ||
+    'unknown';
 
   const purchaseAmount = parseNumber(
-    raw.order_amount ?? raw.sale_amount ?? raw.transaction_amount ?? raw.purchase_amount ?? raw.amount
+    raw.order_amount ??
+      raw.sale_amount ??
+      raw.transaction_amount ??
+      raw.purchase_amount ??
+      raw.amount ??
+      raw.pay_amount
   );
 
-  const commissionAmount = parseNumber(raw.commission ?? raw.commission_amount ?? raw.publisher_commission ?? 0);
+  const commissionAmount = parseNumber(
+    raw.commission ??
+      raw.commission_amount ??
+      raw.publisher_commission ??
+      raw.affiliate_commission ??
+      raw.estimated_commission ??
+      raw.paid_commission ??
+      0
+  );
 
   const currency =
-    firstString(raw, ['currency', 'currency_code', 'order_currency', 'sale_currency']) ||
-    'PLN';
+    firstString(raw, ['order_currency', 'currency', 'currency_code', 'sale_currency']) ||
+    'USD';
 
   const purchaseDate = toIsoDate(
-    raw.date ?? raw.transaction_date ?? raw.created_at ?? raw.createdAt ?? raw.event_time
+    raw.order_time ??
+      raw.payment_time ??
+      raw.date ??
+      raw.transaction_date ??
+      raw.created_at ??
+      raw.createdAt ??
+      raw.event_time
   );
 
   const purchaseDateMs = new Date(purchaseDate).getTime();
@@ -161,10 +170,85 @@ function normalizePurchase(raw: Record<string, any>, index: number): NormalizedP
     purchaseDate,
     purchaseDateMs: Number.isFinite(purchaseDateMs) ? purchaseDateMs : 0,
     website: firstString(raw, ['website_name', 'website', 'publisher_website']),
-    clickId: firstString(raw, ['click_id', 'clickId', 'subid', 'sub_id']),
-    source: 'convertiser',
+    clickId: firstString(raw, ['tracking_id', 'click_id', 'clickId', 'subid', 'sub_id']),
+    source: 'aliexpress',
     updatedAt: nowIso,
   };
+}
+
+function extractOrderRows(payload: any): Record<string, any>[] {
+  const knownPaths = [
+    payload?.aliexpress_affiliate_order_list_response?.resp_result?.result?.orders,
+    payload?.aliexpress_affiliate_order_list_response?.resp_result?.result?.records,
+    payload?.aliexpress_affiliate_order_list_response?.resp_result?.result?.order_list,
+    payload?.aliexpress_affiliate_order_list_response?.result?.orders,
+    payload?.result?.orders,
+    payload?.orders,
+    payload?.data?.orders,
+    payload?.data?.records,
+  ];
+
+  for (const candidate of knownPaths) {
+    if (Array.isArray(candidate) && candidate.length >= 0) {
+      return candidate as Record<string, any>[];
+    }
+  }
+
+  const arrays: Record<string, any>[][] = [];
+  const visit = (value: any) => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      if (value.length === 0 || typeof value[0] === 'object') {
+        arrays.push(value as Record<string, any>[]);
+      }
+      value.forEach(visit);
+      return;
+    }
+    if (typeof value === 'object') {
+      Object.values(value).forEach(visit);
+    }
+  };
+
+  visit(payload);
+
+  const bestMatch = arrays.find((arr) =>
+    arr.some((row) => {
+      const keys = Object.keys(row || {}).join('|').toLowerCase();
+      return keys.includes('order') || keys.includes('commission') || keys.includes('tracking');
+    })
+  );
+
+  return bestMatch || [];
+}
+
+function getAliExpressApiError(payload: any): string | null {
+  const errorNode = payload?.error_response || payload;
+  const responseCode = Number(payload?.resp_result?.resp_code || 0);
+  const responseMessage = String(payload?.resp_result?.resp_msg || '').trim();
+
+  if (Number.isFinite(responseCode) && responseCode > 0) {
+    return responseMessage
+      ? `resp_code ${responseCode}: ${responseMessage}`
+      : `resp_code ${responseCode}`;
+  }
+
+  const code = String(errorNode?.code || '').trim();
+  const message = String(
+    errorNode?.sub_msg ||
+      errorNode?.msg ||
+      payload?.message ||
+      ''
+  ).trim();
+
+  if (!code && !message) {
+    return null;
+  }
+
+  if (code && message) {
+    return `${code}: ${message}`;
+  }
+
+  return code || message;
 }
 
 async function verifyAdminToken(request: NextRequest): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
@@ -189,7 +273,10 @@ async function verifyAdminToken(request: NextRequest): Promise<{ ok: true } | { 
   }
 }
 
-async function savePurchasesToFirestore(purchases: NormalizedPurchase[]): Promise<void> {
+async function savePurchasesToFirestore(
+  purchases: NormalizedPurchase[],
+  sourceLabel: 'aliexpress-api' | 'csv-import' = 'aliexpress-api'
+): Promise<void> {
   if (!purchases.length) return;
 
   const chunkSize = 400;
@@ -209,10 +296,113 @@ async function savePurchasesToFirestore(purchases: NormalizedPurchase[]): Promis
     {
       lastSyncAt: new Date().toISOString(),
       records: purchases.length,
-      source: 'convertiser',
+      source: sourceLabel,
     },
     { merge: true }
   );
+}
+
+function getCsvField(row: Record<string, any>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null) {
+      const text = String(value).trim();
+      if (text) return text;
+    }
+  }
+  return null;
+}
+
+function normalizeCsvPurchase(row: Record<string, any>, index: number): NormalizedPurchase {
+  const transactionId =
+    getCsvField(row, [
+      'transactionId',
+      'transaction_id',
+      'id',
+      'ID transakcji',
+      'Transaction ID',
+    ]) || `csv-${Date.now()}-${index}`;
+
+  const orderId = getCsvField(row, [
+    'orderId',
+    'order_id',
+    'order_no',
+    'ID zamówienia',
+    'Order ID',
+  ]);
+
+  const status =
+    getCsvField(row, ['status', 'order_status', 'transaction_status', 'Status', 'Status transakcji']) ||
+    'unknown';
+
+  const advertiser = getCsvField(row, ['advertiser', 'advertiser_name', 'Reklamodawca']) || 'AliExpress';
+
+  const purchaseAmount = parseNumber(
+    getCsvField(row, [
+      'purchaseAmount',
+      'purchase_amount',
+      'order_amount',
+      'sale_amount',
+      'amount',
+      'Kwota zakupu',
+      'Order amount',
+    ])
+  );
+
+  const commissionAmount = parseNumber(
+    getCsvField(row, [
+      'commissionAmount',
+      'commission_amount',
+      'commission',
+      'Prowizja',
+      'Commission',
+    ])
+  );
+
+  const currency =
+    getCsvField(row, ['currency', 'currency_code', 'Waluta', 'Currency']) ||
+    'USD';
+
+  const purchaseDate = toIsoDate(
+    getCsvField(row, [
+      'purchaseDate',
+      'purchase_date',
+      'order_time',
+      'payment_time',
+      'date',
+      'Data',
+      'Date',
+    ])
+  );
+
+  const clickId = getCsvField(row, [
+    'clickId',
+    'click_id',
+    'tracking_id',
+    'subid',
+    'sub_id',
+    'Tracking ID',
+  ]);
+
+  const website = getCsvField(row, ['website', 'website_name', 'site', 'Strona']);
+  const purchaseDateMs = new Date(purchaseDate).getTime();
+
+  return {
+    id: transactionId.replace(/[^a-zA-Z0-9_-]/g, '_'),
+    transactionId,
+    orderId,
+    advertiser,
+    status,
+    purchaseAmount,
+    commissionAmount,
+    currency,
+    purchaseDate,
+    purchaseDateMs: Number.isFinite(purchaseDateMs) ? purchaseDateMs : 0,
+    website,
+    clickId,
+    source: 'aliexpress',
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 async function loadAllPurchasesFromFirestore(): Promise<NormalizedPurchase[]> {
@@ -333,6 +523,7 @@ export async function GET(request: NextRequest) {
   const trackingId = (searchParams.get('trackingId') || '').trim();
   const scanPages = clamp(Number(searchParams.get('scanPages') || DEFAULT_SCAN_PAGES), 1, 10);
   const scanPageSize = clamp(Number(searchParams.get('scanPageSize') || DEFAULT_SCAN_PAGE_SIZE), 10, 100);
+  const daysBack = clamp(Number(searchParams.get('daysBack') || 90), 1, 365);
 
   let allPurchases: NormalizedPurchase[] = [];
   let filteredPurchases: NormalizedPurchase[] = [];
@@ -341,13 +532,28 @@ export async function GET(request: NextRequest) {
 
   if (forceRefresh) {
     try {
-      const client = getConvertiserClient();
+      const client = createAliExpressClient();
       const collectedRaw: Record<string, any>[] = [];
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - daysBack * 24 * 60 * 60 * 1000);
+
+      const formatTopDate = (date: Date) => date.toISOString().replace('T', ' ').substring(0, 19);
 
       for (let currentPage = 1; currentPage <= scanPages; currentPage += 1) {
-        const response = await client.listTransactions({ page: currentPage, page_size: scanPageSize });
-        const results = Array.isArray(response?.results) ? response.results : [];
-        collectedRaw.push(...(results as Record<string, any>[]));
+        const response = await client.getAffiliateOrders({
+          pageNo: currentPage,
+          pageSize: scanPageSize,
+          startTime: formatTopDate(startDate),
+          endTime: formatTopDate(endDate),
+        });
+
+        const aliError = getAliExpressApiError(response);
+        if (aliError) {
+          throw new Error(aliError);
+        }
+
+        const results = extractOrderRows(response);
+        collectedRaw.push(...results);
 
         if (results.length < scanPageSize) {
           break;
@@ -355,8 +561,6 @@ export async function GET(request: NextRequest) {
       }
 
       const normalized = collectedRaw
-        .filter((row) => hasAliExpressMarker(row))
-        .filter((row) => isCompletedPurchase(row))
         .map((row, index) => normalizePurchase(row, index))
         .sort((a, b) => b.purchaseDateMs - a.purchaseDateMs);
 
@@ -369,7 +573,7 @@ export async function GET(request: NextRequest) {
       await savePurchasesToFirestore(allPurchases);
       source = 'live';
     } catch (error: any) {
-      remoteError = error?.message || 'Nie udało się pobrać danych z Convertiser';
+      remoteError = error?.message || 'Nie udało się pobrać danych z AliExpress API';
     }
   }
 
@@ -444,4 +648,86 @@ export async function GET(request: NextRequest) {
       forceRefresh,
     },
   });
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await verifyAdminToken(request);
+  if (!auth.ok) {
+    const authError = auth as { ok: false; status: number; error: string };
+    return NextResponse.json({ success: false, error: authError.error }, { status: authError.status });
+  }
+
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file');
+
+    const hasTextMethod =
+      typeof file === 'object' &&
+      file !== null &&
+      'text' in file &&
+      typeof (file as Blob).text === 'function';
+
+    if (!hasTextMethod) {
+      return NextResponse.json(
+        { success: false, error: 'Brak pliku CSV do importu' },
+        { status: 400 }
+      );
+    }
+
+    const csvText = await (file as Blob).text();
+    if (!csvText.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Plik CSV jest pusty' },
+        { status: 400 }
+      );
+    }
+
+    const parsed = Papa.parse<Record<string, any>>(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim(),
+    });
+
+    if (parsed.errors?.length) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Błąd parsowania CSV: ${parsed.errors[0]?.message || 'Nieprawidłowy format'}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const rows = Array.isArray(parsed.data) ? parsed.data : [];
+    const normalized = rows
+      .map((row, index) => normalizeCsvPurchase(row, index))
+      .filter((item) => item.transactionId && item.purchaseDateMs > 0)
+      .sort((a, b) => b.purchaseDateMs - a.purchaseDateMs);
+
+    const uniqueById = new Map<string, NormalizedPurchase>();
+    for (const item of normalized) {
+      uniqueById.set(item.id, item);
+    }
+
+    const importedPurchases = Array.from(uniqueById.values());
+    if (!importedPurchases.length) {
+      return NextResponse.json(
+        { success: false, error: 'Nie znaleziono poprawnych rekordów w CSV' },
+        { status: 400 }
+      );
+    }
+
+    await savePurchasesToFirestore(importedPurchases, 'csv-import');
+
+    return NextResponse.json({
+      success: true,
+      imported: importedPurchases.length,
+      source: 'csv-import',
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Nie udało się zaimportować CSV' },
+      { status: 500 }
+    );
+  }
 }

@@ -4,6 +4,33 @@ import { adminDb, adminAuth, FieldValue } from '@/lib/firebase-admin';
 // Rate limiting - prosta implementacja w pamięci (dla produkcji użyj Redis)
 const voteRateLimit = new Map<string, { count: number; resetAt: number }>();
 
+function parseEnvInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+const AUTO_MODERATION_MIN_VOTES = parseEnvInt('AUTO_MODERATION_MIN_VOTES', 8);
+const AUTO_MODERATION_APPROVE_THRESHOLD = parseEnvInt('AUTO_MODERATION_APPROVE_THRESHOLD', 4);
+const AUTO_MODERATION_REJECT_THRESHOLD = parseEnvInt('AUTO_MODERATION_REJECT_THRESHOLD', -4);
+
+function isWaitingRoomStatus(status: unknown): boolean {
+  return status === 'draft' || status === 'pending' || status === 'pending_approval';
+}
+
+function resolveAutoModerationStatus(
+  currentStatus: unknown,
+  voteCount: number,
+  temperature: number
+): 'pending' | 'approved' | 'rejected' | null {
+  if (!isWaitingRoomStatus(currentStatus)) return null;
+  if (voteCount < AUTO_MODERATION_MIN_VOTES) return 'pending';
+  if (temperature >= AUTO_MODERATION_APPROVE_THRESHOLD) return 'approved';
+  if (temperature <= AUTO_MODERATION_REJECT_THRESHOLD) return 'rejected';
+  return 'pending';
+}
+
 function checkRateLimit(userId: string): boolean {
   const now = Date.now();
   const limit = voteRateLimit.get(userId);
@@ -118,6 +145,7 @@ export async function POST(
 
       const currentTemperature = dealData.temperature || 0;
       const currentVoteCount = dealData.voteCount || 0;
+      const currentStatus = dealData.status || 'draft';
 
       // Pobierz obecny głos użytkownika (jeśli istnieje)
       const voteDoc = await transaction.get(voteRef);
@@ -176,16 +204,53 @@ export async function POST(
         newVote = voteValue;
       }
 
-      // Aktualizuj deal
-      transaction.update(dealRef, {
+      const nextTemperature = currentTemperature + temperatureChange;
+      const nextVoteCount = currentVoteCount + voteCountChange;
+      const autoModerationStatus = resolveAutoModerationStatus(currentStatus, nextVoteCount, nextTemperature);
+
+      const dealUpdatePayload: Record<string, unknown> = {
         temperature: FieldValue.increment(temperatureChange),
         voteCount: FieldValue.increment(voteCountChange),
-      });
+        lastVoteAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+
+      if (autoModerationStatus && autoModerationStatus !== currentStatus) {
+        dealUpdatePayload.status = autoModerationStatus;
+        if (autoModerationStatus === 'approved') {
+          dealUpdatePayload.approvedAt = new Date().toISOString();
+        }
+        if (autoModerationStatus === 'rejected') {
+          dealUpdatePayload.rejectedAt = new Date().toISOString();
+        }
+      }
+
+      transaction.update(dealRef, dealUpdatePayload);
+
+      // If community voting approves a deal, move related product from waiting state to approved.
+      if (autoModerationStatus === 'approved') {
+        const productCoreId = dealData.productCoreId || dealData.productId;
+        if (productCoreId) {
+          const productRef = adminDb.collection('product_cores').doc(String(productCoreId));
+          const productDoc = await transaction.get(productRef);
+          if (productDoc.exists) {
+            const productStatus = productDoc.data()?.status;
+            if (productStatus === 'pending_approval' || productStatus === 'draft') {
+              transaction.update(productRef, {
+                status: 'approved',
+                approvedAt: new Date().toISOString(),
+                updatedAt: FieldValue.serverTimestamp(),
+              });
+            }
+          }
+        }
+      }
 
       return {
-        temperature: currentTemperature + temperatureChange,
-        voteCount: currentVoteCount + voteCountChange,
+        temperature: nextTemperature,
+        voteCount: nextVoteCount,
         userVote: newVote,
+        status: autoModerationStatus || currentStatus,
       };
     });
     

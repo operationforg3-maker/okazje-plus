@@ -30,6 +30,8 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { ai } from '@/ai/genkit';
+import { adminDb } from '@/lib/firebase-admin';
+import { parseJsonFromResponse } from '@/lib/vertex';
 
 /**
  * Add item to moderation queue
@@ -42,7 +44,7 @@ export async function addToModerationQueue(
   priority: ModerationQueueItem['priority'] = 'normal'
 ): Promise<ModerationQueueItem> {
   try {
-    const queueRef = doc(collection(db, 'moderationQueue'));
+    const queueRef = adminDb.collection('moderationQueue').doc();
     const now = new Date().toISOString();
 
     // Generate AI score
@@ -63,9 +65,9 @@ export async function addToModerationQueue(
       tags: [],
     };
 
-    await setDoc(queueRef, {
+    await queueRef.set({
       ...queueItem,
-      submittedAt: Timestamp.fromDate(new Date(queueItem.submittedAt)),
+      submittedAt: new Date(queueItem.submittedAt),
       assignedAt: null,
       reviewedAt: null,
     });
@@ -95,10 +97,10 @@ export async function generateModerationScore(
     logger.info('Generating moderation score', { itemId, itemType });
 
     // Fetch the item
-    const itemRef = doc(db, itemType === 'product' ? 'products' : 'deals', itemId);
-    const itemSnap = await getDoc(itemRef);
+    const collectionName = itemType === 'product' ? 'products' : 'deals';
+    const itemSnap = await adminDb.collection(collectionName).doc(itemId).get();
 
-    if (!itemSnap.exists()) {
+    if (!itemSnap.exists) {
       throw new Error(`${itemType} ${itemId} not found`);
     }
 
@@ -154,7 +156,29 @@ Return JSON:
       prompt,
     });
 
-    const score = JSON.parse(result.text);
+    const parsed = parseJsonFromResponse(result.text || '');
+
+    const score = {
+      overallScore: Number(parsed.overallScore ?? 50),
+      contentQuality: Number(parsed.contentQuality ?? 50),
+      priceQuality: Number(parsed.priceQuality ?? 50),
+      trustworthiness: Number(parsed.trustworthiness ?? 50),
+      suspicionFlags: Array.isArray(parsed.suspicionFlags) ? parsed.suspicionFlags : [],
+      recommendation:
+        parsed.recommendation === 'approve' ||
+        parsed.recommendation === 'review' ||
+        parsed.recommendation === 'reject'
+          ? parsed.recommendation
+          : 'review',
+      confidence:
+        typeof parsed.confidence === 'number' && Number.isFinite(parsed.confidence)
+          ? parsed.confidence
+          : 0,
+      reasoning:
+        typeof parsed.reasoning === 'string' && parsed.reasoning.length > 0
+          ? parsed.reasoning
+          : 'AI scoring returned incomplete response, manual review required',
+    };
 
     const aiScore: ModerationAIScore = {
       overallScore: score.overallScore,
@@ -177,7 +201,11 @@ Return JSON:
 
     return aiScore;
   } catch (error) {
-    logger.error('Failed to generate moderation score', { itemId, itemType, error });
+    logger.error('Failed to generate moderation score', {
+      itemId,
+      itemType,
+      error: error instanceof Error ? error.message : String(error),
+    });
 
     // Return fallback score
     return {

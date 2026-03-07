@@ -302,7 +302,7 @@ export class AIRefiner {
 
     // Build best-effort specs seed
     let specsSeed: Record<string, string> = {};
-    const rawSpecs = product.specs || {};
+    const rawSpecs = product.rawSpecs || product.specs || {};
     if (Object.keys(rawSpecs).length > 0) {
       specsSeed = { ...rawSpecs };
     } else if (product.metadata?.specifications && Object.keys(product.metadata.specifications).length > 0) {
@@ -332,6 +332,8 @@ export class AIRefiner {
 
     // Clean up specs using AI
     refined.specs = await this.cleanupSpecs(specsSeed);
+    refined.coreSpecs = { ...(refined.specs || {}) };
+    refined.rawSpecs = { ...specsSeed };
     
     // M6 UPGRADE: Use intelligent generator instead of iterative translation
     // This addresses "AI should improve, not just translate"
@@ -394,6 +396,7 @@ export class AIRefiner {
                 ...(refined.specs || product.specs || {}),
                 ...titleResult.specsExtracted
               };
+              refined.coreSpecs = { ...(refined.specs || {}) };
             }
           } catch (specErr) {
             this.addLog('warn', 'Specyfikacje nie zostały wyekstrahowane z tytułu', specErr);
@@ -408,6 +411,7 @@ export class AIRefiner {
               Object.entries(specsAugmented).map(([key, value]) => [key, String(value ?? '').trim()])
             ),
           };
+          refined.coreSpecs = { ...(refined.specs || {}) };
         }
 
         // M6+ Market Price Estimation
@@ -484,6 +488,7 @@ export class AIRefiner {
             ...(refined.specs || product.specs || {}),
             ...titleResult.specsExtracted
           };
+          refined.coreSpecs = { ...(refined.specs || {}) };
         }
       } catch (e) {
         console.error('[Refiner] Title cleanup failed:', e);
@@ -582,11 +587,15 @@ export class AIRefiner {
               Object.entries(inferredSpecs).filter(([key]) => !(refined.specs || product.specs || {})[key])
             ),
           };
+          refined.coreSpecs = { ...(refined.specs || {}) };
         }
       }
 
       // Extract search tags
-      refined.searchTags = await this.extractSearchTags(product.title, product.specs);
+      refined.searchTags = await this.extractSearchTags(
+        refined.title || product.title,
+        refined.specs || product.specs || {}
+      );
 
       // Calculate quality score
       refined.aiQualityScore = this.calculateQualityScore(product);

@@ -1,0 +1,60 @@
+Architektura Społecznościowa i Standardy UI (M6)
+Dokument definiuje standardy wizualne (UI/UX), zasady responsywności (RWD) oraz architekturę backendową dla modułu "Poczekalnia" (Crowdsourced Moderation) na platformie OkazjePlus.pl.
+1. Żelazny Standard Responsywności (Mobile-First M6)
+Platforma musi być projektowana w paradygmacie Mobile-First. Użytkownik przeglądający "Poczekalnię" na telefonie w autobusie to nasz główny klient.
+1.1 Breakpointy (Tailwind CSS)
+Używamy standardowych breakpointów Tailwind, ale z rygorystycznym podziałem zachowań:
+	•	DEFAULT (0px - 639px): Mobile. Widok 1-kolumnowy, ukryte sidebary, nawigacja dolna (Bottom Tab Bar).
+	•	sm (640px - 767px): Duży Mobile / Mały Tablet. Rozszerzone karty produktów.
+	•	md (768px - 1023px): Tablet. Widok 2-kolumnowy (Siatka ofert), pojawia się boczny pasek filtrów (jako Offcanvas).
+	•	lg (1024px - 1279px): Desktop. Widok 3-kolumnowy, stale widoczny sidebar.
+	•	xl i 2xl (1280px+): Duży Desktop. Widok 4-kolumnowy, maksymalna szerokość kontenera ograniczona do max-w-7xl (1280px), aby treść nie "rozlewała się" na ultra-szerokich monitorach.
+1.2 Reguły UX dla Mobile
+	•	Touch Targets: Każdy interaktywny element (przycisk głosu +/-, link, kategoria) musi mieć absolutne minimum 44x44 piksele (standard Apple/Google). Brak marginesów błędu dla "grubych palców".
+	•	Strefa Kciuka (Thumb Zone): Najważniejsze akcje (Głosuj w górę, Głosuj w dół, Skomentuj, Kup) muszą znajdować się w dolnej połowie ekranu (łatwo dostępne dla kciuka bez zmiany chwytu).
+	•	Gestures (Gesty): W mobilnej poczekalni wprowadzamy "Swipe" na kartach:
+	•	Swipe w prawo = Głos w górę (+1)
+	•	Swipe w lewo = Głos w dół (-1)
+	•	Sticky Bottom Action Bar: Dolny pasek nawigacji widoczny cały czas, jak w natywnych aplikacjach (Konto, Szukaj, Dodaj Okazję, Poczekalnia, Główna).
+2. Architektura Frontend (UI Poczekalni)
+Poczekalnia musi przetwarzać tysiące deali bez zawieszania przeglądarki.
+2.1 Infinite Scroll + Virtualization
+Ponieważ użytkownicy będą przewijać tysiące odrzuconych/nowych ofert, klasyczne renderowanie DOM "zabije" pamięć RAM w telefonie.
+	•	Technologia: Wdrażamy Wirtualizację list (np. @tanstack/react-virtual lub react-window). Renderowane są tylko te oferty, które są aktualnie widoczne na ekranie (+ kilka w buforze).
+2.2 Wygląd Karty Deal (Tryb Poczekalni)
+Karta deala w poczekalni (w przeciwieństwie do strony głównej) kładzie nacisk na szybką decyzję.
+	•	Układ Kompaktowy (List View): Miniaturka po lewej, tytuł i cena na środku, wielkie przyciski [^] (Plus) i [v] (Minus) po prawej z licznikiem punktów w środku.
+	•	Wizualizacja "Temperatury": Kolor licznika zmienia się w zależności od poparcia:
+	•	< 0: Kolor szary / wyblakły (Deal jest zakopywany).
+	•	1 do 14: Kolor niebieski / neutralny.
+	•	15+ (Zaraz wejdzie na główną): Kolor pomarańczowy / pulsujący.
+	•	Przyciski Admina (Tylko dla ról admin/moderator):
+	•	Ikona ⚡ (Zatwierdź natychmiast - nadaje max punktów i zmienia status).
+	•	Ikona 🗑️ (Usuń/Spal - ukrywa permanentnie).
+2.3 Optymistyczne UI (Optimistic Updates)
+Klucz do UX: Kiedy użytkownik klika "+1", punkty na ekranie muszą zmienić się natychmiast (zanim serwer Firebase to potwierdzi). Jeśli wystąpi błąd sieci, cofamy zmianę i pokazujemy Toast ("Błąd głosowania"). Narzędzia: React Query (useMutation z onMutate).
+3. Architektura Backend (Silnik Głosowania i Temperatury)
+Proste sumowanie Plusy - Minusy nie zadziała w skali. Stary deal, który dostał 100 plusów 2 lata temu, zawsze będzie wyżej niż świetny deal z wczoraj (który ma dopiero 20 plusów). Potrzebujemy Algorytmu Time-Decay (Starzenia się).
+3.1 Algorytm Grawitacji (HackerNews Style)
+Na Firebase zapisujemy surowe głosy. Ale do Typesense (naszej wyszukiwarki) wysyłamy pole temperature (score).
+Wzór na Temperaturę (Temperature Score):
+Score = (Upvotes - Downvotes) / (AgeInHours + 2)^Gravity
+	•	AgeInHours: Liczba godzin od znalezienia deala przez Harvester.
+	•	Gravity: Parametr grawitacji (np. 1.8). Im wyższy, tym szybciej stare deale spadają na dół.
+Dlaczego to genialne?
+	•	Deal dodany godzinę temu z 5 plusami będzie WYŻEJ na liście "Gorące" niż deal dodany 4 dni temu z 50 plusami. To gwarantuje ciągłą rotację treści i powroty użytkowników.
+3.2 Transakcje Bazy Danych (Firestore)
+Głosowanie musi być bezpieczne (Race conditions).
+// Pseudo-kod Backend Action dla Głosowania export async function voteOnDeal(dealId: string, userId: string, voteType: 1 | -1) {   const db = getFirestore();   const dealRef = db.collection('deals').doc(dealId);   const voteRef = db.collection('votes').doc(`${dealId}_${userId}`);    await db.runTransaction(async (transaction) => {     const voteDoc = await transaction.get(voteRef);     const dealDoc = await transaction.get(dealRef);          // 1. Zabezpieczenie przed podwójnym głosowaniem     if (voteDoc.exists && voteDoc.data().value === voteType) {         throw new Error("Już oddałeś taki głos.");     }      // ... obliczanie nowej liczby upvotes/downvotes     // 2. Jeśli wynik przekracza próg (np. +15), awans na stronę główną!     if (newTotalScore >= 15 && dealDoc.data().status === 'poczekalnia') {         transaction.update(dealRef, { status: 'approved', promotedAt: FieldValue.serverTimestamp() });     }   }); } 
+3.3 Indeksowanie (Typesense) - Klucz do wydajności
+Firestore NIE MOGŁOBY obsłużyć zapytania: "Pokaż mi poczekalnię, posortowaną po temperaturze malejąco, z kategorii Laptopy, tylko te poniżej 2000 zł".
+Dlatego wszystko robimy w Typesense:
+W Typesense mamy dwie główne "kolekcje" do przeglądania przez użytkowników:
+	•	Szukaj Poczekalnia: filter_by: status:='poczekalnia', sort_by: createdAt:desc (lub temperature:desc).
+	•	Szukaj Główna: filter_by: status:='approved', sort_by: temperature:desc.
+Worker (np. uruchamiany co 15 minut) przelicza w tle parametr temperature dla wszystkich aktywnych deali i uaktualnia Typesense, aby sortowanie "Gorące" żyło własnym życiem bez obciążania głównej bazy Firestore.
+4. Ochrona przed nadużyciami (Anti-Fraud)
+W systemach crowdsourcingowych boty to codzienność (konkurencja może chcieć minusować dobre oferty albo firmy mogą botować swoje słabe oferty).
+	•	Rate Limiting: IP może oddać max 50 głosów na minutę.
+	•	Age Gating Konta: Głosy użytkowników zarejestrowanych mniej niż 24h temu mają mniejszą wagę (np. 0.2 zamiast 1) do momentu, aż uwiarygodnią się na platformie.
+	•	Ghost Banning: Jeśli system wykryje bota, pozwala mu klikać plusy (bot widzi zmianę na swoim ekranie), ale te głosy nie są dodawane do globalnej sumy DealM6 na serwerze. Bot nie wie, że został zablokowany.

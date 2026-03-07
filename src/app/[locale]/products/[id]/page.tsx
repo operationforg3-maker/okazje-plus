@@ -6,7 +6,7 @@ import { Product, ProductRating, ProductCore, DealM6 } from '@/lib/types';
 import { getProductRatings, getProductWithDeals } from '@/lib/data';
 import { getProductWithDealsAdmin } from '@/lib/data-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
-import { generateProductJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
+import { generateProductJsonLd, generateBreadcrumbJsonLd, generateFaqJsonLd } from '@/lib/json-ld-generators';
 import ProductDetailM6Client from './product-detail-m6-client';
 
 // Force dynamic rendering dla real-time danych
@@ -354,6 +354,22 @@ export default async function ProductDetailPage({ params }: PageProps) {
     productData.id,
     (productData as any)?.subCategorySlug || undefined
   );
+  const faqJsonLd = generateFaqJsonLd([
+    {
+      question: `Jaka jest najniższa cena produktu ${productName}?`,
+      answer: isM6 && productCore?.bestPrice?.amount
+        ? `Aktualnie najniższa wykryta cena to ${productCore.bestPrice.amount} ${productCore.bestPrice.currency || 'PLN'}.`
+        : 'Cena produktu zależy od dostępnych ofert i może się zmieniać w czasie.',
+    },
+    {
+      question: `Ile ofert jest dostępnych dla ${productName}?`,
+      answer: `Aktualnie dostępnych ofert: ${deals?.length || 0}.`,
+    },
+    {
+      question: `Czy ten produkt jest regularnie aktualizowany?`,
+      answer: 'Tak, dane ofertowe są okresowo odświeżane przez system harvestera i procesy moderacji.',
+    },
+  ]);
   
   return (
     <>
@@ -365,6 +381,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       
       {/* Client component z interaktywnym UI */}

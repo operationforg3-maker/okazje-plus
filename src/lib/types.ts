@@ -433,7 +433,7 @@ export interface DealLegacy {
   // Deal specifics
   merchant?: string;
   shippingCost?: number;
-  status: 'draft' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
   createdBy?: string;
   createdAt?: any; // Firestore Timestamp
   updatedAt?: any; // Firestore Timestamp
@@ -2190,6 +2190,9 @@ export interface ProductCore {
   
   // Specifications (Standardized Key-Value)
   specs: Record<string, string>; // e.g., {"RAM": "16GB", "Storage": "512GB SSD", "Screen": "15.6\" OLED"}
+  // M6 compatibility: split between curated and raw specs for downstream indexing/UI.
+  coreSpecs?: Record<string, string>;
+  rawSpecs?: Record<string, string>;
   /**
    * Optional localized specs map to support multi-language spec labels
    */
@@ -2480,7 +2483,7 @@ export interface DealM6 {
   commentsCount: number;
   
   // Moderation
-  status: 'draft' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
   
   // Metadata
   createdAt: string; // ISO timestamp

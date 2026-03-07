@@ -3,6 +3,47 @@ import { db } from "@/lib/firebase";
 import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment, CategorySuggestion } from "@/lib/types";
 import { sanitizeDealRecord, sanitizeProductRecord, sanitizeProductCoreRecord } from '@/lib/sanitizers';
 import { getExternalUrl } from '@/lib/external-url';
+import { filterCategoriesByContent } from '@/lib/data/categories-content';
+import {
+  getDealsByCategoryData,
+  getDealsByFiltersData,
+  getDealsCountData,
+  getHotDealsByCategoryData,
+  getHotDealsData,
+} from '@/lib/data/deals';
+import {
+  getProductCoresByCategoryData,
+  getProductCoresByFiltersData,
+  getRecommendedProductCoresData,
+} from '@/lib/data/products';
+import {
+  getDealsForModerationData,
+  getPendingDealsData,
+  getPendingProductsData,
+  getProductCoresForModerationData,
+  getRecentlyModeratedData,
+} from '@/lib/data/moderation';
+import {
+  createNotificationData,
+  deleteNotificationData,
+  getNotificationsData,
+  getUnreadNotificationsCountData,
+  getUnreadNotificationsData,
+  markAllNotificationsAsReadData,
+  markNotificationAsReadData,
+} from '@/lib/data/notifications';
+import {
+  addForumPostData,
+  approveCategorySuggestionData,
+  createCategorySuggestionData,
+  createForumThreadData,
+  getForumThreadData,
+  listCategorySuggestionsData,
+  listForumCategoriesData,
+  listForumPostsData,
+  listForumThreadsData,
+  rejectCategorySuggestionData,
+} from '@/lib/data/forum';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
 const _warnedOnce = new Set<string>();
 function warnOnce(key: string, ...args: any[]) {
@@ -49,49 +90,49 @@ const docToProduct = (snap: any): Product => sanitizeProductRecord(snap.data(), 
 const docToDeal = (snap: any): Deal => sanitizeDealRecord(snap.data(), snap.id);
 const docToProductCore = (snap: any): ProductCore => sanitizeProductCoreRecord(snap.data(), snap.id);
 
+const TEMPERATURE_HALF_LIFE_HOURS = 48;
+
+function toMillis(value: any): number {
+  if (!value) return 0;
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  if (typeof value?.toDate === 'function') return value.toDate().getTime();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return value;
+  const parsed = Date.parse(String(value));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function withDecayedTemperature(deal: Deal): Deal {
+  const baseTemperature = Number(deal.temperature || 0);
+  if (!Number.isFinite(baseTemperature) || baseTemperature <= 0) return deal;
+
+  const referenceTs =
+    (deal as any).lastVoteAt ||
+    (deal as any).updatedAt ||
+    deal.postedAt;
+
+  const referenceMillis = toMillis(referenceTs);
+  if (!referenceMillis) return deal;
+
+  const ageHours = Math.max(0, (Date.now() - referenceMillis) / (1000 * 60 * 60));
+  const decayFactor = Math.exp((-Math.log(2) * ageHours) / TEMPERATURE_HALF_LIFE_HOURS);
+  const decayedTemperature = Math.round(baseTemperature * decayFactor * 100) / 100;
+
+  return {
+    ...deal,
+    temperature: decayedTemperature,
+  };
+}
+
+function rankDealsWithDecay(deals: Deal[], count: number): Deal[] {
+  return deals
+    .map(withDecayedTemperature)
+    .sort((a, b) => (b.temperature || 0) - (a.temperature || 0))
+    .slice(0, count);
+}
+
 export async function getHotDeals(count: number): Promise<Deal[]> {
-  // Lazy import cache tylko na serwerze; dla klienta funkcja i tak zwykle nie będzie używana.
-  let cacheGetFn: any = null, cacheSetFn: any = null;
-  if (typeof window === 'undefined') {
-    try {
-      const mod = await import('@/lib/cache');
-      cacheGetFn = mod.cacheGet;
-      cacheSetFn = mod.cacheSet;
-    } catch (_) {}
-  }
-
-  const cacheKey = `deals:hot:${count}`;
-  if (cacheGetFn) {
-    const cached = await cacheGetFn(cacheKey);
-    if (cached) return cached as Deal[];
-  }
-
-  try {
-    const dealsRef = collection(db, "deals");
-    const q = query(
-      dealsRef,
-      where("status", "==", "approved"),
-      orderBy("temperature", "desc"),
-      limit(count)
-    );
-    const querySnapshot = await getDocs(q);
-    const deals = querySnapshot.docs.map(docToDeal);
-    
-    if (cacheSetFn) {
-      await cacheSetFn(cacheKey, deals, 300);
-    }
-    
-    return deals;
-  } catch (error: any) {
-    // Fallback: jeśli indeks się buduje, zwróć puste dane zamiast crashować stronę
-    const errorMessage = error?.message || String(error);
-    if (errorMessage.includes('index') && errorMessage.includes('building')) {
-      console.warn('[getHotDeals] Index building, returning empty array temporarily');
-      return [];
-    }
-    // Inne błędy - propaguj dalej
-    throw error;
-  }
+  return getHotDealsData(count);
 }
 
 // Pobiera kilka losowych okazji (np. do sekcji trending AI porównawczych) - fallback gdy mało danych
@@ -273,22 +314,7 @@ export async function getTopProductsByCategory(mainCategorySlug: string, count: 
 
 // Najgorętsze okazje w kategorii
 export async function getHotDealsByCategory(mainCategorySlug: string, count: number = 3): Promise<Deal[]> {
-  const dealsRef = collection(db, "deals");
-  try {
-    const q1 = query(
-      dealsRef,
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-      orderBy("temperature", "desc"),
-      limit(count)
-    );
-    const snap = await getDocs(q1);
-    return snap.docs.map(docToDeal);
-  } catch (_) {
-    const q2 = query(dealsRef, where("status", "==", "approved"), where("mainCategorySlug", "==", mainCategorySlug), limit(count));
-    const snap2 = await getDocs(q2);
-    return snap2.docs.map(docToDeal);
-  }
+  return getHotDealsByCategoryData(mainCategorySlug, count);
 }
 
 // Funkcje do moderacji - pobieranie treści oczekujących
@@ -298,62 +324,14 @@ export async function getHotDealsByCategory(mainCategorySlug: string, count: num
  * @param maxLimit - maksymalna liczba wyników
  */
 export async function getDealsForModeration(statusFilter?: string[], maxLimit = 200): Promise<Deal[]> {
-  const dealsRef = collection(db, "deals");
-  const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
-  
-  try {
-    if (statusFilter && statusFilter.length > 0) {
-      // Filtruj po wybranych statusach
-      const queries = statusFilter.map(status => 
-        query(
-          dealsRef,
-          where("status", "==", status),
-          orderBy("createdAt", "desc"),
-          limit(Math.ceil(maxLimit / statusFilter.length))
-        )
-      );
-      
-      const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-      const deals = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
-      
-      DEBUG && console.log(`[getDealsForModeration] Filter: ${statusFilter.join(',')}, Found: ${deals.length}`);
-      
-      // Sortuj i ogranicz
-      deals.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
-      return deals.slice(0, maxLimit);
-    }
-    
-    // Pobierz WSZYSTKIE statusy
-    const statuses = ['approved', 'pending', 'draft', 'rejected'];
-    const queries = statuses.map(status => 
-      query(
-        dealsRef,
-        where("status", "==", status),
-        orderBy("createdAt", "desc"),
-        limit(50) // 50 per status = 200 total max
-      )
-    );
-    
-    const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-    const all = snapshots.flatMap(snapshot => snapshot.docs.map(docToDeal));
-    
-    DEBUG && console.log(`[getDealsForModeration] All statuses, Found: ${all.length}`);
-    
-    // Sortuj według daty utworzenia
-    all.sort((a, b) => new Date(b.postedAt || 0).getTime() - new Date(a.postedAt || 0).getTime());
-    
-    return all.slice(0, maxLimit);
-  } catch (error) {
-    console.error('[getDealsForModeration] Error:', error);
-    throw error;
-  }
+  return getDealsForModerationData(statusFilter, maxLimit);
 }
 
 /**
  * Backward compatibility: getPendingDeals używa getDealsForModeration z filtrem pending/draft
  */
 export async function getPendingDeals(): Promise<Deal[]> {
-  return getDealsForModeration(['pending', 'draft'], 100);
+  return getPendingDealsData();
 }
 
 /**
@@ -363,124 +341,18 @@ export async function getPendingDeals(): Promise<Deal[]> {
  * @param maxLimit - maksymalna liczba wyników
  */
 export async function getProductCoresForModeration(statusFilter?: string[], maxLimit = 200): Promise<Product[]> {
-  const productCoresRef = collection(db, "product_cores");
-  const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
-  
-  try {
-    if (statusFilter && statusFilter.length > 0) {
-      // Filtruj po wybranych statusach
-      const queries = statusFilter.map(status => 
-        query(
-          productCoresRef,
-          where("status", "==", status),
-          orderBy("createdAt", "desc"),
-          limit(Math.ceil(maxLimit / statusFilter.length))
-        )
-      );
-      
-      const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-      const products = snapshots.flatMap(snapshot => 
-        snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product))
-      );
-      
-      DEBUG && console.log(`[getProductCoresForModeration] Filter: ${statusFilter.join(',')}, Found: ${products.length}`);
-      
-      // Sortuj i ogranicz
-      products.sort((a, b) => {
-        const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
-        const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
-        return dateB - dateA;
-      });
-      return products.slice(0, maxLimit);
-    }
-    
-    // Pobierz WSZYSTKIE statusy M6
-    const statuses = ['approved', 'pending_approval', 'draft', 'rejected'];
-    const queries = statuses.map(status => 
-      query(
-        productCoresRef,
-        where("status", "==", status),
-        orderBy("createdAt", "desc"),
-        limit(50) // 50 per status = 200 total max
-      )
-    );
-    
-    const snapshots = await Promise.all(queries.map(q => getDocs(q)));
-    const all = snapshots.flatMap(snapshot => 
-      snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Product))
-    );
-    
-    DEBUG && console.log(`[getProductCoresForModeration] All statuses, Found: ${all.length}`);
-    
-    // Sortuj według daty utworzenia/importu
-    all.sort((a, b) => {
-      const dateA = new Date(a.metadata?.importedAt || (a as any).createdAt || 0).getTime();
-      const dateB = new Date(b.metadata?.importedAt || (b as any).createdAt || 0).getTime();
-      return dateB - dateA;
-    });
-    
-    return all.slice(0, maxLimit);
-  } catch (error) {
-    console.error('[getProductCoresForModeration] Error:', error);
-    throw error;
-  }
+  return getProductCoresForModerationData(statusFilter, maxLimit);
 }
 
 /**
  * Backward compatibility: getPendingProducts używa getProductCoresForModeration z filtrem pending/draft
  */
 export async function getPendingProducts(): Promise<Product[]> {
-  return getProductCoresForModeration(['pending_approval', 'draft'], 100);
+  return getPendingProductsData();
 }
 
 export async function getRecentlyModerated(status: "approved" | "rejected", days: number = 7): Promise<(Deal | Product)[]> {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
-  const cutoffTime = cutoffDate.getTime();
-  
-  // Pobierz okazje - bez range filter na updatedAt, filtrujemy w pamięci
-  const dealsRef = collection(db, "deals");
-  const dealsQuery = query(
-    dealsRef,
-    where("status", "==", status),
-    orderBy("updatedAt", "desc"),
-    limit(100) // pobierz więcej i przefiltruj
-  );
-  const dealsSnapshot = await getDocs(dealsQuery);
-  const deals = dealsSnapshot.docs
-    .map(doc => ({ id: doc.id, ...doc.data(), type: 'deal' } as any))
-    .filter(deal => {
-      const updatedAt = deal.updatedAt?.toDate?.() || new Date(0);
-      return updatedAt.getTime() >= cutoffTime;
-    })
-    .slice(0, 50); // ogranicz do 50 po filtrowaniu
-  
-  // Pobierz produkty - podobnie
-  const productsRef = collection(db, "products");
-  const productsQuery = query(
-    productsRef,
-    where("status", "==", status),
-    orderBy("updatedAt", "desc"),
-    limit(100)
-  );
-  const productsSnapshot = await getDocs(productsQuery);
-  const products = productsSnapshot.docs
-    .map(doc => ({ id: doc.id, ...doc.data(), type: 'product' } as any))
-    .filter(product => {
-      const updatedAt = product.updatedAt?.toDate?.() || new Date(0);
-      return updatedAt.getTime() >= cutoffTime;
-    })
-    .slice(0, 50);
-  
-  // Połącz i posortuj po dacie
-  const all = [...deals, ...products];
-  all.sort((a, b) => {
-    const dateA = a.updatedAt?.toDate?.() || new Date(0);
-    const dateB = b.updatedAt?.toDate?.() || new Date(0);
-    return dateB.getTime() - dateA.getTime();
-  });
-  
-  return all.slice(0, 50); // ostateczny limit
+  return getRecentlyModeratedData(status, days);
 }
 
 export async function getDealsByCategory(
@@ -489,83 +361,7 @@ export async function getDealsByCategory(
   subSubCategorySlug?: string,
   count: number = 100
 ): Promise<Deal[]> {
-  const dealsRef = collection(db, "deals");
-
-  // Budujemy główną próbę z sortowaniem po temperaturze (wymaga często indeksów kompozytowych)
-  const buildPrimaryQuery = () => {
-    if (subSubCategorySlug && subCategorySlug) {
-      return query(
-        dealsRef,
-        where("status", "==", "approved"),
-        where("mainCategorySlug", "==", mainCategorySlug),
-        where("subCategorySlug", "==", subCategorySlug),
-        where("subSubCategorySlug", "==", subSubCategorySlug),
-        orderBy("temperature", "desc"),
-        limit(count)
-      );
-    } else if (subCategorySlug) {
-      return query(
-        dealsRef,
-        where("status", "==", "approved"),
-        where("mainCategorySlug", "==", mainCategorySlug),
-        where("subCategorySlug", "==", subCategorySlug),
-        orderBy("temperature", "desc"),
-        limit(count)
-      );
-    } else {
-      return query(
-        dealsRef,
-        where("status", "==", "approved"),
-        where("mainCategorySlug", "==", mainCategorySlug),
-        orderBy("temperature", "desc"),
-        limit(count)
-      );
-    }
-  };
-
-  // Fallback bez sortowania po temperaturze (mniejsza szansa na wymaganie indeksu)
-  const buildFallbackQuery = () => {
-    if (subSubCategorySlug && subCategorySlug) {
-      return query(
-        dealsRef,
-        where("status", "==", "approved"),
-        where("mainCategorySlug", "==", mainCategorySlug),
-        where("subCategorySlug", "==", subCategorySlug),
-        where("subSubCategorySlug", "==", subSubCategorySlug),
-        limit(count)
-      );
-    } else if (subCategorySlug) {
-      return query(
-        dealsRef,
-        where("status", "==", "approved"),
-        where("mainCategorySlug", "==", mainCategorySlug),
-        where("subCategorySlug", "==", subCategorySlug),
-        limit(count)
-      );
-    } else {
-      return query(
-        dealsRef,
-        where("status", "==", "approved"),
-        where("mainCategorySlug", "==", mainCategorySlug),
-        limit(count)
-      );
-    }
-  };
-
-  try {
-    const primarySnap = await getDocs(buildPrimaryQuery());
-    return primarySnap.docs.map(docToDeal);
-  } catch (err: any) {
-    // Missing index lub permission – spróbuj fallback bez sortowania
-  warnOnce("getDealsByCategory-primary", "getDealsByCategory primary query failed – fallback", err?.message || err);
-    try {
-      const fbSnap = await getDocs(buildFallbackQuery());
-      return fbSnap.docs.map(docToDeal);
-    } catch (inner: any) {
-      console.error("getDealsByCategory fallback failed", inner?.message || inner);
-      return [];
-    }
-  }
+  return getDealsByCategoryData(mainCategorySlug, subCategorySlug, subSubCategorySlug, count);
 }
 
 // Produkty wg kategorii (z prostym fallbackiem na brak indeksu / orderBy). Primary próbuje sortować po createdAt.
@@ -738,10 +534,12 @@ export async function voteOnDeal(dealId: string, userId: string, vote: 1 | -1) {
                 throw new Error("Już głosowałeś na tą okazję.");
             }
 
-            transaction.set(voteDocRef, { vote: vote });
+            transaction.set(voteDocRef, { vote: vote, createdAt: serverTimestamp() });
             transaction.update(dealDocRef, { 
                 temperature: increment(vote),
-                voteCount: increment(vote > 0 ? 1 : -1)
+              voteCount: increment(vote > 0 ? 1 : -1),
+              lastVoteAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
             });
         });
     } catch (e) {
@@ -1124,74 +922,9 @@ export async function getCategoriesWithContent(
   contentType: 'deals' | 'products' = 'deals'
 ): Promise<Category[]> {
   const allCategories = await getCategories();
-  
-  // Funkcja pomocnicza do sprawdzenia czy kategoria ma kontentu
-  const getCategoryContentCount = async (value: string, fieldName: string = 'mainCategorySlug'): Promise<number> => {
-    try {
-      // M6 Migration: Use 'product_cores' for products content check
-      const collection_name = contentType === 'deals' ? 'deals' : 'product_cores';
-      const dealsRef = collection(db, collection_name);
-      const q = query(
-        dealsRef,
-        where(fieldName, '==', value),
-        where('status', '==', 'approved'),
-        limit(1) // Wystarczy wiedza czy istnieje choć jeden
-      );
-      const snapshot = await getDocs(q);
-      return snapshot.size > 0 ? 1 : 0;
-    } catch {
-      return 0;
-    }
-  };
-  
-  // Filtruj kategorie - zostawiaj tylko te, które mają kontentu
-  const filteredCategories = await Promise.all(
-    allCategories.map(async (category) => {
-      const hasContent = await getCategoryContentCount(category.id!, 'mainCategorySlug');
-      
-      if (!hasContent && (!category.subcategories || category.subcategories.length === 0)) {
-        return null; // Usuń kategorię bez treści i bez podkategorii
-      }
-      
-      // Filtruj podkategorie aby pokazywać tylko te, które mają kontentu
-      if (category.subcategories) {
-        const filteredSubcategories = await Promise.all(
-          category.subcategories.map(async (subcategory) => {
-            const subHasContent = await getCategoryContentCount(subcategory.slug! || subcategory.id!, 'subCategorySlug');
-            
-            if (!subHasContent && (!subcategory.subcategories || subcategory.subcategories.length === 0)) {
-              return null; // Usuń podkategorię bez treści i bez pod-podkategorii
-            }
-            
-            // Filtruj pod-podkategorie - ZAWSZE pokazuj L3 kategorie, niezależnie czy mają content
-            if (subcategory.subcategories && subcategory.subcategories.length > 0) {
-              // Nie filtruj L3 - pokazuj je wszystkie aby użytkownik mógł wybierać
-              return {
-                ...subcategory,
-                subcategories: subcategory.subcategories, // Zachowaj wszystkie L3
-              };
-            }
-            
-            return subHasContent > 0 ? subcategory : null;
-          })
-        );
-        
-        const validSubcategories = filteredSubcategories.filter(s => s !== null);
-        
-        // Jeśli kategoria nie ma treści ale ma podkategorie z treścią, zachowaj kategorię
-        if (hasContent > 0 || validSubcategories.length > 0) {
-          return {
-            ...category,
-            subcategories: validSubcategories,
-          };
-        }
-      }
-      
-      return hasContent > 0 ? category : null;
-    })
-  );
-  
-  return filteredCategories.filter(c => c !== null);
+
+  // N+1 reduction: one batched read in dedicated module.
+  return filterCategoriesByContent(allCategories, contentType);
 }
 
 export async function getDealById(dealId: string): Promise<Deal | null> {
@@ -1628,112 +1361,49 @@ export async function getFavoritesCount(userId: string): Promise<{ deals: number
  * Tworzy nowe powiadomienie dla użytkownika
  */
 export async function createNotification(notification: Omit<Notification, 'id' | 'createdAt'>): Promise<string> {
-  const notificationsRef = collection(db, 'notifications');
-  const docRef = await addDoc(notificationsRef, {
-    ...notification,
-    createdAt: serverTimestamp(),
-    read: false,
-  });
-  return docRef.id;
+  return createNotificationData(notification);
 }
 
 /**
  * Pobiera powiadomienia użytkownika
  */
 export async function getNotifications(userId: string, limitCount: number = 50): Promise<Notification[]> {
-  const notificationsRef = collection(db, 'notifications');
-  const q = query(
-    notificationsRef,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc'),
-    limit(limitCount)
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString()
-    } as Notification;
-  });
+  return getNotificationsData(userId, limitCount);
 }
 
 /**
  * Pobiera nieprzeczytane powiadomienia użytkownika
  */
 export async function getUnreadNotifications(userId: string): Promise<Notification[]> {
-  const notificationsRef = collection(db, 'notifications');
-  const q = query(
-    notificationsRef,
-    where('userId', '==', userId),
-    where('read', '==', false),
-    orderBy('createdAt', 'desc'),
-    limit(50)
-  );
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString()
-    } as Notification;
-  });
+  return getUnreadNotificationsData(userId);
 }
 
 /**
  * Oznacza powiadomienie jako przeczytane
  */
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
-  const notificationRef = doc(db, 'notifications', notificationId);
-  await updateDoc(notificationRef, {
-    read: true,
-  });
+  return markNotificationAsReadData(notificationId);
 }
 
 /**
  * Oznacza wszystkie powiadomienia użytkownika jako przeczytane
  */
 export async function markAllNotificationsAsRead(userId: string): Promise<void> {
-  const notificationsRef = collection(db, 'notifications');
-  const q = query(
-    notificationsRef,
-    where('userId', '==', userId),
-    where('read', '==', false)
-  );
-  
-  const snapshot = await getDocs(q);
-  const updatePromises = snapshot.docs.map(doc => 
-    updateDoc(doc.ref, { read: true })
-  );
-  
-  await Promise.all(updatePromises);
+  return markAllNotificationsAsReadData(userId);
 }
 
 /**
  * Usuwa powiadomienie
  */
 export async function deleteNotification(notificationId: string): Promise<void> {
-  const notificationRef = doc(db, 'notifications', notificationId);
-  await deleteDoc(notificationRef);
+  return deleteNotificationData(notificationId);
 }
 
 /**
  * Pobiera liczbę nieprzeczytanych powiadomień
  */
 export async function getUnreadNotificationsCount(userId: string): Promise<number> {
-  const notificationsRef = collection(db, 'notifications');
-  const q = query(
-    notificationsRef,
-    where('userId', '==', userId),
-    where('read', '==', false)
-  );
-  
-  const countSnapshot = await getCountFromServer(q);
-  return countSnapshot.data().count;
+  return getUnreadNotificationsCountData(userId);
 }
 
 // === ADMIN DASHBOARD STATISTICS ===
@@ -1883,9 +1553,7 @@ async function calculateGrowth(collectionName: string, daysBack: number): Promis
 
 // Kategorie forum
 export async function listForumCategories(): Promise<ForumCategory[]> {
-  const ref = collection(db, 'forum_categories');
-  const snap = await getDocs(query(ref, orderBy('sortOrder', 'asc')));
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumCategory));
+  return listForumCategoriesData();
 }
 
 // ===== CATEGORY SUGGESTIONS =====
@@ -1897,139 +1565,35 @@ export async function createCategorySuggestion(data: {
   suggestedByUid: string;
   suggestedByName?: string | null;
 }): Promise<string> {
-  const ref = collection(db, 'forum_category_suggestions');
-  const docRef = await addDoc(ref, {
-    ...data,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  } as Omit<CategorySuggestion, 'id'>);
-  return docRef.id;
+  return createCategorySuggestionData(data);
 }
 
 /** Lista propozycji kategorii dla admina */
 export async function listCategorySuggestions(statusFilter?: 'pending' | 'approved' | 'rejected'): Promise<CategorySuggestion[]> {
-  const ref = collection(db, 'forum_category_suggestions');
-  let q;
-  if (statusFilter) {
-    q = query(ref, where('status', '==', statusFilter), orderBy('createdAt', 'desc'));
-  } else {
-    q = query(ref, orderBy('createdAt', 'desc'));
-  }
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as CategorySuggestion));
+  return listCategorySuggestionsData(statusFilter);
 }
 
 /** Zaakceptuj propozycję i stwórz nową kategorię */
 export async function approveCategorySuggestion(suggestionId: string, adminUid: string): Promise<string> {
-  const suggestionRef = doc(db, 'forum_category_suggestions', suggestionId);
-  const suggestionSnap = await getDoc(suggestionRef);
-  
-  if (!suggestionSnap.exists()) {
-    throw new Error('Propozycja nie znaleziona');
-  }
-  
-  const suggestion = suggestionSnap.data() as CategorySuggestion;
-  
-  // Utwórz nową kategorię
-  const slug = suggestion.name
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-  
-  // Pobranie liczby kategorii by określić sortOrder
-  const categoriesRef = collection(db, 'forum_categories');
-  const categoriesSnap = await getDocs(categoriesRef);
-  const nextSortOrder = categoriesSnap.size + 1;
-  
-  const newCategoryRef = await addDoc(categoriesRef, {
-    name: suggestion.name,
-    slug,
-    description: suggestion.description,
-    sortOrder: nextSortOrder,
-    createdAt: new Date().toISOString(),
-  });
-  
-  // Zaktualizuj status propozycji
-  await updateDoc(suggestionRef, {
-    status: 'approved',
-    reviewedAt: new Date().toISOString(),
-    reviewedByUid: adminUid,
-  });
-  
-  return newCategoryRef.id;
+  return approveCategorySuggestionData(suggestionId, adminUid);
 }
 
 /** Odrzuć propozycję kategorii */
 export async function rejectCategorySuggestion(suggestionId: string, adminUid: string, reason: string): Promise<void> {
-  const suggestionRef = doc(db, 'forum_category_suggestions', suggestionId);
-  await updateDoc(suggestionRef, {
-    status: 'rejected',
-    reviewedAt: new Date().toISOString(),
-    reviewedByUid: adminUid,
-    rejectionReason: reason,
-  });
+  return rejectCategorySuggestionData(suggestionId, adminUid, reason);
 }
 
 // Lista wątków (z sortowaniem po ostatniej aktywności)
 export async function listForumThreads(limitCount: number = 20, categoryId?: string): Promise<ForumThread[]> {
-  const ref = collection(db, 'forum_threads');
-  let qBase;
-  try {
-    if (categoryId) {
-      qBase = query(
-        ref,
-        where('categoryId', '==', categoryId),
-        orderBy('isPinned', 'desc'),
-        orderBy('lastPostAt', 'desc'),
-        limit(limitCount)
-      );
-    } else {
-      qBase = query(
-        ref,
-        orderBy('isPinned', 'desc'),
-        orderBy('lastPostAt', 'desc'),
-        limit(limitCount)
-      );
-    }
-  } catch {
-    // fallback jeśli brak indeksu
-    qBase = categoryId
-      ? query(ref, where('categoryId', '==', categoryId), orderBy('createdAt', 'desc'), limit(limitCount))
-      : query(ref, orderBy('createdAt', 'desc'), limit(limitCount));
-  }
-  const snap = await getDocs(qBase);
-  const threads = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumThread));
-  
-  // Filtruj tylko approved/undefined oraz sortuj przypięte na górze
-  return threads
-    .filter(t => !t.status || t.status === 'approved')
-    .sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return 0;
-    });
+  return listForumThreadsData(limitCount, categoryId);
 }
 
 export async function getForumThread(threadId: string): Promise<ForumThread | null> {
-  const ref = doc(db, 'forum_threads', threadId);
-  const d = await getDoc(ref);
-  if (!d.exists()) return null;
-  return { id: d.id, ...(d.data() as any) } as ForumThread;
+  return getForumThreadData(threadId);
 }
 
 export async function listForumPosts(threadId: string, limitCount: number = 100): Promise<ForumPost[]> {
-  const ref = collection(db, 'forum_threads', threadId, 'posts');
-  const q = query(
-    ref,
-    orderBy('createdAt', 'asc'),
-    limit(limitCount)
-  );
-  const snap = await getDocs(q);
-  const posts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) } as ForumPost));
-  
-  // Filtruj tylko approved/undefined (nie usunięte)
-  return posts.filter(p => !p.status || p.status === 'approved');
+  return listForumPostsData(threadId, limitCount);
 }
 
 export async function createForumThread(params: {
@@ -2040,44 +1604,7 @@ export async function createForumThread(params: {
   authorUid: string;
   authorDisplayName?: string | null;
 }): Promise<string> {
-  const now = new Date().toISOString();
-  // Najpierw utwórz wątek
-  const threadData: Record<string, any> = {
-    title: params.title,
-    authorUid: params.authorUid,
-    authorDisplayName: params.authorDisplayName ?? null,
-    categoryId: params.categoryId ?? null,
-    tags: [],
-    summary: params.content.slice(0, 200),
-    postsCount: 1,
-    createdAt: now,
-    updatedAt: now,
-    lastPostAt: now,
-  };
-  
-  // Dodaj attachments tylko jeśli istnieją
-  if (params.attachments && params.attachments.length > 0) {
-    threadData.attachments = params.attachments;
-  }
-  
-  const threadRef = await addDoc(collection(db, 'forum_threads'), threadData);
-
-  // Następnie dodaj pierwszy post do subkolekcji
-  const post: Omit<ForumPost, 'id'> = {
-    threadId: threadRef.id,
-    authorUid: params.authorUid,
-    authorDisplayName: params.authorDisplayName ?? null,
-    content: params.content,
-    ...(params.attachments && params.attachments.length > 0 && { attachments: params.attachments }),
-    parentId: null,
-    upvotes: 0,
-    downvotes: 0,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await addDoc(collection(db, 'forum_threads', threadRef.id, 'posts'), post as any);
-
-  return threadRef.id;
+  return createForumThreadData(params);
 }
 
 export async function addForumPost(params: {
@@ -2088,32 +1615,7 @@ export async function addForumPost(params: {
   authorDisplayName?: string | null;
   parentId?: string | null;
 }): Promise<string> {
-  const now = new Date().toISOString();
-  const postData: Record<string, any> = {
-    threadId: params.threadId,
-    authorUid: params.authorUid,
-    authorDisplayName: params.authorDisplayName ?? null,
-    content: params.content,
-    parentId: params.parentId ?? null,
-    upvotes: 0,
-    downvotes: 0,
-    createdAt: now,
-    updatedAt: now,
-  };
-  
-  // Dodaj attachments tylko jeśli istnieją
-  if (params.attachments && params.attachments.length > 0) {
-    postData.attachments = params.attachments;
-  }
-  
-  const ref = await addDoc(collection(db, 'forum_threads', params.threadId, 'posts'), postData);
-  // Aktualizuj licznik i lastPostAt
-  await updateDoc(doc(db, 'forum_threads', params.threadId), {
-    postsCount: increment(1),
-    lastPostAt: now,
-    updatedAt: now,
-  });
-  return ref.id;
+  return addForumPostData(params);
 }
 
 // ============================================
@@ -2610,34 +2112,7 @@ export async function searchProductCores(
  * Get recommended ProductCores (M6)
  */
 export async function getRecommendedProductCores(count: number = 50): Promise<any[]> {
-  try {
-    const ref = collection(db, "product_cores");
-    const q = query(
-      ref,
-      where("status", "==", "approved"),
-      limit(count * 2) // Fetch more to account for sorting on client
-    );
-    const snap = await getDocs(q);
-    const products = snap.docs.map(d => {
-      const data = d.data() as any;
-      return {
-        ...data,
-        id: d.id,
-        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
-      } as ProductCore;
-    });
-    // Sort by price on client side to avoid requiring a complex index
-    products.sort((a, b) => {
-      const priceA = a.bestPrice?.amount || 0;
-      const priceB = b.bestPrice?.amount || 0;
-      return priceA - priceB;
-    });
-    return products.slice(0, count);
-  } catch (err) {
-    console.error("Error fetching recommended products:", err);
-    return [];
-  }
+  return getRecommendedProductCoresData(count);
 }
 
 /**
@@ -2649,48 +2124,7 @@ export async function getProductCoresByCategory(
   subSubCategorySlug?: string,
     limitCount: number = 50
 ): Promise<any[]> {
-  try {
-    const ref = collection(db, "product_cores");
-    const constraints: any[] = [
-      where("status", "==", "approved"),
-      where("mainCategorySlug", "==", mainCategorySlug),
-    ];
-
-    if (subCategorySlug) {
-      constraints.push(where("subCategorySlug", "==", subCategorySlug));
-    }
-
-    if (subSubCategorySlug) {
-      constraints.push(where("subSubCategorySlug", "==", subSubCategorySlug));
-    }
-
-    // Fetch more to account for sorting on client side
-    constraints.push(limit(limitCount * 2));
-
-    const q = query(ref, ...constraints);
-    const snap = await getDocs(q);
-    const products = snap.docs.map(d => {
-      const data = d.data() as any;
-      return {
-        ...data,
-        id: d.id,
-        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
-      } as ProductCore;
-    });
-    
-    // Sort by price on client side to avoid requiring complex indexes
-    products.sort((a, b) => {
-      const priceA = a.bestPrice?.amount || 0;
-      const priceB = b.bestPrice?.amount || 0;
-      return priceA - priceB;
-    });
-    
-    return products.slice(0, limitCount);
-  } catch (err) {
-    console.error("Error fetching products by category:", err);
-    return [];
-  }
+  return getProductCoresByCategoryData(mainCategorySlug, subCategorySlug, subSubCategorySlug, limitCount);
 }
 
 /**
@@ -2826,103 +2260,12 @@ export async function getProductCoresByFilters(
     subSubCategorySlug?: string;
     brands?: string[];
     searchTerm?: string;
+    statusFilter?: 'approved' | 'waiting_room';
   },
   sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'relevance' | 'popularity' = 'relevance',
   limit_count: number = 50
 ): Promise<ProductCore[]> {
-  console.log('[getProductCoresByFilters] FUNCTION CALLED - filters:', JSON.stringify(filters), 'sortBy:', sortBy, 'limit:', limit_count);
-  try {
-    console.log('[getProductCoresByFilters] Creating base constraints...');
-    // Build base query constraints
-    let constraints = [where('status', '==', 'approved')];
-    
-    console.log('[getProductCoresByFilters] Starting with filters:', { categoryId: filters.categoryId, subCategorySlug: filters.subCategorySlug });
-    
-    // Hierarchical category filtering
-    if (filters.subSubCategorySlug) {
-      // Most specific: filter by sub-subcategory
-      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-    } else if (filters.subCategorySlug) {
-      // Filter by subcategory (includes all sub-subcategories)
-      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-    } else if (filters.categoryId) {
-      // Filter by main category (includes all subcategories and sub-subcategories)
-      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
-    }
-
-    // Firestore can't filter on nested fields like bestPrice.amount directly in where,
-    // so we fetch all and filter in-memory (alternative: use Firestore Lite or index)
-    console.log('[getProductCoresByFilters] Creating Firestore query with', constraints.length, 'constraints...');
-    const q = query(collection(db, 'product_cores'), ...constraints, limit(limit_count));
-
-    console.log('[getProductCoresByFilters] Executing getDocs...');
-    const snapshot = await getDocs(q);
-    console.log('[getProductCoresByFilters] Got snapshot, size:', snapshot.size);
-    // Always sanitize ProductCore from Firestore to ensure JSON-serializable data
-    let products: ProductCore[] = snapshot.docs.map(docToProductCore);
-    
-    console.log(`[getProductCoresByFilters] Fetched ${products.length} products from DB, mapped to ProductCore`);
-
-
-    // Client-side filtering for complex conditions
-    let filtered = products.filter(p => {
-      const pc = p as ProductCore;
-      // Price range
-      if (filters.priceRange) {
-        const price = pc.bestPrice?.amount || 0;
-        if (price < filters.priceRange.min || price > filters.priceRange.max) return false;
-      }
-
-      // Rating
-      if (filters.minRating && (pc.rating?.score || 0) < filters.minRating) return false;
-
-      // Brand filter
-      if (filters.brands && filters.brands.length > 0) {
-        // Assuming brand might be in specs or metadata
-        const productBrand = pc.metadata?.brand || '';
-        if (!filters.brands.includes(productBrand)) return false;
-      }
-
-      // Search term (match against title, description, specs)
-      if (filters.searchTerm) {
-        const searchLower = filters.searchTerm.toLowerCase();
-        const titleMatch = (typeof pc.title === 'object' ? pc.title.pl : pc.title || '').toLowerCase().includes(searchLower);
-        const descMatch = (typeof pc.description === 'object' ? pc.description.pl : pc.description || '').toLowerCase().includes(searchLower);
-        if (!titleMatch && !descMatch) return false;
-      }
-
-      return true;
-    });
-
-    // Client-side sorting
-    filtered.sort((a, b) => {
-      const pa = a as ProductCore;
-      const pb = b as ProductCore;
-      switch (sortBy) {
-        case 'price_asc':
-          return (pa.bestPrice?.amount || 0) - (pb.bestPrice?.amount || 0);
-        case 'price_desc':
-          return (pb.bestPrice?.amount || 0) - (pa.bestPrice?.amount || 0);
-        case 'rating_desc':
-          return (pb.rating?.score || 0) - (pa.rating?.score || 0);
-        case 'newest':
-          return new Date(pb.updatedAt || 0).getTime() - new Date(pa.updatedAt || 0).getTime();
-        case 'popularity':
-          return ((pb as any).marketing?.ordersCount || 0) - ((pa as any).marketing?.ordersCount || 0);
-        case 'hot':
-          // Assuming hot products have higher temperature or popularity metric
-          return (pb.rating?.count || 0) - (pa.rating?.count || 0);
-        case 'relevance':
-        default:
-          return 0;
-      }
-    });
-
-    return filtered.slice(0, limit_count) as ProductCore[];
-  } catch (err) {
-    console.error('Error filtering products:', err);
-    return [] as ProductCore[];
-  }
+  return getProductCoresByFiltersData(filters, sortBy, limit_count);
 }
 
 /**
@@ -2943,128 +2286,12 @@ export async function getDealsByFilters(
     subSubCategorySlug?: string;
     sources?: Array<'aliexpress' | 'amazon' | 'allegro'>;
     searchTerm?: string;
+    statusFilter?: 'approved' | 'waiting_room';
   },
   sortBy: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest' | 'hot' | 'discount_desc' | 'popularity' = 'hot',
   limit_count: number = 50
 ): Promise<Deal[]> {
-  try {
-    const constraints = [where('status', '==', 'approved')];
-
-    // Hierarchical category filtering
-    if (filters.subSubCategorySlug) {
-      // Most specific: filter by sub-subcategory
-      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-    } else if (filters.subCategorySlug) {
-      // Filter by subcategory (includes all sub-subcategories)
-      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-    } else if (filters.categoryId) {
-      // Filter by main category (includes all subcategories and sub-subcategories)
-      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
-    }
-
-    const q = query(
-      collection(db, 'deals'),
-      ...constraints,
-      orderBy('updatedAt', 'desc'),
-      limit(limit_count)
-    );
-
-    const snapshot = await getDocs(q);
-    // Sanitize to normalize strings/numbers and attach id consistently
-    let deals: Deal[] = snapshot.docs.map(docToDeal);
-
-    // Client-side filtering for complex conditions
-    let filtered = deals.filter(d => {
-      const deal = d as Deal;
-      
-      // M6 Migration: Handle deals that may have old category structure
-      // If mainCategorySlug is missing, try to parse from legacy 'category' field
-      let mainCat = deal.mainCategorySlug;
-      let subCat = deal.subCategorySlug;
-      let subSubCat = deal.subSubCategorySlug;
-      
-      if ((!mainCat || mainCat === 'uncategorized') && (deal as any).category) {
-        const parts = ((deal as any).category as string).split('/');
-        mainCat = parts[0] || 'uncategorized';
-        subCat = parts[1] || 'uncategorized';
-        subSubCat = parts[2] || undefined;
-      }
-      
-      // M6 Category filtering (hierarchical fallback for client-side)
-      if (filters.subSubCategorySlug) {
-        if (subSubCat !== filters.subSubCategorySlug) return false;
-      } else if (filters.subCategorySlug) {
-        if (subCat !== filters.subCategorySlug) return false;
-      } else if (filters.categoryId) {
-        if (mainCat !== filters.categoryId) return false;
-      }
-      
-      // Price range
-      if (filters.priceRange) {
-        const price = (deal as any).priceV2?.amount || deal.price || 0;
-        if (price < filters.priceRange.min || price > filters.priceRange.max) return false;
-      }
-
-      // In stock
-      if (filters.inStockOnly && (deal as any).inStock === false) return false;
-
-      // Discount
-      if (filters.discountOnly && !deal.originalPrice) return false;
-      if (filters.minDiscount && deal.originalPrice) {
-        const discount = ((deal.originalPrice - ((deal as any).priceV2?.amount || deal.price)) / deal.originalPrice) * 100;
-        if (discount < filters.minDiscount) return false;
-      }
-
-      // Source filter
-      if (filters.sources && filters.sources.length > 0) {
-        if (!filters.sources.includes((deal as any).source)) return false;
-      }
-
-      // Search term
-      if (filters.searchTerm) {
-        const searchLower = filters.searchTerm.toLowerCase();
-        const titleText = typeof deal.title === 'object' ? (deal.title.pl || deal.title.en || '') : (deal.title || '');
-        const titleMatch = titleText.toLowerCase().includes(searchLower);
-        if (!titleMatch) return false;
-      }
-
-      return true;
-    });
-
-    // Client-side sorting
-    filtered.sort((a, b) => {
-      const da = a as Deal;
-      const db = b as Deal;
-      switch (sortBy) {
-        case 'price_asc':
-          return ((da as any).priceV2?.amount || da.price || 0) - ((db as any).priceV2?.amount || db.price || 0);
-        case 'price_desc':
-          return ((db as any).priceV2?.amount || db.price || 0) - ((da as any).priceV2?.amount || da.price || 0);
-        case 'rating_desc':
-          return ((db as any).rating || 0) - ((da as any).rating || 0);
-        case 'newest':
-          return new Date((db as any).createdAt || 0).getTime() - new Date((da as any).createdAt || 0).getTime();
-        case 'discount_desc':
-          if (da.originalPrice && db.originalPrice) {
-            const aDiscount = ((da.originalPrice - ((da as any).priceV2?.amount || da.price)) / da.originalPrice) * 100;
-            const bDiscount = ((db.originalPrice - ((db as any).priceV2?.amount || db.price)) / db.originalPrice) * 100;
-            return bDiscount - aDiscount;
-          }
-          return 0;
-        case 'popularity':
-          return ((db as any).marketing?.ordersCount || 0) - ((da as any).marketing?.ordersCount || 0);
-        case 'hot':
-        default:
-          // Hot deals: sort by temperature or votes
-          return ((db as any).temperature || 0) - ((da as any).temperature || 0);
-      }
-    });
-
-    return filtered.slice(0, limit_count) as Deal[];
-  } catch (err) {
-    console.error('Error filtering deals:', err);
-    return [] as Deal[];
-  }
+  return getDealsByFiltersData(filters, sortBy, limit_count);
 }
 
 export async function getDealsCount(filters: {
@@ -3073,23 +2300,6 @@ export async function getDealsCount(filters: {
   subSubCategorySlug?: string;
   status?: string;
 } = {}): Promise<number> {
-  try {
-    const constraints = [where('status', '==', filters.status || 'approved')];
-
-    if (filters.subSubCategorySlug) {
-      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-    } else if (filters.subCategorySlug) {
-      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-    } else if (filters.categoryId) {
-      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
-    }
-
-    const q = query(collection(db, 'deals'), ...constraints);
-    const snap = await getCountFromServer(q);
-    return snap.data().count || 0;
-  } catch (err) {
-    console.error('Error counting deals:', err);
-    return 0;
-  }
+  return getDealsCountData(filters);
 }
 

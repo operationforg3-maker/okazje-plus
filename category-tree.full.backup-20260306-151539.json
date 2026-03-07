@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-03-06T14:15:40.643Z",
+  "generatedAt": "2026-02-18T15:35:07.194Z",
   "counts": {
-    "main": 12,
-    "sub": 51,
-    "subSub": 257,
-    "total": 320
+    "main": 18,
+    "sub": 86,
+    "subSub": 446,
+    "total": 550
   },
   "tree": [
     {
@@ -59,23 +59,6 @@
               }
             },
             {
-              "name": "Telefony klasyczne",
-              "slug": "telefony-klasyczne",
-              "sortOrder": 2,
-              "importKeywords": [
-                "Classic phones"
-              ],
-              "aliexpressCategoryIds": [],
-              "translations": {
-                "en": {
-                  "name": "Classic phones"
-                },
-                "de": {
-                  "name": "Klassische Telefone"
-                }
-              }
-            },
-            {
               "name": "Samsung Galaxy",
               "slug": "samsung-galaxy",
               "sortOrder": 3,
@@ -91,25 +74,6 @@
                 },
                 "de": {
                   "name": "Samsung Galaxy"
-                }
-              }
-            },
-            {
-              "name": "Akcesoria GSM",
-              "slug": "akcesoria-gsm",
-              "sortOrder": 3,
-              "aliexpressCategoryIds": [
-                "509"
-              ],
-              "importKeywords": [
-                "GSM accessories"
-              ],
-              "translations": {
-                "en": {
-                  "name": "GSM accessories"
-                },
-                "de": {
-                  "name": "GSM-Zubehör"
                 }
               }
             },
@@ -133,25 +97,6 @@
               }
             },
             {
-              "name": "Etui i pokrowce",
-              "slug": "etui-pokrowce",
-              "sortOrder": 4,
-              "aliexpressCategoryIds": [
-                "509"
-              ],
-              "importKeywords": [
-                "Cases and covers"
-              ],
-              "translations": {
-                "en": {
-                  "name": "Cases and covers"
-                },
-                "de": {
-                  "name": "Hüllen und Taschen"
-                }
-              }
-            },
-            {
               "name": "Huawei",
               "slug": "huawei-smartfony",
               "sortOrder": 5,
@@ -167,25 +112,6 @@
                 },
                 "de": {
                   "name": "Huawei"
-                }
-              }
-            },
-            {
-              "name": "Ładowarki i kable",
-              "slug": "ladowarki-kable",
-              "sortOrder": 5,
-              "aliexpressCategoryIds": [
-                "509"
-              ],
-              "importKeywords": [
-                "Chargers and cables"
-              ],
-              "translations": {
-                "en": {
-                  "name": "Chargers and cables"
-                },
-                "de": {
-                  "name": "Ladegeräte und Kabel"
                 }
               }
             },
@@ -209,44 +135,6 @@
               }
             },
             {
-              "name": "Ładowarki bezprzewodowe",
-              "slug": "ladowarki-bezprzewodowe",
-              "sortOrder": 6,
-              "aliexpressCategoryIds": [
-                "509"
-              ],
-              "importKeywords": [
-                "Wireless chargers"
-              ],
-              "translations": {
-                "en": {
-                  "name": "Wireless chargers"
-                },
-                "de": {
-                  "name": "Wireless Ladegeräte"
-                }
-              }
-            },
-            {
-              "name": "Power banki",
-              "slug": "power-banki",
-              "sortOrder": 6,
-              "aliexpressCategoryIds": [
-                "509"
-              ],
-              "importKeywords": [
-                "Power banks"
-              ],
-              "translations": {
-                "en": {
-                  "name": "Power banks"
-                },
-                "de": {
-                  "name": "Powerbanks"
-                }
-              }
-            },
-            {
               "name": "Realme",
               "slug": "realme",
               "sortOrder": 7,
@@ -262,6 +150,99 @@
                 },
                 "de": {
                   "name": "Realme"
+                }
+              }
+            },
+            {
+              "name": "Telefony klasyczne",
+              "slug": "telefony-klasyczne",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Classic phones"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Classic phones"
+                },
+                "de": {
+                  "name": "Klassische Telefone"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria GSM",
+              "slug": "akcesoria-gsm",
+              "sortOrder": 3,
+              "aliexpressCategoryIds": [
+                "509"
+              ],
+              "importKeywords": [
+                "GSM accessories"
+              ],
+              "translations": {
+                "en": {
+                  "name": "GSM accessories"
+                },
+                "de": {
+                  "name": "GSM-Zubehör"
+                }
+              }
+            },
+            {
+              "name": "Etui i pokrowce",
+              "slug": "etui-pokrowce",
+              "sortOrder": 4,
+              "aliexpressCategoryIds": [
+                "509"
+              ],
+              "importKeywords": [
+                "Cases and covers"
+              ],
+              "translations": {
+                "en": {
+                  "name": "Cases and covers"
+                },
+                "de": {
+                  "name": "Hüllen und Taschen"
+                }
+              }
+            },
+            {
+              "name": "Ładowarki i kable",
+              "slug": "ladowarki-kable",
+              "sortOrder": 5,
+              "aliexpressCategoryIds": [
+                "509"
+              ],
+              "importKeywords": [
+                "Chargers and cables"
+              ],
+              "translations": {
+                "en": {
+                  "name": "Chargers and cables"
+                },
+                "de": {
+                  "name": "Ladegeräte und Kabel"
+                }
+              }
+            },
+            {
+              "name": "Ładowarki bezprzewodowe",
+              "slug": "ladowarki-bezprzewodowe",
+              "sortOrder": 6,
+              "aliexpressCategoryIds": [
+                "509"
+              ],
+              "importKeywords": [
+                "Wireless chargers"
+              ],
+              "translations": {
+                "en": {
+                  "name": "Wireless chargers"
+                },
+                "de": {
+                  "name": "Wireless Ladegeräte"
                 }
               }
             },
@@ -285,25 +266,6 @@
               }
             },
             {
-              "name": "Folie i szkła ochronne",
-              "slug": "folie-szkla",
-              "sortOrder": 7,
-              "aliexpressCategoryIds": [
-                "509"
-              ],
-              "importKeywords": [
-                "Screen protectors"
-              ],
-              "translations": {
-                "en": {
-                  "name": "Screen protectors"
-                },
-                "de": {
-                  "name": "Schutzfolien und Glas"
-                }
-              }
-            },
-            {
               "name": "Kable Lightning",
               "slug": "kable-lightning",
               "sortOrder": 8,
@@ -319,6 +281,44 @@
                 },
                 "de": {
                   "name": "Lightning Kabel"
+                }
+              }
+            },
+            {
+              "name": "Power banki",
+              "slug": "power-banki",
+              "sortOrder": 6,
+              "aliexpressCategoryIds": [
+                "509"
+              ],
+              "importKeywords": [
+                "Power banks"
+              ],
+              "translations": {
+                "en": {
+                  "name": "Power banks"
+                },
+                "de": {
+                  "name": "Powerbanks"
+                }
+              }
+            },
+            {
+              "name": "Folie i szkła ochronne",
+              "slug": "folie-szkla",
+              "sortOrder": 7,
+              "aliexpressCategoryIds": [
+                "509"
+              ],
+              "importKeywords": [
+                "Screen protectors"
+              ],
+              "translations": {
+                "en": {
+                  "name": "Screen protectors"
+                },
+                "de": {
+                  "name": "Schutzfolien und Glas"
                 }
               }
             },
@@ -5252,6 +5252,57 @@
                   "name": "Motorradhelme"
                 }
               }
+            },
+            {
+              "name": "Odzież motocyklowa",
+              "slug": "odziez-motocyklowa",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Motorcycle clothing"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Motorcycle clothing"
+                },
+                "de": {
+                  "name": "Motorradbekleidung"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria do motocykli",
+              "slug": "akcesoria-motocykle",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Motorcycle accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Motorcycle accessories"
+                },
+                "de": {
+                  "name": "Motorradzubehör"
+                }
+              }
+            },
+            {
+              "name": "Części do skuterów",
+              "slug": "czesci-skutery",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Scooter parts"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Scooter parts"
+                },
+                "de": {
+                  "name": "Rollerteile"
+                }
+              }
             }
           ],
           "translations": {
@@ -5287,7 +5338,144 @@
           "slug": "streaming",
           "icon": "📺",
           "sortOrder": 1,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "Netflix",
+              "slug": "netflix",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Netflix"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Netflix"
+                },
+                "de": {
+                  "name": "Netflix"
+                }
+              }
+            },
+            {
+              "name": "HBO Max",
+              "slug": "hbo-max",
+              "sortOrder": 2,
+              "importKeywords": [
+                "HBO Max"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "HBO Max"
+                },
+                "de": {
+                  "name": "HBO Max"
+                }
+              }
+            },
+            {
+              "name": "Disney+",
+              "slug": "disney-plus",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Disney+"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Disney+"
+                },
+                "de": {
+                  "name": "Disney+"
+                }
+              }
+            },
+            {
+              "name": "Amazon Prime",
+              "slug": "amazon-prime",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Amazon Prime"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Amazon Prime"
+                },
+                "de": {
+                  "name": "Amazon Prime"
+                }
+              }
+            },
+            {
+              "name": "Spotify",
+              "slug": "spotify",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Spotify"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Spotify"
+                },
+                "de": {
+                  "name": "Spotify"
+                }
+              }
+            },
+            {
+              "name": "YouTube Premium",
+              "slug": "youtube-premium",
+              "sortOrder": 6,
+              "importKeywords": [
+                "YouTube Premium"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "YouTube Premium"
+                },
+                "de": {
+                  "name": "YouTube Premium"
+                }
+              }
+            },
+            {
+              "name": "Apple TV+",
+              "slug": "apple-tv-plus",
+              "sortOrder": 7,
+              "importKeywords": [
+                "Apple TV+"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Apple TV+"
+                },
+                "de": {
+                  "name": "Apple TV+"
+                }
+              }
+            },
+            {
+              "name": "SkyShowtime",
+              "slug": "skyshowtime",
+              "sortOrder": 8,
+              "importKeywords": [
+                "SkyShowtime"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "SkyShowtime"
+                },
+                "de": {
+                  "name": "SkyShowtime"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Streaming"
@@ -5302,7 +5490,93 @@
           "slug": "uslugi-gaming",
           "icon": "🎮",
           "sortOrder": 2,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "PlayStation Plus",
+              "slug": "playstation-plus",
+              "sortOrder": 1,
+              "importKeywords": [
+                "PlayStation Plus"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "PlayStation Plus"
+                },
+                "de": {
+                  "name": "PlayStation Plus"
+                }
+              }
+            },
+            {
+              "name": "Xbox Game Pass",
+              "slug": "xbox-game-pass",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Xbox Game Pass"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Xbox Game Pass"
+                },
+                "de": {
+                  "name": "Xbox Game Pass"
+                }
+              }
+            },
+            {
+              "name": "Nintendo Switch Online",
+              "slug": "nintendo-switch-online",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Nintendo Switch Online"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Nintendo Switch Online"
+                },
+                "de": {
+                  "name": "Nintendo Switch Online"
+                }
+              }
+            },
+            {
+              "name": "EA Play",
+              "slug": "ea-play",
+              "sortOrder": 4,
+              "importKeywords": [
+                "EA Play"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "EA Play"
+                },
+                "de": {
+                  "name": "EA Play"
+                }
+              }
+            },
+            {
+              "name": "Ubisoft+",
+              "slug": "ubisoft-plus",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Ubisoft+"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Ubisoft+"
+                },
+                "de": {
+                  "name": "Ubisoft+"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Gaming"
@@ -5317,7 +5591,110 @@
           "slug": "software",
           "icon": "💻",
           "sortOrder": 3,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "Microsoft Office",
+              "slug": "microsoft-office",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Microsoft Office"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Microsoft Office"
+                },
+                "de": {
+                  "name": "Microsoft Office"
+                }
+              }
+            },
+            {
+              "name": "Windows",
+              "slug": "windows",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Windows"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Windows"
+                },
+                "de": {
+                  "name": "Windows"
+                }
+              }
+            },
+            {
+              "name": "Antivirus",
+              "slug": "antivirus",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Antivirus"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Antivirus"
+                },
+                "de": {
+                  "name": "Antivirus"
+                }
+              }
+            },
+            {
+              "name": "VPN",
+              "slug": "vpn",
+              "sortOrder": 4,
+              "importKeywords": [
+                "VPN"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "VPN"
+                },
+                "de": {
+                  "name": "VPN"
+                }
+              }
+            },
+            {
+              "name": "Adobe Creative Cloud",
+              "slug": "adobe-creative-cloud",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Adobe Creative Cloud"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Adobe Creative Cloud"
+                },
+                "de": {
+                  "name": "Adobe Creative Cloud"
+                }
+              }
+            },
+            {
+              "name": "Canva Pro",
+              "slug": "canva-pro",
+              "sortOrder": 6,
+              "importKeywords": [
+                "Canva Pro"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Canva Pro"
+                },
+                "de": {
+                  "name": "Canva Pro"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Software"
@@ -5332,7 +5709,93 @@
           "slug": "podroze-bilety",
           "icon": "✈️",
           "sortOrder": 4,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "Loty",
+              "slug": "loty",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Flights"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Flights"
+                },
+                "de": {
+                  "name": "Flüge"
+                }
+              }
+            },
+            {
+              "name": "Hotele",
+              "slug": "hotele",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Hotels"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Hotels"
+                },
+                "de": {
+                  "name": "Hotels"
+                }
+              }
+            },
+            {
+              "name": "Bilety kolejowe",
+              "slug": "bilety-kolejowe",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Train tickets"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Train tickets"
+                },
+                "de": {
+                  "name": "Zugtickets"
+                }
+              }
+            },
+            {
+              "name": "Wynajem samochodów",
+              "slug": "wynajem-samochodow",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Car rental"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Car rental"
+                },
+                "de": {
+                  "name": "Autovermietung"
+                }
+              }
+            },
+            {
+              "name": "Ubezpieczenia turystyczne",
+              "slug": "ubezpieczenia-turystyczne",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Travel insurance"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Travel insurance"
+                },
+                "de": {
+                  "name": "Reiseversicherung"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Travel and tickets"
@@ -5366,7 +5829,110 @@
           "slug": "psy",
           "icon": "🐕",
           "sortOrder": 1,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "Karma dla psów",
+              "slug": "karma-psy",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Dog food"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Dog food"
+                },
+                "de": {
+                  "name": "Hundefutter"
+                }
+              }
+            },
+            {
+              "name": "Smycze i obroże",
+              "slug": "smycze-obroze",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Leashes and collars"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Leashes and collars"
+                },
+                "de": {
+                  "name": "Leinen und Halsbänder"
+                }
+              }
+            },
+            {
+              "name": "Legowiska",
+              "slug": "legowiska-psy",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Dog beds"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Dog beds"
+                },
+                "de": {
+                  "name": "Hundebetten"
+                }
+              }
+            },
+            {
+              "name": "Zabawki dla psów",
+              "slug": "zabawki-psy",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Dog toys"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Dog toys"
+                },
+                "de": {
+                  "name": "Hundespielzeug"
+                }
+              }
+            },
+            {
+              "name": "Transportery dla psów",
+              "slug": "transportery-psy",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Dog carriers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Dog carriers"
+                },
+                "de": {
+                  "name": "Hundeboxen"
+                }
+              }
+            },
+            {
+              "name": "Pielęgnacja psów",
+              "slug": "pielegnacja-psy",
+              "sortOrder": 6,
+              "importKeywords": [
+                "Dog grooming"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Dog grooming"
+                },
+                "de": {
+                  "name": "Hundepflege"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Dogs"
@@ -5381,7 +5947,93 @@
           "slug": "koty",
           "icon": "🐈",
           "sortOrder": 2,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "Karma dla kotów",
+              "slug": "karma-koty",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Cat food"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Cat food"
+                },
+                "de": {
+                  "name": "Katzenfutter"
+                }
+              }
+            },
+            {
+              "name": "Kuwety i żwirek",
+              "slug": "kuwety-zwirek",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Litter and trays"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Litter and trays"
+                },
+                "de": {
+                  "name": "Katzenklos und Streu"
+                }
+              }
+            },
+            {
+              "name": "Drapaki",
+              "slug": "drapaki",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Scratchers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Scratchers"
+                },
+                "de": {
+                  "name": "Kratzbäume"
+                }
+              }
+            },
+            {
+              "name": "Zabawki dla kotów",
+              "slug": "zabawki-koty",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Cat toys"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Cat toys"
+                },
+                "de": {
+                  "name": "Katzenspielzeug"
+                }
+              }
+            },
+            {
+              "name": "Transportery dla kotów",
+              "slug": "transportery-koty",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Cat carriers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Cat carriers"
+                },
+                "de": {
+                  "name": "Katzentransportboxen"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Cats"
@@ -5396,7 +6048,76 @@
           "slug": "akwaria-rybki",
           "icon": "🐠",
           "sortOrder": 3,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "Akwaria",
+              "slug": "akwaria",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Aquariums"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Aquariums"
+                },
+                "de": {
+                  "name": "Aquarien"
+                }
+              }
+            },
+            {
+              "name": "Filtry do akwarium",
+              "slug": "filtry-akwarium",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Filters"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Filters"
+                },
+                "de": {
+                  "name": "Filter"
+                }
+              }
+            },
+            {
+              "name": "Oświetlenie akwariowe",
+              "slug": "oswietlenie-akwarium",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Aquarium lighting"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Aquarium lighting"
+                },
+                "de": {
+                  "name": "Aquarienbeleuchtung"
+                }
+              }
+            },
+            {
+              "name": "Pokarm dla ryb",
+              "slug": "pokarm-ryb",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Fish food"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Fish food"
+                },
+                "de": {
+                  "name": "Fischfutter"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Aquarium and fish"
@@ -5411,13 +6132,167 @@
           "slug": "ptaki-gryzonie",
           "icon": "🐹",
           "sortOrder": 4,
-          "subcategories": [],
+          "subcategories": [
+            {
+              "name": "Klatki",
+              "slug": "klatki",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Cages"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Cages"
+                },
+                "de": {
+                  "name": "Käfige"
+                }
+              }
+            },
+            {
+              "name": "Karma dla ptaków",
+              "slug": "karma-ptaki",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Bird food"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Bird food"
+                },
+                "de": {
+                  "name": "Vogelfutter"
+                }
+              }
+            },
+            {
+              "name": "Karma dla gryzoni",
+              "slug": "karma-gryzonie",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Rodent food"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Rodent food"
+                },
+                "de": {
+                  "name": "Nagerfutter"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria dla gryzoni",
+              "slug": "akcesoria-gryzonie",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Rodent accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Rodent accessories"
+                },
+                "de": {
+                  "name": "Nagerzubehör"
+                }
+              }
+            }
+          ],
           "translations": {
             "en": {
               "name": "Birds and rodents"
             },
             "de": {
               "name": "Vögel und Nagetiere"
+            }
+          }
+        },
+        {
+          "name": "Smart dla zwierząt",
+          "slug": "smart-dla-zwierzat",
+          "icon": "📡",
+          "sortOrder": 5,
+          "subcategories": [
+            {
+              "name": "Automatyczne karmniki",
+              "slug": "automatyczne-karmniki",
+              "sortOrder": 1,
+              "importKeywords": [
+                "smart pet feeder",
+                "automatic pet feeder"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Automatic feeders"
+                },
+                "de": {
+                  "name": "Automatische Futterspender"
+                }
+              }
+            },
+            {
+              "name": "Fontanny i poidła smart",
+              "slug": "fontanny-poidla-smart",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Smart fountains and drinkers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart fountains and drinkers"
+                },
+                "de": {
+                  "name": "Smarte Trinkbrunnen"
+                }
+              }
+            },
+            {
+              "name": "Lokalizatory GPS",
+              "slug": "lokalizatory-gps-zwierzeta",
+              "sortOrder": 3,
+              "importKeywords": [
+                "GPS trackers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "GPS trackers"
+                },
+                "de": {
+                  "name": "GPS-Tracker"
+                }
+              }
+            },
+            {
+              "name": "Kamery do monitoringu zwierząt",
+              "slug": "kamery-monitoring-zwierzat",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Pet monitoring cameras"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Pet monitoring cameras"
+                },
+                "de": {
+                  "name": "Haustier-Überwachungskameras"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Smart pet"
+            },
+            "de": {
+              "name": "Smartes Haustier"
             }
           }
         }
@@ -5439,7 +6314,361 @@
       "icon": "📝",
       "description": "Materiały biurowe, papiernicze i szkolne",
       "sortOrder": 11,
-      "subcategories": [],
+      "subcategories": [
+        {
+          "name": "Materiały piśmienne",
+          "slug": "materialy-pismienne",
+          "icon": "✏️",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Długopisy",
+              "slug": "dlugopisy",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Pens"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Pens"
+                },
+                "de": {
+                  "name": "Kugelschreiber"
+                }
+              }
+            },
+            {
+              "name": "Ołówki",
+              "slug": "olowki",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Pencils"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Pencils"
+                },
+                "de": {
+                  "name": "Bleistifte"
+                }
+              }
+            },
+            {
+              "name": "Markery i flamastry",
+              "slug": "markery-flamastry",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Markers and highlighters"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Markers and highlighters"
+                },
+                "de": {
+                  "name": "Marker und Textmarker"
+                }
+              }
+            },
+            {
+              "name": "Korektory",
+              "slug": "korektory",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Correction"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Correction"
+                },
+                "de": {
+                  "name": "Korrekturmittel"
+                }
+              }
+            },
+            {
+              "name": "Zakreślacze",
+              "slug": "zakreslacze",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Highlighters"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Highlighters"
+                },
+                "de": {
+                  "name": "Textmarker"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Writing materials"
+            },
+            "de": {
+              "name": "Schreibwaren"
+            }
+          }
+        },
+        {
+          "name": "Papier i zeszyty",
+          "slug": "papier-zeszyty",
+          "icon": "📄",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Papier ksero",
+              "slug": "papier-ksero",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Copy paper"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Copy paper"
+                },
+                "de": {
+                  "name": "Kopierpapier"
+                }
+              }
+            },
+            {
+              "name": "Zeszyty",
+              "slug": "zeszyty",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Notebooks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Notebooks"
+                },
+                "de": {
+                  "name": "Hefte"
+                }
+              }
+            },
+            {
+              "name": "Notesy",
+              "slug": "notesy",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Notepads"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Notepads"
+                },
+                "de": {
+                  "name": "Notizblöcke"
+                }
+              }
+            },
+            {
+              "name": "Bloki rysunkowe",
+              "slug": "bloki-rysunkowe",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Drawing pads"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Drawing pads"
+                },
+                "de": {
+                  "name": "Zeichenblöcke"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Paper and notebooks"
+            },
+            "de": {
+              "name": "Papier und Hefte"
+            }
+          }
+        },
+        {
+          "name": "Organizacja",
+          "slug": "organizacja-biuro",
+          "icon": "📋",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Segregatory",
+              "slug": "segregatory",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Binders"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Binders"
+                },
+                "de": {
+                  "name": "Ordner"
+                }
+              }
+            },
+            {
+              "name": "Teczki",
+              "slug": "teczki",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Folders"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Folders"
+                },
+                "de": {
+                  "name": "Mappen"
+                }
+              }
+            },
+            {
+              "name": "Organizery biurkowe",
+              "slug": "organizery-biurkowe",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Desk organizers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Desk organizers"
+                },
+                "de": {
+                  "name": "Schreibtisch-Organizer"
+                }
+              }
+            },
+            {
+              "name": "Kalendarze i plannery",
+              "slug": "kalendarze-plannery",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Calendars and planners"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Calendars and planners"
+                },
+                "de": {
+                  "name": "Kalender und Planer"
+                }
+              }
+            },
+            {
+              "name": "Tablice i pinezki",
+              "slug": "tablice-pinezki",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Boards and pins"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Boards and pins"
+                },
+                "de": {
+                  "name": "Tafeln und Pins"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Organization"
+            },
+            "de": {
+              "name": "Organisation"
+            }
+          }
+        },
+        {
+          "name": "Plecaki i tornistry",
+          "slug": "plecaki-tornistry",
+          "icon": "🎒",
+          "sortOrder": 4,
+          "subcategories": [
+            {
+              "name": "Tornistry szkolne",
+              "slug": "tornistry-szkolne",
+              "sortOrder": 1,
+              "importKeywords": [
+                "School bags"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "School bags"
+                },
+                "de": {
+                  "name": "Schulranzen"
+                }
+              }
+            },
+            {
+              "name": "Plecaki szkolne",
+              "slug": "plecaki-szkolne",
+              "sortOrder": 2,
+              "importKeywords": [
+                "School backpacks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "School backpacks"
+                },
+                "de": {
+                  "name": "Schulrucksäcke"
+                }
+              }
+            },
+            {
+              "name": "Piórniki",
+              "slug": "piorniki",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Pencil cases"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Pencil cases"
+                },
+                "de": {
+                  "name": "Federmäppchen"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Bags and backpacks"
+            },
+            "de": {
+              "name": "Taschen und Rucksäcke"
+            }
+          }
+        }
+      ],
       "translations": {
         "en": {
           "name": "Office and School",
@@ -5457,7 +6686,448 @@
       "icon": "🏡",
       "description": "Inteligentne urządzenia do domu",
       "sortOrder": 12,
-      "subcategories": [],
+      "subcategories": [
+        {
+          "name": "Oświetlenie inteligentne",
+          "slug": "oswietlenie-smart",
+          "icon": "💡",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Żarówki smart",
+              "slug": "zarowki-smart",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Smart bulbs"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart bulbs"
+                },
+                "de": {
+                  "name": "Smart-Glühbirnen"
+                }
+              }
+            },
+            {
+              "name": "Taśmy LED smart",
+              "slug": "tasmy-led-smart",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Smart LED strips"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart LED strips"
+                },
+                "de": {
+                  "name": "Smart-LED-Streifen"
+                }
+              }
+            },
+            {
+              "name": "Przełączniki smart",
+              "slug": "przelaczniki-smart",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Smart switches"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart switches"
+                },
+                "de": {
+                  "name": "Smart-Schalter"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Smart lighting"
+            },
+            "de": {
+              "name": "Smart-Beleuchtung"
+            }
+          }
+        },
+        {
+          "name": "Bezpieczeństwo",
+          "slug": "bezpieczenstwo-smart",
+          "icon": "🔒",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Kamery IP",
+              "slug": "kamery-ip",
+              "sortOrder": 1,
+              "importKeywords": [
+                "IP cameras"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "IP cameras"
+                },
+                "de": {
+                  "name": "IP-Kameras"
+                }
+              }
+            },
+            {
+              "name": "Dzwonki wideo",
+              "slug": "dzwonki-wideo",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Video doorbells"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Video doorbells"
+                },
+                "de": {
+                  "name": "Video-Türklingeln"
+                }
+              }
+            },
+            {
+              "name": "Alarmy smart",
+              "slug": "alarmy-smart",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Smart alarms"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart alarms"
+                },
+                "de": {
+                  "name": "Smart-Alarme"
+                }
+              }
+            },
+            {
+              "name": "Zamki smart",
+              "slug": "zamki-smart",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Smart locks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart locks"
+                },
+                "de": {
+                  "name": "Smart-Schlösser"
+                }
+              }
+            },
+            {
+              "name": "Czujniki ruchu",
+              "slug": "czujniki-ruchu",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Motion sensors"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Motion sensors"
+                },
+                "de": {
+                  "name": "Bewegungssensoren"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Security"
+            },
+            "de": {
+              "name": "Sicherheit"
+            }
+          }
+        },
+        {
+          "name": "Klimatyzacja i ogrzewanie",
+          "slug": "klimatyzacja-smart",
+          "icon": "🌡️",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Termostaty smart",
+              "slug": "termostaty-smart",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Smart thermostats"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart thermostats"
+                },
+                "de": {
+                  "name": "Smart-Thermostate"
+                }
+              }
+            },
+            {
+              "name": "Czujniki temperatury",
+              "slug": "czujniki-temperatury",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Temperature sensors"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Temperature sensors"
+                },
+                "de": {
+                  "name": "Temperatursensoren"
+                }
+              }
+            },
+            {
+              "name": "Nawilżacze smart",
+              "slug": "nawilzacze-smart",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Smart humidifiers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart humidifiers"
+                },
+                "de": {
+                  "name": "Smart-Luftbefeuchter"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Climate"
+            },
+            "de": {
+              "name": "Klima"
+            }
+          }
+        },
+        {
+          "name": "Asystenci głosowi",
+          "slug": "asystenci-glosowi",
+          "icon": "🔊",
+          "sortOrder": 4,
+          "subcategories": [
+            {
+              "name": "Amazon Echo",
+              "slug": "amazon-echo",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Amazon Echo"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Amazon Echo"
+                },
+                "de": {
+                  "name": "Amazon Echo"
+                }
+              }
+            },
+            {
+              "name": "Google Home",
+              "slug": "google-home",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Google Home"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Google Home"
+                },
+                "de": {
+                  "name": "Google Home"
+                }
+              }
+            },
+            {
+              "name": "Apple HomePod",
+              "slug": "apple-homepod",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Apple HomePod"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Apple HomePod"
+                },
+                "de": {
+                  "name": "Apple HomePod"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Voice assistants"
+            },
+            "de": {
+              "name": "Sprachassistenten"
+            }
+          }
+        },
+        {
+          "name": "Gniazdka i sterowanie",
+          "slug": "gniazdka-sterowanie",
+          "icon": "🔌",
+          "sortOrder": 5,
+          "subcategories": [
+            {
+              "name": "Gniazdka smart",
+              "slug": "gniazdka-smart",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Smart sockets"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart sockets"
+                },
+                "de": {
+                  "name": "Smart-Steckdosen"
+                }
+              }
+            },
+            {
+              "name": "Listwy zasilające smart",
+              "slug": "listwy-smart",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Smart power strips"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smart power strips"
+                },
+                "de": {
+                  "name": "Smart-Steckdosenleisten"
+                }
+              }
+            },
+            {
+              "name": "Piloty uniwersalne",
+              "slug": "piloty-uniwersalne",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Universal remotes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Universal remotes"
+                },
+                "de": {
+                  "name": "Universale Fernbedienungen"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Sockets and control"
+            },
+            "de": {
+              "name": "Steckdosen und Steuerung"
+            }
+          }
+        },
+        {
+          "name": "Sprzątanie automatyczne",
+          "slug": "sprzatanie-automatyczne",
+          "icon": "🤖",
+          "sortOrder": 6,
+          "subcategories": [
+            {
+              "name": "Roboty odkurzające",
+              "slug": "roboty-odkurzajace",
+              "sortOrder": 1,
+              "importKeywords": [
+                "robot vacuum",
+                "vacuum robot",
+                "smart vacuum cleaner"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Robot vacuums"
+                },
+                "de": {
+                  "name": "Saugroboter"
+                }
+              }
+            },
+            {
+              "name": "Roboty mopujące",
+              "slug": "roboty-mopujace",
+              "sortOrder": 2,
+              "importKeywords": [
+                "robot mop",
+                "mopping robot"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Robot mops"
+                },
+                "de": {
+                  "name": "Wischroboter"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria do robotów",
+              "slug": "akcesoria-roboty-sprzatajace",
+              "sortOrder": 3,
+              "importKeywords": [
+                "robot vacuum accessories",
+                "robot mop accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Robot vacuum accessories"
+                },
+                "de": {
+                  "name": "Saugroboter-Zubehör"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Automated cleaning"
+            },
+            "de": {
+              "name": "Automatisierte Reinigung"
+            }
+          }
+        }
+      ],
       "translations": {
         "en": {
           "name": "Smart Home",
@@ -5466,6 +7136,2239 @@
         "de": {
           "name": "Smart Home",
           "description": "Intelligente Geräte für Zuhause"
+        }
+      }
+    },
+    {
+      "name": "Elektronika noszona",
+      "slug": "elektronika-noszona",
+      "icon": "⌚",
+      "description": "Smartwatche, opaski, akcesoria wearables",
+      "sortOrder": 13,
+      "subcategories": [
+        {
+          "name": "Smartwatche",
+          "slug": "smartwatche-wearables",
+          "icon": "⌚",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Apple Watch",
+              "slug": "apple-watch",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Apple Watch"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Apple Watch"
+                },
+                "de": {
+                  "name": "Apple Watch"
+                }
+              }
+            },
+            {
+              "name": "Samsung Galaxy Watch",
+              "slug": "samsung-galaxy-watch",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Samsung Galaxy Watch"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Samsung Galaxy Watch"
+                },
+                "de": {
+                  "name": "Samsung Galaxy Watch"
+                }
+              }
+            },
+            {
+              "name": "Garmin",
+              "slug": "garmin-smartwatch",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Garmin"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Garmin"
+                },
+                "de": {
+                  "name": "Garmin"
+                }
+              }
+            },
+            {
+              "name": "Xiaomi Watch",
+              "slug": "xiaomi-watch",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Xiaomi Watch"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Xiaomi Watch"
+                },
+                "de": {
+                  "name": "Xiaomi Watch"
+                }
+              }
+            },
+            {
+              "name": "Zegarki dla dzieci",
+              "slug": "zegarki-dzieci",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Kids smartwatches"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Kids smartwatches"
+                },
+                "de": {
+                  "name": "Kinder-Smartwatches"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Smartwatches"
+            },
+            "de": {
+              "name": "Smartwatches"
+            }
+          }
+        },
+        {
+          "name": "Opaski sportowe",
+          "slug": "opaski-sportowe",
+          "icon": "🏃",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Opaski fitness",
+              "slug": "opaski-fitness",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Fitness bands"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Fitness bands"
+                },
+                "de": {
+                  "name": "Fitness-Armbänder"
+                }
+              }
+            },
+            {
+              "name": "Pulsometry",
+              "slug": "pulsometry",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Heart rate monitors"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Heart rate monitors"
+                },
+                "de": {
+                  "name": "Pulsmesser"
+                }
+              }
+            },
+            {
+              "name": "Opaski do biegania",
+              "slug": "opaski-bieganie",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Running bands"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Running bands"
+                },
+                "de": {
+                  "name": "Laufarmbänder"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Sport bands"
+            },
+            "de": {
+              "name": "Sportarmbänder"
+            }
+          }
+        },
+        {
+          "name": "Akcesoria do wearables",
+          "slug": "akcesoria-wearables",
+          "icon": "🔗",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Paski do zegarków",
+              "slug": "paski-smartwatch",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Watch straps"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Watch straps"
+                },
+                "de": {
+                  "name": "Uhrenarmbänder"
+                }
+              }
+            },
+            {
+              "name": "Ładowarki do smartwatchy",
+              "slug": "ladowarki-smartwatch",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Smartwatch chargers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smartwatch chargers"
+                },
+                "de": {
+                  "name": "Smartwatch-Ladegeräte"
+                }
+              }
+            },
+            {
+              "name": "Folie ochronne",
+              "slug": "folie-smartwatch",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Protective films"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Protective films"
+                },
+                "de": {
+                  "name": "Schutzfolien"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Wearable accessories"
+            },
+            "de": {
+              "name": "Wearable-Zubehör"
+            }
+          }
+        }
+      ],
+      "translations": {
+        "en": {
+          "name": "Wearable Electronics",
+          "description": "Smartwatches, bands, accessories"
+        },
+        "de": {
+          "name": "Wearable Elektronik",
+          "description": "Smartwatches, Bänder, Zubehör"
+        }
+      }
+    },
+    {
+      "name": "Hobby i rękodzieło",
+      "slug": "hobby-rekodzilo",
+      "icon": "🎨",
+      "description": "Modelarstwo, druk 3D, malarstwo, szycie",
+      "sortOrder": 14,
+      "subcategories": [
+        {
+          "name": "Modelarstwo",
+          "slug": "modelarstwo",
+          "icon": "✈️",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Modele samolotów",
+              "slug": "modele-samolotow",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Airplane models"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Airplane models"
+                },
+                "de": {
+                  "name": "Flugzeugmodelle"
+                }
+              }
+            },
+            {
+              "name": "Modele samochodów",
+              "slug": "modele-samochodow",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Car models"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Car models"
+                },
+                "de": {
+                  "name": "Automodelle"
+                }
+              }
+            },
+            {
+              "name": "Modele statków",
+              "slug": "modele-statkow",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Ship models"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Ship models"
+                },
+                "de": {
+                  "name": "Schiffsmodelle"
+                }
+              }
+            },
+            {
+              "name": "Kleje i farby modelarskie",
+              "slug": "kleje-farby-modelarskie",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Glues and paints"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Glues and paints"
+                },
+                "de": {
+                  "name": "Kleber und Farben"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Model making"
+            },
+            "de": {
+              "name": "Modellbau"
+            }
+          }
+        },
+        {
+          "name": "Druk 3D",
+          "slug": "druk-3d",
+          "icon": "🖨️",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Drukarki 3D",
+              "slug": "drukarki-3d",
+              "sortOrder": 1,
+              "importKeywords": [
+                "3D printers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "3D printers"
+                },
+                "de": {
+                  "name": "3D-Drucker"
+                }
+              }
+            },
+            {
+              "name": "Filamenty PLA",
+              "slug": "filamenty-pla",
+              "sortOrder": 2,
+              "importKeywords": [
+                "PLA filaments"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "PLA filaments"
+                },
+                "de": {
+                  "name": "PLA-Filamente"
+                }
+              }
+            },
+            {
+              "name": "Filamenty ABS",
+              "slug": "filamenty-abs",
+              "sortOrder": 3,
+              "importKeywords": [
+                "ABS filaments"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "ABS filaments"
+                },
+                "de": {
+                  "name": "ABS-Filamente"
+                }
+              }
+            },
+            {
+              "name": "Żywice do druku",
+              "slug": "zywice-druk",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Printing resins"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Printing resins"
+                },
+                "de": {
+                  "name": "Harze für Druck"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "3D printing"
+            },
+            "de": {
+              "name": "3D-Druck"
+            }
+          }
+        },
+        {
+          "name": "Malarstwo i rysowanie",
+          "slug": "malarstwo-rysowanie",
+          "icon": "🎨",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Farby akrylowe",
+              "slug": "farby-akrylowe",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Acrylic paints"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Acrylic paints"
+                },
+                "de": {
+                  "name": "Acrylfarben"
+                }
+              }
+            },
+            {
+              "name": "Farby olejne",
+              "slug": "farby-olejne",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Oil paints"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Oil paints"
+                },
+                "de": {
+                  "name": "Ölfarben"
+                }
+              }
+            },
+            {
+              "name": "Pędzle",
+              "slug": "pedzle",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Brushes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Brushes"
+                },
+                "de": {
+                  "name": "Pinsel"
+                }
+              }
+            },
+            {
+              "name": "Płótna malarskie",
+              "slug": "plotna-malarskie",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Canvas"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Canvas"
+                },
+                "de": {
+                  "name": "Leinwände"
+                }
+              }
+            },
+            {
+              "name": "Kredki i pastele",
+              "slug": "kredki-pastele",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Crayons and pastels"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Crayons and pastels"
+                },
+                "de": {
+                  "name": "Buntstifte und Pastelle"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Painting and drawing"
+            },
+            "de": {
+              "name": "Malen und Zeichnen"
+            }
+          }
+        },
+        {
+          "name": "Szycie i dziewiarstwo",
+          "slug": "szycie-dziewiarstwo",
+          "icon": "🧵",
+          "sortOrder": 4,
+          "subcategories": [
+            {
+              "name": "Maszyny do szycia",
+              "slug": "maszyny-szycia",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Sewing machines"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Sewing machines"
+                },
+                "de": {
+                  "name": "Nähmaschinen"
+                }
+              }
+            },
+            {
+              "name": "Nici i igły",
+              "slug": "nici-igly",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Threads and needles"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Threads and needles"
+                },
+                "de": {
+                  "name": "Garn und Nadeln"
+                }
+              }
+            },
+            {
+              "name": "Tkaniny",
+              "slug": "tkaniny",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Fabrics"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Fabrics"
+                },
+                "de": {
+                  "name": "Stoffe"
+                }
+              }
+            },
+            {
+              "name": "Druty i szydełka",
+              "slug": "druty-szydelka",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Knitting needles and hooks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Knitting needles and hooks"
+                },
+                "de": {
+                  "name": "Stricknadeln und Häkelnadeln"
+                }
+              }
+            },
+            {
+              "name": "Włóczki",
+              "slug": "wloczki",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Yarns"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Yarns"
+                },
+                "de": {
+                  "name": "Wolle"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Sewing and knitting"
+            },
+            "de": {
+              "name": "Nähen und Stricken"
+            }
+          }
+        },
+        {
+          "name": "Elektronika DIY",
+          "slug": "elektronika-diy",
+          "icon": "🔧",
+          "sortOrder": 5,
+          "subcategories": [
+            {
+              "name": "Arduino",
+              "slug": "arduino",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Arduino"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Arduino"
+                },
+                "de": {
+                  "name": "Arduino"
+                }
+              }
+            },
+            {
+              "name": "Raspberry Pi",
+              "slug": "raspberry-pi",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Raspberry Pi"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Raspberry Pi"
+                },
+                "de": {
+                  "name": "Raspberry Pi"
+                }
+              }
+            },
+            {
+              "name": "Zestawy elektroniczne",
+              "slug": "zestawy-elektroniczne",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Electronic kits"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Electronic kits"
+                },
+                "de": {
+                  "name": "Elektronik-Bausätze"
+                }
+              }
+            },
+            {
+              "name": "Lutownice",
+              "slug": "lutownice",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Soldering irons"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Soldering irons"
+                },
+                "de": {
+                  "name": "Lötkolben"
+                }
+              }
+            },
+            {
+              "name": "Multimetry",
+              "slug": "multimetry",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Multimeters"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Multimeters"
+                },
+                "de": {
+                  "name": "Multimeter"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "DIY electronics"
+            },
+            "de": {
+              "name": "Elektronik DIY"
+            }
+          }
+        }
+      ],
+      "translations": {
+        "en": {
+          "name": "Hobby and Crafts",
+          "description": "Modeling, 3D printing, painting, sewing"
+        },
+        "de": {
+          "name": "Hobby und Handwerk",
+          "description": "Modellbau, 3D-Druck, Malen, Nähen"
+        }
+      }
+    },
+    {
+      "name": "Narzędzia i przemysł",
+      "slug": "narzedzia-przemysl",
+      "icon": "🔧",
+      "description": "Elektronarzędzia, BHP, osprzęt przemysłowy",
+      "sortOrder": 15,
+      "subcategories": [
+        {
+          "name": "Elektronarzędzia",
+          "slug": "elektronarzedzia",
+          "icon": "⚙️",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Wiertarko-wkrętarki",
+              "slug": "wiertarko-wkretarki",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Drill drivers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Drill drivers"
+                },
+                "de": {
+                  "name": "Bohrschrauber"
+                }
+              }
+            },
+            {
+              "name": "Młoty udarowe",
+              "slug": "mloty-udarowe",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Hammer drills"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Hammer drills"
+                },
+                "de": {
+                  "name": "Bohrhämmer"
+                }
+              }
+            },
+            {
+              "name": "Szlifierki kątowe",
+              "slug": "szlifierki-katowe",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Angle grinders"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Angle grinders"
+                },
+                "de": {
+                  "name": "Winkelschleifer"
+                }
+              }
+            },
+            {
+              "name": "Piły tarczowe",
+              "slug": "pily-tarczowe",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Circular saws"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Circular saws"
+                },
+                "de": {
+                  "name": "Kreissägen"
+                }
+              }
+            },
+            {
+              "name": "Frezarki",
+              "slug": "frezarki",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Routers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Routers"
+                },
+                "de": {
+                  "name": "Fräsen"
+                }
+              }
+            },
+            {
+              "name": "Strugarki",
+              "slug": "strugarki",
+              "sortOrder": 6,
+              "importKeywords": [
+                "Planers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Planers"
+                },
+                "de": {
+                  "name": "Hobelmaschinen"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Power tools"
+            },
+            "de": {
+              "name": "Elektrowerkzeuge"
+            }
+          }
+        },
+        {
+          "name": "Osprzęt narzędziowy",
+          "slug": "osprzet-narzedzia",
+          "icon": "🔩",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Wiertła",
+              "slug": "wiertla",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Drill bits"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Drill bits"
+                },
+                "de": {
+                  "name": "Bohrer"
+                }
+              }
+            },
+            {
+              "name": "Bity i nasadki",
+              "slug": "bity-nasadki",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Bits and sockets"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Bits and sockets"
+                },
+                "de": {
+                  "name": "Bits und Nüsse"
+                }
+              }
+            },
+            {
+              "name": "Tarcze ścierne",
+              "slug": "tarcze-scierne",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Grinding discs"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Grinding discs"
+                },
+                "de": {
+                  "name": "Schleifscheiben"
+                }
+              }
+            },
+            {
+              "name": "Tarcze do piły",
+              "slug": "tarcze-pily",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Saw blades"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Saw blades"
+                },
+                "de": {
+                  "name": "Sägeblätter"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Tool accessories"
+            },
+            "de": {
+              "name": "Werkzeugzubehör"
+            }
+          }
+        },
+        {
+          "name": "BHP i ochrona",
+          "slug": "bhp-ochrona",
+          "icon": "🦺",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Kaski ochronne",
+              "slug": "kaski-ochronne",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Safety helmets"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Safety helmets"
+                },
+                "de": {
+                  "name": "Schutzhelme"
+                }
+              }
+            },
+            {
+              "name": "Okulary ochronne",
+              "slug": "okulary-ochronne",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Safety glasses"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Safety glasses"
+                },
+                "de": {
+                  "name": "Schutzbrillen"
+                }
+              }
+            },
+            {
+              "name": "Rękawice robocze",
+              "slug": "rekawice-robocze",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Work gloves"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Work gloves"
+                },
+                "de": {
+                  "name": "Arbeitshandschuhe"
+                }
+              }
+            },
+            {
+              "name": "Maseczki i respiratory",
+              "slug": "maseczki-respiratory",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Masks and respirators"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Masks and respirators"
+                },
+                "de": {
+                  "name": "Masken und Respiratoren"
+                }
+              }
+            },
+            {
+              "name": "Buty robocze",
+              "slug": "buty-robocze",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Work shoes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Work shoes"
+                },
+                "de": {
+                  "name": "Arbeitsschuhe"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Safety"
+            },
+            "de": {
+              "name": "Arbeitsschutz"
+            }
+          }
+        },
+        {
+          "name": "Spawanie i lutowanie",
+          "slug": "spawanie-lutowanie",
+          "icon": "🔥",
+          "sortOrder": 4,
+          "subcategories": [
+            {
+              "name": "Spawarki",
+              "slug": "spawarki",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Welders"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Welders"
+                },
+                "de": {
+                  "name": "Schweißgeräte"
+                }
+              }
+            },
+            {
+              "name": "Elektrody",
+              "slug": "elektrody",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Electrodes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Electrodes"
+                },
+                "de": {
+                  "name": "Elektroden"
+                }
+              }
+            },
+            {
+              "name": "Maski spawalnicze",
+              "slug": "maski-spawalnicze",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Welding masks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Welding masks"
+                },
+                "de": {
+                  "name": "Schweißmasken"
+                }
+              }
+            },
+            {
+              "name": "Palniki",
+              "slug": "palniki",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Torches"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Torches"
+                },
+                "de": {
+                  "name": "Brenner"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Welding and soldering"
+            },
+            "de": {
+              "name": "Schweißen und Löten"
+            }
+          }
+        },
+        {
+          "name": "Pomiary i poziomy",
+          "slug": "pomiary-poziomy",
+          "icon": "📏",
+          "sortOrder": 5,
+          "subcategories": [
+            {
+              "name": "Poziomice laserowe",
+              "slug": "poziomica-laserowe",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Laser levels"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Laser levels"
+                },
+                "de": {
+                  "name": "Laser-Nivelliere"
+                }
+              }
+            },
+            {
+              "name": "Dalmierze",
+              "slug": "dalmierze",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Rangefinders"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Rangefinders"
+                },
+                "de": {
+                  "name": "Entfernungsmesser"
+                }
+              }
+            },
+            {
+              "name": "Mierniki laserowe",
+              "slug": "mierniki-laserowe",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Laser meters"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Laser meters"
+                },
+                "de": {
+                  "name": "Laser-Messgeräte"
+                }
+              }
+            },
+            {
+              "name": "Taśmy miernicze",
+              "slug": "tasmy-miernicze",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Measuring tapes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Measuring tapes"
+                },
+                "de": {
+                  "name": "Maßbänder"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Measurement"
+            },
+            "de": {
+              "name": "Messung"
+            }
+          }
+        }
+      ],
+      "translations": {
+        "en": {
+          "name": "Tools and Industry",
+          "description": "Power tools, safety, industrial accessories"
+        },
+        "de": {
+          "name": "Werkzeuge und Industrie",
+          "description": "Elektrowerkzeuge, Arbeitsschutz, Industrie-Zubehör"
+        }
+      }
+    },
+    {
+      "name": "Supermarket i codzienne zakupy",
+      "slug": "supermarket-codzienne-zakupy",
+      "icon": "🛒",
+      "description": "Artykuły spożywcze, napoje, chemia domowa i higiena",
+      "sortOrder": 16,
+      "subcategories": [
+        {
+          "name": "Artykuły spożywcze",
+          "slug": "artykuly-spozywcze",
+          "icon": "🥫",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Kawa i herbata",
+              "slug": "kawa-herbata",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Coffee and tea"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Coffee and tea"
+                },
+                "de": {
+                  "name": "Kaffee und Tee"
+                }
+              }
+            },
+            {
+              "name": "Przekąski i słodycze",
+              "slug": "przekaski-slodycze",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Snacks and sweets"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Snacks and sweets"
+                },
+                "de": {
+                  "name": "Snacks und Süßigkeiten"
+                }
+              }
+            },
+            {
+              "name": "Dania gotowe",
+              "slug": "dania-gotowe",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Ready meals"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Ready meals"
+                },
+                "de": {
+                  "name": "Fertiggerichte"
+                }
+              }
+            },
+            {
+              "name": "Produkty instant",
+              "slug": "produkty-instant",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Instant products"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Instant products"
+                },
+                "de": {
+                  "name": "Instantprodukte"
+                }
+              }
+            },
+            {
+              "name": "Przyprawy i dodatki",
+              "slug": "przyprawy-dodatki",
+              "sortOrder": 5,
+              "importKeywords": [
+                "Spices and additives"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Spices and additives"
+                },
+                "de": {
+                  "name": "Gewürze und Zusätze"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Groceries"
+            },
+            "de": {
+              "name": "Lebensmittel"
+            }
+          }
+        },
+        {
+          "name": "Napoje",
+          "slug": "napoje",
+          "icon": "🥤",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Woda i napoje izotoniczne",
+              "slug": "woda-izotoniki",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Water and isotonic drinks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Water and isotonic drinks"
+                },
+                "de": {
+                  "name": "Wasser und Isogetränke"
+                }
+              }
+            },
+            {
+              "name": "Napoje gazowane",
+              "slug": "napoje-gazowane",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Carbonated drinks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Carbonated drinks"
+                },
+                "de": {
+                  "name": "Kohlensäurehaltige Getränke"
+                }
+              }
+            },
+            {
+              "name": "Soki",
+              "slug": "soki",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Juices"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Juices"
+                },
+                "de": {
+                  "name": "Säfte"
+                }
+              }
+            },
+            {
+              "name": "Napoje energetyczne",
+              "slug": "napoje-energetyczne",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Energy drinks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Energy drinks"
+                },
+                "de": {
+                  "name": "Energy-Drinks"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Drinks"
+            },
+            "de": {
+              "name": "Getränke"
+            }
+          }
+        },
+        {
+          "name": "Chemia gospodarcza",
+          "slug": "chemia-gospodarcza",
+          "icon": "🧴",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Detergenty do prania",
+              "slug": "detergenty-pranie",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Laundry detergents"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Laundry detergents"
+                },
+                "de": {
+                  "name": "Waschmittel"
+                }
+              }
+            },
+            {
+              "name": "Płyny do mycia naczyń",
+              "slug": "plyny-mycie-naczyn",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Dishwashing liquids"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Dishwashing liquids"
+                },
+                "de": {
+                  "name": "Spülmittel"
+                }
+              }
+            },
+            {
+              "name": "Środki do czyszczenia",
+              "slug": "srodki-czyszczenia",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Cleaning products"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Cleaning products"
+                },
+                "de": {
+                  "name": "Reinigungsmittel"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria do sprzątania",
+              "slug": "akcesoria-sprzatanie",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Cleaning accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Cleaning accessories"
+                },
+                "de": {
+                  "name": "Reinigungszubehör"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Household chemicals"
+            },
+            "de": {
+              "name": "Haushaltschemie"
+            }
+          }
+        },
+        {
+          "name": "Higiena codzienna",
+          "slug": "higiena-codzienna",
+          "icon": "🧻",
+          "sortOrder": 4,
+          "subcategories": [
+            {
+              "name": "Mydła i żele",
+              "slug": "mydla-zele",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Soaps and gels"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Soaps and gels"
+                },
+                "de": {
+                  "name": "Seifen und Gele"
+                }
+              }
+            },
+            {
+              "name": "Pasty i szczoteczki do zębów",
+              "slug": "pasty-szczoteczki-zeby",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Toothpaste and toothbrushes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Toothpaste and toothbrushes"
+                },
+                "de": {
+                  "name": "Zahnpasta und Zahnbürsten"
+                }
+              }
+            },
+            {
+              "name": "Papier toaletowy i ręczniki",
+              "slug": "papier-reczniki",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Toilet paper and towels"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Toilet paper and towels"
+                },
+                "de": {
+                  "name": "Toilettenpapier und Handtücher"
+                }
+              }
+            },
+            {
+              "name": "Artykuły higieniczne",
+              "slug": "artykuly-higieniczne",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Hygiene products"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Hygiene products"
+                },
+                "de": {
+                  "name": "Hygieneprodukte"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Daily hygiene"
+            },
+            "de": {
+              "name": "Tägliche Hygiene"
+            }
+          }
+        }
+      ],
+      "translations": {
+        "en": {
+          "name": "Supermarket and Daily Shopping",
+          "description": "Groceries, beverages, household chemicals and hygiene essentials"
+        },
+        "de": {
+          "name": "Supermarkt und tägliche Einkäufe",
+          "description": "Lebensmittel, Getränke, Haushaltschemie und Hygieneartikel"
+        }
+      }
+    },
+    {
+      "name": "Ślub i imprezy",
+      "slug": "slub-imprezy",
+      "icon": "🎉",
+      "description": "Dekoracje okolicznościowe, akcesoria ślubne i imprezowe",
+      "sortOrder": 17,
+      "subcategories": [
+        {
+          "name": "Dekoracje imprezowe",
+          "slug": "dekoracje-imprezowe",
+          "icon": "🎈",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Balony i girlandy",
+              "slug": "balony-girlandy",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Balloons and garlands"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Balloons and garlands"
+                },
+                "de": {
+                  "name": "Ballons und Girlanden"
+                }
+              }
+            },
+            {
+              "name": "Dekoracje stołu",
+              "slug": "dekoracje-stolu",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Table decorations"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Table decorations"
+                },
+                "de": {
+                  "name": "Tischdekoration"
+                }
+              }
+            },
+            {
+              "name": "Świece i konfetti",
+              "slug": "swiece-konfetti",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Candles and confetti"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Candles and confetti"
+                },
+                "de": {
+                  "name": "Kerzen und Konfetti"
+                }
+              }
+            },
+            {
+              "name": "Banery i ozdoby",
+              "slug": "banery-ozdoby",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Banners and ornaments"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Banners and ornaments"
+                },
+                "de": {
+                  "name": "Banner und Deko"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Party decorations"
+            },
+            "de": {
+              "name": "Partydekoration"
+            }
+          }
+        },
+        {
+          "name": "Akcesoria ślubne",
+          "slug": "akcesoria-slubne",
+          "icon": "💍",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Dekoracje ślubne",
+              "slug": "dekoracje-slubne",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Wedding decorations"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Wedding decorations"
+                },
+                "de": {
+                  "name": "Hochzeitsdekoration"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria dla pary młodej",
+              "slug": "akcesoria-para-mloda",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Bride and groom accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Bride and groom accessories"
+                },
+                "de": {
+                  "name": "Brautpaar-Accessoires"
+                }
+              }
+            },
+            {
+              "name": "Upominki dla gości",
+              "slug": "upominki-goscie",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Guest favors"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Guest favors"
+                },
+                "de": {
+                  "name": "Gastgeschenke"
+                }
+              }
+            },
+            {
+              "name": "Papeteria ślubna",
+              "slug": "papeteria-slubna",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Wedding stationery"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Wedding stationery"
+                },
+                "de": {
+                  "name": "Hochzeitspapeterie"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Wedding accessories"
+            },
+            "de": {
+              "name": "Hochzeitszubehör"
+            }
+          }
+        },
+        {
+          "name": "Kostiumy i przebrania",
+          "slug": "kostiumy-przebrania",
+          "icon": "🦸",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Kostiumy dla dorosłych",
+              "slug": "kostiumy-dorosli",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Adult costumes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Adult costumes"
+                },
+                "de": {
+                  "name": "Kostüme für Erwachsene"
+                }
+              }
+            },
+            {
+              "name": "Kostiumy dla dzieci",
+              "slug": "kostiumy-dzieci",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Kids costumes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Kids costumes"
+                },
+                "de": {
+                  "name": "Kostüme für Kinder"
+                }
+              }
+            },
+            {
+              "name": "Maski i peruki",
+              "slug": "maski-peruki",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Masks and wigs"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Masks and wigs"
+                },
+                "de": {
+                  "name": "Masken und Perücken"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria do przebrań",
+              "slug": "akcesoria-przebrania",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Costume accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Costume accessories"
+                },
+                "de": {
+                  "name": "Kostümzubehör"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Costumes and outfits"
+            },
+            "de": {
+              "name": "Kostüme und Verkleidungen"
+            }
+          }
+        }
+      ],
+      "translations": {
+        "en": {
+          "name": "Weddings and Parties",
+          "description": "Party decorations, wedding accessories and costumes"
+        },
+        "de": {
+          "name": "Hochzeit und Party",
+          "description": "Partydekoration, Hochzeitszubehör und Kostüme"
+        }
+      }
+    },
+    {
+      "name": "Bezpieczeństwo i ochrona",
+      "slug": "bezpieczenstwo-ochrona",
+      "icon": "🛡️",
+      "description": "Monitoring, kontrola dostępu, alarmy i ochrona osobista",
+      "sortOrder": 18,
+      "subcategories": [
+        {
+          "name": "Monitoring i CCTV",
+          "slug": "monitoring-cctv",
+          "icon": "📹",
+          "sortOrder": 1,
+          "subcategories": [
+            {
+              "name": "Kamery zewnętrzne",
+              "slug": "kamery-zewnetrzne",
+              "sortOrder": 1,
+              "importKeywords": [
+                "outdoor security camera",
+                "cctv camera"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Outdoor cameras"
+                },
+                "de": {
+                  "name": "Außenkameras"
+                }
+              }
+            },
+            {
+              "name": "Kamery wewnętrzne",
+              "slug": "kamery-wewnetrzne",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Indoor cameras"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Indoor cameras"
+                },
+                "de": {
+                  "name": "Innenkameras"
+                }
+              }
+            },
+            {
+              "name": "Rejestratory NVR/DVR",
+              "slug": "rejestratory-nvr-dvr",
+              "sortOrder": 3,
+              "importKeywords": [
+                "NVR/DVR recorders"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "NVR/DVR recorders"
+                },
+                "de": {
+                  "name": "NVR/DVR-Rekorder"
+                }
+              }
+            },
+            {
+              "name": "Zestawy monitoringu",
+              "slug": "zestawy-monitoringu",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Surveillance kits"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Surveillance kits"
+                },
+                "de": {
+                  "name": "Überwachungssets"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Monitoring and CCTV"
+            },
+            "de": {
+              "name": "Überwachung und CCTV"
+            }
+          }
+        },
+        {
+          "name": "Kontrola dostępu",
+          "slug": "kontrola-dostepu",
+          "icon": "🚪",
+          "sortOrder": 2,
+          "subcategories": [
+            {
+              "name": "Wideodomofony",
+              "slug": "wideodomofony",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Video intercoms"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Video intercoms"
+                },
+                "de": {
+                  "name": "Video-Gegensprechanlagen"
+                }
+              }
+            },
+            {
+              "name": "Czytniki RFID",
+              "slug": "czytniki-rfid",
+              "sortOrder": 2,
+              "importKeywords": [
+                "RFID readers"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "RFID readers"
+                },
+                "de": {
+                  "name": "RFID-Leser"
+                }
+              }
+            },
+            {
+              "name": "Elektrozaczepy i zamki",
+              "slug": "elektrozaczepy-zamki",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Electric strikes and locks"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Electric strikes and locks"
+                },
+                "de": {
+                  "name": "Elektrische Türöffner und Schlösser"
+                }
+              }
+            },
+            {
+              "name": "Systemy kodowe",
+              "slug": "systemy-kodowe",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Keypad systems"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Keypad systems"
+                },
+                "de": {
+                  "name": "Codeschlosssysteme"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Access control"
+            },
+            "de": {
+              "name": "Zutrittskontrolle"
+            }
+          }
+        },
+        {
+          "name": "Alarmy i czujniki",
+          "slug": "alarmy-czujniki",
+          "icon": "🚨",
+          "sortOrder": 3,
+          "subcategories": [
+            {
+              "name": "Centrale alarmowe",
+              "slug": "centrale-alarmowe",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Alarm control panels"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Alarm control panels"
+                },
+                "de": {
+                  "name": "Alarmzentralen"
+                }
+              }
+            },
+            {
+              "name": "Czujniki ruchu i otwarcia",
+              "slug": "czujniki-ruchu-otwarcia",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Motion and door sensors"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Motion and door sensors"
+                },
+                "de": {
+                  "name": "Bewegungs- und Türsensoren"
+                }
+              }
+            },
+            {
+              "name": "Czujniki dymu i gazu",
+              "slug": "czujniki-dymu-gazu",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Smoke and gas detectors"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Smoke and gas detectors"
+                },
+                "de": {
+                  "name": "Rauch- und Gasmelder"
+                }
+              }
+            },
+            {
+              "name": "Syreny i moduły GSM",
+              "slug": "syreny-moduly-gsm",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Sirens and GSM modules"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Sirens and GSM modules"
+                },
+                "de": {
+                  "name": "Sirenen und GSM-Module"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Alarms and sensors"
+            },
+            "de": {
+              "name": "Alarme und Sensoren"
+            }
+          }
+        },
+        {
+          "name": "Ochrona osobista",
+          "slug": "ochrona-osobista",
+          "icon": "🦺",
+          "sortOrder": 4,
+          "subcategories": [
+            {
+              "name": "Latarki taktyczne",
+              "slug": "latarki-taktyczne",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Tactical flashlights"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Tactical flashlights"
+                },
+                "de": {
+                  "name": "Taktische Taschenlampen"
+                }
+              }
+            },
+            {
+              "name": "Kamizelki i ochraniacze",
+              "slug": "kamizelki-ochraniacze",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Vests and protectors"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Vests and protectors"
+                },
+                "de": {
+                  "name": "Westen und Schutzausrüstung"
+                }
+              }
+            },
+            {
+              "name": "Sejfy i skrytki",
+              "slug": "sejfy-skrytki",
+              "sortOrder": 3,
+              "importKeywords": [
+                "Safes and lockboxes"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Safes and lockboxes"
+                },
+                "de": {
+                  "name": "Safes und Geldkassetten"
+                }
+              }
+            },
+            {
+              "name": "Akcesoria bezpieczeństwa",
+              "slug": "akcesoria-bezpieczenstwa",
+              "sortOrder": 4,
+              "importKeywords": [
+                "Safety accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Safety accessories"
+                },
+                "de": {
+                  "name": "Sicherheitszubehör"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Personal safety"
+            },
+            "de": {
+              "name": "Persönliche Sicherheit"
+            }
+          }
+        }
+      ],
+      "translations": {
+        "en": {
+          "name": "Safety and Security",
+          "description": "Monitoring, access control, alarms and personal safety"
+        },
+        "de": {
+          "name": "Sicherheit und Schutz",
+          "description": "Überwachung, Zutrittskontrolle, Alarmanlagen und persönlicher Schutz"
         }
       }
     }

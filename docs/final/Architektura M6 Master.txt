@@ -1,0 +1,66 @@
+👑 M6 MASTER ARCHITECTURE: Social Commerce & Bulk Ingestion
+Wersja: 1.1 (Zunifikowana + Standardy UX/RWD) | Cel: Milion produktów, 6 języków, Moderacja Społecznościowa
+Ten dokument stanowi jedyne, absolutne źródło prawdy (Source of Truth) dla całego ekosystemu OkazjePlus. Opisuje drogę danych od pobrania (API), przez filtrowanie (JSON), bazę danych (Firestore), wzbogacanie (AI), aż po moderację (Poczekalnia) i wyświetlanie (UI/UX).
+🧭 SPIS TREŚCI
+	•	Paradygmat Architektury
+	•	Słownik Pojęć (Taksonomia)
+	•	FAZA 1: Ingestion (Pobieranie i Filtrowanie)
+	•	FAZA 2: Baza Danych i Deduplikacja (Schemas)
+	•	FAZA 3: AI Enrichment (Wzbogacanie)
+	•	FAZA 4: Social Commerce (Poczekalnia i Głosowanie)
+	•	FAZA 5: Search & Wyszukiwarka (Typesense)
+	•	FAZA 6: Standardy UX i Responsywności (Mobile-First)
+1. PARADYGMAT ARCHITEKTURY
+OkazjePlus w wersji M6 to Social Commerce. Nie jesteśmy zwykłym sklepem.
+	•	Product-Centric: Katalog produktów (ProductCore) jest stały i czysty. Podłączamy pod niego mutowalne, żyjące własnym życiem oferty (DealM6).
+	•	The Firehose & Sieve: Pobieramy z API masowo ("z węża strażackiego"), a odfiltrowujemy lokalnie przez gęste sito (nasz plik JSON).
+	•	Crowdsourced Moderation: To użytkownicy decydują, co jest okazją. System przepuszcza do "Poczekalni" wszystko co logiczne, ale tylko głosy społeczności awansują deal na Stronę Główną.
+2. SŁOWNIK POJĘĆ (TAKSONOMIA)
+	•	Drzewo L1/L2/L3: Nasz plik category-tree-seo-extended.json. Służy jako baza kategorii, słownik synonimów do wyszukiwarki (seoKeywords), silnik dla parserów (importKeywords) i dostawca meta tagów.
+	•	ProductCore: "Idea" produktu. Np. "Apple iPhone 15 Pro 256GB Czarny". Ma parametry, opis od AI, a także wyświetla najniższą cenę i ma link afiliacyjny do najtańszej oferty.
+	•	DealM6: Konkretna oferta z konkretnego sklepu (np. x-kom) na ProductCore. Posiada cenę, link afiliacyjny, koszty wysyłki i historię cen.
+	•	Poczekalnia: Tabela ofert (Deals), które zostały zmapowane i wzbogacone, ale nie zdobyły jeszcze poparcia społeczności.
+	•	Temperatura (Score): Wartość liczbowa określająca "gorączkę" wokół deala, liczona na podstawie plusów, minusów i czasu (Time-decay).
+3. FAZA 1: INGESTION (POBIERANIE I FILTROWANIE)
+Zasada: Oszczędzamy limity API. Pobieramy masowo (Bulk), filtrujemy lokalnie.
+3.1. Krok A: Bulk Fetch
+Harvester łączy się z AliExpress / Convertiser / Amazon i pobiera np. 50 000 promowanych ofert w jednym rzucie. Otrzymujemy surowe dane w pamięci RAM.
+3.2. Krok B: The Sieve (Sito JSON-a)
+Funkcja CategoryRouter analizuje każdy produkt w pamięci:
+	•	Dopasowanie po ID: Sprawdza ustandaryzowane kody z API (np. googleCategoryId lub aliexpressCategoryIds). Jeśli ID pasuje -> ZATRZYMUJE PRODUKT.
+	•	Dopasowanie po Słowach (Fallback): Szuka w tytule dopasowania do tablic importKeywords ze wszystkich węzłów L3. Jeśli znajdzie -> ZATRZYMUJE PRODUKT.
+	•	Drop (Odrzut śmieci): Jeśli zawiodą obie metody -> ODRZUCA PRODUKT.
+3.3. Krok C: Standaryzacja Dostawy (Shipping Normalization)
+Harvester BEZWZGLĘDNIE musi wyciągnąć koszty dostawy i obliczyć totalPrice = price + shippingCost.
+4. FAZA 2: BAZA DANYCH I DEDUPLIKACJA (SCHEMAS)
+(Skrócony dla czytelności. Pełny schemat powyżej)
+5. FAZA 3: AI ENRICHMENT (WZBOGACANIE)
+Wzbogacanie ustrukturyzowanych atrybutów coreSpecs na podstawie flag filterableAttributes z drzewa JSON oraz tłumaczenie na 6 języków.
+6. FAZA 4: SOCIAL COMMERCE (POCZEKALNIA I GŁOSOWANIE)
+Nowe deale otrzymują status poczekalnia. Algorytm Time-Decay Gravity przelicza ich temperature co 15 minut. Po osiągnięciu progu głosów (np. 15), zmienia status na approved i trafia na Główną. Administratorzy mają przyciski błyskawicznego zatwierdzania.
+7. FAZA 5: SEARCH & WYSZUKIWARKA (TYPESENSE)
+Typesense przejmuje 95% ruchu przeglądania. Odfiltrowuje poczekalnia vs approved na podstawie statusów i sortuje według wyliczonej wcześniej temperature.
+8. FAZA 6: STANDARDY UX I RESPONSYWNOŚCI (MOBILE-FIRST)
+W modelu Social Commerce 80%+ interakcji pochodzi ze smartfonów. Interfejs musi być uzależniający, płynny i dostosowany do obsługi jedną ręką.
+8.1. Złota Zasada "Strefy Kciuka" (Thumb Zone Navigation)
+Projektujemy UI tak, aby kluczowe akcje były dostępne dla kciuka bez zmiany chwytu telefonu.
+	•	Mobile (Poniżej 768px): Całkowity zakaz używania górnego paska nawigacji do kluczowych akcji. Wdrażamy Bottom Tab Bar (jak w Instagramie/TikToku) z ikonami: [🏠 Główna], [⏳ Poczekalnia], [➕ Dodaj Deal], [❤️ Ulubione], [👤 Profil].
+	•	Tablet / Desktop (Od 768px): Bottom Tab Bar znika. Pojawia się tradycyjna nawigacja górna (Navbar) oraz boczne paski (Sidebary) do filtrowania drzewa kategorii.
+8.2. Karta Deala - Zmiana Kształtu (Shape-Shifting UI)
+Karta produktu nie może wyglądać tak samo na telefonie i komputerze. Musi mutować w oparciu o dostępne miejsce, aby maksymalizować widoczność treści (tzw. Information Density).
+	•	Widok Mobile (Kompaktowa Lista): Karty są układane jedna pod drugą (1 kolumna). Używamy układu horyzontalnego: po lewej małe, kwadratowe zdjęcie (np. 96x96px), na środku tytuł i uderzająco wielka totalPrice, a mocno po prawej pionowy kontroler głosowania (Strzałka w górę, Wynik, Strzałka w dół). Cel: Użytkownik musi widzieć co najmniej 4-5 deali na jednym ekranie telefonu bez scrollowania.
+	•	Widok Desktop (Siatka / Grid): Układ kafli (np. 3 lub 4 kolumny). Karta pionowa: Duże zdjęcie na samej górze, poniżej kategoria L3, tytuł i cena. Kontroler głosowania poziomy na samym dole obok przycisku "Przejdź do sklepu".
+8.3. Interakcje i Feedback (Touch-First)
+Na ekranach dotykowych nie ma zjawiska :hover (najechania myszką).
+	•	Brak opóźnień (Optymistyczne UI): Kliknięcie "+" musi natychmiast zmienić kolor licznika i cyfrę na ekranie. Zapytanie do Firebase leci w tle.
+	•	Minimum Touch Target: Każdy klikalny element (szczególnie przyciski do głosowania i tagi kategorii) musi mieć co najmniej 44x44px (standard Apple) lub 48x48px (standard Google). Żadnych mikroskopijnych linków.
+	•	Haptic Feedback: Do kluczowych akcji (np. oddanie głosu, przejście oferty z Poczekalni na Główną przy nas) podpinamy wibracje urządzenia poprzez navigator.vibrate([50]) (tylko dla wspierających to urządzeń Android).
+	•	Gesty (Swipe): W trybie mobilnej Poczekalni umożliwiamy "Swipe" po karcie. Szybkie pociągnięcie karty w lewo = zakop (downvote).
+8.4. Zarządzanie Głębią Drzewa (UX Kategorii)
+Mamy rozbudowane, trójpoziomowe drzewo (L1 -> L2 -> L3).
+	•	Desktop: Wyświetlamy je jako klasyczne drzewko z lewej strony (Mega Menu / Sidebar z akordeonami).
+	•	Mobile: Górny, przesuwalny poziomo pasek (Scrollable Tabs) dla L1 (Elektronika, Dom...). Po kliknięciu w L1, otwiera się estetyczny "Drawer" (wysuwany z dołu ekranu na 80% wysokości) pozwalający zanurkować w L2 i L3, bez utraty kontekstu obecnej strony.
+8.5. Wydajność Renderowania (Infinite Scroll & CLS)
+Użytkownicy potrafią scrollować Poczekalnię przez kilkadziesiąt minut dziennie.
+	•	Virtualization (Wirtualizacja): Zamiast renderować 500 pobranych deali w strukturze DOM, używamy @tanstack/react-virtual. DOM trzyma w pamięci tylko te 15 kart, które użytkownik aktualnie widzi (i kilka poza ekranem). Zapobiega to crashom przeglądarki Safari/Chrome na telefonach z mniejszą ilością RAM.
+	•	Prewencja CLS (Cumulative Layout Shift): Każda karta musi mieć z góry na sztywno określone proporcje zdjęć (np. aspect-square). Zanim zdjęcie pobierze się z serwera zewnętrznego (np. AliExpress), wyświetlamy szary Skeleton (tzw. Shimmer effect), aby strona nie "skakała" w trakcie ładowania. Używamy naszego wewnętrznego Image Proxy (/api/image-proxy) do cache'owania i serwowania WebP.
