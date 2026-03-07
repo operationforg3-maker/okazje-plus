@@ -65,7 +65,15 @@ export default function ProductDetailDeepData({ productCore, deals }: ProductDet
         (selectedDeal as any).affiliateUrl,
         (selectedDeal as any).dealUrl,
         (selectedDeal as any).sourceUrl,
-        (selectedDeal as any).link
+        (selectedDeal as any).url,
+        (selectedDeal as any).externalUrl,
+        (selectedDeal as any)?.metadata?.offerPreviewUrl,
+        (selectedDeal as any)?.metadata?.previewUrl,
+        (selectedDeal as any)?.metadata?.offerUrl,
+        (selectedDeal as any)?.metadata?.externalUrl,
+        (selectedDeal as any)?.metadata?.url,
+        (selectedDeal as any)?.metadata?.originalUrl,
+        (productCore as any)?.sourceLinks?.[0]?.url
       )
     : null;
   

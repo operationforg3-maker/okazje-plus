@@ -7,8 +7,18 @@ type CategoryEntry = {
   keywords: string[];
 };
 
+type CategoryExternalIdEntry = {
+  mainSlug: string;
+  subSlug?: string;
+  subSubSlug?: string;
+  googleCategoryId?: number;
+  aliexpressCategoryIds: string[];
+};
+
 let cachedEntries: CategoryEntry[] | null = null;
 let cachedAt = 0;
+let cachedExternalIdEntries: CategoryExternalIdEntry[] | null = null;
+let cachedExternalIdsAt = 0;
 
 const CACHE_TTL_MS = 60_000; // 60s
 
@@ -105,6 +115,135 @@ export async function loadCategoryKeywordEntries(): Promise<CategoryEntry[]> {
   }));
   cachedAt = now;
   return cachedEntries!;
+}
+
+export async function loadCategoryExternalIdEntries(): Promise<CategoryExternalIdEntry[]> {
+  const now = Date.now();
+  if (cachedExternalIdEntries && now - cachedExternalIdsAt < CACHE_TTL_MS) {
+    return cachedExternalIdEntries;
+  }
+
+  const entries: CategoryExternalIdEntry[] = [];
+
+  const toNumberOrUndefined = (value: any): number | undefined => {
+    if (value === null || value === undefined || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const toStringArray = (value: any): string[] => {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((item) => String(item || '').trim())
+      .filter(Boolean);
+  };
+
+  const mainSnap = await adminDb.collection('categories').get();
+  for (const mainDoc of mainSnap.docs) {
+    const mainData = mainDoc.data() as any;
+    const mainSlug = mainData?.slug || mainDoc.id;
+
+    const subSnap = await adminDb
+      .collection('categories')
+      .doc(mainDoc.id)
+      .collection('subcategories')
+      .get();
+
+    for (const subDoc of subSnap.docs) {
+      const subData = subDoc.data() as any;
+      const subSlug = subData?.slug || subDoc.id;
+
+      const subGoogle = toNumberOrUndefined(subData?.googleCategoryId);
+      const subAliIds = toStringArray(subData?.aliexpressCategoryIds);
+      if (subGoogle !== undefined || subAliIds.length > 0) {
+        entries.push({
+          mainSlug,
+          subSlug,
+          googleCategoryId: subGoogle,
+          aliexpressCategoryIds: subAliIds,
+        });
+      }
+
+      const subSubSnap = await adminDb
+        .collection('categories')
+        .doc(mainDoc.id)
+        .collection('subcategories')
+        .doc(subDoc.id)
+        .collection('subcategories')
+        .get();
+
+      for (const subSubDoc of subSubSnap.docs) {
+        const subSubData = subSubDoc.data() as any;
+        const subSubSlug = subSubData?.slug || subSubDoc.id;
+        const subSubGoogle = toNumberOrUndefined(subSubData?.googleCategoryId);
+        const subSubAliIds = toStringArray(subSubData?.aliexpressCategoryIds);
+
+        if (subSubGoogle === undefined && subSubAliIds.length === 0) continue;
+
+        entries.push({
+          mainSlug,
+          subSlug,
+          subSubSlug,
+          googleCategoryId: subSubGoogle,
+          aliexpressCategoryIds: subSubAliIds,
+        });
+      }
+    }
+  }
+
+  cachedExternalIdEntries = entries;
+  cachedExternalIdsAt = now;
+  return cachedExternalIdEntries;
+}
+
+export async function matchCategoryByExternalIds(input: {
+  googleCategoryId?: number;
+  aliexpressCategoryId?: string;
+}): Promise<{ mainCategorySlug: string; subCategorySlug?: string; subSubCategorySlug?: string } | null> {
+  const googleCategoryId = Number.isFinite(input.googleCategoryId)
+    ? Number(input.googleCategoryId)
+    : undefined;
+  const aliexpressCategoryId = String(input.aliexpressCategoryId || '').trim();
+
+  if (googleCategoryId === undefined && !aliexpressCategoryId) return null;
+
+  const entries = await loadCategoryExternalIdEntries();
+
+  const byDepth = (a: CategoryExternalIdEntry, b: CategoryExternalIdEntry) => {
+    const depthA = a.subSubSlug ? 3 : a.subSlug ? 2 : 1;
+    const depthB = b.subSubSlug ? 3 : b.subSlug ? 2 : 1;
+    return depthB - depthA;
+  };
+
+  if (googleCategoryId !== undefined) {
+    const googleMatch = entries
+      .filter((entry) => entry.googleCategoryId === googleCategoryId)
+      .sort(byDepth)[0];
+
+    if (googleMatch) {
+      return {
+        mainCategorySlug: googleMatch.mainSlug,
+        subCategorySlug: googleMatch.subSlug,
+        subSubCategorySlug: googleMatch.subSubSlug,
+      };
+    }
+  }
+
+  if (aliexpressCategoryId) {
+    const aliMatch = entries
+      .filter((entry) => entry.aliexpressCategoryIds.includes(aliexpressCategoryId))
+      .sort(byDepth)[0];
+
+    if (aliMatch) {
+      return {
+        mainCategorySlug: aliMatch.mainSlug,
+        subCategorySlug: aliMatch.subSlug,
+        subSubCategorySlug: aliMatch.subSubSlug,
+      };
+    }
+  }
+
+  return null;
 }
 
 export async function matchCategoryByText(text: string | string[]): Promise<{ mainCategorySlug: string; subCategorySlug?: string; subSubCategorySlug?: string } | null> {

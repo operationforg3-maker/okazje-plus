@@ -78,9 +78,20 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
   const { addItem, isInCart } = useSmartCart();
   const [activeTab, setActiveTab] = useState<'description' | 'reviews' | 'rate' | 'external-reviews'>('description');
   const outboundUrl = getExternalUrl(
+    (product as any)?.affiliateLink,
     (product as any)?.affiliateUrl,
+    (product as any)?.dealUrl,
     (product as any)?.sourceUrl,
-    (product as any)?.link
+    (product as any)?.link,
+    (product as any)?.url,
+    (product as any)?.externalUrl,
+    (product as any)?.metadata?.offerPreviewUrl,
+    (product as any)?.metadata?.previewUrl,
+    (product as any)?.metadata?.offerUrl,
+    (product as any)?.metadata?.externalUrl,
+    (product as any)?.metadata?.url,
+    (product as any)?.metadata?.originalUrl,
+    (product as any)?.sourceLinks?.[0]?.url
   );
 
   const fetchRatings = async () => {

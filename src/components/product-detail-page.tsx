@@ -102,11 +102,20 @@ export function ProductDetailPage({ productId }: ProductDetailPageProps) {
   const bestShippingPLN = bestDeal ? CurrencyManager.convertToPLN(bestDeal.shipping?.cost || 0, bestCurrency) : 0;
   const bestDealUrl = bestDeal
     ? getExternalUrl(
+        bestDeal.link,
         bestDeal.affiliateLink,
         bestDeal.affiliateUrl,
         bestDeal.dealUrl,
         bestDeal.sourceUrl,
-        bestDeal.link
+        (bestDeal as any).url,
+        (bestDeal as any).externalUrl,
+        (bestDeal as any)?.metadata?.offerPreviewUrl,
+        (bestDeal as any)?.metadata?.previewUrl,
+        (bestDeal as any)?.metadata?.offerUrl,
+        (bestDeal as any)?.metadata?.externalUrl,
+        (bestDeal as any)?.metadata?.url,
+        (bestDeal as any)?.metadata?.originalUrl,
+        (product as any)?.sourceLinks?.[0]?.url
       )
     : null;
 

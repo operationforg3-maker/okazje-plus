@@ -20,7 +20,7 @@ import { addToModerationQueue } from '@/lib/moderation';
 import { batchAssignCategories } from '@/ai/flows/convertiser-auto-category';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { chunkArray } from '@/lib/utils';
-import { matchCategoryByText } from '@/lib/category-mapper';
+import { matchCategoryByExternalIds, matchCategoryByText } from '@/lib/category-mapper';
 import { load as loadHtml } from 'cheerio';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
@@ -44,6 +44,7 @@ interface RawProduct {
   matchedL3Slug?: string;
   originalCategoryName?: string;
   googleCategoryId?: number;
+  aliexpressCategoryId?: string;
   videoUrl?: string; // Product video URL from source (e.g., AliExpress)
   merchantName?: string;
   merchantRating?: number;
@@ -101,7 +102,7 @@ export class SmartHarvester {
 
   private extractSourceCategoryHints(input: any): Pick<
     RawProduct,
-    'matchedL1Slug' | 'matchedL2Slug' | 'matchedL3Slug' | 'originalCategoryName' | 'googleCategoryId'
+    'matchedL1Slug' | 'matchedL2Slug' | 'matchedL3Slug' | 'originalCategoryName' | 'googleCategoryId' | 'aliexpressCategoryId'
   > {
     const toStringOrUndefined = (value: any): string | undefined => {
       if (value === null || value === undefined) return undefined;
@@ -141,6 +142,13 @@ export class SmartHarvester {
         input?.googleCategoryId ??
         input?.google_category_id
       ),
+      aliexpressCategoryId: toStringOrUndefined(
+        input?.aliexpressCategoryId ??
+        input?.aliexpress_category_id ??
+        input?.categoryId ??
+        input?.category_id ??
+        input?.leaf_category_id
+      ),
     };
   }
 
@@ -176,6 +184,23 @@ export class SmartHarvester {
         subCategorySlug: matchedSub,
         subSubCategorySlug: matchedLeaf,
       };
+    }
+
+    try {
+      const externalIdMatch = await matchCategoryByExternalIds({
+        googleCategoryId: sourceProduct.googleCategoryId,
+        aliexpressCategoryId: sourceProduct.aliexpressCategoryId,
+      });
+
+      if (externalIdMatch?.mainCategorySlug) {
+        return {
+          mainCategorySlug: externalIdMatch.mainCategorySlug,
+          subCategorySlug: externalIdMatch.subCategorySlug || 'uncategorized',
+          subSubCategorySlug: externalIdMatch.subSubCategorySlug,
+        };
+      }
+    } catch (error) {
+      this.addLog('warn', `External ID category router failed: ${error instanceof Error ? error.message : 'unknown error'}`);
     }
 
     try {
@@ -1283,6 +1308,7 @@ export class SmartHarvester {
         importedAt: now,
         originalCategoryName: sourceProduct.originalCategoryName,
         googleCategoryId: sourceProduct.googleCategoryId,
+        aliexpressCategoryId: sourceProduct.aliexpressCategoryId,
         identifiers,
       },
     };
@@ -2532,6 +2558,7 @@ export class SmartHarvester {
           gtin: p.gtin || undefined,
           upc: p.upc || undefined,
           mpn: p.mpn || p.manufacturer_part_number || undefined,
+          ...this.extractSourceCategoryHints(p),
         };
       }));
     } catch (error) {

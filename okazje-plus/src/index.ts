@@ -672,117 +672,65 @@ export const scheduleAudit = onCall(async (request: CallableRequest) => {
 // ============================================
 
 /**
- * Scheduled function to sync AliExpress products
+ * Near-real-time AliExpress sync trigger.
  *
- * This function runs on a schedule (configured in Firebase Console)
- * and processes all enabled import profiles sequentially.
- *
- * TODO M2:
- * - Add parallel processing with rate limiting
- * - Add better error recovery
- * - Add metrics collection
- * - Add alerts for failed imports
- * - Store logs in Cloud Storage
- *
- * @schedule Every day at 2 AM (Europe/Warsaw timezone)
- * @region europe-west1
+ * Runs every 5 minutes and forwards request to Next.js cron endpoint
+ * which performs actual importFromAliExpress on enabled profiles.
  */
-
 export const scheduleAliExpressSync = onSchedule(
   {
-    schedule: "0 2 * * *", // Daily at 2 AM
+    schedule: "*/5 * * * *",
     timeZone: "Europe/Warsaw",
     region: "europe-west1",
-    // TODO M2: Adjust memory/timeout based on actual import volume
-    memory: "512MiB",
-    timeoutSeconds: 540, // 9 minutes (max for scheduled functions)
+    memory: "256MiB",
+    timeoutSeconds: 300,
   },
   async () => {
-    logger.info("Starting scheduled AliExpress sync");
+    const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
+    const cronSecret = process.env.CRON_SECRET || "";
+    const adminToken = process.env.IMPORT_ADMIN_TOKEN || process.env.ADMIN_BEARER || "";
+    const maxItems = Number(process.env.ALIEXPRESS_SYNC_MAX_ITEMS || "20");
+
+    const query = new URLSearchParams();
+    if (cronSecret) {
+      query.set("secret", cronSecret);
+    }
+    query.set("maxItems", String(Number.isFinite(maxItems) ? Math.max(5, Math.min(maxItems, 200)) : 20));
+
+    const url = `${siteUrl.replace(/\/$/, "")}/api/cron/aliexpress-sync?${query.toString()}`;
+
+    logger.info("Starting scheduled AliExpress sync trigger", {
+      url,
+      hasSecret: Boolean(cronSecret),
+      hasAdminToken: Boolean(adminToken),
+    });
 
     try {
-      // Get all enabled import profiles
-      const profilesSnapshot = await db
-        .collection("importProfiles")
-        .where("enabled", "==", true)
-        .get();
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(cronSecret ? {"x-cron-secret": cronSecret} : {}),
+          ...(adminToken ? {Authorization: `Bearer ${adminToken}`} : {}),
+        },
+      });
 
-      if (profilesSnapshot.empty) {
-        logger.info("No enabled import profiles found");
-        return;
+      const text = await response.text();
+      logger.info("AliExpress sync trigger response", {
+        status: response.status,
+        ok: response.ok,
+        bodyPreview: text.slice(0, 300),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AliExpress sync failed with status ${response.status}`);
       }
-
-      logger.info(`Found ${profilesSnapshot.size} enabled import profiles`);
-
-      // Process each profile sequentially
-      // TODO M2: Consider parallel processing with proper rate limiting
-      for (const profileDoc of profilesSnapshot.docs) {
-        const profile = {id: profileDoc.id, ...profileDoc.data()} as any;
-        logger.info(`Processing import profile: ${profile.id}`, {
-          name: profile.name || "Unknown",
-        });
-
-        try {
-          // Create import run record
-          const importRunRef = db.collection("importRuns").doc();
-          await importRunRef.set({
-            id: importRunRef.id,
-            profileId: profile.id,
-            vendorId: profile.vendorId || "unknown",
-            status: "running",
-            dryRun: false,
-            stats: {
-              fetched: 0,
-              created: 0,
-              updated: 0,
-              skipped: 0,
-              duplicates: 0,
-              errors: 0,
-            },
-            startedAt: new Date().toISOString(),
-            triggeredBy: "scheduled",
-          });
-
-          // TODO M2: Call actual import logic
-          // For M1, we just log and mark as completed
-          // In M2, integrate with src/integrations/aliexpress/ingest.ts
-          logger.info(
-            `Import run ${importRunRef.id} created for profile ${profile.id}`
-          );
-
-          // TODO M2: Replace this with actual import call:
-          // const result = await runImport(profile.id, {
-          //   triggeredBy: 'scheduled',
-          //   maxItems: profile.maxItemsPerRun
-          // });
-
-          // Mark as completed (stub for M1)
-          await importRunRef.update({
-            status: "completed",
-            finishedAt: new Date().toISOString(),
-            durationMs: 0,
-          });
-
-          logger.info(`Import run ${importRunRef.id} completed successfully`);
-        } catch (error: unknown) {
-          logger.error(
-            `Error processing profile ${profile.id}:`,
-            error instanceof Error ? error.message : error
-          );
-          // Continue with next profile even if one fails
-        }
-
-        // TODO M2: Add rate limiting delay between profiles
-        // await new Promise(resolve => setTimeout(resolve, 5000));
-      }
-
-      logger.info("Scheduled AliExpress sync completed");
     } catch (error: unknown) {
       logger.error(
-        "Failed to run scheduled AliExpress sync:",
+        "Failed to run scheduled AliExpress sync trigger:",
         error instanceof Error ? error.message : error
       );
-      throw error; // Re-throw to mark function as failed
+      throw error;
     }
   }
 );

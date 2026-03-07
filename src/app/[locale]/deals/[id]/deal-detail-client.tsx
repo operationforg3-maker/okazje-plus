@@ -220,8 +220,16 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     (deal as any).affiliateUrl,
     (deal as any).dealUrl,
     (deal as any).sourceUrl,
+    (deal as any).url,
+    (deal as any).externalUrl,
     deal.metadata?.offerPreviewUrl,
-    deal.metadata?.previewUrl
+    deal.metadata?.previewUrl,
+    (deal as any)?.metadata?.offerUrl,
+    (deal as any)?.metadata?.externalUrl,
+    (deal as any)?.metadata?.url,
+    (deal as any)?.product?.affiliateLink,
+    (deal as any)?.product?.sourceUrl,
+    (productData as any)?.sourceLinks?.[0]?.url
   );
 
   // Update countdown every minute

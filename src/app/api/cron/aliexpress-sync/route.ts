@@ -3,26 +3,97 @@ import { importFromAliExpress } from '@/lib/aliexpress-importer';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
 
-/**
- * GET /api/cron/aliexpress-sync
- * 
- * Scheduled cron job to refresh AliExpress products/deals
- * - Fetches latest prices, availability, images
- * - Updates existing items
- * - Triggered by Cloud Scheduler or App Hosting cron
- */
-export async function GET(request: NextRequest) {
-  try {
-    // Verify cron authorization (Cloud Scheduler sends OIDC token)
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      logger.warn('Unauthorized cron request: missing auth header');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+const LOCK_DOC_PATH = 'admin_meta/aliexpress-sync-lock';
+const LOCK_TTL_MS = 25 * 60 * 1000;
+
+function getBearerToken(authHeader: string | null): string {
+  if (!authHeader) return '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1]?.trim() || '';
+}
+
+function isAuthorizedCronRequest(request: NextRequest): boolean {
+  const providedSecret =
+    request.nextUrl.searchParams.get('secret') ||
+    request.headers.get('x-cron-secret') ||
+    getBearerToken(request.headers.get('authorization'));
+
+  const expectedSecrets = [
+    process.env.CRON_SECRET,
+    process.env.IMPORT_ADMIN_TOKEN,
+    process.env.ADMIN_BEARER,
+  ]
+    .map((v) => String(v || '').trim())
+    .filter(Boolean);
+
+  if (expectedSecrets.length > 0) {
+    return expectedSecrets.includes(String(providedSecret || '').trim());
+  }
+
+  // Legacy fallback: allow if any Authorization header exists and no explicit secrets configured.
+  return Boolean(request.headers.get('authorization'));
+}
+
+async function withSyncLock<T>(runner: () => Promise<T>): Promise<{ skipped: boolean; result?: T }> {
+  const lockRef = adminDb.doc(LOCK_DOC_PATH);
+  const now = Date.now();
+  const lockUntil = new Date(now + LOCK_TTL_MS).toISOString();
+
+  const acquired = await adminDb.runTransaction(async (tx) => {
+    const snap = await tx.get(lockRef);
+    const data = snap.data() as { lockedUntil?: string } | undefined;
+    const lockedUntilMs = Date.parse(data?.lockedUntil || '');
+    const isLocked = Number.isFinite(lockedUntilMs) && lockedUntilMs > now;
+
+    if (isLocked) {
+      return false;
     }
 
+    tx.set(
+      lockRef,
+      {
+        lockedUntil: lockUntil,
+        startedAt: new Date(now).toISOString(),
+        updatedAt: new Date(now).toISOString(),
+      },
+      { merge: true }
+    );
+    return true;
+  });
+
+  if (!acquired) {
+    return { skipped: true };
+  }
+
+  try {
+    const result = await runner();
+    return { skipped: false, result };
+  } finally {
+    await lockRef.set(
+      {
+        lockedUntil: null,
+        finishedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  }
+}
+
+async function runAliExpressSync(request: NextRequest) {
+  if (!isAuthorizedCronRequest(request)) {
+    logger.warn('Unauthorized cron request for AliExpress sync');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const lockRun = await withSyncLock(async () => {
     logger.info('Starting scheduled AliExpress sync');
 
-    // Load enabled import profiles
+    const maxItemsParam = Number(request.nextUrl.searchParams.get('maxItems') || '0');
+    const maxItems = Number.isFinite(maxItemsParam) && maxItemsParam > 0
+      ? Math.min(maxItemsParam, 200)
+      : 20;
+
     const profilesSnapshot = await adminDb
       .collection('importProfiles')
       .where('enabled', '==', true)
@@ -41,15 +112,15 @@ export async function GET(request: NextRequest) {
     const results = [];
     for (const profileDoc of profilesSnapshot.docs) {
       const profile = { id: profileDoc.id, ...profileDoc.data() } as { id: string; name?: string; [key: string]: unknown };
-      
+
       try {
-        logger.info('Running sync for profile', { profileId: profile.id, name: profile.name ?? profile.id });
-        
+        logger.info('Running sync for profile', { profileId: profile.id, name: profile.name ?? profile.id, maxItems });
+
         const result = await importFromAliExpress({
           profileId: profile.id,
-          maxItems: 20, // Limit for scheduled sync
+          maxItems,
           dryRun: false,
-          autoApprove: true, // Auto-approve for scheduled sync
+          autoApprove: true,
           enableAI: true,
           triggeredBy: 'cron',
         });
@@ -65,13 +136,12 @@ export async function GET(request: NextRequest) {
           profileId: profile.id,
           stats: result.stats,
         });
-
       } catch (error) {
         logger.error('Profile sync failed', {
           profileId: profile.id,
           error: error instanceof Error ? error.message : String(error),
         });
-        
+
         results.push({
           profileId: profile.id,
           name: profile.name,
@@ -96,7 +166,30 @@ export async function GET(request: NextRequest) {
       total: totalCount,
       results,
     });
+  });
 
+  if (lockRun.skipped) {
+    return NextResponse.json({
+      success: true,
+      skipped: true,
+      message: 'AliExpress sync already running',
+    });
+  }
+
+  return lockRun.result as NextResponse;
+}
+
+/**
+ * GET /api/cron/aliexpress-sync
+ * 
+ * Scheduled cron job to refresh AliExpress products/deals
+ * - Fetches latest prices, availability, images
+ * - Updates existing items
+ * - Triggered by Cloud Scheduler or App Hosting cron
+ */
+export async function GET(request: NextRequest) {
+  try {
+    return await runAliExpressSync(request);
   } catch (error) {
     logger.error('Cron sync failed', { error });
     return NextResponse.json(
@@ -107,4 +200,8 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: NextRequest) {
+  return GET(request);
 }
