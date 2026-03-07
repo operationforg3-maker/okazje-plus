@@ -908,6 +908,55 @@ export class SmartHarvester {
   }
 
   /**
+   * Build a unique list of AliExpress category IDs from Firestore category tree.
+   * Reads IDs from subcategory and sub-subcategory nodes.
+   */
+  static async buildAliExpressCategoryIds(rootCategorySlug?: string): Promise<string[]> {
+    const ids = new Set<string>();
+
+    try {
+      const mainCategories = [] as Array<{ id: string }>;
+
+      if (rootCategorySlug) {
+        const mainDoc = await adminDb.collection('categories').doc(rootCategorySlug).get();
+        if (mainDoc.exists) {
+          mainCategories.push({ id: mainDoc.id });
+        }
+      } else {
+        const mainSnapshot = await adminDb.collection('categories').get();
+        mainSnapshot.forEach((docSnap) => mainCategories.push({ id: docSnap.id }));
+      }
+
+      const addIds = (value: any) => {
+        if (!Array.isArray(value)) return;
+        for (const item of value) {
+          const normalized = String(item || '').trim();
+          if (normalized) ids.add(normalized);
+        }
+      };
+
+      for (const main of mainCategories) {
+        const subSnapshot = await adminDb.collection(`categories/${main.id}/subcategories`).get();
+        for (const subDoc of subSnapshot.docs) {
+          const subData = subDoc.data() as any;
+          addIds(subData?.aliexpressCategoryIds);
+
+          const subSubSnapshot = await adminDb.collection(`categories/${main.id}/subcategories/${subDoc.id}/subcategories`).get();
+          for (const subSubDoc of subSubSnapshot.docs) {
+            const subSubData = subSubDoc.data() as any;
+            addIds(subSubData?.aliexpressCategoryIds);
+          }
+        }
+      }
+
+      return Array.from(ids);
+    } catch (error) {
+      console.error('[Harvester] Failed to build AliExpress category IDs', error);
+      return [];
+    }
+  }
+
+  /**
    * Log an entry to the job
    */
   private addLog(
@@ -1384,7 +1433,7 @@ export class SmartHarvester {
    * @param query - Search query or category slug (e.g., 'phones', 'phones/flagship' for sub-categories)
    * @param maxResults - Maximum products to fetch
    * @param categories - Optional: Iterate through multiple categories/sub-categories
-   * @param autoBrowse - Auto-browse entire catalog (Convertiser only)
+  * @param autoBrowse - Auto-browse entire catalog (Convertiser/AliExpress)
    */
   async harvestProducts(
     source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
@@ -1393,7 +1442,7 @@ export class SmartHarvester {
     categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
     isTreeMode: boolean = false, // True when harvesting from category tree
     convertiserMode?: 'products' | 'offers', // Convertiser: fetch products or offers
-    autoBrowse: boolean = false, // Convertiser: fetch entire catalog without keywords
+    autoBrowse: boolean = false, // Convertiser/AliExpress: fetch broad catalog without keyword query
     importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers'
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
@@ -1401,7 +1450,7 @@ export class SmartHarvester {
     // For Convertiser: NEVER use category tree mode - use simple query only
     // Moderator will manually categorize products in admin UI
     let queries: string[];
-    if (autoBrowse && source === 'convertiser') {
+    if (autoBrowse && (source === 'convertiser' || source === 'aliexpress')) {
       queries = ['__AUTO_BROWSE__'];
     } else {
       const useSimpleQuery = source === 'convertiser' || !isTreeMode;
@@ -1409,9 +1458,11 @@ export class SmartHarvester {
     }
     const processedCategoriesLog: HarvesterJob['processedCategories'] = [];
     
-    const modeDesc = source === 'convertiser' 
-      ? 'simple-query (moderator categorizes)' 
-      : (isTreeMode ? 'category-tree' : 'single');
+    const modeDesc = autoBrowse
+      ? `${source}-auto-browse`
+      : source === 'convertiser'
+        ? 'simple-query (moderator categorizes)'
+        : (isTreeMode ? 'category-tree' : 'single');
     this.addLog('info', `Starting harvest job: source=${source}, mode=${modeDesc}, queries=${queries.join(', ')}, maxResults=${maxResults}`);
 
     // Initialize job record immediately (so UI can poll for status)
@@ -2110,6 +2161,9 @@ export class SmartHarvester {
   > {
     switch (source) {
       case 'aliexpress':
+        if (searchQuery === '__AUTO_BROWSE__') {
+          return await this.fetchFromAliExpressAutoBrowse(maxResults, importStrategy);
+        }
         return await this.fetchFromAliExpress(searchQuery, maxResults, isTreeMode, importStrategy);
       case 'amazon':
         return await this.fetchFromAmazon(searchQuery, maxResults);
@@ -2732,6 +2786,114 @@ export class SmartHarvester {
       return rawProducts.filter(Boolean) as RawProduct[];
     } catch (error) {
       this.addLog('error', `Convertiser auto-browse API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch AliExpress hot catalog without keyword iteration.
+   * Uses category IDs from Firestore tree and falls back to global hot products.
+   */
+  private async fetchFromAliExpressAutoBrowse(
+    maxResults: number,
+    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers'
+  ): Promise<RawProduct[]> {
+    try {
+      const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
+      const client = createAliExpressClient();
+
+      this.addLog('info', `Auto-browse AliExpress hot catalog (limit=${maxResults})`);
+
+      const rawCategoryIds = await SmartHarvester.buildAliExpressCategoryIds();
+      const categoryChunks = chunkArray(rawCategoryIds, 20);
+      const unique = new Map<string, any>();
+
+      for (const chunk of categoryChunks) {
+        if (unique.size >= maxResults) break;
+
+        const products = await client.getHotProducts(chunk, 'PLN', Math.min(maxResults, 50));
+        for (const product of products || []) {
+          const pid = String(product?.product_id || product?.item_id || '').trim();
+          if (!pid || unique.has(pid)) continue;
+          unique.set(pid, product);
+          if (unique.size >= maxResults) break;
+        }
+      }
+
+      if (unique.size < maxResults) {
+        const fallback = await client.getHotProducts(undefined, 'PLN', Math.min(maxResults, 50));
+        for (const product of fallback || []) {
+          const pid = String(product?.product_id || product?.item_id || '').trim();
+          if (!pid || unique.has(pid)) continue;
+          unique.set(pid, product);
+          if (unique.size >= maxResults) break;
+        }
+      }
+
+      const products = Array.from(unique.values());
+      if (products.length === 0) {
+        this.addLog('warn', 'AliExpress auto-browse: no products found');
+        return [];
+      }
+
+      const parseNumber = (value: any): number => {
+        if (value === null || value === undefined || value === '') return 0;
+        const parsed = Number(String(value).replace(',', '.').replace('%', '').trim());
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      const sorted = [...products].sort((a, b) => {
+        if (importStrategy === 'price_asc') {
+          const pa = parseNumber(a?.target_sale_price || a?.sale_price || a?.app_sale_price);
+          const pb = parseNumber(b?.target_sale_price || b?.sale_price || b?.app_sale_price);
+          return pa - pb;
+        }
+
+        const va = parseNumber(a?.lastest_volume || a?.volume || 0);
+        const vb = parseNumber(b?.lastest_volume || b?.volume || 0);
+        return vb - va;
+      });
+
+      const mapped = sorted.slice(0, maxResults).map((p: any) => {
+        const title = String(p?.product_title || p?.title || '').trim();
+        const sourceProductId = String(p?.product_id || p?.item_id || '').trim();
+        const imageUrl = String(p?.product_main_image_url || '').trim() || this.getFallbackImageUrl();
+        const price = parseNumber(p?.target_sale_price || p?.sale_price || p?.app_sale_price);
+        const originalPrice = parseNumber(p?.target_original_price || p?.original_price);
+        const discountPercent = parseNumber(p?.discount);
+        const salesVolume = parseNumber(p?.lastest_volume || p?.volume || 0);
+        const evaluateRateRaw = parseNumber(p?.evaluate_rate);
+        const rating = evaluateRateRaw > 5 ? evaluateRateRaw / 20 : evaluateRateRaw;
+
+        return {
+          title,
+          description: '',
+          imageUrl,
+          images: [imageUrl],
+          price,
+          originalPrice: originalPrice > price ? originalPrice : undefined,
+          currency: String(p?.target_sale_price_currency || 'PLN').toUpperCase(),
+          shippingCost: 0,
+          shippingDays: 7,
+          sourceProductId,
+          sourceUrl: String(p?.product_detail_url || p?.promotion_link || '').trim(),
+          merchantName: String(p?.shop_name || 'AliExpress').trim(),
+          specs: extractDimensionsFromTitle(title),
+          discountPercent: discountPercent > 0 ? discountPercent : undefined,
+          freeShipping: true,
+          rating: rating > 0 ? rating : undefined,
+          ratingCount: salesVolume > 0 ? salesVolume : undefined,
+          evaluateCount: salesVolume > 0 ? salesVolume : undefined,
+          soldCount: salesVolume > 0 ? salesVolume : undefined,
+          originalCategoryName: String(p?.second_level_category_name || p?.first_level_category_name || '').trim() || undefined,
+        } as RawProduct;
+      });
+
+      const filtered = mapped.filter((p) => p.title && p.sourceProductId && p.price > 0);
+      this.addLog('info', `AliExpress auto-browse fetched ${filtered.length} products`);
+      return filtered;
+    } catch (error) {
+      this.addLog('error', `AliExpress auto-browse error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
     }
   }

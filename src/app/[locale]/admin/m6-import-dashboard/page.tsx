@@ -1248,9 +1248,21 @@ function HarvesterWizard({
   const [rootCategorySlug, setRootCategorySlug] = useState("");
   const [autoIsImporting, setAutoIsImporting] = useState(false);
   const [autoMaxResults, setAutoMaxResults] = useState(10000);
+  const [autoAliIsImporting, setAutoAliIsImporting] = useState(false);
+  const [autoAliMaxResults, setAutoAliMaxResults] = useState(200);
   const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('offers');
   const [importStrategy, setImportStrategy] = useState<'bestsellers' | 'price_asc'>('bestsellers');
   const [autoProgress, setAutoProgress] = useState<{
+    jobId?: string;
+    productsFound?: number;
+    productsCreated?: number;
+    dealsCreated?: number;
+    dbProducts?: number;
+    dbDeals?: number;
+    status?: string;
+    error?: string;
+  }>({});
+  const [autoAliProgress, setAutoAliProgress] = useState<{
     jobId?: string;
     productsFound?: number;
     productsCreated?: number;
@@ -1546,6 +1558,171 @@ function HarvesterWizard({
     }
   };
 
+  const handleAutoImportAliExpress = async () => {
+    if (!authToken) {
+      setAuthError("Brak tokenu administratora. Zaloguj się ponownie.");
+      return;
+    }
+
+    try {
+      setAutoAliIsImporting(true);
+      setAutoAliProgress({});
+
+      const response = await fetch('/api/admin/harvester/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          source: 'aliexpress',
+          query: '',
+          maxResults: autoAliMaxResults,
+          autoBrowse: true,
+          importStrategy,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = data.error || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMsg);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to start AliExpress auto-import');
+      }
+
+      const jobId = data.job?.id;
+      if (!jobId) {
+        throw new Error('No job ID returned');
+      }
+
+      setAutoAliProgress({ jobId, status: 'running' });
+
+      let pollAttempts = 0;
+      const maxPollAttempts = 12; // ~1 min
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/admin/harvester-jobs?jobId=${jobId}`, {
+            headers: { Authorization: `Bearer ${authToken}` },
+          });
+
+          if (statusResponse.status === 401 || statusResponse.status === 403) {
+            clearInterval(pollInterval);
+            setAutoAliProgress(prev => ({
+              ...prev,
+              status: 'failed',
+              error: 'Brak uprawnień (401/403) do odczytu statusu joba.',
+            }));
+            setAutoAliIsImporting(false);
+            return;
+          }
+
+          const statusData = await statusResponse.json();
+
+          if (!statusData.success || !statusData.job) {
+            pollAttempts += 1;
+
+            const listResponse = await fetch('/api/admin/harvester-jobs?limit=50', {
+              headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            if (listResponse.ok) {
+              const listData = await listResponse.json();
+              const fallbackJob = (listData.jobs || []).find((j: any) => j.id === jobId);
+              if (fallbackJob) {
+                setAutoAliProgress({
+                  jobId,
+                  productsFound: fallbackJob.productsFound || 0,
+                  productsCreated: fallbackJob.productsCreated || 0,
+                  dealsCreated: fallbackJob.dealsCreated || 0,
+                  status: fallbackJob.status,
+                });
+
+                if (fallbackJob.status === 'completed' || fallbackJob.status === 'failed') {
+                  clearInterval(pollInterval);
+                  setAutoAliIsImporting(false);
+                  onJobCreated();
+                }
+                return;
+              }
+            }
+
+            if (pollAttempts <= maxPollAttempts) {
+              setAutoAliProgress(prev => ({
+                ...prev,
+                status: 'running',
+                error: 'Czekam na zapis joba w bazie...'
+              }));
+              return;
+            }
+
+            clearInterval(pollInterval);
+            setAutoAliProgress(prev => ({
+              ...prev,
+              status: 'failed',
+              error: statusData.error || 'Nie udało się pobrać statusu joba.'
+            }));
+            setAutoAliIsImporting(false);
+            return;
+          }
+
+          const job = statusData.job;
+          setAutoAliProgress({
+            jobId,
+            productsFound: job.productsFound || 0,
+            productsCreated: job.productsCreated || 0,
+            dealsCreated: job.dealsCreated || 0,
+            status: job.status,
+          });
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(pollInterval);
+            setAutoAliIsImporting(false);
+            onJobCreated();
+
+            if (job.status === 'completed') {
+              try {
+                const verifyRes = await fetch(`/api/admin/harvester/verify?jobId=${jobId}`, {
+                  headers: { Authorization: `Bearer ${authToken}` },
+                });
+                if (verifyRes.ok) {
+                  const verifyData = await verifyRes.json();
+                  setAutoAliProgress(prev => ({
+                    ...prev,
+                    dbProducts: verifyData.productsInDb || 0,
+                    dbDeals: verifyData.dealsInDb || 0,
+                  }));
+                }
+              } catch (verifyErr) {
+                console.error('Verify DB counts failed:', verifyErr);
+              }
+            }
+          }
+        } catch (pollError) {
+          console.error('Failed to poll AliExpress job status:', pollError);
+          clearInterval(pollInterval);
+          setAutoAliProgress(prev => ({
+            ...prev,
+            status: 'failed',
+            error: 'Błąd sieci podczas odczytu statusu joba.'
+          }));
+          setAutoAliIsImporting(false);
+        }
+      }, 5000);
+    } catch (error) {
+      console.error('AliExpress auto-import error:', error);
+      setAutoAliProgress(prev => ({
+        ...prev,
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }));
+      setAutoAliIsImporting(false);
+    }
+  };
+
   return (
     <Card className="bg-white border-0 shadow-sm">
       <CardHeader>
@@ -1759,22 +1936,129 @@ function HarvesterWizard({
 
         {/* Step 2: Query input */}
         {source === 'aliexpress' && (
-          <div className="space-y-2 border border-slate-200 rounded-lg p-4 bg-slate-50">
-            <Label htmlFor="import-strategy" className="text-sm font-semibold text-slate-900">
-              Strategia importu AliExpress
-            </Label>
-            <Select value={importStrategy} onValueChange={(v) => setImportStrategy(v as 'bestsellers' | 'price_asc')}>
-              <SelectTrigger id="import-strategy">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="bestsellers">Bestsellery (najpierw największa sprzedaż)</SelectItem>
-                <SelectItem value="price_asc">Najniższa cena (rosnąco)</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-slate-500">
-              Działa dla AliExpress. W trybie drzewka domyślnie zalecane: Bestsellery.
-            </p>
+          <div className="space-y-4">
+            <div className="space-y-2 border border-slate-200 rounded-lg p-4 bg-slate-50">
+              <Label htmlFor="import-strategy" className="text-sm font-semibold text-slate-900">
+                Strategia importu AliExpress
+              </Label>
+              <Select value={importStrategy} onValueChange={(v) => setImportStrategy(v as 'bestsellers' | 'price_asc')}>
+                <SelectTrigger id="import-strategy">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bestsellers">Bestsellery (najpierw największa sprzedaż)</SelectItem>
+                  <SelectItem value="price_asc">Najniższa cena (rosnąco)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-slate-500">
+                Działa dla AliExpress. W trybie drzewka domyślnie zalecane: Bestsellery.
+              </p>
+            </div>
+
+            <div className="space-y-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center">
+                    <Download className="text-white" size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Auto Import AliExpress (bez iteracji query)</p>
+                    <p className="text-xs text-slate-600">Pobiera hot katalog i mapuje do kategorii po imporcie</p>
+                  </div>
+                </div>
+                <Badge className="bg-blue-600">AUTO</Badge>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="auto-ali-max-results">Max Results</Label>
+                <Input
+                  id="auto-ali-max-results"
+                  type="number"
+                  value={autoAliMaxResults}
+                  onChange={(e) => setAutoAliMaxResults(parseInt(e.target.value) || 200)}
+                  min={20}
+                  max={200}
+                  step={10}
+                  disabled={autoAliIsImporting}
+                  className="w-full"
+                />
+                <p className="text-xs text-slate-500">Maksymalna liczba produktów (20-200)</p>
+              </div>
+
+              {autoAliProgress.status && (
+                <div className="rounded-lg border border-blue-200 bg-white p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    {autoAliProgress.status === 'running' && (
+                      <>
+                        <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                        <span className="text-sm font-semibold text-slate-900">⏳ Import w toku...</span>
+                      </>
+                    )}
+                    {autoAliProgress.status === 'completed' && (
+                      <>
+                        <CheckCircle2 className="text-green-600" size={18} />
+                        <span className="text-sm font-semibold text-green-900">✅ Import zakończony!</span>
+                      </>
+                    )}
+                    {autoAliProgress.status === 'failed' && (
+                      <>
+                        <AlertCircle className="text-red-600" size={18} />
+                        <span className="text-sm font-semibold text-red-900">❌ Import nie powiódł się</span>
+                      </>
+                    )}
+                  </div>
+
+                  {autoAliProgress.jobId && (
+                    <p className="text-xs text-gray-500 mb-2">Job ID: {autoAliProgress.jobId}</p>
+                  )}
+
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="bg-blue-50 rounded p-2">
+                      <div className="text-blue-600 font-medium">Znaleziono</div>
+                      <div className="text-lg font-bold text-blue-900">{autoAliProgress.productsFound || 0}</div>
+                    </div>
+                    <div className="bg-green-50 rounded p-2">
+                      <div className="text-green-600 font-medium">Produkty</div>
+                      <div className="text-lg font-bold text-green-900">{autoAliProgress.productsCreated || 0}</div>
+                    </div>
+                    <div className="bg-purple-50 rounded p-2">
+                      <div className="text-purple-600 font-medium">Oferty</div>
+                      <div className="text-lg font-bold text-purple-900">{autoAliProgress.dealsCreated || 0}</div>
+                    </div>
+                  </div>
+
+                  {(autoAliProgress.dbProducts !== undefined || autoAliProgress.dbDeals !== undefined) && (
+                    <div className="mt-2 text-xs text-slate-600">
+                      Zapisane w bazie: produkty {autoAliProgress.dbProducts ?? 0}, oferty {autoAliProgress.dbDeals ?? 0}
+                    </div>
+                  )}
+
+                  {autoAliProgress.error && (
+                    <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                      {autoAliProgress.error}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Button
+                onClick={handleAutoImportAliExpress}
+                disabled={autoAliIsImporting}
+                className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              >
+                {autoAliIsImporting ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    Importowanie...
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    Uruchom Auto Import AliExpress
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         )}
 

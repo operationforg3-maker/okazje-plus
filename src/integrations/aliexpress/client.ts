@@ -1320,15 +1320,16 @@ export class AliExpressClient {
       }
       
       const result = await this.request<any>('aliexpress.affiliate.hotproduct.query', params);
-      
-      // Parse response - same structure as product.query:
-      // { aliexpress_affiliate_hotproduct_query_response: { resp_result: { resp_code, resp_msg, result: { products: [] } } } }
-      const responseKey = Object.keys(result)[0];
-      const responseData = result[responseKey];
-      const respResult = responseData?.resp_result;
-      
-      if (!responseData || !respResult || (respResult.resp_code !== 200 && respResult.resp_code !== '200')) {
-        logger.warn('Hot products fetch failed', { respResult });
+
+      // Parse response - supports both response shapes:
+      // 1) Wrapped: { aliexpress_affiliate_hotproduct_query_response: { resp_result: { ... } } }
+      // 2) Direct:  { resp_result: { ... } } (common for /sync)
+      const responseKey = Object.keys(result || {})[0];
+      const responseData = responseKey ? result?.[responseKey] : null;
+      const respResult = result?.resp_result || responseData?.resp_result;
+
+      if (!respResult || (respResult.resp_code !== 200 && respResult.resp_code !== '200')) {
+        logger.warn('Hot products fetch failed', { respResult, responseKey });
         return [];
       }
       

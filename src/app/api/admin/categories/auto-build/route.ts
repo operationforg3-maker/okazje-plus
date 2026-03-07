@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAuthSession } from '@/lib/auth-server';
-import { CATEGORY_SEEDS } from '@/lib/category-seeds';
-import { buildCategoriesFromSeeds } from '@/lib/category-builder';
+import { seedCategoriesFromJsonFile } from '@/lib/category-tree-seeder';
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,8 +14,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log('[auto-build] Starting category build process...');
-    const result = await buildCategoriesFromSeeds(CATEGORY_SEEDS);
+    console.log('[auto-build] Starting category build process from JSON...');
+    const result = await seedCategoriesFromJsonFile();
     
     console.log(`[auto-build] ✅ Success! Created: Main=${result.mainCount}, Sub=${result.subCount}, SubSub=${result.subSubCount}`);
 
@@ -26,7 +25,9 @@ export async function POST(req: NextRequest) {
       categories: result.mainCount,
       subcategories: result.subCount,
       subSubcategories: result.subSubCount,
-      message: `✅ Zbudowano ${result.mainCount} głównych kategorii, ${result.subCount} podkategorii, ${result.subSubCount} pod-podkategorii.`
+      sourcePath: result.inputPath,
+      generatedAt: result.generatedAt || null,
+      message: `✅ Zbudowano ${result.mainCount} głównych kategorii, ${result.subCount} podkategorii, ${result.subSubCount} pod-podkategorii z pliku JSON.`
     });
 
   } catch (error: any) {
