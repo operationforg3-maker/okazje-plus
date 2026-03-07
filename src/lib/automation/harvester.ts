@@ -20,6 +20,7 @@ import { addToModerationQueue } from '@/lib/moderation';
 import { batchAssignCategories } from '@/ai/flows/convertiser-auto-category';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { chunkArray } from '@/lib/utils';
+import { matchCategoryByText } from '@/lib/category-mapper';
 import { load as loadHtml } from 'cheerio';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
@@ -38,6 +39,11 @@ interface RawProduct {
   shippingDays: number;
   sourceProductId: string;
   sourceUrl: string;
+  matchedL1Slug?: string;
+  matchedL2Slug?: string;
+  matchedL3Slug?: string;
+  originalCategoryName?: string;
+  googleCategoryId?: number;
   videoUrl?: string; // Product video URL from source (e.g., AliExpress)
   merchantName?: string;
   merchantRating?: number;
@@ -91,6 +97,123 @@ export class SmartHarvester {
 
   private getFallbackImageUrl(): string {
     return PlaceHolderImages?.[0]?.imageUrl || '/placeholder.png';
+  }
+
+  private extractSourceCategoryHints(input: any): Pick<
+    RawProduct,
+    'matchedL1Slug' | 'matchedL2Slug' | 'matchedL3Slug' | 'originalCategoryName' | 'googleCategoryId'
+  > {
+    const toStringOrUndefined = (value: any): string | undefined => {
+      if (value === null || value === undefined) return undefined;
+      const normalized = String(value).trim();
+      return normalized.length > 0 ? normalized : undefined;
+    };
+
+    const toNumberOrUndefined = (value: any): number | undefined => {
+      if (value === null || value === undefined || value === '') return undefined;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    };
+
+    return {
+      matchedL1Slug: toStringOrUndefined(
+        input?.matchedL1Slug ??
+        input?.mainCategorySlug ??
+        input?.main_category_slug
+      ),
+      matchedL2Slug: toStringOrUndefined(
+        input?.matchedL2Slug ??
+        input?.subCategorySlug ??
+        input?.sub_category_slug
+      ),
+      matchedL3Slug: toStringOrUndefined(
+        input?.matchedL3Slug ??
+        input?.subSubCategorySlug ??
+        input?.sub_sub_category_slug
+      ),
+      originalCategoryName: toStringOrUndefined(
+        input?.originalCategoryName ??
+        input?.category_name ??
+        input?.category ??
+        input?.categoryPath
+      ),
+      googleCategoryId: toNumberOrUndefined(
+        input?.googleCategoryId ??
+        input?.google_category_id
+      ),
+    };
+  }
+
+  private async resolveCategoryInfo(
+    sourceProduct: RawProduct,
+    currentQuery: string,
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser'
+  ): Promise<{
+    mainCategorySlug: string;
+    subCategorySlug: string;
+    subSubCategorySlug?: string;
+  }> {
+    const normalize = (value?: string) => {
+      const normalized = String(value || '').trim();
+      return normalized.length > 0 ? normalized : undefined;
+    };
+
+    const assigned = (sourceProduct as any)?.__categoryAssignment;
+    if (source === 'convertiser' && assigned?.mainCategorySlug && assigned?.subCategorySlug) {
+      return {
+        mainCategorySlug: assigned.mainCategorySlug,
+        subCategorySlug: assigned.subCategorySlug,
+        subSubCategorySlug: assigned.subSubCategorySlug,
+      };
+    }
+
+    const matchedMain = normalize(sourceProduct.matchedL1Slug);
+    const matchedSub = normalize(sourceProduct.matchedL2Slug);
+    const matchedLeaf = normalize(sourceProduct.matchedL3Slug);
+    if (matchedMain && matchedSub) {
+      return {
+        mainCategorySlug: matchedMain,
+        subCategorySlug: matchedSub,
+        subSubCategorySlug: matchedLeaf,
+      };
+    }
+
+    try {
+      const localMatch = await matchCategoryByText([
+        sourceProduct.title,
+        sourceProduct.description || '',
+        sourceProduct.originalCategoryName || '',
+        currentQuery || '',
+      ]);
+
+      if (localMatch?.mainCategorySlug) {
+        return {
+          mainCategorySlug: localMatch.mainCategorySlug,
+          subCategorySlug: localMatch.subCategorySlug || 'uncategorized',
+          subSubCategorySlug: localMatch.subSubCategorySlug,
+        };
+      }
+    } catch (error) {
+      this.addLog('warn', `Local category router failed: ${error instanceof Error ? error.message : 'unknown error'}`);
+    }
+
+    const queryParts = (currentQuery || '')
+      .split('/')
+      .map(part => part.trim())
+      .filter(Boolean);
+
+    if (queryParts.length >= 2) {
+      return {
+        mainCategorySlug: queryParts[0],
+        subCategorySlug: queryParts[1],
+        subSubCategorySlug: queryParts[2],
+      };
+    }
+
+    return {
+      mainCategorySlug: 'uncategorized',
+      subCategorySlug: 'uncategorized',
+    };
   }
 
   /**
@@ -570,8 +693,150 @@ export class SmartHarvester {
           previewUrl: previewUrl || undefined,
           hasCoupons: Boolean(offer.has_coupons || couponCode),
         },
+        ...this.extractSourceCategoryHints(offer),
       } as RawProduct;
     } catch {
+      return null;
+    }
+  }
+
+  private async mapConvertiserProductToRawProduct(
+    product: any,
+    searchQuery: string
+  ): Promise<RawProduct | null> {
+    try {
+      const title = product.title || product.name || '';
+      if (!title) {
+        await this.recordDiscardedItem({
+          source: 'convertiser',
+          type: 'product',
+          reason: 'Brak tytułu produktu w danych źródłowych.',
+          reasonCode: 'missing_title',
+          item: {
+            title: '',
+            sourceProductId: String(product.id || product.uuid || product.product_id || product.offer_id || product.sku || ''),
+            sourceUrl: product.direct_link || product.link || product.url || '',
+            merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+          },
+          query: searchQuery,
+        });
+        return null;
+      }
+
+      const imageUrl = product.images?.default || product.image_link || product.image_url || '';
+      if (!imageUrl || imageUrl.trim() === '') {
+        await this.recordDiscardedItem({
+          source: 'convertiser',
+          type: 'product',
+          reason: 'Brak zdjęcia produktu w danych źródłowych.',
+          reasonCode: 'missing_image',
+          item: {
+            title,
+            sourceProductId: String(product.id || product.sku || ''),
+            sourceUrl: product.direct_link || product.link || product.url || '',
+            merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+          },
+          query: searchQuery,
+        });
+        return null;
+      }
+
+      const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
+        if (!priceStr) return { amount: 0, currency: 'PLN' };
+        const str = String(priceStr);
+        const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
+        if (currencyMatch) {
+          return {
+            currency: currencyMatch[1],
+            amount: parseFloat(currencyMatch[2].replace(',', '.')),
+          };
+        }
+
+        const amountMatch = str.match(/([\d.,]+)/);
+        const fallbackAmount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
+        const fallbackCurrency = String(product.currency || 'PLN').toUpperCase();
+        return {
+          currency: fallbackCurrency,
+          amount: fallbackAmount,
+        };
+      };
+
+      const priceRaw =
+        product.sale_price ||
+        product.price ||
+        product.current_price ||
+        product.offer_price ||
+        product.price_value ||
+        product.price_amount ||
+        '';
+
+      const originalPriceRaw =
+        product.original_price ||
+        product.regular_price ||
+        product.old_price ||
+        product.list_price ||
+        '';
+
+      const shippingRaw =
+        product.shipping_cost ||
+        product.shipping_price ||
+        product.shipping ||
+        '';
+
+      const parsedPrice = parsePriceWithCurrency(priceRaw);
+      const parsedOriginal = parsePriceWithCurrency(originalPriceRaw);
+      const parsedShipping = parsePriceWithCurrency(shippingRaw);
+
+      const pricePLN = await convertToPLN(parsedPrice.amount, parsedPrice.currency);
+      const originalPricePLN = parsedOriginal.amount > 0
+        ? await convertToPLN(parsedOriginal.amount, parsedOriginal.currency)
+        : 0;
+      const shippingPLN = parsedShipping.amount > 0
+        ? await convertToPLN(parsedShipping.amount, parsedShipping.currency)
+        : 0;
+
+      const description = product.description || product.short_description || '';
+      const specs = product.specs || product.attributes || product.parameters || undefined;
+
+      const ratingRaw = product.rating || product.rating_score || product.evaluate_rate || 0;
+      const ratingCountRaw = product.rating_count || product.evaluate_count || product.review_count || 0;
+
+      return {
+        title,
+        description,
+        imageUrl,
+        price: pricePLN,
+        originalPrice: originalPricePLN > pricePLN ? originalPricePLN : undefined,
+        currency: 'PLN',
+        shippingCost: shippingPLN,
+        shippingDays: Number(product.shipping_days || product.delivery_days || 0),
+        sourceProductId: String(
+          product.id ||
+          product.uuid ||
+          product.product_id ||
+          product.offer_id ||
+          product.sku ||
+          ''
+        ),
+        sourceUrl: product.direct_link || product.link || product.url || '',
+        merchantName: product.offer || product.merchant || product.store_name || product.brand || 'Convertiser',
+        merchantRating: Number(product.merchant_rating || 0),
+        specs,
+        rating: Number(ratingRaw) || 0,
+        ratingCount: Number(ratingCountRaw) || 0,
+        images: Array.isArray(product.images)
+          ? product.images
+          : (product.image_urls || [imageUrl]),
+        variants: Array.isArray(product.variants) ? product.variants : (product.sku_list || undefined),
+        sku: product.sku || undefined,
+        ean: product.ean || product.barcode || undefined,
+        gtin: product.gtin || undefined,
+        upc: product.upc || undefined,
+        mpn: product.mpn || product.manufacturer_part_number || undefined,
+        ...this.extractSourceCategoryHints(product),
+      } as RawProduct;
+    } catch (error) {
+      this.addLog('warn', `Convertiser product parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
   }
@@ -932,6 +1197,8 @@ export class SmartHarvester {
       shortDescription: this.toLocalizedText(shortDescription || 'Brak opisu'),
       fullDescription: this.toLocalizedText(description || shortDescription || ''),
       specs,
+      coreSpecs: { ...specs },
+      rawSpecs: { ...specs },
       mainCategorySlug: categoryInfo.mainCategorySlug,
       subCategorySlug: categoryInfo.subCategorySlug,
       subSubCategorySlug: categoryInfo.subSubCategorySlug,
@@ -965,6 +1232,8 @@ export class SmartHarvester {
         source,
         originalId: sourceProduct.sourceProductId,
         importedAt: now,
+        originalCategoryName: sourceProduct.originalCategoryName,
+        googleCategoryId: sourceProduct.googleCategoryId,
         identifiers,
       },
     };
@@ -1042,7 +1311,7 @@ export class SmartHarvester {
       voteCount: 0,
       temperature: 0,
       commentsCount: 0,
-      status: 'draft',
+      status: 'pending',
       createdAt: now,
       updatedAt: now,
       sourceProductId: sourceProduct.sourceProductId,
@@ -1459,40 +1728,8 @@ export class SmartHarvester {
                   // New product: Create ProductCore + Deal
                   this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
 
-                  // Parse category hierarchy from query (e.g., 'electronics/phones/flagship')
-                  let categoryInfo: any;
-                  
-                  if (source === 'convertiser') {
-                    const cachedAssignment = (sourceProduct as any).__categoryAssignment;
-                    if (cachedAssignment) {
-                      categoryInfo = {
-                        mainCategorySlug: cachedAssignment.mainCategorySlug,
-                        subCategorySlug: cachedAssignment.subCategorySlug,
-                        subSubCategorySlug: cachedAssignment.subSubCategorySlug,
-                      };
-                      this.addLog('info', `✅ Using batch-assigned category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}`);
-                    } else {
-                      this.addLog('warn', 'Batch categorization result missing, using uncategorized');
-                      categoryInfo = {
-                        mainCategorySlug: 'uncategorized',
-                        subCategorySlug: 'uncategorized',
-                      };
-                    }
-                  } else {
-                    if (currentQuery.includes('/')) {
-                      const categoryParts = currentQuery.split('/');
-                      categoryInfo = {
-                        mainCategorySlug: categoryParts[0] || 'uncategorized',
-                        subCategorySlug: categoryParts[1] || 'uncategorized',
-                        subSubCategorySlug: categoryParts[2],
-                      };
-                    } else {
-                      categoryInfo = {
-                        mainCategorySlug: 'uncategorized',
-                        subCategorySlug: 'uncategorized',
-                      };
-                    }
-                  }
+                  const categoryInfo = await this.resolveCategoryInfo(sourceProduct, currentQuery, source);
+                  this.addLog('info', `Resolved category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}${categoryInfo.subSubCategorySlug ? `/${categoryInfo.subSubCategorySlug}` : ''}`);
 
                   const { productData, productRef } = await this.prepareProductCore(
                     sourceProduct,
@@ -1752,9 +1989,14 @@ export class SmartHarvester {
 
       // Step 3: Update job record
       const jobEndTime = new Date().toISOString();
+      const finalStatus: HarvesterJob['status'] =
+        errors.length > 0 && productsCreated === 0 && dealsCreated === 0
+          ? 'failed'
+          : 'completed';
+
       const job: HarvesterJob = {
         id: this.jobId,
-        status: 'completed',
+        status: finalStatus,
         source,
         query: queries.join(', '),
         maxResults,
@@ -1930,7 +2172,7 @@ export class SmartHarvester {
         ? (importStrategy === 'price_asc' ? 'price_asc' : 'orders')
         : 'price_asc';
 
-      const response = await client.searchProducts({
+      let response = await client.searchProducts({
         q: searchQuery,
         limit: fetchSize,
         sort: aliExpressSort,
@@ -1938,9 +2180,47 @@ export class SmartHarvester {
         targetCurrency: 'PLN', // Ensure prices are in PLN
         shipToCountry: 'PL'    // Ensure shipping to Poland
       });
+
+      // Fallback: AliExpress often returns empty for SALE_PRICE_ASC on some queries,
+      // while LAST_VOLUME_DESC returns valid products.
+      const shouldRetryWithOrders =
+        aliExpressSort === 'price_asc' &&
+        (
+          !response.success ||
+          !Array.isArray(response.products) ||
+          response.products.length === 0
+        );
+
+      if (shouldRetryWithOrders) {
+        this.addLog('warn', 'AliExpress: fallback sort price_asc -> orders (LAST_VOLUME_DESC)');
+        response = await client.searchProducts({
+          q: searchQuery,
+          limit: fetchSize,
+          sort: 'orders',
+          targetLanguage: 'EN',
+          targetCurrency: 'PLN',
+          shipToCountry: 'PL',
+        });
+      }
       
       if (!response.success || !response.products) {
-        this.addLog('error', `AliExpress search failed: ${response.error?.message || 'Unknown error'}`);
+        const code = String((response as any)?.error?.code || '').trim();
+        const message = String((response as any)?.error?.message || 'Unknown error').trim();
+        this.addLog('error', `AliExpress search failed: ${message}${code ? ` (${code})` : ''}`);
+
+        const authLikeError = [
+          'InvalidAppKey',
+          'InvalidSignature',
+          'MissingAccessToken',
+          'InsufficientPermissions',
+          '401',
+          '403',
+        ].includes(code) || /invalid app key|invalid signature|access token|permission/i.test(message);
+
+        if (authLikeError) {
+          throw new Error(`AliExpress auth/config error: ${code || message}`);
+        }
+
         return [];
       }
 
@@ -2232,7 +2512,6 @@ export class SmartHarvester {
    */
   private async fetchFromConvertiser(searchQuery: string, maxResults: number) {
     try {
-      // Check if token is available before importing client
       if (!process.env.CONVERTISER_API_TOKEN) {
         this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
         return [];
@@ -2243,191 +2522,62 @@ export class SmartHarvester {
 
       this.addLog('info', `Fetching from Convertiser: "${searchQuery}"`);
 
-      // Convertiser has "Search Products" endpoint for product discovery
-      // Try v2 first (better data), fallback to v1 if not available
-      let response: any;
-      try {
-        response = await client.searchProductsV2(
-          {
-            query: searchQuery,
-            country: 'PL', // Polish marketplace
-          },
-          {
-            page: 1,
-            page_size: Math.min(maxResults, 50),
+      const pageSize = Math.min(maxResults, 50);
+      const maxPages = Math.max(2, Math.ceil(maxResults / Math.max(pageSize, 1)) + 2);
+      const products: any[] = [];
+      let useV2 = true;
+      let page = 1;
+
+      while (page <= maxPages && products.length < maxResults) {
+        let response: any;
+        try {
+          response = useV2
+            ? await client.searchProductsV2(
+                { query: searchQuery, country: 'PL' },
+                { page, page_size: pageSize }
+              )
+            : await client.searchProducts(
+                { query: searchQuery, country: 'PL' },
+                { page, page_size: pageSize }
+              );
+        } catch (error) {
+          if (useV2 && page === 1) {
+            this.addLog('warn', `Convertiser v2 API failed: ${error instanceof Error ? error.message : 'Unknown'} - Trying v1`);
+            useV2 = false;
+            continue;
           }
-        );
-      } catch (v2Error) {
-        this.addLog('warn', `Convertiser v2 API failed: ${v2Error instanceof Error ? v2Error.message : 'Unknown'} - Trying v1`);
-        // Fallback to v1
-        response = await client.searchProducts(
-          {
-            query: searchQuery,
-            country: 'PL',
-          },
-          {
-            page: 1,
-            page_size: Math.min(maxResults, 50),
-          }
-        );
+          this.addLog('warn', `Convertiser pagination stopped on page ${page}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          break;
+        }
+
+        const pageProducts = (response as any).data || response.results || [];
+        if (!Array.isArray(pageProducts) || pageProducts.length === 0) {
+          break;
+        }
+
+        products.push(...pageProducts);
+
+        const totalCount = Number((response as any).count || 0);
+        const hasNext = Boolean((response as any).next);
+        if (products.length >= maxResults) break;
+        if (totalCount > 0 && products.length >= totalCount) break;
+        if (!hasNext && pageProducts.length < pageSize) break;
+
+        page += 1;
       }
 
-      // Convertiser v2 returns products in 'data' field, not 'results'
-      const products = (response as any).data || response.results || [];
-
-      if (!products || products.length === 0) {
+      if (!products.length) {
         this.addLog('warn', `Convertiser: No products found for "${searchQuery}"`);
         return [];
       }
 
-      this.addLog('info', `Found ${products.length} products from Convertiser`);
+      this.addLog('info', `Found ${products.length} products from Convertiser (firehose)`);
 
-      // Transform Convertiser products to RawProduct format
-      // Use Promise.all for async currency conversion
       const rawProducts = await Promise.all(
-        products.map(async (product: any) => {
-          try {
-            const title = product.title || product.name || '';
-            if (!title) {
-              await this.recordDiscardedItem({
-                source: 'convertiser',
-                type: 'product',
-                reason: 'Brak tytułu produktu w danych źródłowych.',
-                reasonCode: 'missing_title',
-                item: {
-                  title: '',
-                  sourceProductId: String(product.id || product.uuid || product.product_id || product.offer_id || product.sku || ''),
-                  sourceUrl: product.direct_link || product.link || product.url || '',
-                  merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
-                },
-                query: searchQuery,
-              });
-              return null;
-            }
-
-            // Convertiser images are in 'images.default' or 'image_link'
-            const imageUrl = product.images?.default || product.image_link || product.image_url || '';
-            // Skip products without valid image URL (required for identity hash)
-            if (!imageUrl || imageUrl.trim() === '') {
-              await this.recordDiscardedItem({
-                source: 'convertiser',
-                type: 'product',
-                reason: 'Brak zdjęcia produktu w danych źródłowych.',
-                reasonCode: 'missing_image',
-                item: {
-                  title,
-                  sourceProductId: String(product.id || product.sku || ''),
-                  sourceUrl: product.direct_link || product.link || product.url || '',
-                  merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
-                },
-                query: searchQuery,
-              });
-              return null;
-            }
-
-            // Parse price and currency from "PLN 199.99" or "USD 199.99" format
-            const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
-              if (!priceStr) return { amount: 0, currency: 'PLN' };
-              const str = String(priceStr);
-              // Try to extract currency code (3 letters at start)
-              const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
-              if (currencyMatch) {
-                return {
-                  currency: currencyMatch[1],
-                  amount: parseFloat(currencyMatch[2].replace(',', '.')),
-                };
-              }
-
-              const amountMatch = str.match(/([\d.,]+)/);
-              const fallbackAmount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
-              const fallbackCurrency = String(product.currency || 'PLN').toUpperCase();
-              return {
-                currency: fallbackCurrency,
-                amount: fallbackAmount,
-              };
-            };
-
-            const priceRaw =
-              product.sale_price ||
-              product.price ||
-              product.current_price ||
-              product.offer_price ||
-              product.price_value ||
-              product.price_amount ||
-              '';
-
-            const originalPriceRaw =
-              product.original_price ||
-              product.regular_price ||
-              product.old_price ||
-              product.list_price ||
-              '';
-
-            const shippingRaw =
-              product.shipping_cost ||
-              product.shipping_price ||
-              product.shipping ||
-              '';
-
-            const parsedPrice = parsePriceWithCurrency(priceRaw);
-            const parsedOriginal = parsePriceWithCurrency(originalPriceRaw);
-            const parsedShipping = parsePriceWithCurrency(shippingRaw);
-
-            const pricePLN = await convertToPLN(parsedPrice.amount, parsedPrice.currency);
-            const originalPricePLN = parsedOriginal.amount > 0
-              ? await convertToPLN(parsedOriginal.amount, parsedOriginal.currency)
-              : 0;
-            const shippingPLN = parsedShipping.amount > 0
-              ? await convertToPLN(parsedShipping.amount, parsedShipping.currency)
-              : 0;
-
-            const description = product.description || product.short_description || '';
-            const specs = product.specs || product.attributes || product.parameters || undefined;
-
-            const ratingRaw = product.rating || product.rating_score || product.evaluate_rate || 0;
-            const ratingCountRaw = product.rating_count || product.evaluate_count || product.review_count || 0;
-
-            return {
-              title,
-              description,
-              imageUrl,
-              price: pricePLN,
-              originalPrice: originalPricePLN > pricePLN ? originalPricePLN : undefined,
-              currency: 'PLN',
-              shippingCost: shippingPLN,
-              shippingDays: Number(product.shipping_days || product.delivery_days || 0),
-              sourceProductId: String(
-                product.id ||
-                product.uuid ||
-                product.product_id ||
-                product.offer_id ||
-                product.sku ||
-                ''
-              ),
-              sourceUrl: product.direct_link || product.link || product.url || '',
-              merchantName: product.offer || product.merchant || product.store_name || product.brand || 'Convertiser',
-              merchantRating: Number(product.merchant_rating || 0),
-              specs,
-              rating: Number(ratingRaw) || 0,
-              ratingCount: Number(ratingCountRaw) || 0,
-              images: Array.isArray(product.images)
-                ? product.images
-                : (product.image_urls || [imageUrl]),
-              variants: Array.isArray(product.variants) ? product.variants : (product.sku_list || undefined),
-              sku: product.sku || undefined,
-              ean: product.ean || product.barcode || undefined,
-              gtin: product.gtin || undefined,
-              upc: product.upc || undefined,
-              mpn: product.mpn || product.manufacturer_part_number || undefined,
-            } as RawProduct;
-          } catch (error) {
-            this.addLog('warn', `Convertiser product parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            return null;
-          }
-        })
+        products.slice(0, maxResults).map((product: any) => this.mapConvertiserProductToRawProduct(product, searchQuery))
       );
 
-      return (rawProducts.filter(Boolean) as RawProduct[]).slice(0, maxResults);
+      return rawProducts.filter(Boolean) as RawProduct[];
     } catch (error) {
       this.addLog('error', `Convertiser API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
@@ -2449,23 +2599,51 @@ export class SmartHarvester {
 
       this.addLog('info', `Fetching Convertiser offers: "${searchQuery}"`);
 
-      let response: any;
-      try {
-        response = await client.findOffers({
-          query: searchQuery,
-          q: searchQuery,
-          country: 'PL',
-        });
-      } catch (err) {
-        this.addLog('warn', `Convertiser offers find failed: ${err instanceof Error ? err.message : 'Unknown'} - falling back to listOffers`);
-        response = await client.listOffers(
-          { page: 1, page_size: Math.min(maxResults, 50) },
-          { country: 'PL' }
-        );
+      const pageSize = Math.min(maxResults, 50);
+      const maxPages = Math.max(2, Math.ceil(maxResults / Math.max(pageSize, 1)) + 2);
+      let page = 1;
+      const offers: any[] = [];
+
+      while (page <= maxPages && offers.length < maxResults) {
+        let response: any;
+        try {
+          response = await client.listOffers(
+            { page, page_size: pageSize },
+            {
+              country: 'PL',
+              ...(searchQuery ? { query: searchQuery, q: searchQuery } : {}),
+            }
+          );
+        } catch (error) {
+          if (page === 1 && searchQuery) {
+            this.addLog('warn', `Convertiser listOffers search failed: ${error instanceof Error ? error.message : 'Unknown'} - trying findOffers`);
+            try {
+              response = await client.findOffers({ query: searchQuery, q: searchQuery, country: 'PL' });
+            } catch (fallbackError) {
+              this.addLog('warn', `Convertiser offers fallback failed: ${fallbackError instanceof Error ? fallbackError.message : 'Unknown'}`);
+              break;
+            }
+          } else {
+            this.addLog('warn', `Convertiser offers pagination stopped on page ${page}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            break;
+          }
+        }
+
+        const pageOffers = (response as any).results || (response as any).data || [];
+        if (!Array.isArray(pageOffers) || pageOffers.length === 0) break;
+
+        offers.push(...pageOffers);
+
+        const totalCount = Number((response as any).count || 0);
+        const hasNext = Boolean((response as any).next);
+        if (offers.length >= maxResults) break;
+        if (totalCount > 0 && offers.length >= totalCount) break;
+        if (!hasNext && pageOffers.length < pageSize) break;
+
+        page += 1;
       }
 
-      const offers = (response as any).results || (response as any).data || [];
-      if (!offers || offers.length === 0) {
+      if (!offers.length) {
         this.addLog('warn', `Convertiser: No offers found for "${searchQuery}"`);
         return [];
       }
@@ -2500,88 +2678,58 @@ export class SmartHarvester {
 
       this.addLog('info', 'Auto-browse Convertiser catalog (products)');
 
-      let response: any;
-      try {
-        response = await client.searchProductsV2(
-          { country: 'PL' },
-          { page: 1, page_size: Math.min(maxResults, 50) }
-        );
-      } catch (v2Error) {
-        this.addLog('warn', `Convertiser v2 auto-browse failed: ${v2Error instanceof Error ? v2Error.message : 'Unknown'} - Trying v1`);
-        response = await client.searchProducts(
-          { country: 'PL' },
-          { page: 1, page_size: Math.min(maxResults, 50) }
-        );
+      const pageSize = Math.min(maxResults, 50);
+      const maxPages = Math.max(2, Math.ceil(maxResults / Math.max(pageSize, 1)) + 2);
+      const products: any[] = [];
+      let useV2 = true;
+      let page = 1;
+
+      while (page <= maxPages && products.length < maxResults) {
+        let response: any;
+        try {
+          response = useV2
+            ? await client.searchProductsV2(
+                { country: 'PL' },
+                { page, page_size: pageSize }
+              )
+            : await client.searchProducts(
+                { country: 'PL' },
+                { page, page_size: pageSize }
+              );
+        } catch (error) {
+          if (useV2 && page === 1) {
+            this.addLog('warn', `Convertiser v2 auto-browse failed: ${error instanceof Error ? error.message : 'Unknown'} - Trying v1`);
+            useV2 = false;
+            continue;
+          }
+          this.addLog('warn', `Convertiser auto-browse stopped on page ${page}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          break;
+        }
+
+        const pageProducts = (response as any).data || response.results || [];
+        if (!Array.isArray(pageProducts) || pageProducts.length === 0) break;
+
+        products.push(...pageProducts);
+
+        const totalCount = Number((response as any).count || 0);
+        const hasNext = Boolean((response as any).next);
+        if (products.length >= maxResults) break;
+        if (totalCount > 0 && products.length >= totalCount) break;
+        if (!hasNext && pageProducts.length < pageSize) break;
+
+        page += 1;
       }
 
-      const products = (response as any).data || response.results || [];
-      if (!products || products.length === 0) {
+      if (!products.length) {
         this.addLog('warn', 'Convertiser auto-browse: no products found');
         return [];
       }
 
       const rawProducts = await Promise.all(
-        products.map(async (product: any) => {
-          try {
-            const title = product.title || product.name || '';
-            if (!title) return null;
-            const imageUrl = product.images?.default || product.image_link || product.image_url || '';
-            if (!imageUrl || imageUrl.trim() === '') return null;
-
-            const parsePriceWithCurrency = (priceStr: string): { amount: number; currency: string } => {
-              if (!priceStr) return { amount: 0, currency: 'PLN' };
-              const str = String(priceStr);
-              const currencyMatch = str.match(/^([A-Z]{3})\s*([\d.,]+)/);
-              if (currencyMatch) {
-                return {
-                  currency: currencyMatch[1],
-                  amount: parseFloat(currencyMatch[2].replace(',', '.')),
-                };
-              }
-              const amountMatch = str.match(/([\d.,]+)/);
-              const fallbackAmount = amountMatch ? parseFloat(amountMatch[1].replace(',', '.')) : 0;
-              const fallbackCurrency = String(product.currency || 'PLN').toUpperCase();
-              return {
-                currency: fallbackCurrency,
-                amount: fallbackAmount,
-              };
-            };
-
-            const priceRaw = product.sale_price || product.price || product.current_price || '';
-            const parsedPrice = parsePriceWithCurrency(priceRaw);
-            const pricePLN = await convertToPLN(parsedPrice.amount, parsedPrice.currency);
-
-            return {
-              title,
-              description: product.description || product.short_description || '',
-              imageUrl,
-              price: pricePLN,
-              currency: 'PLN',
-              shippingCost: 0,
-              shippingDays: Number(product.shipping_days || product.delivery_days || 0),
-              sourceProductId: String(product.id || product.uuid || product.product_id || product.sku || ''),
-              sourceUrl: product.direct_link || product.link || product.url || '',
-              merchantName: product.offer || product.merchant || product.store_name || product.brand || 'Convertiser',
-              merchantRating: Number(product.merchant_rating || 0),
-              specs: product.specs || product.attributes || product.parameters || undefined,
-              rating: Number(product.rating || product.rating_score || 0),
-              ratingCount: Number(product.rating_count || product.evaluate_count || 0),
-              images: Array.isArray(product.images) ? product.images : (product.image_urls || [imageUrl]),
-              variants: Array.isArray(product.variants) ? product.variants : (product.sku_list || undefined),
-              sku: product.sku || undefined,
-              ean: product.ean || product.barcode || undefined,
-              gtin: product.gtin || undefined,
-              upc: product.upc || undefined,
-              mpn: product.mpn || product.manufacturer_part_number || undefined,
-            } as RawProduct;
-          } catch (error) {
-            this.addLog('warn', `Convertiser auto-browse parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            return null;
-          }
-        })
+        products.slice(0, maxResults).map((product: any) => this.mapConvertiserProductToRawProduct(product, 'auto-browse'))
       );
 
-      return (rawProducts.filter(Boolean) as RawProduct[]).slice(0, maxResults);
+      return rawProducts.filter(Boolean) as RawProduct[];
     } catch (error) {
       this.addLog('error', `Convertiser auto-browse API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
