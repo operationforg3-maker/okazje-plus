@@ -514,6 +514,13 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     minOrderValue: ensureOptionalNumber(raw.minOrderValue),
     stockAlert: raw.stockAlert,
     expiryDate: ensureOptionalString(raw.expiryDate),
+    // Preserve external link variants used by UI and notifications.
+    affiliateLink: ensureOptionalString((raw as any).affiliateLink),
+    affiliateUrl: ensureString((raw as any).affiliateUrl, FALLBACK_URL) || FALLBACK_URL,
+    dealUrl: ensureOptionalString((raw as any).dealUrl),
+    sourceUrl: ensureOptionalString((raw as any).sourceUrl),
+    externalUrl: ensureOptionalString((raw as any).externalUrl),
+    url: ensureOptionalString((raw as any).url),
     availableQuantity: ensureOptionalNumber(raw.availableQuantity),
     limitPerUser: ensureOptionalNumber(raw.limitPerUser),
     requiresMembership: ensureOptionalString(raw.requiresMembership),
