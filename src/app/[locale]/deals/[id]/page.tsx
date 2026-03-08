@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Deal, LocalizedText } from '@/lib/types';
 import { getDealById, getDealsForProduct, getHotDeals, getProductCore } from '@/lib/data';
+import { getExternalUrl } from '@/lib/external-url';
 import DealDetailClient from './deal-detail-client';
 
 // Force dynamic rendering dla real-time danych
@@ -42,7 +43,15 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
     return value;
   };
 
-  const priceAmount = typeof raw?.price === 'number' ? raw.price : raw?.price?.amount ?? raw?.priceV2?.amount ?? 0;
+  const rawPriceObject = (raw?.price && typeof raw.price === 'object')
+    ? raw.price
+    : (raw?.priceV2 && typeof raw.priceV2 === 'object' ? raw.priceV2 : null);
+  const priceAmount = typeof raw?.totalPrice === 'number'
+    ? raw.totalPrice
+    : (typeof raw?.price === 'number' ? raw.price : rawPriceObject?.amount ?? 0);
+  const priceCurrency = typeof rawPriceObject?.currency === 'string'
+    ? rawPriceObject.currency.toUpperCase()
+    : 'PLN';
   const image = raw?.image || product?.images?.[0];
   if (!image) return null;
 
@@ -61,7 +70,23 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
     ? descriptionInput as LocalizedText
     : ensureLocalizedText(descriptionInput, product?.shortDescription?.pl || '');
 
-  const link = raw?.link || raw?.affiliateLink || raw?.sourceUrl || '';
+  const link = getExternalUrl(
+    raw?.link,
+    raw?.affiliateLink,
+    raw?.affiliateUrl,
+    raw?.dealUrl,
+    raw?.sourceUrl,
+    raw?.url,
+    raw?.externalUrl,
+    raw?.metadata?.offerPreviewUrl,
+    raw?.metadata?.previewUrl,
+    raw?.metadata?.offerUrl,
+    raw?.metadata?.externalUrl,
+    raw?.metadata?.url,
+    raw?.product?.affiliateLink,
+    raw?.product?.sourceUrl,
+    product?.sourceLinks?.[0]?.url
+  ) || '';
   const mainCategorySlug = raw?.mainCategorySlug || product?.mainCategorySlug || 'inne';
   const subCategorySlug = raw?.subCategorySlug || product?.subCategorySlug || 'inne';
 
@@ -69,7 +94,7 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
     id: raw?.id,
     title,
     description,
-    price: priceAmount,
+    price: { amount: priceAmount, currency: priceCurrency },
     originalPrice: typeof raw?.originalPrice === 'number' ? raw.originalPrice : priceAmount,
     link,
     image,
@@ -175,12 +200,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { deal } = data;
   const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || deal.title?.en || 'Okazja';
   
-  const getP = (v: any) => typeof v === 'object' ? v.amount : v;
-  const pVal = getP(deal.price);
-  
-  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(pVal);
+  const getPriceMeta = (priceValue: any) => {
+    if (priceValue && typeof priceValue === 'object') {
+      return {
+        amount: Number(priceValue.amount) || 0,
+        currency: typeof priceValue.currency === 'string' ? priceValue.currency.toUpperCase() : 'PLN',
+      };
+    }
+    return { amount: Number(priceValue) || 0, currency: 'PLN' };
+  };
+
+  const priceMeta = getPriceMeta(deal.price);
+  const pVal = priceMeta.amount;
+  const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: priceMeta.currency }).format(pVal);
   const originalPrice = deal.originalPrice 
-    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(deal.originalPrice)
+    ? new Intl.NumberFormat('pl-PL', { style: 'currency', currency: priceMeta.currency }).format(deal.originalPrice)
     : null;
   const discount = deal.originalPrice && deal.originalPrice > 0
     ? Math.round(((deal.originalPrice - pVal) / deal.originalPrice) * 100)
@@ -235,8 +269,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       canonical: canonicalUrl,
     },
     other: {
-      'product:price:amount': deal.price.toString(),
-      'product:price:currency': 'PLN',
+      'product:price:amount': String(pVal),
+      'product:price:currency': priceMeta.currency,
       ...(originalPrice && { 'product:original_price:amount': deal.originalPrice?.toString() }),
       'deal:temperature': deal.temperature.toString(),
       'deal:votes': deal.voteCount.toString(),
@@ -276,13 +310,17 @@ export default async function DealDetailPage({ params }: PageProps) {
     description: dealDescription,
     image: deal.image,
     url: `https://okazjeplus.pl/pl/deals/${deal.id}`,
-    priceCurrency: 'PLN',
-    price: deal.price,
+    priceCurrency: (typeof deal.price === 'object' && typeof deal.price.currency === 'string')
+      ? deal.price.currency.toUpperCase()
+      : 'PLN',
+    price: typeof deal.price === 'object' ? deal.price.amount : deal.price,
     ...(deal.originalPrice && {
       priceSpecification: {
         '@type': 'PriceSpecification',
-        price: deal.price,
-        priceCurrency: 'PLN',
+          price: typeof deal.price === 'object' ? deal.price.amount : deal.price,
+          priceCurrency: (typeof deal.price === 'object' && typeof deal.price.currency === 'string')
+            ? deal.price.currency.toUpperCase()
+            : 'PLN',
         valueAddedTaxIncluded: true,
       },
     }),
