@@ -1,9 +1,9 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Deal, LocalizedText } from '@/lib/types';
-import { getDealById, getDealsForProduct, getProductCore } from '@/lib/data';
+import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
-import { searchDealsTypesense } from '@/lib/search';
+import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search';
 import DealDetailClient from './deal-detail-client';
 
 // Force dynamic rendering dla real-time danych
@@ -143,7 +143,7 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
 
 // Server-side data fetching
 async function getDealData(id: string) {
-  const dealDoc = await getDealById(id);
+  const dealDoc = await getDealByIdTypesense(id);
   if (!dealDoc || (dealDoc as any).status && (dealDoc as any).status !== 'approved') {
     return null;
   }
@@ -157,13 +157,6 @@ async function getDealData(id: string) {
   if (!deal) return null;
 
   let relatedDeals: Deal[] = [];
-  if (productId) {
-    const relatedDocs = await getDealsForProduct(productId);
-    relatedDeals = relatedDocs
-      .filter(d => d.id !== id)
-      .map(d => normalizeDealForUi(d as any, product))
-      .filter(Boolean) as Deal[];
-  }
 
   if (relatedDeals.length === 0) {
     const hotDeals = await searchDealsTypesense('*', {

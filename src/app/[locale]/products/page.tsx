@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getRecommendedProductCores, getProductCoresByCategory, getCategories, getCategoriesWithContent, getDealById, getNavigationShowcase, getProductCoresByFilters } from '@/lib/data';
-import { searchProductsTypesense } from '@/lib/search';
+import { getRecommendedProductCores, getProductCoresByCategory, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductCoresByFilters } from '@/lib/data';
+import { getDealByIdTypesense, searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
 import ProductListCard from '@/components/product-list-card';
 import ProductCard from '@/components/product-card';
@@ -123,7 +123,7 @@ function ProductsPageContent() {
 
         // Pobierz deal of the day
         if (showcaseConfig?.dealOfTheDayId) {
-          const deal = await getDealById(showcaseConfig.dealOfTheDayId);
+          const deal = await getDealByIdTypesense(showcaseConfig.dealOfTheDayId);
           setDealOfTheDay(deal);
         }
       } catch (error) {

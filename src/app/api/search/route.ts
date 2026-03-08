@@ -124,6 +124,7 @@ export async function GET(request: Request) {
   const minTemperature = url.searchParams.get('minTemperature');
   const sort = url.searchParams.get('sort') || '';
   const dealStatus = url.searchParams.get('status') || 'approved';
+  const dealId = (url.searchParams.get('dealId') || '').trim();
 
   if (!q || q.trim().length < 1) return NextResponse.json({ products: [], deals: [] });
 
@@ -146,7 +147,7 @@ export async function GET(request: Request) {
   const allowed = await rateLimit(ip, 60, 60);
   if (!allowed) return NextResponse.json({ error: 'rate_limited', message: 'Too many requests' }, { status: 429 });
 
-  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}:${dealStatus}`;
+  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}:${dealStatus}:${dealId}`;
   const cached = await cacheGet(key);
   if (cached) return NextResponse.json(cached as any);
 
@@ -188,6 +189,7 @@ export async function GET(request: Request) {
       if (mainCategorySlug) filters.push(`mainCategorySlug:=${mainCategorySlug}`);
       if (subCategorySlug) filters.push(`subCategorySlug:=${subCategorySlug}`);
       if (subSubCategorySlug) filters.push(`subSubCategorySlug:=${subSubCategorySlug}`);
+      if (dealId) filters.push(`id:=${dealId}`);
       if (minPrice) filters.push(`price:>=${Number(minPrice)}`);
       if (maxPrice) filters.push(`price:<=${Number(maxPrice)}`);
       if (minTemperature) filters.push(`temperature:>=${Number(minTemperature)}`);

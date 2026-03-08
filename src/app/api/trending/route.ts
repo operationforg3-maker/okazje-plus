@@ -1,20 +1,16 @@
 import { NextResponse } from 'next/server';
-import { getHotDeals, getRandomDeals } from '@/lib/data';
+import { searchDealsTypesense } from '@/lib/search';
 import { trendingDealPrediction } from '@/ai/flows/trending-deal-prediction';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // Weź gorące okazje, jeśli mało danych dobierz losowe, aby mieć 6 pozycji
-    const hot = await getHotDeals(6);
-    let deals = hot;
-    if (hot.length < 6) {
-      const extra = await getRandomDeals(6 - hot.length);
-      // unikaj duplikatów
-      const hotIds = new Set(hot.map((d) => d.id));
-      deals = hot.concat(extra.filter((e) => !hotIds.has(e.id)));
-    }
+    const deals = await searchDealsTypesense('*', {
+      limit: 6,
+      sortBy: 'hot',
+      statusFilter: 'approved',
+    });
 
     const predictions = await Promise.all(
       deals.map(async (d) => {

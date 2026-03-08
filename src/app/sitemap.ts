@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
-import { getHotDeals } from '@/lib/data';
 import { getRecommendedProducts } from '@/lib/data';
+import { searchDealsTypesense } from '@/lib/search';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
@@ -26,7 +26,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic deals - top 1000 hottest
   let dealUrls: MetadataRoute.Sitemap = [];
   try {
-    const deals = await getHotDeals(1000);
+    const deals = await searchDealsTypesense('*', {
+      limit: 1000,
+      sortBy: 'hot',
+      statusFilter: 'approved',
+    });
     dealUrls = deals.map((deal) => ({
       url: `${baseUrl}/deals/${deal.id}`,
       lastModified: deal.updatedAt ? new Date(deal.updatedAt) : new Date(),

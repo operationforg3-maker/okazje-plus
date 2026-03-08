@@ -280,3 +280,46 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
     return [];
   }
 }
+
+// final.md alignment: public offer reads should use Typesense.
+export async function getDealByIdTypesense(dealId: string): Promise<Deal | null> {
+  if (!dealId) return null;
+
+  // If running in browser, go through API route.
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams();
+      params.set('q', '*');
+      params.set('type', 'deals');
+      params.set('limit', '1');
+      params.set('dealId', dealId);
+      const res = await fetch(`/api/search?${params.toString()}`);
+      if (!res.ok) return null;
+      const body = await res.json();
+      return Array.isArray(body.deals) && body.deals.length > 0 ? (body.deals[0] as Deal) : null;
+    } catch (e) {
+      console.warn('Client-side getDealByIdTypesense proxy failed:', e);
+      return null;
+    }
+  }
+
+  if (!typesenseClient) {
+    console.warn('Typesense client unavailable for getDealByIdTypesense. Returning null.');
+    return null;
+  }
+
+  try {
+    const res = await typesenseClient.collections('deals').documents().search({
+      q: '*',
+      query_by: 'title,description,postedBy',
+      filter_by: `id:=${dealId} && status:=[approved,pending,poczekalnia]`,
+      per_page: 1,
+    }, {});
+    const firstHit = (res.hits || [])[0] as any;
+    if (!firstHit?.document) return null;
+    return { id: firstHit.document.id, ...firstHit.document } as Deal;
+  } catch (e) {
+    console.warn('Typesense getDealById failed:', e);
+    return null;
+  }
+}
