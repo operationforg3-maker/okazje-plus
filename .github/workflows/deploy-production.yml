@@ -92,6 +92,10 @@ jobs:
           NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
           GOOGLE_GENAI_API_KEY: ${{ secrets.GOOGLE_GENAI_API_KEY }}
 
+      - name: Rollout Firebase App Hosting backend
+        run: |
+          firebase apphosting:rollouts:create okazje-plus-backend --git-commit ${{ github.sha }} --project ${{ secrets.FIREBASE_PROJECT_ID }} --force
+
       - name: Deploy Firestore rules + indexes
         run: firebase deploy --only firestore:rules,firestore:indexes --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive --force
 
