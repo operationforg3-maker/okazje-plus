@@ -40,6 +40,7 @@ const pathNames: Record<string, string> = {
   '/admin/m6-import-dashboard': 'M6 Import Dashboard',
   '/admin/m6-pipeline-visualizer': 'M6 Pipeline Visualizer',
   '/admin/m6-ui-guide': 'M6 UI Guide',
+  '/admin/typesense-queue': 'Nadzór Typesense Queue',
 };
 
 export default function AdminLayout({

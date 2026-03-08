@@ -24,6 +24,7 @@ import {
   Combine,
   Share2,
   MessageCircle,
+  SearchCheck,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -101,6 +102,7 @@ const navStructure: (NavItem | NavGroup)[] = [
       { title: 'Import Dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp, badge: 'NEW', badgeVariant: 'default' },
       { title: 'Harvester Presets', href: '/admin/harvester-presets', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
       { title: 'Pipeline Visualizer', href: '/admin/m6-pipeline-visualizer', icon: Layers, badge: 'NEW', badgeVariant: 'default' },
+      { title: 'Nadzór Typesense Queue', href: '/admin/typesense-queue', icon: SearchCheck, badge: 'OPS', badgeVariant: 'destructive' },
       { title: 'UI Guide', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
     ],
   },

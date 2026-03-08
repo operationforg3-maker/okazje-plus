@@ -23,6 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
+import typesenseAdminClient from '@/lib/typesense-admin';
 
 interface Job {
   id: string;
@@ -41,6 +42,170 @@ const CRON_SECRET = process.env.CRON_SECRET || 'dev-secret-change-in-production'
 const MAX_JOBS_PER_RUN = 10;
 const MAX_RETRIES = 3;
 const HARVESTER_STALE_MS = 15 * 60 * 1000;
+const MAX_TYPESENSE_TASKS_PER_RUN = 100;
+const MAX_TYPESENSE_QUEUE_RETRIES = 5;
+
+type TypesenseQueueEntity = 'products' | 'deals';
+type TypesenseQueueOperation = 'upsert' | 'delete';
+
+interface TypesenseQueueTask {
+  id: string;
+  entity: TypesenseQueueEntity;
+  operation: TypesenseQueueOperation;
+  itemId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  attempts?: number;
+  lastError?: string;
+}
+
+const ensureStringValue = (value: unknown, fallback = ''): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return fallback;
+};
+
+const ensureNumberValue = (value: unknown, fallback = 0): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const normalized = value.replace(',', '.').replace(/[^0-9.-]/g, '');
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+};
+
+const localizeText = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const pl = ensureStringValue((value as any).pl, '');
+    const en = ensureStringValue((value as any).en, '');
+    return pl || en || '';
+  }
+  return '';
+};
+
+async function mapQueueDocument(entity: TypesenseQueueEntity, itemId: string): Promise<any | null> {
+  const sourceCollection = entity === 'deals' ? 'deals' : 'products';
+  const docSnap = await adminDb.collection(sourceCollection).doc(itemId).get();
+
+  if (!docSnap.exists) return null;
+
+  const data = docSnap.data() as Record<string, any>;
+  if (entity === 'deals') {
+    return {
+      id: itemId,
+      title: localizeText(data.title),
+      description: localizeText(data.description),
+      price: ensureNumberValue(data.price?.amount ?? data.price, 0),
+      originalPrice: data.originalPrice !== undefined ? ensureNumberValue(data.originalPrice, 0) : undefined,
+      mainCategorySlug: ensureStringValue(data.mainCategorySlug, 'inne'),
+      subCategorySlug: ensureStringValue(data.subCategorySlug, 'inne'),
+      subSubCategorySlug: ensureStringValue(data.subSubCategorySlug, ''),
+      status: ensureStringValue(data.status, 'draft'),
+      temperature: ensureNumberValue(data.temperature, 0),
+      voteCount: ensureNumberValue(data.voteCount, 0),
+      postedBy: ensureStringValue(data.postedBy, 'system'),
+    };
+  }
+
+  return {
+    id: itemId,
+    name: ensureStringValue(data.name, localizeText(data.title)),
+    description: ensureStringValue(data.description, localizeText(data.shortDescription)),
+    longDescription: ensureStringValue(data.longDescription, localizeText(data.fullDescription)),
+    image: ensureStringValue(data.image, data.imageUrl || ''),
+    affiliateUrl: ensureStringValue(data.affiliateUrl, '#'),
+    price: ensureNumberValue(data.price?.amount ?? data.price, 0),
+    originalPrice: data.originalPrice !== undefined ? ensureNumberValue(data.originalPrice, 0) : undefined,
+    mainCategorySlug: ensureStringValue(data.mainCategorySlug, 'inne'),
+    subCategorySlug: ensureStringValue(data.subCategorySlug, 'inne'),
+    subSubCategorySlug: ensureStringValue(data.subSubCategorySlug, ''),
+    status: ensureStringValue(data.status, 'draft'),
+    ratingCard_average: ensureNumberValue(data.ratingCard?.average, 0),
+    ratingCard_count: Math.round(ensureNumberValue(data.ratingCard?.count, 0)),
+  };
+}
+
+async function processTypesenseQueueTask(task: TypesenseQueueTask): Promise<void> {
+  const taskRef = adminDb.collection('typesense_index_queue').doc(task.id);
+  const attempts = task.attempts || 0;
+
+  await taskRef.set(
+    {
+      status: 'processing',
+      updatedAt: new Date().toISOString(),
+      startedAt: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+
+  try {
+    if (!typesenseAdminClient) {
+      throw new Error('Typesense admin client is not configured (missing TYPESENSE_ADMIN_API_KEY)');
+    }
+
+    if (task.operation === 'delete') {
+      try {
+        await (typesenseAdminClient as any).collections(task.entity).documents(task.itemId).delete();
+      } catch (error) {
+        // Document might not exist in index, which is fine for delete semantics.
+        logger.warn('Typesense delete returned warning', {
+          queueTaskId: task.id,
+          entity: task.entity,
+          itemId: task.itemId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    } else {
+      const mapped = await mapQueueDocument(task.entity, task.itemId);
+      if (!mapped) {
+        await taskRef.set(
+          {
+            status: 'completed',
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
+            note: 'Source document not found, nothing to index',
+          },
+          { merge: true }
+        );
+        return;
+      }
+
+      await (typesenseAdminClient as any)
+        .collections(task.entity)
+        .documents()
+        .import([mapped], { action: 'upsert' });
+    }
+
+    await taskRef.set(
+      {
+        status: 'completed',
+        updatedAt: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
+        attempts,
+        lastError: null,
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    const nextAttempts = attempts + 1;
+    const permanentFailure = nextAttempts >= MAX_TYPESENSE_QUEUE_RETRIES;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    await taskRef.set(
+      {
+        status: permanentFailure ? 'failed' : 'pending',
+        attempts: nextAttempts,
+        lastError: errorMessage,
+        updatedAt: new Date().toISOString(),
+        ...(permanentFailure ? { failedAt: new Date().toISOString() } : {}),
+      },
+      { merge: true }
+    );
+
+    throw error;
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -91,6 +256,18 @@ export async function POST(req: NextRequest) {
       id: doc.id,
       ...doc.data(),
     }));
+
+    // ===== FETCH PENDING TYPESENSE QUEUE TASKS =====
+    const typesenseQueueSnapshot = await adminDb
+      .collection('typesense_index_queue')
+      .where('status', '==', 'pending')
+      .limit(MAX_TYPESENSE_TASKS_PER_RUN)
+      .get();
+
+    const typesenseQueueTasks = typesenseQueueSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as TypesenseQueueTask[];
 
     // ===== WATCHDOG: MARK STALE HARVESTER JOBS AS FAILED =====
     const runningHarvesterSnapshot = await adminDb
@@ -143,6 +320,7 @@ export async function POST(req: NextRequest) {
       jobsFound: jobs.length,
       importJobsQueued: importJobsToResume.length,
       uiImportJobsPending: uiImportJobsToProcess.length,
+      typesenseQueuePending: typesenseQueueTasks.length,
       staleHarvesterJobsDetected,
       staleHarvesterJobsMarked,
       maxPerRun: MAX_JOBS_PER_RUN,
@@ -179,12 +357,19 @@ export async function POST(req: NextRequest) {
       })
     );
 
+    // ===== PROCESS TYPESENSE INDEX QUEUE =====
+    const typesenseQueueResults = await Promise.allSettled(
+      typesenseQueueTasks.map((task) => processTypesenseQueueTask(task))
+    );
+
     const successful = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.filter(r => r.status === 'rejected').length;
     const importSuccessful = importResults.filter(r => r.status === 'fulfilled').length;
     const importFailed = importResults.filter(r => r.status === 'rejected').length;
     const uiImportSuccessful = uiImportResults.filter(r => r.status === 'fulfilled').length;
     const uiImportFailed = uiImportResults.filter(r => r.status === 'rejected').length;
+    const typesenseQueueSuccessful = typesenseQueueResults.filter(r => r.status === 'fulfilled').length;
+    const typesenseQueueFailed = typesenseQueueResults.filter(r => r.status === 'rejected').length;
     const durationMs = Date.now() - startTime;
 
     logger.info('Cron job processor completed', {
@@ -197,6 +382,9 @@ export async function POST(req: NextRequest) {
       uiImportJobsProcessed: uiImportJobsToProcess.length,
       uiImportSuccessful,
       uiImportFailed,
+      typesenseQueueProcessed: typesenseQueueTasks.length,
+      typesenseQueueSuccessful,
+      typesenseQueueFailed,
       staleHarvesterJobsDetected,
       staleHarvesterJobsMarked,
       durationMs,
@@ -213,6 +401,9 @@ export async function POST(req: NextRequest) {
       uiImportJobsProcessed: uiImportJobsToProcess.length,
       uiImportSuccessful,
       uiImportFailed,
+      typesenseQueueProcessed: typesenseQueueTasks.length,
+      typesenseQueueSuccessful,
+      typesenseQueueFailed,
       staleHarvesterJobsDetected,
       staleHarvesterJobsMarked,
       durationMs,

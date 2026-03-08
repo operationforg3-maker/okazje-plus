@@ -17,6 +17,7 @@ import { generateText, embedText } from "../vertex";
 import { getJobQueue, Job } from "./queue";
 import { NormalizedDeal, NormalizedProduct } from "../integrations/api-interfaces";
 import { generatePersona, personaToUser } from "../ai/persona-generator";
+import { queueDealsForIndexing } from "@/search/typesenseQueue";
 
 // ===== Types =====
 export type PipelineSource = "aliexpress" | "convertiser" | "manual";
@@ -292,9 +293,16 @@ export async function executePipeline(
         const created = await persistBatch(enhanced, config);
         results.push(...created);
 
-        // TODO: Typesense indexing
+        // Queue created deals for asynchronous Typesense indexing.
         if (config.indexTypesense) {
-          logger.info("Typesense indexing would happen here", { count: created.length });
+          try {
+            await queueDealsForIndexing(created);
+          } catch (indexError) {
+            logger.error("Failed to queue Typesense indexing", {
+              error: indexError,
+              count: created.length,
+            });
+          }
         }
 
         processedCount += batch.length;
@@ -331,6 +339,16 @@ export async function executePipeline(
 
       const created = await persistBatch(enhanced, config);
       results.push(...created);
+      if (config.indexTypesense) {
+        try {
+          await queueDealsForIndexing(created);
+        } catch (indexError) {
+          logger.error("Failed to queue Typesense indexing", {
+            error: indexError,
+            count: created.length,
+          });
+        }
+      }
       processedCount += batch.length;
     }
 

@@ -548,14 +548,29 @@ export const sanitizeDealRecord = (raw: any, id: string): Deal => ({
  */
 export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => {
   const sanitizeLocalizedText = (value: any): LocalizedText => {
-    if (!value || typeof value !== 'object') {
+    if (typeof value === 'string') {
+      const normalized = ensureString(value, '');
+      return { pl: normalized, en: normalized, de: '' };
+    }
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return { pl: '', en: '', de: '' };
     }
-    return {
+    const result: Record<string, string | undefined> = {
       pl: ensureString((value as any).pl, ''),
       en: ensureString((value as any).en, ''),
       de: ensureOptionalString((value as any).de) || undefined,
-    } as LocalizedText;
+    };
+
+    // Preserve additional locale keys (fr/es/uk or custom locales)
+    for (const [locale, localeValue] of Object.entries(value as Record<string, unknown>)) {
+      if (locale in result) continue;
+      const parsed = ensureOptionalString(localeValue);
+      if (parsed) {
+        result[locale] = parsed;
+      }
+    }
+
+    return result as LocalizedText;
   };
 
   const sanitizeSpecs = (raw: any): Record<string, string> | undefined => {
@@ -567,6 +582,17 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
       if (strKey && strVal) normalized[strKey] = strVal;
     }
     return Object.keys(normalized).length > 0 ? normalized : undefined;
+  };
+
+  const sanitizeStatus = (statusValue: unknown): ProductCore['status'] => {
+    const normalized = ensureString(statusValue, 'draft');
+    if (normalized === 'pending') return 'pending_approval';
+    if (normalized === 'ready_for_review') return 'pending_approval';
+
+    const allowed: ProductCore['status'][] = ['draft', 'pending_approval', 'approved', 'rejected'];
+    return allowed.includes(normalized as ProductCore['status'])
+      ? (normalized as ProductCore['status'])
+      : 'draft';
   };
 
   const sanitizeRating = (raw: any): any => {
@@ -603,12 +629,22 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     identityHash: ensureString((raw as any).identityHash, ''),
     title: sanitizeLocalizedText((raw as any).title),
     shortDescription: sanitizeLocalizedText((raw as any).shortDescription),
+    fullDescription: sanitizeLocalizedText((raw as any).fullDescription || (raw as any).description),
     description: sanitizeLocalizedText((raw as any).description),
-    specs: sanitizeSpecs((raw as any).specs),
+    specs: sanitizeSpecs((raw as any).specs) || {},
+    coreSpecs: sanitizeSpecs((raw as any).coreSpecs),
+    rawSpecs: sanitizeSpecs((raw as any).rawSpecs),
+    specsLocalized:
+      (raw as any).specsLocalized && typeof (raw as any).specsLocalized === 'object' && !Array.isArray((raw as any).specsLocalized)
+        ? (raw as any).specsLocalized
+        : undefined,
     mainCategorySlug: ensureString((raw as any).mainCategorySlug, 'inne'),
     subCategorySlug: ensureString((raw as any).subCategorySlug, 'inne'),
     subSubCategorySlug: ensureOptionalString((raw as any).subSubCategorySlug),
+    imageUrl: ensureOptionalString((raw as any).imageUrl),
     images: sanitizeImages((raw as any).images),
+    primaryImageHash: ensureOptionalString((raw as any).primaryImageHash),
+    videoUrl: ensureOptionalString((raw as any).videoUrl),
     reviewsSummary: sanitizeLocalizedText((raw as any).reviewsSummary),
     rating: sanitizeRating((raw as any).rating),
     ratingCard: sanitizeRatingCard((raw as any).ratingCard),
@@ -616,16 +652,36 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     bestPrice: sanitizeBestPrice((raw as any).bestPrice),
     linkedDealIds: ensureStringArray((raw as any).linkedDealIds, 100),
     searchTags: sanitizeSearchTags((raw as any).searchTags),
-    status: (raw as any).status === 'approved' ? 'approved' : 'draft',
+    seoTitle: ensureOptionalString((raw as any).seoTitle),
+    seoDescription: ensureOptionalString((raw as any).seoDescription),
+    seoTitleLocalized:
+      (raw as any).seoTitleLocalized && typeof (raw as any).seoTitleLocalized === 'object'
+        ? (raw as any).seoTitleLocalized
+        : undefined,
+    seoDescriptionLocalized:
+      (raw as any).seoDescriptionLocalized && typeof (raw as any).seoDescriptionLocalized === 'object'
+        ? (raw as any).seoDescriptionLocalized
+        : undefined,
+    slug:
+      (raw as any).slug && typeof (raw as any).slug === 'object'
+        ? (raw as any).slug
+        : undefined,
+    status: sanitizeStatus((raw as any).status),
     createdAt: ensureString((raw as any).createdAt, new Date().toISOString()),
     updatedAt: ensureString((raw as any).updatedAt, new Date().toISOString()),
     createdBy: ensureOptionalString((raw as any).createdBy),
     approvedBy: ensureOptionalString((raw as any).approvedBy),
     metadata: typeof (raw as any).metadata === 'object' ? (raw as any).metadata : undefined,
     aiQualityScore: ensureOptionalNumber((raw as any).aiQualityScore),
+    embeddings: Array.isArray((raw as any).embeddings) ? (raw as any).embeddings : undefined,
+    aiRating: ensureOptionalNumber((raw as any).aiRating),
     confidence: ensureOptionalNumber((raw as any).confidence),
     warnings: ensureStringArray((raw as any).warnings, 50),
     bestDealId: ensureOptionalString((raw as any).bestDealId),
+    bestDealType: ensureOptionalString((raw as any).bestDealType),
+    hasCoupons: (raw as any).hasCoupons === undefined ? undefined : ensureBoolean((raw as any).hasCoupons),
+    couponDealsCount: ensureOptionalNumber((raw as any).couponDealsCount),
+    bestDealCouponCode: ensureOptionalString((raw as any).bestDealCouponCode),
     bestTotalPrice: ensureOptionalNumber((raw as any).bestTotalPrice),
   } as ProductCore;
 };
