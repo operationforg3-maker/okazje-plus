@@ -31,34 +31,13 @@ export async function GET(request: Request) {
 
   try {
     if (!typesenseServerClient) {
-      // Fallback to Firestore-based autocomplete implemented here. Use a broader
-      // candidate set (recommended/hot lists) and filter in-memory to support
-      // substring matches — this improves recall when Typesense isn't present.
-      const timeoutData = new Promise((_, reject) => setTimeout(() => reject(new Error('lib/data import timeout (10s)')), 10000));
-      const dataMod = await Promise.race([import('@/lib/data'), timeoutData]) as any;
-      const { getRecommendedProducts, getHotDeals } = dataMod;
-      const normalizedQuery = q.toLowerCase().trim();
-
-      // Fetch larger candidate pools and then filter locally
-      const [productsCandidates, dealsCandidates] = await Promise.all([
-        getRecommendedProducts(200).catch(() => []),
-        getHotDeals(200).catch(() => []),
-      ]);
-
-      const out: any[] = [];
-
-      productsCandidates
-        .filter((p: any) => ((p.name || '') + ' ' + (p.description || '')).toLowerCase().includes(normalizedQuery))
-        .slice(0, limit)
-        .forEach((p: any) => out.push({ type: 'product', id: p.id, label: p.name, subLabel: p.description }));
-
-      dealsCandidates
-        .filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(normalizedQuery))
-        .slice(0, Math.max(0, limit - out.length))
-        .forEach((d: any) => out.push({ type: 'deal', id: d.id, label: d.title, subLabel: d.description }));
-
-      await cacheSet(key, out, DEFAULT_TTL);
-      return NextResponse.json(out);
+      return NextResponse.json(
+        {
+          error: 'typesense_unavailable',
+          message: 'Autouzupełnianie jest chwilowo niedostępne. Spróbuj ponownie za chwilę.',
+        },
+        { status: 503 }
+      );
     }
 
     // Use multi-search to get products + deals

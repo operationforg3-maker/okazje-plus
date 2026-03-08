@@ -175,8 +175,12 @@ export async function searchDealsTypesense(
   if (minPrice !== undefined) filters.push(`price:>=${minPrice}`);
   if (maxPrice !== undefined) filters.push(`price:<=${maxPrice}`);
   if (minTemperature !== undefined) filters.push(`temperature:>=${minTemperature}`);
-  const typesenseStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
-  filters.push(`status:=${typesenseStatus}`);
+  if (statusFilter === 'waiting_room') {
+    // final.md compatibility: support both legacy pending and canonical poczekalnia labels.
+    filters.push('status:=[pending,poczekalnia]');
+  } else {
+    filters.push('status:=approved');
+  }
   
   // Sortowanie
   let sort_by = '';

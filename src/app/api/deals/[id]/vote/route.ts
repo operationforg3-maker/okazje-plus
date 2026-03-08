@@ -15,17 +15,17 @@ const AUTO_MODERATION_APPROVE_SCORE_THRESHOLD = parseEnvInt('AUTO_MODERATION_APP
 const AUTO_MODERATION_REJECT_SCORE_THRESHOLD = parseEnvInt('AUTO_MODERATION_REJECT_SCORE_THRESHOLD', -15);
 
 function isWaitingRoomStatus(status: unknown): boolean {
-  return status === 'draft' || status === 'pending' || status === 'pending_approval';
+  return status === 'draft' || status === 'pending' || status === 'pending_approval' || status === 'poczekalnia';
 }
 
 function resolveAutoModerationStatus(
   currentStatus: unknown,
   score: number
-): 'pending' | 'approved' | 'rejected' | null {
+): 'pending' | 'poczekalnia' | 'approved' | 'rejected' | null {
   if (!isWaitingRoomStatus(currentStatus)) return null;
   if (score >= AUTO_MODERATION_APPROVE_SCORE_THRESHOLD) return 'approved';
   if (score <= AUTO_MODERATION_REJECT_SCORE_THRESHOLD) return 'rejected';
-  return 'pending';
+  return currentStatus === 'poczekalnia' ? 'poczekalnia' : 'pending';
 }
 
 function checkRateLimit(userId: string): boolean {

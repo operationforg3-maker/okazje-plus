@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsCount } from '@/lib/data';
+import { getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsCount } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib/offline-utils';
 import { Deal, Category, Product } from '@/lib/types';
@@ -331,7 +331,11 @@ export default function DealsPage() {
         const [fetchedCategories, showcaseConfig, hotDeals] = await Promise.all([
           retryWithBackoff(() => getCategoriesWithContent('deals'), 2, 500),
           retryWithBackoff(() => getNavigationShowcase(), 1, 500),
-          retryWithBackoff(() => getHotDeals(100), 2, 500), // Pobierz gorące okazje na start
+          retryWithBackoff(() => searchDealsTypesense('*', {
+            limit: 100,
+            sortBy: 'hot',
+            statusFilter: 'approved',
+          }), 2, 500), // Pobierz gorące okazje na start przez Typesense
         ]);
         
         setCategories(fetchedCategories || []);

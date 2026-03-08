@@ -101,7 +101,7 @@ function computeCounts(tree: CategoryNode[]) {
 
 function resolveInputPath(inputPath?: string): string {
   const pathFromEnv = process.env.CATEGORY_TREE_PATH;
-  const selected = inputPath || pathFromEnv || 'category-tree.full.json';
+  const selected = inputPath || pathFromEnv || 'category-tree-seo-extended.json';
   return path.isAbsolute(selected) ? selected : path.resolve(process.cwd(), selected);
 }
 

@@ -1,8 +1,103 @@
 import { NextResponse } from 'next/server';
 import typesenseServerClient from '@/lib/typesense-server';
 import { cacheGet, cacheSet, rateLimit } from '@/lib/cache';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 const DEFAULT_TTL = 60; // seconds
+
+type CategoryNode = {
+  slug?: string;
+  seoKeywords?: string[];
+  subcategories?: CategoryNode[];
+};
+
+type SeoRoutingTarget = {
+  mainCategorySlug?: string;
+  subCategorySlug?: string;
+  subSubCategorySlug?: string;
+};
+
+let seoKeywordMapCache: Map<string, SeoRoutingTarget> | null = null;
+
+function normalizeKeyword(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+async function loadSeoKeywordMap(): Promise<Map<string, SeoRoutingTarget>> {
+  if (seoKeywordMapCache) return seoKeywordMapCache;
+
+  const primaryPath = path.resolve(process.cwd(), 'category-tree-seo-extended.json');
+  const fallbackPath = path.resolve(process.cwd(), 'category-tree.full.json');
+
+  let raw: string;
+  try {
+    raw = await fs.readFile(primaryPath, 'utf8');
+  } catch {
+    raw = await fs.readFile(fallbackPath, 'utf8');
+  }
+
+  const parsed = JSON.parse(raw) as { tree?: CategoryNode[] };
+  const map = new Map<string, SeoRoutingTarget>();
+
+  const addKeywords = (keywords: string[] | undefined, target: SeoRoutingTarget) => {
+    if (!Array.isArray(keywords)) return;
+    for (const keyword of keywords) {
+      if (typeof keyword !== 'string') continue;
+      const normalized = normalizeKeyword(keyword);
+      if (!normalized) continue;
+      if (!map.has(normalized)) map.set(normalized, target);
+    }
+  };
+
+  for (const main of parsed.tree || []) {
+    const mainSlug = main.slug;
+    if (!mainSlug) continue;
+    addKeywords(main.seoKeywords, { mainCategorySlug: mainSlug });
+
+    for (const sub of main.subcategories || []) {
+      const subSlug = sub.slug;
+      if (!subSlug) continue;
+      addKeywords(sub.seoKeywords, {
+        mainCategorySlug: mainSlug,
+        subCategorySlug: subSlug,
+      });
+
+      for (const subSub of sub.subcategories || []) {
+        const subSubSlug = subSub.slug;
+        if (!subSubSlug) continue;
+        addKeywords(subSub.seoKeywords, {
+          mainCategorySlug: mainSlug,
+          subCategorySlug: subSlug,
+          subSubCategorySlug: subSubSlug,
+        });
+      }
+    }
+  }
+
+  seoKeywordMapCache = map;
+  return map;
+}
+
+async function resolveSeoRoutingTarget(queryText: string): Promise<SeoRoutingTarget | null> {
+  const normalizedQuery = normalizeKeyword(queryText);
+  if (!normalizedQuery || normalizedQuery === '*') return null;
+
+  const map = await loadSeoKeywordMap();
+  if (map.has(normalizedQuery)) return map.get(normalizedQuery) || null;
+
+  for (const [keyword, target] of map.entries()) {
+    if (normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)) {
+      return target;
+    }
+  }
+
+  return null;
+}
 
 function getIp(request: Request) {
   return (
@@ -20,9 +115,9 @@ export async function GET(request: Request) {
   const type = url.searchParams.get('type') || 'all'; // products|deals|all
   const limit = Number(url.searchParams.get('limit') || '50');
   // optional filters
-  const mainCategorySlug = url.searchParams.get('mainCategorySlug') || '';
-  const subCategorySlug = url.searchParams.get('subCategorySlug') || '';
-  const subSubCategorySlug = url.searchParams.get('subSubCategorySlug') || '';
+  let mainCategorySlug = url.searchParams.get('mainCategorySlug') || '';
+  let subCategorySlug = url.searchParams.get('subCategorySlug') || '';
+  let subSubCategorySlug = url.searchParams.get('subSubCategorySlug') || '';
   const minPrice = url.searchParams.get('minPrice');
   const maxPrice = url.searchParams.get('maxPrice');
   const minRating = url.searchParams.get('minRating');
@@ -31,6 +126,20 @@ export async function GET(request: Request) {
   const dealStatus = url.searchParams.get('status') || 'approved';
 
   if (!q || q.trim().length < 1) return NextResponse.json({ products: [], deals: [] });
+
+  // final.md: if query maps to category SEO keyword, auto-apply category filters.
+  if (!mainCategorySlug && !subCategorySlug && !subSubCategorySlug && q !== '*') {
+    try {
+      const seoTarget = await resolveSeoRoutingTarget(q);
+      if (seoTarget) {
+        mainCategorySlug = seoTarget.mainCategorySlug || '';
+        subCategorySlug = seoTarget.subCategorySlug || '';
+        subSubCategorySlug = seoTarget.subSubCategorySlug || '';
+      }
+    } catch (error) {
+      console.warn('SEO keyword routing skipped:', error);
+    }
+  }
 
   // rate-limit per IP (requires Redis). If Redis not configured, rateLimit() allows requests.
   const ip = getIp(request);
@@ -82,8 +191,11 @@ export async function GET(request: Request) {
       if (minPrice) filters.push(`price:>=${Number(minPrice)}`);
       if (maxPrice) filters.push(`price:<=${Number(maxPrice)}`);
       if (minTemperature) filters.push(`temperature:>=${Number(minTemperature)}`);
-      const mappedStatus = dealStatus === 'waiting_room' ? 'pending' : 'approved';
-      filters.push(`status:=${mappedStatus}`);
+      if (dealStatus === 'waiting_room' || dealStatus === 'poczekalnia') {
+        filters.push('status:=[pending,poczekalnia]');
+      } else {
+        filters.push('status:=approved');
+      }
 
       // Sorting
       let sort_by = '';

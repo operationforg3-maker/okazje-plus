@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Deal, LocalizedText } from '@/lib/types';
-import { getDealById, getDealsForProduct, getHotDeals, getProductCore } from '@/lib/data';
+import { getDealById, getDealsForProduct, getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
+import { searchDealsTypesense } from '@/lib/search';
 import DealDetailClient from './deal-detail-client';
 
 // Force dynamic rendering dla real-time danych
@@ -165,7 +166,11 @@ async function getDealData(id: string) {
   }
 
   if (relatedDeals.length === 0) {
-    const hotDeals = await getHotDeals(60);
+    const hotDeals = await searchDealsTypesense('*', {
+      limit: 60,
+      sortBy: 'hot',
+      statusFilter: 'approved',
+    });
     relatedDeals = hotDeals
       .filter((d) => d.id !== id)
       .filter((d) => {
@@ -281,7 +286,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // Optional: Generate static params for hot deals
 export async function generateStaticParams() {
   try {
-    const deals = await getHotDeals(100);
+    const deals = await searchDealsTypesense('*', {
+      limit: 100,
+      sortBy: 'hot',
+      statusFilter: 'approved',
+    });
     return deals.map(deal => ({ id: deal.id }));
   } catch (error) {
     console.error('Error generating static params:', error);

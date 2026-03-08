@@ -96,7 +96,7 @@ function computeCounts(tree: CategoryNode[]) {
 }
 
 function loadTreeFromFile(): CategoryTreeFile {
-  const inputPath = process.env.CATEGORY_TREE_PATH || 'category-tree.full.json';
+  const inputPath = process.env.CATEGORY_TREE_PATH || 'category-tree-seo-extended.json';
   const absolutePath = path.isAbsolute(inputPath)
     ? inputPath
     : path.resolve(process.cwd(), inputPath);
