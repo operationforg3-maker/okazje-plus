@@ -42,6 +42,36 @@ function initTypesenseAdmin() {
   });
 }
 
+function toFloat(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const normalized = value.replace(',', '.').replace(/[^0-9.-]/g, '');
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  if (value && typeof value === 'object') {
+    const maybeAmount = (value as { amount?: unknown }).amount;
+    return toFloat(maybeAmount, fallback);
+  }
+  return fallback;
+}
+
+function toInt(value: unknown, fallback = 0): number {
+  const parsed = Math.round(toFloat(value, fallback));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toText(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return fallback;
+  }
+}
+
 async function ensureProductsSchema(client: any) {
   const schema = {
     name: 'products',
@@ -52,13 +82,13 @@ async function ensureProductsSchema(client: any) {
       { name: 'longDescription', type: 'string', optional: true },
       { name: 'image', type: 'string', optional: true },
       { name: 'affiliateUrl', type: 'string', optional: true },
-      { name: 'price', type: 'float', optional: true },
+      { name: 'price', type: 'float' },
       { name: 'originalPrice', type: 'float', optional: true },
       { name: 'mainCategorySlug', type: 'string', facet: true },
       { name: 'subCategorySlug', type: 'string', facet: true },
       { name: 'subSubCategorySlug', type: 'string', facet: true, optional: true },
       { name: 'status', type: 'string', facet: true },
-      { name: 'ratingCard_average', type: 'float', optional: true },
+      { name: 'ratingCard_average', type: 'float' },
       { name: 'ratingCard_count', type: 'int32', optional: true },
     ],
     default_sorting_field: 'ratingCard_average',
@@ -79,13 +109,13 @@ async function ensureDealsSchema(client: any) {
       { name: 'id', type: 'string' },
       { name: 'title', type: 'string' },
       { name: 'description', type: 'string' },
-      { name: 'price', type: 'float', optional: true },
+      { name: 'price', type: 'float' },
       { name: 'originalPrice', type: 'float', optional: true },
       { name: 'mainCategorySlug', type: 'string', facet: true },
       { name: 'subCategorySlug', type: 'string', facet: true },
       { name: 'subSubCategorySlug', type: 'string', facet: true, optional: true },
       { name: 'status', type: 'string', facet: true },
-      { name: 'temperature', type: 'int32', optional: true },
+      { name: 'temperature', type: 'int32' },
       { name: 'voteCount', type: 'int32', optional: true },
       { name: 'postedBy', type: 'string', optional: true },
     ],
@@ -108,17 +138,17 @@ async function fetchApprovedDeals(): Promise<any[]> {
 function mapDealForIndex(d: any) {
   return {
     id: d.id,
-    title: d.title,
-    description: d.description,
-    price: d.price,
+    title: toText(d.title),
+    description: toText(d.description),
+    price: toFloat(d.price, 0),
     originalPrice: d.originalPrice,
-    mainCategorySlug: d.mainCategorySlug,
-    subCategorySlug: d.subCategorySlug,
-    subSubCategorySlug: d.subSubCategorySlug,
-    status: d.status,
-    temperature: d.temperature,
-    voteCount: d.voteCount,
-    postedBy: d.postedBy,
+    mainCategorySlug: toText(d.mainCategorySlug),
+    subCategorySlug: toText(d.subCategorySlug),
+    subSubCategorySlug: toText(d.subSubCategorySlug),
+    status: toText(d.status),
+    temperature: toInt(d.temperature, 0),
+    voteCount: toInt(d.voteCount, 0),
+    postedBy: toText(d.postedBy),
   };
 }
 
@@ -140,19 +170,19 @@ async function fetchApprovedProducts(): Promise<any[]> {
 function mapProductForIndex(p: any) {
   return {
     id: p.id,
-    name: p.name,
-    description: p.description,
-    longDescription: p.longDescription,
-    image: p.image,
-    affiliateUrl: p.affiliateUrl,
-    price: p.price,
+    name: toText(p.name),
+    description: toText(p.description),
+    longDescription: toText(p.longDescription),
+    image: toText(p.image),
+    affiliateUrl: toText(p.affiliateUrl),
+    price: toFloat(p.price, 0),
     originalPrice: p.originalPrice,
-    mainCategorySlug: p.mainCategorySlug,
-    subCategorySlug: p.subCategorySlug,
-    subSubCategorySlug: p.subSubCategorySlug,
-    status: p.status,
-    ratingCard_average: p.ratingCard?.average,
-    ratingCard_count: p.ratingCard?.count,
+    mainCategorySlug: toText(p.mainCategorySlug),
+    subCategorySlug: toText(p.subCategorySlug),
+    subSubCategorySlug: toText(p.subSubCategorySlug),
+    status: toText(p.status),
+    ratingCard_average: toFloat(p.ratingCard?.average, 0),
+    ratingCard_count: toInt(p.ratingCard?.count, 0),
   };
 }
 

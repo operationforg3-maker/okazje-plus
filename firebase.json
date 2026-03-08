@@ -1,6 +1,10 @@
 {
   "hosting": {
     "source": ".",
+    "frameworksBackend": {
+      "region": "us-central1",
+      "memory": "1GiB"
+    },
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -25,5 +29,8 @@
         "npm --prefix \"$RESOURCE_DIR\" run build"
       ]
     }
-  ]
+  ],
+  "extensions": {
+    "firestore-typesense-search": "typesense/firestore-typesense-search@2.1.0"
+  }
 }
