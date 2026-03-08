@@ -1386,7 +1386,7 @@ export class SmartHarvester {
       voteCount: 0,
       temperature: 0,
       commentsCount: 0,
-      status: 'pending',
+      status: 'poczekalnia',
       createdAt: now,
       updatedAt: now,
       sourceProductId: sourceProduct.sourceProductId,

@@ -431,7 +431,7 @@ export default function DealsPage() {
           categoryId: selectedMainCategorySlug,
           subCategorySlug: selectedSubcategory || undefined,
           subSubCategorySlug: selectedSubSubcategory || undefined,
-          status: dealStatusView === 'waiting_room' ? 'pending' : 'approved',
+          status: dealStatusView === 'waiting_room' ? 'poczekalnia' : 'approved',
         }), 2, 500);
 
         if (!cancelled) setTotalDealsCount(count);

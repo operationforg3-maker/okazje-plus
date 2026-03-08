@@ -25,7 +25,7 @@ function resolveAutoModerationStatus(
   if (!isWaitingRoomStatus(currentStatus)) return null;
   if (score >= AUTO_MODERATION_APPROVE_SCORE_THRESHOLD) return 'approved';
   if (score <= AUTO_MODERATION_REJECT_SCORE_THRESHOLD) return 'rejected';
-  return currentStatus === 'poczekalnia' ? 'poczekalnia' : 'pending';
+  return 'poczekalnia';
 }
 
 function checkRateLimit(userId: string): boolean {
