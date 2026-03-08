@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
-import { Home, Hourglass, PlusCircle, Heart, User } from 'lucide-react';
+import { Home, Hourglass, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type BottomNavItem = {
@@ -36,23 +36,16 @@ export function BottomTabBar() {
       isActive: (p, sp) => p === `${prefix}/deals` && sp.get('status') === 'waiting_room',
     },
     {
-      key: 'add-deal',
-      href: `${prefix}/add-deal`,
-      label: 'Dodaj',
-      icon: PlusCircle,
-      isActive: (p) => p === `${prefix}/add-deal`,
+      key: 'search',
+      href: `${prefix}/search`,
+      label: 'Szukaj',
+      icon: Search,
+      isActive: (p) => p === `${prefix}/search`,
     },
     {
-      key: 'favorites',
-      href: `${prefix}/profile?tab=favorites`,
-      label: 'Ulubione',
-      icon: Heart,
-      isActive: (p, sp) => p === `${prefix}/profile` && sp.get('tab') === 'favorites',
-    },
-    {
-      key: 'profile',
+      key: 'account',
       href: `${prefix}/profile`,
-      label: 'Profil',
+      label: 'Konto',
       icon: User,
       isActive: (p) => p === `${prefix}/profile` || p.startsWith(`${prefix}/profile/`),
     },
@@ -63,7 +56,7 @@ export function BottomTabBar() {
       className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:hidden"
       aria-label="Nawigacja mobilna"
     >
-      <ul className="mx-auto grid h-16 max-w-screen-sm grid-cols-5 px-1">
+      <ul className="mx-auto grid h-16 max-w-screen-sm grid-cols-4 px-1">
         {items.map((item) => {
           const Icon = item.icon;
           const active = item.isActive

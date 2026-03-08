@@ -1076,7 +1076,7 @@ function DealCard({ deal, product }: DealCardProps) {
               }
             }}
             aria-label={t('cart.addToCart')}
-            className="h-8 w-8"
+            className="h-11 w-11"
           >
             <ShoppingCart className="h-4 w-4" />
           </Button>
@@ -1088,13 +1088,13 @@ function DealCard({ deal, product }: DealCardProps) {
               variant="button"
             />
           ) : dealExternalUrl ? (
-            <Button asChild size="icon" className="h-8 w-8 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
+            <Button asChild size="icon" className="h-11 w-11 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
               <a href={dealExternalUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                 <ArrowUp className="h-4 w-4 rotate-90" />
               </a>
             </Button>
           ) : (
-            <Button size="icon" className="h-8 w-8 bg-emerald-600 text-white opacity-80" aria-label={t('actions.goTo')} disabled>
+            <Button size="icon" className="h-11 w-11 bg-emerald-600 text-white opacity-80" aria-label={t('actions.goTo')} disabled>
               <ArrowUp className="h-4 w-4 rotate-90" />
             </Button>
           )}
@@ -1103,7 +1103,7 @@ function DealCard({ deal, product }: DealCardProps) {
               asChild
               variant="outline"
               size="icon"
-              className="h-8 w-8"
+              className="h-11 w-11"
               aria-label="Zobacz produkt"
               onClick={(e) => {
                 e.preventDefault();

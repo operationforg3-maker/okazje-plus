@@ -15,7 +15,9 @@ export function ConditionalNav({ children }: { children: React.ReactNode }) {
       >
         Przejdź do głównej zawartości
       </a>
-      <Navbar />
+      <div className="hidden md:block">
+        <Navbar />
+      </div>
       <main id="main-content" className="flex-1 pb-20 md:pb-0" role="main">
         {children}
       </main>

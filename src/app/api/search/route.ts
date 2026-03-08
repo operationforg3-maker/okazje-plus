@@ -15,7 +15,8 @@ function getIp(request: Request) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const q = url.searchParams.get('q') || '';
+  const qParam = (url.searchParams.get('q') || '').trim();
+  const q = qParam.length > 0 ? qParam : '*';
   const type = url.searchParams.get('type') || 'all'; // products|deals|all
   const limit = Number(url.searchParams.get('limit') || '50');
   // optional filters
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
   const minRating = url.searchParams.get('minRating');
   const minTemperature = url.searchParams.get('minTemperature');
   const sort = url.searchParams.get('sort') || '';
+  const dealStatus = url.searchParams.get('status') || 'approved';
 
   if (!q || q.trim().length < 1) return NextResponse.json({ products: [], deals: [] });
 
@@ -35,7 +37,7 @@ export async function GET(request: Request) {
   const allowed = await rateLimit(ip, 60, 60);
   if (!allowed) return NextResponse.json({ error: 'rate_limited', message: 'Too many requests' }, { status: 429 });
 
-  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}`;
+  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}:${dealStatus}`;
   const cached = await cacheGet(key);
   if (cached) return NextResponse.json(cached as any);
 
@@ -85,7 +87,11 @@ export async function GET(request: Request) {
 
       if (type !== 'products') {
         try {
-          deals = (await (searchDeals ? searchDeals(q) : Promise.resolve([]))) || [];
+          if (q === '*') {
+            deals = (await dataMod.getDealsByFilters?.({ statusFilter: dealStatus === 'waiting_room' ? 'waiting_room' : 'approved' }, sort || 'hot', limit)) || [];
+          } else {
+            deals = (await (searchDeals ? searchDeals(q) : Promise.resolve([]))) || [];
+          }
         } catch (err) {
           deals = [];
         }
@@ -93,7 +99,10 @@ export async function GET(request: Request) {
           const candidates = await getHotDeals(200);
           const nq = q.toLowerCase();
           // Apply optional filters for fallback path
-          let filtered = candidates.filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(nq));
+          let filtered = q === '*'
+            ? candidates
+            : candidates.filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(nq));
+          filtered = filtered.filter((d: any) => dealStatus === 'waiting_room' ? d.status === 'pending' : d.status === 'approved');
           if (mainCategorySlug) filtered = filtered.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
           if (subCategorySlug) filtered = filtered.filter((d: any) => d.subCategorySlug === subCategorySlug);
             if (subSubCategorySlug) filtered = filtered.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
@@ -156,7 +165,8 @@ export async function GET(request: Request) {
       if (minPrice) filters.push(`price:>=${Number(minPrice)}`);
       if (maxPrice) filters.push(`price:<=${Number(maxPrice)}`);
       if (minTemperature) filters.push(`temperature:>=${Number(minTemperature)}`);
-      filters.push(`status:=approved`);
+      const mappedStatus = dealStatus === 'waiting_room' ? 'pending' : 'approved';
+      filters.push(`status:=${mappedStatus}`);
 
       // Sorting
       let sort_by = '';

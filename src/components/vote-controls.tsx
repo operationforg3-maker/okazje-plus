@@ -18,8 +18,12 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
   const { user } = useAuth();
   const t = useTranslations('common');
   const [isLoading, setIsLoading] = useState(false);
-  // Stan dla licznika głosów będzie potrzebny, jeśli będziemy go aktualizować w czasie rzeczywistym
-  // Na razie polegamy na initialVoteCount
+  const [voteCount, setVoteCount] = useState(initialVoteCount);
+  const [userVote, setUserVote] = useState<1 | -1 | null>(null);
+
+  useEffect(() => {
+    setVoteCount(initialVoteCount);
+  }, [initialVoteCount]);
 
   const handleVote = useCallback(async (direction: 'up' | 'down') => {
     if (!user) {
@@ -27,6 +31,13 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       return;
     }
 
+    const prevVote = userVote;
+    const nextVote: 1 | -1 = direction === 'up' ? 1 : -1;
+    const delta = prevVote === nextVote ? 0 : prevVote === null ? nextVote : nextVote - prevVote;
+
+    // Optimistic update for instant feedback on mobile and desktop.
+    setUserVote(nextVote);
+    if (delta !== 0) setVoteCount((prev) => prev + delta);
     setIsLoading(true);
     try {
       // Pobierz Firebase Auth token z aktualnego użytkownika Firebase
@@ -51,6 +62,9 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       const json = await res.json();
       
       if (!res.ok || !json.success) {
+        // Rollback optimistic update on API-level failure.
+        setUserVote(prevVote);
+        if (delta !== 0) setVoteCount((prev) => prev - delta);
         if (res.status === 429) {
           toast.error('Zbyt wiele głosów - poczekaj chwilę');
         } else if (res.status === 401) {
@@ -63,6 +77,12 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
 
       // Update UI based on server response
       setIsLoading(false);
+      if (typeof json.voteCount === 'number') {
+        setVoteCount(json.voteCount);
+      }
+      if (json.userVote === 1 || json.userVote === -1 || json.userVote === null) {
+        setUserVote(json.userVote);
+      }
       
       // Notify other components to refresh deal data
       try {
@@ -80,6 +100,9 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       toast.success(`Głos ${direction === 'up' ? 'za' : 'przeciw'} został zapisany`);
       
     } catch (error) {
+      // Rollback optimistic update on network/runtime errors.
+      setUserVote(prevVote);
+      if (delta !== 0) setVoteCount((prev) => prev - delta);
       console.error("Błąd podczas głosowania:", error);
       toast.error(t('errors.voteError'));
     } finally {
@@ -90,14 +113,22 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    const onSwipeUpvote = (event: Event) => {
+      const custom = event as CustomEvent<{ dealId?: string }>;
+      if (custom.detail?.dealId !== dealId) return;
+      void handleVote('up');
+    };
+
     const onSwipeDownvote = (event: Event) => {
       const custom = event as CustomEvent<{ dealId?: string }>;
       if (custom.detail?.dealId !== dealId) return;
       void handleVote('down');
     };
 
+    window.addEventListener('deal-swipe-upvote', onSwipeUpvote as EventListener);
     window.addEventListener('deal-swipe-downvote', onSwipeDownvote as EventListener);
     return () => {
+      window.removeEventListener('deal-swipe-upvote', onSwipeUpvote as EventListener);
       window.removeEventListener('deal-swipe-downvote', onSwipeDownvote as EventListener);
     };
   }, [dealId, handleVote]);
@@ -110,16 +141,18 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
         aria-label="Głosuj za"
         onClick={() => handleVote('up')}
         disabled={isLoading}
+        className={userVote === 1 ? 'text-green-600 bg-green-100/80 hover:bg-green-100' : undefined}
       >
         <ArrowUp className="h-5 w-5" />
       </Button>
-      <span className="font-bold text-lg">{initialVoteCount}</span>
+      <span className="font-bold text-lg">{voteCount}</span>
       <Button
         variant="ghost"
         size="icon"
         aria-label="Głosuj przeciw"
         onClick={() => handleVote('down')}
         disabled={isLoading}
+        className={userVote === -1 ? 'text-red-600 bg-red-100/80 hover:bg-red-100' : undefined}
       >
         <ArrowDown className="h-5 w-5" />
       </Button>

@@ -41,10 +41,17 @@ export async function POST(request: NextRequest) {
 
     // Zaktualizuj status
     const newStatus = action === "approve" ? "approved" : "rejected";
-    await itemRef.update({
+    const updatePayload: Record<string, unknown> = {
       status: newStatus,
       updatedAt: FieldValue.serverTimestamp(),
-    });
+    };
+
+    if (itemType === 'deal' && action === 'approve') {
+      updatePayload.approvedAt = new Date().toISOString();
+      updatePayload.promotedAt = new Date().toISOString();
+    }
+
+    await itemRef.update(updatePayload);
 
     // Gdy admin ręcznie zatwierdza deala, zsynchronizuj powiązany ProductCore.
     if (itemType === 'deal' && action === 'approve' && beforeSnap.exists) {

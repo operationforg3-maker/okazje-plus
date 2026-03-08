@@ -117,7 +117,8 @@ export type DealSearchOptions = {
   maxPrice?: number;
   minTemperature?: number;
   limit?: number;
-  sortBy?: 'relevance' | 'temperature' | 'price_asc' | 'price_desc' | 'newest';
+  sortBy?: 'relevance' | 'temperature' | 'hot' | 'price_asc' | 'price_desc' | 'newest' | 'discount_desc' | 'popularity';
+  statusFilter?: 'approved' | 'waiting_room';
 };
 
 export async function searchDealsTypesense(
@@ -132,14 +133,16 @@ export async function searchDealsTypesense(
     maxPrice,
     minTemperature,
     sortBy = 'relevance',
-    limit = 50 
+    limit = 50,
+    statusFilter = 'approved',
   } = opts;
+  const query = q.trim().length > 0 ? q : '*';
   
   // If running in browser, prefer server-side API (centralized caching / rate-limiting)
   if (typeof window !== 'undefined') {
     try {
       const params = new URLSearchParams();
-      params.set('q', q);
+      params.set('q', query);
       params.set('type', 'deals');
       params.set('limit', String(limit));
       if (mainCategorySlug) params.set('mainCategorySlug', String(mainCategorySlug));
@@ -149,6 +152,7 @@ export async function searchDealsTypesense(
       if (maxPrice !== undefined) params.set('maxPrice', String(maxPrice));
       if (minTemperature !== undefined) params.set('minTemperature', String(minTemperature));
       if (sortBy) params.set('sort', sortBy);
+      params.set('status', statusFilter);
       const res = await fetch(`/api/search?${params.toString()}`);
       if (!res.ok) return [];
       const body = await res.json();
@@ -159,10 +163,16 @@ export async function searchDealsTypesense(
   }
 
   if (!typesenseClient) {
-    // Brak Typesense — użyj Firestore fallback (searchDeals z data.ts)
+    // Brak Typesense — użyj Firestore fallback.
     try {
-      const { searchDeals } = await import('@/lib/data');
-      const fallbackResults = await searchDeals(q);
+      const { getDealsByFilters, searchDeals } = await import('@/lib/data');
+      if (query === '*') {
+        return await getDealsByFilters({ statusFilter }, sortBy as any, limit);
+      }
+      if (statusFilter === 'waiting_room') {
+        return await getDealsByFilters({ searchTerm: query, statusFilter: 'waiting_room' }, sortBy as any, limit);
+      }
+      const fallbackResults = await searchDeals(query);
       return fallbackResults;
     } catch (e) {
       console.warn('Firestore fallback for deals search failed:', e);
@@ -177,12 +187,14 @@ export async function searchDealsTypesense(
   if (minPrice !== undefined) filters.push(`price:>=${minPrice}`);
   if (maxPrice !== undefined) filters.push(`price:<=${maxPrice}`);
   if (minTemperature !== undefined) filters.push(`temperature:>=${minTemperature}`);
-  filters.push(`status:=approved`);
+  const typesenseStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
+  filters.push(`status:=${typesenseStatus}`);
   
   // Sortowanie
   let sort_by = '';
   switch (sortBy) {
     case 'temperature':
+    case 'hot':
       sort_by = 'temperature:desc';
       break;
     case 'price_asc':
@@ -194,13 +206,19 @@ export async function searchDealsTypesense(
     case 'newest':
       sort_by = 'postedAt:desc';
       break;
+    case 'popularity':
+      sort_by = 'voteCount:desc';
+      break;
+    case 'discount_desc':
+      sort_by = 'discountPercent:desc';
+      break;
     default:
       sort_by = '_text_match:desc'; // relevance
   }
   
   try {
     const res = await typesenseClient.collections('deals').documents().search({
-      q,
+      q: query,
       query_by: 'title,description,postedBy',
       filter_by: filters.join(' && '),
       sort_by,

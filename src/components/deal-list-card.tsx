@@ -251,7 +251,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
         <div className="absolute right-2 bottom-2">
           <AdminEditButton
             onClick={() => setEditDialogOpen(true)}
-            className="h-8 w-8 rounded-full bg-white/90 shadow-md hover:bg-white"
+            className="h-11 w-11 rounded-full bg-white/90 shadow-md hover:bg-white"
             tooltip="Edytuj deal (admin)"
           />
         </div>
@@ -357,7 +357,7 @@ export default function DealListCard({ deal }: DealListCardProps) {
               }}
               aria-label={isFavorited ? t('auth.removeFromFavorites') : t('auth.addToFavorites')}
               disabled={isFavoriteLoading}
-              className={isFavorited ? "h-9 w-9 p-0 bg-red-500 hover:bg-red-600" : "h-9 w-9 p-0"}
+              className={isFavorited ? "h-11 w-11 p-0 bg-red-500 hover:bg-red-600" : "h-11 w-11 p-0"}
             >
               <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
             </Button>

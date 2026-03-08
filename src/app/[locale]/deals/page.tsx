@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsByFilters, getDealsCount } from '@/lib/data';
+import { getHotDeals, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsCount } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib/offline-utils';
 import { Deal, Category, Product } from '@/lib/types';
@@ -21,7 +21,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List as ListIcon, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FixedSizeList as VirtualizedList } from 'react-window';
+import { List as VirtualizedList } from 'react-window';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SortSelect } from '@/components/sort-select';
@@ -380,39 +380,17 @@ export default function DealsPage() {
         }
         
         const q = searchTerm.trim();
-        if (q.length > 1) {
-          if (dealStatusView === 'approved') {
-            // Wyszukiwanie approved w Typesense
-            const results = await retryWithBackoff(() => searchDealsTypesense(q, {
-              mainCategorySlug: selectedMainCategorySlug,
-              subCategorySlug: selectedSubcategory || undefined,
-              subSubCategorySlug: selectedSubSubcategory || undefined,
-              limit: 100,
-            }), 1, 500);
-            if (!cancelled) setDeals(results || []);
-          } else {
-            // Dla poczekalni używamy Firestore, żeby uwzględnić status pending
-            const waitingDeals = await retryWithBackoff(() => getDealsByFilters({
-              categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
-              subCategorySlug: selectedSubcategory || undefined,
-              subSubCategorySlug: selectedSubSubcategory || undefined,
-              searchTerm: q,
-              statusFilter: 'waiting_room',
-            }, sortBy, 100), 2, 500);
-            if (!cancelled) setDeals(waitingDeals || []);
-          }
-        } else {
-          // Użyj zunifiowanych filtrów do pobierania dealów
-          const filterConfig = {
-            ...unifiedFilters,
-            categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
-            subCategorySlug: selectedSubcategory || undefined,
-            subSubCategorySlug: selectedSubSubcategory || undefined,
-            statusFilter: dealStatusView,
-          };
-          const filteredDeals = await retryWithBackoff(() => getDealsByFilters(filterConfig, sortBy, 100), 2, 500);
-          if (!cancelled) setDeals(filteredDeals || []);
-        }
+        const typesenseSort = sortBy === 'hot' ? 'hot' : sortBy === 'newest' ? 'newest' : sortBy === 'price_asc' ? 'price_asc' : sortBy === 'price_desc' ? 'price_desc' : 'relevance';
+        const results = await retryWithBackoff(() => searchDealsTypesense(q.length > 1 ? q : '*', {
+          mainCategorySlug: selectedMainCategorySlug,
+          subCategorySlug: selectedSubcategory || undefined,
+          subSubCategorySlug: selectedSubSubcategory || undefined,
+          limit: 100,
+          sortBy: typesenseSort as any,
+          statusFilter: dealStatusView,
+        }), 2, 500);
+
+        if (!cancelled) setDeals(results || []);
       } catch (error) {
         console.error('[DealsPage] Error fetching deals:', error);
         if (isOfflineError(error)) {
@@ -746,13 +724,49 @@ export default function DealsPage() {
 
     if (!isMobile || !isWaitingRoomList) return;
 
-    // Swipe left to downvote (M6 touch-first waiting room behavior).
+    // Swipe right to upvote and left to downvote (M6 touch-first waiting room behavior).
+    if (deltaX >= 90 && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('deal-swipe-upvote', { detail: { dealId } })
+      );
+      toast.success('Przesunięto w prawo: oddano głos za');
+      return;
+    }
+
     if (deltaX <= -90 && typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('deal-swipe-downvote', { detail: { dealId } })
       );
       toast.success('Przesunięto w lewo: oddano głos przeciw');
     }
+  };
+
+  const WaitingRoomVirtualRow = ({
+    index,
+    style,
+    dealsList,
+    cardClass,
+  }: {
+    index: number;
+    style: React.CSSProperties;
+    dealsList: Deal[];
+    cardClass: string;
+  }) => {
+    const deal = dealsList[index];
+    if (!deal) return null;
+
+    return (
+      <div
+        style={style}
+        className="px-1 pb-3"
+        onTouchStart={(event) => handleSwipeStart(deal.id, event.changedTouches[0]?.clientX ?? 0)}
+        onTouchEnd={(event) => handleSwipeEnd(deal.id, event.changedTouches[0]?.clientX ?? 0)}
+      >
+        <div className={cardClass}>
+          <DealListCard deal={deal} />
+        </div>
+      </div>
+    );
   };
 
   // Sidebar Content (reusable for desktop and mobile) – na wzór strony produktów
@@ -1230,30 +1244,13 @@ export default function DealsPage() {
                       shouldUseVirtualizedWaitingRoom ? (
                         <div className="rounded-lg border border-border/60 bg-background/30">
                           <VirtualizedList
-                            height={mobileListHeight}
-                            width="100%"
-                            itemCount={filteredAndSortedDeals.length}
-                            itemSize={waitingRoomItemSize}
+                            style={{ height: mobileListHeight, width: '100%' }}
+                            rowCount={filteredAndSortedDeals.length}
+                            rowHeight={waitingRoomItemSize}
                             overscanCount={4}
-                          >
-                            {({ index, style }) => {
-                              const deal = filteredAndSortedDeals[index];
-                              if (!deal) return null;
-
-                              return (
-                                <div
-                                  style={style}
-                                  className="px-1 pb-3"
-                                  onTouchStart={(event) => handleSwipeStart(deal.id, event.changedTouches[0]?.clientX ?? 0)}
-                                  onTouchEnd={(event) => handleSwipeEnd(deal.id, event.changedTouches[0]?.clientX ?? 0)}
-                                >
-                                  <div className={cardWrapperClass}>
-                                    <DealListCard deal={deal} />
-                                  </div>
-                                </div>
-                              );
-                            }}
-                          </VirtualizedList>
+                            rowComponent={WaitingRoomVirtualRow as any}
+                            rowProps={{ dealsList: filteredAndSortedDeals, cardClass: cardWrapperClass }}
+                          />
                         </div>
                       ) : (
                         <div className={listWrapperClass}>

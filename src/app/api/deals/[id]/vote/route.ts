@@ -11,9 +11,8 @@ function parseEnvInt(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-const AUTO_MODERATION_MIN_VOTES = parseEnvInt('AUTO_MODERATION_MIN_VOTES', 8);
-const AUTO_MODERATION_APPROVE_THRESHOLD = parseEnvInt('AUTO_MODERATION_APPROVE_THRESHOLD', 4);
-const AUTO_MODERATION_REJECT_THRESHOLD = parseEnvInt('AUTO_MODERATION_REJECT_THRESHOLD', -4);
+const AUTO_MODERATION_APPROVE_SCORE_THRESHOLD = parseEnvInt('AUTO_MODERATION_APPROVE_SCORE_THRESHOLD', 15);
+const AUTO_MODERATION_REJECT_SCORE_THRESHOLD = parseEnvInt('AUTO_MODERATION_REJECT_SCORE_THRESHOLD', -15);
 
 function isWaitingRoomStatus(status: unknown): boolean {
   return status === 'draft' || status === 'pending' || status === 'pending_approval';
@@ -21,13 +20,11 @@ function isWaitingRoomStatus(status: unknown): boolean {
 
 function resolveAutoModerationStatus(
   currentStatus: unknown,
-  voteCount: number,
-  temperature: number
+  score: number
 ): 'pending' | 'approved' | 'rejected' | null {
   if (!isWaitingRoomStatus(currentStatus)) return null;
-  if (voteCount < AUTO_MODERATION_MIN_VOTES) return 'pending';
-  if (temperature >= AUTO_MODERATION_APPROVE_THRESHOLD) return 'approved';
-  if (temperature <= AUTO_MODERATION_REJECT_THRESHOLD) return 'rejected';
+  if (score >= AUTO_MODERATION_APPROVE_SCORE_THRESHOLD) return 'approved';
+  if (score <= AUTO_MODERATION_REJECT_SCORE_THRESHOLD) return 'rejected';
   return 'pending';
 }
 
@@ -206,7 +203,7 @@ export async function POST(
 
       const nextTemperature = currentTemperature + temperatureChange;
       const nextVoteCount = currentVoteCount + voteCountChange;
-      const autoModerationStatus = resolveAutoModerationStatus(currentStatus, nextVoteCount, nextTemperature);
+      const autoModerationStatus = resolveAutoModerationStatus(currentStatus, nextVoteCount);
 
       const dealUpdatePayload: Record<string, unknown> = {
         temperature: FieldValue.increment(temperatureChange),
@@ -219,6 +216,7 @@ export async function POST(
         dealUpdatePayload.status = autoModerationStatus;
         if (autoModerationStatus === 'approved') {
           dealUpdatePayload.approvedAt = new Date().toISOString();
+          dealUpdatePayload.promotedAt = new Date().toISOString();
         }
         if (autoModerationStatus === 'rejected') {
           dealUpdatePayload.rejectedAt = new Date().toISOString();
