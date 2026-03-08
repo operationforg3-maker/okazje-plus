@@ -46,6 +46,28 @@ export async function POST(request: NextRequest) {
       updatedAt: FieldValue.serverTimestamp(),
     });
 
+    // Gdy admin ręcznie zatwierdza deala, zsynchronizuj powiązany ProductCore.
+    if (itemType === 'deal' && action === 'approve' && beforeSnap.exists) {
+      const dealData = beforeSnap.data() as any;
+      const productCoreId = dealData?.productCoreId || dealData?.productId;
+
+      if (productCoreId) {
+        const productRef = adminDb.collection('product_cores').doc(String(productCoreId));
+        const productSnap = await productRef.get();
+
+        if (productSnap.exists) {
+          const productStatus = productSnap.data()?.status;
+          if (productStatus === 'pending_approval' || productStatus === 'draft') {
+            await productRef.update({
+              status: 'approved',
+              approvedAt: new Date().toISOString(),
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      }
+    }
+
     // Log moderation action
     try {
       await adminDb.collection('moderation_log').add({
