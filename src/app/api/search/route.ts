@@ -43,98 +43,15 @@ export async function GET(request: Request) {
 
   try {
     if (!typesenseServerClient) {
-      // Fallback to Firestore search. First try the existing fast helpers (which use
-      // indexed range queries). If they return nothing (because the query is a
-      // substring or starts later in the title), perform a broader in-memory
-      // filter over a larger set (recommended/hot) to improve recall.
-      const timeoutData = new Promise((_, reject) => setTimeout(() => reject(new Error('lib/data import timeout (10s)')), 10000));
-      const dataMod = await Promise.race([import('@/lib/data'), timeoutData]) as any;
-      const { searchProducts, searchDeals, getRecommendedProducts, getHotDeals } = dataMod;
-
-      let products: any[] = [];
-      let deals: any[] = [];
-
-      if (type !== 'deals') {
-        try {
-          products = (await searchProducts(q)) || [];
-        } catch (err) {
-          products = [];
-        }
-        if (products && products.length > 0) {
-          if (mainCategorySlug) products = products.filter((p: any) => p.mainCategorySlug === mainCategorySlug);
-          if (subCategorySlug) products = products.filter((p: any) => p.subCategorySlug === subCategorySlug);
-          if (subSubCategorySlug) products = products.filter((p: any) => p.subSubCategorySlug === subSubCategorySlug);
-          if (minPrice) products = products.filter((p: any) => typeof p.price === 'number' && p.price >= Number(minPrice));
-          if (maxPrice) products = products.filter((p: any) => typeof p.price === 'number' && p.price <= Number(maxPrice));
-          if (minRating) products = products.filter((p: any) => (p.ratingCard?.average || 0) >= Number(minRating));
-        }
-        if (!products || products.length === 0) {
-          // Broader scan (limited) with substring match
-          const candidates = await getRecommendedProducts(200);
-          const nq = q.toLowerCase();
-          let filtered = candidates.filter((p: any) => ((p.name || '') + ' ' + (p.description || '')).toLowerCase().includes(nq));
-          if (mainCategorySlug) filtered = filtered.filter((p: any) => p.mainCategorySlug === mainCategorySlug);
-          if (subCategorySlug) filtered = filtered.filter((p: any) => p.subCategorySlug === subCategorySlug);
-          if (subSubCategorySlug) filtered = filtered.filter((p: any) => p.subSubCategorySlug === subSubCategorySlug);
-          if (minPrice) filtered = filtered.filter((p: any) => typeof p.price === 'number' && p.price >= Number(minPrice));
-          if (maxPrice) filtered = filtered.filter((p: any) => typeof p.price === 'number' && p.price <= Number(maxPrice));
-          if (minRating) filtered = filtered.filter((p: any) => (p.ratingCard?.average || 0) >= Number(minRating));
-          products = filtered.slice(0, limit);
-        } else {
-          products = products.slice(0, limit);
-        }
-      }
-
-      if (type !== 'products') {
-        try {
-          if (q === '*') {
-            deals = (await dataMod.getDealsByFilters?.({ statusFilter: dealStatus === 'waiting_room' ? 'waiting_room' : 'approved' }, sort || 'hot', limit)) || [];
-          } else {
-            deals = (await (searchDeals ? searchDeals(q) : Promise.resolve([]))) || [];
-          }
-        } catch (err) {
-          deals = [];
-        }
-        if (!deals || deals.length === 0) {
-          const candidates = await getHotDeals(200);
-          const nq = q.toLowerCase();
-          // Apply optional filters for fallback path
-          let filtered = q === '*'
-            ? candidates
-            : candidates.filter((d: any) => ((d.title || '') + ' ' + (d.description || '')).toLowerCase().includes(nq));
-          filtered = filtered.filter((d: any) => dealStatus === 'waiting_room' ? d.status === 'pending' : d.status === 'approved');
-          if (mainCategorySlug) filtered = filtered.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
-          if (subCategorySlug) filtered = filtered.filter((d: any) => d.subCategorySlug === subCategorySlug);
-            if (subSubCategorySlug) filtered = filtered.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
-          if (minPrice) filtered = filtered.filter((d: any) => typeof d.price === 'number' && d.price >= Number(minPrice));
-          if (maxPrice) filtered = filtered.filter((d: any) => typeof d.price === 'number' && d.price <= Number(maxPrice));
-          if (minTemperature) filtered = filtered.filter((d: any) => typeof d.temperature === 'number' && d.temperature >= Number(minTemperature));
-
-          // Sort fallback
-          if (sort) {
-            filtered.sort((a: any, b: any) => {
-              switch (sort) {
-                case 'temperature': return (b.temperature||0) - (a.temperature||0);
-                case 'price_asc': return (a.price||0) - (b.price||0);
-                case 'price_desc': return (b.price||0) - (a.price||0);
-                case 'newest': {
-                  const ta = a.postedAt?.seconds ? a.postedAt.seconds*1000 : Date.parse(a.postedAt||0);
-                  const tb = b.postedAt?.seconds ? b.postedAt.seconds*1000 : Date.parse(b.postedAt||0);
-                  return (tb||0) - (ta||0);
-                }
-                default: return 0;
-              }
-            });
-          }
-          deals = filtered.slice(0, limit);
-        } else {
-          deals = deals.slice(0, limit);
-        }
-      }
-
-      const out = { products, deals };
-      await cacheSet(key, out, DEFAULT_TTL);
-      return NextResponse.json(out);
+      return NextResponse.json(
+        {
+          error: 'typesense_unavailable',
+          message: 'Wyszukiwarka jest chwilowo niedostępna. Spróbuj ponownie za chwilę.',
+          products: [],
+          deals: [],
+        },
+        { status: 503 }
+      );
     }
 
     const tasks: Promise<any>[] = [];

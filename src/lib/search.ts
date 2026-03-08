@@ -1,6 +1,5 @@
 import typesenseClient from '@/lib/typesense';
-import { Product, Deal, ProductCore } from '@/lib/types';
-import { searchProducts as fallbackSearch } from '@/lib/data';
+import { Deal, ProductCore } from '@/lib/types';
 
 export type ProductSearchOptions = {
   mainCategorySlug?: string;
@@ -48,13 +47,14 @@ export async function searchProductsTypesense(
       const body = await res.json();
       return body.products || [];
     } catch (e) {
-      console.warn('Client-side search proxy failed, falling back to local Typesense/fallback:', e);
+      console.warn('Client-side search proxy failed:', e);
     }
   }
 
-  // Fallback: jeśli Typesense nie skonfigurowany, użyj dotychczasowego wyszukiwania Firestore
+  // final.md: public reads should go through Typesense, no Firestore fallback.
   if (!typesenseClient) {
-    return fallbackSearch(q);
+    console.warn('Typesense client unavailable for product search. Returning empty result.');
+    return [];
   }
 
   const filters: string[] = [];
@@ -104,8 +104,8 @@ export async function searchProductsTypesense(
     const hits = (res.hits || []).map((h: any) => ({ id: h.document.id, ...h.document })) as ProductCore[];
     return hits;
   } catch (err) {
-    console.warn('Typesense search failed, falling back to Firestore search:', err);
-    return fallbackSearch(q);
+    console.warn('Typesense search failed:', err);
+    return [];
   }
 }
 
@@ -158,26 +158,14 @@ export async function searchDealsTypesense(
       const body = await res.json();
       return body.deals || [];
     } catch (e) {
-      console.warn('Client-side search proxy failed, falling back to local Typesense/fallback:', e);
+      console.warn('Client-side search proxy failed:', e);
     }
   }
 
+  // final.md: public reads should go through Typesense, no Firestore fallback.
   if (!typesenseClient) {
-    // Brak Typesense — użyj Firestore fallback.
-    try {
-      const { getDealsByFilters, searchDeals } = await import('@/lib/data');
-      if (query === '*') {
-        return await getDealsByFilters({ statusFilter }, sortBy as any, limit);
-      }
-      if (statusFilter === 'waiting_room') {
-        return await getDealsByFilters({ searchTerm: query, statusFilter: 'waiting_room' }, sortBy as any, limit);
-      }
-      const fallbackResults = await searchDeals(query);
-      return fallbackResults;
-    } catch (e) {
-      console.warn('Firestore fallback for deals search failed:', e);
-      return [];
-    }
+    console.warn('Typesense client unavailable for deal search. Returning empty result.');
+    return [];
   }
   
   const filters: string[] = [];
@@ -250,14 +238,15 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
       if (!res.ok) return [];
       return (await res.json()) as Suggestion[];
     } catch (e) {
-      console.warn('Autocomplete proxy failed, falling back to Firestore:', e);
-      return getFirestoreAutocompleteSuggestions(q, limit);
+      console.warn('Autocomplete proxy failed:', e);
+      return [];
     }
   }
 
-  // Server-side: try Typesense client, otherwise Firestore fallback
+  // final.md: public reads should go through Typesense, no Firestore fallback.
   if (!typesenseClient) {
-    return getFirestoreAutocompleteSuggestions(q, limit);
+    console.warn('Typesense client unavailable for autocomplete. Returning empty result.');
+    return [];
   }
 
   try {
@@ -283,61 +272,7 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
     }
     return out;
   } catch (e) {
-    console.warn('Typesense autocomplete failed, falling back to Firestore:', e);
-    return getFirestoreAutocompleteSuggestions(q, limit);
-  }
-}
-
-// Firestore fallback dla autocomplete (bez Typesense)
-async function getFirestoreAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
-  const { searchProducts, getHotDeals } = await import('@/lib/data');
-  const normalizedQuery = q.toLowerCase().trim();
-  
-  try {
-    // Szukaj produktów i deals równolegle
-    const [products, deals] = await Promise.all([
-      searchProducts(q).then(p => p.slice(0, limit)),
-      getHotDeals(limit)
-    ]);
-
-    const out: Suggestion[] = [];
-
-    // Filtruj produkty po nazwie lub opisie
-    products
-      .filter(p => 
-        (typeof p.title === 'object' ? (p.title.pl || p.title.en || '') : p.title || '').toLowerCase().includes(normalizedQuery) || 
-        (typeof p.fullDescription === 'object' ? (p.fullDescription.pl || p.fullDescription.en || '') : p.fullDescription || '').toLowerCase().includes(normalizedQuery)
-      )
-      .slice(0, limit)
-      .forEach(p => {
-        out.push({
-          type: 'product',
-          id: p.id,
-          label: (typeof p.title === 'object' ? (p.title.pl || p.title.en || '') : p.title) || 'Unknown',
-          subLabel: (typeof p.fullDescription === 'object' ? (p.fullDescription.pl || p.fullDescription.en || '') : p.fullDescription) || '',
-        });
-      });
-
-    // Filtruj deals po tytule lub opisie
-    deals
-      .filter(d => {
-        const title = (d.title?.pl || d.title?.en || '').toLowerCase();
-        const desc = (d.description?.pl || d.description?.en || '').toLowerCase();
-        return title.includes(normalizedQuery) || desc.includes(normalizedQuery);
-      })
-      .slice(0, Math.max(0, limit - out.length))
-      .forEach(d => {
-        out.push({
-          type: 'deal',
-          id: d.id,
-          label: d.title?.pl || d.title?.en || 'Bez tytułu',
-          subLabel: d.description?.pl || d.description?.en || '',
-        });
-      });
-
-    return out;
-  } catch (err) {
-    console.error('Firestore autocomplete failed:', err);
+    console.warn('Typesense autocomplete failed:', e);
     return [];
   }
 }
