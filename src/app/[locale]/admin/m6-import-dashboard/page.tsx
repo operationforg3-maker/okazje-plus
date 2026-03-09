@@ -40,6 +40,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { AliExpressAutopilotControl } from '@/components/admin/aliexpress-autopilot-control';
 
 function toSafeText(value: unknown, fallback = ""): string {
   if (typeof value === "string") return value;
@@ -1029,6 +1030,10 @@ export default function M6ImportDashboard() {
               <Code className="w-4 h-4" />
               Live Monitor
             </TabsTrigger>
+            <TabsTrigger value="autopilot" className="gap-2">
+              <Play className="w-4 h-4" />
+              Autopilot UX
+            </TabsTrigger>
           </TabsList>
 
           {/* TAB: Historia jobów */}
@@ -1110,6 +1115,15 @@ export default function M6ImportDashboard() {
           {/* TAB: Live Monitor */}
           <TabsContent value="monitor">
             <LiveMonitor authToken={authToken} setAuthError={setAuthError} />
+          </TabsContent>
+
+          {/* TAB: Autopilot UX */}
+          <TabsContent value="autopilot">
+            <AliExpressAutopilotControl
+              authToken={authToken}
+              setAuthError={setAuthError}
+              onActionDone={refreshJobs}
+            />
           </TabsContent>
         </Tabs>
       </div>

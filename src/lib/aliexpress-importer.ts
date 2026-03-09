@@ -31,6 +31,9 @@ export interface AliExpressImportConfig {
   enableAI?: boolean;
   triggeredBy?: 'manual' | 'scheduled' | 'cron';
   triggeredByUid?: string;
+  hardCap?: number;
+  pageSize?: number;
+  maxPages?: number;
 }
 
 export interface AliExpressImportResult {
@@ -190,16 +193,22 @@ export async function importFromAliExpress(
     logger.info('Searching AliExpress products', { query: searchQuery });
 
     const requestedMaxItems = config.maxItems || profile.maxItemsPerRun || 50;
-    const hardCap = Number(process.env.ALIEXPRESS_SYNC_HARD_CAP || '5000');
+    const hardCap = Number.isFinite(config.hardCap)
+      ? Number(config.hardCap)
+      : Number(process.env.ALIEXPRESS_SYNC_HARD_CAP || '5000');
     const normalizedHardCap = Number.isFinite(hardCap) ? Math.max(100, hardCap) : 5000;
     const maxItems = Math.min(requestedMaxItems, normalizedHardCap);
 
-    const configuredPageSize = Number(process.env.ALIEXPRESS_SYNC_PAGE_SIZE || '50');
+    const configuredPageSize = Number.isFinite(config.pageSize)
+      ? Number(config.pageSize)
+      : Number(process.env.ALIEXPRESS_SYNC_PAGE_SIZE || '50');
     const pageSize = Number.isFinite(configuredPageSize)
       ? Math.max(10, Math.min(configuredPageSize, 50))
       : 50;
 
-    const configuredMaxPages = Number(process.env.ALIEXPRESS_SYNC_MAX_PAGES || '100');
+    const configuredMaxPages = Number.isFinite(config.maxPages)
+      ? Number(config.maxPages)
+      : Number(process.env.ALIEXPRESS_SYNC_MAX_PAGES || '100');
     const maxPages = Number.isFinite(configuredMaxPages)
       ? Math.max(1, configuredMaxPages)
       : 100;

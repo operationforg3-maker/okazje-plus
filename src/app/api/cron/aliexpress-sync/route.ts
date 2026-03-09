@@ -5,6 +5,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
 
 const LOCK_DOC_PATH = 'admin_meta/aliexpress-sync-lock';
+const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
 const LOCK_TTL_MS = 25 * 60 * 1000;
 
 function getBearerToken(authHeader: string | null): string {
@@ -90,15 +91,31 @@ async function runAliExpressSync(request: NextRequest) {
   const lockRun = await withSyncLock(async () => {
     logger.info('Starting scheduled AliExpress sync');
 
-    const maxItemsParam = Number(request.nextUrl.searchParams.get('maxItems') || '0');
-    const hardCap = Number(process.env.ALIEXPRESS_SYNC_HARD_CAP || '5000');
+    const settingsSnap = await adminDb.doc(SETTINGS_DOC_PATH).get();
+    const settings = settingsSnap.exists ? (settingsSnap.data() as any) : {};
+
+    if (settings?.enabled === false) {
+      logger.info('AliExpress sync skipped: autopilot disabled in settings');
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'Autopilot AliExpress jest wyłączony w ustawieniach.',
+      });
+    }
+
+    const maxItemsParam = Number(request.nextUrl.searchParams.get('maxItems') || settings?.maxItemsPerProfile || '0');
+    const hardCap = Number(settings?.hardCap || process.env.ALIEXPRESS_SYNC_HARD_CAP || '5000');
     const normalizedHardCap = Number.isFinite(hardCap) ? Math.max(100, hardCap) : 5000;
     const maxItems = Number.isFinite(maxItemsParam) && maxItemsParam > 0
       ? Math.min(maxItemsParam, normalizedHardCap)
-      : 500;
+      : Number(settings?.maxItemsPerProfile || 500);
+
+    const pageSize = Number(settings?.pageSize || process.env.ALIEXPRESS_SYNC_PAGE_SIZE || 50);
+    const maxPages = Number(settings?.maxPages || process.env.ALIEXPRESS_SYNC_MAX_PAGES || 100);
 
     const shouldEnsureProfiles =
       request.nextUrl.searchParams.get('ensureProfiles') === '1' ||
+      settings?.ensureProfiles === true ||
       process.env.ALIEXPRESS_AUTO_BOOTSTRAP_PROFILES === 'true';
 
     if (shouldEnsureProfiles) {
@@ -138,6 +155,9 @@ async function runAliExpressSync(request: NextRequest) {
         const result = await importFromAliExpress({
           profileId: profile.id,
           maxItems,
+          hardCap: normalizedHardCap,
+          pageSize,
+          maxPages,
           dryRun: false,
           autoApprove: true,
           enableAI: true,

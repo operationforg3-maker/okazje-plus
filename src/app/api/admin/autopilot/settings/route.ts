@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth-server';
+import { adminDb } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger';
+
+const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
+
+export type AliExpressAutopilotSettings = {
+  enabled: boolean;
+  ensureProfiles: boolean;
+  maxItemsPerProfile: number;
+  hardCap: number;
+  pageSize: number;
+  maxPages: number;
+  defaultProfileMaxItems: number;
+  updatedAt?: string;
+  updatedBy?: string;
+};
+
+const DEFAULT_SETTINGS: AliExpressAutopilotSettings = {
+  enabled: true,
+  ensureProfiles: true,
+  maxItemsPerProfile: 500,
+  hardCap: 5000,
+  pageSize: 50,
+  maxPages: 100,
+  defaultProfileMaxItems: 200,
+};
+
+function normalizeNumeric(value: unknown, fallback: number, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function normalizeSettings(input: Partial<AliExpressAutopilotSettings>): AliExpressAutopilotSettings {
+  return {
+    enabled: typeof input.enabled === 'boolean' ? input.enabled : DEFAULT_SETTINGS.enabled,
+    ensureProfiles: typeof input.ensureProfiles === 'boolean' ? input.ensureProfiles : DEFAULT_SETTINGS.ensureProfiles,
+    maxItemsPerProfile: normalizeNumeric(input.maxItemsPerProfile, DEFAULT_SETTINGS.maxItemsPerProfile, 5, 20000),
+    hardCap: normalizeNumeric(input.hardCap, DEFAULT_SETTINGS.hardCap, 100, 50000),
+    pageSize: normalizeNumeric(input.pageSize, DEFAULT_SETTINGS.pageSize, 10, 50),
+    maxPages: normalizeNumeric(input.maxPages, DEFAULT_SETTINGS.maxPages, 1, 1000),
+    defaultProfileMaxItems: normalizeNumeric(input.defaultProfileMaxItems, DEFAULT_SETTINGS.defaultProfileMaxItems, 10, 5000),
+  };
+}
+
+export async function GET() {
+  try {
+    const session = await requireAdmin();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const snap = await adminDb.doc(SETTINGS_DOC_PATH).get();
+    const raw = snap.exists ? (snap.data() as Partial<AliExpressAutopilotSettings>) : {};
+    const settings = normalizeSettings(raw);
+
+    return NextResponse.json({
+      success: true,
+      settings: {
+        ...settings,
+        updatedAt: raw.updatedAt,
+        updatedBy: raw.updatedBy,
+      },
+    });
+  } catch (error) {
+    logger.error('Failed to load autopilot settings', { error });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to load settings',
+        message: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await requireAdmin();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const body = (await request.json().catch(() => ({}))) as Partial<AliExpressAutopilotSettings>;
+    const settings = normalizeSettings(body);
+
+    const payload: AliExpressAutopilotSettings = {
+      ...settings,
+      updatedAt: new Date().toISOString(),
+      updatedBy: session.uid,
+    };
+
+    await adminDb.doc(SETTINGS_DOC_PATH).set(payload, { merge: true });
+
+    return NextResponse.json({
+      success: true,
+      settings: payload,
+      message: 'Ustawienia autopilota zapisane.',
+    });
+  } catch (error) {
+    logger.error('Failed to save autopilot settings', { error });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to save settings',
+        message: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
