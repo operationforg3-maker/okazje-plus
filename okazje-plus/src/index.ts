@@ -689,13 +689,22 @@ export const scheduleAliExpressSync = onSchedule(
     const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
     const cronSecret = process.env.CRON_SECRET || "";
     const adminToken = process.env.IMPORT_ADMIN_TOKEN || process.env.ADMIN_BEARER || "";
-    const maxItems = Number(process.env.ALIEXPRESS_SYNC_MAX_ITEMS || "20");
+    const maxItems = Number(process.env.ALIEXPRESS_SYNC_MAX_ITEMS || "500");
+    const hardCap = Number(process.env.ALIEXPRESS_SYNC_HARD_CAP || "5000");
+    const normalizedHardCap = Number.isFinite(hardCap) ? Math.max(100, hardCap) : 5000;
 
     const query = new URLSearchParams();
     if (cronSecret) {
       query.set("secret", cronSecret);
     }
-    query.set("maxItems", String(Number.isFinite(maxItems) ? Math.max(5, Math.min(maxItems, 200)) : 20));
+    query.set(
+      "maxItems",
+      String(
+        Number.isFinite(maxItems)
+          ? Math.max(5, Math.min(maxItems, normalizedHardCap))
+          : 500
+      )
+    );
 
     const url = `${siteUrl.replace(/\/$/, "")}/api/cron/aliexpress-sync?${query.toString()}`;
 

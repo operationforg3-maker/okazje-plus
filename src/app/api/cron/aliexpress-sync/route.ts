@@ -90,9 +90,11 @@ async function runAliExpressSync(request: NextRequest) {
     logger.info('Starting scheduled AliExpress sync');
 
     const maxItemsParam = Number(request.nextUrl.searchParams.get('maxItems') || '0');
+    const hardCap = Number(process.env.ALIEXPRESS_SYNC_HARD_CAP || '5000');
+    const normalizedHardCap = Number.isFinite(hardCap) ? Math.max(100, hardCap) : 5000;
     const maxItems = Number.isFinite(maxItemsParam) && maxItemsParam > 0
-      ? Math.min(maxItemsParam, 200)
-      : 20;
+      ? Math.min(maxItemsParam, normalizedHardCap)
+      : 500;
 
     const profilesSnapshot = await adminDb
       .collection('importProfiles')

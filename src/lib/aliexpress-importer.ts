@@ -185,26 +185,72 @@ export async function importFromAliExpress(
       logger.warn('No AliExpress access token found - API calls may fail without OAuth');
     }
 
-    // Search products
+    // Search products (multi-page)
     const searchQuery = config.searchQuery || profile.filters.searchQuery || '';
     logger.info('Searching AliExpress products', { query: searchQuery });
 
-    // Use affiliate hot products API for better quality
-    const maxItems = config.maxItems || profile.maxItemsPerRun || 50;
-    const searchResponse = await client.getAffiliateHotProducts(
-      config.categoryFilter ? [config.categoryFilter] : undefined,
-      maxItems
-    );
+    const requestedMaxItems = config.maxItems || profile.maxItemsPerRun || 50;
+    const hardCap = Number(process.env.ALIEXPRESS_SYNC_HARD_CAP || '5000');
+    const normalizedHardCap = Number.isFinite(hardCap) ? Math.max(100, hardCap) : 5000;
+    const maxItems = Math.min(requestedMaxItems, normalizedHardCap);
 
-    // Parse response
-    // Affiliate API response: { aliexpress_affiliate_hotproduct_query_response: { resp_result: { result: { products: [] } } } }
-    // products is a direct array (not XML-style .product wrapper)
-    let products: any[] = [];
-    const rawResult =
-      searchResponse?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result ??
-      searchResponse?.resp_result?.result;
-    if (Array.isArray(rawResult?.products)) {
-      products = rawResult.products;
+    const configuredPageSize = Number(process.env.ALIEXPRESS_SYNC_PAGE_SIZE || '50');
+    const pageSize = Number.isFinite(configuredPageSize)
+      ? Math.max(10, Math.min(configuredPageSize, 50))
+      : 50;
+
+    const configuredMaxPages = Number(process.env.ALIEXPRESS_SYNC_MAX_PAGES || '100');
+    const maxPages = Number.isFinite(configuredMaxPages)
+      ? Math.max(1, configuredMaxPages)
+      : 100;
+
+    const extractProductsFromResponse = (response: any): any[] => {
+      const rawResult =
+        response?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result ??
+        response?.resp_result?.result ??
+        response?.result;
+
+      const direct = rawResult?.products;
+      if (Array.isArray(direct)) return direct;
+      if (Array.isArray(direct?.product)) return direct.product;
+      if (Array.isArray(rawResult?.product_list)) return rawResult.product_list;
+      if (Array.isArray(rawResult?.products_list)) return rawResult.products_list;
+      return [];
+    };
+
+    const products: any[] = [];
+    const seenProductIds = new Set<string>();
+
+    for (let pageNo = 1; pageNo <= maxPages && products.length < maxItems; pageNo++) {
+      const response = await client.getAffiliateHotProducts(
+        config.categoryFilter ? [config.categoryFilter] : undefined,
+        pageSize,
+        pageNo
+      );
+
+      const pageProducts = extractProductsFromResponse(response);
+      if (pageProducts.length === 0) {
+        logger.info('AliExpress pagination finished (empty page)', { pageNo, collected: products.length });
+        break;
+      }
+
+      for (const product of pageProducts) {
+        const pid = String(product?.product_id || product?.productId || product?.item_id || '').trim();
+        if (!pid || seenProductIds.has(pid)) continue;
+        seenProductIds.add(pid);
+        products.push(product);
+        if (products.length >= maxItems) break;
+      }
+
+      if (pageProducts.length < pageSize) {
+        logger.info('AliExpress pagination finished (last partial page)', {
+          pageNo,
+          pageSize,
+          returned: pageProducts.length,
+          collected: products.length,
+        });
+        break;
+      }
     }
 
     result.stats.fetched = products.length;

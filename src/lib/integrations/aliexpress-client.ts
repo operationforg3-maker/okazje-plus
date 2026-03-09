@@ -289,10 +289,12 @@ export class AliExpressClient {
   // Hot products for affiliates (Affiliate API) - returns products with affiliate links and pricing
   async getAffiliateHotProducts(
     categoryIds?: string[],
-    pageSize: number = 50
+    pageSize: number = 50,
+    pageNo: number = 1
   ): Promise<any> {
     const params: Record<string, any> = {
       page_size: pageSize,
+      page_no: pageNo,
       target_currency: 'PLN',
       target_language: 'PL',
       sort: 'SALE_PRICE_ASC'
