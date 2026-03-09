@@ -20,6 +20,70 @@ type SeoRoutingTarget = {
 
 let seoKeywordMapCache: Map<string, SeoRoutingTarget> | null = null;
 
+function ensureString(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
+}
+
+function parseLocalizedStringPayload(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  const tryExtractFromObject = (obj: Record<string, unknown>): string => {
+    const preferred = [obj.pl, obj.en, obj.de, ...Object.values(obj)]
+      .find((entry) => typeof entry === 'string' && String(entry).trim().length > 0);
+    return typeof preferred === 'string' ? preferred.trim() : '';
+  };
+
+  const tryParse = (input: string): string => {
+    try {
+      const parsed = JSON.parse(input);
+      if (typeof parsed === 'string' && parsed !== input) return tryParse(parsed);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return tryExtractFromObject(parsed as Record<string, unknown>);
+      }
+    } catch {
+      // ignored on purpose
+    }
+    return '';
+  };
+
+  return tryParse(trimmed) || trimmed;
+}
+
+function normalizeLocalizedField(value: unknown): unknown {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+  const raw = ensureString(value);
+  const parsed = parseLocalizedStringPayload(raw);
+  if (!parsed) return { pl: '', en: '' };
+  return { pl: parsed, en: parsed };
+}
+
+function resolveDealImage(doc: any): string {
+  const candidates = [
+    doc?.image,
+    doc?.imageUrl,
+    doc?.thumbnail,
+    Array.isArray(doc?.images) ? doc.images[0] : undefined,
+    Array.isArray(doc?.gallery) ? doc.gallery[0] : undefined,
+  ];
+
+  const valid = candidates.find((entry) => typeof entry === 'string' && entry.trim().length > 0);
+  return typeof valid === 'string' ? valid : '/icon_okazjeplus.svg';
+}
+
+function normalizeDealDocument(doc: any): any {
+  return {
+    ...doc,
+    title: normalizeLocalizedField(doc?.title),
+    description: normalizeLocalizedField(doc?.description),
+    image: resolveDealImage(doc),
+  };
+}
+
 function normalizeKeyword(value: string): string {
   return value
     .normalize('NFD')
@@ -222,7 +286,7 @@ export async function GET(request: Request) {
 
     const [prodRes, dealRes] = await Promise.all(tasks);
     const products = (prodRes.hits || []).map((h: any) => ({ id: h.document.id, ...h.document }));
-    const deals = (dealRes.hits || []).map((h: any) => ({ id: h.document.id, ...h.document }));
+    const deals = (dealRes.hits || []).map((h: any) => normalizeDealDocument({ id: h.document.id, ...h.document }));
 
     const out = { products, deals };
     await cacheSet(key, out, DEFAULT_TTL);

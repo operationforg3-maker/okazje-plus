@@ -42,6 +42,60 @@ const stripHtmlTags = (value: string): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
+const decodeHtmlEntities = (value: string): string =>
+  value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+
+const parseLocalizedStringPayload = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  const tryExtractFromObject = (obj: Record<string, unknown>): string => {
+    const preferred = [obj.pl, obj.en, obj.de, ...Object.values(obj)]
+      .find((entry) => typeof entry === 'string' && String(entry).trim().length > 0);
+    return typeof preferred === 'string' ? preferred : '';
+  };
+
+  const tryParse = (input: string): string => {
+    try {
+      const parsed = JSON.parse(input);
+      if (typeof parsed === 'string' && parsed !== input) return tryParse(parsed);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return tryExtractFromObject(parsed as Record<string, unknown>);
+      }
+    } catch {
+      // ignored on purpose
+    }
+    return '';
+  };
+
+  return tryParse(trimmed) || trimmed;
+};
+
+const normalizeDisplayText = (value: unknown): string => {
+  const asString = safeText(value, '');
+  const parsed = parseLocalizedStringPayload(asString);
+  return stripHtmlTags(decodeHtmlEntities(parsed));
+};
+
+const resolveDealImage = (deal: any): string => {
+  const candidates = [
+    deal?.image,
+    deal?.imageUrl,
+    deal?.thumbnail,
+    Array.isArray(deal?.images) ? deal.images[0] : undefined,
+    Array.isArray(deal?.gallery) ? deal.gallery[0] : undefined,
+  ];
+
+  const valid = candidates.find((entry) => typeof entry === 'string' && entry.trim().length > 0);
+  return typeof valid === 'string' ? valid : '/icon_okazjeplus.svg';
+};
+
 function toTimestampSafe(value: any): number {
   if (!value) return 0;
   if (typeof value === 'number') {
@@ -117,9 +171,10 @@ export default function DealListCard({ deal }: DealListCardProps) {
   const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || '', en: deal.title || '' };
   const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
   
-  const dealTitle = isMounted ? getText(titleObj) : (titleObj.pl || '');
+  const dealTitle = normalizeDisplayText(isMounted ? getText(titleObj) : (titleObj.pl || ''));
   const rawDescription = isMounted ? getText(descObj) : (descObj.pl || '');
-  const description = stripHtmlTags(rawDescription || '');
+  const description = normalizeDisplayText(rawDescription);
+  const dealImage = resolveDealImage(deal);
   
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
   const { currency } = useCurrency();
@@ -214,8 +269,8 @@ export default function DealListCard({ deal }: DealListCardProps) {
       <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
         <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted/50">
           <Image
-            src={withImageProxy(typeof deal.image === 'string' ? deal.image : '/placeholder.png')}
-            alt={safeText(deal.title) || 'Okazja'}
+            src={withImageProxy(dealImage)}
+            alt={dealTitle || 'Okazja'}
             data-ai-hint={safeText(deal.imageHint)}
             fill
             priority
