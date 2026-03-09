@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { importFromAliExpress } from '@/lib/aliexpress-importer';
+import { ensureAliExpressImportProfilesCoverage } from '@/lib/import-profiles-bootstrap';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
 
@@ -95,6 +96,22 @@ async function runAliExpressSync(request: NextRequest) {
     const maxItems = Number.isFinite(maxItemsParam) && maxItemsParam > 0
       ? Math.min(maxItemsParam, normalizedHardCap)
       : 500;
+
+    const shouldEnsureProfiles =
+      request.nextUrl.searchParams.get('ensureProfiles') === '1' ||
+      process.env.ALIEXPRESS_AUTO_BOOTSTRAP_PROFILES === 'true';
+
+    if (shouldEnsureProfiles) {
+      const bootstrapResult = await ensureAliExpressImportProfilesCoverage({
+        enabled: true,
+        defaultStatus: 'approved',
+        deduplicationStrategy: 'skip',
+        maxItemsPerRun: maxItems,
+        createdBy: 'cron',
+      });
+
+      logger.info('AliExpress profile coverage ensured', bootstrapResult);
+    }
 
     const profilesSnapshot = await adminDb
       .collection('importProfiles')

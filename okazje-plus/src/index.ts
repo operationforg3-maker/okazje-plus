@@ -697,6 +697,7 @@ export const scheduleAliExpressSync = onSchedule(
     if (cronSecret) {
       query.set("secret", cronSecret);
     }
+    query.set("ensureProfiles", "1");
     query.set(
       "maxItems",
       String(
