@@ -1,34 +1,72 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
+import typesenseServerClient from '@/lib/typesense-server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
 
 export async function GET() {
   try {
-    // Public stats - no auth required
+    // final.md: public offer reads should use Typesense (not Firestore).
+    const usersTotalPromise = adminDb.collection('users').count().get();
+
+    if (!typesenseServerClient) {
+      const usersTotal = await usersTotalPromise;
+      return NextResponse.json({
+        success: false,
+        dealsCount: 0,
+        productsCount: 0,
+        usersCount: usersTotal.data().count,
+        totalSavings: 0,
+        error: 'Typesense unavailable',
+        timestamp: new Date().toISOString(),
+      }, { status: 503 });
+    }
+
     const [approvedDeals, approvedProducts, usersTotal] = await Promise.all([
-      adminDb.collection('deals').where('status', '==', 'approved').count().get(),
-      adminDb.collection('product_cores').where('status', '==', 'approved').count().get(),
-      adminDb.collection('users').count().get(),
+      typesenseServerClient.collections('deals').documents().search({
+        q: '*',
+        query_by: 'title,description,postedBy',
+        filter_by: 'status:=approved',
+        per_page: 1,
+      }, {}),
+      typesenseServerClient.collections('products').documents().search({
+        q: '*',
+        query_by: 'name,description',
+        filter_by: 'status:=approved',
+        per_page: 1,
+      }, {}),
+      usersTotalPromise,
     ]);
 
-    // Calculate approximate savings (votes * 10 PLN per vote)
-    const dealsSnapshot = await adminDb.collection('deals')
-      .where('status', '==', 'approved')
-      .select('vote_count')
-      .limit(5000) // Limit for performance
-      .get();
-    
-    const totalSavings = dealsSnapshot.docs.reduce((sum, doc) => {
-      const votes = (doc.data() as any).vote_count || 0;
-      return sum + votes * 10;
-    }, 0);
+    // Approximate savings from up to 5000 approved deals in Typesense (votes * 10 PLN).
+    const totalApprovedDeals = Math.max(0, Number((approvedDeals as any).found || 0));
+    const maxDealsForSavings = Math.min(totalApprovedDeals, 5000);
+    const perPage = 250;
+    const maxPages = Math.ceil(maxDealsForSavings / perPage);
+    let totalSavings = 0;
+
+    for (let page = 1; page <= maxPages; page++) {
+      const pageRes = await typesenseServerClient.collections('deals').documents().search({
+        q: '*',
+        query_by: 'title,description,postedBy',
+        filter_by: 'status:=approved',
+        sort_by: 'voteCount:desc',
+        per_page: perPage,
+        page,
+      }, {});
+
+      const hits = ((pageRes as any).hits || []) as Array<{ document?: Record<string, unknown> }>;
+      totalSavings += hits.reduce((sum, hit) => {
+        const voteCount = Number((hit.document?.voteCount as number | undefined) ?? 0);
+        return sum + (Number.isFinite(voteCount) ? voteCount : 0) * 10;
+      }, 0);
+    }
 
     return NextResponse.json({
       success: true,
-      dealsCount: approvedDeals.data().count,
-      productsCount: approvedProducts.data().count,
+      dealsCount: totalApprovedDeals,
+      productsCount: Math.max(0, Number((approvedProducts as any).found || 0)),
       usersCount: usersTotal.data().count,
       totalSavings: Math.round(totalSavings),
       timestamp: new Date().toISOString(),

@@ -198,9 +198,8 @@ export async function getUserProductRatings(userId: string): Promise<UserProduct
 }
 
 /**
- * Pobiera liczbę ALL votes dla użytkownika - OPTIMIZED VERSION
- * Zamiast iterować votes subkolekcja, sprawdzamy czy user głosował na deal
- * (Deal model ma voteCount pole - nie trzeba liczyć od zera)
+ * Pobiera liczbę głosów użytkownika przez collectionGroup('votes').
+ * Dzięki temu nie czytamy dokumentów ofert i nie iterujemy po dealach.
  */
 export async function getUserVotes(userId: string): Promise<{ count: number }> {
   console.log('[getUserVotes] Called with userId:', userId);
@@ -212,35 +211,15 @@ export async function getUserVotes(userId: string): Promise<{ count: number }> {
 
   try {
     const db = getAdminFirestore();
-    
-    // Get approved deals (max 200)
-    const dealsSnapshot = await db.collection('deals')
-      .where('status', '==', 'approved')
-      .limit(200)
+
+    const votesCountSnapshot = await db
+      .collectionGroup('votes')
+      .where('userId', '==', userId)
+      .count()
       .get();
-    
-    console.log('[getUserVotes] Checking votes in', dealsSnapshot.size, 'approved deals');
-    
-    let totalVotes = 0;
-    
-    // For each deal, check if user has a vote in votes subkolekcja
-    for (const dealDoc of dealsSnapshot.docs) {
-      try {
-        const votesSnapshot = await dealDoc.ref.collection('votes')
-          .where('userId', '==', userId)
-          .limit(1) // Only need to know if exists
-          .get();
-        
-        if (votesSnapshot.size > 0) {
-          totalVotes++;
-          console.log('[getUserVotes] User voted on deal:', dealDoc.id);
-        }
-      } catch (err) {
-        // Silent - deal may not have votes subkolekcja
-      }
-    }
-    
-    console.log('[getUserVotes] Total votes found:', totalVotes, 'in', dealsSnapshot.size, 'deals');
+
+    const totalVotes = votesCountSnapshot.data().count || 0;
+    console.log('[getUserVotes] Total votes found:', totalVotes);
     return { count: totalVotes };
   } catch (error: any) {
     console.error('[getUserVotes] Error:', error.message);

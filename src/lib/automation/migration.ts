@@ -348,7 +348,13 @@ function convertDealToNew(oldDeal: DealLegacy, productId: string): DealM6 {
     voteCount: oldDeal.voteCount || 0,
     temperature: oldDeal.temperature || 0,
     commentsCount: oldDeal.commentsCount || 0,
-    status: oldDeal.status,
+    status: ((): DealM6['status'] => {
+      const status = oldDeal.status as string | undefined;
+      if (status === 'draft' || status === 'pending' || status === 'poczekalnia' || status === 'approved' || status === 'rejected' || status === 'expired') {
+        return status;
+      }
+      return 'pending';
+    })(),
     createdAt: oldDeal.createdAt?.toISOString?.() || now,
     updatedAt: oldDeal.updatedAt?.toISOString?.() || now,
     sourceProductId: oldDeal.externalOriginalId,

@@ -433,7 +433,7 @@ export interface DealLegacy {
   // Deal specifics
   merchant?: string;
   shippingCost?: number;
-  status: 'draft' | 'pending' | 'poczekalnia' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'poczekalnia' | 'approved' | 'rejected' | 'expired';
   createdBy?: string;
   createdAt?: any; // Firestore Timestamp
   updatedAt?: any; // Firestore Timestamp
@@ -2483,7 +2483,7 @@ export interface DealM6 {
   commentsCount: number;
   
   // Moderation
-  status: 'draft' | 'pending' | 'poczekalnia' | 'approved' | 'rejected';
+  status: 'draft' | 'pending' | 'poczekalnia' | 'approved' | 'rejected' | 'expired';
   
   // Metadata
   createdAt: string; // ISO timestamp
