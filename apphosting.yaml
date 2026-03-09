@@ -179,6 +179,19 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  # Server-side host/port/protocol for API routes and server rendering
+  - variable: TYPESENSE_HOST
+    secret: TYPESENSE_HOST
+    availability:
+      - RUNTIME
+  - variable: TYPESENSE_PORT
+    secret: TYPESENSE_PORT
+    availability:
+      - RUNTIME
+  - variable: TYPESENSE_PROTOCOL
+    secret: TYPESENSE_PROTOCOL
+    availability:
+      - RUNTIME
   # Server-side search-only key (fallback dla API routes)
   - variable: TYPESENSE_SEARCH_ONLY_API_KEY
     secret: TYPESENSE_SEARCH_ONLY_API_KEY
