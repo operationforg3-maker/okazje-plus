@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import typesenseServerClient from '@/lib/typesense-server';
 import { cacheGet, cacheSet, rateLimit } from '@/lib/cache';
+import { collection, documentId, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { promises as fs } from 'fs';
 import path from 'path';
 
 const DEFAULT_TTL = 60; // seconds
+const FALLBACK_DEAL_IMAGE = '/icon_okazjeplus.svg';
 
 type CategoryNode = {
   slug?: string;
@@ -62,17 +65,49 @@ function normalizeLocalizedField(value: unknown): unknown {
   return { pl: parsed, en: parsed };
 }
 
+function resolveImageCandidate(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = resolveImageCandidate(entry);
+      if (resolved) return resolved;
+    }
+    return undefined;
+  }
+  if (typeof value === 'object') {
+    const candidate = (value as any).src || (value as any).url || (value as any).image || (value as any).imageUrl;
+    return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : undefined;
+  }
+  return undefined;
+}
+
 function resolveDealImage(doc: any): string {
   const candidates = [
     doc?.image,
     doc?.imageUrl,
+    doc?.mainImage,
+    doc?.product_main_image_url,
     doc?.thumbnail,
-    Array.isArray(doc?.images) ? doc.images[0] : undefined,
-    Array.isArray(doc?.gallery) ? doc.gallery[0] : undefined,
+    doc?.images,
+    doc?.gallery,
+    doc?.metadata?.image,
+    doc?.metadata?.imageUrl,
+    doc?.metadata?.mainImage,
+    doc?.importMetadata?.image,
+    doc?.importMetadata?.imageUrl,
+    doc?.importMetadata?.mainImage,
   ];
 
-  const valid = candidates.find((entry) => typeof entry === 'string' && entry.trim().length > 0);
-  return typeof valid === 'string' ? valid : '/icon_okazjeplus.svg';
+  for (const candidate of candidates) {
+    const resolved = resolveImageCandidate(candidate);
+    if (resolved) return resolved;
+  }
+
+  return '/icon_okazjeplus.svg';
 }
 
 function normalizeDealDocument(doc: any): any {
@@ -82,6 +117,47 @@ function normalizeDealDocument(doc: any): any {
     description: normalizeLocalizedField(doc?.description),
     image: resolveDealImage(doc),
   };
+}
+
+function chunkIds(ids: string[], chunkSize = 30): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    chunks.push(ids.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+async function hydrateFallbackDealImages(deals: any[]): Promise<any[]> {
+  const idsToHydrate = deals
+    .filter((deal) => !deal?.image || deal.image === FALLBACK_DEAL_IMAGE)
+    .map((deal) => String(deal.id || ''))
+    .filter(Boolean);
+
+  if (idsToHydrate.length === 0) return deals;
+
+  const resolved = new Map<string, string>();
+  const batches = chunkIds([...new Set(idsToHydrate)]);
+
+  await Promise.all(
+    batches.map(async (batch) => {
+      const snap = await getDocs(query(collection(db, 'deals'), where(documentId(), 'in', batch)));
+      snap.docs.forEach((docSnap) => {
+        const raw = docSnap.data() as any;
+        const image = resolveDealImage(raw);
+        if (image && image !== FALLBACK_DEAL_IMAGE) {
+          resolved.set(docSnap.id, image);
+        }
+      });
+    })
+  );
+
+  if (resolved.size === 0) return deals;
+
+  return deals.map((deal) => {
+    const hydrated = resolved.get(String(deal.id || ''));
+    if (!hydrated) return deal;
+    return { ...deal, image: hydrated };
+  });
 }
 
 function normalizeKeyword(value: string): string {
@@ -187,7 +263,7 @@ export async function GET(request: Request) {
   const minRating = url.searchParams.get('minRating');
   const minTemperature = url.searchParams.get('minTemperature');
   const sort = url.searchParams.get('sort') || '';
-  const dealStatus = url.searchParams.get('status') || 'approved';
+  const statusFilter = url.searchParams.get('status') || 'approved';
   const dealId = (url.searchParams.get('dealId') || '').trim();
 
   if (!q || q.trim().length < 1) return NextResponse.json({ products: [], deals: [] });
@@ -211,7 +287,7 @@ export async function GET(request: Request) {
   const allowed = await rateLimit(ip, 60, 60);
   if (!allowed) return NextResponse.json({ error: 'rate_limited', message: 'Too many requests' }, { status: 429 });
 
-  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}:${dealStatus}:${dealId}`;
+  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}:${statusFilter}:${dealId}`;
   const cached = await cacheGet(key);
   if (cached) return NextResponse.json(cached as any);
 
@@ -237,6 +313,11 @@ export async function GET(request: Request) {
       if (minPrice) productFilters.push(`price:>=${Number(minPrice)}`);
       if (maxPrice) productFilters.push(`price:<=${Number(maxPrice)}`);
       if (minRating) productFilters.push(`ratingCard.average:>=${Number(minRating)}`);
+      if (statusFilter === 'waiting_room' || statusFilter === 'poczekalnia') {
+        productFilters.push('status:=[pending_approval,approval,pending,poczekalnia]');
+      } else {
+        productFilters.push('status:=approved');
+      }
 
       tasks.push(typesenseServerClient.collections('products').documents().search({ 
         q, 
@@ -257,8 +338,8 @@ export async function GET(request: Request) {
       if (minPrice) filters.push(`price:>=${Number(minPrice)}`);
       if (maxPrice) filters.push(`price:<=${Number(maxPrice)}`);
       if (minTemperature) filters.push(`temperature:>=${Number(minTemperature)}`);
-      if (dealStatus === 'waiting_room' || dealStatus === 'poczekalnia') {
-        filters.push('status:=[pending,poczekalnia]');
+      if (statusFilter === 'waiting_room' || statusFilter === 'poczekalnia') {
+        filters.push('status:=[pending,poczekalnia,pending_approval,approval]');
       } else {
         filters.push('status:=approved');
       }
@@ -286,7 +367,8 @@ export async function GET(request: Request) {
 
     const [prodRes, dealRes] = await Promise.all(tasks);
     const products = (prodRes.hits || []).map((h: any) => ({ id: h.document.id, ...h.document }));
-    const deals = (dealRes.hits || []).map((h: any) => normalizeDealDocument({ id: h.document.id, ...h.document }));
+    const normalizedDeals = (dealRes.hits || []).map((h: any) => normalizeDealDocument({ id: h.document.id, ...h.document }));
+    const deals = await hydrateFallbackDealImages(normalizedDeals);
 
     const out = { products, deals };
     await cacheSet(key, out, DEFAULT_TTL);

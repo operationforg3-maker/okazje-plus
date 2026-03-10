@@ -335,7 +335,7 @@ export function DealComparisonTool() {
           <SheetTrigger asChild>
             <Button
               size="lg"
-              className="rounded-full shadow-2xl gap-2 relative group hover:scale-105 transition-transform"
+              className="hidden rounded-full shadow-2xl gap-2 relative group hover:scale-105 transition-transform"
               disabled={comparisonState.items.length === 0}
               variant={comparisonState.items.length === 0 ? 'outline' : 'default'}
               onClick={(e) => {

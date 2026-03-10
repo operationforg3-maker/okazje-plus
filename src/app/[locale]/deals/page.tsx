@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsCount } from '@/lib/data';
+import { getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsCount, getDealsByFilters } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib/offline-utils';
 import { Deal, Category, Product } from '@/lib/types';
@@ -106,6 +106,7 @@ export default function DealsPage() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [mobileListHeight, setMobileListHeight] = useState(520);
   const categoryInitialized = useRef(false);
+  const autoResetPerformed = useRef(false);
   const selectedMainCategorySlug = selectedCategory?.slug || selectedCategory?.id;
 
   // Helper: unify postedAt to timestamp (ms)
@@ -394,7 +395,53 @@ export default function DealsPage() {
           statusFilter: dealStatusView,
         }), 2, 500);
 
-        if (!cancelled) setDeals(results || []);
+        let effectiveResults = results || [];
+
+        // Typesense index can be stale for waiting room statuses. Fallback to Firestore query.
+        if ((effectiveResults.length || 0) === 0) {
+          effectiveResults = await getDealsByFilters({
+            ...unifiedFilters,
+            categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
+            subCategorySlug: selectedSubcategory || undefined,
+            subSubCategorySlug: selectedSubSubcategory || undefined,
+            searchTerm: q.length > 1 ? q : undefined,
+            statusFilter: dealStatusView,
+          }, typesenseSort as any, 100);
+        }
+
+        // If waiting room has no data, transparently switch back to approved.
+        if (
+          !cancelled &&
+          dealStatusView === 'waiting_room' &&
+          (effectiveResults?.length || 0) === 0 &&
+          q.length === 0
+        ) {
+          setDealStatusView('approved');
+          const params = new URLSearchParams(searchParams.toString());
+          params.set('status', 'approved');
+          router.replace(`${window.location.pathname}?${params.toString()}`);
+          return;
+        }
+
+        // LocalStorage can restore stale category filters with no active deals.
+        // Reset once to avoid the "no deals loaded" experience on plain /deals open.
+        if (
+          !cancelled &&
+          !autoResetPerformed.current &&
+          (effectiveResults?.length || 0) === 0 &&
+          q.length === 0 &&
+          dealStatusView === 'approved' &&
+          (selectedMainCategorySlug || selectedSubcategory || selectedSubSubcategory)
+        ) {
+          autoResetPerformed.current = true;
+          setSelectedCategory(null);
+          setSelectedSubcategory(null);
+          setSelectedSubSubcategory(null);
+          toast.info('Brak okazji w zapisanym filtrze. Pokazuję wszystkie okazje.');
+          return;
+        }
+
+      if (!cancelled) setDeals(effectiveResults || []);
       } catch (error) {
         console.error('[DealsPage] Error fetching deals:', error);
         if (isOfflineError(error)) {
@@ -584,7 +631,10 @@ export default function DealsPage() {
     const newFilter: SavedFilter = {
       name: filterName,
       sortBy,
-      priceRange,
+      priceRange: [
+        unifiedFilters.priceRange?.min ?? 0,
+        unifiedFilters.priceRange?.max ?? 15000,
+      ],
       quickFilters,
       categoryId: selectedMainCategorySlug,
       subcategorySlug: selectedSubcategory || undefined,
@@ -605,7 +655,13 @@ export default function DealsPage() {
   // Funkcja wczytywania zapisanego filtra
   const loadSavedFilter = (filter: SavedFilter) => {
     setSortBy(filter.sortBy);
-    setPriceRange(filter.priceRange);
+    setUnifiedFilters((prev) => ({
+      ...prev,
+      priceRange: {
+        min: filter.priceRange?.[0] ?? prev.priceRange.min,
+        max: filter.priceRange?.[1] ?? prev.priceRange.max,
+      },
+    }));
     setQuickFilters(filter.quickFilters);
     
     if (filter.categoryId) {

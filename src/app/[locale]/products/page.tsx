@@ -84,6 +84,7 @@ function ProductsPageContent() {
   const { formatPrice } = useCurrency();
   const lang = (locale as SupportedLanguage) || 'pl';
   const selectedMainCategorySlug = selectedCategory?.slug || selectedCategory?.id;
+  const autoStatusSwitchPerformed = useRef(false);
 
   // Wczytaj kategorie i ustaw z URL
   useEffect(() => {
@@ -181,8 +182,23 @@ function ProductsPageContent() {
               subCategorySlug: selectedSubcategory || undefined,
               subSubCategorySlug: selectedSubSubcategory || undefined,
               limit: 100,
+              statusFilter: productStatusView,
             });
-            if (!cancelled) setProducts(results || []);
+            if (!cancelled) {
+              if ((results?.length || 0) > 0) {
+                setProducts(results || []);
+              } else {
+                // Fallback when Typesense index is stale or incomplete.
+                const fallbackProducts = await getProductCoresByFilters({
+                  categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
+                  subCategorySlug: selectedSubcategory || undefined,
+                  subSubCategorySlug: selectedSubSubcategory || undefined,
+                  searchTerm: q,
+                  statusFilter: productStatusView,
+                }, sortBy, 100);
+                setProducts(fallbackProducts || []);
+              }
+            }
           } else {
             // Dla poczekalni używamy Firestore, aby uwzględnić pending_approval
             const waitingProducts = await getProductCoresByFilters({
@@ -204,7 +220,33 @@ function ProductsPageContent() {
             statusFilter: productStatusView,
           };
           const filteredProducts = await getProductCoresByFilters(filterConfig, sortBy, 100);
-          if (!cancelled) setProducts(filteredProducts);
+          if (!cancelled) {
+            // When the selected status has no results, switch once to the opposite status.
+            if (
+              !autoStatusSwitchPerformed.current &&
+              (filteredProducts?.length || 0) === 0 &&
+              searchTerm.trim().length === 0
+            ) {
+              const alternateStatus: ProductStatusView = productStatusView === 'approved' ? 'waiting_room' : 'approved';
+              const alternateProducts = await getProductCoresByFilters({
+                ...filterConfig,
+                statusFilter: alternateStatus,
+              }, sortBy, 20);
+
+              if ((alternateProducts?.length || 0) > 0) {
+                autoStatusSwitchPerformed.current = true;
+                setProductStatusView(alternateStatus);
+                toast.info(
+                  alternateStatus === 'waiting_room'
+                    ? 'Brak zatwierdzonych produktów. Przełączono na poczekalnię.'
+                    : 'Brak produktów w poczekalni. Przełączono na zatwierdzone.'
+                );
+                return;
+              }
+            }
+
+            setProducts(filteredProducts);
+          }
         }
       } catch (error) {
         console.error('Error fetching products:', error);
@@ -215,6 +257,10 @@ function ProductsPageContent() {
     const t = setTimeout(fetchProducts, 250); // drobny debounce
     return () => { cancelled = true; clearTimeout(t); };
   }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy, productStatusView]);
+
+  useEffect(() => {
+    autoStatusSwitchPerformed.current = false;
+  }, [selectedMainCategorySlug, selectedSubcategory, selectedSubSubcategory, unifiedFilters, sortBy, searchTerm]);
 
   useEffect(() => {
     try { localStorage.setItem('products_view_mode', viewMode); } catch {}

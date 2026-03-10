@@ -110,6 +110,54 @@ const ensureStringArray = (value: unknown, max = 50): string[] => {
   return normalized;
 };
 
+const extractImageCandidate = (value: unknown): string | undefined => {
+  if (!value) return undefined;
+  if (typeof value === 'string') {
+    const parsed = ensureString(value, '');
+    return parsed || undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const extracted = extractImageCandidate(entry);
+      if (extracted) return extracted;
+    }
+    return undefined;
+  }
+  if (typeof value === 'object') {
+    const src = ensureOptionalString((value as any).src)
+      || ensureOptionalString((value as any).url)
+      || ensureOptionalString((value as any).image)
+      || ensureOptionalString((value as any).imageUrl);
+    return src;
+  }
+  return undefined;
+};
+
+const resolveDealImageFallback = (raw: any): string => {
+  const candidates: unknown[] = [
+    raw?.image,
+    raw?.imageUrl,
+    raw?.mainImage,
+    raw?.product_main_image_url,
+    raw?.thumbnail,
+    raw?.images,
+    raw?.gallery,
+    raw?.metadata?.image,
+    raw?.metadata?.imageUrl,
+    raw?.metadata?.mainImage,
+    raw?.importMetadata?.image,
+    raw?.importMetadata?.imageUrl,
+    raw?.importMetadata?.mainImage,
+  ];
+
+  for (const candidate of candidates) {
+    const resolved = extractImageCandidate(candidate);
+    if (resolved) return resolved;
+  }
+
+  return FALLBACK_IMAGE;
+};
+
 const pruneObject = <T extends Record<string, any>>(obj?: T): T | undefined => {
   if (!obj) return undefined;
   const record = obj as Record<string, any>;
@@ -488,7 +536,7 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     price: ensurePrice(raw.price),
     originalPrice: ensureOptionalNumber(raw.originalPrice),
     link: ensureString(raw.link, FALLBACK_URL) || FALLBACK_URL,
-    image: ensureString(raw.image, FALLBACK_IMAGE) || FALLBACK_IMAGE,
+    image: resolveDealImageFallback(raw),
     imageHint: ensureString(raw.imageHint || (typeof raw.title === 'string' ? raw.title : (raw.title as any)?.pl) || 'okazja', 'okazja'),
     postedBy: ensureString(raw.postedBy, 'system'),
     postedAt: ensureString(raw.postedAt, new Date().toISOString()),

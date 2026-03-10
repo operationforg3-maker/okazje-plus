@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo, isFreeShipping } from '@/lib/i18n-utils';
+import { withImageProxy } from '@/lib/image-proxy';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
@@ -104,6 +105,30 @@ function stripHtmlTags(value: string): string {
     .replace(/&nbsp;/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function resolveImageCandidate(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const resolved = resolveImageCandidate(item);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+  if (typeof value === 'object') {
+    const candidate =
+      (value as any).src ||
+      (value as any).url ||
+      (value as any).image ||
+      (value as any).imageUrl;
+    return resolveImageCandidate(candidate);
+  }
+  return null;
 }
 
 interface Props {
@@ -270,17 +295,39 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     // dealTitle jest już computed string, użyj go
     const titleString = typeof dealTitle === 'string' ? dealTitle : 'Deal';
     
-    if (deal.gallery && deal.gallery.length > 0) {
-      computedImages = deal.gallery.map((url, idx) => ({ id: idx.toString(), src: url, alt: titleString }));
+    if (Array.isArray(deal.gallery) && deal.gallery.length > 0) {
+      computedImages = deal.gallery
+        .map((item, idx) => {
+          const src = resolveImageCandidate(item);
+          if (!src) return null;
+          return { id: idx.toString(), src, alt: titleString };
+        })
+        .filter(Boolean) as Array<{ id: string; src: string; alt: string }>;
     } else if (productData && typeof productData === 'object') {
-      const productImg = (productData as any).image || (productData as any)?.metadata?.images?.[0];
+      const productImg =
+        resolveImageCandidate((productData as any).image)
+        || resolveImageCandidate((productData as any).imageUrl)
+        || resolveImageCandidate((productData as any).images)
+        || resolveImageCandidate((productData as any)?.metadata?.images)
+        || resolveImageCandidate((productData as any)?.metadata?.mainImage);
       if (productImg) {
         computedImages = [{ id: '0', src: productImg, alt: titleString }];
       }
     }
     
     if (computedImages.length === 0) {
-      computedImages = [{ id: '0', src: deal.image, alt: titleString }];
+      const fallbackImage =
+        resolveImageCandidate(deal.image)
+        || resolveImageCandidate((deal as any).imageUrl)
+        || resolveImageCandidate((deal as any).mainImage)
+        || resolveImageCandidate((deal as any).product_main_image_url)
+        || resolveImageCandidate((deal as any).images)
+        || resolveImageCandidate((deal as any).metadata?.image)
+        || resolveImageCandidate((deal as any).metadata?.imageUrl)
+        || resolveImageCandidate((deal as any).metadata?.mainImage)
+        || '/icon_okazjeplus.svg';
+
+      computedImages = [{ id: '0', src: fallbackImage, alt: titleString }];
     }
     
     setImages(computedImages);
@@ -437,7 +484,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
             <div className="relative aspect-[4/3] bg-card rounded-xl shadow-lg overflow-hidden border">
               {images && images.length > 0 ? (
                 <Image
-                  src={images[currentImageIndex].src}
+                  src={withImageProxy(images[currentImageIndex].src)}
                   alt={dealTitle}
                   fill
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
@@ -533,7 +580,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                     }`}
                   >
                     <Image
-                      src={img.src}
+                      src={withImageProxy(img.src)}
                       alt={dealTitle}
                       fill
                       sizes="80px"

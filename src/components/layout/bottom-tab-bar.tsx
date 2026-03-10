@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { Home, Hourglass, Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { MobileSearchModule } from '@/components/layout/mobile-search-module';
 
 type BottomNavItem = {
   key: string;
@@ -14,6 +22,7 @@ type BottomNavItem = {
 };
 
 export function BottomTabBar() {
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const params = useParams();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -37,10 +46,10 @@ export function BottomTabBar() {
     },
     {
       key: 'search',
-      href: `${prefix}/search`,
+      href: '#',
       label: 'Szukaj',
       icon: Search,
-      isActive: (p) => p === `${prefix}/search`,
+      isActive: (p) => p === `${prefix}/search` || isSearchOpen,
     },
     {
       key: 'account',
@@ -52,36 +61,67 @@ export function BottomTabBar() {
   ];
 
   return (
-    <nav
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:hidden"
-      aria-label="Nawigacja mobilna"
-    >
-      <ul className="mx-auto grid h-16 max-w-screen-sm grid-cols-4 px-1">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const active = item.isActive
-            ? item.isActive(pathname, searchParams)
-            : pathname === item.href;
+    <>
+      <Sheet open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <SheetContent side="bottom" className="md:hidden h-[78vh] rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>Szukaj</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            <MobileSearchModule prefix={prefix} onNavigate={() => setIsSearchOpen(false)} />
+          </div>
+        </SheetContent>
+      </Sheet>
 
-          return (
-            <li key={item.key}>
-              <Link
-                href={item.href}
-                className={cn(
-                  'flex h-full flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium transition-colors',
-                  active
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground active:scale-[0.98]'
+      <nav
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:hidden"
+        aria-label="Nawigacja mobilna"
+      >
+        <ul className="mx-auto grid h-16 max-w-screen-sm grid-cols-4 px-1">
+          {items.map((item) => {
+            const Icon = item.icon;
+            const active = item.isActive
+              ? item.isActive(pathname, searchParams)
+              : pathname === item.href;
+
+            return (
+              <li key={item.key}>
+                {item.key === 'search' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsSearchOpen(true)}
+                    className={cn(
+                      'flex h-full w-full flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium transition-colors',
+                      active
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground active:scale-[0.98]'
+                    )}
+                    aria-current={active ? 'page' : undefined}
+                    aria-label="Otwórz wyszukiwarkę"
+                  >
+                    <Icon className={cn('h-5 w-5', active && 'text-primary')} />
+                    <span>{item.label}</span>
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      'flex h-full flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium transition-colors',
+                      active
+                        ? 'text-primary'
+                        : 'text-muted-foreground hover:text-foreground active:scale-[0.98]'
+                    )}
+                    aria-current={active ? 'page' : undefined}
+                  >
+                    <Icon className={cn('h-5 w-5', active && 'text-primary')} />
+                    <span>{item.label}</span>
+                  </Link>
                 )}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon className={cn('h-5 w-5', active && 'text-primary')} />
-                <span>{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
   );
 }

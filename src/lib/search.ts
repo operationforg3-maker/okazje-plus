@@ -1,5 +1,92 @@
 import typesenseClient from '@/lib/typesense';
 import { Deal, ProductCore } from '@/lib/types';
+import { collection, documentId, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+const DEAL_IMAGE_FALLBACK = '/icon_okazjeplus.svg';
+
+function resolveImageCandidate(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const resolved = resolveImageCandidate(item);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+  if (typeof value === 'object') {
+    return (
+      resolveImageCandidate((value as any).src)
+      || resolveImageCandidate((value as any).url)
+      || resolveImageCandidate((value as any).image)
+      || resolveImageCandidate((value as any).imageUrl)
+    );
+  }
+  return null;
+}
+
+function resolveDealImage(record: any): string {
+  return (
+    resolveImageCandidate(record?.image)
+    || resolveImageCandidate(record?.imageUrl)
+    || resolveImageCandidate(record?.mainImage)
+    || resolveImageCandidate(record?.product_main_image_url)
+    || resolveImageCandidate(record?.thumbnail)
+    || resolveImageCandidate(record?.images)
+    || resolveImageCandidate(record?.gallery)
+    || resolveImageCandidate(record?.metadata?.image)
+    || resolveImageCandidate(record?.metadata?.imageUrl)
+    || resolveImageCandidate(record?.metadata?.mainImage)
+    || resolveImageCandidate(record?.importMetadata?.image)
+    || resolveImageCandidate(record?.importMetadata?.imageUrl)
+    || resolveImageCandidate(record?.importMetadata?.mainImage)
+    || DEAL_IMAGE_FALLBACK
+  );
+}
+
+function chunkIds(ids: string[], chunkSize = 30): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    chunks.push(ids.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+async function hydrateFallbackDealImages(deals: Deal[]): Promise<Deal[]> {
+  const idsToHydrate = deals
+    .filter((deal) => !deal?.image || deal.image === DEAL_IMAGE_FALLBACK)
+    .map((deal) => String(deal.id || ''))
+    .filter(Boolean);
+
+  if (idsToHydrate.length === 0) return deals;
+
+  const batches = chunkIds([...new Set(idsToHydrate)]);
+  const resolved = new Map<string, string>();
+
+  await Promise.all(
+    batches.map(async (batch) => {
+      const snap = await getDocs(query(collection(db, 'deals'), where(documentId(), 'in', batch)));
+      snap.docs.forEach((docSnap) => {
+        const image = resolveDealImage(docSnap.data());
+        if (image && image !== DEAL_IMAGE_FALLBACK) {
+          resolved.set(docSnap.id, image);
+        }
+      });
+    })
+  );
+
+  if (resolved.size === 0) return deals;
+
+  return deals.map((deal) => {
+    const hydratedImage = resolved.get(String(deal.id || ''));
+    if (!hydratedImage) return deal;
+    return { ...deal, image: hydratedImage };
+  });
+}
 
 export type ProductSearchOptions = {
   mainCategorySlug?: string;
@@ -10,6 +97,7 @@ export type ProductSearchOptions = {
   minRating?: number;
   limit?: number;
   sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'popularity' | 'newest';
+  statusFilter?: 'approved' | 'waiting_room';
 };
 
 // Pełnotekstowe wyszukiwanie produktów w Typesense z filtrowaniem po kategoriach
@@ -26,7 +114,8 @@ export async function searchProductsTypesense(
     maxPrice, 
     minRating,
     sortBy = 'relevance',
-    limit = 50 
+    limit = 50,
+    statusFilter = 'approved',
   } = opts;
 
   // If running in browser, prefer server-side API (centralized caching / rate-limiting)
@@ -42,6 +131,7 @@ export async function searchProductsTypesense(
       if (minPrice !== undefined) params.set('minPrice', String(minPrice));
       if (maxPrice !== undefined) params.set('maxPrice', String(maxPrice));
       if (minRating !== undefined) params.set('minRating', String(minRating));
+      params.set('status', statusFilter);
       const res = await fetch(`/api/search?${params.toString()}`);
       if (!res.ok) return [];
       const body = await res.json();
@@ -64,7 +154,11 @@ export async function searchProductsTypesense(
   if (minPrice !== undefined) filters.push(`price:>=${minPrice}`);
   if (maxPrice !== undefined) filters.push(`price:<=${maxPrice}`);
   if (minRating !== undefined) filters.push(`ratingCard.average:>=${minRating}`);
-  filters.push(`status:=approved`);
+  if (statusFilter === 'waiting_room') {
+    filters.push('status:=[pending_approval,approval,pending,poczekalnia]');
+  } else {
+    filters.push('status:=approved');
+  }
 
   // Sortowanie
   let sort_by = '';
@@ -217,6 +311,12 @@ export async function searchDealsTypesense(
       per_page: limit,
     }, {});
     const hits = (res.hits || []).map((h: any) => ({ id: h.document.id, ...h.document })) as Deal[];
+
+    // Typesense can contain stale fallback image placeholders; hydrate from Firestore on server.
+    if (typeof window === 'undefined') {
+      return await hydrateFallbackDealImages(hits);
+    }
+
     return hits;
   } catch (err) {
     console.warn('Typesense deals search failed:', err);

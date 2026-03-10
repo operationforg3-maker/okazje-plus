@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { getCounts } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, Users, Boxes } from 'lucide-react';
 
@@ -9,6 +8,9 @@ interface Counts {
   deals: number;
   users: number;
 }
+
+const STATS_CACHE_KEY = 'okazje:home:stats';
+const STATS_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 
 function formatNumber(n: number) {
   return new Intl.NumberFormat('pl-PL').format(n);
@@ -20,10 +22,50 @@ export function StatsStrip() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const readCachedCounts = (): Counts | null => {
+      try {
+        const raw = localStorage.getItem(STATS_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { ts?: number; counts?: Counts };
+        if (!parsed?.ts || !parsed?.counts) return null;
+        if (Date.now() - parsed.ts > STATS_CACHE_MAX_AGE_MS) return null;
+        return parsed.counts;
+      } catch {
+        return null;
+      }
+    };
+
+    const writeCachedCounts = (next: Counts) => {
+      try {
+        localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ ts: Date.now(), counts: next }));
+      } catch {}
+    };
+
+    const cached = readCachedCounts();
+    if (cached) {
+      setCounts(cached);
+      setLoading(false);
+    }
+
     async function load() {
       try {
-        const c = await getCounts();
-        if (!cancelled) setCounts(c);
+        const res = await fetch('/api/public/stats');
+        if (!res.ok) throw new Error(`stats_http_${res.status}`);
+        const data = await res.json();
+        if (!cancelled) {
+          const nextCounts = {
+            products: Number(data.productsCount || 0),
+            deals: Number(data.dealsCount || 0),
+            users: Number(data.usersCount || 0),
+          };
+          setCounts(nextCounts);
+          writeCachedCounts(nextCounts);
+        }
+      } catch {
+        if (!cancelled) {
+          setCounts({ products: 0, deals: 0, users: 0 });
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }

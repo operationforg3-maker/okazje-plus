@@ -23,27 +23,55 @@ const defaultStats: StatsData = {
   lastUpdateTime: new Date().toISOString(),
 };
 
+const STATS_CACHE_KEY = 'okazje:home:stats:full';
+const STATS_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
+
 export function RealTimeStats() {
   const [stats, setStats] = useState<StatsData>(defaultStats);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const readCachedStats = (): StatsData | null => {
+      try {
+        const raw = localStorage.getItem(STATS_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as { ts?: number; stats?: StatsData };
+        if (!parsed?.ts || !parsed?.stats) return null;
+        if (Date.now() - parsed.ts > STATS_CACHE_MAX_AGE_MS) return null;
+        return parsed.stats;
+      } catch {
+        return null;
+      }
+    };
+
+    const writeCachedStats = (next: StatsData) => {
+      try {
+        localStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ ts: Date.now(), stats: next }));
+      } catch {}
+    };
+
+    const cached = readCachedStats();
+    if (cached) {
+      setStats(cached);
+      setIsLoading(false);
+    }
+
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/public/stats', {
-          cache: 'no-store',
-        });
+        const response = await fetch('/api/public/stats');
 
         if (response.ok) {
           const data = await response.json();
-          setStats({
+          const nextStats = {
             dealsCount: data.dealsCount || 0,
             productsCount: data.productsCount || 0,
             usersCount: data.usersCount || 0,
             totalSavings: data.totalSavings || 0,
             activeForumThreads: data.activeForumThreads || 0,
             lastUpdateTime: new Date().toISOString(),
-          });
+          };
+          setStats(nextStats);
+          writeCachedStats(nextStats);
         }
       } catch (error) {
         console.error('Failed to fetch stats:', error);

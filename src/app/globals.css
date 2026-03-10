@@ -449,6 +449,19 @@
     /* Tailwind v4 does not allow applying custom utilities from utilities layer inside base */
     border-color: hsl(var(--border));
   }
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  /* Keep root wrappers within viewport width to avoid accidental horizontal pan on mobile. */
+  body > * {
+    max-width: 100%;
+  }
+
   body {
     /* Inline base colors to avoid missing utility failures in production */
     background-color: hsl(var(--background));

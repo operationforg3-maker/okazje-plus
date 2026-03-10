@@ -23,6 +23,7 @@
     "auto-import": "tsx src/scripts/auto-import-products.ts",
     "report:tools": "node scripts/generate-tools-inventory.mjs",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts",
+    "typesense:sync:full": "ts-node src/scripts/typesense-sync.ts",
     "postinstall": "node ./scripts/apply-react-hooks-shim.js || true && patch-package",
     "deploy:hosting": "npm run build && firebase deploy --only hosting",
     "deploy:functions": "npm --prefix okazje-plus run build && firebase deploy --only functions",

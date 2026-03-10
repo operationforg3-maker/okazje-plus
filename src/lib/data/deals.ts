@@ -217,20 +217,37 @@ export async function getDealsByFiltersData(
   limitCount: number = 50
 ): Promise<Deal[]> {
   try {
-    const status = filters.statusFilter === 'waiting_room' ? 'pending' : 'approved';
-    const constraints = [where('status', '==', status)];
+    const statuses = filters.statusFilter === 'waiting_room'
+      ? ['pending', 'poczekalnia', 'pending_approval', 'approval']
+      : ['approved'];
 
-    if (filters.subSubCategorySlug) {
-      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-    } else if (filters.subCategorySlug) {
-      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-    } else if (filters.categoryId) {
-      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
+    const snapshots = await Promise.all(
+      statuses.map(async (status) => {
+        const constraints: any[] = [where('status', '==', status)];
+
+        if (filters.subSubCategorySlug) {
+          constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+        } else if (filters.subCategorySlug) {
+          constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+        } else if (filters.categoryId) {
+          constraints.push(where('mainCategorySlug', '==', filters.categoryId));
+        }
+
+        const q = query(collection(db, 'deals'), ...constraints, orderBy('updatedAt', 'desc'), limit(limitCount));
+        return getDocs(q);
+      })
+    );
+
+    const dealsMap = new Map<string, Deal>();
+    for (const snapshot of snapshots) {
+      for (const docSnap of snapshot.docs) {
+        if (!dealsMap.has(docSnap.id)) {
+          dealsMap.set(docSnap.id, docToDeal(docSnap));
+        }
+      }
     }
 
-    const q = query(collection(db, 'deals'), ...constraints, orderBy('updatedAt', 'desc'), limit(limitCount));
-    const snapshot = await getDocs(q);
-    const deals: Deal[] = snapshot.docs.map(docToDeal);
+    const deals: Deal[] = Array.from(dealsMap.values());
 
     const filtered = deals.filter(d => {
       const deal = d as Deal;

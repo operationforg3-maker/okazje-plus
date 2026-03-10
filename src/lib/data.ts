@@ -253,21 +253,65 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       } catch (_) {}
     }
 
-    const cacheKey = `products:recommended:${count}`;
+    const cacheKey = `products:recommended:v2:${count}`;
     if (cacheGetFn) {
       const cached = await cacheGetFn(cacheKey);
       if (cached) return cached as Product[];
     }
 
-    // Try M6 ProductCores first (they have bestPrice and deals)
+    // Try M6 ProductCores first (they have bestPrice and deals).
+    // Public Firestore rules allow only approved, so non-public statuses are fetched via Admin SDK on server.
     const coresRef = collection(db, "product_cores");
-    const q = query(
-      coresRef,
-      where("status", "==", "approved"),
-      limit(count)
-    );
-    const querySnapshot = await getDocs(q);
-    const products = querySnapshot.docs.map(docToProductCore) as any as Product[];
+    const productMap = new Map<string, Product>();
+    const baseLimit = count * 2;
+
+    try {
+      const approvedQ = query(
+        coresRef,
+        where("status", "==", "approved"),
+        limit(baseLimit)
+      );
+      const approvedSnap = await getDocs(approvedQ);
+
+      for (const snap of approvedSnap.docs) {
+        if (!productMap.has(snap.id)) {
+          productMap.set(snap.id, docToProductCore(snap) as any as Product);
+        }
+      }
+    } catch (err) {
+      console.error("getRecommendedProducts approved query failed:", err);
+    }
+
+    if (typeof window === 'undefined' && productMap.size < count) {
+      try {
+        const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+        const adminDb = getAdminFirestore();
+        const statusPriority = ['pending_approval', 'approval'];
+
+        for (const status of statusPriority) {
+          if (productMap.size >= baseLimit) break;
+
+          const snap = await adminDb
+            .collection('product_cores')
+            .where('status', '==', status)
+            .limit(baseLimit)
+            .get();
+
+          for (const doc of snap.docs) {
+            if (!productMap.has(doc.id)) {
+              productMap.set(doc.id, sanitizeProductCoreRecord(doc.data(), doc.id) as any as Product);
+            }
+          }
+        }
+      } catch (err) {
+        // Keep homepage resilient when local admin credentials are unavailable.
+        console.warn('getRecommendedProducts admin fallback unavailable:', err);
+      }
+    }
+
+    const products = Array.from(productMap.values())
+      .sort((a: any, b: any) => (a?.bestPrice?.amount || 0) - (b?.bestPrice?.amount || 0))
+      .slice(0, count);
     
     if (cacheSetFn) {
       await cacheSetFn(cacheKey, products, 600);

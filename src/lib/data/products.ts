@@ -8,9 +8,49 @@ const docToProductCore = (snap: any): ProductCore => sanitizeProductCoreRecord(s
 export async function getRecommendedProductCoresData(count: number = 50): Promise<ProductCore[]> {
   try {
     const ref = collection(db, 'product_cores');
-    const q = query(ref, where('status', '==', 'approved'), limit(count * 2));
-    const snap = await getDocs(q);
-    const products = snap.docs.map(docToProductCore);
+    const productsMap = new Map<string, ProductCore>();
+    const baseLimit = count * 2;
+
+    try {
+      const approvedQ = query(ref, where('status', '==', 'approved'), limit(baseLimit));
+      const approvedSnap = await getDocs(approvedQ);
+
+      for (const doc of approvedSnap.docs) {
+        if (!productsMap.has(doc.id)) {
+          productsMap.set(doc.id, docToProductCore(doc));
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching approved recommended products:', err);
+    }
+
+    if (typeof window === 'undefined' && productsMap.size < count) {
+      try {
+        const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+        const adminDb = getAdminFirestore();
+        const statusPriority = ['pending_approval', 'approval'];
+
+        for (const status of statusPriority) {
+          if (productsMap.size >= baseLimit) break;
+
+          const snap = await adminDb
+            .collection('product_cores')
+            .where('status', '==', status)
+            .limit(baseLimit)
+            .get();
+
+          for (const doc of snap.docs) {
+            if (!productsMap.has(doc.id)) {
+              productsMap.set(doc.id, sanitizeProductCoreRecord(doc.data(), doc.id));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Admin fallback for recommended products unavailable:', err);
+      }
+    }
+
+    const products = Array.from(productsMap.values());
 
     products.sort((a, b) => {
       const priceA = a.bestPrice?.amount || 0;
@@ -81,20 +121,37 @@ export async function getProductCoresByFiltersData(
   limitCount: number = 50
 ): Promise<ProductCore[]> {
   try {
-    const status = filters.statusFilter === 'waiting_room' ? 'pending_approval' : 'approved';
-    const constraints = [where('status', '==', status)];
+    const statuses = filters.statusFilter === 'waiting_room'
+      ? ['pending_approval', 'approval', 'pending', 'poczekalnia']
+      : ['approved'];
 
-    if (filters.subSubCategorySlug) {
-      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-    } else if (filters.subCategorySlug) {
-      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-    } else if (filters.categoryId) {
-      constraints.push(where('mainCategorySlug', '==', filters.categoryId));
+    const snapshots = await Promise.all(
+      statuses.map(async (status) => {
+        const constraints: any[] = [where('status', '==', status)];
+
+        if (filters.subSubCategorySlug) {
+          constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+        } else if (filters.subCategorySlug) {
+          constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+        } else if (filters.categoryId) {
+          constraints.push(where('mainCategorySlug', '==', filters.categoryId));
+        }
+
+        const q = query(collection(db, 'product_cores'), ...constraints, limit(limitCount));
+        return getDocs(q);
+      })
+    );
+
+    const productsMap = new Map<string, ProductCore>();
+    for (const snapshot of snapshots) {
+      for (const docSnap of snapshot.docs) {
+        if (!productsMap.has(docSnap.id)) {
+          productsMap.set(docSnap.id, docToProductCore(docSnap));
+        }
+      }
     }
 
-    const q = query(collection(db, 'product_cores'), ...constraints, limit(limitCount));
-    const snapshot = await getDocs(q);
-    const products: ProductCore[] = snapshot.docs.map(docToProductCore);
+    const products: ProductCore[] = Array.from(productsMap.values());
 
     const filtered = products.filter(product => {
       if (filters.priceRange) {

@@ -1,76 +1,93 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import typesenseServerClient from '@/lib/typesense-server';
+import { cacheGet, cacheSet } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
 
+const PUBLIC_STATS_CACHE_KEY = 'public:stats:v3';
+const PUBLIC_STATS_TTL_SECONDS = 300;
+
 export async function GET() {
   try {
+    const cached = await cacheGet(PUBLIC_STATS_CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     // final.md: public offer reads should use Typesense (not Firestore).
     const usersTotalPromise = adminDb.collection('users').count().get();
 
     if (!typesenseServerClient) {
-      const usersTotal = await usersTotalPromise;
-      return NextResponse.json({
-        success: false,
-        dealsCount: 0,
-        productsCount: 0,
+      const [usersTotal, approvedDeals, approvedProductCores] = await Promise.all([
+        usersTotalPromise,
+        adminDb.collection('deals').where('status', '==', 'approved').count().get(),
+        adminDb.collection('product_cores').where('status', '==', 'approved').count().get(),
+      ]);
+
+      const payload = {
+        success: true,
+        dealsCount: approvedDeals.data().count,
+        productsCount: approvedProductCores.data().count,
         usersCount: usersTotal.data().count,
         totalSavings: 0,
-        error: 'Typesense unavailable',
+        source: 'firestore_fallback',
         timestamp: new Date().toISOString(),
-      }, { status: 503 });
+      };
+
+      await cacheSet(PUBLIC_STATS_CACHE_KEY, payload, PUBLIC_STATS_TTL_SECONDS);
+      return NextResponse.json(payload);
     }
 
-    const [approvedDeals, approvedProducts, usersTotal] = await Promise.all([
+    const [approvedDeals, approvedProductCores, pendingProductCores, approvedLegacyProducts, usersTotal] = await Promise.all([
       typesenseServerClient.collections('deals').documents().search({
         q: '*',
         query_by: 'title,description,postedBy',
         filter_by: 'status:=approved',
         per_page: 1,
       }, {}),
-      typesenseServerClient.collections('products').documents().search({
-        q: '*',
-        query_by: 'name,description',
-        filter_by: 'status:=approved',
-        per_page: 1,
-      }, {}),
+      adminDb.collection('product_cores').where('status', '==', 'approved').count().get(),
+      adminDb.collection('product_cores').where('status', '==', 'pending_approval').count().get(),
+      adminDb.collection('products').where('status', '==', 'approved').count().get(),
       usersTotalPromise,
     ]);
 
-    // Approximate savings from up to 5000 approved deals in Typesense (votes * 10 PLN).
     const totalApprovedDeals = Math.max(0, Number((approvedDeals as any).found || 0));
-    const maxDealsForSavings = Math.min(totalApprovedDeals, 5000);
-    const perPage = 250;
-    const maxPages = Math.ceil(maxDealsForSavings / perPage);
+
+    // Keep this lightweight for home page TTFB: estimate from top 250 deals only.
     let totalSavings = 0;
+    const savingsSampleRes = await typesenseServerClient.collections('deals').documents().search({
+      q: '*',
+      query_by: 'title,description,postedBy',
+      filter_by: 'status:=approved',
+      sort_by: 'voteCount:desc',
+      per_page: 250,
+      page: 1,
+    }, {});
 
-    for (let page = 1; page <= maxPages; page++) {
-      const pageRes = await typesenseServerClient.collections('deals').documents().search({
-        q: '*',
-        query_by: 'title,description,postedBy',
-        filter_by: 'status:=approved',
-        sort_by: 'voteCount:desc',
-        per_page: perPage,
-        page,
-      }, {});
+    const savingsHits = ((savingsSampleRes as any).hits || []) as Array<{ document?: Record<string, unknown> }>;
+    totalSavings = savingsHits.reduce((sum, hit) => {
+      const voteCount = Number((hit.document?.voteCount as number | undefined) ?? 0);
+      return sum + (Number.isFinite(voteCount) ? voteCount : 0) * 10;
+    }, 0);
 
-      const hits = ((pageRes as any).hits || []) as Array<{ document?: Record<string, unknown> }>;
-      totalSavings += hits.reduce((sum, hit) => {
-        const voteCount = Number((hit.document?.voteCount as number | undefined) ?? 0);
-        return sum + (Number.isFinite(voteCount) ? voteCount : 0) * 10;
-      }, 0);
-    }
+    const productsFromCanonicalStore = approvedProductCores.data().count + pendingProductCores.data().count;
+    const productsFromLegacyStore = approvedLegacyProducts.data().count;
+    const totalApprovedProducts = Math.max(productsFromCanonicalStore, productsFromLegacyStore);
 
-    return NextResponse.json({
+    const payload = {
       success: true,
       dealsCount: totalApprovedDeals,
-      productsCount: Math.max(0, Number((approvedProducts as any).found || 0)),
+      productsCount: totalApprovedProducts,
       usersCount: usersTotal.data().count,
       totalSavings: Math.round(totalSavings),
+      productsCountSource: 'product_cores_approved_plus_pending',
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    await cacheSet(PUBLIC_STATS_CACHE_KEY, payload, PUBLIC_STATS_TTL_SECONDS);
+    return NextResponse.json(payload);
   } catch (error) {
     console.error('[Public Stats API] Error:', error);
     return NextResponse.json({

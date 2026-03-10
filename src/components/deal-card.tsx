@@ -100,18 +100,52 @@ const normalizeDisplayText = (value: unknown): string => {
   return stripHtmlTags(decodeHtmlEntities(parsed));
 };
 
+const resolveImageCandidate = (value: unknown): string | undefined => {
+  if (!value) return undefined;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = resolveImageCandidate(entry);
+      if (resolved) return resolved;
+    }
+    return undefined;
+  }
+  if (typeof value === 'object') {
+    const candidate = (value as any).src || (value as any).url || (value as any).image || (value as any).imageUrl;
+    return typeof candidate === 'string' && candidate.trim().length > 0 ? candidate.trim() : undefined;
+  }
+  return undefined;
+};
+
 const resolveDealImage = (deal: any, product?: Product | null): string => {
   const candidates = [
     deal?.image,
     deal?.imageUrl,
+    deal?.mainImage,
+    deal?.product_main_image_url,
     deal?.thumbnail,
-    Array.isArray(deal?.images) ? deal.images[0] : undefined,
-    Array.isArray(deal?.gallery) ? deal.gallery[0] : undefined,
-    product?.images?.[0],
+    deal?.images,
+    deal?.gallery,
+    deal?.metadata?.image,
+    deal?.metadata?.imageUrl,
+    deal?.metadata?.mainImage,
+    deal?.importMetadata?.image,
+    deal?.importMetadata?.imageUrl,
+    deal?.importMetadata?.mainImage,
+    product?.images,
+    (product as any)?.image,
+    (product as any)?.imageUrl,
   ];
 
-  const valid = candidates.find((entry) => typeof entry === 'string' && entry.trim().length > 0);
-  return typeof valid === 'string' ? valid : '/icon_okazjeplus.svg';
+  for (const candidate of candidates) {
+    const resolved = resolveImageCandidate(candidate);
+    if (resolved) return resolved;
+  }
+
+  return '/icon_okazjeplus.svg';
 };
 
 function toTimestampSafe(value: any): number {
