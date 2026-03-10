@@ -1,48 +1,32 @@
 # Okazje Plus 🛍️
 
-Polska platforma z okazjami i produktami (Next.js 15 + Firebase + Genkit AI). Ten README jest celowo zwięzły — pełna dokumentacja została przeniesiona do `docs/`.
+Polska platforma z okazjami i produktami (Next.js 15 + Firebase + Genkit AI).  
+**Social Commerce Marketplace** w stylu Ceneo/HotDeals — masowy import z AliExpress & Convertiser, AI enrichment, moderacja społecznościowa.
 
-## 🔗 Dokumentacja
+## 📖 Dokumentacja
 
-**Pełen indeks**: [`docs/INDEX.md`](docs/INDEX.md) (zreorganizowany grudzień 2025)
+> **Single Source of Truth:** [`docs/MASTER.md`](docs/MASTER.md)
 
-### Szybkie linki:
-- 🚀 **Start**: [`docs/QUICK_START.md`](docs/QUICK_START.md)
-- 👤 **Admin**: [`docs/guides/PRZEWODNIK_ADMINA.md`](docs/guides/PRZEWODNIK_ADMINA.md)
-- 🛒 **API**: [`docs/api/ALIEXPRESS_API_OVERVIEW.md`](docs/api/ALIEXPRESS_API_OVERVIEW.md)
-- 📦 **Deployment**: [`docs/deployment/DEPLOY_STATUS.md`](docs/deployment/DEPLOY_STATUS.md)
-- 🎯 **M5 (najnowszy)**: [`docs/milestones/M5_COMPLETION_SUMMARY.md`](docs/milestones/M5_COMPLETION_SUMMARY.md)
-- 🧪 **Testy**: [`docs/testing/tests-quickstart.md`](docs/testing/tests-quickstart.md)
+Zawiera: architekturę M6, model danych, pipeline Harvestera, integracje API (AliExpress), SEO/Rich Results, UX Mobile-First, Firebase/GCloud infrastructure, roadmap monetyzacji.
 
-### Struktura dokumentacji:
-```
-docs/
-├── guides/       # Przewodniki użytkownika i admina
-├── api/          # Dokumentacja API i integracji
-├── deployment/   # Wdrożenia i konfiguracja
-├── milestones/   # Podsumowania M4, M5, etc.
-├── features/     # Dokumentacja funkcjonalności
-├── testing/      # Testy i QA
-└── archive/      # Starsza dokumentacja (M1-M3)
-```
+## ✨ Aktywne funkcje (M6 — Marzec 2026)
 
-## ✨ Nowe funkcje (M5 - 23.11.2025)
+### 🏗️ M6 Product-Centric Architecture
+- **ProductCore + Deal model**: niezmienialny katalog produktów + mutowalne oferty cenowe
+- **Bulk Harvester**: masowy import z AliExpress/Convertiser, lokalny routing przez JSON drzewo kategorii
+- **AI Enrichment**: Product Refiner (coreSpecs + 6-lang opisy) + Deal Refiner (sellingPoints)
+- **Social Commerce (Poczekalnia)**: oferty wchodzą do głosowania, próg +15 = Strona Główna
+- **Typesense**: wyszukiwarka (95% browse ruchu), sortowanie po `temperature` (time-decay)
+- **SEO**: JSON-LD Product schema, AggregateOffer, BreadcrumbList, Rich Results Google
 
-### 🔔 System Powiadomień
+### 🔔 Powiadomienia (M5)
 - **In-app notifications**: dropdown w navbar z real-time updates
-- **Email notifications**: integracja SendGrid dla wszystkich typów powiadomień
-- **Auto-triggers**: Cloud Functions automatycznie powiadamiają o odpowiedziach na komentarze
+- **Email notifications**: integracja SendGrid
+- **Auto-triggers**: Cloud Functions dla odpowiedzi na komentarze
 
-### 💰 Price Monitoring & Alerts
-- **Alerty cenowe**: użytkownicy mogą ustawić powiadomienia przy spadku ceny
-- **Scheduled monitoring**: Cloud Function sprawdza ceny co godzinę
-- **Historia cen**: wykresy zmian w czasie (30 dni)
-- **Email notifications**: automatyczne powiadomienia gdy cena spadnie
-
-### 💬 Comment Enhancements
-- **Edycja komentarzy**: inline editing z oznaczeniem "(edytowano)"
-- **Spam protection**: 5-sekundowy cooldown między komentarzami
-- **Threading**: odpowiedzi na komentarze z powiadomieniami
+### 💰 Price Monitoring
+- **Alerty cenowe**: powiadomienia przy spadku ceny
+- **Historia cen**: Omnibus Directive compliance (30 dni)
 
 ## 🚀 Szybki start (skrót)
 ```bash
@@ -94,22 +78,24 @@ ALIEXPRESS_APP_SECRET=xxx
 ## 🤖 AI
 Uruchom: `npm run genkit:dev` i otwórz panel lokalny (port 4000) do testu flowów.
 
-## ✅ Jakość
+## ✅ Jakość kodu
 ```bash
 npm run typecheck
 npm run lint
-npm run test
 npm run build
 ```
 
-## 🔄 Konwencje
-- Logika dostępu do danych tylko w `data.ts`.
-- Polski język w UI i nazwach; techniczne komentarze mogą być po angielsku.
-- Status publiczny: `status: "approved"`.
-- Optymistyczne UI dla interakcji (głosy, komentarze).
+> `npm test` usunięty (Jan 2026). Testy systemowe: Panel Admin → zakładka "Testy".
 
-## �️ Wsparcie
-Problemy / pytania → załóż issue. Rozbudowane opisy rozwiązań: zobacz pliki w `docs/`.
+## 🔄 Kluczowe konwencje
+- **Logika danych**: tylko w `src/lib/data/` (nigdy bezpośrednio w komponentach)
+- **Język UI**: Polski (`messages/pl/*.json`)
+- **Status publiczny**: zawsze `status: "approved"`
+- **Optimistic UI**: głosy i komentarze z rollback na błąd
+- **Afiliacja**: każdy Deal musi mieć poprawny `affiliateLink` (to nasz przychód)
+
+## 🗺️ Wsparcie
+Problemy → załóż issue. Rozbudowane rozwiązania → [`docs/MASTER.md`](docs/MASTER.md).
 
 ---
 Made with ❤️ in Poland 🇵🇱
