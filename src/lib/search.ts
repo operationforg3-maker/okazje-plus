@@ -331,6 +331,47 @@ export type Suggestion = {
   subLabel?: string;
 };
 
+function stripHtmlTags(value: unknown): string {
+  if (typeof value !== 'string' || value.length === 0) return '';
+
+  return value
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestion | null {
+  const id = typeof document?.id === 'string' ? document.id : '';
+  if (!id) return null;
+
+  const rawLabel = type === 'deal'
+    ? document?.title ?? document?.name ?? document?.description
+    : document?.name ?? document?.title ?? document?.description;
+  const rawSubLabel = type === 'deal'
+    ? document?.description ?? document?.title
+    : document?.description ?? document?.name;
+
+  const label = stripHtmlTags(rawLabel);
+  const subLabel = stripHtmlTags(rawSubLabel);
+
+  if (!label) return null;
+
+  return {
+    type,
+    id,
+    label,
+    subLabel: subLabel && subLabel !== label ? subLabel : undefined,
+  };
+}
+
 export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
   // If running in browser, always use server-side autocomplete endpoint
   if (typeof window !== 'undefined') {
@@ -354,24 +395,25 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
   }
 
   try {
-    const searches = {
+    const searches = [
+      { collection: 'products', q, query_by: 'name,description', per_page: limit, highlight_full_fields: 'name', prefix: true },
+      { collection: 'deals', q, query_by: 'title,description', per_page: limit, highlight_full_fields: 'title', prefix: true },
+    ];
+    const searchRequest = {
       searches: [
-        { collection: 'products', q, query_by: 'name,description', per_page: limit, highlight_full_fields: 'name', prefix: true },
-        { collection: 'deals', q, query_by: 'title,description', per_page: limit, highlight_full_fields: 'title', prefix: true },
+        ...searches,
       ],
     } as any;
-    const res = await (typesenseClient as any).multiSearch.perform(searches, {});
+    const res = await (typesenseClient as any).multiSearch.perform(searchRequest, {});
     const out: Suggestion[] = [];
-    for (const r of res.results || []) {
-      const isDeal = r.request_params.collection === 'deals';
+    for (const [index, r] of (res.results || []).entries()) {
+      const collectionName = searches[index]?.collection;
+      const type: 'product' | 'deal' = collectionName === 'deals' ? 'deal' : 'product';
       for (const h of r.hits || []) {
-        const doc = h.document;
-        out.push({
-          type: isDeal ? 'deal' : 'product',
-          id: doc.id,
-          label: isDeal ? doc.title : doc.name,
-          subLabel: isDeal ? doc.description : doc.description,
-        });
+        const suggestion = normalizeSuggestion(h.document, type);
+        if (suggestion) {
+          out.push(suggestion);
+        }
       }
     }
     return out;
