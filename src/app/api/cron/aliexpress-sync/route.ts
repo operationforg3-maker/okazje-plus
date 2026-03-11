@@ -112,6 +112,7 @@ async function runAliExpressSync(request: NextRequest) {
 
     const pageSize = Number(settings?.pageSize || process.env.ALIEXPRESS_SYNC_PAGE_SIZE || 50);
     const maxPages = Number(settings?.maxPages || process.env.ALIEXPRESS_SYNC_MAX_PAGES || 100);
+    const autoApprove = typeof settings?.autoApprove === 'boolean' ? settings.autoApprove : true;
 
     const shouldEnsureProfiles =
       request.nextUrl.searchParams.get('ensureProfiles') === '1' ||
@@ -159,7 +160,7 @@ async function runAliExpressSync(request: NextRequest) {
           pageSize,
           maxPages,
           dryRun: false,
-          autoApprove: true,
+          autoApprove,
           enableAI: true,
           triggeredBy: 'cron',
         });

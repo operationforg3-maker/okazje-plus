@@ -13,6 +13,7 @@ import { RefreshCw, Save, Play, Layers, ShieldCheck, AlertTriangle, Info, Activi
 type Settings = {
   enabled: boolean;
   ensureProfiles: boolean;
+  autoApprove: boolean;
   maxItemsPerProfile: number;
   hardCap: number;
   pageSize: number;
@@ -25,6 +26,7 @@ type Settings = {
 const DEFAULTS: Settings = {
   enabled: true,
   ensureProfiles: true,
+  autoApprove: true,
   maxItemsPerProfile: 500,
   hardCap: 5000,
   pageSize: 50,
@@ -41,6 +43,7 @@ type HealthIssue = {
 type HealthState = {
   autopilotEnabled: boolean;
   ensureProfiles: boolean;
+  autoApprove: boolean;
   lockActive: boolean;
   lockUntil: string | null;
   cronSecretConfigured: boolean;
@@ -175,7 +178,10 @@ export function AliExpressAutopilotControl({
           Authorization: `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ maxItemsPerProfile: settings.maxItemsPerProfile }),
+        body: JSON.stringify({
+          maxItemsPerProfile: settings.maxItemsPerProfile,
+          autoApprove: settings.autoApprove,
+        }),
       });
       const data = await res.json();
 
@@ -277,12 +283,15 @@ export function AliExpressAutopilotControl({
           </div>
 
           {health && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
               <Badge variant={health.autopilotEnabled ? 'default' : 'destructive'}>
                 Autopilot: {health.autopilotEnabled ? 'wlaczony' : 'wylaczony'}
               </Badge>
               <Badge variant={health.profiles.enabled > 0 ? 'default' : 'destructive'}>
                 Profile: {health.profiles.enabled}/{health.profiles.total}
+              </Badge>
+              <Badge variant={health.autoApprove ? 'default' : 'secondary'}>
+                Auto-approve: {health.autoApprove ? 'wlaczony' : 'wylaczony'}
               </Badge>
               <Badge variant={health.aliexpressTokenConfigured ? 'default' : 'destructive'}>
                 Token API: {health.aliexpressTokenConfigured ? 'OK' : 'BRAK'}
@@ -320,7 +329,7 @@ export function AliExpressAutopilotControl({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <p className="font-medium">Autopilot aktywny</p>
@@ -335,6 +344,14 @@ export function AliExpressAutopilotControl({
               <p className="text-xs text-slate-500">Przed sync automatycznie dopina brakujace profile L3.</p>
             </div>
             <Switch checked={settings.ensureProfiles} onCheckedChange={(value) => setSettings((prev) => ({ ...prev, ensureProfiles: value }))} />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="font-medium">Auto-approve importu</p>
+              <p className="text-xs text-slate-500">Autopilot zapisuje nowe oferty od razu jako approved zamiast draft.</p>
+            </div>
+            <Switch checked={settings.autoApprove} onCheckedChange={(value) => setSettings((prev) => ({ ...prev, autoApprove: value }))} />
           </div>
         </div>
 

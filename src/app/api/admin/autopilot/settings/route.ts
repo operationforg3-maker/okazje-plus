@@ -8,6 +8,7 @@ const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
 export type AliExpressAutopilotSettings = {
   enabled: boolean;
   ensureProfiles: boolean;
+  autoApprove: boolean;
   maxItemsPerProfile: number;
   hardCap: number;
   pageSize: number;
@@ -20,6 +21,7 @@ export type AliExpressAutopilotSettings = {
 const DEFAULT_SETTINGS: AliExpressAutopilotSettings = {
   enabled: true,
   ensureProfiles: true,
+  autoApprove: true,
   maxItemsPerProfile: 500,
   hardCap: 5000,
   pageSize: 50,
@@ -36,6 +38,7 @@ function normalizeSettings(input: Partial<AliExpressAutopilotSettings>): AliExpr
   return {
     enabled: typeof input.enabled === 'boolean' ? input.enabled : DEFAULT_SETTINGS.enabled,
     ensureProfiles: typeof input.ensureProfiles === 'boolean' ? input.ensureProfiles : DEFAULT_SETTINGS.ensureProfiles,
+    autoApprove: typeof input.autoApprove === 'boolean' ? input.autoApprove : DEFAULT_SETTINGS.autoApprove,
     maxItemsPerProfile: normalizeNumeric(input.maxItemsPerProfile, DEFAULT_SETTINGS.maxItemsPerProfile, 5, 20000),
     hardCap: normalizeNumeric(input.hardCap, DEFAULT_SETTINGS.hardCap, 100, 50000),
     pageSize: normalizeNumeric(input.pageSize, DEFAULT_SETTINGS.pageSize, 10, 50),

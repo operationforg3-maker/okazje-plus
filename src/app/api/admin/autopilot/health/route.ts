@@ -111,6 +111,7 @@ export async function GET() {
       health: {
         autopilotEnabled: settings?.enabled !== false,
         ensureProfiles: settings?.ensureProfiles === true,
+        autoApprove: typeof settings?.autoApprove === 'boolean' ? settings.autoApprove : true,
         lockActive,
         lockUntil: lockData?.lockedUntil || null,
         cronSecretConfigured,

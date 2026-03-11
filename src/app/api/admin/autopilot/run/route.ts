@@ -4,6 +4,8 @@ import { adminDb } from '@/lib/firebase-admin';
 import { importFromAliExpress } from '@/lib/aliexpress-importer';
 import { logger } from '@/lib/logger';
 
+const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
+
 /**
  * POST /api/admin/autopilot/run
  * Admin-only helper to run all enabled AliExpress import profiles on demand.
@@ -20,6 +22,13 @@ export async function POST(request: NextRequest) {
     const maxItemsOverride = typeof body?.maxItemsPerProfile === 'number'
       ? Number(body.maxItemsPerProfile)
       : undefined;
+    const autoApproveOverride = typeof body?.autoApprove === 'boolean'
+      ? body.autoApprove
+      : undefined;
+
+    const settingsSnap = await adminDb.doc(SETTINGS_DOC_PATH).get();
+    const settings = settingsSnap.exists ? (settingsSnap.data() as { autoApprove?: boolean }) : {};
+    const autoApprove = autoApproveOverride ?? settings.autoApprove ?? true;
 
     const profilesSnapshot = await adminDb
       .collection('importProfiles')
@@ -43,7 +52,7 @@ export async function POST(request: NextRequest) {
         const result = await importFromAliExpress({
           profileId: profile.id,
           maxItems: maxItemsOverride || profile.maxItemsPerRun || 50,
-          autoApprove: profile?.mapping?.defaultStatus === 'approved',
+          autoApprove,
           enableAI: true,
           triggeredBy: 'manual',
           triggeredByUid: session.uid,
