@@ -353,24 +353,11 @@ export async function importFromAliExpress(
           continue;
         }
 
-        // Check for duplicates
-        const existingId = await checkDuplicate(originalId, 'aliexpress', 'products');
-        if (existingId) {
-          result.stats.duplicates++;
-          result.stats.skipped++;
-          await logImportItem(result.importRunId, {
-            originalId,
-            action: 'skipped',
-            itemType: 'product',
-            itemId: existingId,
-            reason: 'Duplicate',
-            timestamp: new Date().toISOString(),
-            metadata: {
-              duplicateOf: existingId,
-            },
-          });
-          continue;
-        }
+        // Check for duplicate PRODUCT (will create DEAL for same product with different merchant/price)
+        const existingProductId = await checkDuplicate(originalId, 'aliexpress', 'products');
+        
+        // If product exists, we'll link a new Deal instead of skipping
+        // This allows same product from different merchants/prices
 
         // Extract images
         // product_small_image_urls is string[] per AliExpress Affiliate API types
@@ -458,9 +445,79 @@ export async function importFromAliExpress(
         const sanitized = sanitizeProductPayload(productData);
 
         if (!config.dryRun) {
-          // Create product in Firestore
-          const productRef = await adminDb.collection('products').add(sanitized);
-          result.stats.created++;
+          let productRef: any;
+          
+          if (existingProductId) {
+            // Product already exists - create a DEAL for it instead (different price/merchant)
+            result.stats.duplicates++;
+            productRef = {
+              id: existingProductId,
+              isExisting: true,
+            };
+            logger.info('Product exists - creating deal for same product', {
+              productId: existingProductId,
+              originalId,
+              price: pricePLN,
+            });
+          } else {
+            // New product - create it
+            productRef = await adminDb.collection('products').add(sanitized);
+            result.stats.created++;
+            logger.info('Product imported', {
+              productId: productRef.id,
+              originalId,
+              title: title.substring(0, 50),
+            });
+          }
+
+          // Create a Deal document for this offer (always, whether new product or existing)
+          const dealData: Partial<any> = {
+            productId: productRef.id,
+            mainCategorySlug: profile.mapping.targetMainCategory,
+            subCategorySlug: profile.mapping.targetSubCategory,
+            subSubCategorySlug: profile.mapping.targetSubSubCategory,
+            price: {
+              amount: pricePLN,
+              currency: 'PLN',
+            },
+            shipping: {
+              cost: 0,
+              timeDays: parseInt(rawProduct.delivery_time || '14'),
+              fromCountry: rawProduct.ship_from_country || 'CN',
+            },
+            source: 'aliexpress' as const,
+            affiliateLink: rawProduct.promotion_link || rawProduct.product_detail_url || '',
+            title: { pl: title },
+            stockStatus: 'in_stock' as const,
+            isActive: true,
+            priceHistory: [
+              {
+                date: new Date().toISOString().split('T')[0],
+                price: pricePLN,
+                currency: 'PLN',
+              },
+            ],
+            voteCount: 0,
+            temperature: 0,
+            commentsCount: 0,
+            status: config.autoApprove ? 'approved' : 'draft',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            createdBy: config.triggeredByUid || 'system',
+            sourceProductId: originalId,
+            sourceUrl: rawProduct.product_detail_url || '',
+            metadata: {
+              source: 'aliexpress',
+              originalId,
+              importedAt: new Date().toISOString(),
+              importedBy: config.triggeredByUid || 'system',
+              merchant: rawProduct.shop_title || rawProduct.shop_name,
+              merchantId: rawProduct.shop_id,
+            },
+          };
+
+          const dealRef = await adminDb.collection('deals').add(dealData);
+          result.stats.created++; // Count deal creation as created item
           
           if (config.autoApprove) {
             result.stats.autoApproved++;
@@ -469,26 +526,27 @@ export async function importFromAliExpress(
           await logImportItem(result.importRunId, {
             originalId,
             action: 'created',
-            itemType: 'product',
-            itemId: productRef.id,
+            itemType: existingProductId ? 'deal' : 'product',
+            itemId: existingProductId ? dealRef.id : productRef.id,
             timestamp: new Date().toISOString(),
             metadata: {
               title,
               price: pricePLN,
               category: profile.mapping.targetMainCategory,
               autoApproved: config.autoApprove,
-              aiEnriched: false, // AI enrichment happens asynchronously
+              duplicateOf: existingProductId || undefined,
             },
           });
 
-          logger.info('Product imported', {
+          logger.info(`Deal imported${existingProductId ? ' for existing product' : ''}`, {
+            dealId: dealRef.id,
             productId: productRef.id,
             originalId,
-            title: title.substring(0, 50),
+            price: pricePLN,
           });
         } else {
           result.stats.created++;
-          logger.info('Product would be created (dry run)', {
+          logger.info(`${existingProductId ? 'Deal for existing' : 'New product'} would be created (dry run)`, {
             originalId,
             title: title.substring(0, 50),
           });
