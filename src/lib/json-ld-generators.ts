@@ -4,6 +4,32 @@ const BASE_URL = 'https://okazjeplus.pl';
 const PRODUCT_BASE_URL = `${BASE_URL}/pl/products`;
 const DEAL_BASE_URL = `${BASE_URL}/pl/deals`;
 
+function getValidAbsoluteUrl(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.toString();
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
+}
+
+function stripHtml(input: string): string {
+  return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function getLocalizedValue(value: unknown, fallback = ''): string {
   if (typeof value === 'string') {
     return value;
@@ -52,8 +78,8 @@ export function generateProductJsonLd(
   
   // Get images
   const images = isM6
-    ? ((productCore?.images || []).slice(0, 5))
-    : ([product?.image].filter(Boolean));
+    ? (productCore?.images || []).map(getValidAbsoluteUrl).filter((img): img is string => Boolean(img)).slice(0, 5)
+    : ([getValidAbsoluteUrl(product?.image)].filter((img): img is string => Boolean(img)));
   
   // Get prices
   const priceAmount = isM6 
@@ -223,20 +249,22 @@ export function generateBreadcrumbJsonLd(
  */
 export function generateDealJsonLd(deal: Deal) {
   const dealTitle = getLocalizedValue(deal.title, 'Okazja');
-  const dealDescription = getLocalizedValue(deal.description, '');
+  const dealDescription = stripHtml(getLocalizedValue(deal.description, ''));
   const price = typeof deal.price === 'object' ? Number(deal.price.amount) || 0 : Number(deal.price) || 0;
   const priceCurrency = typeof deal.price === 'object' && typeof deal.price.currency === 'string'
     ? deal.price.currency.toUpperCase()
     : 'PLN';
   const sellerName = deal.merchant || 'Various';
+  const dealUrl = `${DEAL_BASE_URL}/${deal.id}`;
+  const dealImage = getValidAbsoluteUrl(deal.image);
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Offer',
     name: dealTitle,
     description: dealDescription,
-    image: deal.image,
-    url: `${DEAL_BASE_URL}/${deal.id}`,
+    ...(dealImage && { image: dealImage }),
+    url: dealUrl,
     priceCurrency,
     price,
     ...(deal.originalPrice && {
@@ -263,13 +291,6 @@ export function generateDealJsonLd(deal: Deal) {
         name: deal.merchant,
       },
     }),
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: clampRating((deal.temperature || 0) / 100),
-      reviewCount: deal.voteCount || 0,
-      bestRating: 5,
-      worstRating: 1,
-    },
   };
 }
 
@@ -310,16 +331,18 @@ export function generateHomePageJsonLd(
           const dealCurrency = typeof deal.price === 'object' && typeof deal.price.currency === 'string'
             ? deal.price.currency.toUpperCase()
             : 'PLN';
+          const dealUrl = `${DEAL_BASE_URL}/${deal.id}`;
+          const dealImage = getValidAbsoluteUrl(deal.image);
 
           return {
             '@type': 'ListItem',
             position: index + 1,
-            url: `${DEAL_BASE_URL}/${deal.id}`,
+            url: dealUrl,
             item: {
               '@type': 'Offer',
               name: dealTitle,
-              url: `${DEAL_BASE_URL}/${deal.id}`,
-              image: deal.image,
+              url: dealUrl,
+              ...(dealImage && { image: dealImage }),
               price: dealPrice,
               priceCurrency: dealCurrency,
               availability: 'https://schema.org/InStock',
@@ -340,7 +363,9 @@ export function generateHomePageJsonLd(
           const productPrice = typeof (product as any).price === 'object'
             ? Number((product as any).price.amount) || 0
             : Number((product as any).price) || 0;
-          const productImage = (product as any).image || (product as any).imageUrl || (product as any).images?.[0];
+          const productImage = getValidAbsoluteUrl((product as any).image)
+            || getValidAbsoluteUrl((product as any).imageUrl)
+            || getValidAbsoluteUrl((product as any).images?.[0]);
           const ratingValue = clampRating(Number((product as any)?.ratingCard?.average) || Number((product as any)?.rating?.score) || 0);
           const ratingCount = Number((product as any)?.ratingCard?.count) || Number((product as any)?.rating?.count) || 0;
 
@@ -352,7 +377,7 @@ export function generateHomePageJsonLd(
               '@type': 'Product',
               name: productTitle,
               url: `${PRODUCT_BASE_URL}/${product.id}`,
-              image: productImage,
+              ...(productImage && { image: productImage }),
               description: productDescription.slice(0, 300),
               ...(productPrice > 0 && {
                 offers: {
