@@ -4,6 +4,7 @@ import { Deal, LocalizedText } from '@/lib/types';
 import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
 import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search';
+import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 import DealDetailClient from './deal-detail-client';
 
 // Force dynamic rendering dla real-time danych
@@ -305,77 +306,8 @@ export default async function DealDetailPage({ params }: PageProps) {
   const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || 'Okazja';
   const dealDescription = typeof deal.description === 'string' ? deal.description : deal.description?.pl || '';
   
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Offer',
-    name: dealTitle,
-    description: dealDescription,
-    image: deal.image,
-    url: `https://okazjeplus.pl/pl/deals/${deal.id}`,
-    priceCurrency: (typeof deal.price === 'object' && typeof deal.price.currency === 'string')
-      ? deal.price.currency.toUpperCase()
-      : 'PLN',
-    price: typeof deal.price === 'object' ? deal.price.amount : deal.price,
-    ...(deal.originalPrice && {
-      priceSpecification: {
-        '@type': 'PriceSpecification',
-          price: typeof deal.price === 'object' ? deal.price.amount : deal.price,
-          priceCurrency: (typeof deal.price === 'object' && typeof deal.price.currency === 'string')
-            ? deal.price.currency.toUpperCase()
-            : 'PLN',
-        valueAddedTaxIncluded: true,
-      },
-    }),
-    ...(deal.expiryDate && {
-      priceValidUntil: deal.expiryDate,
-    }),
-    availability: deal.stockAlert === 'ending-soon' 
-      ? 'https://schema.org/LimitedAvailability'
-      : 'https://schema.org/InStock',
-    seller: {
-      '@type': 'Organization',
-      name: deal.merchant || 'Various',
-    },
-    ...(deal.merchant && {
-      brand: {
-        '@type': 'Brand',
-        name: deal.merchant,
-      },
-    }),
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: Math.min(5, Math.max(1, deal.temperature / 100)),
-      reviewCount: deal.voteCount,
-      bestRating: 5,
-      worstRating: 1,
-    },
-  };
-
-  // BreadcrumbList schema for better navigation in Google
-  const breadcrumbList = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Strona główna',
-        item: 'https://okazjeplus.pl'
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Okazje',
-        item: 'https://okazjeplus.pl/deals'
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: dealTitle,
-        item: `https://okazjeplus.pl/deals/${deal.id}`
-      }
-    ]
-  };
+  const jsonLd = generateDealJsonLd(deal);
+  const breadcrumbList = generateBreadcrumbJsonLd(dealTitle, deal.id, undefined, 'deals');
   
   return (
     <>

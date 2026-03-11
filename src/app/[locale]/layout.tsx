@@ -15,6 +15,7 @@ import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
 import { CashbackWarningModal } from '@/components/cashback-warning-modal';
 import { AnalyticsProvider } from '@/components/analytics/provider';
 import { CookieConsentBanner } from '@/components/cookie-consent';
+import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/json-ld-generators';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
 
@@ -106,6 +107,8 @@ export default async function LocaleLayout({
   const { locale } = await params;
   const effectiveLocale = locale || 'pl';
   const messages = await getMessages();
+  const websiteJsonLd = generateWebSiteJsonLd();
+  const organizationJsonLd = generateOrganizationJsonLd();
   
   return (
     <>
@@ -115,22 +118,7 @@ export default async function LocaleLayout({
         type="application/ld+json"
         strategy="beforeInteractive"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'WebSite',
-            name: 'Okazje+',
-            alternateName: 'OkazjePlus',
-            url: 'https://okazjeplus.pl',
-            description: 'Najlepsze okazje zakupowe, promocje i wyprzedaże w Polsce. Społeczność dzieląca się najgorętszymi ofertami i cenami produktów.',
-            potentialAction: {
-              '@type': 'SearchAction',
-              target: {
-                '@type': 'EntryPoint',
-                urlTemplate: 'https://okazjeplus.pl/search?q={search_term_string}'
-              },
-              'query-input': 'required name=search_term_string'
-            }
-          })
+          __html: JSON.stringify(websiteJsonLd)
         }}
       />
 
@@ -140,22 +128,7 @@ export default async function LocaleLayout({
         type="application/ld+json"
         strategy="beforeInteractive"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Organization',
-            name: 'Okazje+',
-            url: 'https://okazjeplus.pl',
-            logo: 'https://okazjeplus.pl/Logotyp_okazjePlus.png',
-            sameAs: [
-              'https://www.facebook.com/okazjeplus',
-              'https://twitter.com/okazjeplus'
-            ],
-            contactPoint: {
-              '@type': 'ContactPoint',
-              contactType: 'customer service',
-              availableLanguage: ['Polish', 'English', 'German']
-            }
-          })
+          __html: JSON.stringify(organizationJsonLd)
         }}
       />
 

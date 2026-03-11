@@ -1,9 +1,8 @@
 import { Metadata } from 'next';
-import { Suspense } from 'react';
 import HomeClient from './home-client';
 import { getRecommendedProducts, getCategories } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
-import { getServerAuthSession } from '@/lib/auth-server';
+import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
 
 // Cache home page more aggressively for better performance
 export const dynamic = 'force-dynamic';
@@ -41,7 +40,7 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   // Load data for home page
-  const [hotDeals, topProducts, categories, session] = await Promise.all([
+  const [hotDeals, topProducts, categories] = await Promise.all([
     searchDealsTypesense('*', {
       limit: 20,
       sortBy: 'hot',
@@ -49,15 +48,22 @@ export default async function HomePage() {
     }),
     getRecommendedProducts(12),
     getCategories(),
-    getServerAuthSession(),
   ]);
 
+  const homeJsonLd = generateHomePageJsonLd(hotDeals, topProducts);
+
   return (
-    <HomeClient 
-      initialHotDeals={hotDeals}
-      initialTopProducts={topProducts}
-      categories={categories}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
+      />
+      <HomeClient 
+        initialHotDeals={hotDeals}
+        initialTopProducts={topProducts}
+        categories={categories}
+      />
+    </>
   );
 }
 
