@@ -46,12 +46,24 @@ export async function POST(request: NextRequest) {
       result,
     });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('Unauthorized') || message.includes('Forbidden')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized',
+          message,
+        },
+        { status: 403 }
+      );
+    }
+
     logger.error('AliExpress profiles bootstrap failed', { error });
     return NextResponse.json(
       {
         success: false,
         error: 'Bootstrap failed',
-        message: error instanceof Error ? error.message : String(error),
+        message,
       },
       { status: 500 }
     );

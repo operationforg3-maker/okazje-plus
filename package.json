@@ -21,6 +21,8 @@
     "seed:categories": "tsx src/scripts/seed-categories-full.ts",
     "seed:import-profiles": "tsx src/scripts/seed-import-profiles.ts",
     "auto-import": "tsx src/scripts/auto-import-products.ts",
+    "backfill:master-data": "tsx src/scripts/master-data-backfill.ts",
+    "backfill:master-data:apply": "tsx src/scripts/master-data-backfill.ts --apply",
     "report:tools": "node scripts/generate-tools-inventory.mjs",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts",
     "typesense:sync:full": "ts-node src/scripts/typesense-sync.ts",

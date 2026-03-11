@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -17,7 +19,7 @@ import ConvertiserAutoImport from '@/components/admin/convertiser-auto-import';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIEnhancer } from '@/components/admin/ai-enhancer';
 import { withAuth } from '@/components/auth/withAuth';
-import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2 } from 'lucide-react';
+import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2, Rocket, Layers, PlayCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { JobsMonitor } from '@/components/admin/jobs-monitor';
 import { HarvesterJobsMonitor } from '@/components/admin/harvester-jobs-monitor';
@@ -42,6 +44,124 @@ function HarvesterPage() {
   const [query, setQuery] = useState('');
   const [maxResults, setMaxResults] = useState(50);
   const [isStartingJob, setIsStartingJob] = useState(false);
+  const [isFillingCategories, setIsFillingCategories] = useState(false);
+  const [isBootstrappingProfiles, setIsBootstrappingProfiles] = useState(false);
+  const [isRunningAutopilot, setIsRunningAutopilot] = useState(false);
+  const [isEnablingDealSchedule, setIsEnablingDealSchedule] = useState(false);
+
+  const runM6FillCategories = async () => {
+    setIsFillingCategories(true);
+    try {
+      const token = await getIdToken();
+      const response = await fetch('/api/admin/ai/fill-categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || 'Nie udało się uzupełnić kategorii');
+      }
+
+      addLog('M6: Automatyczne uzupełnianie kategorii zakończone.', 'success');
+    } catch (error: any) {
+      addLog(`M6: Błąd uzupełniania kategorii: ${error?.message || 'Nieznany błąd'}`, 'error');
+    } finally {
+      setIsFillingCategories(false);
+    }
+  };
+
+  const runM6BootstrapProfiles = async () => {
+    setIsBootstrappingProfiles(true);
+    try {
+      const token = await getIdToken();
+      const response = await fetch('/api/admin/autopilot/bootstrap-profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          dryRun: false,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || 'Nie udało się przygotować profili autopilota');
+      }
+
+      const created = Number(data?.result?.createdProfiles || 0);
+      const skipped = Number(data?.result?.skippedProfiles || 0);
+      addLog(`M6: Bootstrap profili zakończony. Utworzono: ${created}, pominięto: ${skipped}.`, 'success');
+    } catch (error: any) {
+      addLog(`M6: Błąd bootstrapu profili: ${error?.message || 'Nieznany błąd'}`, 'error');
+    } finally {
+      setIsBootstrappingProfiles(false);
+    }
+  };
+
+  const runM6AutopilotNow = async () => {
+    setIsRunningAutopilot(true);
+    try {
+      const token = await getIdToken();
+      const response = await fetch('/api/admin/autopilot/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || 'Nie udało się uruchomić autopilota');
+      }
+
+      addLog(
+        `M6: Autopilot uruchomiony. Profile: ${Number(data?.total || 0)}, sukces: ${Number(data?.successful || 0)}, błędy: ${Number(data?.failed || 0)}.`,
+        'success'
+      );
+    } catch (error: any) {
+      addLog(`M6: Błąd autopilota: ${error?.message || 'Nieznany błąd'}`, 'error');
+    } finally {
+      setIsRunningAutopilot(false);
+    }
+  };
+
+  const runEnableDealsSchedule = async () => {
+    setIsEnablingDealSchedule(true);
+    try {
+      const token = await getIdToken();
+      const response = await fetch('/api/admin/schedule/deals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          enabled: true,
+          frequency: 'hourly',
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || 'Nie udało się ustawić harmonogramu deali');
+      }
+
+      addLog('M6: Włączono harmonogram deali (hourly), aby utrzymać świeże najlepsze oferty.', 'success');
+    } catch (error: any) {
+      addLog(`M6: Błąd ustawiania harmonogramu deali: ${error?.message || 'Nieznany błąd'}`, 'error');
+    } finally {
+      setIsEnablingDealSchedule(false);
+    }
+  };
 
   const startHarvesterJob = async () => {
     const normalizedQuery = query.trim();
@@ -214,6 +334,65 @@ function HarvesterPage() {
                   </div>
                 </div>
               </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Rocket className="h-4 w-4" />
+                    M6 Autopilot - kategorie i najlepsze deale
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="gap-1">
+                      <Layers className="h-3 w-3" />
+                      Wypelnianie kategorii
+                    </Badge>
+                    <Badge variant="secondary" className="gap-1">
+                      <PlayCircle className="h-3 w-3" />
+                      Biezace top deale
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={runM6FillCategories}
+                      disabled={isFillingCategories}
+                    >
+                      {isFillingCategories ? 'Uzupelniam kategorie...' : 'Uzupelnij wszystkie kategorie'}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={runM6BootstrapProfiles}
+                      disabled={isBootstrappingProfiles}
+                    >
+                      {isBootstrappingProfiles ? 'Przygotowuje profile...' : 'Bootstrap profili L3'}
+                    </Button>
+
+                    <Button
+                      onClick={runM6AutopilotNow}
+                      disabled={isRunningAutopilot}
+                    >
+                      {isRunningAutopilot ? 'Uruchamiam autopilot...' : 'Uruchom najlepsze deale teraz'}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={runEnableDealsSchedule}
+                      disabled={isEnablingDealSchedule}
+                    >
+                      {isEnablingDealSchedule ? 'Wlaczam harmonogram...' : 'Wlacz harmonogram hourly'}
+                    </Button>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Rekomendowany workflow: 1) Uzupelnij kategorie, 2) Bootstrap profili L3, 3) Uruchom autopilot.
+                    Wyniki monitoruj w zakladce Zadania.
+                  </p>
+                </CardContent>
+              </Card>
 
               <ConvertiserAutoImport />
             </TabsContent>
