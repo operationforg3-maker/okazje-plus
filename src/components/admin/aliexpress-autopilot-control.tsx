@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Save, Play, Layers } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RefreshCw, Save, Play, Layers, ShieldCheck, AlertTriangle, Info, Activity } from 'lucide-react';
 
 type Settings = {
   enabled: boolean;
@@ -31,6 +32,27 @@ const DEFAULTS: Settings = {
   defaultProfileMaxItems: 200,
 };
 
+type HealthIssue = {
+  code: string;
+  severity: 'info' | 'warning' | 'error';
+  message: string;
+};
+
+type HealthState = {
+  autopilotEnabled: boolean;
+  ensureProfiles: boolean;
+  lockActive: boolean;
+  lockUntil: string | null;
+  cronSecretConfigured: boolean;
+  aliexpressTokenConfigured: boolean;
+  profiles: {
+    enabled: number;
+    total: number;
+  };
+  lastRun: Record<string, any> | null;
+  issues: HealthIssue[];
+};
+
 export function AliExpressAutopilotControl({
   authToken,
   setAuthError,
@@ -45,6 +67,8 @@ export function AliExpressAutopilotControl({
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(false);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [health, setHealth] = useState<HealthState | null>(null);
   const [message, setMessage] = useState<string>('');
 
   const canAct = useMemo(() => Boolean(authToken), [authToken]);
@@ -76,9 +100,36 @@ export function AliExpressAutopilotControl({
     }
   };
 
+  const loadHealth = async () => {
+    if (!authToken) {
+      setAuthError('Brak tokenu administratora. Zaloguj się ponownie.');
+      return;
+    }
+
+    setHealthLoading(true);
+    try {
+      const res = await fetch('/api/admin/autopilot/health', {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || 'Nie udalo sie pobrac diagnostyki autopilota');
+      }
+
+      setHealth(data.health as HealthState);
+      setAuthError(null);
+    } catch (error) {
+      setMessage(`❌ ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (authToken) {
       void loadSettings();
+      void loadHealth();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authToken]);
@@ -133,6 +184,7 @@ export function AliExpressAutopilotControl({
       }
 
       setMessage(`✅ Autopilot uruchomiony. Profile: ${data.total}, sukces: ${data.successful}.`);
+      void loadHealth();
       onActionDone?.();
     } catch (error) {
       setMessage(`❌ ${error instanceof Error ? error.message : String(error)}`);
@@ -165,6 +217,7 @@ export function AliExpressAutopilotControl({
       setMessage(
         `✅ Bootstrap ${dryRun ? '(dry-run)' : ''}: utworzono ${result.createdProfiles || 0}, pominięto ${result.skippedProfiles || 0}, targetów ${result.totalTargets || 0}.`
       );
+      void loadHealth();
       onActionDone?.();
     } catch (error) {
       setMessage(`❌ ${error instanceof Error ? error.message : String(error)}`);
@@ -190,6 +243,83 @@ export function AliExpressAutopilotControl({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="rounded-lg border p-3 bg-slate-50">
+            <p className="text-sm font-semibold">Autopilot aktywny</p>
+            <p className="text-xs text-slate-600 mt-1">
+              Uruchamia import ze wszystkich aktywnych profili AliExpress i zapisuje wyniki do importRuns.
+            </p>
+          </div>
+          <div className="rounded-lg border p-3 bg-slate-50">
+            <p className="text-sm font-semibold">Bootstrap profili</p>
+            <p className="text-xs text-slate-600 mt-1">
+              Tworzy brakujace profile importu dla kategorii L3, aby kazda kategoria miala zrodlo danych.
+            </p>
+          </div>
+          <div className="rounded-lg border p-3 bg-slate-50">
+            <p className="text-sm font-semibold">Diagnostyka</p>
+            <p className="text-xs text-slate-600 mt-1">
+              Pokazuje gotowosc: token API, liczbe profili, lock sync oraz ostatni run.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-lg border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="font-semibold flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-600" />
+              Stan mechanizmu Autopilot
+            </p>
+            <Button variant="outline" size="sm" onClick={loadHealth} disabled={!canAct || healthLoading} className="gap-2">
+              <RefreshCw className={`w-4 h-4 ${healthLoading ? 'animate-spin' : ''}`} />
+              Odswiez stan
+            </Button>
+          </div>
+
+          {health && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+              <Badge variant={health.autopilotEnabled ? 'default' : 'destructive'}>
+                Autopilot: {health.autopilotEnabled ? 'wlaczony' : 'wylaczony'}
+              </Badge>
+              <Badge variant={health.profiles.enabled > 0 ? 'default' : 'destructive'}>
+                Profile: {health.profiles.enabled}/{health.profiles.total}
+              </Badge>
+              <Badge variant={health.aliexpressTokenConfigured ? 'default' : 'destructive'}>
+                Token API: {health.aliexpressTokenConfigured ? 'OK' : 'BRAK'}
+              </Badge>
+              <Badge variant={health.lockActive ? 'secondary' : 'outline'}>
+                Sync lock: {health.lockActive ? 'aktywny' : 'nieaktywny'}
+              </Badge>
+            </div>
+          )}
+
+          {health?.lastRun && (
+            <div className="text-xs text-slate-600 rounded-md bg-slate-50 p-2 border">
+              Ostatni run: status {String(health.lastRun.status || 'unknown')} | start {String(health.lastRun.startedAt || 'n/a')}
+            </div>
+          )}
+
+          {health?.issues && health.issues.length > 0 ? (
+            <div className="space-y-2">
+              {health.issues.map((issue) => (
+                <Alert key={issue.code} variant={issue.severity === 'error' ? 'destructive' : 'default'}>
+                  {issue.severity === 'error' ? <AlertTriangle className="h-4 w-4" /> : issue.severity === 'warning' ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                  <AlertDescription className="text-xs">{issue.message}</AlertDescription>
+                </Alert>
+              ))}
+            </div>
+          ) : (
+            health && (
+              <Alert>
+                <ShieldCheck className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  Mechanizm wyglada na gotowy do pracy. Mozesz uruchomic Autopilot teraz.
+                </AlertDescription>
+              </Alert>
+            )
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
