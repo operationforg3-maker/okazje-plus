@@ -4,19 +4,17 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { AutocompleteSearch } from '@/components/autocomplete-search';
 import DealCard from '@/components/deal-card';
 import ProductCard from '@/components/product-card';
 import CategoryGrid from '@/components/home/category-grid';
 import { RealTimeStats, ForumStats } from '@/components/home/real-time-stats';
 import {
-  Search,
   Flame,
   TrendingUp,
   ShoppingBag,
@@ -42,16 +40,7 @@ interface Props {
 }
 
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
-  const router = useRouter();
   const t = useTranslations('home');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,26 +69,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </div>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                <Input
-                  type="text"
-                  placeholder={t('hero.searchPlaceholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-6 text-sm sm:text-lg rounded-full border-2 focus:border-primary shadow-lg"
-                />
-                <Button 
-                  type="submit"
-                  size="lg"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full"
-                >
-                  {t('hero.searchButton')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </form>
+            <div className="max-w-2xl mx-auto">
+              <AutocompleteSearch className="rounded-full border-2 focus-within:border-primary shadow-lg bg-background px-2 py-1" />
+            </div>
 
             {/* Primary CTAs - Browse Categories + Add Deal */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto pt-2 md:pt-4">
