@@ -496,7 +496,8 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
           withTranslations({ name: 'Plecaki turystyczne', slug: 'plecaki-turystyczne', sortOrder: 4 }, 'Hiking backpacks', 'Wanderrucksäcke'),
           withTranslations({ name: 'Latarki i czołówki', slug: 'latarki-czolowki', sortOrder: 5 }, 'Flashlights and headlamps', 'Taschen- und Stirnlampen'),
           withTranslations({ name: 'Kuchenki turystyczne', slug: 'kuchenki-turystyczne', sortOrder: 6 }, 'Camping stoves', 'Campingkocher'),
-          withTranslations({ name: 'Termosy', slug: 'termosy', sortOrder: 7 }, 'Thermoses', 'Thermoskannen'),
+          withTranslations({ name: 'Kampery i akcesoria', slug: 'kampery', sortOrder: 7 }, 'Campers and accessories', 'Camper und Zubehör'),
+          withTranslations({ name: 'Termosy', slug: 'termosy', sortOrder: 8 }, 'Thermoses', 'Thermoskannen'),
         ]
       }, 'Trekking and camping', 'Trekking und Camping'),
 
@@ -515,10 +516,21 @@ export const CATEGORY_SEEDS: Omit<Category, 'id'>[] = [
       }, 'Water sports', 'Wassersport'),
 
       withSubTranslations({
+        name: 'Golf',
+        slug: 'golf',
+        icon: '⛳',
+        sortOrder: 5,
+        subcategories: [
+          withTranslations({ name: 'Akcesoria golfowe', slug: 'akcesoria-golfowe', sortOrder: 1 }, 'Golf accessories', 'Golfzubehör'),
+          withTranslations({ name: 'Dalmierze golfowe', slug: 'dalmierze-golfowe', sortOrder: 2 }, 'Golf rangefinders', 'Golf-Entfernungsmesser'),
+        ]
+      }, 'Golf', 'Golf'),
+
+      withSubTranslations({
         name: 'Sporty zimowe',
         slug: 'sporty-zimowe',
         icon: '⛷️',
-        sortOrder: 5,
+        sortOrder: 6,
         subcategories: [
           withTranslations({ name: 'Narty', slug: 'narty', sortOrder: 1 }, 'Skis', 'Ski'),
           withTranslations({ name: 'Snowboardy', slug: 'snowboardy', sortOrder: 2 }, 'Snowboards', 'Snowboards'),

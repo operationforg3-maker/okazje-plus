@@ -13,6 +13,7 @@ import { extractDimensionsFromTitle } from '@/lib/automation/identity-matcher';
 export class AIRefiner {
   private jobId: string;
   private logs: RefinerJob['logs'] = [];
+  private categoryContextCache = new Map<string, { label: string; keywordHints: string[] }>();
 
   constructor(jobId: string) {
     this.jobId = jobId;
@@ -244,6 +245,7 @@ export class AIRefiner {
   ): Promise<Partial<ProductCore>> {
     const refined: Partial<ProductCore> = {};
     const locales: Array<'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'> = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+    const categoryContext = await this.resolveCategoryContext(product);
 
     const ensureAllLocales = async (
       value: Partial<LocalizedText> | undefined,
@@ -350,7 +352,7 @@ export class AIRefiner {
         const refinedContent = await generateMarketingContent({
           originalTitle,
           specs: refined.specs || product.specs || {},
-          category: product.mainCategorySlug,
+          category: categoryContext.label,
           source: product.metadata?.source as string
         });
 
@@ -378,10 +380,11 @@ export class AIRefiner {
         // Use SEO output
         refined.seoTitle = refinedContent.seo.title;
         refined.seoDescription = refinedContent.seo.description;
-        refined.searchTags = [
+        refined.searchTags = Array.from(new Set([
           ...(refinedContent.seo.keywords || []),
-          ...(await this.extractSearchTags(refined.title, refined.specs))
-        ];
+          ...categoryContext.keywordHints,
+          ...(await this.extractSearchTags(refined.title, refined.specs, categoryContext))
+        ]));
 
         // Ensure we extract specs even when creative flow runs
         if (!refined.specs || Object.keys(refined.specs).length === 0) {
@@ -505,8 +508,15 @@ export class AIRefiner {
       );
 
       // Generate SEO metadata
-      refined.seoTitle = await this.generateSeoTitle(product.title);
-      refined.seoDescription = await this.generateSeoDescription(product.title, product.specs);
+      refined.seoTitle = await this.generateSeoTitle(
+        refined.title || product.title,
+        categoryContext.label
+      );
+      refined.seoDescription = await this.generateSeoDescription(
+        refined.title || product.title,
+        refined.specs || product.specs,
+        categoryContext.label
+      );
 
       // M6 Update: Generate richly formatted HTML descriptions with structure
       // Include specs table, features list, and proper formatting
@@ -594,7 +604,8 @@ export class AIRefiner {
       // Extract search tags
       refined.searchTags = await this.extractSearchTags(
         refined.title || product.title,
-        refined.specs || product.specs || {}
+        refined.specs || product.specs || {},
+        categoryContext
       );
 
       // Calculate quality score
@@ -788,24 +799,108 @@ export class AIRefiner {
     }
   }
 
+  private async resolveCategoryContext(product: ProductCore): Promise<{ label: string; keywordHints: string[] }> {
+    const mainSlug = String(product.mainCategorySlug || '').trim();
+    const subSlug = String(product.subCategorySlug || '').trim();
+    const subSubSlug = String(product.subSubCategorySlug || '').trim();
+    const cacheKey = `${mainSlug}::${subSlug}::${subSubSlug}`;
+
+    const cached = this.categoryContextCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const fallback = {
+      label: [mainSlug, subSlug, subSubSlug].filter(Boolean).join(' > ') || 'Produkt',
+      keywordHints: [mainSlug, subSlug, subSubSlug].filter(Boolean),
+    };
+
+    if (!mainSlug || mainSlug === 'uncategorized') {
+      this.categoryContextCache.set(cacheKey, fallback);
+      return fallback;
+    }
+
+    try {
+      const mainRef = adminDb.collection('categories').doc(mainSlug);
+      const mainSnap = await mainRef.get();
+      if (!mainSnap.exists) {
+        this.categoryContextCache.set(cacheKey, fallback);
+        return fallback;
+      }
+
+      const mainData = mainSnap.data() as any;
+      const names: string[] = [String(mainData?.name || mainSlug).trim()];
+      const keywordHints = new Set<string>([
+        String(mainData?.name || '').trim(),
+        String(mainData?.translations?.en?.name || '').trim(),
+        mainSlug,
+      ].filter(Boolean));
+
+      if (subSlug && subSlug !== 'uncategorized') {
+        const subRef = mainRef.collection('subcategories').doc(subSlug);
+        const subSnap = await subRef.get();
+        if (subSnap.exists) {
+          const subData = subSnap.data() as any;
+          names.push(String(subData?.name || subSlug).trim());
+          [
+            String(subData?.name || '').trim(),
+            String(subData?.translations?.en?.name || '').trim(),
+            subSlug,
+            ...(Array.isArray(subData?.importKeywords) ? subData.importKeywords : []),
+            ...(Array.isArray(subData?.searchKeywords) ? subData.searchKeywords : []),
+          ].filter(Boolean).forEach((value) => keywordHints.add(String(value).trim()));
+
+          if (subSubSlug && subSubSlug !== 'uncategorized') {
+            const subSubRef = subRef.collection('subcategories').doc(subSubSlug);
+            const subSubSnap = await subSubRef.get();
+            if (subSubSnap.exists) {
+              const subSubData = subSubSnap.data() as any;
+              names.push(String(subSubData?.name || subSubSlug).trim());
+              [
+                String(subSubData?.name || '').trim(),
+                String(subSubData?.translations?.en?.name || '').trim(),
+                subSubSlug,
+                ...(Array.isArray(subSubData?.importKeywords) ? subSubData.importKeywords : []),
+                ...(Array.isArray(subSubData?.searchKeywords) ? subSubData.searchKeywords : []),
+              ].filter(Boolean).forEach((value) => keywordHints.add(String(value).trim()));
+            }
+          }
+        }
+      }
+
+      const resolved = {
+        label: names.filter(Boolean).join(' > '),
+        keywordHints: Array.from(keywordHints),
+      };
+
+      this.categoryContextCache.set(cacheKey, resolved);
+      return resolved;
+    } catch (error) {
+      console.error('[Refiner] Category context resolution failed:', error);
+      this.categoryContextCache.set(cacheKey, fallback);
+      return fallback;
+    }
+  }
+
   /**
    * Generate SEO-optimized title using Vertex AI
    */
-  private async generateSeoTitle(title: LocalizedText): Promise<string> {
+  private async generateSeoTitle(title: LocalizedText, categoryLabel: string): Promise<string> {
     try {
       const { generateProductDescription } = await import('@/ai/flows/enrichment');
       const titleText = title.pl || title.en || '';
       
       const result = await generateProductDescription({
         productTitle: titleText,
-        productCategory: 'Electronics',
+        productCategory: categoryLabel,
         targetLocale: 'pl',
       });
       
       return result.seoTitle;
     } catch (error) {
       console.error('[Refiner] SEO title generation failed:', error);
-      return `${title.pl} - Best Price & Reviews`;
+      const titleText = title.pl || title.en || 'Produkt';
+      return `${titleText} - ${categoryLabel} | Porownanie cen`;
     }
   }
 
@@ -814,7 +909,8 @@ export class AIRefiner {
    */
   private async generateSeoDescription(
     title: LocalizedText,
-    specs: Record<string, string>
+    specs: Record<string, string>,
+    categoryLabel: string
   ): Promise<string> {
     try {
       const { generateProductDescription } = await import('@/ai/flows/enrichment');
@@ -822,15 +918,16 @@ export class AIRefiner {
       
       const result = await generateProductDescription({
         productTitle: titleText,
-        productCategory: 'Electronics',
+        productCategory: categoryLabel,
         targetLocale: 'pl',
       });
       
       return result.seoDescription;
     } catch (error) {
       console.error('[Refiner] SEO description generation failed:', error);
+      const titleText = title.pl || title.en || 'Produkt';
       const specsText = Object.keys(specs).join(', ');
-      return `Compare ${title.pl} prices. ${specsText}. Best deals available now.`;
+      return `Porownaj ceny produktu ${titleText} w kategorii ${categoryLabel}. ${specsText}. Najlepsze oferty dostepne teraz.`;
     }
   }
 
@@ -887,7 +984,8 @@ export class AIRefiner {
    */
   private async extractSearchTags(
     title: LocalizedText,
-    specsOrDescription: Record<string, string> | LocalizedText
+    specsOrDescription: Record<string, string> | LocalizedText,
+    categoryContext?: { label: string; keywordHints: string[] }
   ): Promise<string[]> {
     try {
       const { extractProductTags } = await import('@/ai/flows/enrichment');
@@ -908,17 +1006,24 @@ export class AIRefiner {
       const result = await extractProductTags({
         title: titleText,
         description: descText,
-        category: 'Electronics',
+        category: categoryContext?.label || 'Produkt',
       });
       
       // Combine tags and keywords
-      return [...new Set([...result.tags, ...result.keywords])];
+      return [...new Set([
+        ...result.tags,
+        ...result.keywords,
+        ...(categoryContext?.keywordHints || []),
+      ])];
     } catch (error) {
       console.error('[Refiner] Search tag extraction failed:', error);
       // Fallback: extract from title
       const titleText = title.pl || title.en || '';
       const words = titleText.toLowerCase().split(/\s+/);
-      return words.filter(w => w.length > 3);
+      return [...new Set([
+        ...words.filter(w => w.length > 3),
+        ...((categoryContext?.keywordHints || []).map((value) => value.toLowerCase())),
+      ])];
     }
   }
 

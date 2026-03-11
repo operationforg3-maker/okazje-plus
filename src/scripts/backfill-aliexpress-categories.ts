@@ -39,6 +39,19 @@ function categoryAliases(originalCategoryName?: string): string[] {
     aliases.push('phone parts');
   }
 
+  if (text.includes('pojazdów kempingowych') || text.includes('pojazdow kempingowych')) {
+    aliases.push('camper accessories');
+    aliases.push('rv accessories');
+    aliases.push('motorhome accessories');
+    aliases.push('camping vehicle accessories');
+  }
+
+  if (text.includes('golf')) {
+    aliases.push('golf');
+    aliases.push('golf accessories');
+    aliases.push('golf rangefinder');
+  }
+
   return aliases;
 }
 
@@ -82,6 +95,21 @@ function manualCategoryOverride(originalCategoryName?: string): {
     'topy i t-shirty': {
       main: 'moda-uroda',
       sub: 'odziez-damska',
+    },
+    'części i akcesoria do pojazdów kempingowych': {
+      main: 'sport-rekreacja',
+      sub: 'turystyka-camping',
+      subSub: 'kampery',
+    },
+    'czesci i akcesoria do pojazdow kempingowych': {
+      main: 'sport-rekreacja',
+      sub: 'turystyka-camping',
+      subSub: 'kampery',
+    },
+    'golf': {
+      main: 'sport-rekreacja',
+      sub: 'golf',
+      subSub: 'dalmierze-golfowe',
     },
   };
 

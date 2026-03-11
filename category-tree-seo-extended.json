@@ -3443,9 +3443,28 @@
               }
             },
             {
+              "name": "Kampery i akcesoria",
+              "slug": "kampery",
+              "sortOrder": 7,
+              "importKeywords": [
+                "Camper accessories",
+                "RV accessories",
+                "Motorhome accessories"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Campers and accessories"
+                },
+                "de": {
+                  "name": "Camper und Zubehor"
+                }
+              }
+            },
+            {
               "name": "Termosy",
               "slug": "termosy",
-              "sortOrder": 7,
+              "sortOrder": 8,
               "importKeywords": [
                 "Thermoses"
               ],
@@ -3571,10 +3590,71 @@
           }
         },
         {
+          "name": "Golf",
+          "slug": "golf",
+          "icon": "⛳",
+          "sortOrder": 5,
+          "subcategories": [
+            {
+              "name": "Akcesoria golfowe",
+              "slug": "akcesoria-golfowe",
+              "sortOrder": 1,
+              "importKeywords": [
+                "Golf accessories",
+                "Golf rangefinder",
+                "Golf tools"
+              ],
+              "searchKeywords": [
+                "golf",
+                "rangefinder",
+                "akcesoria golfowe"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Golf accessories"
+                },
+                "de": {
+                  "name": "Golfzubehor"
+                }
+              }
+            },
+            {
+              "name": "Dalmierze golfowe",
+              "slug": "dalmierze-golfowe",
+              "sortOrder": 2,
+              "importKeywords": [
+                "Golf rangefinders"
+              ],
+              "searchKeywords": [
+                "dalmierz golfowy",
+                "laser golf"
+              ],
+              "aliexpressCategoryIds": [],
+              "translations": {
+                "en": {
+                  "name": "Golf rangefinders"
+                },
+                "de": {
+                  "name": "Golf Entfernungsmesser"
+                }
+              }
+            }
+          ],
+          "translations": {
+            "en": {
+              "name": "Golf"
+            },
+            "de": {
+              "name": "Golf"
+            }
+          }
+        },
+        {
           "name": "Sporty zimowe",
           "slug": "sporty-zimowe",
           "icon": "⛷️",
-          "sortOrder": 5,
+          "sortOrder": 6,
           "subcategories": [
             {
               "name": "Narty",
@@ -3594,7 +3674,7 @@
               }
             },
             {
-              "name": "Snowboardy",
+                  "sortOrder": 7,
               "slug": "snowboardy",
               "sortOrder": 2,
               "importKeywords": [
@@ -3611,7 +3691,7 @@
               }
             },
             {
-              "name": "Wiązania",
+                  "sortOrder": 8,
               "slug": "wiazania",
               "sortOrder": 3,
               "importKeywords": [
