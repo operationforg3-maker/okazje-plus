@@ -56,6 +56,15 @@ type HealthState = {
   issues: HealthIssue[];
 };
 
+function toSafeNumber(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
 export function AliExpressAutopilotControl({
   authToken,
   setAuthError,
@@ -75,6 +84,25 @@ export function AliExpressAutopilotControl({
   const [message, setMessage] = useState<string>('');
 
   const canAct = useMemo(() => Boolean(authToken), [authToken]);
+
+  const lastRunStats = useMemo(() => {
+    if (!health?.lastRun || typeof health.lastRun !== 'object') return {} as Record<string, unknown>;
+    const stats = (health.lastRun as any).stats;
+    return stats && typeof stats === 'object' ? stats : {};
+  }, [health?.lastRun]);
+
+  const lastRunTelemetry = useMemo(() => {
+    if (!health?.lastRun || typeof health.lastRun !== 'object') return {} as Record<string, unknown>;
+    const telemetry = (health.lastRun as any).telemetry;
+    return telemetry && typeof telemetry === 'object' ? telemetry : {};
+  }, [health?.lastRun]);
+
+  const lastRunCreatedProducts = toSafeNumber(lastRunTelemetry.createdProducts ?? lastRunStats.createdProducts);
+  const lastRunCreatedDeals = toSafeNumber(lastRunTelemetry.createdDeals ?? lastRunStats.createdDeals);
+  const lastRunUniqueShare = toSafeNumber(lastRunTelemetry.uniqueSharePercent ?? lastRunStats.uniqueSharePercent);
+  const lastRunUniquePool = toSafeNumber(lastRunTelemetry.uniqueProductsInPool ?? lastRunStats.uniqueProductsInPool);
+  const lastRunDuplicatePool = toSafeNumber(lastRunTelemetry.duplicateProductsInPool ?? lastRunStats.duplicateProductsInPool);
+  const lastRunSearchMethod = String(lastRunTelemetry.searchMethod ?? lastRunStats.searchMethod ?? '').trim();
 
   const loadSettings = async () => {
     if (!authToken) {
@@ -303,8 +331,37 @@ export function AliExpressAutopilotControl({
           )}
 
           {health?.lastRun && (
-            <div className="text-xs text-slate-600 rounded-md bg-slate-50 p-2 border">
-              Ostatni run: status {String(health.lastRun.status || 'unknown')} | start {String(health.lastRun.startedAt || 'n/a')}
+            <div className="text-xs text-slate-600 rounded-md bg-slate-50 p-3 border space-y-2">
+              <div>
+                Ostatni run: status {String(health.lastRun.status || 'unknown')} | start {String(health.lastRun.startedAt || 'n/a')}
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px]">
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Nowe produkty</p>
+                  <p className="font-semibold text-slate-900">{lastRunCreatedProducts}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Nowe oferty</p>
+                  <p className="font-semibold text-slate-900">{lastRunCreatedDeals}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Udział unikalnych</p>
+                  <p className="font-semibold text-slate-900">{lastRunUniqueShare}%</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Pula unikalnych</p>
+                  <p className="font-semibold text-slate-900">{lastRunUniquePool}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Pula duplikatów</p>
+                  <p className="font-semibold text-slate-900">{lastRunDuplicatePool}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Metoda wyszukiwania</p>
+                  <p className="font-semibold text-slate-900">{lastRunSearchMethod || 'brak danych'}</p>
+                </div>
+              </div>
             </div>
           )}
 
