@@ -52,6 +52,12 @@ export interface AliExpressImportResult {
   errors: ImportError[];
 }
 
+type AliExpressImportCandidate = {
+  rawProduct: any;
+  originalId: string;
+  existingProductId: string | null;
+};
+
 /**
  * Check if product/deal already exists (deduplication)
  * 
@@ -214,10 +220,13 @@ export async function importFromAliExpress(
       : 100;
 
     const extractProductsFromResponse = (response: any): any[] => {
-      const rawResult =
+      const searchResult =
+        response?.aliexpress_affiliate_product_query_response?.resp_result?.result ??
+        response?.aliexpress_affiliate_productquery_response?.resp_result?.result;
+      const hotResult =
         response?.aliexpress_affiliate_hotproduct_query_response?.resp_result?.result ??
-        response?.resp_result?.result ??
-        response?.result;
+        response?.aliexpress_affiliate_hotproductquery_response?.resp_result?.result;
+      const rawResult = searchResult ?? hotResult ?? response?.resp_result?.result ?? response?.result;
 
       const direct = rawResult?.products;
       if (Array.isArray(direct)) return direct;
@@ -227,10 +236,82 @@ export async function importFromAliExpress(
       return [];
     };
 
-    const products: any[] = [];
+    const searchQueryNormalized = String(searchQuery || '').trim();
+    const desiredUniqueProducts = Math.max(5, Math.ceil(maxItems * 0.4));
+    const scanCap = Math.min(normalizedHardCap, Math.max(maxItems * 3, desiredUniqueProducts * 3));
+    const duplicateCandidates: AliExpressImportCandidate[] = [];
+    const uniqueCandidates: AliExpressImportCandidate[] = [];
     const seenProductIds = new Set<string>();
 
-    for (let pageNo = 1; pageNo <= maxPages && products.length < maxItems; pageNo++) {
+    const hasBalancedCandidatePool = () => {
+      const enoughUnique = uniqueCandidates.length >= desiredUniqueProducts;
+      const enoughTotal = uniqueCandidates.length + duplicateCandidates.length >= maxItems;
+      return enoughUnique && enoughTotal;
+    };
+
+    const registerProducts = async (pageProducts: any[]) => {
+      for (const product of pageProducts) {
+        const pid = String(product?.product_id || product?.productId || product?.item_id || '').trim();
+        if (!pid || seenProductIds.has(pid)) continue;
+
+        seenProductIds.add(pid);
+        const existingProductId = await checkDuplicate(pid, 'aliexpress', 'products');
+        const candidate: AliExpressImportCandidate = {
+          rawProduct: product,
+          originalId: pid,
+          existingProductId,
+        };
+
+        if (existingProductId) {
+          duplicateCandidates.push(candidate);
+        } else {
+          uniqueCandidates.push(candidate);
+        }
+
+        if (uniqueCandidates.length + duplicateCandidates.length >= scanCap) {
+          return;
+        }
+      }
+    };
+
+    if (searchQueryNormalized) {
+      for (let pageNo = 1; pageNo <= maxPages && seenProductIds.size < scanCap && !hasBalancedCandidatePool(); pageNo++) {
+        const response = await client.searchAffiliateProducts({
+          keywords: searchQueryNormalized,
+          category_ids: config.categoryFilter,
+          page_no: pageNo,
+          page_size: pageSize,
+          sort: pageNo % 2 === 1 ? 'LAST_VOLUME_DESC' : 'SALE_PRICE_ASC',
+          target_currency: 'PLN',
+          target_language: 'PL',
+          ship_to_country: 'PL',
+        });
+
+        const pageProducts = extractProductsFromResponse(response);
+        if (pageProducts.length === 0) {
+          logger.info('AliExpress keyword search finished (empty page)', {
+            pageNo,
+            query: searchQueryNormalized,
+            collected: seenProductIds.size,
+          });
+          break;
+        }
+
+        await registerProducts(pageProducts);
+
+        if (pageProducts.length < pageSize) {
+          logger.info('AliExpress keyword search finished (last partial page)', {
+            pageNo,
+            query: searchQueryNormalized,
+            returned: pageProducts.length,
+            collected: seenProductIds.size,
+          });
+          break;
+        }
+      }
+    }
+
+    for (let pageNo = 1; pageNo <= maxPages && seenProductIds.size < scanCap && !hasBalancedCandidatePool(); pageNo++) {
       const response = await client.getAffiliateHotProducts(
         config.categoryFilter ? [config.categoryFilter] : undefined,
         pageSize,
@@ -239,36 +320,43 @@ export async function importFromAliExpress(
 
       const pageProducts = extractProductsFromResponse(response);
       if (pageProducts.length === 0) {
-        logger.info('AliExpress pagination finished (empty page)', { pageNo, collected: products.length });
+        logger.info('AliExpress hot feed finished (empty page)', { pageNo, collected: seenProductIds.size });
         break;
       }
 
-      for (const product of pageProducts) {
-        const pid = String(product?.product_id || product?.productId || product?.item_id || '').trim();
-        if (!pid || seenProductIds.has(pid)) continue;
-        seenProductIds.add(pid);
-        products.push(product);
-        if (products.length >= maxItems) break;
-      }
+      await registerProducts(pageProducts);
 
       if (pageProducts.length < pageSize) {
-        logger.info('AliExpress pagination finished (last partial page)', {
+        logger.info('AliExpress hot feed finished (last partial page)', {
           pageNo,
           pageSize,
           returned: pageProducts.length,
-          collected: products.length,
+          collected: seenProductIds.size,
         });
         break;
       }
     }
 
-    result.stats.fetched = products.length;
-    logger.info(`Fetched ${products.length} products from AliExpress`);
+    const guaranteedUnique = uniqueCandidates.slice(0, desiredUniqueProducts);
+    const remainingSlots = Math.max(0, maxItems - guaranteedUnique.length);
+    const duplicateFirst = duplicateCandidates.slice(0, remainingSlots);
+    const remainingAfterDuplicates = Math.max(0, remainingSlots - duplicateFirst.length);
+    const extraUnique = uniqueCandidates.slice(guaranteedUnique.length, guaranteedUnique.length + remainingAfterDuplicates);
+    const productsToProcess = [...guaranteedUnique, ...duplicateFirst, ...extraUnique].slice(0, maxItems);
+
+    result.stats.fetched = productsToProcess.length;
+    logger.info('Fetched AliExpress candidates for import', {
+      fetched: productsToProcess.length,
+      uniqueCandidates: uniqueCandidates.length,
+      duplicateCandidates: duplicateCandidates.length,
+      desiredUniqueProducts,
+      searchQuery: searchQueryNormalized || null,
+    });
 
     // Update progress
     await importRunRef.update({
       'stats.fetched': result.stats.fetched,
-      'progress.total': Math.min(products.length, maxItems),
+      'progress.total': productsToProcess.length,
       'progress.phase': 'processing',
     });
 
@@ -281,12 +369,11 @@ export async function importFromAliExpress(
     };
 
     // Apply maxItems slicing to guard against API overfetch
-    const productsToProcess = products.slice(0, maxItems);
-
     // Process each product
     for (let i = 0; i < productsToProcess.length; i++) {
-      const rawProduct = productsToProcess[i];
-      const originalId = String(rawProduct.product_id || rawProduct.productId || rawProduct.item_id || '');
+      const candidate = productsToProcess[i];
+      const rawProduct = candidate.rawProduct;
+      const originalId = candidate.originalId;
       
       if (!originalId) {
         result.stats.skipped++;
@@ -354,7 +441,7 @@ export async function importFromAliExpress(
         }
 
         // Check for duplicate PRODUCT (will create DEAL for same product with different merchant/price)
-        const existingProductId = await checkDuplicate(originalId, 'aliexpress', 'products');
+        const existingProductId = candidate.existingProductId;
         
         // If product exists, we'll link a new Deal instead of skipping
         // This allows same product from different merchants/prices
