@@ -48,6 +48,13 @@ export interface AliExpressImportResult {
     errors: number;
     autoApproved: number;
     aiEnriched: number;
+    // Telemetry: product vs deal balance
+    createdProducts: number;
+    createdDeals: number;
+    uniqueProductsInPool: number;
+    duplicateProductsInPool: number;
+    uniqueSharePercent: number;
+    searchMethod: 'keyword' | 'hotfeed' | 'mixed';
   };
   errors: ImportError[];
 }
@@ -133,6 +140,12 @@ export async function importFromAliExpress(
       errors: 0,
       autoApproved: 0,
       aiEnriched: 0,
+      createdProducts: 0,
+      createdDeals: 0,
+      uniqueProductsInPool: 0,
+      duplicateProductsInPool: 0,
+      uniqueSharePercent: 0,
+      searchMethod: 'hotfeed',
     },
     errors: [],
   };
@@ -151,7 +164,7 @@ export async function importFromAliExpress(
       vendorId: profile.vendorId || 'aliexpress',
       status: 'running',
       dryRun: config.dryRun || false,
-      stats: { fetched: 0, created: 0, updated: 0, skipped: 0, errors: 0, duplicates: 0, autoApproved: 0, aiEnriched: 0 },
+      stats: { fetched: 0, created: 0, updated: 0, skipped: 0, errors: 0, duplicates: 0, autoApproved: 0, aiEnriched: 0, createdProducts: 0, createdDeals: 0, uniqueProductsInPool: 0, duplicateProductsInPool: 0, uniqueSharePercent: 0, searchMethod: 'hotfeed' as const },
       startedAt: new Date().toISOString(),
       triggeredBy: config.triggeredBy || 'manual',
       triggeredByUid: config.triggeredByUid,
@@ -274,6 +287,9 @@ export async function importFromAliExpress(
       }
     };
 
+    let usedKeyword = false;
+    let usedHotFeed = false;
+
     if (searchQueryNormalized) {
       for (let pageNo = 1; pageNo <= maxPages && seenProductIds.size < scanCap && !hasBalancedCandidatePool(); pageNo++) {
         const response = await client.searchAffiliateProducts({
@@ -298,6 +314,7 @@ export async function importFromAliExpress(
         }
 
         await registerProducts(pageProducts);
+        usedKeyword = true;
 
         if (pageProducts.length < pageSize) {
           logger.info('AliExpress keyword search finished (last partial page)', {
@@ -325,6 +342,7 @@ export async function importFromAliExpress(
       }
 
       await registerProducts(pageProducts);
+      usedHotFeed = true;
 
       if (pageProducts.length < pageSize) {
         logger.info('AliExpress hot feed finished (last partial page)', {
@@ -344,11 +362,23 @@ export async function importFromAliExpress(
     const extraUnique = uniqueCandidates.slice(guaranteedUnique.length, guaranteedUnique.length + remainingAfterDuplicates);
     const productsToProcess = [...guaranteedUnique, ...duplicateFirst, ...extraUnique].slice(0, maxItems);
 
+    // Record pool telemetry
+    result.stats.uniqueProductsInPool = uniqueCandidates.length;
+    result.stats.duplicateProductsInPool = duplicateCandidates.length;
+    const uniqueInFinalList = productsToProcess.filter(c => !c.existingProductId).length;
+    result.stats.uniqueSharePercent = productsToProcess.length > 0
+      ? Math.round((uniqueInFinalList / productsToProcess.length) * 100)
+      : 0;
+    result.stats.searchMethod = usedKeyword && usedHotFeed ? 'mixed' : usedKeyword ? 'keyword' : 'hotfeed';
+
     result.stats.fetched = productsToProcess.length;
     logger.info('Fetched AliExpress candidates for import', {
       fetched: productsToProcess.length,
       uniqueCandidates: uniqueCandidates.length,
       duplicateCandidates: duplicateCandidates.length,
+      uniqueInFinalList,
+      uniqueSharePercent: result.stats.uniqueSharePercent,
+      searchMethod: result.stats.searchMethod,
       desiredUniqueProducts,
       searchQuery: searchQueryNormalized || null,
     });
@@ -550,6 +580,7 @@ export async function importFromAliExpress(
             // New product - create it
             productRef = await adminDb.collection('products').add(sanitized);
             result.stats.created++;
+            result.stats.createdProducts++;
             logger.info('Product imported', {
               productId: productRef.id,
               originalId,
@@ -605,6 +636,7 @@ export async function importFromAliExpress(
 
           const dealRef = await adminDb.collection('deals').add(dealData);
           result.stats.created++; // Count deal creation as created item
+          result.stats.createdDeals++;
           
           if (config.autoApprove) {
             result.stats.autoApproved++;
@@ -633,6 +665,12 @@ export async function importFromAliExpress(
           });
         } else {
           result.stats.created++;
+          if (existingProductId) {
+            result.stats.createdDeals++;
+          } else {
+            result.stats.createdProducts++;
+            result.stats.createdDeals++;
+          }
           logger.info(`${existingProductId ? 'Deal for existing' : 'New product'} would be created (dry run)`, {
             originalId,
             title: title.substring(0, 50),
@@ -682,6 +720,13 @@ export async function importFromAliExpress(
       durationMs,
       stats: result.stats,
       'progress.phase': 'completing',
+      // Telemetry snapshot at top level for easy Firestore queries
+      'telemetry.createdProducts': result.stats.createdProducts,
+      'telemetry.createdDeals': result.stats.createdDeals,
+      'telemetry.uniqueProductsInPool': result.stats.uniqueProductsInPool,
+      'telemetry.duplicateProductsInPool': result.stats.duplicateProductsInPool,
+      'telemetry.uniqueSharePercent': result.stats.uniqueSharePercent,
+      'telemetry.searchMethod': result.stats.searchMethod,
     });
 
     result.success = true;

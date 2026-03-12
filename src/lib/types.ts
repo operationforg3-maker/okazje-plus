@@ -956,13 +956,20 @@ export interface ImportRun {
   dryRun: boolean; // If true, no actual writes were made
   stats: {
     fetched: number; // Items fetched from API
-    created: number; // New items created
+    created: number; // New items created (products + deals combined)
     updated: number; // Existing items updated
     skipped: number; // Items skipped (duplicates, filters, etc)
     errors: number; // Items that failed to process
     duplicates?: number; // Detected duplicates
     autoApproved?: number; // Items auto-approved based on config
     aiEnriched?: number; // Items enriched with AI
+    // Telemetry: product vs deal balance
+    createdProducts?: number; // Newly created product documents
+    createdDeals?: number; // Newly created deal documents (incl. deals for existing products)
+    uniqueProductsInPool?: number; // Unique product candidates scanned before selection
+    duplicateProductsInPool?: number; // Duplicate product candidates scanned before selection
+    uniqueSharePercent?: number; // Fraction of unique products in final processing list (0-100)
+    searchMethod?: 'keyword' | 'hotfeed' | 'mixed'; // Discovery method used
   };
   startedAt: string;
   finishedAt?: string;
