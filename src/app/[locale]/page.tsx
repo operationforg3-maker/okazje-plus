@@ -4,9 +4,8 @@ import { getRecommendedProducts, getCategories } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
 
-// Cache home page more aggressively for better performance
-export const dynamic = 'force-dynamic';
-export const revalidate = 60; // Revalidate co 1 minutę (było 180) dla lepszych Core Web Vitals
+// Prefer ISR cache for homepage to improve TTFB/LCP on mobile.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: 'Okazje Plus - Najlepsze promocje i produkty w jednym miejscu',
@@ -42,11 +41,11 @@ export default async function HomePage() {
   // Load data for home page
   const [hotDeals, topProducts, categories] = await Promise.all([
     searchDealsTypesense('*', {
-      limit: 20,
+      limit: 8,
       sortBy: 'hot',
       statusFilter: 'approved',
     }),
-    getRecommendedProducts(12),
+    getRecommendedProducts(8),
     getCategories(),
   ]);
 

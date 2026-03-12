@@ -31,6 +31,10 @@ export function RealTimeStats() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    let idleId: number | null = null;
+
     const readCachedStats = (): StatsData | null => {
       try {
         const raw = localStorage.getItem(STATS_CACHE_KEY);
@@ -82,11 +86,27 @@ export function RealTimeStats() {
       }
     };
 
-    fetchStats();
+    // Delay first network hit until browser is idle to prioritize initial render.
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleId = window.requestIdleCallback(() => {
+        fetchStats();
+      }, { timeout: 2000 });
+    } else {
+      timeout = setTimeout(() => {
+        fetchStats();
+      }, 1200);
+    }
 
     // Refresh every 5 minutes
-    const interval = setInterval(fetchStats, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    interval = setInterval(fetchStats, 5 * 60 * 1000);
+
+    return () => {
+      if (interval) clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
+      if (idleId !== null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(idleId);
+      }
+    };
   }, []);
 
   const statsItems = [
@@ -129,7 +149,7 @@ export function RealTimeStats() {
           <Card
             key={idx}
             className={cn(
-              'border-2 hover:border-primary/50 transition-all hover:shadow-lg hover:-translate-y-1',
+              'border-2 hover:border-primary/50 transition-[box-shadow,border-color,transform] hover:shadow-lg hover:-translate-y-1',
               isLoading ? 'animate-pulse' : ''
             )}
           >

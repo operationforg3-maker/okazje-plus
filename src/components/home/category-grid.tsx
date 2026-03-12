@@ -64,7 +64,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               {/* Main Category Card */}
               <Card
                 className={cn(
-                  'border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden',
+                  'border-2 transition-[box-shadow,border-color,transform] duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden',
                   style.border,
                   isExpanded && 'ring-2 ring-primary'
                 )}
@@ -159,7 +159,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                                 </div>
                               )}
                             </div>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover/sub:text-primary transition-all group-hover/sub:translate-x-0.5" />
+                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover/sub:text-primary transition-[color,transform] group-hover/sub:translate-x-0.5" />
                           </Link>
 
                           {/* Level 3: Sub-subcategories */}
