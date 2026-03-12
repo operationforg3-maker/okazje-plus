@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
 import { importFromAliExpress } from '@/lib/aliexpress-importer';
+import { refreshProductPrices } from '@/lib/aliexpress-price-refresh';
 import { logger } from '@/lib/logger';
 
 const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
@@ -40,6 +41,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Brak aktywnych profili AliExpress', total: 0, results: [] });
     }
 
+    // Odśwież ceny istniejących produktów przed nowym importem
+    const refreshStats = await refreshProductPrices(50);
+    logger.info('Autopilot: odświeżanie cen zakończone', refreshStats);
+
     const results: Array<{ profileId: string; name?: string; success: boolean; stats?: any; error?: string; }>
       = [];
 
@@ -74,6 +79,7 @@ export async function POST(request: NextRequest) {
       successful: successCount,
       failed: results.length - successCount,
       results,
+      priceRefresh: refreshStats,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
