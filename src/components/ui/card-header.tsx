@@ -30,6 +30,8 @@ export interface CardHeaderProps {
   imageContainerClassName?: string;
   className?: string;
   children?: React.ReactNode;
+  /** Pass true for above-the-fold cards (LCP) */
+  priority?: boolean;
 }
 
 export function CardHeader({
@@ -46,6 +48,7 @@ export function CardHeader({
   imageContainerClassName,
   className,
   children,
+  priority = false,
 }: CardHeaderProps) {
   return (
     <div className={cn('relative bg-muted overflow-hidden rounded-t-lg', className)}>
@@ -57,7 +60,8 @@ export function CardHeader({
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className={cn('object-cover transition-transform duration-300 hover:scale-105', imageClassName)}
-          loading="lazy"
+          loading={priority ? 'eager' : 'lazy'}
+          priority={priority}
           quality={75}
         />
       </div>

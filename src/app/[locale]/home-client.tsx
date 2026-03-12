@@ -4,16 +4,26 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AutocompleteSearch } from '@/components/autocomplete-search';
-import DealCard from '@/components/deal-card';
-import ProductCard from '@/components/product-card';
-import CategoryGrid from '@/components/home/category-grid';
-import { RealTimeStats, ForumStats } from '@/components/home/real-time-stats';
+
+// Dynamic imports for below-fold components — reduces TBT / main-thread parse cost
+const DealCard = dynamic(() => import('@/components/deal-card'), { ssr: false });
+const ProductCard = dynamic(() => import('@/components/product-card'), { ssr: false });
+const CategoryGrid = dynamic(() => import('@/components/home/category-grid'), { ssr: false });
+const RealTimeStats = dynamic(
+  () => import('@/components/home/real-time-stats').then((m) => ({ default: m.RealTimeStats })),
+  { ssr: false }
+);
+const ForumStats = dynamic(
+  () => import('@/components/home/real-time-stats').then((m) => ({ default: m.ForumStats })),
+  { ssr: false }
+);
 import {
   Flame,
   TrendingUp,
@@ -52,7 +62,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           <div className="max-w-4xl mx-auto text-center space-y-8">
             {/* Logo & Tagline */}
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-semibold animate-bounce">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-semibold">
                 <Sparkles className="h-4 w-4" />
                 {t('hero.badge')}
               </div>
@@ -153,8 +163,8 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {initialHotDeals.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {initialHotDeals.slice(0, 8).map((deal) => (
-                <DealCard key={deal.id} deal={deal} />
+              {initialHotDeals.slice(0, 8).map((deal, idx) => (
+                <DealCard key={deal.id} deal={deal} priority={idx < 4} />
               ))}
             </div>
           ) : (
@@ -262,7 +272,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
                   color: 'from-teal-500 to-blue-500',
                 },
               ].map((benefit, idx) => (
-                <Card key={idx} className="border-2 hover:border-primary transition-all hover:shadow-xl group">
+                <Card key={idx} className="border-2 hover:border-primary transition-[box-shadow,border-color] hover:shadow-xl group">
                   <CardHeader>
                     <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${benefit.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                       <benefit.icon className="h-6 w-6 text-white" />

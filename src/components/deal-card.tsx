@@ -38,6 +38,8 @@ import { getExternalUrl } from '@/lib/external-url';
 interface DealCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
   product?: Product | null;
+  /** Pass true for first ~4 cards above the fold for LCP priority */
+  priority?: boolean;
 }
 
 const safeText = (value: unknown, fallback = ''): string => {
@@ -187,7 +189,7 @@ function getRelativeTime(when: any): string {
   return `${Math.floor(diffDays / 30)} mies. temu`;
 }
 
-function DealCard({ deal, product }: DealCardProps) {
+function DealCard({ deal, product, priority = false }: DealCardProps) {
   // Używaj przekazanego ProductCore jeśli dostępny (spójność z ProductCard)
   const resolvedProduct = product || null;
   const params = useParams();
@@ -573,6 +575,7 @@ function DealCard({ deal, product }: DealCardProps) {
         imageClassName="object-contain transition-transform-base group-hover:scale-105"
         imageContainerClassName="h-auto aspect-square bg-muted/40 rounded-t-xl border-b"
         className="rounded-none"
+        priority={priority}
       >
         {/* Pasek ocen produktu jeśli powiązany */}
         {resolvedProduct && resolvedProduct.ratingSources && (

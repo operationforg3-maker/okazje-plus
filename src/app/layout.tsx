@@ -17,6 +17,11 @@ export default function RootLayout({
     <html lang="pl" suppressHydrationWarning>
       {/* Critical CSS inline for better LCP */}
       <head>
+        {/* Preconnect do domen zewnętrznych — skraca FCP/LCP */}
+        <link rel="preconnect" href="https://ae-pic-a1.aliexpress-media.com" />
+        <link rel="preconnect" href="https://imgproxy.convertiser.com" />
+        <link rel="dns-prefetch" href="https://ae-pic-a1.aliexpress-media.com" />
+        <link rel="dns-prefetch" href="https://imgproxy.convertiser.com" />
         <style dangerouslySetInnerHTML={{__html: `
           * { margin: 0; padding: 0; box-sizing: border-box; }
           html { scroll-behavior: smooth; }
