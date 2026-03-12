@@ -1,6 +1,6 @@
 import typesenseClient from '@/lib/typesense';
 import { Deal, ProductCore } from '@/lib/types';
-import { collection, documentId, getDocs, query, where } from 'firebase/firestore';
+import { collection, doc, documentId, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 const DEAL_IMAGE_FALLBACK = '/icon_okazjeplus.svg';
@@ -427,6 +427,82 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
 export async function getDealByIdTypesense(dealId: string): Promise<Deal | null> {
   if (!dealId) return null;
 
+  const hasAnyOutboundCandidate = (raw: any): boolean => {
+    const candidates = [
+      raw?.link,
+      raw?.affiliateLink,
+      raw?.affiliateUrl,
+      raw?.dealUrl,
+      raw?.sourceUrl,
+      raw?.url,
+      raw?.externalUrl,
+      raw?.metadata?.offerPreviewUrl,
+      raw?.metadata?.previewUrl,
+      raw?.metadata?.offerUrl,
+      raw?.metadata?.externalUrl,
+      raw?.metadata?.url,
+    ];
+
+    return candidates.some((value) => typeof value === 'string' && value.trim().length > 0);
+  };
+
+  const shouldHydrateFromFirestore = (raw: any): boolean => {
+    if (!raw || typeof raw !== 'object') return true;
+    const keyCount = Object.keys(raw).length;
+    const hasTitle = Boolean(raw?.title);
+    const hasImage = Boolean(raw?.image || raw?.imageUrl || raw?.mainImage);
+    const hasLink = hasAnyOutboundCandidate(raw);
+
+    // Sparse Typesense documents (e.g. only id) break CTA links on detail page.
+    return keyCount <= 3 || !hasTitle || !hasImage || !hasLink;
+  };
+
+  const readDealFromFirestore = async (): Promise<any | null> => {
+    try {
+      const snap = await getDoc(doc(db, 'deals', dealId));
+      if (!snap.exists()) return null;
+      return { id: snap.id, ...snap.data() };
+    } catch (error) {
+      console.warn('Firestore fallback for getDealByIdTypesense failed:', error);
+      return null;
+    }
+  };
+
+  const mergeDealWithFirestoreFallback = async (typesenseDeal: any): Promise<Deal> => {
+    if (!shouldHydrateFromFirestore(typesenseDeal)) {
+      return typesenseDeal as Deal;
+    }
+
+    const firestoreDeal = await readDealFromFirestore();
+    if (!firestoreDeal) {
+      return typesenseDeal as Deal;
+    }
+
+    const merged = {
+      ...firestoreDeal,
+      ...typesenseDeal,
+    } as any;
+
+    // Preserve critical outbound link fields when Typesense payload is sparse.
+    merged.link = (
+      typesenseDeal?.link
+      || typesenseDeal?.affiliateLink
+      || typesenseDeal?.sourceUrl
+      || firestoreDeal?.link
+      || firestoreDeal?.affiliateLink
+      || firestoreDeal?.sourceUrl
+      || ''
+    ).trim();
+    merged.affiliateLink = (typesenseDeal?.affiliateLink || firestoreDeal?.affiliateLink || '').trim();
+    merged.affiliateUrl = (typesenseDeal?.affiliateUrl || firestoreDeal?.affiliateUrl || '').trim();
+    merged.dealUrl = (typesenseDeal?.dealUrl || firestoreDeal?.dealUrl || '').trim();
+    merged.sourceUrl = (typesenseDeal?.sourceUrl || firestoreDeal?.sourceUrl || '').trim();
+    merged.url = (typesenseDeal?.url || firestoreDeal?.url || '').trim();
+    merged.externalUrl = (typesenseDeal?.externalUrl || firestoreDeal?.externalUrl || '').trim();
+
+    return merged as Deal;
+  };
+
   // If running in browser, go through API route.
   if (typeof window !== 'undefined') {
     try {
@@ -458,10 +534,16 @@ export async function getDealByIdTypesense(dealId: string): Promise<Deal | null>
       per_page: 1,
     }, {});
     const firstHit = (res.hits || [])[0] as any;
-    if (!firstHit?.document) return null;
-    return { id: firstHit.document.id, ...firstHit.document } as Deal;
+    if (!firstHit?.document) {
+      const firestoreDeal = await readDealFromFirestore();
+      return firestoreDeal ? (firestoreDeal as Deal) : null;
+    }
+
+    const typesenseDeal = { id: firstHit.document.id, ...firstHit.document } as Deal;
+    return await mergeDealWithFirestoreFallback(typesenseDeal);
   } catch (e) {
     console.warn('Typesense getDealById failed:', e);
-    return null;
+    const firestoreDeal = await readDealFromFirestore();
+    return firestoreDeal ? (firestoreDeal as Deal) : null;
   }
 }
