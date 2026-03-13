@@ -16,6 +16,7 @@
     "lint": "next lint",
     "test": "echo \"No tests specified\" && exit 0",
     "typecheck": "tsc --noEmit",
+    "verify:autopilot-path": "node ./scripts/verify-autopilot-harvester-path.mjs",
     "seed": "ts-node src/scripts/seed.ts",
     "seed:interactions": "ts-node src/scripts/seed-interactions.ts",
     "seed:categories": "tsx src/scripts/seed-categories-full.ts",

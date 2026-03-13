@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies (app)
         run: npm ci
 
+      - name: Verify autopilot/cron import path
+        run: npm run verify:autopilot-path
+
       - name: TypeScript check
         run: npm run typecheck
 
