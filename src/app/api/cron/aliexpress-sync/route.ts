@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { importFromAliExpress } from '@/lib/aliexpress-importer';
+import { SmartHarvester } from '@/lib/automation/harvester';
 import { ensureAliExpressImportProfilesCoverage } from '@/lib/import-profiles-bootstrap';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
@@ -113,6 +113,7 @@ async function runAliExpressSync(request: NextRequest) {
     const pageSize = Number(settings?.pageSize || process.env.ALIEXPRESS_SYNC_PAGE_SIZE || 50);
     const maxPages = Number(settings?.maxPages || process.env.ALIEXPRESS_SYNC_MAX_PAGES || 100);
     const autoApprove = typeof settings?.autoApprove === 'boolean' ? settings.autoApprove : true;
+    const importStrategy = settings?.importStrategy === 'price_asc' ? 'price_asc' : 'bestsellers';
 
     const shouldEnsureProfiles =
       request.nextUrl.searchParams.get('ensureProfiles') === '1' ||
@@ -149,32 +150,66 @@ async function runAliExpressSync(request: NextRequest) {
     const results = [];
     for (const profileDoc of profilesSnapshot.docs) {
       const profile = { id: profileDoc.id, ...profileDoc.data() } as { id: string; name?: string; [key: string]: unknown };
+      const profileQuery = String((profile as any)?.filters?.searchQuery || profile.name || '').trim();
+
+      if (!profileQuery) {
+        results.push({
+          profileId: profile.id,
+          name: profile.name,
+          success: false,
+          error: 'Profil nie ma searchQuery ani nazwy do użycia jako zapytanie.',
+        });
+        continue;
+      }
 
       try {
-        logger.info('Running sync for profile', { profileId: profile.id, name: profile.name ?? profile.id, maxItems });
-
-        const result = await importFromAliExpress({
+        logger.info('Running sync for profile via SmartHarvester', {
           profileId: profile.id,
+          name: profile.name ?? profile.id,
+          query: profileQuery,
           maxItems,
-          hardCap: normalizedHardCap,
           pageSize,
           maxPages,
-          dryRun: false,
+          hardCap: normalizedHardCap,
           autoApprove,
-          enableAI: true,
-          triggeredBy: 'cron',
+          importStrategy,
         });
+
+        const jobId = `cron_harvest_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const harvester = new SmartHarvester(jobId);
+        const jobResult = await harvester.harvestProducts(
+          'aliexpress',
+          profileQuery,
+          maxItems,
+          undefined,
+          false,
+          undefined,
+          false,
+          importStrategy
+        );
+
+        const success = jobResult.status === 'completed';
+        const stats = {
+          productsFound: jobResult.productsFound,
+          productsCreated: jobResult.productsCreated,
+          dealsCreated: jobResult.dealsCreated,
+          dealsLinked: jobResult.dealsLinked,
+          duplicatesSkipped: jobResult.duplicatesSkipped,
+          errors: jobResult.errors.length,
+          status: jobResult.status,
+          jobId: jobResult.id,
+        };
 
         results.push({
           profileId: profile.id,
           name: profile.name,
-          success: result.success,
-          stats: result.stats,
+          success,
+          stats,
         });
 
         logger.info('Profile sync completed', {
           profileId: profile.id,
-          stats: result.stats,
+          stats,
         });
       } catch (error) {
         logger.error('Profile sync failed', {

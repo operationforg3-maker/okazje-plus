@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
-import { importFromAliExpress } from '@/lib/aliexpress-importer';
+import { SmartHarvester } from '@/lib/automation/harvester';
 import { refreshProductPrices } from '@/lib/aliexpress-price-refresh';
 import { logger } from '@/lib/logger';
 
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     const maxItemsOverride = typeof body?.maxItemsPerProfile === 'number'
       ? Number(body.maxItemsPerProfile)
       : undefined;
+    const importStrategy = body?.importStrategy === 'price_asc' ? 'price_asc' : 'bestsellers';
     const autoApproveOverride = typeof body?.autoApprove === 'boolean'
       ? body.autoApprove
       : undefined;
@@ -50,20 +51,61 @@ export async function POST(request: NextRequest) {
 
     for (const profileDoc of profilesSnapshot.docs) {
       const profile = { id: profileDoc.id, ...profileDoc.data() } as any;
+      const profileQuery = String(
+        profile?.filters?.searchQuery || profile?.name || ''
+      ).trim();
+
+      if (!profileQuery) {
+        results.push({
+          profileId: profile.id,
+          name: profile.name,
+          success: false,
+          error: 'Profil nie ma searchQuery ani nazwy do użycia jako zapytanie.',
+        });
+        continue;
+      }
 
       try {
-        logger.info('Autopilot: running profile', { profileId: profile.id, name: profile.name, maxItemsOverride });
+        const maxItems = maxItemsOverride || profile.maxItemsPerRun || 50;
+        const jobId = `autopilot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const harvester = new SmartHarvester(jobId);
 
-        const result = await importFromAliExpress({
+        logger.info('Autopilot: running profile via SmartHarvester', {
           profileId: profile.id,
-          maxItems: maxItemsOverride || profile.maxItemsPerRun || 50,
+          name: profile.name,
+          query: profileQuery,
+          maxItems,
+          importStrategy,
           autoApprove,
-          enableAI: true,
-          triggeredBy: 'manual',
-          triggeredByUid: session.uid,
         });
 
-        results.push({ profileId: profile.id, name: profile.name, success: result.success, stats: result.stats });
+        const jobResult = await harvester.harvestProducts(
+          'aliexpress',
+          profileQuery,
+          maxItems,
+          undefined,
+          false,
+          undefined,
+          false,
+          importStrategy
+        );
+
+        const success = jobResult.status === 'completed';
+        results.push({
+          profileId: profile.id,
+          name: profile.name,
+          success,
+          stats: {
+            productsFound: jobResult.productsFound,
+            productsCreated: jobResult.productsCreated,
+            dealsCreated: jobResult.dealsCreated,
+            dealsLinked: jobResult.dealsLinked,
+            duplicatesSkipped: jobResult.duplicatesSkipped,
+            errors: jobResult.errors.length,
+            status: jobResult.status,
+            jobId: jobResult.id,
+          },
+        });
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         logger.error('Autopilot profile failed', { profileId: profile.id, error: msg });
