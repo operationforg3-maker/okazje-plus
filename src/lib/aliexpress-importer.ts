@@ -65,6 +65,113 @@ type AliExpressImportCandidate = {
   existingProductId: string | null;
 };
 
+type ProductSpecEntry = {
+  key?: string;
+  name?: string;
+  value: string;
+  unit?: string;
+};
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (size <= 0) return [items];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function extractRawProductsFromDetailResponse(response: any): any[] {
+  const detailResult =
+    response?.aliexpress_affiliate_productdetail_get_response?.result ??
+    response?.result;
+
+  const products =
+    Array.isArray(detailResult?.products?.product)
+      ? detailResult.products.product
+      : Array.isArray(detailResult?.products)
+        ? detailResult.products
+        : [];
+
+  return products;
+}
+
+function stripHtmlTags(input: string): string {
+  if (!input) return '';
+  return input
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseSpecEntries(rawProduct: any): ProductSpecEntry[] {
+  const rawSpecs = rawProduct?.product_props ?? rawProduct?.specs ?? rawProduct?.specifications;
+  if (!rawSpecs) return [];
+
+  const addSpec = (
+    list: ProductSpecEntry[],
+    keyRaw: any,
+    valueRaw: any,
+    unitRaw?: any,
+    nameRaw?: any,
+  ) => {
+    const key = String(keyRaw ?? '').trim();
+    const value = String(valueRaw ?? '').trim();
+    const name = String(nameRaw ?? keyRaw ?? '').trim();
+    const unit = String(unitRaw ?? '').trim();
+    if (!value) return;
+    list.push({
+      key: key || name || undefined,
+      name: name || key || undefined,
+      value,
+      unit: unit || undefined,
+    });
+  };
+
+  const specs: ProductSpecEntry[] = [];
+
+  if (Array.isArray(rawSpecs)) {
+    rawSpecs.forEach((entry: any) => {
+      if (!entry) return;
+      if (typeof entry === 'string') {
+        const [k, ...rest] = entry.split(':');
+        addSpec(specs, k, rest.join(':').trim() || entry);
+        return;
+      }
+      addSpec(
+        specs,
+        entry.attr_name ?? entry.property_name ?? entry.key ?? entry.name,
+        entry.attr_value ?? entry.property_value ?? entry.value,
+        entry.attr_unit ?? entry.unit,
+        entry.name,
+      );
+    });
+  } else if (typeof rawSpecs === 'object') {
+    Object.entries(rawSpecs).forEach(([key, value]) => {
+      if (typeof value === 'object' && value !== null) {
+        addSpec(
+          specs,
+          key,
+          (value as any).value ?? (value as any).attr_value,
+          (value as any).unit ?? (value as any).attr_unit,
+          (value as any).name,
+        );
+        return;
+      }
+      addSpec(specs, key, value);
+    });
+  }
+
+  const deduped = new Map<string, ProductSpecEntry>();
+  specs.forEach(spec => {
+    const dedupeKey = `${(spec.key || spec.name || '').toLowerCase()}::${spec.value.toLowerCase()}`;
+    if (!deduped.has(dedupeKey)) {
+      deduped.set(dedupeKey, spec);
+    }
+  });
+  return Array.from(deduped.values()).slice(0, 80);
+}
+
 /**
  * Check if product/deal already exists (deduplication)
  * 
@@ -362,6 +469,27 @@ export async function importFromAliExpress(
     const extraUnique = uniqueCandidates.slice(guaranteedUnique.length, guaranteedUnique.length + remainingAfterDuplicates);
     const productsToProcess = [...guaranteedUnique, ...duplicateFirst, ...extraUnique].slice(0, maxItems);
 
+    // Enrich list responses with detail endpoint (more accurate price/images/description/specs)
+    const detailById = new Map<string, any>();
+    const idsForDetail = Array.from(new Set(productsToProcess.map(c => c.originalId).filter(Boolean)));
+    for (const idChunk of chunkArray(idsForDetail, 50)) {
+      try {
+        const detailResponse = await client.getAffiliateProductDetails(idChunk);
+        const detailedProducts = extractRawProductsFromDetailResponse(detailResponse);
+        detailedProducts.forEach((item: any) => {
+          const productId = String(item?.product_id ?? '').trim();
+          if (productId) {
+            detailById.set(productId, item);
+          }
+        });
+      } catch (error) {
+        logger.warn('AliExpress detail enrichment chunk failed', {
+          ids: idChunk.length,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     // Record pool telemetry
     result.stats.uniqueProductsInPool = uniqueCandidates.length;
     result.stats.duplicateProductsInPool = duplicateCandidates.length;
@@ -402,7 +530,8 @@ export async function importFromAliExpress(
     // Process each product
     for (let i = 0; i < productsToProcess.length; i++) {
       const candidate = productsToProcess[i];
-      const rawProduct = candidate.rawProduct;
+      const detailed = detailById.get(candidate.originalId);
+      const rawProduct = detailed ? { ...candidate.rawProduct, ...detailed } : candidate.rawProduct;
       const originalId = candidate.originalId;
       
       if (!originalId) {
@@ -482,13 +611,40 @@ export async function importFromAliExpress(
         const images: string[] = [mainImage];
         if (Array.isArray(rawProduct.product_small_image_urls)) {
           images.push(...rawProduct.product_small_image_urls.filter((url: string) => url && !images.includes(url)));
+        } else if (typeof rawProduct.product_small_image_urls === 'string') {
+          const compact = String(rawProduct.product_small_image_urls).trim();
+          if (compact.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(compact);
+              if (Array.isArray(parsed)) {
+                images.push(...parsed.filter((url: string) => url && !images.includes(url)));
+              }
+            } catch {
+              // Ignore malformed JSON-like field and keep other image sources.
+            }
+          } else {
+            compact
+              .split(',')
+              .map((value) => value.trim())
+              .filter(Boolean)
+              .forEach((url) => {
+                if (!images.includes(url)) {
+                  images.push(url);
+                }
+              });
+          }
         }
+
+        const descriptionText = stripHtmlTags(
+          rawProduct.product_description || rawProduct.short_description || title
+        );
+        const parsedSpecifications = parseSpecEntries(rawProduct);
 
         // Build product data
         const productData: Partial<Product> = {
           name: title,
-          description: rawProduct.product_description || rawProduct.short_description || title,
-          longDescription: rawProduct.product_description || title,
+          description: descriptionText || title,
+          longDescription: descriptionText || title,
           image: mainImage,
           imageHint: title,
           affiliateUrl: rawProduct.promotion_link || rawProduct.product_detail_url || '',
@@ -551,6 +707,7 @@ export async function importFromAliExpress(
             commissionRate: rawProduct.commission_rate,
             evaluateCount: rawProduct.evaluate_count,
             evaluateRate: rawProduct.evaluate_rate,
+            specifications: parsedSpecifications,
             warehouse: rawProduct.ship_from_country || rawProduct.warehouse_location,
             deliveryTime: rawProduct.delivery_time || rawProduct.estimated_delivery_time,
             freeShipping: rawProduct.free_shipping || rawProduct.is_free_shipping || false,
@@ -571,6 +728,57 @@ export async function importFromAliExpress(
               id: existingProductId,
               isExisting: true,
             };
+
+            // Opportunistic refresh of existing product core fields from richer detail payload.
+            const existingDocRef = adminDb.collection('products').doc(existingProductId);
+            const existingDoc = await existingDocRef.get();
+            if (existingDoc.exists) {
+              const current = existingDoc.data() as any;
+              const currentGalleryCount = Array.isArray(current?.gallery) ? current.gallery.length : 0;
+              const currentDescriptionLength = String(current?.description || '').trim().length;
+              const currentSpecCount = Array.isArray(current?.metadata?.specifications)
+                ? current.metadata.specifications.length
+                : 0;
+
+              const updatePayload: Record<string, any> = {
+                updatedAt: new Date().toISOString(),
+              };
+
+              if (images.length > currentGalleryCount) {
+                updatePayload.image = mainImage || current?.image || '';
+                updatePayload.gallery = images.map((url, idx) => ({
+                  id: `img_${idx}`,
+                  type: 'url' as const,
+                  src: url,
+                  isPrimary: idx === 0,
+                  source: 'aliexpress' as const,
+                  addedAt: new Date().toISOString(),
+                }));
+              }
+
+              if (descriptionText.length > currentDescriptionLength + 20) {
+                updatePayload.description = descriptionText;
+                updatePayload.longDescription = descriptionText;
+              }
+
+              if (parsedSpecifications.length > currentSpecCount) {
+                updatePayload['metadata.specifications'] = parsedSpecifications;
+              }
+
+              if (rawProduct.product_video_url) {
+                updatePayload['metadata.productVideoUrl'] = rawProduct.product_video_url;
+              }
+
+              if (rawProduct.promotion_link || rawProduct.product_detail_url) {
+                updatePayload.affiliateUrl = rawProduct.promotion_link || rawProduct.product_detail_url;
+              }
+
+              if (Object.keys(updatePayload).length > 1) {
+                await existingDocRef.update(updatePayload);
+                result.stats.updated++;
+              }
+            }
+
             logger.info('Product exists - creating deal for same product', {
               productId: existingProductId,
               originalId,
