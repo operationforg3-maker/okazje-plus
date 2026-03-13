@@ -54,9 +54,9 @@ function ProductsPageContent() {
   const t = useTranslations('products');
   const locale = useLocale();
   const { user } = useAuth();
-  const mainCategoryParam = searchParams.get('mainCategory');
-  const subCategoryParam = searchParams.get('subCategory');
-  const subSubCategoryParam = searchParams.get('subSubCategory');
+  const mainCategoryParam = searchParams.get('mainCategory') || searchParams.get('category');
+  const subCategoryParam = searchParams.get('subCategory') || searchParams.get('subcategory');
+  const subSubCategoryParam = searchParams.get('subSubCategory') || searchParams.get('subsubcategory');
   const statusParam = searchParams.get('status');
   const [products, setProducts] = useState<ProductCore[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -477,6 +477,19 @@ function ProductsPageContent() {
     return [selected, ...currentSub.subcategories.filter(ss => (ss.slug || ss.id) !== selectedSubSubcategory)];
   }, [sortedSubcategories, selectedSubcategory, selectedSubSubcategory]);
 
+  const selectedSubcategoryName = useMemo(() => {
+    if (!selectedCategory || !selectedSubcategory) return null;
+    const sub = selectedCategory.subcategories?.find((s) => (s.slug || s.id) === selectedSubcategory);
+    return sub ? getLocalizedCategoryName(sub as any, lang) : selectedSubcategory;
+  }, [selectedCategory, selectedSubcategory, lang]);
+
+  const selectedSubSubcategoryName = useMemo(() => {
+    if (!selectedSubcategory || !selectedSubSubcategory) return null;
+    const currentSub = sortedSubcategories.find((s) => (s.slug || s.id) === selectedSubcategory);
+    const subSub = currentSub?.subcategories?.find((ss) => (ss.slug || ss.id) === selectedSubSubcategory);
+    return subSub ? getLocalizedCategoryName(subSub as any, lang) : selectedSubSubcategory;
+  }, [sortedSubcategories, selectedSubcategory, selectedSubSubcategory, lang]);
+
   const SidebarContent = () => (
     <div className="space-y-2">
       <div className="mb-4">
@@ -638,7 +651,13 @@ function ProductsPageContent() {
             {selectedSubcategory && (
               <>
                 <ChevronRight className="h-4 w-4" />
-                <span className="font-medium text-foreground">{selectedSubcategory}</span>
+                <span className="font-medium text-foreground">{selectedSubcategoryName || selectedSubcategory}</span>
+              </>
+            )}
+            {selectedSubSubcategory && (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                <span className="font-medium text-foreground">{selectedSubSubcategoryName || selectedSubSubcategory}</span>
               </>
             )}
           </div>

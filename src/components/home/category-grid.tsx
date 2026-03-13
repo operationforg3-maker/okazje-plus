@@ -72,7 +72,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                 <CardContent className="p-4">
                   {/* Główny nagłówek - ikona, tytuł i liczba produktów w jednej linii */}
                   <Link 
-                    href={`/products?category=${category.slug || category.id}`}
+                    href={`/products?mainCategory=${category.slug || category.id}`}
                     className="flex items-center gap-3 mb-3 group/title"
                   >
                     <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg', `bg-gradient-to-br ${style.gradient}`)}>
@@ -104,7 +104,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                         {category.subcategories.map((sub) => (
                           <Link
                             key={sub.id}
-                            href={`/products?category=${category.slug || category.id}&subcategory=${sub.slug || sub.id}`}
+                            href={`/products?mainCategory=${category.slug || category.id}&subCategory=${sub.slug || sub.id}`}
                             className="text-xs px-2 py-1 rounded-md bg-secondary/50 hover:bg-primary/10 hover:text-primary transition-colors"
                           >
                             {sub.name}
@@ -139,7 +139,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                         <div key={sub.id} className="space-y-2">
                           {/* Level 2: Subcategory */}
                           <Link
-                            href={`/products?category=${category.slug || category.id}&subcategory=${sub.slug || sub.id}`}
+                            href={`/products?mainCategory=${category.slug || category.id}&subCategory=${sub.slug || sub.id}`}
                             className="flex items-start gap-2 p-2 rounded-lg hover:bg-secondary transition-colors group/sub"
                           >
                             <div className="p-1.5 rounded bg-primary/10 group-hover/sub:bg-primary/20 transition-colors">
@@ -168,7 +168,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                               {sub.subcategories.map((subsub) => (
                                 <Link
                                   key={subsub.id}
-                                  href={`/products?category=${category.slug || category.id}&subcategory=${sub.slug || sub.id}&subsubcategory=${subsub.slug || subsub.id}`}
+                                  href={`/products?mainCategory=${category.slug || category.id}&subCategory=${sub.slug || sub.id}&subSubCategory=${subsub.slug || subsub.id}`}
                                   className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-secondary hover:text-primary transition-colors group/subsub"
                                 >
                                   <div className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover/subsub:bg-primary" />

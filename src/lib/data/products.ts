@@ -129,16 +129,37 @@ export async function getProductCoresByFiltersData(
       statuses.map(async (status) => {
         const constraints: any[] = [where('status', '==', status)];
 
-        if (filters.subSubCategorySlug) {
-          constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-        } else if (filters.subCategorySlug) {
-          constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-        } else if (filters.categoryId) {
+        if (filters.categoryId) {
           constraints.push(where('mainCategorySlug', '==', filters.categoryId));
         }
 
-        const q = query(collection(db, 'product_cores'), ...constraints, limit(limitCount));
-        return getDocs(q);
+        if (filters.subCategorySlug) {
+          constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+        }
+
+        if (filters.subSubCategorySlug) {
+          constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+        }
+
+        const baseQuery = query(collection(db, 'product_cores'), ...constraints, limit(limitCount));
+
+        try {
+          return await getDocs(baseQuery);
+        } catch (error: any) {
+          const message = String(error?.message || '');
+          const isIndexIssue = message.includes('index') || message.includes('FAILED_PRECONDITION');
+
+          if (!isIndexIssue) throw error;
+
+          // Fallback without composite category filters; category checks are enforced in-memory below.
+          const fallbackQuery = query(
+            collection(db, 'product_cores'),
+            where('status', '==', status),
+            limit(limitCount * 3)
+          );
+
+          return getDocs(fallbackQuery);
+        }
       })
     );
 
@@ -154,6 +175,10 @@ export async function getProductCoresByFiltersData(
     const products: ProductCore[] = Array.from(productsMap.values());
 
     const filtered = products.filter(product => {
+      if (filters.categoryId && product.mainCategorySlug !== filters.categoryId) return false;
+      if (filters.subCategorySlug && product.subCategorySlug !== filters.subCategorySlug) return false;
+      if (filters.subSubCategorySlug && product.subSubCategorySlug !== filters.subSubCategorySlug) return false;
+
       if (filters.priceRange) {
         const price = product.bestPrice?.amount || 0;
         if (price < filters.priceRange.min || price > filters.priceRange.max) return false;

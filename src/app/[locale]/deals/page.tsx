@@ -177,9 +177,9 @@ export default function DealsPage() {
     categoryInitialized.current = true;
     try {
       const params = new URLSearchParams(window.location.search);
-      const mainParam = params.get('mainCategory');
-      const subParam = params.get('subCategory');
-      const subSubParam = params.get('subSubCategory');
+      const mainParam = params.get('mainCategory') || params.get('category');
+      const subParam = params.get('subCategory') || params.get('subcategory');
+      const subSubParam = params.get('subSubCategory') || params.get('subsubcategory');
       const sortParam = params.get('sort');
       const statusParam = params.get('status');
       const qParam = params.get('q');
@@ -769,6 +769,19 @@ export default function DealsPage() {
     return [selected, ...currentSub.subcategories.filter(ss => (ss.slug || ss.id) !== selectedSubSubcategory)];
   }, [sortedSubcategories, selectedSubcategory, selectedSubSubcategory]);
 
+  const selectedSubcategoryName = useMemo(() => {
+    if (!selectedCategory || !selectedSubcategory) return null;
+    const sub = selectedCategory.subcategories?.find((s) => (s.slug || s.id) === selectedSubcategory);
+    return sub ? getLocalizedCategoryName(sub as any, lang) : selectedSubcategory;
+  }, [selectedCategory, selectedSubcategory, lang]);
+
+  const selectedSubSubcategoryName = useMemo(() => {
+    if (!selectedSubcategory || !selectedSubSubcategory) return null;
+    const currentSub = sortedSubcategories.find((s) => (s.slug || s.id) === selectedSubcategory);
+    const subSub = currentSub?.subcategories?.find((ss) => (ss.slug || ss.id) === selectedSubSubcategory);
+    return subSub ? getLocalizedCategoryName(subSub as any, lang) : selectedSubSubcategory;
+  }, [sortedSubcategories, selectedSubcategory, selectedSubSubcategory, lang]);
+
   const handleSwipeStart = (dealId: string, touchX: number) => {
     swipeStartXRef.current[dealId] = touchX;
   };
@@ -983,13 +996,19 @@ export default function DealsPage() {
             {selectedCategory && (
               <>
                 <ChevronRight className="h-4 w-4" />
-                <span className="font-medium text-foreground">{selectedCategory.name}</span>
+                <span className="font-medium text-foreground">{getLocalizedCategoryName(selectedCategory as any, lang)}</span>
               </>
             )}
             {selectedSubcategory && (
               <>
                 <ChevronRight className="h-4 w-4" />
-                <span className="font-medium text-foreground">{selectedSubcategory}</span>
+                <span className="font-medium text-foreground">{selectedSubcategoryName || selectedSubcategory}</span>
+              </>
+            )}
+            {selectedSubSubcategory && (
+              <>
+                <ChevronRight className="h-4 w-4" />
+                <span className="font-medium text-foreground">{selectedSubSubcategoryName || selectedSubSubcategory}</span>
               </>
             )}
           </div>

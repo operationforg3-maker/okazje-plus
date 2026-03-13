@@ -225,16 +225,37 @@ export async function getDealsByFiltersData(
       statuses.map(async (status) => {
         const constraints: any[] = [where('status', '==', status)];
 
-        if (filters.subSubCategorySlug) {
-          constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-        } else if (filters.subCategorySlug) {
-          constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-        } else if (filters.categoryId) {
+        if (filters.categoryId) {
           constraints.push(where('mainCategorySlug', '==', filters.categoryId));
         }
 
-        const q = query(collection(db, 'deals'), ...constraints, orderBy('updatedAt', 'desc'), limit(limitCount));
-        return getDocs(q);
+        if (filters.subCategorySlug) {
+          constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+        }
+
+        if (filters.subSubCategorySlug) {
+          constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+        }
+
+        const baseQuery = query(collection(db, 'deals'), ...constraints, limit(limitCount));
+
+        try {
+          return await getDocs(baseQuery);
+        } catch (error: any) {
+          const message = String(error?.message || '');
+          const isIndexIssue = message.includes('index') || message.includes('FAILED_PRECONDITION');
+
+          if (!isIndexIssue) throw error;
+
+          // Fallback without composite category filters; category checks are enforced in-memory below.
+          const fallbackQuery = query(
+            collection(db, 'deals'),
+            where('status', '==', status),
+            limit(limitCount * 3)
+          );
+
+          return getDocs(fallbackQuery);
+        }
       })
     );
 
@@ -263,13 +284,9 @@ export async function getDealsByFiltersData(
         subSubCat = parts[2] || undefined;
       }
 
-      if (filters.subSubCategorySlug) {
-        if (subSubCat !== filters.subSubCategorySlug) return false;
-      } else if (filters.subCategorySlug) {
-        if (subCat !== filters.subCategorySlug) return false;
-      } else if (filters.categoryId) {
-        if (mainCat !== filters.categoryId) return false;
-      }
+      if (filters.categoryId && mainCat !== filters.categoryId) return false;
+      if (filters.subCategorySlug && subCat !== filters.subCategorySlug) return false;
+      if (filters.subSubCategorySlug && subSubCat !== filters.subSubCategorySlug) return false;
 
       if (filters.priceRange) {
         const price = (deal as any).priceV2?.amount || deal.price || 0;
@@ -341,17 +358,41 @@ export async function getDealsCountData(filters: {
   try {
     const constraints = [where('status', '==', filters.status || 'approved')];
 
-    if (filters.subSubCategorySlug) {
-      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
-    } else if (filters.subCategorySlug) {
-      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
-    } else if (filters.categoryId) {
+    if (filters.categoryId) {
       constraints.push(where('mainCategorySlug', '==', filters.categoryId));
     }
 
-    const q = query(collection(db, 'deals'), ...constraints);
-    const snap = await getCountFromServer(q);
-    return snap.data().count || 0;
+    if (filters.subCategorySlug) {
+      constraints.push(where('subCategorySlug', '==', filters.subCategorySlug));
+    }
+
+    if (filters.subSubCategorySlug) {
+      constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
+    }
+
+    try {
+      const q = query(collection(db, 'deals'), ...constraints);
+      const snap = await getCountFromServer(q);
+      return snap.data().count || 0;
+    } catch (error: any) {
+      const message = String(error?.message || '');
+      const isIndexIssue = message.includes('index') || message.includes('FAILED_PRECONDITION');
+      if (!isIndexIssue) throw error;
+
+      const fallbackQ = query(
+        collection(db, 'deals'),
+        where('status', '==', filters.status || 'approved')
+      );
+      const fallbackSnap = await getDocs(fallbackQ);
+
+      return fallbackSnap.docs.filter((docSnap) => {
+        const deal = docToDeal(docSnap);
+        if (filters.categoryId && deal.mainCategorySlug !== filters.categoryId) return false;
+        if (filters.subCategorySlug && deal.subCategorySlug !== filters.subCategorySlug) return false;
+        if (filters.subSubCategorySlug && deal.subSubCategorySlug !== filters.subSubCategorySlug) return false;
+        return true;
+      }).length;
+    }
   } catch (err) {
     console.error('Error counting deals:', err);
     return 0;
