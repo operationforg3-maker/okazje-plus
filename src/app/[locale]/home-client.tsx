@@ -8,6 +8,8 @@ import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import HomeDealCard from '@/components/home/home-deal-card';
+import HomeProductCard from '@/components/home/home-product-card';
 const AutocompleteSearch = dynamic(
   () => import('@/components/autocomplete-search').then((m) => ({ default: m.AutocompleteSearch })),
   {
@@ -17,8 +19,6 @@ const AutocompleteSearch = dynamic(
 );
 
 // Dynamic imports for below-fold components — reduces TBT / main-thread parse cost
-const DealCard = dynamic(() => import('@/components/deal-card'), { ssr: false });
-const ProductCard = dynamic(() => import('@/components/product-card'), { ssr: false });
 const CategoryGrid = dynamic(() => import('@/components/home/category-grid'), { ssr: false });
 const RealTimeStats = dynamic(
   () => import('@/components/home/real-time-stats').then((m) => ({ default: m.RealTimeStats })),
@@ -160,7 +160,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           {initialHotDeals.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {initialHotDeals.slice(0, 8).map((deal, idx) => (
-                <DealCard key={deal.id} deal={deal} priority={idx < 4} />
+                <HomeDealCard key={deal.id} deal={deal} priority={idx < 4} />
               ))}
             </div>
           ) : (
@@ -198,7 +198,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           {initialTopProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {initialTopProducts.slice(0, 8).map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <HomeProductCard key={product.id} product={product} />
               ))}
             </div>
           ) : (
