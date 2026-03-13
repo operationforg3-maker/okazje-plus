@@ -62,6 +62,7 @@ export default function DealsPage() {
   const t = useTranslations('deals');
   const tCommon = useTranslations('common');
   const locale = useLocale();
+  const lang = (locale as SupportedLanguage) || 'pl';
   const [deals, setDeals] = useState<Deal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
