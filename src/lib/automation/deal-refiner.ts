@@ -60,14 +60,25 @@ export class DealRefiner {
       this.addLog('info', `Starting Deal Refiner job: limit=${limit}`);
 
       // Find deals that need refinement:
-      // - Status is 'draft' (newly harvested deals awaiting moderation + enrichment)
+      // - Status is 'draft' OR 'approved' (harvested deals that missed enrichment after moderation)
       // - title is missing OR
       // - title lacks 'pl' field (Polish translation missing - CRITICAL!)
-      const dealsSnapshot = await adminDb
-        .collection('deals')
-        .where('status', '==', 'draft')
-        .limit(limit)
-        .get();
+      //
+      // NOTE: We query both statuses because deals approved before full enrichment
+      // could remain with incomplete translations (only pl/en/de, missing fr/es/uk).
+      const [draftSnap, approvedSnap] = await Promise.all([
+        adminDb.collection('deals').where('status', '==', 'draft').limit(limit).get(),
+        adminDb.collection('deals').where('status', '==', 'approved').limit(limit).get(),
+      ]);
+
+      // Merge and deduplicate
+      const seenIds = new Set<string>();
+      const allDocs = [...draftSnap.docs, ...approvedSnap.docs].filter((d) => {
+        if (seenIds.has(d.id)) return false;
+        seenIds.add(d.id);
+        return true;
+      });
+      const dealsSnapshot = { docs: allDocs.slice(0, limit) };
 
       const totalDeals = dealsSnapshot.docs.length;
       this.addLog('info', `Found ${totalDeals} deals to process`);

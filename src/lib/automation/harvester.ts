@@ -1112,6 +1112,9 @@ export class SmartHarvester {
       pl: safe,
       en: safe,
       de: safe,
+      fr: safe,
+      es: safe,
+      uk: safe,
     };
   }
 

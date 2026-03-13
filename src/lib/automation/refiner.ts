@@ -262,8 +262,8 @@ export class AIRefiner {
 
       const fallbackBase =
         normalized[preferredSourceLocale] ||
-        normalized.en ||
         normalized.pl ||
+        normalized.en ||
         normalized.de ||
         normalized.fr ||
         normalized.es ||
