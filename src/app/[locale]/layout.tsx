@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import dynamic from 'next/dynamic';
 import Script from 'next/script';
 import '../globals.css';
 import { ConditionalNav } from '@/components/layout/conditional-nav';
@@ -10,24 +9,7 @@ import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import ErrorBoundary from '@/components/auth/error-boundary';
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/json-ld-generators';
-
-const Toaster = dynamic(() => import('sonner').then((m) => ({ default: m.Toaster })), { ssr: false });
-const ComparisonListener = dynamic(
-  () => import('@/components/deal-comparison-tool').then((m) => ({ default: m.ComparisonListener })),
-  { ssr: false }
-);
-const ExtensionWarningBanner = dynamic(
-  () => import('@/components/extension-warning-banner').then((m) => ({ default: m.ExtensionWarningBanner })),
-  { ssr: false }
-);
-const CashbackWarningModal = dynamic(
-  () => import('@/components/cashback-warning-modal').then((m) => ({ default: m.CashbackWarningModal })),
-  { ssr: false }
-);
-const CookieConsentBanner = dynamic(
-  () => import('@/components/cookie-consent').then((m) => ({ default: m.CookieConsentBanner })),
-  { ssr: false }
-);
+import { DeferredClientWidgets } from '@/components/layout/deferred-client-widgets';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
 
@@ -175,11 +157,7 @@ export default async function LocaleLayout({
                   <ConditionalNav>
                       {children}
                   </ConditionalNav>
-                  <ComparisonListener />
-                  <ExtensionWarningBanner />
-                  <CashbackWarningModal />
-                  <CookieConsentBanner />
-                  <Toaster />
+                  <DeferredClientWidgets />
                 </div>
               </SmartCartProvider>
             </CurrencyProvider>
