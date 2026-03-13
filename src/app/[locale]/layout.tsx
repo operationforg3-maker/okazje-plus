@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
 import Script from 'next/script';
 import '../globals.css';
-import { Toaster } from 'sonner';
 import { ConditionalNav } from '@/components/layout/conditional-nav';
 import { AuthProvider } from '@/lib/auth';
 import { SmartCartProvider } from '@/lib/cart-context';
@@ -9,13 +9,25 @@ import { CurrencyProvider } from '@/context/currency-context';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import ErrorBoundary from '@/components/auth/error-boundary';
-import ComingSoonLanding from '@/components/coming-soon-landing';
-import { ComparisonListener } from '@/components/deal-comparison-tool';
-import { ExtensionWarningBanner } from '@/components/extension-warning-banner';
-import { CashbackWarningModal } from '@/components/cashback-warning-modal';
-import { AnalyticsProvider } from '@/components/analytics/provider';
-import { CookieConsentBanner } from '@/components/cookie-consent';
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/json-ld-generators';
+
+const Toaster = dynamic(() => import('sonner').then((m) => ({ default: m.Toaster })), { ssr: false });
+const ComparisonListener = dynamic(
+  () => import('@/components/deal-comparison-tool').then((m) => ({ default: m.ComparisonListener })),
+  { ssr: false }
+);
+const ExtensionWarningBanner = dynamic(
+  () => import('@/components/extension-warning-banner').then((m) => ({ default: m.ExtensionWarningBanner })),
+  { ssr: false }
+);
+const CashbackWarningModal = dynamic(
+  () => import('@/components/cashback-warning-modal').then((m) => ({ default: m.CashbackWarningModal })),
+  { ssr: false }
+);
+const CookieConsentBanner = dynamic(
+  () => import('@/components/cookie-consent').then((m) => ({ default: m.CookieConsentBanner })),
+  { ssr: false }
+);
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
 
@@ -131,11 +143,6 @@ export default async function LocaleLayout({
           __html: JSON.stringify(organizationJsonLd)
         }}
       />
-
-      {/* Fonts */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
 
       {/* Google Analytics 4 - Lazy loaded to avoid blocking main thread */}
       <Script

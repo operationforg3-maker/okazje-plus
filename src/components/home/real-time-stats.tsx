@@ -25,15 +25,21 @@ const defaultStats: StatsData = {
 
 const STATS_CACHE_KEY = 'okazje:home:stats:full';
 const STATS_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
+const HOME_STATS_REFRESH_MS = 15 * 60 * 1000;
+const FORUM_STATS_REFRESH_MS = 30 * 60 * 1000;
+
+const logClientError = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== 'production') {
+    console.error(...args);
+  }
+};
 
 export function RealTimeStats() {
   const [stats, setStats] = useState<StatsData>(defaultStats);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    let idleId: number | null = null;
+    let initialTimer: ReturnType<typeof setTimeout> | null = null;
 
     const readCachedStats = (): StatsData | null => {
       try {
@@ -62,7 +68,7 @@ export function RealTimeStats() {
 
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/public/stats');
+        const response = await fetch('/api/public/stats', { cache: 'force-cache' });
 
         if (response.ok) {
           const data = await response.json();
@@ -78,7 +84,7 @@ export function RealTimeStats() {
           writeCachedStats(nextStats);
         }
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        logClientError('Failed to fetch stats:', error);
         // Use fallback data
         setStats(prev => ({ ...prev, lastUpdateTime: new Date().toISOString() }));
       } finally {
@@ -86,26 +92,28 @@ export function RealTimeStats() {
       }
     };
 
-    // Delay first network hit until browser is idle to prioritize initial render.
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = window.requestIdleCallback(() => {
-        fetchStats();
-      }, { timeout: 2000 });
-    } else {
-      timeout = setTimeout(() => {
-        fetchStats();
-      }, 1200);
-    }
+    const scheduleInitialFetch = () => {
+      if (typeof window === 'undefined') return;
 
-    // Refresh every 5 minutes
-    interval = setInterval(fetchStats, 5 * 60 * 1000);
+      // Delay non-critical fetch to reduce early main-thread pressure and improve LCP.
+      const run = () => {
+        initialTimer = setTimeout(fetchStats, 1200);
+      };
 
-    return () => {
-      if (interval) clearInterval(interval);
-      if (timeout) clearTimeout(timeout);
-      if (idleId !== null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(idleId);
+      if ('requestIdleCallback' in window) {
+        (window as Window & { requestIdleCallback: (cb: IdleRequestCallback) => number }).requestIdleCallback(() => run());
+        return;
       }
+
+      run();
+    };
+
+    scheduleInitialFetch();
+
+    const interval = setInterval(fetchStats, HOME_STATS_REFRESH_MS);
+    return () => {
+      if (initialTimer) clearTimeout(initialTimer);
+      clearInterval(interval);
     };
   }, []);
 
@@ -176,10 +184,12 @@ export function ForumStats() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let initialTimer: ReturnType<typeof setTimeout> | null = null;
+
     const fetchStats = async () => {
       try {
         const response = await fetch('/api/forum/stats', {
-          cache: 'no-store',
+          cache: 'force-cache',
         });
 
         if (response.ok) {
@@ -191,17 +201,33 @@ export function ForumStats() {
           });
         }
       } catch (error) {
-        console.error('Failed to fetch forum stats:', error);
+        logClientError('Failed to fetch forum stats:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchStats();
+    const scheduleInitialFetch = () => {
+      if (typeof window === 'undefined') return;
+      const run = () => {
+        initialTimer = setTimeout(fetchStats, 1800);
+      };
 
-    // Refresh every 10 minutes
-    const interval = setInterval(fetchStats, 10 * 60 * 1000);
-    return () => clearInterval(interval);
+      if ('requestIdleCallback' in window) {
+        (window as Window & { requestIdleCallback: (cb: IdleRequestCallback) => number }).requestIdleCallback(() => run());
+        return;
+      }
+
+      run();
+    };
+
+    scheduleInitialFetch();
+
+    const interval = setInterval(fetchStats, FORUM_STATS_REFRESH_MS);
+    return () => {
+      if (initialTimer) clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
   }, []);
 
   return (

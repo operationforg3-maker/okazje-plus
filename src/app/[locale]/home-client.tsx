@@ -8,7 +8,13 @@ import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AutocompleteSearch } from '@/components/autocomplete-search';
+const AutocompleteSearch = dynamic(
+  () => import('@/components/autocomplete-search').then((m) => ({ default: m.AutocompleteSearch })),
+  {
+    ssr: false,
+    loading: () => <div className="h-12 rounded-full border-2 bg-background/80" aria-hidden="true" />,
+  }
+);
 
 // Dynamic imports for below-fold components — reduces TBT / main-thread parse cost
 const DealCard = dynamic(() => import('@/components/deal-card'), { ssr: false });
@@ -16,7 +22,10 @@ const ProductCard = dynamic(() => import('@/components/product-card'), { ssr: fa
 const CategoryGrid = dynamic(() => import('@/components/home/category-grid'), { ssr: false });
 const RealTimeStats = dynamic(
   () => import('@/components/home/real-time-stats').then((m) => ({ default: m.RealTimeStats })),
-  { ssr: false }
+  {
+    ssr: false,
+    loading: () => <div className="h-[160px]" aria-hidden="true" />,
+  }
 );
 const HomeSecondarySections = dynamic(() => import('@/components/home/home-secondary-sections'), {
   ssr: false,

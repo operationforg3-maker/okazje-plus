@@ -4,8 +4,8 @@ import { getRecommendedProducts, getCategories } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
 
-// Prefer ISR cache for homepage to improve TTFB/LCP on mobile.
-export const revalidate = 300;
+// Cache home page more aggressively for better performance
+export const revalidate = 60; // ISR co 1 minutę dla lepszego TTFB/LCP bez pełnej dynamiki
 
 export const metadata: Metadata = {
   title: 'Okazje Plus - Najlepsze promocje i produkty w jednym miejscu',
@@ -41,11 +41,11 @@ export default async function HomePage() {
   // Load data for home page
   const [hotDeals, topProducts, categories] = await Promise.all([
     searchDealsTypesense('*', {
-      limit: 8,
+      limit: 20,
       sortBy: 'hot',
       statusFilter: 'approved',
     }),
-    getRecommendedProducts(8),
+    getRecommendedProducts(12),
     getCategories(),
   ]);
 
