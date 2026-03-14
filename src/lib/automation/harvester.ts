@@ -1945,13 +1945,12 @@ export class SmartHarvester {
               if (batchIds.length > 0) {
                 lastDealRefinerAt = Date.now();
                 this.addLog('info', `Uruchamiam Deal Refiner dla ${batchIds.length} ofert (batch/auto)`);
-                startDealRefinerJob(batchIds)
-                  .then((result) => {
-                    this.addLog('info', `Deal Refiner zakończony (batch/auto): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
-                  })
-                  .catch((err) => {
-                    this.addLog('error', 'Deal Refiner nie powiódł się (batch/auto)', err);
-                  });
+                try {
+                  const result = await startDealRefinerJob(batchIds);
+                  this.addLog('info', `Deal Refiner zakończony (batch/auto): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+                } catch (err) {
+                  this.addLog('error', 'Deal Refiner nie powiódł się (batch/auto)', err);
+                }
               }
             }
           }
@@ -2105,26 +2104,24 @@ export class SmartHarvester {
       // Trigger asynchronous Deal Refiner for freshly created deals
       if (dealsToRefine.length > 0) {
         this.addLog('info', `Uruchamiam Deal Refiner dla ${dealsToRefine.length} ofert (async)`);
-        startDealRefinerJob(dealsToRefine)
-          .then((result) => {
-            this.addLog('info', `Deal Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
-          })
-          .catch((err) => {
-            this.addLog('error', 'Deal Refiner nie powiódł się w tle', err);
-          });
+        try {
+          const result = await startDealRefinerJob(dealsToRefine);
+          this.addLog('info', `Deal Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+        } catch (err) {
+          this.addLog('error', 'Deal Refiner nie powiódł się', err);
+        }
       }
 
       if (productsToRefine.length > 0) {
         const refinerJobId = `refiner_${this.jobId}`;
         this.addLog('info', `Uruchamiam AI Refiner dla ${productsToRefine.length} produktów (async)`);
-        const productRefiner = new AIRefiner(refinerJobId);
-        productRefiner.refineProducts(productsToRefine, 'full_enrichment')
-          .then((result) => {
-            this.addLog('info', `AI Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
-          })
-          .catch((err) => {
-            this.addLog('error', 'AI Refiner nie powiódł się w tle', err);
-          });
+        try {
+          const productRefiner = new AIRefiner(refinerJobId);
+          const result = await productRefiner.refineProducts(productsToRefine, 'full_enrichment');
+          this.addLog('info', `AI Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+        } catch (err) {
+          this.addLog('error', 'AI Refiner nie powiódł się', err);
+        }
       }
 
       return job;
