@@ -40,6 +40,60 @@ type HealthIssue = {
   message: string;
 };
 
+type SchedulerState = {
+  status: string;
+  ok: boolean;
+  triggeredAt: string | null;
+  completedAt: string | null;
+  durationMs: number;
+  synced: number;
+  total: number;
+  failed: number;
+  skipped: boolean;
+  stale: boolean;
+  message: string | null;
+  error: string | null;
+};
+
+type SlaState = {
+  windowHours: number;
+  totalRuns: number;
+  effectiveRuns: number;
+  successfulRuns: number;
+  failedRuns: number;
+  skippedRuns: number;
+  successRatePercent: number | null;
+  avgDurationMs: number;
+  consecutiveFailures: number;
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+};
+
+type RecentRunState = {
+  id?: string;
+  status?: string;
+  ok?: boolean;
+  triggeredAt?: string | null;
+  completedAt?: string | null;
+  durationMs?: number;
+  synced?: number;
+  total?: number;
+  failed?: number;
+  skipped?: boolean;
+  message?: string | null;
+  error?: string | null;
+};
+
+type AlertState = {
+  id: string;
+  code: string;
+  severity: 'warning' | 'error';
+  title: string;
+  message: string;
+  createdAt: string;
+  resolved?: boolean;
+};
+
 type HealthState = {
   autopilotEnabled: boolean;
   ensureProfiles: boolean;
@@ -52,6 +106,10 @@ type HealthState = {
     enabled: number;
     total: number;
   };
+  scheduler: SchedulerState | null;
+  sla24h: SlaState;
+  recentRuns: RecentRunState[];
+  recentAlerts: AlertState[];
   lastRun: Record<string, any> | null;
   issues: HealthIssue[];
 };
@@ -63,6 +121,13 @@ function toSafeNumber(value: unknown): number {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return 'brak';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'brak';
+  return date.toLocaleString('pl-PL');
 }
 
 export function AliExpressAutopilotControl({
@@ -330,6 +395,94 @@ export function AliExpressAutopilotControl({
             </div>
           )}
 
+          {health?.scheduler && (
+            <div className="text-xs text-slate-600 rounded-md bg-amber-50 p-3 border border-amber-200 space-y-2">
+              <div className="font-semibold text-slate-800">Runtime z Firebase Scheduler</div>
+              <div>
+                Status: {health.scheduler.status || 'unknown'} | trigger: {health.scheduler.triggeredAt ? new Date(health.scheduler.triggeredAt).toLocaleString('pl-PL') : 'brak'}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-[11px]">
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Synced profile</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.scheduler.synced)}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Total profile</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.scheduler.total)}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Failed profile</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.scheduler.failed)}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Czas wykonania</p>
+                  <p className="font-semibold text-slate-900">{Math.max(0, Math.round(toSafeNumber(health.scheduler.durationMs) / 1000))}s</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Pominiety run</p>
+                  <p className="font-semibold text-slate-900">{health.scheduler.skipped ? 'tak' : 'nie'}</p>
+                </div>
+                <div className="rounded border bg-white p-2">
+                  <p className="text-slate-500">Swiezosc triggera</p>
+                  <p className="font-semibold text-slate-900">{health.scheduler.stale ? 'przeterminowany' : 'aktualny'}</p>
+                </div>
+              </div>
+              {health.scheduler.message && (
+                <div className="rounded border bg-white p-2 text-[11px]">
+                  Wiadomosc: {health.scheduler.message}
+                </div>
+              )}
+              {health.scheduler.error && (
+                <div className="rounded border border-red-200 bg-red-50 p-2 text-[11px] text-red-700">
+                  Blad: {health.scheduler.error}
+                </div>
+              )}
+            </div>
+          )}
+
+          {health?.sla24h && (
+            <div className="rounded-lg border p-4 space-y-3 bg-white">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm">SLA autopilota z ostatnich 24h</p>
+                <Badge variant={toSafeNumber(health.sla24h.successRatePercent) >= 95 ? 'default' : toSafeNumber(health.sla24h.successRatePercent) >= 80 ? 'secondary' : 'destructive'}>
+                  SLA: {health.sla24h.successRatePercent ?? 'brak'}%
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 text-[11px]">
+                <div className="rounded border bg-slate-50 p-2">
+                  <p className="text-slate-500">Uruchomienia</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.sla24h.totalRuns)}</p>
+                </div>
+                <div className="rounded border bg-slate-50 p-2">
+                  <p className="text-slate-500">Skuteczne</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.sla24h.successfulRuns)}</p>
+                </div>
+                <div className="rounded border bg-slate-50 p-2">
+                  <p className="text-slate-500">Nieudane</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.sla24h.failedRuns)}</p>
+                </div>
+                <div className="rounded border bg-slate-50 p-2">
+                  <p className="text-slate-500">Pominiete</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.sla24h.skippedRuns)}</p>
+                </div>
+                <div className="rounded border bg-slate-50 p-2">
+                  <p className="text-slate-500">Sredni czas</p>
+                  <p className="font-semibold text-slate-900">{Math.max(0, Math.round(toSafeNumber(health.sla24h.avgDurationMs) / 1000))}s</p>
+                </div>
+                <div className="rounded border bg-slate-50 p-2">
+                  <p className="text-slate-500">Seria awarii</p>
+                  <p className="font-semibold text-slate-900">{toSafeNumber(health.sla24h.consecutiveFailures)}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-slate-600">
+                <div className="rounded border bg-slate-50 p-2">Ostatni sukces: {formatDateTime(health.sla24h.lastSuccessAt)}</div>
+                <div className="rounded border bg-slate-50 p-2">Ostatnia awaria: {formatDateTime(health.sla24h.lastFailureAt)}</div>
+              </div>
+            </div>
+          )}
+
           {health?.lastRun && (
             <div className="text-xs text-slate-600 rounded-md bg-slate-50 p-3 border space-y-2">
               <div>
@@ -361,6 +514,49 @@ export function AliExpressAutopilotControl({
                   <p className="text-slate-500">Metoda wyszukiwania</p>
                   <p className="font-semibold text-slate-900">{lastRunSearchMethod || 'brak danych'}</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {health?.recentRuns?.length > 0 && (
+            <div className="rounded-lg border p-4 space-y-3 bg-white">
+              <p className="font-semibold text-sm">Ostatnie przebiegi scheduler</p>
+              <div className="space-y-2">
+                {health.recentRuns.slice(0, 6).map((run) => (
+                  <div key={run.id || `${run.triggeredAt}-${run.status}`} className="rounded border bg-slate-50 p-3 text-[11px] text-slate-700">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <Badge variant={run.ok ? 'default' : 'destructive'}>{run.status || 'unknown'}</Badge>
+                      {run.skipped ? <Badge variant="secondary">skipped</Badge> : null}
+                      <span>Trigger: {formatDateTime(run.triggeredAt)}</span>
+                      <span>Czas: {Math.max(0, Math.round(toSafeNumber(run.durationMs) / 1000))}s</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>Synced: {toSafeNumber(run.synced)}</div>
+                      <div>Total: {toSafeNumber(run.total)}</div>
+                      <div>Failed: {toSafeNumber(run.failed)}</div>
+                    </div>
+                    {run.message ? <div className="mt-2">Wiadomosc: {run.message}</div> : null}
+                    {run.error ? <div className="mt-2 text-red-700">Blad: {run.error}</div> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {health?.recentAlerts?.length > 0 && (
+            <div className="rounded-lg border p-4 space-y-3 bg-red-50 border-red-200">
+              <p className="font-semibold text-sm text-red-900">Ostatnie incydenty autopilota</p>
+              <div className="space-y-2">
+                {health.recentAlerts.map((alert) => (
+                  <div key={alert.id} className="rounded border bg-white p-3 text-[11px] text-slate-700">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <Badge variant={alert.severity === 'error' ? 'destructive' : 'secondary'}>{alert.code}</Badge>
+                      <span>{formatDateTime(alert.createdAt)}</span>
+                    </div>
+                    <div className="font-semibold text-slate-900">{alert.title}</div>
+                    <div>{alert.message}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

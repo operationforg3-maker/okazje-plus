@@ -221,6 +221,19 @@ interface DealM6 {
 | `votes` | `userId_dealId → { value: 1|-1 }` (zapobiega podwójnemu głosowaniu) | `userId_dealId` |
 | `categories` | Seedowane z `category-tree-seo-extended.json` | `slug` |
 | `notifications` | Powiadomienia in-app dla użytkowników | `userId` |
+| `aliexpress_autopilot_runs` | Historia przebiegów Firebase Scheduler dla AliExpress Autopilot | `id` |
+| `automation_alerts` | Incydenty automatyzacji i alerty dla adminów | `id` |
+
+### 3.5 Observability autopilota AliExpress
+
+- Snapshot ostatniego triggera jest zapisywany w `admin_meta/aliexpress-autopilot-runtime`.
+- Każdy przebieg schedulera zapisuje osobny wpis do `aliexpress_autopilot_runs`.
+- Alerty runtime trafiają do `automation_alerts` oraz do `notifications` typu `system` dla wszystkich adminów.
+- Panel admina liczy SLA z ostatnich 24h na podstawie realnej historii, nie na podstawie mockowanych wartości UI.
+- Watchdog Firebase wykrywa:
+  - brak świeżego triggera > 20 minut,
+  - częściowe niepowodzenia profili,
+  - 2+ kolejne awarie schedulera.
 
 ### 3.4 Algorytm temperatury (Time-Decay Gravity)
 
@@ -693,6 +706,13 @@ Cel: 4–5 dealów widocznych na ekranie bez scrollowania.
 | **Vertex AI** | Gemini 2.0 Flash Exp (enrichment) |
 | **Typesense** | Self-hosted / Cloud (wyszukiwarka) |
 
+### Monitoring importu AliExpress
+
+- `scheduleAliExpressSync` uruchamia cron importu co 5 minut i zapisuje runtime snapshot + historię przebiegów.
+- `monitorAliExpressAutopilotHealth` działa jako watchdog co 10 minut i emituje alerty dla adminów przy stale/failure burst.
+- `/api/admin/autopilot/health` agreguje runtime, SLA 24h, serię awarii i ostatnie incydenty do panelu admina.
+- `AliExpressAutopilotControl` jest operacyjnym ekranem FE dla scheduler health, nie tylko ekranem ustawień.
+
 ### Cloud Functions (okazje-plus/)
 
 | Funkcja | Trigger | Opis |
@@ -701,6 +721,8 @@ Cel: 4–5 dealów widocznych na ekranie bez scrollowania.
 | `recalculateTemperature` | Cron co 15 min | Przelicza `temperature` dla aktywnych dealów |
 | `notifyOnDealCommentReply` | Firestore write `comments` | Powiadomienie in-app + email |
 | `globalSync` | Cron 02:00 | Uruchamia Harvester (Global Sync) |
+| `scheduleAliExpressSync` | Cron co 5 min | Wywołuje `/api/cron/aliexpress-sync`, zapisuje runtime i historię przebiegów |
+| `monitorAliExpressAutopilotHealth` | Cron co 10 min | Watchdog stale/failure burst + powiadomienia dla adminów |
 | `syncToTypesense` | Firestore write `deals`, `product_cores` | Synchronizuje zmiany do Typesense |
 
 ### Firestore Indexes (`firestore.indexes.json`)
@@ -799,16 +821,36 @@ npm run build            # Production build (TS + next build)
 
 # Dane
 npm run seed:categories  # Seeduje drzewo kategorii do Firestore
+npm run verify:autopilot-path # Weryfikuje, że cron/admin używają SmartHarvestera
 
 # Deploy
 npm run deploy:hosting   # Firebase App Hosting
 npm run deploy:functions # Cloud Functions
 npm run deploy:prod      # Pełny deploy
 
+# Backfill / audyt AliExpress
+npm run backfill:translations
+npm run backfill:translations:apply
+npm run backfill:images:apply
+npm run audit:aliexpress-import
+
 # Testy systemowe (Admin UI)
 # Panel Admin → zakładka "Testy" → "Uruchom Testy"
 # lub: POST /api/admin/tests/run (z tokenem admina)
 ```
+
+### GitHub Actions deploy produkcyjny
+
+- Workflow: `.github/workflows/deploy-production.yml`
+- Trigger: `push` do `main` lub ręczny `workflow_dispatch`
+- Quality gate przed deployem:
+  1. `npm ci`
+  2. `npm run verify:autopilot-path`
+  3. `npm run typecheck`
+  4. `npm run lint`
+  5. `npm run build`
+  6. `okazje-plus/npm run build`
+- Następnie workflow robi deploy Hosting + Functions + Firestore rules/indexes.
 
 ---
 

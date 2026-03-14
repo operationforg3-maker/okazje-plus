@@ -667,6 +667,270 @@ export const scheduleAudit = onCall(async (request: CallableRequest) => {
   return {ok: true, id: ref.id};
 });
 
+type AutopilotRuntimeRecord = {
+  source: "firebase-scheduler";
+  status: "completed" | "failed";
+  ok: boolean;
+  httpStatus?: number;
+  endpoint: string;
+  hasCronSecret: boolean;
+  hasAdminToken: boolean;
+  triggeredAt: string;
+  completedAt: string;
+  durationMs: number;
+  skipped?: boolean;
+  synced?: number;
+  total?: number;
+  failed?: number;
+  message?: string | null;
+  error?: string | null;
+  responsePreview?: string | null;
+};
+
+const AUTOPILOT_RUNTIME_DOC_ID = "aliexpress-autopilot-runtime";
+const AUTOPILOT_ALERT_STATE_DOC_ID = "aliexpress-autopilot-alert-state";
+const AUTOPILOT_RUNTIME_HISTORY_COLLECTION = "aliexpress_autopilot_runs";
+const AUTOMATION_ALERTS_COLLECTION = "automation_alerts";
+const AUTOPILOT_STALE_MS = 20 * 60 * 1000;
+const ALERT_DEDUPE_WINDOW_MS = 60 * 60 * 1000;
+
+async function recordAliExpressAutopilotRuntime(
+  runtime: AutopilotRuntimeRecord
+): Promise<void> {
+  const runtimeDocRef = db.collection("admin_meta").doc(AUTOPILOT_RUNTIME_DOC_ID);
+  const historyRef = db.collection(AUTOPILOT_RUNTIME_HISTORY_COLLECTION).doc();
+  const payload = {
+    ...runtime,
+    domain: "aliexpress-autopilot",
+    updatedAt: new Date().toISOString(),
+  };
+
+  await Promise.all([
+    runtimeDocRef.set(payload, {merge: true}),
+    historyRef.set({
+      id: historyRef.id,
+      ...payload,
+      createdAt: runtime.completedAt || runtime.triggeredAt,
+    }),
+  ]);
+}
+
+async function getAliExpressAutopilotRecentRuns(
+  limitCount = 12
+): Promise<AutopilotRuntimeRecord[]> {
+  const snapshot = await db
+    .collection(AUTOPILOT_RUNTIME_HISTORY_COLLECTION)
+    .orderBy("triggeredAt", "desc")
+    .limit(limitCount)
+    .get();
+
+  return snapshot.docs.map((doc) => doc.data() as AutopilotRuntimeRecord);
+}
+
+function getAliExpressAutopilotConsecutiveFailures(
+  runs: AutopilotRuntimeRecord[]
+): number {
+  let consecutiveFailures = 0;
+
+  for (const run of runs) {
+    if (run.skipped) {
+      continue;
+    }
+
+    if (run.ok && run.status === "completed") {
+      break;
+    }
+
+    consecutiveFailures += 1;
+  }
+
+  return consecutiveFailures;
+}
+
+async function notifyAdminsAboutAutopilotAlert({
+  code,
+  severity,
+  title,
+  message,
+  metadata,
+  dedupeKey,
+}: {
+  code: string;
+  severity: "warning" | "error";
+  title: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  dedupeKey: string;
+}): Promise<boolean> {
+  const stateRef = db.collection("admin_meta").doc(AUTOPILOT_ALERT_STATE_DOC_ID);
+  const nowIso = new Date().toISOString();
+
+  const shouldNotify = await db.runTransaction(async (transaction) => {
+    const stateSnap = await transaction.get(stateRef);
+    const state = (stateSnap.data() || {}) as Record<string, any>;
+    const alerts = (state.alerts || {}) as Record<string, any>;
+    const existing = alerts[code] as {dedupeKey?: string; lastNotifiedAt?: string} | undefined;
+    const lastNotifiedMs = Date.parse(existing?.lastNotifiedAt || "");
+    const withinWindow =
+      Number.isFinite(lastNotifiedMs) &&
+      Date.now() - lastNotifiedMs < ALERT_DEDUPE_WINDOW_MS;
+
+    if (existing?.dedupeKey === dedupeKey && withinWindow) {
+      return false;
+    }
+
+    transaction.set(
+      stateRef,
+      {
+        alerts: {
+          ...alerts,
+          [code]: {
+            dedupeKey,
+            lastNotifiedAt: nowIso,
+            severity,
+            title,
+          },
+        },
+        updatedAt: nowIso,
+      },
+      {merge: true}
+    );
+
+    return true;
+  });
+
+  if (!shouldNotify) {
+    return false;
+  }
+
+  const adminsSnapshot = await db.collection("users").where("role", "==", "admin").get();
+  const alertRef = db.collection(AUTOMATION_ALERTS_COLLECTION).doc();
+  const batch = db.batch();
+
+  batch.set(alertRef, {
+    id: alertRef.id,
+    source: "aliexpress-autopilot",
+    code,
+    severity,
+    title,
+    message,
+    metadata: metadata || {},
+    createdAt: nowIso,
+    resolved: false,
+  });
+
+  adminsSnapshot.docs.forEach((adminDoc) => {
+    const notificationRef = db.collection("notifications").doc();
+    batch.set(notificationRef, {
+      userId: adminDoc.id,
+      type: "system",
+      title,
+      message,
+      link: "/pl/admin/m6-import-dashboard",
+      itemType: "comment",
+      read: false,
+      createdAt: Timestamp.now(),
+      metadata: {
+        source: "aliexpress-autopilot",
+        code,
+        severity,
+        ...(metadata || {}),
+      },
+    });
+  });
+
+  await batch.commit();
+  return true;
+}
+
+async function handleAutopilotRunAlerts(
+  runtime: AutopilotRuntimeRecord
+): Promise<void> {
+  const recentRuns = await getAliExpressAutopilotRecentRuns(12);
+  const consecutiveFailures = getAliExpressAutopilotConsecutiveFailures(recentRuns);
+
+  if (!runtime.ok) {
+    await notifyAdminsAboutAutopilotAlert({
+      code: "AUTOPILOT_TRIGGER_FAILED",
+      severity: "error",
+      title: "AliExpress Autopilot: trigger nieudany",
+      message: runtime.error || `Scheduler zakonczyl sie HTTP ${runtime.httpStatus || "?"}.`,
+      metadata: {
+        triggeredAt: runtime.triggeredAt,
+        httpStatus: runtime.httpStatus || null,
+        durationMs: runtime.durationMs,
+      },
+      dedupeKey: `${runtime.completedAt}:${runtime.httpStatus || "na"}:${runtime.error || "unknown"}`,
+    });
+  }
+
+  if (runtime.ok && Number(runtime.failed || 0) > 0) {
+    await notifyAdminsAboutAutopilotAlert({
+      code: "AUTOPILOT_PARTIAL_FAILURE",
+      severity: "warning",
+      title: "AliExpress Autopilot: czesciowe niepowodzenie",
+      message: `Scheduler zakonczyl sie czesciowo: ${runtime.failed}/${runtime.total || 0} profili nie przeszlo.`,
+      metadata: {
+        triggeredAt: runtime.triggeredAt,
+        failedProfiles: runtime.failed || 0,
+        totalProfiles: runtime.total || 0,
+      },
+      dedupeKey: `${runtime.completedAt}:${runtime.failed || 0}:${runtime.total || 0}`,
+    });
+  }
+
+  if (consecutiveFailures >= 2) {
+    await notifyAdminsAboutAutopilotAlert({
+      code: "AUTOPILOT_CONSECUTIVE_FAILURES",
+      severity: "error",
+      title: "AliExpress Autopilot: seria awarii",
+      message: `Autopilot zanotowal ${consecutiveFailures} kolejnych nieudanych przebiegow.`,
+      metadata: {
+        consecutiveFailures,
+        lastTriggeredAt: runtime.triggeredAt,
+      },
+      dedupeKey: `${consecutiveFailures}:${runtime.completedAt}`,
+    });
+  }
+}
+
+async function monitorAliExpressAutopilotStaleness(): Promise<void> {
+  const runtimeSnap = await db.collection("admin_meta").doc(AUTOPILOT_RUNTIME_DOC_ID).get();
+  if (!runtimeSnap.exists) {
+    await notifyAdminsAboutAutopilotAlert({
+      code: "AUTOPILOT_RUNTIME_MISSING",
+      severity: "warning",
+      title: "AliExpress Autopilot: brak raportu runtime",
+      message: "Firebase Scheduler nie zapisal jeszcze zadnego raportu runtime dla autopilota.",
+      dedupeKey: "missing-runtime",
+    });
+    return;
+  }
+
+  const runtime = runtimeSnap.data() as Partial<AutopilotRuntimeRecord>;
+  const triggeredAtMs = Date.parse(String(runtime?.triggeredAt || ""));
+  const isStale =
+    !Number.isFinite(triggeredAtMs) ||
+    Date.now() - triggeredAtMs > AUTOPILOT_STALE_MS;
+
+  if (!isStale) {
+    return;
+  }
+
+  await notifyAdminsAboutAutopilotAlert({
+    code: "AUTOPILOT_STALE",
+    severity: "warning",
+    title: "AliExpress Autopilot: brak swiezego triggera",
+    message: "Od ponad 20 minut nie pojawil sie swiezy trigger Firebase Scheduler dla autopilota.",
+    metadata: {
+      lastTriggeredAt: runtime?.triggeredAt || null,
+      lastCompletedAt: runtime?.completedAt || null,
+      lastStatus: runtime?.status || null,
+    },
+    dedupeKey: String(runtime?.triggeredAt || "unknown"),
+  });
+}
+
 // ============================================
 // AliExpress Integration Functions (M1)
 // ============================================
@@ -686,6 +950,7 @@ export const scheduleAliExpressSync = onSchedule(
     timeoutSeconds: 300,
   },
   async () => {
+    const triggerStartedAt = Date.now();
     const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
     const cronSecret = process.env.CRON_SECRET || "";
     const adminToken = process.env.IMPORT_ADMIN_TOKEN || process.env.ADMIN_BEARER || "";
@@ -726,6 +991,42 @@ export const scheduleAliExpressSync = onSchedule(
       });
 
       const text = await response.text();
+      let parsedBody: Record<string, unknown> = {};
+      try {
+        parsedBody = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        parsedBody = {};
+      }
+
+      const synced = Number(parsedBody?.synced || 0);
+      const total = Number(parsedBody?.total || 0);
+      const failed = Number.isFinite(total) && Number.isFinite(synced) ? Math.max(total - synced, 0) : 0;
+      const completedAt = Date.now();
+      const runtime: AutopilotRuntimeRecord = {
+        source: "firebase-scheduler",
+        status: response.ok ? "completed" : "failed",
+        ok: response.ok,
+        httpStatus: response.status,
+        endpoint: url,
+        hasCronSecret: Boolean(cronSecret),
+        hasAdminToken: Boolean(adminToken),
+        triggeredAt: new Date(triggerStartedAt).toISOString(),
+        completedAt: new Date(completedAt).toISOString(),
+        durationMs: completedAt - triggerStartedAt,
+        skipped: Boolean(parsedBody?.skipped),
+        synced: Number.isFinite(synced) ? synced : 0,
+        total: Number.isFinite(total) ? total : 0,
+        failed,
+        message:
+          typeof parsedBody?.message === "string"
+            ? parsedBody.message
+            : null,
+        responsePreview: text.slice(0, 500),
+      };
+
+      await recordAliExpressAutopilotRuntime(runtime);
+      await handleAutopilotRunAlerts(runtime);
+
       logger.info("AliExpress sync trigger response", {
         status: response.status,
         ok: response.ok,
@@ -736,12 +1037,42 @@ export const scheduleAliExpressSync = onSchedule(
         throw new Error(`AliExpress sync failed with status ${response.status}`);
       }
     } catch (error: unknown) {
+      const failedAt = Date.now();
+      const runtime: AutopilotRuntimeRecord = {
+        source: "firebase-scheduler",
+        status: "failed",
+        ok: false,
+        endpoint: url,
+        hasCronSecret: Boolean(cronSecret),
+        hasAdminToken: Boolean(adminToken),
+        triggeredAt: new Date(triggerStartedAt).toISOString(),
+        completedAt: new Date(failedAt).toISOString(),
+        durationMs: failedAt - triggerStartedAt,
+        error: error instanceof Error ? error.message : String(error),
+      };
+
+      await recordAliExpressAutopilotRuntime(runtime);
+      await handleAutopilotRunAlerts(runtime);
+
       logger.error(
         "Failed to run scheduled AliExpress sync trigger:",
         error instanceof Error ? error.message : error
       );
       throw error;
     }
+  }
+);
+
+export const monitorAliExpressAutopilotHealth = onSchedule(
+  {
+    schedule: "*/10 * * * *",
+    timeZone: "Europe/Warsaw",
+    region: "europe-west1",
+    memory: "256MiB",
+    timeoutSeconds: 120,
+  },
+  async () => {
+    await monitorAliExpressAutopilotStaleness();
   }
 );
 

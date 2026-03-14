@@ -5,6 +5,78 @@ import { logger } from '@/lib/logger';
 
 const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
 const LOCK_DOC_PATH = 'admin_meta/aliexpress-sync-lock';
+const RUNTIME_DOC_PATH = 'admin_meta/aliexpress-autopilot-runtime';
+const SCHEDULER_STALE_MS = 20 * 60 * 1000;
+const AUTOPILOT_RUNTIME_HISTORY_COLLECTION = 'aliexpress_autopilot_runs';
+const AUTOMATION_ALERTS_COLLECTION = 'automation_alerts';
+
+type RuntimeHistoryEntry = {
+  id?: string;
+  status?: string;
+  ok?: boolean;
+  triggeredAt?: string | null;
+  completedAt?: string | null;
+  durationMs?: number;
+  synced?: number;
+  total?: number;
+  failed?: number;
+  skipped?: boolean;
+  message?: string | null;
+  error?: string | null;
+  httpStatus?: number;
+};
+
+type AutomationAlert = {
+  id: string;
+  code: string;
+  severity: 'warning' | 'error';
+  title: string;
+  message: string;
+  createdAt: string;
+  resolved?: boolean;
+};
+
+function toFiniteNumber(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
+}
+
+function buildSlaSummary(entries: RuntimeHistoryEntry[]) {
+  const effectiveRuns = entries.filter((entry) => !entry.skipped);
+  const successfulRuns = effectiveRuns.filter((entry) => entry.ok && entry.status === 'completed');
+  const failedRuns = effectiveRuns.filter((entry) => !entry.ok || entry.status === 'failed');
+  const skippedRuns = entries.filter((entry) => entry.skipped);
+
+  let consecutiveFailures = 0;
+  for (const entry of entries) {
+    if (entry.skipped) continue;
+    if (entry.ok && entry.status === 'completed') break;
+    consecutiveFailures += 1;
+  }
+
+  const avgDurationMs = effectiveRuns.length > 0
+    ? Math.round(effectiveRuns.reduce((sum, entry) => sum + toFiniteNumber(entry.durationMs), 0) / effectiveRuns.length)
+    : 0;
+
+  return {
+    windowHours: 24,
+    totalRuns: entries.length,
+    effectiveRuns: effectiveRuns.length,
+    successfulRuns: successfulRuns.length,
+    failedRuns: failedRuns.length,
+    skippedRuns: skippedRuns.length,
+    successRatePercent: effectiveRuns.length > 0 ? Math.round((successfulRuns.length / effectiveRuns.length) * 100) : null,
+    avgDurationMs,
+    consecutiveFailures,
+    lastSuccessAt: successfulRuns[0]?.completedAt || successfulRuns[0]?.triggeredAt || null,
+    lastFailureAt: failedRuns[0]?.completedAt || failedRuns[0]?.triggeredAt || null,
+  };
+}
 
 type HealthIssue = {
   code: string;
@@ -23,12 +95,16 @@ export async function GET() {
     const [
       settingsSnap,
       lockSnap,
+      runtimeSnap,
       enabledProfilesSnap,
       allProfilesSnap,
       lastRunSnap,
+      runtimeHistorySnap,
+      alertsSnap,
     ] = await Promise.all([
       adminDb.doc(SETTINGS_DOC_PATH).get(),
       adminDb.doc(LOCK_DOC_PATH).get(),
+      adminDb.doc(RUNTIME_DOC_PATH).get(),
       adminDb.collection('importProfiles')
         .where('vendorId', '==', 'aliexpress')
         .where('enabled', '==', true)
@@ -41,10 +117,19 @@ export async function GET() {
         .orderBy('startedAt', 'desc')
         .limit(1)
         .get(),
+      adminDb.collection(AUTOPILOT_RUNTIME_HISTORY_COLLECTION)
+        .orderBy('triggeredAt', 'desc')
+        .limit(24)
+        .get(),
+      adminDb.collection(AUTOMATION_ALERTS_COLLECTION)
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get(),
     ]);
 
     const settings = settingsSnap.exists ? settingsSnap.data() : {};
     const lockData = lockSnap.exists ? lockSnap.data() : {};
+    const runtimeData = runtimeSnap.exists ? runtimeSnap.data() : {};
 
     const lockedUntilRaw = String(lockData?.lockedUntil || '');
     const lockedUntilMs = Date.parse(lockedUntilRaw);
@@ -57,6 +142,12 @@ export async function GET() {
           ...(lastRunSnap.docs[0].data() as Record<string, unknown>),
         };
 
+    const schedulerLastTriggerAt = String(runtimeData?.triggeredAt || '');
+    const schedulerLastTriggerMs = Date.parse(schedulerLastTriggerAt);
+    const schedulerStale =
+      Number.isFinite(schedulerLastTriggerMs) &&
+      Date.now() - schedulerLastTriggerMs > SCHEDULER_STALE_MS;
+
     const cronSecretConfigured =
       envFlag('CRON_SECRET') ||
       envFlag('IMPORT_ADMIN_TOKEN') ||
@@ -65,6 +156,18 @@ export async function GET() {
     const aliexpressTokenConfigured = envFlag('ALIEXPRESS_ACCESS_TOKEN');
 
     const issues: HealthIssue[] = [];
+    const runtimeHistory = runtimeHistorySnap.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as RuntimeHistoryEntry),
+    }));
+    const recentAlerts = alertsSnap.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<AutomationAlert, 'id'> & { source?: string }),
+      }))
+      .filter((alert) => alert.source === 'aliexpress-autopilot')
+      .slice(0, 10);
+    const sla24h = buildSlaSummary(runtimeHistory);
 
     if (settings?.enabled === false) {
       issues.push({
@@ -106,6 +209,46 @@ export async function GET() {
       });
     }
 
+    if (!runtimeSnap.exists) {
+      issues.push({
+        code: 'SCHEDULER_RUNTIME_MISSING',
+        severity: 'warning',
+        message: 'Brak raportu runtime z Firebase Scheduler. Sprawdz trigger scheduleAliExpressSync.',
+      });
+    }
+
+    if (runtimeData?.status === 'failed') {
+      issues.push({
+        code: 'SCHEDULER_LAST_RUN_FAILED',
+        severity: 'error',
+        message: `Ostatni trigger Firebase Scheduler zakonczyl sie bledem: ${String(runtimeData?.error || 'brak szczegolow')}`,
+      });
+    }
+
+    if (runtimeSnap.exists && schedulerStale) {
+      issues.push({
+        code: 'SCHEDULER_RUN_STALE',
+        severity: 'warning',
+        message: 'Brak swiezego triggera Scheduler od ponad 20 minut.',
+      });
+    }
+
+    if (sla24h.consecutiveFailures >= 2) {
+      issues.push({
+        code: 'SCHEDULER_CONSECUTIVE_FAILURES',
+        severity: 'error',
+        message: `Autopilot zanotowal ${sla24h.consecutiveFailures} kolejne nieudane przebiegi.`,
+      });
+    }
+
+    if (sla24h.successRatePercent !== null && sla24h.successRatePercent < 80) {
+      issues.push({
+        code: 'SCHEDULER_SLA_DEGRADED',
+        severity: 'warning',
+        message: `SLA 24h spadl do ${sla24h.successRatePercent}%.`,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       health: {
@@ -120,6 +263,25 @@ export async function GET() {
           enabled: enabledProfilesSnap.size,
           total: allProfilesSnap.size,
         },
+        scheduler: runtimeSnap.exists
+          ? {
+              status: runtimeData?.status || 'unknown',
+              ok: Boolean(runtimeData?.ok),
+              triggeredAt: runtimeData?.triggeredAt || null,
+              completedAt: runtimeData?.completedAt || null,
+              durationMs: Number(runtimeData?.durationMs || 0),
+              synced: Number(runtimeData?.synced || 0),
+              total: Number(runtimeData?.total || 0),
+              failed: Number(runtimeData?.failed || 0),
+              skipped: Boolean(runtimeData?.skipped),
+              stale: Boolean(schedulerStale),
+              message: runtimeData?.message || null,
+              error: runtimeData?.error || null,
+            }
+          : null,
+        sla24h,
+        recentRuns: runtimeHistory,
+        recentAlerts,
         lastRun,
         issues,
       },
