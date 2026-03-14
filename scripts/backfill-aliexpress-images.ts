@@ -73,6 +73,32 @@ function extractImageCandidates(detailProduct: any): string[] {
       continue;
     }
 
+    if (bucket && typeof bucket === 'object') {
+      const obj = bucket as Record<string, unknown>;
+      // Common AliExpress shape: { string: [...] } or { string: 'url' }
+      const nested = obj.string;
+      if (Array.isArray(nested)) {
+        nested.forEach((entry) => push(entry));
+      } else if (typeof nested === 'string') {
+        push(nested);
+      }
+
+      // Defensive extraction for alternate payload shapes
+      push(obj.url);
+      push(obj.imageUrl);
+      push(obj.src);
+
+      // If object has arbitrary values, scan shallow strings/arrays
+      for (const value of Object.values(obj)) {
+        if (typeof value === 'string') {
+          push(value);
+        } else if (Array.isArray(value)) {
+          value.forEach((entry) => push(entry));
+        }
+      }
+      continue;
+    }
+
     if (typeof bucket === 'string') {
       const raw = bucket.trim();
       if (!raw) continue;

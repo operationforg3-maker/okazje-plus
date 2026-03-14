@@ -1,7 +1,7 @@
 /**
  * backfill-missing-translations.ts
  *
- * Uzupełnia brakujące tłumaczenia (fr/es/uk) w kolekcjach deals i product_cores.
+ * Uzupełnia brakujące tłumaczenia (pl/en/de/fr/es/uk) w kolekcjach deals i product_cores.
  *
  * Problem:
  *   - Harvester historycznie zapisywał toLocalizedText() z tylko pl/en/de
@@ -30,7 +30,6 @@ const ONLY = process.argv.find((a) => a.startsWith('--only='))?.split('=')[1] as
 const BATCH_SIZE = 400; // Firestore writeBatch max = 500; leave room for safety
 
 const LANGS: Array<'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'> = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
-const MISSING_LANGS: Array<'fr' | 'es' | 'uk'> = ['fr', 'es', 'uk'];
 
 // ---------------------------------------------------------------------------
 // Firebase init
@@ -71,18 +70,33 @@ async function translateMissing(
   const { text, locale } = getBestFallback(value);
   if (!text) return null;
 
-  const missingInRecord = MISSING_LANGS.filter(
+  const missingInRecord = LANGS.filter(
     (k) => !value[k] || typeof value[k] !== 'string' || String(value[k]).trim().length === 0
   );
   if (missingInRecord.length === 0) return null;
 
+  // If source locale itself is missing, populate it directly from fallback text.
+  const directFill: Record<string, string> = {};
+  if (missingInRecord.includes(locale)) {
+    directFill[locale] = text;
+  }
+
+  const targetLocales = missingInRecord.filter((k) => k !== locale);
+
   try {
+    if (targetLocales.length === 0) {
+      return directFill;
+    }
+
     const result = await translateContent({
       text,
       sourceLocale: locale,
-      targetLocales: missingInRecord,
+      targetLocales,
     });
-    return result.translations || null;
+    return {
+      ...directFill,
+      ...(result.translations || {}),
+    };
   } catch (err) {
     console.warn('[translate] Błąd tłumaczenia, używam fallback:', (err as Error).message?.slice(0, 80));
     // Fallback: copy the best available text (better than empty string)
@@ -305,7 +319,7 @@ async function backfillProducts(): Promise<{ scanned: number; updated: number; s
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
-  console.log(`\n🌍 Backfill brakujących tłumaczeń (fr/es/uk)`);
+  console.log(`\n🌍 Backfill brakujących tłumaczeń (pl/en/de/fr/es/uk)`);
   console.log(`Mode: ${DRY_RUN ? '🔍 DRY-RUN (brak zapisu)' : '✏️  APPLY (zapis do Firestore)'}`);
   console.log(`Limit: ${LIMIT} rekordów na kolekcję`);
   if (ONLY) console.log(`Zakres: tylko ${ONLY}`);

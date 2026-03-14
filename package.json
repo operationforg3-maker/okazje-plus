@@ -32,6 +32,8 @@
     "backfill:translations:products:apply": "tsx scripts/backfill-missing-translations.ts --apply --only=products",
     "backfill:images": "tsx scripts/backfill-aliexpress-images.ts",
     "backfill:images:apply": "tsx scripts/backfill-aliexpress-images.ts --apply",
+    "audit:aliexpress": "tsx scripts/audit-aliexpress-import-completeness.ts",
+    "audit:aliexpress:strict": "tsx scripts/audit-aliexpress-import-completeness.ts --strict",
     "report:tools": "node scripts/generate-tools-inventory.mjs",
     "typesense:sync": "ts-node src/scripts/typesense-sync.ts",
     "typesense:sync:full": "ts-node src/scripts/typesense-sync.ts",
