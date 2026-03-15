@@ -5,6 +5,8 @@ runConfig:
   minInstances: 0
   maxInstances: 100
   concurrency: 200
+  cpu: 2
+  timeoutSeconds: 3600
   network:
     vpcAccess:
       connector: projects/okazje-plus/locations/europe-west1/connectors/redis-connector

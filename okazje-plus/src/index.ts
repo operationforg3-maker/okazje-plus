@@ -721,7 +721,7 @@ async function recordAliExpressAutopilotRuntime(
   };
 
   await Promise.all([
-    runtimeDocRef.set(payload, {merge: true}),
+    runtimeDocRef.set(payload),
     historyRef.set({
       id: historyRef.id,
       ...payload,
@@ -962,7 +962,7 @@ export const scheduleAliExpressSync = onSchedule(
     timeZone: "Europe/Warsaw",
     region: "europe-west1",
     memory: "256MiB",
-    timeoutSeconds: 300,
+    timeoutSeconds: 1800,
   },
   async () => {
     const triggerStartedAt = Date.now();
