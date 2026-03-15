@@ -32,8 +32,9 @@ function isAuthorizedCronRequest(request: NextRequest): boolean {
     return expectedSecrets.includes(String(providedSecret || '').trim());
   }
 
-  // Legacy fallback: allow if any Authorization header exists and no explicit secrets configured.
-  return Boolean(request.headers.get('authorization'));
+  // Fail closed: jeśli sekrety nie są skonfigurowane, odrzucamy request.
+  // Zapobiega to przypadkowemu otwarciu endpointu cron w środowisku prod.
+  return false;
 }
 
 async function withSyncLock<T>(runner: () => Promise<T>): Promise<{ skipped: boolean; result?: T }> {

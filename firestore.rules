@@ -37,7 +37,7 @@ service cloud.firestore {
     ////////////////////////////////
     // Odczyt ograniczony: publicznie tylko wybrane pola, pełny dokument tylko dla właściciela lub admina
     match /users/{userId} {
-      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId) || true; // TODO: ograniczyć publiczny zakres pól przez Cloud Functions maskowania
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && request.auth.uid == userId;
       allow delete: if isAdmin();

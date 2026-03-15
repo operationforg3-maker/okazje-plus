@@ -40,7 +40,7 @@ export async function GET() {
       return NextResponse.json(payload);
     }
 
-    const [approvedDeals, approvedProductCores, pendingProductCores, approvedLegacyProducts, usersTotal] = await Promise.all([
+    const [approvedDeals, approvedProductCores, pendingProductCores, usersTotal] = await Promise.all([
       typesenseServerClient.collections('deals').documents().search({
         q: '*',
         query_by: 'title,description,postedBy',
@@ -49,7 +49,6 @@ export async function GET() {
       }, {}),
       adminDb.collection('product_cores').where('status', '==', 'approved').count().get(),
       adminDb.collection('product_cores').where('status', '==', 'pending_approval').count().get(),
-      adminDb.collection('products').where('status', '==', 'approved').count().get(),
       usersTotalPromise,
     ]);
 
@@ -72,9 +71,7 @@ export async function GET() {
       return sum + (Number.isFinite(voteCount) ? voteCount : 0) * 10;
     }, 0);
 
-    const productsFromCanonicalStore = approvedProductCores.data().count + pendingProductCores.data().count;
-    const productsFromLegacyStore = approvedLegacyProducts.data().count;
-    const totalApprovedProducts = Math.max(productsFromCanonicalStore, productsFromLegacyStore);
+    const totalApprovedProducts = approvedProductCores.data().count + pendingProductCores.data().count;
 
     const payload = {
       success: true,
@@ -82,7 +79,7 @@ export async function GET() {
       productsCount: totalApprovedProducts,
       usersCount: usersTotal.data().count,
       totalSavings: Math.round(totalSavings),
-      productsCountSource: 'product_cores_approved_plus_pending',
+      productsCountSource: 'product_cores_only',
       timestamp: new Date().toISOString(),
     };
 

@@ -59,6 +59,18 @@ type ImportProductData = Partial<Omit<Product, "id" | "ratingCard">> & {
 initializeApp();
 const db = getFirestore();
 const storageBucketName = process.env.STORAGE_BUCKET || null;
+const LEGACY_PRODUCTS_WRITES_ENABLED = process.env.LEGACY_PRODUCTS_WRITES_ENABLED === "true";
+
+function assertLegacyProductsWriteAllowed(operationName: string): void {
+  if (LEGACY_PRODUCTS_WRITES_ENABLED) {
+    return;
+  }
+
+  throw new HttpsError(
+    "failed-precondition",
+    `Legacy write path to collection 'products' is disabled (${operationName}). Use M6 product_cores + deals pipeline.`
+  );
+}
 
 // --- Funkcja pomocnicza do weryfikacji Admina ---
 const ensureAdmin = async (auth: {uid: string} | null): Promise<void> => {
@@ -218,6 +230,7 @@ export const batchImportProducts = onCall(
     request: CallableRequest<{products: ImportProductData[]}>
   ) => {
     await ensureAdmin(request.auth ?? null);
+    assertLegacyProductsWriteAllowed("batchImportProducts");
 
     const productsToImport =
       request.data.products as ImportProductData[];
@@ -304,6 +317,7 @@ export const batchImportProducts = onCall(
 export const importAliProduct = onCall(
   async (request: CallableRequest<Record<string, unknown>>) => {
     await ensureAdmin(request.auth ?? null);
+    assertLegacyProductsWriteAllowed("importAliProduct");
 
     const payload = request.data as Record<string, unknown>;
     const product = payload.product as Record<string, unknown>;
@@ -410,6 +424,7 @@ export const bulkImportAliProducts = onCall(
     request: CallableRequest<{products: Record<string, unknown>[]}>
   ) => {
     await ensureAdmin(request.auth ?? null);
+    assertLegacyProductsWriteAllowed("bulkImportAliProducts");
     const payload = request.data as Record<string, unknown>;
     const products: Array<Record<string, unknown>> = Array.isArray(
       payload.products
@@ -951,6 +966,7 @@ export const scheduleAliExpressSync = onSchedule(
   },
   async () => {
     const triggerStartedAt = Date.now();
+    let runtimePersisted = false;
     const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
     const cronSecret = process.env.CRON_SECRET || "";
     const adminToken = process.env.IMPORT_ADMIN_TOKEN || process.env.ADMIN_BEARER || "";
@@ -1026,6 +1042,7 @@ export const scheduleAliExpressSync = onSchedule(
 
       await recordAliExpressAutopilotRuntime(runtime);
       await handleAutopilotRunAlerts(runtime);
+      runtimePersisted = true;
 
       logger.info("AliExpress sync trigger response", {
         status: response.status,
@@ -1037,22 +1054,24 @@ export const scheduleAliExpressSync = onSchedule(
         throw new Error(`AliExpress sync failed with status ${response.status}`);
       }
     } catch (error: unknown) {
-      const failedAt = Date.now();
-      const runtime: AutopilotRuntimeRecord = {
-        source: "firebase-scheduler",
-        status: "failed",
-        ok: false,
-        endpoint: url,
-        hasCronSecret: Boolean(cronSecret),
-        hasAdminToken: Boolean(adminToken),
-        triggeredAt: new Date(triggerStartedAt).toISOString(),
-        completedAt: new Date(failedAt).toISOString(),
-        durationMs: failedAt - triggerStartedAt,
-        error: error instanceof Error ? error.message : String(error),
-      };
+      if (!runtimePersisted) {
+        const failedAt = Date.now();
+        const runtime: AutopilotRuntimeRecord = {
+          source: "firebase-scheduler",
+          status: "failed",
+          ok: false,
+          endpoint: url,
+          hasCronSecret: Boolean(cronSecret),
+          hasAdminToken: Boolean(adminToken),
+          triggeredAt: new Date(triggerStartedAt).toISOString(),
+          completedAt: new Date(failedAt).toISOString(),
+          durationMs: failedAt - triggerStartedAt,
+          error: error instanceof Error ? error.message : String(error),
+        };
 
-      await recordAliExpressAutopilotRuntime(runtime);
-      await handleAutopilotRunAlerts(runtime);
+        await recordAliExpressAutopilotRuntime(runtime);
+        await handleAutopilotRunAlerts(runtime);
+      }
 
       logger.error(
         "Failed to run scheduled AliExpress sync trigger:",
