@@ -1109,7 +1109,9 @@ export const processImportJobsTrigger = onRequest(
     region: "europe-west1",
     timeoutSeconds: 120,
     memory: "256MiB",
-    // Removed secrets: ["CRON_SECRET"] to avoid Secret Manager billing requirement
+    // Explicitly clear secret bindings for this function to avoid
+    // overlap with non-secret env vars injected from .env.<projectId>.
+    secrets: [],
   },
   async (req, res) => {
     const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
