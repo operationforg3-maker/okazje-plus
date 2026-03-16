@@ -1280,7 +1280,9 @@
               "importKeywords": [
                 "Sofas and couches"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Sofas and couches"
@@ -1297,7 +1299,9 @@
               "importKeywords": [
                 "Armchairs"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Armchairs"
@@ -1314,7 +1318,9 @@
               "importKeywords": [
                 "Tables"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Tables"
@@ -1331,7 +1337,9 @@
               "importKeywords": [
                 "Chairs"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Chairs"
@@ -1348,7 +1356,9 @@
               "importKeywords": [
                 "Wardrobes and dressers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Wardrobes and dressers"
@@ -1365,7 +1375,9 @@
               "importKeywords": [
                 "Desks"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Desks"
@@ -1382,7 +1394,9 @@
               "importKeywords": [
                 "Shelves and bookcases"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Shelves and bookcases"
@@ -1399,7 +1413,9 @@
               "importKeywords": [
                 "Garden furniture"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Garden furniture"
@@ -1432,7 +1448,9 @@
               "importKeywords": [
                 "Pendant lamps"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Pendant lamps"
@@ -1449,7 +1467,9 @@
               "importKeywords": [
                 "Table lamps"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Table lamps"
@@ -1466,7 +1486,9 @@
               "importKeywords": [
                 "Floor lamps"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Floor lamps"
@@ -1483,7 +1505,9 @@
               "importKeywords": [
                 "Wall lamps"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Wall lamps"
@@ -1500,7 +1524,9 @@
               "importKeywords": [
                 "LED bulbs"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "LED bulbs"
@@ -1517,7 +1543,9 @@
               "importKeywords": [
                 "Smart lighting"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Smart lighting"
@@ -1534,7 +1562,9 @@
               "importKeywords": [
                 "Garden lighting"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Garden lighting"
@@ -1702,7 +1732,9 @@
               "importKeywords": [
                 "Coffee makers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Coffee makers"
@@ -1719,7 +1751,9 @@
               "importKeywords": [
                 "Kettles"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Kettles"
@@ -1736,7 +1770,9 @@
               "importKeywords": [
                 "Toasters"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Toasters"
@@ -1753,7 +1789,9 @@
               "importKeywords": [
                 "Blenders"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Blenders"
@@ -1770,7 +1808,9 @@
               "importKeywords": [
                 "Food processors"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Food processors"
@@ -1787,7 +1827,9 @@
               "importKeywords": [
                 "Microwaves"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Microwaves"
@@ -1804,7 +1846,9 @@
               "importKeywords": [
                 "Deep fryers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Deep fryers"
@@ -1821,7 +1865,9 @@
               "importKeywords": [
                 "Juicers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Juicers"
@@ -1838,7 +1884,9 @@
               "importKeywords": [
                 "Mixers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Mixers"
@@ -1855,7 +1903,9 @@
               "importKeywords": [
                 "Electric grills"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Electric grills"
@@ -1872,7 +1922,9 @@
               "importKeywords": [
                 "Vacuum cleaners"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Vacuum cleaners"
@@ -1891,7 +1943,9 @@
                 "robot mop",
                 "vacuum cleaner robot"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Robot vacuums"
@@ -1924,7 +1978,9 @@
               "importKeywords": [
                 "Washing machines"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Washing machines"
@@ -1941,7 +1997,9 @@
               "importKeywords": [
                 "Dryers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Dryers"
@@ -1958,7 +2016,9 @@
               "importKeywords": [
                 "Fridges"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Fridges"
@@ -1975,7 +2035,9 @@
               "importKeywords": [
                 "Freezers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Freezers"
@@ -1992,7 +2054,9 @@
               "importKeywords": [
                 "Dishwashers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Dishwashers"
@@ -2009,7 +2073,9 @@
               "importKeywords": [
                 "Cookers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Cookers"
@@ -2026,7 +2092,9 @@
               "importKeywords": [
                 "Ovens"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Ovens"
@@ -2043,7 +2111,9 @@
               "importKeywords": [
                 "Hoods"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "15"
+              ],
               "translations": {
                 "en": {
                   "name": "Hoods"
@@ -2247,7 +2317,9 @@
               "importKeywords": [
                 "Dresses"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000297"
+              ],
               "translations": {
                 "en": {
                   "name": "Dresses"
@@ -2264,7 +2336,9 @@
               "importKeywords": [
                 "Blouses and shirts"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000297"
+              ],
               "translations": {
                 "en": {
                   "name": "Blouses and shirts"
@@ -2281,7 +2355,9 @@
               "importKeywords": [
                 "Women trousers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000297"
+              ],
               "translations": {
                 "en": {
                   "name": "Women trousers"
@@ -2298,7 +2374,9 @@
               "importKeywords": [
                 "Skirts"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000297"
+              ],
               "translations": {
                 "en": {
                   "name": "Skirts"
@@ -2315,7 +2393,9 @@
               "importKeywords": [
                 "Coats and jackets"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000297"
+              ],
               "translations": {
                 "en": {
                   "name": "Coats and jackets"
@@ -2332,7 +2412,9 @@
               "importKeywords": [
                 "Sweaters"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000297"
+              ],
               "translations": {
                 "en": {
                   "name": "Sweaters"
@@ -2349,7 +2431,9 @@
               "importKeywords": [
                 "Lingerie"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000297"
+              ],
               "translations": {
                 "en": {
                   "name": "Lingerie"
@@ -2382,7 +2466,9 @@
               "importKeywords": [
                 "Men shirts"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000343"
+              ],
               "translations": {
                 "en": {
                   "name": "Men shirts"
@@ -2399,7 +2485,9 @@
               "importKeywords": [
                 "Men t-shirts"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000343"
+              ],
               "translations": {
                 "en": {
                   "name": "Men t-shirts"
@@ -2416,7 +2504,9 @@
               "importKeywords": [
                 "Men trousers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000343"
+              ],
               "translations": {
                 "en": {
                   "name": "Men trousers"
@@ -2433,7 +2523,9 @@
               "importKeywords": [
                 "Men jackets"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000343"
+              ],
               "translations": {
                 "en": {
                   "name": "Men jackets"
@@ -2450,7 +2542,9 @@
               "importKeywords": [
                 "Men sweaters"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000343"
+              ],
               "translations": {
                 "en": {
                   "name": "Men sweaters"
@@ -2467,7 +2561,9 @@
               "importKeywords": [
                 "Suits"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000343"
+              ],
               "translations": {
                 "en": {
                   "name": "Suits"
@@ -2484,7 +2580,9 @@
               "importKeywords": [
                 "Men underwear"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000343"
+              ],
               "translations": {
                 "en": {
                   "name": "Men underwear"
@@ -2517,7 +2615,9 @@
               "importKeywords": [
                 "Sports shoes"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000345"
+              ],
               "translations": {
                 "en": {
                   "name": "Sports shoes"
@@ -2534,7 +2634,9 @@
               "importKeywords": [
                 "Casual shoes"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000345"
+              ],
               "translations": {
                 "en": {
                   "name": "Casual shoes"
@@ -2551,7 +2653,9 @@
               "importKeywords": [
                 "Sandals"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000345"
+              ],
               "translations": {
                 "en": {
                   "name": "Sandals"
@@ -2568,7 +2672,9 @@
               "importKeywords": [
                 "Flip flops"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000345"
+              ],
               "translations": {
                 "en": {
                   "name": "Flip flops"
@@ -2585,7 +2691,9 @@
               "importKeywords": [
                 "Boots"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000345"
+              ],
               "translations": {
                 "en": {
                   "name": "Boots"
@@ -2602,7 +2710,9 @@
               "importKeywords": [
                 "High heels"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000345"
+              ],
               "translations": {
                 "en": {
                   "name": "High heels"
@@ -2619,7 +2729,9 @@
               "importKeywords": [
                 "Hiking boots"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "200000345"
+              ],
               "translations": {
                 "en": {
                   "name": "Hiking boots"
@@ -2871,7 +2983,9 @@
               "importKeywords": [
                 "Makeup"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Makeup"
@@ -2888,7 +3002,9 @@
               "importKeywords": [
                 "Face care"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Face care"
@@ -2905,7 +3021,9 @@
               "importKeywords": [
                 "Hair care"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Hair care"
@@ -2922,7 +3040,9 @@
               "importKeywords": [
                 "Body care"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Body care"
@@ -2939,7 +3059,9 @@
               "importKeywords": [
                 "Perfumes"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Perfumes"
@@ -2956,7 +3078,9 @@
               "importKeywords": [
                 "Cosmetic accessories"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Cosmetic accessories"
@@ -3094,7 +3218,9 @@
               "importKeywords": [
                 "Treadmills"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "18"
+              ],
               "translations": {
                 "en": {
                   "name": "Treadmills"
@@ -3111,7 +3237,9 @@
               "importKeywords": [
                 "Exercise bikes"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "18"
+              ],
               "translations": {
                 "en": {
                   "name": "Exercise bikes"
@@ -3128,7 +3256,9 @@
               "importKeywords": [
                 "Ellipticals"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "18"
+              ],
               "translations": {
                 "en": {
                   "name": "Ellipticals"
@@ -3145,7 +3275,9 @@
               "importKeywords": [
                 "Home gym sets"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "18"
+              ],
               "translations": {
                 "en": {
                   "name": "Home gym sets"
@@ -3162,7 +3294,9 @@
               "importKeywords": [
                 "Dumbbells and weights"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "18"
+              ],
               "translations": {
                 "en": {
                   "name": "Dumbbells and weights"
@@ -3179,7 +3313,9 @@
               "importKeywords": [
                 "Fitness mats"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "18"
+              ],
               "translations": {
                 "en": {
                   "name": "Fitness mats"
@@ -3196,7 +3332,9 @@
               "importKeywords": [
                 "Bands and expanders"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "18"
+              ],
               "translations": {
                 "en": {
                   "name": "Bands and expanders"
@@ -3674,9 +3812,8 @@
               }
             },
             {
-                  "sortOrder": 7,
-              "slug": "snowboardy",
               "sortOrder": 2,
+              "slug": "snowboardy",
               "importKeywords": [
                 "Snowboards"
               ],
@@ -3691,9 +3828,8 @@
               }
             },
             {
-                  "sortOrder": 8,
-              "slug": "wiazania",
               "sortOrder": 3,
+              "slug": "wiazania",
               "importKeywords": [
                 "Bindings"
               ],
@@ -3800,7 +3936,9 @@
               "importKeywords": [
                 "Vitamins"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Vitamins"
@@ -3817,7 +3955,9 @@
               "importKeywords": [
                 "Minerals"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Minerals"
@@ -3834,7 +3974,9 @@
               "importKeywords": [
                 "Proteins"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Proteins"
@@ -3851,7 +3993,9 @@
               "importKeywords": [
                 "Amino acids"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Amino acids"
@@ -3868,7 +4012,9 @@
               "importKeywords": [
                 "Creatine"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Creatine"
@@ -3885,7 +4031,9 @@
               "importKeywords": [
                 "Omega-3"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Omega-3"
@@ -4019,7 +4167,9 @@
               "importKeywords": [
                 "Massagers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Massagers"
@@ -4036,7 +4186,9 @@
               "importKeywords": [
                 "Epilators"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Epilators"
@@ -4053,7 +4205,9 @@
               "importKeywords": [
                 "Hair dryers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Hair dryers"
@@ -4070,7 +4224,9 @@
               "importKeywords": [
                 "Hair straighteners"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Hair straighteners"
@@ -4087,7 +4243,9 @@
               "importKeywords": [
                 "Curling irons"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Curling irons"
@@ -4104,7 +4262,9 @@
               "importKeywords": [
                 "Electric toothbrushes"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "66"
+              ],
               "translations": {
                 "en": {
                   "name": "Electric toothbrushes"
@@ -4156,7 +4316,9 @@
               "importKeywords": [
                 "Strollers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Strollers"
@@ -4173,7 +4335,9 @@
               "importKeywords": [
                 "Prams"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Prams"
@@ -4190,7 +4354,9 @@
               "importKeywords": [
                 "Travel systems"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Travel systems"
@@ -4290,7 +4456,9 @@
               "importKeywords": [
                 "Blocks"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Blocks"
@@ -4307,7 +4475,9 @@
               "importKeywords": [
                 "Dolls"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Dolls"
@@ -4324,7 +4494,9 @@
               "importKeywords": [
                 "Toy cars"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Toy cars"
@@ -4341,7 +4513,9 @@
               "importKeywords": [
                 "Board games"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Board games"
@@ -4358,7 +4532,9 @@
               "importKeywords": [
                 "Puzzles"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Puzzles"
@@ -4375,7 +4551,9 @@
               "importKeywords": [
                 "Plush toys"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "26"
+              ],
               "translations": {
                 "en": {
                   "name": "Plush toys"
@@ -5121,7 +5299,9 @@
               "importKeywords": [
                 "Compressors"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Compressors"
@@ -5138,7 +5318,9 @@
               "importKeywords": [
                 "Car chargers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Car chargers"
@@ -5155,7 +5337,9 @@
               "importKeywords": [
                 "Phone mounts"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Phone mounts"
@@ -5172,7 +5356,9 @@
               "importKeywords": [
                 "Seat covers"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Seat covers"
@@ -5189,7 +5375,9 @@
               "importKeywords": [
                 "Roof racks"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Roof racks"
@@ -5206,7 +5394,9 @@
               "importKeywords": [
                 "Car mats"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Car mats"
@@ -5224,7 +5414,10 @@
             "de": {
               "name": "Autozubehör"
             }
-          }
+          },
+          "aliexpressCategoryIds": [
+            "34"
+          ]
         },
         {
           "name": "Części samochodowe",
@@ -5239,7 +5432,9 @@
               "importKeywords": [
                 "Filters and oils"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Filters and oils"
@@ -5256,7 +5451,9 @@
               "importKeywords": [
                 "Brakes and discs"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Brakes and discs"
@@ -5273,7 +5470,9 @@
               "importKeywords": [
                 "Car batteries"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Car batteries"
@@ -5290,7 +5489,9 @@
               "importKeywords": [
                 "Car lighting"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Car lighting"
@@ -5323,7 +5524,9 @@
               "importKeywords": [
                 "Motorcycle helmets"
               ],
-              "aliexpressCategoryIds": [],
+              "aliexpressCategoryIds": [
+                "34"
+              ],
               "translations": {
                 "en": {
                   "name": "Motorcycle helmets"
