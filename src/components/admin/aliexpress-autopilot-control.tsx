@@ -110,11 +110,37 @@ type HealthState = {
   };
   scheduler: SchedulerState | null;
   sla24h: SlaState;
+  performance24h?: {
+    windowHours: number;
+    jobsAnalyzed: number;
+    topStages: Array<{
+      stage: string;
+      totalMs: number;
+      avgMs: number;
+      maxMs: number;
+      samples: number;
+    }>;
+  };
   recentRuns: RecentRunState[];
   recentAlerts: AlertState[];
   lastRun: Record<string, any> | null;
   issues: HealthIssue[];
 };
+
+function stageLabel(stage: string): string {
+  const labels: Record<string, string> = {
+    fetch: 'Pobieranie źródła',
+    aiCategorization: 'AI kategoryzacja',
+    processing: 'Przetwarzanie wsadu',
+    moderation: 'Kolejka moderacji',
+    bestPriceRecalc: 'Przeliczenie bestPrice',
+    dealRefinerBatch: 'Deal Refiner batch',
+    finalDealRefiner: 'Deal Refiner końcowy',
+    finalProductRefiner: 'Product Refiner końcowy',
+  };
+
+  return labels[stage] || stage;
+}
 
 function toSafeNumber(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -482,6 +508,37 @@ export function AliExpressAutopilotControl({
                 <div className="rounded border bg-slate-50 p-2">Ostatni sukces: {formatDateTime(health.sla24h.lastSuccessAt)}</div>
                 <div className="rounded border bg-slate-50 p-2">Ostatnia awaria: {formatDateTime(health.sla24h.lastFailureAt)}</div>
               </div>
+            </div>
+          )}
+
+          {health?.performance24h && (
+            <div className="rounded-lg border p-4 space-y-3 bg-white">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm">Najdroższe etapy (24h)</p>
+                <Badge variant="secondary">Joby: {toSafeNumber(health.performance24h.jobsAnalyzed)}</Badge>
+              </div>
+
+              {health.performance24h.topStages.length === 0 ? (
+                <div className="rounded border bg-slate-50 p-3 text-[11px] text-slate-600">
+                  Brak danych telemetrycznych etapów z ostatnich 24h.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {health.performance24h.topStages.map((stage, index) => (
+                    <div key={`${stage.stage}-${index}`} className="rounded border bg-slate-50 p-3 text-[11px] text-slate-700">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="font-semibold text-slate-900">{index + 1}. {stageLabel(stage.stage)}</p>
+                        <Badge variant="outline">{Math.max(0, Math.round(toSafeNumber(stage.totalMs) / 1000))}s łącznie</Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>Średnio: {Math.max(0, Math.round(toSafeNumber(stage.avgMs) / 1000))}s</div>
+                        <div>Maks: {Math.max(0, Math.round(toSafeNumber(stage.maxMs) / 1000))}s</div>
+                        <div>Próbki: {toSafeNumber(stage.samples)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

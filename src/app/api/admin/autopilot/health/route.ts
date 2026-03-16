@@ -9,6 +9,20 @@ const RUNTIME_DOC_PATH = 'admin_meta/aliexpress-autopilot-runtime';
 const SCHEDULER_STALE_MS = 20 * 60 * 1000;
 const AUTOPILOT_RUNTIME_HISTORY_COLLECTION = 'aliexpress_autopilot_runs';
 const AUTOMATION_ALERTS_COLLECTION = 'automation_alerts';
+const HARVESTER_JOBS_COLLECTION = 'harvester_jobs';
+
+const TELEMETRY_STAGE_KEYS = [
+  'fetch',
+  'aiCategorization',
+  'processing',
+  'moderation',
+  'bestPriceRecalc',
+  'dealRefinerBatch',
+  'finalDealRefiner',
+  'finalProductRefiner',
+] as const;
+
+type TelemetryStageKey = (typeof TELEMETRY_STAGE_KEYS)[number];
 
 type RuntimeHistoryEntry = {
   id?: string;
@@ -34,6 +48,20 @@ type AutomationAlert = {
   message: string;
   createdAt: string;
   resolved?: boolean;
+};
+
+type HarvesterStageTotals = Record<TelemetryStageKey, number>;
+
+type HarvesterTelemetry = {
+  stageTotalsMs?: Partial<HarvesterStageTotals>;
+};
+
+type HarvesterJobHealthView = {
+  id: string;
+  source?: string;
+  status?: string;
+  startedAt?: string;
+  telemetry?: HarvesterTelemetry;
 };
 
 function toFiniteNumber(value: unknown): number {
@@ -78,6 +106,51 @@ function buildSlaSummary(entries: RuntimeHistoryEntry[]) {
   };
 }
 
+function buildTopStageRanking(entries: HarvesterJobHealthView[]) {
+  const aggregates = new Map<TelemetryStageKey, {
+    totalMs: number;
+    samples: number;
+    maxMs: number;
+  }>();
+
+  TELEMETRY_STAGE_KEYS.forEach((stage) => {
+    aggregates.set(stage, {
+      totalMs: 0,
+      samples: 0,
+      maxMs: 0,
+    });
+  });
+
+  for (const entry of entries) {
+    const stageTotals = entry.telemetry?.stageTotalsMs;
+    if (!stageTotals) continue;
+
+    TELEMETRY_STAGE_KEYS.forEach((stage) => {
+      const value = toFiniteNumber(stageTotals[stage]);
+      if (value <= 0) return;
+
+      const existing = aggregates.get(stage);
+      if (!existing) return;
+
+      existing.totalMs += value;
+      existing.samples += 1;
+      existing.maxMs = Math.max(existing.maxMs, value);
+    });
+  }
+
+  return [...aggregates.entries()]
+    .map(([stage, value]) => ({
+      stage,
+      totalMs: Math.round(value.totalMs),
+      avgMs: value.samples > 0 ? Math.round(value.totalMs / value.samples) : 0,
+      maxMs: Math.round(value.maxMs),
+      samples: value.samples,
+    }))
+    .filter((entry) => entry.totalMs > 0)
+    .sort((left, right) => right.totalMs - left.totalMs)
+    .slice(0, 5);
+}
+
 type HealthIssue = {
   code: string;
   severity: 'info' | 'warning' | 'error';
@@ -101,6 +174,7 @@ export async function GET() {
       lastRunSnap,
       runtimeHistorySnap,
       alertsSnap,
+      harvesterJobsSnap,
     ] = await Promise.all([
       adminDb.doc(SETTINGS_DOC_PATH).get(),
       adminDb.doc(LOCK_DOC_PATH).get(),
@@ -124,6 +198,10 @@ export async function GET() {
       adminDb.collection(AUTOMATION_ALERTS_COLLECTION)
         .orderBy('createdAt', 'desc')
         .limit(20)
+        .get(),
+      adminDb.collection(HARVESTER_JOBS_COLLECTION)
+        .orderBy('startedAt', 'desc')
+        .limit(200)
         .get(),
     ]);
 
@@ -168,6 +246,19 @@ export async function GET() {
       .filter((alert) => alert.source === 'aliexpress-autopilot')
       .slice(0, 10);
     const sla24h = buildSlaSummary(runtimeHistory);
+    const telemetryWindowStart = Date.now() - 24 * 60 * 60 * 1000;
+    const recentHarvesterJobs = harvesterJobsSnap.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...(doc.data() as Omit<HarvesterJobHealthView, 'id'>),
+      }))
+      .filter((job) => {
+        if (job.source !== 'aliexpress') return false;
+        const startedAtMs = Date.parse(String(job.startedAt || ''));
+        if (!Number.isFinite(startedAtMs)) return false;
+        return startedAtMs >= telemetryWindowStart;
+      });
+    const topStages24h = buildTopStageRanking(recentHarvesterJobs);
 
     if (settings?.enabled === false) {
       issues.push({
@@ -281,6 +372,11 @@ export async function GET() {
           : null,
         sla24h,
         recentRuns: runtimeHistory,
+        performance24h: {
+          windowHours: 24,
+          jobsAnalyzed: recentHarvesterJobs.length,
+          topStages: topStages24h,
+        },
         recentAlerts,
         lastRun,
         issues,
