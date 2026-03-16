@@ -95,11 +95,28 @@ async function runAliExpressSync(request: NextRequest) {
   const lockRun = await withSyncLock(async () => {
     logger.info('Starting scheduled AliExpress sync');
 
+    const runStartedAt = Date.now();
     const settingsSnap = await adminDb.doc(SETTINGS_DOC_PATH).get();
     const settings = settingsSnap.exists ? (settingsSnap.data() as any) : {};
     const stateRef = adminDb.doc(STATE_DOC_PATH);
     const stateSnap = await stateRef.get();
     const state = stateSnap.exists ? (stateSnap.data() as any) : {};
+    const runTelemetry = {
+      ensureProfilesMs: 0,
+      loadProfilesMs: 0,
+      profileProcessingMs: 0,
+      totalMs: 0,
+      profiles: [] as Array<{
+        profileId: string;
+        name?: string;
+        query: string;
+        status: 'completed' | 'failed';
+        durationMs: number;
+        jobId?: string;
+        harvesterTelemetry?: unknown;
+        error?: string;
+      }>,
+    };
 
     if (settings?.enabled === false) {
       logger.info('AliExpress sync skipped: autopilot disabled in settings');
@@ -141,6 +158,7 @@ async function runAliExpressSync(request: NextRequest) {
       process.env.ALIEXPRESS_AUTO_BOOTSTRAP_PROFILES === 'true';
 
     if (shouldEnsureProfiles) {
+      const ensureProfilesStartedAt = Date.now();
       const bootstrapResult = await ensureAliExpressImportProfilesCoverage({
         enabled: true,
         defaultStatus: 'approved',
@@ -148,6 +166,7 @@ async function runAliExpressSync(request: NextRequest) {
         maxItemsPerRun: maxItems,
         createdBy: 'cron',
       });
+      runTelemetry.ensureProfilesMs += Date.now() - ensureProfilesStartedAt;
 
       logger.info('AliExpress profile coverage ensured', bootstrapResult);
       await stateRef.set(
@@ -159,11 +178,13 @@ async function runAliExpressSync(request: NextRequest) {
       );
     }
 
+    const loadProfilesStartedAt = Date.now();
     const profilesSnapshot = await adminDb
       .collection('importProfiles')
       .where('enabled', '==', true)
       .where('vendorId', '==', 'aliexpress')
       .get();
+    runTelemetry.loadProfilesMs += Date.now() - loadProfilesStartedAt;
 
     if (profilesSnapshot.empty) {
       logger.info('No enabled AliExpress import profiles found');
@@ -201,15 +222,28 @@ async function runAliExpressSync(request: NextRequest) {
 
     const results = [];
     for (const profileDoc of selectedProfileDocs) {
+      const profileStartedAt = Date.now();
       const profile = { id: profileDoc.id, ...profileDoc.data() } as { id: string; name?: string; [key: string]: unknown };
       const profileQuery = String((profile as any)?.filters?.searchQuery || profile.name || '').trim();
 
       if (!profileQuery) {
+        const durationMs = Date.now() - profileStartedAt;
+        runTelemetry.profileProcessingMs += durationMs;
+        runTelemetry.profiles.push({
+          profileId: profile.id,
+          name: profile.name,
+          query: profileQuery,
+          status: 'failed',
+          durationMs,
+          error: 'Profil nie ma searchQuery ani nazwy do użycia jako zapytanie.',
+        });
+
         results.push({
           profileId: profile.id,
           name: profile.name,
           success: false,
           error: 'Profil nie ma searchQuery ani nazwy do użycia jako zapytanie.',
+          durationMs,
         });
         continue;
       }
@@ -241,6 +275,8 @@ async function runAliExpressSync(request: NextRequest) {
         );
 
         const success = jobResult.status === 'completed';
+        const durationMs = Date.now() - profileStartedAt;
+        runTelemetry.profileProcessingMs += durationMs;
         const stats = {
           productsFound: jobResult.productsFound,
           productsCreated: jobResult.productsCreated,
@@ -250,13 +286,26 @@ async function runAliExpressSync(request: NextRequest) {
           errors: jobResult.errors.length,
           status: jobResult.status,
           jobId: jobResult.id,
+          durationMs,
         };
+
+        runTelemetry.profiles.push({
+          profileId: profile.id,
+          name: profile.name,
+          query: profileQuery,
+          status: success ? 'completed' : 'failed',
+          durationMs,
+          jobId: jobResult.id,
+          harvesterTelemetry: jobResult.telemetry,
+          error: success ? undefined : `Harvester status: ${jobResult.status}`,
+        });
 
         results.push({
           profileId: profile.id,
           name: profile.name,
           success,
           stats,
+          telemetry: jobResult.telemetry,
         });
 
         logger.info('Profile sync completed', {
@@ -264,22 +313,38 @@ async function runAliExpressSync(request: NextRequest) {
           stats,
         });
       } catch (error) {
+        const durationMs = Date.now() - profileStartedAt;
+        runTelemetry.profileProcessingMs += durationMs;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
         logger.error('Profile sync failed', {
           profileId: profile.id,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage,
+          durationMs,
+        });
+
+        runTelemetry.profiles.push({
+          profileId: profile.id,
+          name: profile.name,
+          query: profileQuery,
+          status: 'failed',
+          durationMs,
+          error: errorMessage,
         });
 
         results.push({
           profileId: profile.id,
           name: profile.name,
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage,
+          durationMs,
         });
       }
     }
 
     const successCount = results.filter(r => r.success).length;
     const totalCount = results.length;
+    runTelemetry.totalMs = Date.now() - runStartedAt;
 
     logger.info('Scheduled AliExpress sync completed', {
       total: totalCount,
@@ -287,6 +352,12 @@ async function runAliExpressSync(request: NextRequest) {
       successful: successCount,
       failed: totalCount - successCount,
       nextProfileCursor,
+      telemetry: {
+        ensureProfilesMs: runTelemetry.ensureProfilesMs,
+        loadProfilesMs: runTelemetry.loadProfilesMs,
+        profileProcessingMs: runTelemetry.profileProcessingMs,
+        totalMs: runTelemetry.totalMs,
+      },
     });
 
     await stateRef.set(
@@ -295,10 +366,29 @@ async function runAliExpressSync(request: NextRequest) {
         lastBatchAt: new Date().toISOString(),
         lastBatchSize: selectedProfileDocs.length,
         maxProfilesPerRun,
+        lastRunTelemetry: {
+          ensureProfilesMs: runTelemetry.ensureProfilesMs,
+          loadProfilesMs: runTelemetry.loadProfilesMs,
+          profileProcessingMs: runTelemetry.profileProcessingMs,
+          totalMs: runTelemetry.totalMs,
+          processedProfiles: selectedProfileDocs.length,
+          availableProfiles: orderedProfileDocs.length,
+        },
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
     );
+
+    const slowestProfiles = [...runTelemetry.profiles]
+      .sort((left, right) => right.durationMs - left.durationMs)
+      .slice(0, 5)
+      .map((entry) => ({
+        profileId: entry.profileId,
+        name: entry.name,
+        query: entry.query,
+        durationMs: entry.durationMs,
+        status: entry.status,
+      }));
 
     return NextResponse.json({
       success: true,
@@ -307,6 +397,13 @@ async function runAliExpressSync(request: NextRequest) {
       availableProfiles: orderedProfileDocs.length,
       processedProfiles: selectedProfileDocs.length,
       nextProfileCursor,
+      telemetry: {
+        ensureProfilesMs: runTelemetry.ensureProfilesMs,
+        loadProfilesMs: runTelemetry.loadProfilesMs,
+        profileProcessingMs: runTelemetry.profileProcessingMs,
+        totalMs: runTelemetry.totalMs,
+        slowestProfiles,
+      },
       results,
     });
   });

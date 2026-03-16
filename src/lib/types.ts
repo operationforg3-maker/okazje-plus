@@ -2556,15 +2556,15 @@ export interface DealM6 {
  */
 export interface HarvesterJob {
   id: string;
-  
+
   // Job Metadata
   status: 'running' | 'completed' | 'failed' | 'paused';
   source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'manual';
-  
+
   // Input Parameters
   query: string; // Search term or category ID
   maxResults: number;
-  
+
   // Progress Tracking (M6 Enhanced Control)
   currentCategory?: string;
   totalCategories?: number;
@@ -2585,12 +2585,43 @@ export interface HarvesterJob {
     message: string;
     timestamp: string;
   }>;
-  
+
+  // Performance telemetry (optional, M6.1)
+  telemetry?: {
+    totalDurationMs: number;
+    stageTotalsMs: {
+      fetch: number;
+      aiCategorization: number;
+      processing: number;
+      moderation: number;
+      bestPriceRecalc: number;
+      dealRefinerBatch: number;
+      finalDealRefiner: number;
+      finalProductRefiner: number;
+    };
+    perCategory: Array<{
+      category: string;
+      attempt: number;
+      status: 'ok' | 'error' | 'skipped';
+      durationMs: number;
+      productsFetched: number;
+      productsProcessed: number;
+      fetchMs: number;
+      aiCategorizationMs: number;
+      processingMs: number;
+      moderationMs: number;
+      bestPriceRecalcMs: number;
+      dealRefinerBatchMs: number;
+      timeoutMs: number;
+      errorMessage?: string;
+    }>;
+  };
+
   // Progress
   startedAt: string; // ISO timestamp
   completedAt?: string; // ISO timestamp
   lastUpdatedAt: string; // ISO timestamp
-  
+
   // Logs
   logs: Array<{
     level: 'info' | 'warn' | 'error';

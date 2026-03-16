@@ -1055,6 +1055,7 @@ export class SmartHarvester {
         currentCategory: job.currentCategory,
         totalCategories: job.totalCategories,
         processedCategories: job.processedCategories,
+        telemetry: job.telemetry,
         startedAt: job.startedAt,
         completedAt: job.completedAt,
         lastUpdatedAt: job.lastUpdatedAt,
@@ -1486,7 +1487,18 @@ export class SmartHarvester {
       queries = (useSimpleQuery || !categories || categories.length === 0) ? [query] : categories;
     }
     const processedCategoriesLog: HarvesterJob['processedCategories'] = [];
-    
+    const stageTotals: NonNullable<HarvesterJob['telemetry']>['stageTotalsMs'] = {
+      fetch: 0,
+      aiCategorization: 0,
+      processing: 0,
+      moderation: 0,
+      bestPriceRecalc: 0,
+      dealRefinerBatch: 0,
+      finalDealRefiner: 0,
+      finalProductRefiner: 0,
+    };
+    const perCategoryTelemetry: NonNullable<HarvesterJob['telemetry']>['perCategory'] = [];
+
     const modeDesc = autoBrowse
       ? `${source}-auto-browse`
       : source === 'convertiser'
@@ -1510,6 +1522,11 @@ export class SmartHarvester {
       currentCategory: queries[0] || '',
       totalCategories: queries.length,
       processedCategories: [],
+      telemetry: {
+        totalDurationMs: 0,
+        stageTotalsMs: stageTotals,
+        perCategory: perCategoryTelemetry,
+      },
       startedAt: jobStartTime,
       lastUpdatedAt: jobStartTime,
       logs: this.logs,
@@ -1566,6 +1583,23 @@ export class SmartHarvester {
 
           if (attempt > maxCategoryAttempts) {
             this.addLog('warn', `Przekroczono limit prób dla kategorii: ${currentQuery}`);
+            const skippedTelemetry = {
+              category: currentQuery,
+              attempt,
+              status: 'skipped' as const,
+              durationMs: 0,
+              productsFetched: 0,
+              productsProcessed: categoryProductsCreated,
+              fetchMs: 0,
+              aiCategorizationMs: 0,
+              processingMs: 0,
+              moderationMs: 0,
+              bestPriceRecalcMs: 0,
+              dealRefinerBatchMs: 0,
+              timeoutMs: queryTimeoutMs,
+              errorMessage: 'max attempts exceeded',
+            };
+            perCategoryTelemetry.push(skippedTelemetry);
             processedCategoriesLog.push({
               category: currentQuery,
               count: categoryProductsCreated,
@@ -1600,6 +1634,22 @@ export class SmartHarvester {
           }
 
           const categoryStartTime = Date.now();
+          const attemptTelemetry = {
+            category: currentQuery,
+            attempt,
+            status: 'ok' as 'ok' | 'error' | 'skipped',
+            durationMs: 0,
+            productsFetched: 0,
+            productsProcessed: 0,
+            fetchMs: 0,
+            aiCategorizationMs: 0,
+            processingMs: 0,
+            moderationMs: 0,
+            bestPriceRecalcMs: 0,
+            dealRefinerBatchMs: 0,
+            timeoutMs: queryTimeoutMs,
+            errorMessage: undefined as string | undefined,
+          };
           this.addLog('info', `Processing query/category: ${currentQuery} (attempt ${attempt}/${maxCategoryAttempts})`);
 
           // Update current category in status
@@ -1633,6 +1683,7 @@ export class SmartHarvester {
             ? currentQuery.split('/').pop() || currentQuery 
             : currentQuery;
             
+          const fetchStartedAt = Date.now();
           const sourceProducts = await this.fetchFromSource(
             source,
             searchTerm,
@@ -1641,6 +1692,10 @@ export class SmartHarvester {
             convertiserMode,
             importStrategy
           );
+          const fetchDurationMs = Date.now() - fetchStartedAt;
+          attemptTelemetry.fetchMs += fetchDurationMs;
+          attemptTelemetry.productsFetched = sourceProducts.length;
+          stageTotals.fetch += fetchDurationMs;
           
           // For category-tree mode: Filter by rating/quality (top products only)
           let filteredProducts = sourceProducts;
@@ -1670,6 +1725,7 @@ export class SmartHarvester {
 
           // Step 1.5: Batch AI categorization for Convertiser (optimize token costs)
           if (source === 'convertiser' && filteredProducts.length > 0) {
+            const aiCategorizationStartedAt = Date.now();
             try {
               this.addLog('info', `Running batch AI categorization for ${filteredProducts.length} Convertiser products...`);
               
@@ -1724,6 +1780,10 @@ export class SmartHarvester {
             } catch (batchErr) {
               this.addLog('warn', `Batch categorization failed: ${batchErr instanceof Error ? batchErr.message : 'Unknown error'}`);
               // Continue without categories - will use uncategorized fallback
+            } finally {
+              const aiCategorizationDurationMs = Date.now() - aiCategorizationStartedAt;
+              attemptTelemetry.aiCategorizationMs += aiCategorizationDurationMs;
+              stageTotals.aiCategorization += aiCategorizationDurationMs;
             }
           }
 
@@ -1732,6 +1792,7 @@ export class SmartHarvester {
           this.addLog('info', `Processing ${filteredProducts.length} products in ${chunks.length} batches.`);
 
           for (const chunk of chunks) {
+            const chunkProcessingStartedAt = Date.now();
             const batch = adminDb.batch();
             const productsToRecalculate = new Set<string>();
             const newProductsForCache = [];
@@ -1914,12 +1975,18 @@ export class SmartHarvester {
               }
             }
 
+            attemptTelemetry.productsProcessed += chunk.length;
+            const chunkProcessingDurationMs = Date.now() - chunkProcessingStartedAt;
+            attemptTelemetry.processingMs += chunkProcessingDurationMs;
+            stageTotals.processing += chunkProcessingDurationMs;
+
             this.addLog('info', `Committing batch of ${chunk.length} products.`);
             await batch.commit();
             this.addLog('info', 'Batch committed successfully.');
 
             // Process moderation queue in parallel (small chunks to avoid AI rate limits)
             if (dealsForModeration.length > 0) {
+              const moderationStartedAt = Date.now();
               const MOD_CHUNK_SIZE = 5;
               for (let i = 0; i < dealsForModeration.length; i += MOD_CHUNK_SIZE) {
                 const modChunk = dealsForModeration.slice(i, i + MOD_CHUNK_SIZE);
@@ -1931,18 +1998,26 @@ export class SmartHarvester {
                   }
                 }));
               }
+              const moderationDurationMs = Date.now() - moderationStartedAt;
+              attemptTelemetry.moderationMs += moderationDurationMs;
+              stageTotals.moderation += moderationDurationMs;
               this.addLog('info', `Added ${dealsForModeration.length} deals to moderation queue`);
             }
 
             // Batch update best prices for this chunk
             if (productsToRecalculate.size > 0) {
+              const bestPriceStartedAt = Date.now();
               this.addLog('info', `Updating bestPrice for ${productsToRecalculate.size} products in batch.`);
               await this.batchUpdateProductBestPrices(Array.from(productsToRecalculate));
+              const bestPriceDurationMs = Date.now() - bestPriceStartedAt;
+              attemptTelemetry.bestPriceRecalcMs += bestPriceDurationMs;
+              stageTotals.bestPriceRecalc += bestPriceDurationMs;
             }
 
             if (dealsToRefine.length >= dealRefinerBatchSize || Date.now() - lastDealRefinerAt >= dealRefinerMinIntervalMs) {
               const batchIds = dealsToRefine.splice(0, dealRefinerBatchSize);
               if (batchIds.length > 0) {
+                const dealRefinerBatchStartedAt = Date.now();
                 lastDealRefinerAt = Date.now();
                 this.addLog('info', `Uruchamiam Deal Refiner dla ${batchIds.length} ofert (batch/auto)`);
                 try {
@@ -1950,6 +2025,10 @@ export class SmartHarvester {
                   this.addLog('info', `Deal Refiner zakończony (batch/auto): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
                 } catch (err) {
                   this.addLog('error', 'Deal Refiner nie powiódł się (batch/auto)', err);
+                } finally {
+                  const dealRefinerBatchDurationMs = Date.now() - dealRefinerBatchStartedAt;
+                  attemptTelemetry.dealRefinerBatchMs += dealRefinerBatchDurationMs;
+                  stageTotals.dealRefinerBatch += dealRefinerBatchDurationMs;
                 }
               }
             }
@@ -1964,7 +2043,10 @@ export class SmartHarvester {
               status: 'ok',
             });
             processedCategorySet.add(currentQuery);
-            const durationSec = Math.round((Date.now() - categoryStartTime) / 1000);
+            attemptTelemetry.status = 'ok';
+            attemptTelemetry.durationMs = Date.now() - categoryStartTime;
+            perCategoryTelemetry.push(attemptTelemetry);
+            const durationSec = Math.round(attemptTelemetry.durationMs / 1000);
             this.addLog('info', `Category completed: ${currentQuery} (${categoryProductsCreated} products) in ${durationSec}s`);
 
             // Force update after category finish
@@ -1995,6 +2077,10 @@ export class SmartHarvester {
             const errorMessage = err instanceof Error ? err.message : String(err);
             if (errorMessage.includes('InvalidApiPath')) {
               this.addLog('warn', `Pomijam kategorię z InvalidApiPath: ${currentQuery}`);
+              attemptTelemetry.status = 'skipped';
+              attemptTelemetry.durationMs = Date.now() - categoryStartTime;
+              attemptTelemetry.errorMessage = errorMessage;
+              perCategoryTelemetry.push(attemptTelemetry);
               processedCategoriesLog.push({
                 category: currentQuery,
                 count: categoryProductsCreated,
@@ -2035,6 +2121,10 @@ export class SmartHarvester {
               message: (err as Error).message,
               timestamp: new Date().toISOString(),
             });
+            attemptTelemetry.status = 'error';
+            attemptTelemetry.durationMs = Date.now() - categoryStartTime;
+            attemptTelemetry.errorMessage = errorMessage;
+            perCategoryTelemetry.push(attemptTelemetry);
             processedCategoriesLog.push({
               category: currentQuery,
               count: categoryProductsCreated,
@@ -2088,6 +2178,11 @@ export class SmartHarvester {
         currentCategory: queries[queries.length - 1] || '',
         totalCategories: queries.length,
         processedCategories: processedCategoriesLog,
+        telemetry: {
+          totalDurationMs: Date.now() - Date.parse(jobStartTime),
+          stageTotalsMs: stageTotals,
+          perCategory: perCategoryTelemetry,
+        },
         startedAt: jobStartTime,
         completedAt: jobEndTime,
         lastUpdatedAt: jobEndTime,
@@ -2103,16 +2198,20 @@ export class SmartHarvester {
 
       // Trigger asynchronous Deal Refiner for freshly created deals
       if (dealsToRefine.length > 0) {
+        const finalDealRefinerStartedAt = Date.now();
         this.addLog('info', `Uruchamiam Deal Refiner dla ${dealsToRefine.length} ofert (async)`);
         try {
           const result = await startDealRefinerJob(dealsToRefine);
           this.addLog('info', `Deal Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
         } catch (err) {
           this.addLog('error', 'Deal Refiner nie powiódł się', err);
+        } finally {
+          stageTotals.finalDealRefiner += Date.now() - finalDealRefinerStartedAt;
         }
       }
 
       if (productsToRefine.length > 0) {
+        const finalProductRefinerStartedAt = Date.now();
         const refinerJobId = `refiner_${this.jobId}`;
         this.addLog('info', `Uruchamiam AI Refiner dla ${productsToRefine.length} produktów (async)`);
         try {
@@ -2121,6 +2220,8 @@ export class SmartHarvester {
           this.addLog('info', `AI Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
         } catch (err) {
           this.addLog('error', 'AI Refiner nie powiódł się', err);
+        } finally {
+          stageTotals.finalProductRefiner += Date.now() - finalProductRefinerStartedAt;
         }
       }
 
@@ -2141,6 +2242,11 @@ export class SmartHarvester {
         dealsLinked,
         duplicatesSkipped,
         errors,
+        telemetry: {
+          totalDurationMs: Date.now() - Date.parse(jobStartTime),
+          stageTotalsMs: stageTotals,
+          perCategory: perCategoryTelemetry,
+        },
         startedAt: jobStartTime,
         completedAt: jobEndTime,
         lastUpdatedAt: jobEndTime,
