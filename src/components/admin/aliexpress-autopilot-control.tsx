@@ -14,6 +14,7 @@ type Settings = {
   enabled: boolean;
   ensureProfiles: boolean;
   autoApprove: boolean;
+  maxProfilesPerRun: number;
   maxItemsPerProfile: number;
   hardCap: number;
   pageSize: number;
@@ -25,13 +26,14 @@ type Settings = {
 
 const DEFAULTS: Settings = {
   enabled: true,
-  ensureProfiles: true,
+  ensureProfiles: false,
   autoApprove: true,
-  maxItemsPerProfile: 500,
+  maxProfilesPerRun: 3,
+  maxItemsPerProfile: 20,
   hardCap: 5000,
   pageSize: 50,
   maxPages: 100,
-  defaultProfileMaxItems: 200,
+  defaultProfileMaxItems: 20,
 };
 
 type HealthIssue = {
@@ -609,6 +611,10 @@ export function AliExpressAutopilotControl({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label>maxProfilesPerRun</Label>
+            <Input type="number" value={settings.maxProfilesPerRun} onChange={(e) => updateNumber('maxProfilesPerRun', e.target.value)} />
+          </div>
           <div className="space-y-2">
             <Label>maxItemsPerProfile</Label>
             <Input type="number" value={settings.maxItemsPerProfile} onChange={(e) => updateNumber('maxItemsPerProfile', e.target.value)} />

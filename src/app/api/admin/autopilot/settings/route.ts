@@ -9,6 +9,7 @@ export type AliExpressAutopilotSettings = {
   enabled: boolean;
   ensureProfiles: boolean;
   autoApprove: boolean;
+  maxProfilesPerRun: number;
   maxItemsPerProfile: number;
   hardCap: number;
   pageSize: number;
@@ -20,13 +21,14 @@ export type AliExpressAutopilotSettings = {
 
 const DEFAULT_SETTINGS: AliExpressAutopilotSettings = {
   enabled: true,
-  ensureProfiles: true,
+  ensureProfiles: false,
   autoApprove: true,
-  maxItemsPerProfile: 500,
+  maxProfilesPerRun: 3,
+  maxItemsPerProfile: 20,
   hardCap: 5000,
   pageSize: 50,
   maxPages: 100,
-  defaultProfileMaxItems: 200,
+  defaultProfileMaxItems: 20,
 };
 
 function normalizeNumeric(value: unknown, fallback: number, min: number, max: number): number {
@@ -39,6 +41,7 @@ function normalizeSettings(input: Partial<AliExpressAutopilotSettings>): AliExpr
     enabled: typeof input.enabled === 'boolean' ? input.enabled : DEFAULT_SETTINGS.enabled,
     ensureProfiles: typeof input.ensureProfiles === 'boolean' ? input.ensureProfiles : DEFAULT_SETTINGS.ensureProfiles,
     autoApprove: typeof input.autoApprove === 'boolean' ? input.autoApprove : DEFAULT_SETTINGS.autoApprove,
+    maxProfilesPerRun: normalizeNumeric(input.maxProfilesPerRun, DEFAULT_SETTINGS.maxProfilesPerRun, 1, 25),
     maxItemsPerProfile: normalizeNumeric(input.maxItemsPerProfile, DEFAULT_SETTINGS.maxItemsPerProfile, 5, 20000),
     hardCap: normalizeNumeric(input.hardCap, DEFAULT_SETTINGS.hardCap, 100, 50000),
     pageSize: normalizeNumeric(input.pageSize, DEFAULT_SETTINGS.pageSize, 10, 50),

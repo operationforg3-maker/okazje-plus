@@ -6,7 +6,10 @@ import { logger } from '@/lib/logger';
 
 const LOCK_DOC_PATH = 'admin_meta/aliexpress-sync-lock';
 const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
+const STATE_DOC_PATH = 'admin_meta/aliexpress-autopilot-state';
 const LOCK_TTL_MS = 25 * 60 * 1000;
+const ENSURE_PROFILES_INTERVAL_MS = 12 * 60 * 60 * 1000;
+const DEFAULT_MAX_PROFILES_PER_RUN = 3;
 
 function getBearerToken(authHeader: string | null): string {
   if (!authHeader) return '';
@@ -94,6 +97,9 @@ async function runAliExpressSync(request: NextRequest) {
 
     const settingsSnap = await adminDb.doc(SETTINGS_DOC_PATH).get();
     const settings = settingsSnap.exists ? (settingsSnap.data() as any) : {};
+    const stateRef = adminDb.doc(STATE_DOC_PATH);
+    const stateSnap = await stateRef.get();
+    const state = stateSnap.exists ? (stateSnap.data() as any) : {};
 
     if (settings?.enabled === false) {
       logger.info('AliExpress sync skipped: autopilot disabled in settings');
@@ -115,10 +121,23 @@ async function runAliExpressSync(request: NextRequest) {
     const maxPages = Number(settings?.maxPages || process.env.ALIEXPRESS_SYNC_MAX_PAGES || 100);
     const autoApprove = typeof settings?.autoApprove === 'boolean' ? settings.autoApprove : true;
     const importStrategy = settings?.importStrategy === 'price_asc' ? 'price_asc' : 'bestsellers';
+    const maxProfilesPerRunParam = Number(
+      request.nextUrl.searchParams.get('maxProfiles') ||
+        settings?.maxProfilesPerRun ||
+        process.env.ALIEXPRESS_SYNC_MAX_PROFILES ||
+        DEFAULT_MAX_PROFILES_PER_RUN
+    );
+    const maxProfilesPerRun = Number.isFinite(maxProfilesPerRunParam) && maxProfilesPerRunParam > 0
+      ? Math.min(Math.max(1, Math.round(maxProfilesPerRunParam)), 25)
+      : DEFAULT_MAX_PROFILES_PER_RUN;
 
+    const lastEnsuredAtMs = Date.parse(String(state?.lastEnsuredAt || ''));
     const shouldEnsureProfiles =
       request.nextUrl.searchParams.get('ensureProfiles') === '1' ||
-      settings?.ensureProfiles === true ||
+      (
+        settings?.ensureProfiles === true &&
+        (!Number.isFinite(lastEnsuredAtMs) || Date.now() - lastEnsuredAtMs >= ENSURE_PROFILES_INTERVAL_MS)
+      ) ||
       process.env.ALIEXPRESS_AUTO_BOOTSTRAP_PROFILES === 'true';
 
     if (shouldEnsureProfiles) {
@@ -131,6 +150,13 @@ async function runAliExpressSync(request: NextRequest) {
       });
 
       logger.info('AliExpress profile coverage ensured', bootstrapResult);
+      await stateRef.set(
+        {
+          lastEnsuredAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
     }
 
     const profilesSnapshot = await adminDb
@@ -148,8 +174,33 @@ async function runAliExpressSync(request: NextRequest) {
       });
     }
 
+    const orderedProfileDocs = [...profilesSnapshot.docs].sort((left, right) => left.id.localeCompare(right.id));
+    const lastProfileCursor = typeof state?.lastProfileCursor === 'string' ? state.lastProfileCursor.trim() : '';
+    const cursorIndex = lastProfileCursor
+      ? orderedProfileDocs.findIndex((doc) => doc.id === lastProfileCursor)
+      : -1;
+    const startIndex = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    let selectedProfileDocs = orderedProfileDocs.slice(startIndex, startIndex + maxProfilesPerRun);
+    let wrappedCursor = false;
+
+    if (selectedProfileDocs.length === 0 && orderedProfileDocs.length > 0) {
+      selectedProfileDocs = orderedProfileDocs.slice(0, maxProfilesPerRun);
+      wrappedCursor = true;
+    }
+
+    const nextProfileCursor = selectedProfileDocs.at(-1)?.id || null;
+
+    logger.info('AliExpress sync selected profile batch', {
+      totalProfiles: orderedProfileDocs.length,
+      selectedProfiles: selectedProfileDocs.length,
+      maxProfilesPerRun,
+      lastProfileCursor: lastProfileCursor || null,
+      nextProfileCursor,
+      wrappedCursor,
+    });
+
     const results = [];
-    for (const profileDoc of profilesSnapshot.docs) {
+    for (const profileDoc of selectedProfileDocs) {
       const profile = { id: profileDoc.id, ...profileDoc.data() } as { id: string; name?: string; [key: string]: unknown };
       const profileQuery = String((profile as any)?.filters?.searchQuery || profile.name || '').trim();
 
@@ -232,14 +283,30 @@ async function runAliExpressSync(request: NextRequest) {
 
     logger.info('Scheduled AliExpress sync completed', {
       total: totalCount,
+      availableProfiles: orderedProfileDocs.length,
       successful: successCount,
       failed: totalCount - successCount,
+      nextProfileCursor,
     });
+
+    await stateRef.set(
+      {
+        lastProfileCursor: nextProfileCursor,
+        lastBatchAt: new Date().toISOString(),
+        lastBatchSize: selectedProfileDocs.length,
+        maxProfilesPerRun,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
 
     return NextResponse.json({
       success: true,
       synced: successCount,
       total: totalCount,
+      availableProfiles: orderedProfileDocs.length,
+      processedProfiles: selectedProfileDocs.length,
+      nextProfileCursor,
       results,
     });
   });
