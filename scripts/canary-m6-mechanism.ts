@@ -74,15 +74,27 @@ async function main(): Promise<void> {
   console.log(`invalid.deal.statuses.sample=${invalidDealStatuses}`);
   assertOrThrow(invalidDealStatuses === 0, `Invalid deal statuses found in sample: ${invalidDealStatuses}`);
 
-  const allowedCoreStatuses = new Set(['draft', 'pending_approval', 'approved', 'rejected']);
+  const allowedCoreStatuses = new Set([
+    'draft',
+    'pending_approval',
+    'approved',
+    'rejected',
+    // Legacy-compatible aliases still present in historical records.
+    'approval',
+    'pending',
+  ]);
   const coreSample = await db.collection('product_cores').limit(400).get();
   let invalidCoreStatuses = 0;
+  let legacyCoreStatuses = 0;
   for (const doc of coreSample.docs) {
     const status = String(doc.data().status || '');
+    if (status === 'approval' || status === 'pending') legacyCoreStatuses += 1;
     if (!allowedCoreStatuses.has(status)) invalidCoreStatuses += 1;
   }
   console.log(`invalid.product_core.statuses.sample=${invalidCoreStatuses}`);
+  console.log(`legacy.product_core.statuses.sample=${legacyCoreStatuses}`);
   assertOrThrow(invalidCoreStatuses === 0, `Invalid product_core statuses found in sample: ${invalidCoreStatuses}`);
+  assertOrThrow(legacyCoreStatuses <= 10, `Too many legacy product_core statuses found in sample: ${legacyCoreStatuses}`);
 
   const approvedLegacyProducts = await db.collection('products').where('status', '==', 'approved').count().get();
   console.log(`legacy.products.approved=${approvedLegacyProducts.data().count}`);

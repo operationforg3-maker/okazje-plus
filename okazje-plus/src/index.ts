@@ -958,7 +958,7 @@ async function monitorAliExpressAutopilotStaleness(): Promise<void> {
  */
 export const scheduleAliExpressSync = onSchedule(
   {
-    schedule: "*/5 * * * *",
+    schedule: "*/30 * * * *",
     timeZone: "Europe/Warsaw",
     region: "europe-west1",
     memory: "256MiB",
@@ -970,7 +970,7 @@ export const scheduleAliExpressSync = onSchedule(
     const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";
     const cronSecret = process.env.CRON_SECRET || "";
     const adminToken = process.env.IMPORT_ADMIN_TOKEN || process.env.ADMIN_BEARER || "";
-    const maxItems = Number(process.env.ALIEXPRESS_SYNC_MAX_ITEMS || "500");
+    const maxItems = Number(process.env.ALIEXPRESS_SYNC_MAX_ITEMS || "20");
     const hardCap = Number(process.env.ALIEXPRESS_SYNC_HARD_CAP || "5000");
     const normalizedHardCap = Number.isFinite(hardCap) ? Math.max(100, hardCap) : 5000;
 
@@ -984,7 +984,7 @@ export const scheduleAliExpressSync = onSchedule(
       String(
         Number.isFinite(maxItems)
           ? Math.max(5, Math.min(maxItems, normalizedHardCap))
-          : 500
+          : 20
       )
     );
 
