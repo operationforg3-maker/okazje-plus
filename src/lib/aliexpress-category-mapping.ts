@@ -23,101 +23,148 @@ export const ALIEXPRESS_CATEGORY_MAPPINGS: AliExpressCategoryMapping[] = [
   // Elektronika
   {
     ourCategorySlug: 'elektronika',
-    ourSubcategorySlug: 'telefony',
-    ourSubSubcategorySlug: 'smartfony',
+    ourSubcategorySlug: 'smartfony-telefony',
     aliexpressCategoryId: '509',
     aliexpressCategoryName: 'Phones & Telecommunications',
-    confidence: 0.9,
+    confidence: 0.95,
   },
   {
     ourCategorySlug: 'elektronika',
-    ourSubcategorySlug: 'komputery',
-    ourSubSubcategorySlug: 'laptopy',
+    ourSubcategorySlug: 'komputery-laptopy',
     aliexpressCategoryId: '7',
     aliexpressCategoryName: 'Computer & Office',
     confidence: 0.9,
   },
   {
     ourCategorySlug: 'elektronika',
-    ourSubcategorySlug: 'audio',
+    ourSubcategorySlug: 'audio-wideo',
     aliexpressCategoryId: '18',
     aliexpressCategoryName: 'Consumer Electronics',
-    confidence: 0.8,
+    confidence: 0.85,
   },
-  
+
   // Dom i Ogród
   {
-    ourCategorySlug: 'dom-i-ogrod',
+    ourCategorySlug: 'dom-ogrod',
     ourSubcategorySlug: 'meble',
     aliexpressCategoryId: '15',
     aliexpressCategoryName: 'Home & Garden',
     confidence: 0.9,
   },
   {
-    ourCategorySlug: 'dom-i-ogrod',
-    ourSubcategorySlug: 'kuchnia',
+    ourCategorySlug: 'dom-ogrod',
+    ourSubcategorySlug: 'oswietlenie',
+    aliexpressCategoryId: '15',
+    aliexpressCategoryName: 'Home & Garden',
+    confidence: 0.85,
+  },
+  {
+    ourCategorySlug: 'dom-ogrod',
+    ourSubcategorySlug: 'agd-male',
     aliexpressCategoryId: '15',
     aliexpressCategoryName: 'Home & Garden',
     confidence: 0.8,
   },
-  
-  // Moda
   {
-    ourCategorySlug: 'moda',
+    ourCategorySlug: 'dom-ogrod',
+    ourSubcategorySlug: 'agd-duze',
+    aliexpressCategoryId: '15',
+    aliexpressCategoryName: 'Home & Garden',
+    confidence: 0.8,
+  },
+
+  // Moda i Uroda
+  {
+    ourCategorySlug: 'moda-uroda',
     ourSubcategorySlug: 'odziez-damska',
     aliexpressCategoryId: '200000297',
     aliexpressCategoryName: "Women's Clothing",
-    confidence: 0.9,
+    confidence: 0.95,
   },
   {
-    ourCategorySlug: 'moda',
+    ourCategorySlug: 'moda-uroda',
     ourSubcategorySlug: 'odziez-meska',
     aliexpressCategoryId: '200000343',
     aliexpressCategoryName: "Men's Clothing",
-    confidence: 0.9,
+    confidence: 0.95,
   },
   {
-    ourCategorySlug: 'moda',
+    ourCategorySlug: 'moda-uroda',
     ourSubcategorySlug: 'obuwie',
     aliexpressCategoryId: '200000345',
     aliexpressCategoryName: 'Shoes',
-    confidence: 0.9,
+    confidence: 0.95,
   },
-  
-  // Sport
   {
-    ourCategorySlug: 'sport',
-    ourSubcategorySlug: 'fitness',
-    aliexpressCategoryId: '18',
-    aliexpressCategoryName: 'Sports & Entertainment',
-    confidence: 0.8,
-  },
-  
-  // Zdrowie i Uroda
-  {
-    ourCategorySlug: 'zdrowie-uroda',
+    ourCategorySlug: 'moda-uroda',
     ourSubcategorySlug: 'kosmetyki',
     aliexpressCategoryId: '66',
     aliexpressCategoryName: 'Beauty & Health',
     confidence: 0.9,
   },
-  
-  // Zabawki i Hobby
+
+  // Sport i Rekreacja
   {
-    ourCategorySlug: 'zabawki',
-    ourSubcategorySlug: 'zabawki-dla-dzieci',
+    ourCategorySlug: 'sport-rekreacja',
+    ourSubcategorySlug: 'fitness-silownia',
+    aliexpressCategoryId: '18',
+    aliexpressCategoryName: 'Sports & Entertainment',
+    confidence: 0.85,
+  },
+
+  // Zdrowie i Uroda
+  {
+    ourCategorySlug: 'zdrowie-uroda',
+    ourSubcategorySlug: 'pielegnacja-uroda',
+    aliexpressCategoryId: '66',
+    aliexpressCategoryName: 'Beauty & Health',
+    confidence: 0.9,
+  },
+  {
+    ourCategorySlug: 'zdrowie-uroda',
+    ourSubcategorySlug: 'suplementy-diety',
+    aliexpressCategoryId: '66',
+    aliexpressCategoryName: 'Beauty & Health',
+    confidence: 0.8,
+  },
+
+  // Dziecko i Zabawki
+  {
+    ourCategorySlug: 'dziecko-zabawki',
+    ourSubcategorySlug: 'zabawki',
     aliexpressCategoryId: '26',
     aliexpressCategoryName: 'Toys & Hobbies',
     confidence: 0.9,
   },
-  
+  {
+    ourCategorySlug: 'dziecko-zabawki',
+    ourSubcategorySlug: 'wozki',
+    aliexpressCategoryId: '26',
+    aliexpressCategoryName: 'Toys & Hobbies',
+    confidence: 0.8,
+  },
+
   // Motoryzacja
   {
     ourCategorySlug: 'motoryzacja',
     ourSubcategorySlug: 'akcesoria-samochodowe',
     aliexpressCategoryId: '34',
     aliexpressCategoryName: 'Automobiles & Motorcycles',
-    confidence: 0.9,
+    confidence: 0.95,
+  },
+  {
+    ourCategorySlug: 'motoryzacja',
+    ourSubcategorySlug: 'motocykle-skutery',
+    aliexpressCategoryId: '34',
+    aliexpressCategoryName: 'Automobiles & Motorcycles',
+    confidence: 0.85,
+  },
+  {
+    ourCategorySlug: 'motoryzacja',
+    ourSubcategorySlug: 'czesci-samochodowe',
+    aliexpressCategoryId: '34',
+    aliexpressCategoryName: 'Automobiles & Motorcycles',
+    confidence: 0.85,
   },
 ];
 
