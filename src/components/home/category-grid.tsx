@@ -4,7 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
 import { Category } from '@/lib/types';
+import { buildCategoryPath } from '@/lib/category-routes';
 import { ChevronRight, Grid3x3, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -37,6 +39,8 @@ const CATEGORY_STYLES = [
 export default function CategoryGrid({ categories }: CategoryGridProps) {
   const t = useTranslations('home.browseCategories');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const params = useParams();
+  const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
 
   // Count total products in category (including all subcategories)
   const getTotalProducts = (category: Category) => {
@@ -72,7 +76,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                 <CardContent className="p-4">
                   {/* Główny nagłówek - ikona, tytuł i liczba produktów w jednej linii */}
                   <Link 
-                    href={`/products?mainCategory=${category.slug || category.id}`}
+                    href={buildCategoryPath(locale, category.slug || category.id || '')}
                     className="flex items-center gap-3 mb-3 group/title"
                   >
                     <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg', `bg-gradient-to-br ${style.gradient}`)}>
@@ -104,7 +108,11 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                         {category.subcategories.map((sub) => (
                           <Link
                             key={sub.id}
-                            href={`/products?mainCategory=${category.slug || category.id}&subCategory=${sub.slug || sub.id}`}
+                            href={buildCategoryPath(
+                              locale,
+                              category.slug || category.id || '',
+                              sub.slug || sub.id || ''
+                            )}
                             className="text-xs px-2 py-1 rounded-md bg-secondary/50 hover:bg-primary/10 hover:text-primary transition-colors"
                           >
                             {sub.name}
@@ -139,7 +147,11 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                         <div key={sub.id} className="space-y-2">
                           {/* Level 2: Subcategory */}
                           <Link
-                            href={`/products?mainCategory=${category.slug || category.id}&subCategory=${sub.slug || sub.id}`}
+                            href={buildCategoryPath(
+                              locale,
+                              category.slug || category.id || '',
+                              sub.slug || sub.id || ''
+                            )}
                             className="flex items-start gap-2 p-2 rounded-lg hover:bg-secondary transition-colors group/sub"
                           >
                             <div className="p-1.5 rounded bg-primary/10 group-hover/sub:bg-primary/20 transition-colors">
@@ -168,7 +180,12 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                               {sub.subcategories.map((subsub) => (
                                 <Link
                                   key={subsub.id}
-                                  href={`/products?mainCategory=${category.slug || category.id}&subCategory=${sub.slug || sub.id}&subSubCategory=${subsub.slug || subsub.id}`}
+                                  href={buildCategoryPath(
+                                    locale,
+                                    category.slug || category.id || '',
+                                    sub.slug || sub.id || '',
+                                    subsub.slug || subsub.id || ''
+                                  )}
                                   className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-secondary hover:text-primary transition-colors group/subsub"
                                 >
                                   <div className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover/subsub:bg-primary" />

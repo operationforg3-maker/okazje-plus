@@ -7,6 +7,7 @@ import { getProductRatings, getProductWithDeals } from '@/lib/data';
 import { getProductWithDealsAdmin } from '@/lib/data-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
 import { generateProductJsonLd, generateBreadcrumbJsonLd, generateFaqJsonLd } from '@/lib/json-ld-generators';
+import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import ProductDetailM6Client from './product-detail-m6-client';
 
 // Force dynamic rendering dla real-time danych
@@ -359,7 +360,20 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const breadcrumbList = generateBreadcrumbJsonLd(
     productName,
     productData.id,
-    (productData as any)?.subCategorySlug || undefined
+    (productData as any)?.mainCategorySlug
+      ? {
+          name:
+            humanizeCategorySlug((productData as any)?.subSubCategorySlug)
+            || humanizeCategorySlug((productData as any)?.subCategorySlug)
+            || humanizeCategorySlug((productData as any)?.mainCategorySlug),
+          path: buildCategoryPath(
+            'pl',
+            (productData as any).mainCategorySlug,
+            (productData as any)?.subCategorySlug,
+            (productData as any)?.subSubCategorySlug
+          ),
+        }
+      : undefined
   );
   const faqJsonLd = generateFaqJsonLd([
     {

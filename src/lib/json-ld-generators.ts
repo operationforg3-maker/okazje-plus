@@ -199,7 +199,7 @@ export function generateProductJsonLd(
 export function generateBreadcrumbJsonLd(
   productName: string,
   productId: string,
-  categoryName?: string,
+  category?: string | { name: string; path: string },
   entityType: 'products' | 'deals' = 'products'
 ) {
   const collectionLabel = entityType === 'products' ? 'Produkty' : 'Okazje';
@@ -221,12 +221,14 @@ export function generateBreadcrumbJsonLd(
     },
   ];
 
-  if (categoryName) {
+  if (category) {
+    const categoryName = typeof category === 'string' ? category : category.name;
+    const categoryPath = typeof category === 'string' ? `${BASE_URL}/pl/categories/${category}` : `${BASE_URL}${category.path}`;
     items.push({
       '@type': 'ListItem',
       position: 3,
       name: categoryName,
-      item: `${BASE_URL}/pl/categories/${categoryName}`,
+      item: categoryPath,
     });
   }
 

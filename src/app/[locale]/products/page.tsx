@@ -49,14 +49,24 @@ interface SavedFilter {
   subcategorySlug?: string;
 }
 
-function ProductsPageContent() {
+export interface ProductsPageContentProps {
+  initialMainCategoryParam?: string | null;
+  initialSubCategoryParam?: string | null;
+  initialSubSubCategoryParam?: string | null;
+}
+
+export function ProductsPageContent({
+  initialMainCategoryParam = null,
+  initialSubCategoryParam = null,
+  initialSubSubCategoryParam = null,
+}: ProductsPageContentProps = {}) {
   const searchParams = useSearchParams();
   const t = useTranslations('products');
   const locale = useLocale();
   const { user } = useAuth();
-  const mainCategoryParam = searchParams.get('mainCategory') || searchParams.get('category');
-  const subCategoryParam = searchParams.get('subCategory') || searchParams.get('subcategory');
-  const subSubCategoryParam = searchParams.get('subSubCategory') || searchParams.get('subsubcategory');
+  const mainCategoryParam = searchParams.get('mainCategory') || searchParams.get('category') || initialMainCategoryParam;
+  const subCategoryParam = searchParams.get('subCategory') || searchParams.get('subcategory') || initialSubCategoryParam;
+  const subSubCategoryParam = searchParams.get('subSubCategory') || searchParams.get('subsubcategory') || initialSubSubCategoryParam;
   const statusParam = searchParams.get('status');
   const [products, setProducts] = useState<ProductCore[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);

@@ -5,6 +5,7 @@ import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
 import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search';
 import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
+import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
 
 // Force dynamic rendering dla real-time danych
@@ -315,7 +316,20 @@ export default async function DealDetailPage({ params }: PageProps) {
   const dealDescription = typeof deal.description === 'string' ? deal.description : deal.description?.pl || '';
   
   const jsonLd = generateDealJsonLd(deal);
-  const breadcrumbList = generateBreadcrumbJsonLd(dealTitle, deal.id, undefined, 'deals');
+  const breadcrumbList = generateBreadcrumbJsonLd(
+    dealTitle,
+    deal.id,
+    deal.mainCategorySlug
+      ? {
+          name:
+            humanizeCategorySlug(deal.subSubCategorySlug)
+            || humanizeCategorySlug(deal.subCategorySlug)
+            || humanizeCategorySlug(deal.mainCategorySlug),
+          path: buildCategoryPath('pl', deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug),
+        }
+      : undefined,
+    'deals'
+  );
   
   return (
     <>

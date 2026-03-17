@@ -4,7 +4,9 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useParams } from 'next/navigation';
 import { withImageProxy } from "@/lib/image-proxy";
+import { buildCategoryPath } from '@/lib/category-routes';
 import {
   NavigationMenuItem,
   NavigationMenuTrigger,
@@ -119,6 +121,8 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
 }
 
 function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) {
+  const params = useParams();
+  const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-2">
@@ -140,7 +144,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
 
       {activeCategory?.heroImage ? (
         <Link
-          href={`/products?mainCategory=${encodeURIComponent(activeCategory.slug ?? activeCategory.id)}`}
+          href={buildCategoryPath(locale, activeCategory.slug ?? activeCategory.id ?? '')}
           className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm"
         >
           <Image
@@ -171,13 +175,13 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
       {activeCategory?.subcategories?.length ? (
         <div className="space-y-6">
           {activeCategory.subcategories.map((subcategory) => {
-            const targetCategory = encodeURIComponent(activeCategory.slug ?? activeCategory.id);
             const subKey = subcategory.slug ?? subcategory.id ?? subcategory.name;
             const rawSub = subcategory.slug ?? subcategory.id;
-            const targetSub = rawSub ? encodeURIComponent(rawSub) : null;
+            const targetCategory = activeCategory.slug ?? activeCategory.id ?? '';
+            const targetSub = rawSub ?? null;
             const href = targetSub
-              ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}`
-              : `/products?mainCategory=${targetCategory}`;
+              ? buildCategoryPath(locale, targetCategory, targetSub)
+              : buildCategoryPath(locale, targetCategory);
             const hasSubSubcategories = subcategory.subcategories && subcategory.subcategories.length > 0;
 
             return (
@@ -212,7 +216,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                     {subcategory.subcategories!.map((subSubcategory) => {
                       const subSubSlug = subSubcategory.slug ?? subSubcategory.id;
                       const subSubHref = subSubSlug && targetSub
-                        ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}&subSubCategory=${encodeURIComponent(subSubSlug)}`
+                        ? buildCategoryPath(locale, targetCategory, targetSub, subSubSlug)
                         : href;
 
                       return (
@@ -282,6 +286,8 @@ function DynamicShowcaseColumn({ activeCategory, smartLoading, smartTopProducts,
 
 export function MegaMenu() {
   const { user, loading: authLoading, logout } = useAuth();
+  const params = useParams();
+  const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
   const [menuState, setMenuState] = React.useState({
     categories: [] as Category[],
     promotedItems: [] as ShowcaseItem[],
@@ -519,7 +525,7 @@ export function MegaMenu() {
 
               {activeCategory?.heroImage ? (
                 <Link
-                  href={`/products?mainCategory=${encodeURIComponent(activeCategory.slug ?? activeCategory.id)}`}
+                  href={buildCategoryPath(locale, activeCategory.slug ?? activeCategory.id ?? '')}
                   className="group relative overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm"
                 >
                   <Image
@@ -550,16 +556,16 @@ export function MegaMenu() {
               {activeCategory?.subcategories?.length ? (
                 <div className="space-y-6">
                   {activeCategory.subcategories.map((subcategory) => {
-                    const targetCategory = encodeURIComponent(activeCategory.slug ?? activeCategory.id);
+                    const targetCategory = activeCategory.slug ?? activeCategory.id ?? '';
                     const subKey = subcategory.slug ?? subcategory.id ?? subcategory.name;
                     const rawSub = subcategory.slug ?? subcategory.id;
-                    const targetSub = rawSub ? encodeURIComponent(rawSub) : null;
+                    const targetSub = rawSub ?? null;
                     
                     // Link do podkategorii - ZAWSZE kierujemy na /products (nie /deals)
                     // Deals nie używają mega menu do nawigacji podkategorii (tylko lewy panel)
                     const href = targetSub
-                      ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}`
-                      : `/products?mainCategory=${targetCategory}`;
+                      ? buildCategoryPath(locale, targetCategory, targetSub)
+                      : buildCategoryPath(locale, targetCategory);
                     
                     // Sprawdź czy ma sub-subkategorie
                     const hasSubSubcategories = subcategory.subcategories && subcategory.subcategories.length > 0;
@@ -654,7 +660,7 @@ export function MegaMenu() {
                             {subcategory.subcategories!.map((subSubcategory) => {
                               const subSubSlug = subSubcategory.slug ?? subSubcategory.id;
                               const subSubHref = subSubSlug && targetSub
-                                ? `/products?mainCategory=${targetCategory}&subCategory=${targetSub}&subSubCategory=${encodeURIComponent(subSubSlug)}`
+                                ? buildCategoryPath(locale, targetCategory, targetSub, subSubSlug)
                                 : href;
                               
                               return (

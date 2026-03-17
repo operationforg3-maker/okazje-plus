@@ -1,5 +1,8 @@
-import { notFound, redirect } from 'next/navigation';
-import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { getCategories } from '@/lib/data';
+import { buildCategoryPath, getCategoryDisplayName, resolveCategoryRoute } from '@/lib/category-routes';
+import { ProductsPageContent } from '../../products/page';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -9,21 +12,43 @@ interface CategoryPageProps {
 }
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const { locale, mainSlug } = await params;
-  
+  const resolvedParams = await params;
+  const categories = await getCategories();
+  const route = resolveCategoryRoute(categories, resolvedParams.mainSlug);
+
+  if (!route) {
+    return {
+      title: 'Kategoria nie znaleziona | Okazje Plus',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const name = getCategoryDisplayName(route.mainCategory.name) || route.mainSlug;
   return {
-    title: `${mainSlug} - Okazje`,
-    description: `Przeglądaj oferty w kategorii ${mainSlug}`,
+    title: `${name} | Produkty | Okazje Plus`,
+    description: `Przeglądaj produkty w kategorii ${name} na Okazje Plus.`,
+    alternates: {
+      canonical: `https://okazjeplus.pl${buildCategoryPath('pl', route.mainSlug)}`,
+    },
+    robots: {
+      index: resolvedParams.locale === 'pl',
+      follow: true,
+    },
   };
 }
 
 /**
  * Category page for main category
- * Redirects to /deals with appropriate query params
+ * Renders the existing products listing with an initial category selection.
  */
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { locale, mainSlug } = await params;
-  
-  // Redirect to deals page with category filters
-  redirect(`/${locale}/deals?mainCategory=${mainSlug}`);
+  const resolvedParams = await params;
+  const categories = await getCategories();
+  const route = resolveCategoryRoute(categories, resolvedParams.mainSlug);
+
+  if (!route) {
+    notFound();
+  }
+
+  return <ProductsPageContent initialMainCategoryParam={route.mainSlug} />;
 }

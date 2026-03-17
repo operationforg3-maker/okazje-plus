@@ -1,5 +1,8 @@
-import { notFound, redirect } from 'next/navigation';
-import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
+import { getCategories } from '@/lib/data';
+import { buildCategoryPath, getCategoryDisplayName, resolveCategoryRoute } from '@/lib/category-routes';
+import { ProductsPageContent } from '../../../products/page';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -10,21 +13,49 @@ interface CategoryPageProps {
 }
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
-  const { locale, mainSlug, subSlug } = await params;
-  
+  const resolvedParams = await params;
+  const categories = await getCategories();
+  const route = resolveCategoryRoute(categories, resolvedParams.mainSlug, resolvedParams.subSlug);
+
+  if (!route) {
+    return {
+      title: 'Podkategoria nie znaleziona | Okazje Plus',
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const mainName = getCategoryDisplayName(route.mainCategory.name) || route.mainSlug;
+  const subName = getCategoryDisplayName(route.subCategory?.name) || route.subSlug || '';
   return {
-    title: `${subSlug} - Okazje`,
-    description: `Przeglądaj oferty w kategorii ${mainSlug}/${subSlug}`,
+    title: `${subName} | ${mainName} | Okazje Plus`,
+    description: `Przeglądaj produkty w podkategorii ${subName} w sekcji ${mainName}.`,
+    alternates: {
+      canonical: `https://okazjeplus.pl${buildCategoryPath('pl', route.mainSlug, route.subSlug)}`,
+    },
+    robots: {
+      index: resolvedParams.locale === 'pl',
+      follow: true,
+    },
   };
 }
 
 /**
  * Category page for 2-level navigation: main/sub
- * Redirects to /deals with appropriate query params
+ * Renders the existing products listing with initial category and subcategory selections.
  */
 export default async function CategoryPage({ params }: CategoryPageProps) {
-  const { locale, mainSlug, subSlug } = await params;
-  
-  // Redirect to deals page with category filters
-  redirect(`/${locale}/deals?mainCategory=${mainSlug}&subCategory=${subSlug}`);
+  const resolvedParams = await params;
+  const categories = await getCategories();
+  const route = resolveCategoryRoute(categories, resolvedParams.mainSlug, resolvedParams.subSlug);
+
+  if (!route) {
+    notFound();
+  }
+
+  return (
+    <ProductsPageContent
+      initialMainCategoryParam={route.mainSlug}
+      initialSubCategoryParam={route.subSlug}
+    />
+  );
 }
