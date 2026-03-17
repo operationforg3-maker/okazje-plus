@@ -56,6 +56,7 @@ const CART_STORAGE_KEY = 'smart_cart_items';
 export function SmartCartProvider({ children }: { children: ReactNode }) {
   const authContext = useAuth();
   const user = authContext?.user || null;
+  const debugCartLogs = process.env.NEXT_PUBLIC_DEBUG === 'true';
   
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,7 +87,11 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
                 const cartData = cartDoc.data();
                 const firestoreItems = (cartData.items || []) as CartItem[];
                 setItems(firestoreItems);
-                logger.info(`Loaded ${firestoreItems.length} items from Firestore cart`);
+                if (firestoreItems.length > 0) {
+                  logger.info(`Loaded ${firestoreItems.length} items from Firestore cart`);
+                } else if (debugCartLogs) {
+                  logger.debug('Loaded 0 items from Firestore cart');
+                }
                 return;
               }
             } catch (firestoreError) {
@@ -99,9 +104,15 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
             if (stored) {
               const parsed = JSON.parse(stored) as CartItem[];
               setItems(parsed);
-              logger.info(`Loaded ${parsed.length} items from localStorage cart`);
+              if (parsed.length > 0) {
+                logger.info(`Loaded ${parsed.length} items from localStorage cart`);
+              } else if (debugCartLogs) {
+                logger.debug('Loaded 0 items from localStorage cart');
+              }
             } else {
-              logger.info('Loaded 0 items from localStorage cart');
+              if (debugCartLogs) {
+                logger.debug('Loaded 0 items from localStorage cart');
+              }
             }
           }
         } catch (error) {
@@ -136,7 +147,11 @@ export function SmartCartProvider({ children }: { children: ReactNode }) {
               items,
               updatedAt: new Date().toISOString(),
             });
-            logger.info(`Saved ${items.length} items to Firestore cart`);
+            if (items.length > 0) {
+              logger.info(`Saved ${items.length} items to Firestore cart`);
+            } else if (debugCartLogs) {
+              logger.debug('Saved 0 items to Firestore cart');
+            }
           } catch (firestoreError) {
             logger.warn('Failed to save to Firestore, localStorage backup exists', { error: firestoreError });
           }

@@ -170,7 +170,14 @@ async function getProductData(id: string) {
 
 // SEO: Generate metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
+  const { id, locale } = await params;
+  // Non-pl locales are duplicate content — mark noindex.
+  if (locale && locale !== 'pl') {
+    return {
+      robots: { index: false, follow: false },
+      alternates: { canonical: `https://okazjeplus.pl/pl/products/${id}` },
+    };
+  }
   const data = await getProductData(id);
   
   if (!data) {

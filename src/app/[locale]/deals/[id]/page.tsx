@@ -187,6 +187,14 @@ async function getDealData(id: string) {
 // SEO: Generate metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
+  // Non-pl locales are duplicate content — mark noindex so Google doesn't spend
+  // crawl budget on them. Canonical always points to /pl/ anyway.
+  if (resolvedParams.locale && resolvedParams.locale !== 'pl') {
+    return {
+      robots: { index: false, follow: false },
+      alternates: { canonical: `https://okazjeplus.pl/pl/deals/${resolvedParams.id}` },
+    };
+  }
   const data = await getDealData(resolvedParams.id);
   
   if (!data) {

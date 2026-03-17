@@ -17,6 +17,7 @@ import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { useCategoryName } from '@/hooks/use-category-name';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import ShareButton from '@/components/share-button';
+import { withImageProxy } from '@/lib/image-proxy';
 
 interface ProductListCardProps {
   product: ProductCore;
@@ -26,6 +27,37 @@ const safeText = (value: unknown): string => {
   if (typeof value === 'string') return value.trim() || '';
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   return '';
+};
+
+const resolveImageCandidate = (value: unknown): string => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = resolveImageCandidate(entry);
+      if (resolved) return resolved;
+    }
+    return '';
+  }
+  if (typeof value === 'object') {
+    return resolveImageCandidate(
+      (value as any).src ||
+      (value as any).url ||
+      (value as any).image ||
+      (value as any).imageUrl
+    );
+  }
+  return '';
+};
+
+const resolveProductImage = (product: ProductCore): string => {
+  const image = resolveImageCandidate(product.images)
+    || resolveImageCandidate((product as any).imageUrl)
+    || resolveImageCandidate((product as any).image)
+    || resolveImageCandidate((product as any).metadata?.imageUrl)
+    || resolveImageCandidate((product as any).metadata?.image);
+
+  return image || '/placeholder.png';
 };
 
 const getRelativeTime = (timestamp: any): string => {
@@ -78,6 +110,8 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     relativeTime: 'niedawno',
     formattedPrice: 'N/A',
   });
+  const primaryImage = resolveProductImage(product);
+  const [imageSrc, setImageSrc] = useState(() => withImageProxy(primaryImage) || '/placeholder.png');
   const [bestDeal, setBestDeal] = useState<any | null>(null);
   const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? product?.bestPrice?.amount ?? null);
   const hasCoupons = Boolean((product as any).hasCoupons || (product as any).metadata?.hasCoupons || (bestDeal && ((bestDeal.dealType === 'coupon') || bestDeal.couponCode)));
@@ -135,6 +169,10 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     });
   }, [product.createdAt, price, bestTotalPrice, product?.bestPrice?.amount, product?.bestPrice?.currency, bestDeal, formatPrice]);
 
+  useEffect(() => {
+    setImageSrc(withImageProxy(primaryImage) || '/placeholder.png');
+  }, [primaryImage]);
+
   // Fetch best deal for this product to get accurate affiliate link and total price
   useEffect(() => {
     let cancelled = false;
@@ -154,11 +192,6 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     return () => { cancelled = true; };
   }, [product.id]);
 
-  // Get primary image from ProductCore gallery
-  const primaryImage = Array.isArray(product.images) && product.images.length > 0
-    ? product.images[0]
-    : '/placeholder.png';
-
   const offerUrl = bestDeal
     ? getExternalUrl(
         bestDeal.affiliateLink,
@@ -175,11 +208,12 @@ export default function ProductListCard({ product }: ProductListCardProps) {
       <Link href={`${prefix}/products/${productId}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
         <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted/50">
           <Image
-            src={primaryImage}
+            src={imageSrc || '/placeholder.png'}
             alt={displayTitle}
             fill
             sizes="(max-width: 640px) 100vw, 160px"
             className="object-contain transition-transform duration-300 group-hover:scale-105"
+            onError={() => setImageSrc('/placeholder.png')}
           />
         </div>
         <div className="absolute left-2 top-2 flex flex-col gap-1">
@@ -364,7 +398,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             addItem({
               id: productId,
               name: getText(product.title) || 'Produkt',
-              image: Array.isArray(product.images) ? product.images[0] : '',
+              image: primaryImage,
               price: { amount: (bestTotalPrice ?? (product.bestPrice?.amount || 0)), currency: 'PLN' } as any,
               bestDealId: bestDeal?.id,
               affiliateUrl: (bestDeal?.affiliateLink || bestDeal?.affiliateUrl || bestDeal?.dealUrl || bestDeal?.sourceUrl || bestDeal?.link),

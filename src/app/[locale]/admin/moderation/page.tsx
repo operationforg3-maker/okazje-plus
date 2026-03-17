@@ -3,6 +3,8 @@
 
 export const dynamic = 'force-dynamic';
 
+const DEBUG_MODERATION_LOGS = process.env.NEXT_PUBLIC_DEBUG === 'true';
+
 import { withAuth } from '@/components/auth/withAuth';
 import { auth } from '@/lib/firebase';
 import { useTranslations } from 'next-intl';
@@ -553,7 +555,9 @@ function ModerationPage() {
   const fetchModerationData = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('[Moderation] Fetching data...')
+      if (DEBUG_MODERATION_LOGS) {
+        console.log('[Moderation] Fetching data...')
+      }
       
       // Pobierz z filtrami statusów - jeśli 'all', przekazujemy undefined aby pobrać wszystko
       const dealStatuses = dealStatusFilter === 'all' 
@@ -568,7 +572,9 @@ function ModerationPage() {
         ? ['pending_approval', 'draft']
         : [productStatusFilter];
       
-      console.log('[Moderation] Deal statuses:', dealStatuses, 'Product statuses:', productStatuses)
+      if (DEBUG_MODERATION_LOGS) {
+        console.log('[Moderation] Deal statuses:', dealStatuses, 'Product statuses:', productStatuses)
+      }
       
       const currentUser = auth.currentUser;
       if (!currentUser) {
@@ -599,7 +605,9 @@ function ModerationPage() {
       let rejected = payload.rejected || [];
       let discarded = payload.discarded || [];
       
-      console.log('[Moderation] Got deals:', deals.length, 'products:', products.length, 'approved:', approved.length, 'rejected:', rejected.length)
+      if (DEBUG_MODERATION_LOGS) {
+        console.log('[Moderation] Got deals:', deals.length, 'products:', products.length, 'approved:', approved.length, 'rejected:', rejected.length)
+      }
       
       // Filtruj po kategoriach jeśli wybrana
       if (selectedMainCategory) {

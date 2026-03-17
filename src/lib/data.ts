@@ -44,6 +44,8 @@ import {
   listForumThreadsData,
   rejectCategorySuggestionData,
 } from '@/lib/data/forum';
+
+const DEBUG_DATA_LOGS = process.env.NEXT_PUBLIC_DEBUG === 'true';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
 const _warnedOnce = new Set<string>();
 function warnOnce(key: string, ...args: any[]) {
@@ -828,13 +830,17 @@ export async function getCategories(): Promise<Category[]> {
   const cacheKey = 'categories:all';
   const cached = await cacheGet(cacheKey);
   if (cached) {
-    console.log('[getCategories] Returning cached categories, count:', Array.isArray(cached) ? cached.length : 0);
+    if (DEBUG_DATA_LOGS) {
+      console.log('[getCategories] Returning cached categories, count:', Array.isArray(cached) ? cached.length : 0);
+    }
     return cached as Category[];
   }
 
   const categoriesRef = collection(db, "categories");
   const snapshot = await getDocs(categoriesRef);
-  console.log('[getCategories] Firestore snapshot loaded, docs count:', snapshot.docs.length);
+  if (DEBUG_DATA_LOGS) {
+    console.log('[getCategories] Firestore snapshot loaded, docs count:', snapshot.docs.length);
+  }
 
   const categories = await Promise.all(
     snapshot.docs.map(async (categoryDoc) => {
@@ -867,7 +873,9 @@ export async function getCategories(): Promise<Category[]> {
             try {
               const subSubRef = collection(db, "categories", categoryDoc.id, "subcategories", subDoc.id, "subcategories");
               const subSubSnap = await getDocs(subSubRef);
-              console.log(`[getCategories] Loaded subsub for ${categoryDoc.id}/${subDoc.id}: ${subSubSnap.docs.length} items`);
+              if (DEBUG_DATA_LOGS) {
+                console.log(`[getCategories] Loaded subsub for ${categoryDoc.id}/${subDoc.id}: ${subSubSnap.docs.length} items`);
+              }
               if (!subSubSnap.empty) {
                 subSubcategories = subSubSnap.docs.map((ssDoc) => {
                   const ssData = ssDoc.data();
@@ -886,7 +894,9 @@ export async function getCategories(): Promise<Category[]> {
               }
             } catch (err) {
               // Jeśli subcollection nie istnieje, zostaw embedded array
-              console.warn(`[getCategories] Failed to load subsub for ${categoryDoc.id}/${subDoc.id}:`, err);
+              if (DEBUG_DATA_LOGS) {
+                console.warn(`[getCategories] Failed to load subsub for ${categoryDoc.id}/${subDoc.id}:`, err);
+              }
             }
 
             return {
@@ -949,7 +959,9 @@ export async function getCategories(): Promise<Category[]> {
   );
 
   const sortedCategories = categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  console.log('[getCategories] Final result, count:', sortedCategories.length, 'with subcategories count:', sortedCategories.reduce((sum, c) => sum + (c.subcategories?.length || 0), 0));
+  if (DEBUG_DATA_LOGS) {
+    console.log('[getCategories] Final result, count:', sortedCategories.length, 'with subcategories count:', sortedCategories.reduce((sum, c) => sum + (c.subcategories?.length || 0), 0));
+  }
   
   // Cache the result for 1 hour (3600 seconds)
   await cacheSet(cacheKey, sortedCategories, 3600);

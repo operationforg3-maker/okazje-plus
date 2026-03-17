@@ -73,15 +73,15 @@ export async function generateMetadata({
       apple: '/icon_okazjeplus.png',
     },
     robots: {
-      index: true,
+      index: finalLocale === 'pl',
       follow: true,
     },
     alternates: {
       canonical,
+      // Only declare x-default; individual language alternates are omitted
+      // because non-pl locales serve duplicate Polish content — exposing them
+      // as hreflang targets causes Google to crawl & duplicate-flag those pages.
       languages: {
-        pl: `${SITE_URL}/pl/`,
-        en: `${SITE_URL}/en/`,
-        de: `${SITE_URL}/de/`,
         'x-default': `${SITE_URL}/pl/`,
       },
       types: {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireModerator } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
+import { sanitizeDealRecord, sanitizeProductCoreRecord } from '@/lib/sanitizers';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,12 @@ const toMillis = (value: any): number => {
   if (value.toDate) return value.toDate().getTime();
   return 0;
 };
+
+const toSanitizedDeal = (doc: FirebaseFirestore.QueryDocumentSnapshot) =>
+  sanitizeDealRecord(doc.data(), doc.id);
+
+const toSanitizedProductCore = (doc: FirebaseFirestore.QueryDocumentSnapshot) =>
+  sanitizeProductCoreRecord(doc.data(), doc.id);
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,7 +49,7 @@ export async function GET(request: NextRequest) {
     );
 
     const deals = dealQueries
-      .flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id })))
+      .flatMap((snap) => snap.docs.map(toSanitizedDeal))
       .sort((a, b) => toMillis(b.postedAt || b.createdAt) - toMillis(a.postedAt || a.createdAt))
       .slice(0, limit);
 
@@ -57,7 +64,7 @@ export async function GET(request: NextRequest) {
     );
 
     const products = productQueries
-      .flatMap(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id })))
+      .flatMap((snap) => snap.docs.map(toSanitizedProductCore))
       .filter((item: any) => !(item?.metadata?.offerOnly))
       .sort((a, b) => toMillis(b.metadata?.importedAt || b.createdAt) - toMillis(a.metadata?.importedAt || a.createdAt))
       .slice(0, limit);
@@ -80,7 +87,13 @@ export async function GET(request: NextRequest) {
 
       const mapRecent = (snap: FirebaseFirestore.QuerySnapshot, type: 'deal' | 'product') =>
         snap.docs
-          .map(doc => ({ ...doc.data(), id: doc.id, type } as any))
+          .map((doc) => {
+            const item = type === 'deal'
+              ? toSanitizedDeal(doc as FirebaseFirestore.QueryDocumentSnapshot)
+              : toSanitizedProductCore(doc as FirebaseFirestore.QueryDocumentSnapshot);
+
+            return { ...item, type } as any;
+          })
           .filter((item: any) => {
             const updatedAt = item.updatedAt?.toDate?.() || (item.updatedAt ? new Date(item.updatedAt) : new Date(0));
             return updatedAt.getTime() >= cutoffMs;

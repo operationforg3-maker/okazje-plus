@@ -8,5 +8,13 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
 
+# Non-Polish locales serve duplicate content with canonical pointing to /pl/
+# Blocking here prevents wasted crawl budget on 5xx and alternative pages
+Disallow: /en/
+Disallow: /de/
+Disallow: /fr/
+Disallow: /es/
+Disallow: /uk/
+
 # Sitemap
 Sitemap: https://okazjeplus.pl/sitemap.xml
