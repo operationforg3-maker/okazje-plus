@@ -15,7 +15,9 @@ const typesenseAdminClient =
     : null;
 
 if (!typesenseAdminClient) {
-  console.warn('Typesense admin client not initialized. Set TYPESENSE_HOST and TYPESENSE_ADMIN_API_KEY.');
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('Typesense admin client not initialized. Set TYPESENSE_HOST and TYPESENSE_ADMIN_API_KEY.');
+  }
 }
 
 export default typesenseAdminClient;

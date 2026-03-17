@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getRecommendedProductCores, getProductCoresByCategory, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductCoresByFilters } from '@/lib/data';
 import { getDealByIdTypesense, searchProductsTypesense } from '@/lib/search';
 import { ProductCardBoundary } from '@/components/product-card-boundary';
@@ -31,6 +31,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
+import { buildCategoryPath } from '@/lib/category-routes';
 
 const toSearchableText = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -49,17 +50,23 @@ interface SavedFilter {
   subcategorySlug?: string;
 }
 
+const EMPTY_CATEGORIES: Category[] = [];
+
 export interface ProductsPageContentProps {
   initialMainCategoryParam?: string | null;
   initialSubCategoryParam?: string | null;
   initialSubSubCategoryParam?: string | null;
+  initialCategories?: Category[];
 }
 
 export function ProductsPageContent({
   initialMainCategoryParam = null,
   initialSubCategoryParam = null,
   initialSubSubCategoryParam = null,
+  initialCategories = EMPTY_CATEGORIES,
 }: ProductsPageContentProps = {}) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const t = useTranslations('products');
   const locale = useLocale();
@@ -69,7 +76,7 @@ export function ProductsPageContent({
   const subSubCategoryParam = searchParams.get('subSubCategory') || searchParams.get('subsubcategory') || initialSubSubCategoryParam;
   const statusParam = searchParams.get('status');
   const [products, setProducts] = useState<ProductCore[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() => initialCategories);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [selectedSubSubcategory, setSelectedSubSubcategory] = useState<string | null>(null);
@@ -96,41 +103,54 @@ export function ProductsPageContent({
   const selectedMainCategorySlug = selectedCategory?.slug || selectedCategory?.id;
   const autoStatusSwitchPerformed = useRef(false);
 
-  // Wczytaj kategorie i ustaw z URL
+  const buildProductsBrowsePath = (
+    mainSlug?: string | null,
+    subSlug?: string | null,
+    subSubSlug?: string | null
+  ) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    ['mainCategory', 'category', 'subCategory', 'subcategory', 'subSubCategory', 'subsubcategory'].forEach((key) => {
+      params.delete(key);
+    });
+
+    if (productStatusView === 'waiting_room') {
+      params.set('status', 'waiting_room');
+    } else {
+      params.delete('status');
+    }
+
+    const basePath = mainSlug
+      ? buildCategoryPath(locale, mainSlug, subSlug || undefined, subSubSlug || undefined)
+      : `/${locale}/products`;
+    const queryString = params.toString();
+
+    return queryString ? `${basePath}?${queryString}` : basePath;
+  };
+
+  const navigateToCategory = (
+    mainSlug?: string | null,
+    subSlug?: string | null,
+    subSubSlug?: string | null
+  ) => {
+    setIsMobileSidebarOpen(false);
+    router.push(buildProductsBrowsePath(mainSlug, subSlug, subSubSlug));
+  };
+
+  // Wczytaj dane pomocnicze strony.
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
       try {
+        const shouldFetchCategories = initialCategories.length === 0;
         const [fetchedCategories, showcaseConfig] = await Promise.all([
-          getCategoriesWithContent('products'),
+          shouldFetchCategories ? getCategoriesWithContent('products') : Promise.resolve(initialCategories),
           getNavigationShowcase(),
         ]);
-        
-        setCategories(fetchedCategories);
-        
-        // Sprawdź parametry URL
-        if (mainCategoryParam && fetchedCategories.length > 0) {
-          const foundCategory = fetchedCategories.find(c => c.id === mainCategoryParam || c.slug === mainCategoryParam);
-          if (foundCategory) {
-            setSelectedCategory(foundCategory);
-            if (subSubCategoryParam) {
-              const parentSub = foundCategory.subcategories?.find((s) =>
-                s.subcategories?.some((ss) => ss.slug === subSubCategoryParam || ss.id === subSubCategoryParam)
-              );
-              const matchingSubSub = parentSub?.subcategories?.find((ss) => ss.slug === subSubCategoryParam || ss.id === subSubCategoryParam);
-              if (parentSub && matchingSubSub) {
-                setSelectedSubcategory(parentSub.slug || parentSub.id);
-                setSelectedSubSubcategory(matchingSubSub.slug || matchingSubSub.id || subSubCategoryParam);
-              }
-            } else if (subCategoryParam) {
-              const matchedSub = foundCategory.subcategories?.find((s) => s.slug === subCategoryParam || s.id === subCategoryParam);
-              setSelectedSubcategory((matchedSub?.slug || matchedSub?.id || subCategoryParam) as string);
-              setSelectedSubSubcategory(null);
-            }
-          }
-          // Jeśli nie znaleziono kategorii z URL, pozostaw null (wszystkie produkty)
+
+        if (shouldFetchCategories) {
+          setCategories(fetchedCategories);
         }
-        // Jeśli brak parametrów URL, pozostaw null (wszystkie produkty)
 
         // Pobierz deal of the day
         if (showcaseConfig?.dealOfTheDayId) {
@@ -144,7 +164,52 @@ export function ProductsPageContent({
       }
     }
     fetchData();
-  }, [mainCategoryParam, subCategoryParam, subSubCategoryParam]);
+  }, [initialCategories]);
+
+  useEffect(() => {
+    if (categories.length === 0) {
+      setSelectedCategory(null);
+      setSelectedSubcategory(null);
+      setSelectedSubSubcategory(null);
+      return;
+    }
+
+    const foundCategory = mainCategoryParam
+      ? categories.find((category) => category.id === mainCategoryParam || category.slug === mainCategoryParam) || null
+      : null;
+
+    let nextSubcategory: string | null = null;
+    let nextSubSubcategory: string | null = null;
+
+    if (foundCategory) {
+      if (subSubCategoryParam) {
+        const parentSub = foundCategory.subcategories?.find((subcategory) =>
+          subcategory.subcategories?.some(
+            (subSubcategory) => subSubcategory.slug === subSubCategoryParam || subSubcategory.id === subSubCategoryParam
+          )
+        );
+        const matchingSubSub = parentSub?.subcategories?.find(
+          (subSubcategory) => subSubcategory.slug === subSubCategoryParam || subSubcategory.id === subSubCategoryParam
+        );
+
+        if (parentSub && matchingSubSub) {
+          nextSubcategory = parentSub.slug || parentSub.id || null;
+          nextSubSubcategory = matchingSubSub.slug || matchingSubSub.id || subSubCategoryParam;
+        }
+      }
+
+      if (!nextSubcategory && subCategoryParam) {
+        const matchedSub = foundCategory.subcategories?.find(
+          (subcategory) => subcategory.slug === subCategoryParam || subcategory.id === subCategoryParam
+        );
+        nextSubcategory = matchedSub?.slug || matchedSub?.id || subCategoryParam;
+      }
+    }
+
+    setSelectedCategory((prev) => (prev?.id === foundCategory?.id ? prev : foundCategory));
+    setSelectedSubcategory((prev) => (prev === nextSubcategory ? prev : nextSubcategory));
+    setSelectedSubSubcategory((prev) => (prev === nextSubSubcategory ? prev : nextSubSubcategory));
+  }, [categories, mainCategoryParam, subCategoryParam, subSubCategoryParam]);
 
   useEffect(() => {
     const nextStatus: ProductStatusView = searchParams.get('status') === 'waiting_room'
@@ -156,10 +221,19 @@ export function ProductsPageContent({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(searchParams.toString());
-    params.set('status', productStatusView);
-    const nextUrl = `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState(null, '', nextUrl);
-  }, [productStatusView, searchParams]);
+    if (productStatusView === 'waiting_room') {
+      params.set('status', 'waiting_room');
+    } else {
+      params.delete('status');
+    }
+    const queryString = params.toString();
+    const nextUrl = queryString ? `${pathname}?${queryString}` : pathname;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+
+    if (nextUrl !== currentUrl) {
+      window.history.replaceState(null, '', nextUrl);
+    }
+  }, [pathname, productStatusView, searchParams]);
 
   useEffect(() => {
     try {
@@ -382,10 +456,13 @@ export function ProductsPageContent({
   const loadSavedFilter = (filter: SavedFilter) => {
     setSortBy(filter.sortBy);
     setUnifiedFilters(filter.filters || {});
-    
+
+    let nextMainCategorySlug: string | null = null;
+
     if (filter.categoryId) {
       const cat = categories.find(c => c.id === filter.categoryId || c.slug === filter.categoryId);
       if (cat) {
+        nextMainCategorySlug = cat.slug || cat.id;
         setSelectedCategory(cat);
       }
     }
@@ -395,6 +472,12 @@ export function ProductsPageContent({
     } else {
       setSelectedSubcategory(null);
       setSelectedSubSubcategory(null);
+    }
+
+    if (nextMainCategorySlug) {
+      navigateToCategory(nextMainCategorySlug, filter.subcategorySlug || null, null);
+    } else {
+      navigateToCategory(null);
     }
     
     toast.success(`Załadowano filtr: ${filter.name}`);
@@ -511,10 +594,7 @@ export function ProductsPageContent({
           <button
             ref={allCategoriesButtonRef}
             onClick={() => {
-              setSelectedCategory(null);
-              setSelectedSubcategory(null);
-              setSelectedSubSubcategory(null);
-              setIsMobileSidebarOpen(false);
+              navigateToCategory(null);
             }}
             className={cn(
               "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
@@ -541,10 +621,7 @@ export function ProductsPageContent({
                   if (el) categoryButtonRefs.current[category.id] = el;
                 }}
                 onClick={() => {
-                  setSelectedCategory(category);
-                  setSelectedSubcategory(null);
-                  setSelectedSubSubcategory(null);
-                  setIsMobileSidebarOpen(false);
+                  navigateToCategory(category.slug || category.id);
                 }}
                 className={cn(
                   "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
@@ -575,8 +652,11 @@ export function ProductsPageContent({
                           }}
                           onClick={() => {
                             const willSelect = selectedSubcategory !== subSlug;
-                            setSelectedSubcategory(willSelect ? subSlug : null);
-                            setSelectedSubSubcategory(null);
+                            navigateToCategory(
+                              category.slug || category.id,
+                              willSelect ? subSlug : null,
+                              null
+                            );
                           }}
                           className={cn(
                             "w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 transition-colors",
@@ -610,10 +690,7 @@ export function ProductsPageContent({
                                     if (el) subSubcategoryButtonRefs.current[subSubSlug] = el;
                                   }}
                                   onClick={() => {
-                                    setSelectedCategory(category);
-                                    setSelectedSubcategory(subSlug);
-                                    setSelectedSubSubcategory(subSubSlug);
-                                    setIsMobileSidebarOpen(false);
+                                    navigateToCategory(category.slug || category.id, subSlug, subSubSlug);
                                   }}
                                   className={cn(
                                     "w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 transition-colors",

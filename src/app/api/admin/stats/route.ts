@@ -3,6 +3,8 @@ import { adminDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { requireAdmin } from '@/lib/auth-server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   // Ensure only admins can access — separate try for auth
   let session;

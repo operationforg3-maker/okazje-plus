@@ -3,8 +3,11 @@ import Script from 'next/script';
 import './globals.css';
 import { cn } from '@/lib/utils';
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
+
 export const metadata: Metadata = {
   title: 'Okazje+',
+  metadataBase: new URL(SITE_URL),
 };
 
 export default function RootLayout({

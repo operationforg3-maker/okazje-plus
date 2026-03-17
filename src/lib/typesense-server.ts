@@ -16,9 +16,11 @@ const typesenseServerClient =
     : null;
 
 if (!typesenseServerClient) {
-  console.warn(
-    'Server Typesense client not initialized. Set TYPESENSE_HOST and TYPESENSE_SEARCH_ONLY_API_KEY in server env.'
-  );
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      'Server Typesense client not initialized. Set TYPESENSE_HOST and TYPESENSE_SEARCH_ONLY_API_KEY in server env.'
+    );
+  }
 }
 
 export default typesenseServerClient;

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getCategories } from '@/lib/data';
-import { buildCategoryPath, getCategoryDisplayName, resolveCategoryRoute } from '@/lib/category-routes';
+import { buildCategoryPath, getCategoryDisplayName } from '@/lib/category-routes';
+import { getResolvedProductCategoryRoute } from '@/lib/category-page-data';
 import { ProductsPageContent } from '../../../../products/page';
 
 interface CategoryPageProps {
@@ -15,8 +15,11 @@ interface CategoryPageProps {
 
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const resolvedParams = await params;
-  const categories = await getCategories();
-  const route = resolveCategoryRoute(categories, resolvedParams.mainSlug, resolvedParams.subSlug, resolvedParams.subSubSlug);
+  const { route } = await getResolvedProductCategoryRoute(
+    resolvedParams.mainSlug,
+    resolvedParams.subSlug,
+    resolvedParams.subSubSlug
+  );
 
   if (!route) {
     return {
@@ -47,8 +50,11 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
  */
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const resolvedParams = await params;
-  const categories = await getCategories();
-  const route = resolveCategoryRoute(categories, resolvedParams.mainSlug, resolvedParams.subSlug, resolvedParams.subSubSlug);
+  const { categories, route } = await getResolvedProductCategoryRoute(
+    resolvedParams.mainSlug,
+    resolvedParams.subSlug,
+    resolvedParams.subSubSlug
+  );
 
   if (!route) {
     notFound();
@@ -59,6 +65,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
       initialMainCategoryParam={route.mainSlug}
       initialSubCategoryParam={route.subSlug}
       initialSubSubCategoryParam={route.subSubSlug}
+      initialCategories={categories}
     />
   );
 }

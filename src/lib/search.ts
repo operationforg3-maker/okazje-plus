@@ -4,6 +4,12 @@ import { collection, doc, documentId, getDoc, getDocs, query, where } from 'fire
 import { db } from '@/lib/firebase';
 
 const DEAL_IMAGE_FALLBACK = '/icon_okazjeplus.svg';
+const MAX_TYPESENSE_PAGE_SIZE = 250;
+
+const clampTypesensePageSize = (value?: number, fallback = 50): number => {
+  const raw = typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : fallback;
+  return Math.min(MAX_TYPESENSE_PAGE_SIZE, Math.max(1, raw));
+};
 
 function resolveImageCandidate(value: unknown): string | null {
   if (!value) return null;
@@ -117,6 +123,7 @@ export async function searchProductsTypesense(
     limit = 50,
     statusFilter = 'approved',
   } = opts;
+  const safeLimit = clampTypesensePageSize(limit, 50);
 
   // If running in browser, prefer server-side API (centralized caching / rate-limiting)
   if (typeof window !== 'undefined') {
@@ -124,7 +131,7 @@ export async function searchProductsTypesense(
       const params = new URLSearchParams();
       params.set('q', q);
       params.set('type', 'products');
-      params.set('limit', String(limit));
+      params.set('limit', String(safeLimit));
       if (mainCategorySlug) params.set('mainCategorySlug', String(mainCategorySlug));
       if (subCategorySlug) params.set('subCategorySlug', String(subCategorySlug));
       if (subSubCategorySlug) params.set('subSubCategorySlug', String(subSubCategorySlug));
@@ -191,7 +198,7 @@ export async function searchProductsTypesense(
         query_by: 'name,description',
         filter_by: filters.join(' && '),
         sort_by,
-        per_page: limit,
+        per_page: safeLimit,
       }, {});
 
     // M6: Typesense index contains ProductCore documents, return with id field
@@ -230,6 +237,7 @@ export async function searchDealsTypesense(
     limit = 50,
     statusFilter = 'approved',
   } = opts;
+  const safeLimit = clampTypesensePageSize(limit, 50);
   const query = q.trim().length > 0 ? q : '*';
   
   // If running in browser, prefer server-side API (centralized caching / rate-limiting)
@@ -238,7 +246,7 @@ export async function searchDealsTypesense(
       const params = new URLSearchParams();
       params.set('q', query);
       params.set('type', 'deals');
-      params.set('limit', String(limit));
+      params.set('limit', String(safeLimit));
       if (mainCategorySlug) params.set('mainCategorySlug', String(mainCategorySlug));
       if (subCategorySlug) params.set('subCategorySlug', String(subCategorySlug));
       if (subSubCategorySlug) params.set('subSubCategorySlug', String(subSubCategorySlug));
@@ -308,7 +316,7 @@ export async function searchDealsTypesense(
       query_by: 'title,description,postedBy',
       filter_by: filters.join(' && '),
       sort_by,
-      per_page: limit,
+      per_page: safeLimit,
     }, {});
     const hits = (res.hits || []).map((h: any) => ({ id: h.document.id, ...h.document })) as Deal[];
 
@@ -373,12 +381,14 @@ function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestio
 }
 
 export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
+  const safeLimit = clampTypesensePageSize(limit, 5);
+
   // If running in browser, always use server-side autocomplete endpoint
   if (typeof window !== 'undefined') {
     try {
       const params = new URLSearchParams();
       params.set('q', q);
-      params.set('limit', String(limit));
+      params.set('limit', String(safeLimit));
       const res = await fetch(`/api/search/autocomplete?${params.toString()}`);
       if (!res.ok) return [];
       return (await res.json()) as Suggestion[];
@@ -396,8 +406,8 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
 
   try {
     const searches = [
-      { collection: 'products', q, query_by: 'name,description', per_page: limit, highlight_full_fields: 'name', prefix: true },
-      { collection: 'deals', q, query_by: 'title,description', per_page: limit, highlight_full_fields: 'title', prefix: true },
+      { collection: 'products', q, query_by: 'name,description', per_page: safeLimit, highlight_full_fields: 'name', prefix: true },
+      { collection: 'deals', q, query_by: 'title,description', per_page: safeLimit, highlight_full_fields: 'title', prefix: true },
     ];
     const searchRequest = {
       searches: [

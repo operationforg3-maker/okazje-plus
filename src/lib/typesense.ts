@@ -18,9 +18,11 @@ const typesenseClient =
     : null;
 
 if (!typesenseClient) {
-  console.warn(
-    'Typesense client not initialized. Search functionality will be disabled. Make sure to set NEXT_PUBLIC_TYPESENSE_* environment variables.'
-  );
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(
+      'Typesense client not initialized. Search functionality will be disabled. Make sure to set NEXT_PUBLIC_TYPESENSE_* environment variables.'
+    );
+  }
 }
 
 export default typesenseClient;
