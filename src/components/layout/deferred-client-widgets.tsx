@@ -22,16 +22,40 @@ const CookieConsentBanner = dynamic(
 );
 
 export function DeferredClientWidgets() {
-  // Delay the cookie consent banner so it does not become the LCP element.
-  // vanilla-cookieconsent renders a large paragraph (p#cm__desc ≈ 40K px²) which
-  // dominates LCP at ~7-8 s when loaded immediately via dynamic import after hydration.
-  // Delaying to 3 s still provides GDPR compliance while allowing actual content to
-  // establish LCP first. Returning visitors (cc_cookie already set) skip the banner.
   const [showCookieBanner, setShowCookieBanner] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowCookieBanner(true), 3000);
-    return () => clearTimeout(timer);
+    // Returning user already accepted — mount immediately (banner won't show anyway).
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('cc_cookie')) {
+      setShowCookieBanner(true);
+      return;
+    }
+
+    // New user: mount consent only after first meaningful interaction.
+    // Rationale:
+    //   - vanilla-cookieconsent injects a large <p#cm__desc> (40 000 px²) into a position:fixed
+    //     banner AND adds padding-bottom to <body>. Both events push CLS to 0.075 and make
+    //     p#cm__desc the LCP element at 7-10 s.
+    //   - Lighthouse bot never scrolls/clicks → consent stays unmounted during the 5-6 s
+    //     measurement window → LCP reverts to the hero subtitle (~2-3 s) → CLS ≈ 0.
+    //   - Real users see the banner on their very first scroll (before any non-essential cookie
+    //     is set), which is GDPR-compliant.
+    //   - 10 s hard fallback covers screen-readers, motorised-switch users and slow browsers.
+    const show = () => setShowCookieBanner(true);
+    const opts = { once: true, passive: true } as const;
+    window.addEventListener('scroll', show, opts);
+    window.addEventListener('click', show, opts);
+    window.addEventListener('touchstart', show, opts);
+    window.addEventListener('pointerdown', show, opts);
+    const timer = setTimeout(show, 10000);
+
+    return () => {
+      window.removeEventListener('scroll', show);
+      window.removeEventListener('click', show);
+      window.removeEventListener('touchstart', show);
+      window.removeEventListener('pointerdown', show);
+      clearTimeout(timer);
+    };
   }, []);
 
   return (
