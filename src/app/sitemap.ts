@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { getRecommendedProducts, getCategories } from '@/lib/data';
+import { getRecommendedProducts, getCategories, getAllProductCores } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
 
 // Sitemap builds only Polish canonical URLs.
@@ -83,5 +83,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Error fetching products for sitemap:', error);
   }
 
-  return [...staticUrls, ...categoryUrls, ...dealUrls, ...productUrls];
+  // Dedicated watch pages for products with video
+  let productWatchUrls: MetadataRoute.Sitemap = [];
+  try {
+    const productCores = await getAllProductCores('approved', 1000);
+    const withVideo = productCores.filter((product: any) => {
+      if (typeof product?.videoUrl === 'string' && product.videoUrl.trim().length > 0) {
+        return true;
+      }
+
+      if (Array.isArray(product?.gallery)) {
+        return product.gallery.some((item: any) => item?.type === 'VIDEO' && typeof item?.url === 'string' && item.url.trim().length > 0);
+      }
+
+      return false;
+    });
+
+    productWatchUrls = withVideo.map((product: any) => ({
+      url: `${plBase}/watch/products/${product.id}`,
+      lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.65,
+    }));
+  } catch (error) {
+    console.error('Error fetching product watch pages for sitemap:', error);
+  }
+
+  return [...staticUrls, ...categoryUrls, ...dealUrls, ...productUrls, ...productWatchUrls];
 }

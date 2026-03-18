@@ -467,3 +467,39 @@ export function generateOrganizationJsonLd() {
     },
   };
 }
+
+/**
+ * Generate VideoObject schema for dedicated watch pages.
+ */
+export function generateVideoObjectJsonLd(input: {
+  id: string;
+  name: string;
+  description: string;
+  thumbnailUrl: string;
+  contentUrl: string;
+  watchPath: string;
+  uploadDate: string;
+}) {
+  const safeUploadDate = input.uploadDate || new Date().toISOString();
+  const watchUrl = `${BASE_URL}${input.watchPath}`;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'VideoObject',
+    '@id': `${watchUrl}#video`,
+    name: input.name,
+    description: input.description,
+    thumbnailUrl: [input.thumbnailUrl],
+    uploadDate: safeUploadDate,
+    contentUrl: input.contentUrl,
+    url: watchUrl,
+    publisher: {
+      '@type': 'Organization',
+      name: 'Okazje+',
+      logo: {
+        '@type': 'ImageObject',
+        url: `${BASE_URL}/Logotyp_okazjePlus.png`,
+      },
+    },
+  };
+}

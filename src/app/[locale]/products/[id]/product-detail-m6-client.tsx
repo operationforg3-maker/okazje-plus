@@ -24,6 +24,7 @@ import {
   ShoppingCart,
   MessageSquare,
   Scale,
+  Play,
 } from 'lucide-react';
 import { PriceComparisonTable } from '@/components/price-comparison-table';
 import { ProductPriceHistoryChart } from '@/components/product-price-history-chart';
@@ -75,6 +76,13 @@ export default function ProductDetailM6Client({
   const mainCategorySlug = isM6 ? productCore?.mainCategorySlug : product?.mainCategorySlug;
   const subCategorySlug = isM6 ? productCore?.subCategorySlug : product?.subCategorySlug;
   const subSubCategorySlug = isM6 ? productCore?.subSubCategorySlug : product?.subSubCategorySlug;
+  const hasVideo = Boolean(
+    (productData as any)?.videoUrl
+    || (productData as any)?.productVideoUrl
+    || (productData as any)?.product_video_url
+    || (Array.isArray((productData as any)?.gallery)
+      && (productData as any).gallery.some((item: any) => item?.type === 'VIDEO' && item?.url))
+  );
   
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(productId, 'product');
 
@@ -280,6 +288,16 @@ export default function ProductDetailM6Client({
                 {avgRating.toFixed(1)} ({ratingCount} {ratingCount === 1 ? 'ocena' : 'ocen'})
               </span>
             </div>
+
+            {hasVideo && (
+              <Link
+                href={`/${locale}/watch/products/${productId}`}
+                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+              >
+                <Play className="w-4 h-4" />
+                Obejrzyj wideo produktu
+              </Link>
+            )}
           </div>
 
           {/* Best Price Card */}
