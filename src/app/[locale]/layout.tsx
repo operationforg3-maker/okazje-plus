@@ -17,6 +17,9 @@ const LOCALE_CONFIG: Record<string, { path: string; ogLocale: string }> = {
   pl: { path: '/pl/', ogLocale: 'pl_PL' },
   en: { path: '/en/', ogLocale: 'en_US' },
   de: { path: '/de/', ogLocale: 'de_DE' },
+  fr: { path: '/fr/', ogLocale: 'fr_FR' },
+  es: { path: '/es/', ogLocale: 'es_ES' },
+  uk: { path: '/uk/', ogLocale: 'uk_UA' },
 };
 
 export async function generateMetadata({
@@ -28,6 +31,10 @@ export async function generateMetadata({
   const finalLocale = locale || 'pl';
   const config = LOCALE_CONFIG[finalLocale] ?? LOCALE_CONFIG.pl;
   const canonical = `${SITE_URL}${config.path}`;
+  const languageAlternates = Object.entries(LOCALE_CONFIG).reduce<Record<string, string>>((acc, [key, value]) => {
+    acc[key] = `${SITE_URL}${value.path}`;
+    return acc;
+  }, {});
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -73,15 +80,13 @@ export async function generateMetadata({
       apple: '/icon_okazjeplus.png',
     },
     robots: {
-      index: finalLocale === 'pl',
+      index: true,
       follow: true,
     },
     alternates: {
       canonical,
-      // Only declare x-default; individual language alternates are omitted
-      // because non-pl locales serve duplicate Polish content — exposing them
-      // as hreflang targets causes Google to crawl & duplicate-flag those pages.
       languages: {
+        ...languageAlternates,
         'x-default': `${SITE_URL}/pl/`,
       },
       types: {

@@ -8,12 +8,17 @@ export const revalidate = 300; // Cache for 5 minutes
 
 const PUBLIC_STATS_CACHE_KEY = 'public:stats:v3';
 const PUBLIC_STATS_TTL_SECONDS = 300;
+const PUBLIC_CACHE_CONTROL = 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600';
 
 export async function GET() {
   try {
     const cached = await cacheGet(PUBLIC_STATS_CACHE_KEY);
     if (cached) {
-      return NextResponse.json(cached);
+      return NextResponse.json(cached, {
+        headers: {
+          'Cache-Control': PUBLIC_CACHE_CONTROL,
+        },
+      });
     }
 
     // final.md: public offer reads should use Typesense (not Firestore).
@@ -37,7 +42,11 @@ export async function GET() {
       };
 
       await cacheSet(PUBLIC_STATS_CACHE_KEY, payload, PUBLIC_STATS_TTL_SECONDS);
-      return NextResponse.json(payload);
+      return NextResponse.json(payload, {
+        headers: {
+          'Cache-Control': PUBLIC_CACHE_CONTROL,
+        },
+      });
     }
 
     const [approvedDeals, approvedProductCores, pendingProductCores, usersTotal] = await Promise.all([
@@ -84,7 +93,11 @@ export async function GET() {
     };
 
     await cacheSet(PUBLIC_STATS_CACHE_KEY, payload, PUBLIC_STATS_TTL_SECONDS);
-    return NextResponse.json(payload);
+    return NextResponse.json(payload, {
+      headers: {
+        'Cache-Control': PUBLIC_CACHE_CONTROL,
+      },
+    });
   } catch (error) {
     console.error('[Public Stats API] Error:', error);
     return NextResponse.json({
@@ -94,6 +107,11 @@ export async function GET() {
       usersCount: 0,
       totalSavings: 0,
       error: 'Failed to fetch stats',
-    }, { status: 500 });
+    }, {
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
   }
 }

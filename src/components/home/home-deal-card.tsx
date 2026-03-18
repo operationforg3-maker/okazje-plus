@@ -74,11 +74,11 @@ export default function HomeDealCard({ deal, priority = false }: HomeDealCardPro
             src={withImageProxy(image)}
             alt={title}
             fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+            sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, (max-width: 1536px) 30vw, 320px"
             className="object-cover"
             priority={priority}
             loading={priority ? 'eager' : 'lazy'}
-            quality={70}
+            quality={65}
           />
           <div className="absolute left-3 top-3 flex gap-2">
             {temperature !== null && (

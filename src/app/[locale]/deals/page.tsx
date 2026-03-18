@@ -837,7 +837,7 @@ export default function DealsPage() {
         onTouchEnd={(event) => handleSwipeEnd(deal.id, event.changedTouches[0]?.clientX ?? 0)}
       >
         <div className={cardClass}>
-          <DealListCard deal={deal} />
+          <DealListCard deal={deal} priority={index === 0} />
         </div>
       </div>
     );
@@ -1334,14 +1334,14 @@ export default function DealsPage() {
                         </div>
                       ) : (
                         <div className={listWrapperClass}>
-                          {displayedDeals.map((deal) => (
+                          {displayedDeals.map((deal, index) => (
                             <div
                               key={deal.id}
                               className={cardWrapperClass}
                               onTouchStart={(event) => handleSwipeStart(deal.id, event.changedTouches[0]?.clientX ?? 0)}
                               onTouchEnd={(event) => handleSwipeEnd(deal.id, event.changedTouches[0]?.clientX ?? 0)}
                             >
-                              <DealListCard deal={deal} />
+                              <DealListCard deal={deal} priority={index === 0} />
                             </div>
                           ))}
                         </div>

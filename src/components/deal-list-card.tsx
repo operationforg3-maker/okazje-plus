@@ -21,6 +21,7 @@ import { getExternalUrl } from '@/lib/external-url';
 
 interface DealListCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
+  priority?: boolean;
 }
 
 const safeText = (value: unknown, fallback = ''): string => {
@@ -167,7 +168,7 @@ function getRelativeTime(when: any): string {
   return `${Math.floor(diffDays / 30)} mies. temu`;
 }
 
-export default function DealListCard({ deal }: DealListCardProps) {
+export default function DealListCard({ deal, priority = false }: DealListCardProps) {
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
@@ -305,8 +306,10 @@ export default function DealListCard({ deal }: DealListCardProps) {
             alt={dealTitle || 'Okazja'}
             data-ai-hint={safeText(deal.imageHint)}
             fill
-            priority
+            priority={priority}
+            loading={priority ? 'eager' : 'lazy'}
             sizes="160px"
+            quality={65}
             className="object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </div>

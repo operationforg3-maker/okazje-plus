@@ -1,5 +1,6 @@
 import type {NextConfig} from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { headers as getHeaders } from './next.config.headers.mjs';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 
@@ -92,6 +93,8 @@ const nextConfig: NextConfig = {
   },
   // Compress text for better performance
   compress: true,
+  // Apply HTTP caching/security headers used by Firebase App Hosting CDN.
+  headers: getHeaders,
   // Generate strict source maps only in dev
   productionBrowserSourceMaps: false,
 };

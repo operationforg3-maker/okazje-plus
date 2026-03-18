@@ -459,8 +459,8 @@ function ProfilePage() {
                         Okazje ({favoriteDeals.length})
                       </h3>
                       <div className="space-y-4">
-                        {favoriteDeals.map((deal) => (
-                          <DealListCard key={deal.id} deal={deal} />
+                        {favoriteDeals.map((deal, index) => (
+                          <DealListCard key={deal.id} deal={deal} priority={index === 0} />
                         ))}
                       </div>
                     </div>

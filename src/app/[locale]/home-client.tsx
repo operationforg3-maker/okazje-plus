@@ -3,6 +3,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,51 @@ interface Props {
 
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
   const t = useTranslations('home');
+  const categorySectionRef = useRef<HTMLElement | null>(null);
+  const secondarySectionRef = useRef<HTMLDivElement | null>(null);
+  const [showStats, setShowStats] = useState(false);
+  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
+  const [showSecondarySections, setShowSecondarySections] = useState(false);
+
+  useEffect(() => {
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const enableStats = () => setShowStats(true);
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as Window & { requestIdleCallback: (cb: IdleRequestCallback) => number }).requestIdleCallback(() => enableStats());
+    } else {
+      fallbackTimer = setTimeout(enableStats, 700);
+    }
+
+    return () => {
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const categoryNode = categorySectionRef.current;
+    const secondaryNode = secondarySectionRef.current;
+    if (!categoryNode && !secondaryNode) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          if (entry.target === categoryNode) setShowCategoryGrid(true);
+          if (entry.target === secondaryNode) setShowSecondarySections(true);
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+
+    if (categoryNode) observer.observe(categoryNode);
+    if (secondaryNode) observer.observe(secondaryNode);
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,14 +151,18 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
             {/* Quick Stats - Real time from database */}
             <div className="max-w-3xl mx-auto">
-              <RealTimeStats />
+              {showStats ? <RealTimeStats /> : <div className="h-[160px]" aria-hidden="true" />}
             </div>
           </div>
         </div>
       </section>
 
       {/* CATEGORIES SHOWCASE - Mega Menu with Images */}
-      <section className="py-16 bg-background">
+      <section
+        ref={categorySectionRef}
+        className="py-16 bg-background"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 500px' }}
+      >
         <div className="page-container">
           <div className="text-center mb-12">
             <h2 className="font-headline text-4xl md:text-5xl font-bold mb-4">
@@ -123,7 +173,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {categories.length > 0 ? (
             <div className="space-y-8">
-              <CategoryGrid categories={categories} />
+              {showCategoryGrid ? (
+                <CategoryGrid categories={categories} />
+              ) : (
+                <div className="min-h-[360px]" aria-hidden="true" />
+              )}
             </div>
           ) : (
             <Card className="p-12 text-center">
@@ -137,7 +191,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* HOT DEALS SECTION */}
-      <section className="py-16">
+      <section className="py-16" style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}>
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -159,8 +213,8 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {initialHotDeals.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {initialHotDeals.slice(0, 8).map((deal, idx) => (
-                <HomeDealCard key={deal.id} deal={deal} priority={idx < 4} />
+              {initialHotDeals.slice(0, 6).map((deal, idx) => (
+                <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
               ))}
             </div>
           ) : (
@@ -175,7 +229,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* TOP PRODUCTS SECTION */}
-      <section className="py-16 bg-card/50">
+      <section className="py-16 bg-card/50" style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}>
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -197,7 +251,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {initialTopProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {initialTopProducts.slice(0, 8).map((product) => (
+              {initialTopProducts.slice(0, 6).map((product) => (
                 <HomeProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -212,7 +266,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
         </div>
       </section>
 
-      <HomeSecondarySections />
+      <div ref={secondarySectionRef} style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 1000px' }}>
+        {showSecondarySections ? <HomeSecondarySections /> : <div className="min-h-[1000px]" aria-hidden="true" />}
+      </div>
     </div>
   );
 }

@@ -6,11 +6,20 @@
 export const headers = async () => {
   return [
     {
+      source: '/api/public/:path*',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600',
+        },
+      ],
+    },
+    {
       source: '/api/:path*',
       headers: [
         {
           key: 'Cache-Control',
-          value: 'public, max-age=0, must-revalidate',
+          value: 'private, no-store, max-age=0, must-revalidate',
         },
       ],
     },
@@ -25,6 +34,15 @@ export const headers = async () => {
     },
     {
       source: '/_next/static/:path*',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable',
+        },
+      ],
+    },
+    {
+      source: '/_next/image',
       headers: [
         {
           key: 'Cache-Control',
