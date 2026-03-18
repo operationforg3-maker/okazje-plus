@@ -297,19 +297,22 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
     (Array.isArray(deal?.linkedProductIds) && typeof deal.linkedProductIds[0] === 'string' ? deal.linkedProductIds[0] : '');
   const productPageUrl = linkedProductId ? `${prefix}/products/${linkedProductId}` : null;
 
+  // Generate responsive image URL with size params for proxy optimization
+  const imageUrl = `/api/image-proxy?url=${encodeURIComponent(dealImage)}&w=320&h=240&q=55&f=auto`;
+
   return (
     <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
       <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
         <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted/50">
           <Image
-            src={withImageProxy(dealImage)}
+            src={imageUrl}
             alt={dealTitle || 'Okazja'}
             data-ai-hint={safeText(deal.imageHint)}
             fill
             priority={priority}
             loading={priority ? 'eager' : 'lazy'}
             sizes="160px"
-            quality={65}
+            quality={55}
             className="object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </div>

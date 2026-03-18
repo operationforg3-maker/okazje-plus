@@ -48,6 +48,8 @@ export default function HomeProductCard({ product }: HomeProductCardProps) {
   const title = getLocalizedText(product?.title || product?.name, 'Produkt');
   const href = `/products/${product?.slug || product?.id}`;
   const image = getProductImage(product);
+  // Generate responsive image URL with size params for proxy optimization
+  const imageUrl = `/api/image-proxy?url=${encodeURIComponent(image)}&w=600&h=450&q=60&f=auto`;
   const price = formatPrice((product as any)?.bestPrice ?? product?.price, product?.currency || 'PLN');
   const rating = typeof product?.rating === 'number'
     ? product.rating
@@ -60,13 +62,13 @@ export default function HomeProductCard({ product }: HomeProductCardProps) {
       <Card className="h-full overflow-hidden border-border/60 transition-[box-shadow,border-color,transform] duration-300 hover:-translate-y-1 hover:shadow-lg">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <Image
-            src={withImageProxy(image)}
+            src={imageUrl}
             alt={title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
             className="object-cover"
             loading="lazy"
-            quality={70}
+            quality={60}
           />
         </div>
 

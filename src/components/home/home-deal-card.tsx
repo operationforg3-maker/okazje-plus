@@ -58,6 +58,8 @@ function formatPrice(value: any, fallbackCurrency = 'PLN'): string | null {
 export default function HomeDealCard({ deal, priority = false }: HomeDealCardProps) {
   const title = getLocalizedText(deal?.title, 'Oferta');
   const image = getDealImage(deal);
+  // Generate responsive image URL with size params for proxy optimization
+  const imageUrl = `/api/image-proxy?url=${encodeURIComponent(image)}&w=600&h=450&q=60&f=auto`;
   const href = `/deals/${deal?.id}`;
   const source = getLocalizedText(deal?.merchant || deal?.metadata?.merchant || deal?.source, 'Oferta');
   const price = formatPrice(deal?.price ?? deal?.legacyPrice, deal?.currency || 'PLN');
@@ -71,14 +73,14 @@ export default function HomeDealCard({ deal, priority = false }: HomeDealCardPro
       <Card className="h-full overflow-hidden border-border/60 transition-[box-shadow,border-color,transform] duration-300 hover:-translate-y-1 hover:shadow-lg">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <Image
-            src={withImageProxy(image)}
+            src={imageUrl}
             alt={title}
             fill
             sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, (max-width: 1536px) 30vw, 320px"
             className="object-cover"
             priority={priority}
             loading={priority ? 'eager' : 'lazy'}
-            quality={65}
+            quality={60}
           />
           <div className="absolute left-3 top-3 flex gap-2">
             {temperature !== null && (
