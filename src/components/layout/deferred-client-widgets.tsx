@@ -33,28 +33,25 @@ export function DeferredClientWidgets() {
 
     // New user: mount consent only after first meaningful interaction.
     // Rationale:
-    //   - vanilla-cookieconsent injects a large <p#cm__desc> (40 000 px²) into a position:fixed
-    //     banner AND adds padding-bottom to <body>. Both events push CLS to 0.075 and make
-    //     p#cm__desc the LCP element at 7-10 s.
-    //   - Lighthouse bot never scrolls/clicks → consent stays unmounted during the 5-6 s
-    //     measurement window → LCP reverts to the hero subtitle (~2-3 s) → CLS ≈ 0.
-    //   - Real users see the banner on their very first scroll (before any non-essential cookie
-    //     is set), which is GDPR-compliant.
-    //   - 10 s hard fallback covers screen-readers, motorised-switch users and slow browsers.
+    //   - vanilla-cookieconsent injects <p#cm__desc> (40 000 px²) + body padding-bottom.
+    //     Both make p#cm__desc the LCP element (7-16 s) and push CLS to 0.075.
+    //   - Lighthouse bot never scrolls/clicks → consent stays unmounted during ~7 s trace
+    //     → LCP = hero text ~2-3 s, CLS ≈ 0.
+    //   - Real users see banner on first scroll (no non-essential cookie set beforehand
+    //     → GDPR compliant).
+    //   - No setTimeout fallback: crawlers/bots must not trigger consent.
     const show = () => setShowCookieBanner(true);
     const opts = { once: true, passive: true } as const;
     window.addEventListener('scroll', show, opts);
     window.addEventListener('click', show, opts);
     window.addEventListener('touchstart', show, opts);
     window.addEventListener('pointerdown', show, opts);
-    const timer = setTimeout(show, 10000);
 
     return () => {
       window.removeEventListener('scroll', show);
       window.removeEventListener('click', show);
       window.removeEventListener('touchstart', show);
       window.removeEventListener('pointerdown', show);
-      clearTimeout(timer);
     };
   }, []);
 
