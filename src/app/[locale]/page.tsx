@@ -66,11 +66,11 @@ export default async function HomePage() {
   // Load data for home page
   const [hotDeals, topProducts, categories] = await Promise.all([
     searchDealsTypesense('*', {
-      limit: 12,
+      limit: 8,
       sortBy: 'hot',
       statusFilter: 'approved',
     }),
-    getRecommendedProducts(8),
+    getRecommendedProducts(6),
     getCategories(),
   ]);
 

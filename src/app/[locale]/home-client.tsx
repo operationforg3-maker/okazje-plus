@@ -49,10 +49,36 @@ interface Props {
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
   const t = useTranslations('home');
   const categorySectionRef = useRef<HTMLElement | null>(null);
+  const hotDealsSectionRef = useRef<HTMLElement | null>(null);
+  const topProductsSectionRef = useRef<HTMLElement | null>(null);
   const secondarySectionRef = useRef<HTMLDivElement | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showCategoryGrid, setShowCategoryGrid] = useState(false);
+  const [showHotDealsCards, setShowHotDealsCards] = useState(false);
+  const [showTopProductsCards, setShowTopProductsCards] = useState(false);
   const [showSecondarySections, setShowSecondarySections] = useState(false);
+
+  const visibleHotDeals = initialHotDeals.slice(0, 4);
+  const visibleTopProducts = initialTopProducts.slice(0, 4);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let rafId: number | null = null;
+
+    const revealSearch = () => setShowSearch(true);
+
+    if (typeof window !== 'undefined') {
+      rafId = window.requestAnimationFrame(() => {
+        timer = setTimeout(revealSearch, 350);
+      });
+    }
+
+    return () => {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
@@ -74,21 +100,27 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
     if (typeof window === 'undefined') return;
 
     const categoryNode = categorySectionRef.current;
+    const hotDealsNode = hotDealsSectionRef.current;
+    const topProductsNode = topProductsSectionRef.current;
     const secondaryNode = secondarySectionRef.current;
-    if (!categoryNode && !secondaryNode) return;
+    if (!categoryNode && !hotDealsNode && !topProductsNode && !secondaryNode) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
           if (entry.target === categoryNode) setShowCategoryGrid(true);
+          if (entry.target === hotDealsNode) setShowHotDealsCards(true);
+          if (entry.target === topProductsNode) setShowTopProductsCards(true);
           if (entry.target === secondaryNode) setShowSecondarySections(true);
         }
       },
-      { rootMargin: '300px 0px' }
+      { rootMargin: '80px 0px' }
     );
 
     if (categoryNode) observer.observe(categoryNode);
+    if (hotDealsNode) observer.observe(hotDealsNode);
+    if (topProductsNode) observer.observe(topProductsNode);
     if (secondaryNode) observer.observe(secondaryNode);
 
     return () => observer.disconnect();
@@ -122,7 +154,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto">
-              <AutocompleteSearch className="rounded-full border-2 focus-within:border-primary shadow-lg bg-background px-2 py-1" />
+              {showSearch ? (
+                <AutocompleteSearch className="rounded-full border-2 focus-within:border-primary shadow-lg bg-background px-2 py-1" />
+              ) : (
+                <div className="h-12 rounded-full border-2 bg-background/80" aria-hidden="true" />
+              )}
             </div>
 
             {/* Primary CTAs - Browse Categories + Add Deal */}
@@ -191,7 +227,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* HOT DEALS SECTION */}
-      <section className="py-16" style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}>
+      <section
+        ref={hotDealsSectionRef}
+        className="py-16"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}
+      >
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -211,11 +251,15 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </Button>
           </div>
 
-          {initialHotDeals.length > 0 ? (
+          {visibleHotDeals.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {initialHotDeals.slice(0, 6).map((deal, idx) => (
-                <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
-              ))}
+              {showHotDealsCards ? (
+                visibleHotDeals.map((deal, idx) => (
+                  <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
+                ))
+              ) : (
+                <div className="col-span-full min-h-[560px]" aria-hidden="true" />
+              )}
             </div>
           ) : (
             <Card className="p-12 text-center">
@@ -229,7 +273,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* TOP PRODUCTS SECTION */}
-      <section className="py-16 bg-card/50" style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}>
+      <section
+        ref={topProductsSectionRef}
+        className="py-16 bg-card/50"
+        style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}
+      >
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -249,11 +297,15 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </Button>
           </div>
 
-          {initialTopProducts.length > 0 ? (
+          {visibleTopProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {initialTopProducts.slice(0, 6).map((product) => (
-                <HomeProductCard key={product.id} product={product} />
-              ))}
+              {showTopProductsCards ? (
+                visibleTopProducts.map((product) => (
+                  <HomeProductCard key={product.id} product={product} />
+                ))
+              ) : (
+                <div className="col-span-full min-h-[560px]" aria-hidden="true" />
+              )}
             </div>
           ) : (
             <Card className="p-12 text-center">
