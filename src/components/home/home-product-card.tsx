@@ -66,7 +66,7 @@ export default function HomeProductCard({ product }: HomeProductCardProps) {
             alt={title}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
-            className="object-cover"
+            className="object-cover h-full w-full"
             loading="lazy"
             quality={60}
           />
