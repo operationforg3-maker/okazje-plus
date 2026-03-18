@@ -49,14 +49,10 @@ interface Props {
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
   const t = useTranslations('home');
   const categorySectionRef = useRef<HTMLElement | null>(null);
-  const hotDealsSectionRef = useRef<HTMLElement | null>(null);
-  const topProductsSectionRef = useRef<HTMLElement | null>(null);
   const secondarySectionRef = useRef<HTMLDivElement | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showCategoryGrid, setShowCategoryGrid] = useState(false);
-  const [showHotDealsCards, setShowHotDealsCards] = useState(false);
-  const [showTopProductsCards, setShowTopProductsCards] = useState(false);
   const [showSecondarySections, setShowSecondarySections] = useState(false);
 
   const visibleHotDeals = initialHotDeals.slice(0, 4);
@@ -100,18 +96,14 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
     if (typeof window === 'undefined') return;
 
     const categoryNode = categorySectionRef.current;
-    const hotDealsNode = hotDealsSectionRef.current;
-    const topProductsNode = topProductsSectionRef.current;
     const secondaryNode = secondarySectionRef.current;
-    if (!categoryNode && !hotDealsNode && !topProductsNode && !secondaryNode) return;
+    if (!categoryNode && !secondaryNode) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
           if (entry.target === categoryNode) setShowCategoryGrid(true);
-          if (entry.target === hotDealsNode) setShowHotDealsCards(true);
-          if (entry.target === topProductsNode) setShowTopProductsCards(true);
           if (entry.target === secondaryNode) setShowSecondarySections(true);
         }
       },
@@ -119,8 +111,6 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
     );
 
     if (categoryNode) observer.observe(categoryNode);
-    if (hotDealsNode) observer.observe(hotDealsNode);
-    if (topProductsNode) observer.observe(topProductsNode);
     if (secondaryNode) observer.observe(secondaryNode);
 
     return () => observer.disconnect();
@@ -227,11 +217,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* HOT DEALS SECTION */}
-      <section
-        ref={hotDealsSectionRef}
-        className="py-16"
-        style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}
-      >
+      <section className="py-16">
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -253,13 +239,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {visibleHotDeals.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {showHotDealsCards ? (
-                visibleHotDeals.map((deal, idx) => (
-                  <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
-                ))
-              ) : (
-                <div className="col-span-full min-h-[560px]" aria-hidden="true" />
-              )}
+              {visibleHotDeals.map((deal, idx) => (
+                <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
+              ))}
             </div>
           ) : (
             <Card className="p-12 text-center">
@@ -273,11 +255,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* TOP PRODUCTS SECTION */}
-      <section
-        ref={topProductsSectionRef}
-        className="py-16 bg-card/50"
-        style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 700px' }}
-      >
+      <section className="py-16 bg-card/50">
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -299,13 +277,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {visibleTopProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {showTopProductsCards ? (
-                visibleTopProducts.map((product) => (
-                  <HomeProductCard key={product.id} product={product} />
-                ))
-              ) : (
-                <div className="col-span-full min-h-[560px]" aria-hidden="true" />
-              )}
+              {visibleTopProducts.map((product) => (
+                <HomeProductCard key={product.id} product={product} />
+              ))}
             </div>
           ) : (
             <Card className="p-12 text-center">

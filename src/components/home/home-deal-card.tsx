@@ -58,10 +58,9 @@ function formatPrice(value: any, fallbackCurrency = 'PLN'): string | null {
 export default function HomeDealCard({ deal, priority = false }: HomeDealCardProps) {
   const title = getLocalizedText(deal?.title, 'Oferta');
   const image = getDealImage(deal);
-  // For priority (LCP) images, use original URL for speed; others use resized from imgproxy
-  const imageUrl = priority 
-    ? withImageProxy(image)  // LCP: fetch original fast
-    : `/api/image-proxy?url=${encodeURIComponent(image)}&w=600&h=450&q=60&f=auto`;  // Below-fold: resize for size
+  // Both paths go through image proxy for security; Next.js <Image> handles WebP conversion and caching.
+  // withImageProxy routes allowed CDN hostnames through /api/image-proxy (same origin → no CORS, proper cache headers).
+  const imageUrl = withImageProxy(image);
   const href = `/deals/${deal?.id}`;
   const source = getLocalizedText(deal?.merchant || deal?.metadata?.merchant || deal?.source, 'Oferta');
   const price = formatPrice(deal?.price ?? deal?.legacyPrice, deal?.currency || 'PLN');
