@@ -75,7 +75,7 @@ async function generateRssFeed() {
   <channel>
     <title>Okazje+ - Najlepsze Okazje i Produkty</title>
     <link>${baseUrl}</link>
-    <description>Najnowsze okazje zakupowe, promocje i wyprzedaże w Polsce. Odkryj najlepsze ceny produktów i gorące oferty polecane przez społeczność Okazje+.</description>
+    <description>Najnowsze okazje zakupowe, promocje i wyprzedaże w internecie. Odkryj najlepsze ceny produktów i gorące oferty polecane przez społeczność Okazje+.</description>
     <language>pl</language>
     <lastBuildDate>${formatDate(new Date())}</lastBuildDate>
     <atom:link href="${baseUrl}/rss.xml" rel="self" type="application/rss+xml"/>

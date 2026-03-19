@@ -22,6 +22,43 @@ const LOCALE_CONFIG: Record<string, { path: string; ogLocale: string }> = {
   uk: { path: '/uk/', ogLocale: 'uk_UA' },
 };
 
+const SEO_BY_LOCALE: Record<string, {
+  title: string;
+  description: string;
+  keywords: string[];
+}> = {
+  pl: {
+    title: 'Okazje+ - Najlepsze okazje zakupowe w internecie',
+    description: 'Odkrywaj najlepsze okazje, promocje i wyprzedaże w internecie. Społeczność Okazje+ codziennie publikuje sprawdzone oferty i oszczędności.',
+    keywords: ['okazje', 'promocje', 'wyprzedaże', 'zakupy online', 'rabaty', 'kupony', 'najlepsze ceny'],
+  },
+  en: {
+    title: 'Okazje+ - Best online shopping deals',
+    description: 'Discover the best online deals, promotions and discounts. The Okazje+ community shares verified offers and smart savings every day.',
+    keywords: ['deals', 'promotions', 'discounts', 'online shopping', 'coupons', 'best prices', 'hot deals'],
+  },
+  de: {
+    title: 'Okazje+ - Die besten Online-Angebote',
+    description: 'Entdecke die besten Online-Angebote, Rabatte und Aktionen. Die Okazje+ Community teilt täglich geprüfte Deals und echte Sparmöglichkeiten.',
+    keywords: ['angebote', 'rabatte', 'aktionen', 'online shopping', 'gutscheine', 'beste preise', 'deals'],
+  },
+  fr: {
+    title: 'Okazje+ - Les meilleures offres en ligne',
+    description: 'Découvrez les meilleures offres, promotions et réductions en ligne. La communauté Okazje+ partage chaque jour des bons plans vérifiés.',
+    keywords: ['offres', 'promotions', 'réductions', 'achats en ligne', 'codes promo', 'meilleurs prix', 'bons plans'],
+  },
+  es: {
+    title: 'Okazje+ - Las mejores ofertas en internet',
+    description: 'Descubre las mejores ofertas, promociones y descuentos en internet. La comunidad Okazje+ comparte oportunidades verificadas cada día.',
+    keywords: ['ofertas', 'promociones', 'descuentos', 'compras online', 'cupones', 'mejores precios', 'chollos'],
+  },
+  uk: {
+    title: 'Okazje+ - Найкращі онлайн-пропозиції',
+    description: 'Відкривайте найкращі онлайн-акції, знижки та розпродажі. Спільнота Okazje+ щодня ділиться перевіреними вигідними пропозиціями.',
+    keywords: ['акції', 'знижки', 'розпродаж', 'онлайн покупки', 'купони', 'кращі ціни', 'вигідні пропозиції'],
+  },
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -30,6 +67,7 @@ export async function generateMetadata({
   const { locale } = await params;
   const finalLocale = locale || 'pl';
   const config = LOCALE_CONFIG[finalLocale] ?? LOCALE_CONFIG.pl;
+  const seo = SEO_BY_LOCALE[finalLocale] ?? SEO_BY_LOCALE.pl;
   const canonical = `${SITE_URL}${config.path}`;
   const languageAlternates = Object.entries(LOCALE_CONFIG).reduce<Record<string, string>>((acc, [key, value]) => {
     acc[key] = `${SITE_URL}${value.path}`;
@@ -39,11 +77,11 @@ export async function generateMetadata({
   return {
     metadataBase: new URL(SITE_URL),
     title: {
-      default: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
+      default: seo.title,
       template: '%s | Okazje+'
     },
-    description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
-    keywords: ['okazje', 'promocje', 'wyprzedaże', 'zakupy online', 'najlepsze ceny', 'rabaty', 'kupony'],
+    description: seo.description,
+    keywords: seo.keywords,
     authors: [{ name: 'Okazje+' }],
     creator: 'Okazje+',
     verification: {
@@ -58,8 +96,8 @@ export async function generateMetadata({
       locale: config.ogLocale,
       url: canonical,
       siteName: 'Okazje+',
-      title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
-      description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże. Społeczność Okazje+ dzieli się najgorętszymi ofertami i cenami produktów.',
+      title: seo.title,
+      description: seo.description,
       images: [
         {
           url: '/Logotyp_okazjePlus.png',
@@ -71,8 +109,8 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Okazje+ - Najlepsze okazje zakupowe w Polsce',
-      description: 'Odkryj najlepsze okazje zakupowe, promocje i wyprzedaże',
+      title: seo.title,
+      description: seo.description,
       images: ['/Logotyp_okazjePlus.png'],
     },
     icons: {

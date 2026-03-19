@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';
 
-export const alt = 'Okazje+ - Najlepsze okazje zakupowe w Polsce';
+export const alt = 'Okazje+ - Najlepsze okazje zakupowe w internecie';
 export const size = {
   width: 1200,
   height: 630,
@@ -44,7 +44,7 @@ export default async function Image() {
             color: 'rgba(255, 255, 255, 0.9)',
           }}
         >
-          Najlepsze okazje zakupowe w Polsce
+          Najlepsze okazje zakupowe w internecie
         </div>
       </div>
     ),
