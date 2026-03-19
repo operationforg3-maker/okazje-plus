@@ -4,10 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { getRecommendedProductCores, getProductCoresByCategory, getCategories, getCategoriesWithContent, getNavigationShowcase, getProductCoresByFilters } from '@/lib/data';
-import { getDealByIdTypesense, searchProductsTypesense } from '@/lib/search';
-import { ProductCardBoundary } from '@/components/product-card-boundary';
-import ProductListCard from '@/components/product-list-card';
+import { searchProductsTypesense } from '@/lib/search';
 import ProductCard from '@/components/product-card';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { Input } from '@/components/ui/input';
@@ -17,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, Truck, Tag, Calendar, Save, Bookmark } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, Truck, Save, Bookmark } from 'lucide-react';
 import { Category, ProductCore, Deal } from '@/lib/types';
 import { useCurrency } from '@/lib/unified-currency';
 import Link from 'next/link';
@@ -38,6 +35,29 @@ const toSearchableText = (value: unknown): string => {
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   return '';
 };
+
+async function fetchProductsQuery(
+  filters: Record<string, any>,
+  sortBy: string,
+  limitCount: number
+): Promise<ProductCore[]> {
+  const response = await fetch('/api/public/products/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filters,
+      sortBy,
+      limit: limitCount,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Products query failed: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return Array.isArray(payload?.products) ? payload.products : [];
+}
 
 type SortOption = 'recommended' | 'newest' | 'rating' | 'price_asc' | 'price_desc' | 'hot' | 'discount_desc';
 type ProductStatusView = 'approved' | 'waiting_room';
@@ -142,20 +162,19 @@ export function ProductsPageContent({
     async function fetchData() {
       setIsLoading(true);
       try {
-        const shouldFetchCategories = initialCategories.length === 0;
-        const [fetchedCategories, showcaseConfig] = await Promise.all([
-          shouldFetchCategories ? getCategoriesWithContent('products') : Promise.resolve(initialCategories),
-          getNavigationShowcase(),
-        ]);
+        const shouldFetchBootstrap = initialCategories.length === 0;
 
-        if (shouldFetchCategories) {
-          setCategories(fetchedCategories);
-        }
+        if (shouldFetchBootstrap) {
+          const response = await fetch('/api/public/products/bootstrap', { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`Bootstrap failed: ${response.status}`);
+          }
 
-        // Pobierz deal of the day
-        if (showcaseConfig?.dealOfTheDayId) {
-          const deal = await getDealByIdTypesense(showcaseConfig.dealOfTheDayId);
-          setDealOfTheDay(deal);
+          const payload = await response.json();
+          setCategories(Array.isArray(payload?.categories) ? payload.categories : []);
+          setDealOfTheDay(payload?.dealOfTheDay || null);
+        } else {
+          setCategories(initialCategories);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -257,6 +276,14 @@ export function ProductsPageContent({
     async function fetchProducts() {
       setIsLoading(true);
       try {
+        const baseFilters = {
+          ...unifiedFilters,
+          categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
+          subCategorySlug: selectedSubcategory || undefined,
+          subSubCategorySlug: selectedSubSubcategory || undefined,
+          statusFilter: productStatusView,
+        };
+
         const q = searchTerm.trim();
         if (q.length > 1) {
           if (productStatusView === 'approved') {
@@ -273,37 +300,33 @@ export function ProductsPageContent({
                 setProducts(results || []);
               } else {
                 // Fallback when Typesense index is stale or incomplete.
-                const fallbackProducts = await getProductCoresByFilters({
-                  categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
-                  subCategorySlug: selectedSubcategory || undefined,
-                  subSubCategorySlug: selectedSubSubcategory || undefined,
-                  searchTerm: q,
-                  statusFilter: productStatusView,
-                }, sortBy, 100);
+                const fallbackProducts = await fetchProductsQuery(
+                  {
+                    ...baseFilters,
+                    searchTerm: q,
+                  },
+                  sortBy,
+                  60
+                );
                 setProducts(fallbackProducts || []);
               }
             }
           } else {
             // Dla poczekalni używamy Firestore, aby uwzględnić pending_approval
-            const waitingProducts = await getProductCoresByFilters({
-              categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
-              subCategorySlug: selectedSubcategory || undefined,
-              subSubCategorySlug: selectedSubSubcategory || undefined,
-              searchTerm: q,
-              statusFilter: 'waiting_room',
-            }, sortBy, 100);
+            const waitingProducts = await fetchProductsQuery(
+              {
+                ...baseFilters,
+                searchTerm: q,
+                statusFilter: 'waiting_room',
+              },
+              sortBy,
+              60
+            );
             if (!cancelled) setProducts(waitingProducts || []);
           }
         } else {
           // Użyj zunifiowanych filtrów do pobierania ProductCore
-          const filterConfig = {
-            ...unifiedFilters,
-            categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
-            subCategorySlug: selectedSubcategory || undefined,
-            subSubCategorySlug: selectedSubSubcategory || undefined,
-            statusFilter: productStatusView,
-          };
-          const filteredProducts = await getProductCoresByFilters(filterConfig, sortBy, 100);
+          const filteredProducts = await fetchProductsQuery(baseFilters, sortBy, 60);
           if (!cancelled) {
             // When the selected status has no results, switch once to the opposite status.
             if (
@@ -312,18 +335,22 @@ export function ProductsPageContent({
               searchTerm.trim().length === 0
             ) {
               const alternateStatus: ProductStatusView = productStatusView === 'approved' ? 'waiting_room' : 'approved';
-              const alternateProducts = await getProductCoresByFilters({
-                ...filterConfig,
-                statusFilter: alternateStatus,
-              }, sortBy, 20);
+              const alternateProducts = await fetchProductsQuery(
+                {
+                  ...baseFilters,
+                  statusFilter: alternateStatus,
+                },
+                sortBy,
+                20
+              );
 
               if ((alternateProducts?.length || 0) > 0) {
                 autoStatusSwitchPerformed.current = true;
                 setProductStatusView(alternateStatus);
                 toast.info(
                   alternateStatus === 'waiting_room'
-                    ? 'Brak zatwierdzonych produktów. Przełączono na poczekalnię.'
-                    : 'Brak produktów w poczekalni. Przełączono na zatwierdzone.'
+                    ? t('statusView.autoSwitchToWaitingRoom')
+                    : t('statusView.autoSwitchToApproved')
                 );
                 return;
               }
@@ -426,11 +453,11 @@ export function ProductsPageContent({
   // Functions for saved filters
   const saveCurrentFilter = async () => {
     if (!user?.uid) {
-      toast.error('Zaloguj się, aby zapisać filtry');
+      toast.error(t('filters.authRequiredToSave'));
       return;
     }
 
-    const filterName = prompt('Podaj nazwę dla tego zestawu filtrów:');
+    const filterName = prompt(t('filters.promptFilterName'));
     if (!filterName) return;
 
     const newFilter: SavedFilter = {
@@ -446,10 +473,10 @@ export function ProductsPageContent({
       const docRef = doc(db, 'users', user.uid, 'preferences', 'productFilters');
       await setDoc(docRef, { filters: updatedFilters });
       setSavedFilters(updatedFilters);
-      toast.success(`Filtr "${filterName}" został zapisany!`);
+      toast.success(t('filters.savedSuccess', { name: filterName }));
     } catch (error) {
       console.error('Error saving filter:', error);
-      toast.error('Nie udało się zapisać filtra');
+      toast.error(t('filters.saveError'));
     }
   };
 
@@ -480,7 +507,7 @@ export function ProductsPageContent({
       navigateToCategory(null);
     }
     
-    toast.success(`Załadowano filtr: ${filter.name}`);
+    toast.success(t('filters.loadedSuccess', { name: filter.name }));
   };
 
   const deleteSavedFilter = async (filterName: string) => {
@@ -491,10 +518,10 @@ export function ProductsPageContent({
       const docRef = doc(db, 'users', user.uid, 'preferences', 'productFilters');
       await setDoc(docRef, { filters: updatedFilters });
       setSavedFilters(updatedFilters);
-      toast.success('Filtr został usunięty');
+      toast.success(t('filters.deletedSuccess'));
     } catch (error) {
       console.error('Error deleting filter:', error);
-      toast.error('Nie udało się usunąć filtra');
+      toast.error(t('filters.deleteError'));
     }
   };
 
@@ -674,7 +701,7 @@ export function ProductsPageContent({
                             )} />
                           )}
                           {sub.highlight && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0">Nowość</Badge>
+                            <Badge variant="secondary" className="text-[10px] px-1 py-0">{t('card.new')}</Badge>
                           )}
                         </button>
 
@@ -724,7 +751,7 @@ export function ProductsPageContent({
       <div className="border-b bg-muted/30">
         <div className="page-container py-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Link href="/" className="hover:text-primary transition-colors">
+            <Link href={`/${locale}`} className="hover:text-primary transition-colors">
               {t('breadcrumbs.home')}
             </Link>
             <ChevronRight className="h-4 w-4" />
@@ -852,11 +879,11 @@ export function ProductsPageContent({
                     <Select value={productStatusView} onValueChange={(value: ProductStatusView) => setProductStatusView(value)}>
                       <SelectTrigger className="w-[220px] h-10">
                         <Clock className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder="Widoczność" />
+                        <SelectValue placeholder={t('statusView.visibilityPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="approved">Widok: Zatwierdzone</SelectItem>
-                        <SelectItem value="waiting_room">Widok: Poczekalnia</SelectItem>
+                        <SelectItem value="approved">{t('statusView.approvedView')}</SelectItem>
+                        <SelectItem value="waiting_room">{t('statusView.waitingRoomView')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -996,7 +1023,7 @@ export function ProductsPageContent({
                       <div className={listWrapperClass}>
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
-                            <ProductCard product={product as any} viewMode="list" />
+                            <ProductCard product={product as any} viewMode="list" fetchBestDeal={false} />
                           </div>
                         ))}
                       </div>
@@ -1004,7 +1031,7 @@ export function ProductsPageContent({
                       <div className={gridWrapperClass}>
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
-                            <ProductCard product={product as any} viewMode="grid" />
+                            <ProductCard product={product as any} viewMode="grid" fetchBestDeal={false} />
                           </div>
                         ))}
                       </div>
@@ -1027,7 +1054,7 @@ export function ProductsPageContent({
                       <div className="mt-6 text-center text-sm text-muted-foreground">
                         <p>
                           {t('showing', { count: filteredProducts.length })}
-                          {productStatusView === 'waiting_room' ? ' (poczekalnia)' : ''}
+                          {productStatusView === 'waiting_room' ? ` (${t('statusView.waitingRoomSuffix')})` : ''}
                         </p>
                       </div>
                     )}
@@ -1053,7 +1080,7 @@ export function ProductsPageContent({
               className="hidden xl:inline-flex fixed right-3 top-1/2 -translate-y-1/2 rounded-l-full shadow-lg"
             >
               <Sparkles className="h-4 w-4 mr-2" />
-              Panel rekomendacji
+              {t('recommendations')}
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[340px] sm:w-[420px] overflow-y-auto">
@@ -1092,8 +1119,8 @@ export function ProductsPageContent({
                         </Badge>
                       </div>
                       <Button asChild className="w-full" size="sm">
-                        <Link href={`/deals/${dealOfTheDay.id}`}>
-                          Zobacz ofertę
+                        <Link href={`/${locale}/deals/${dealOfTheDay.id}`}>
+                          {t('insights.seeOffer')}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
@@ -1133,7 +1160,7 @@ export function ProductsPageContent({
                       {selectedCategory.promo.link && (
                         <Button asChild variant="outline" size="sm" className="w-full">
                           <Link href={selectedCategory.promo.link}>
-                            {selectedCategory.promo.cta || 'Zobacz więcej'}
+                            {selectedCategory.promo.cta || t('insights.seeMore')}
                           </Link>
                         </Button>
                       )}
@@ -1147,14 +1174,14 @@ export function ProductsPageContent({
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Najlepsze oferty</span>
+                      <span className="text-sm font-medium">{t('insights.bestOffersTitle')}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Sprawdź nasze polecane produkty z najwyższymi ocenami
+                      {t('insights.bestOffersDesc')}
                     </p>
                     <Button asChild variant="outline" size="sm" className="w-full">
-                      <Link href="/deals">
-                        Zobacz okazje
+                      <Link href={`/${locale}/deals`}>
+                        {t('insights.seeDeals')}
                       </Link>
                     </Button>
                   </div>

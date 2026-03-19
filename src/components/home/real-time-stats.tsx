@@ -150,14 +150,15 @@ export function RealTimeStats() {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="min-h-[312px] md:min-h-[160px]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {statsItems.map((stat, idx) => {
         const Icon = stat.icon;
         return (
           <Card
             key={idx}
             className={cn(
-              'border-2 hover:border-primary/50 transition-[box-shadow,border-color,transform] hover:shadow-lg hover:-translate-y-1',
+              'h-full border-2 hover:border-primary/50 transition-[box-shadow,border-color,transform] hover:shadow-lg hover:-translate-y-1',
               isLoading ? 'animate-pulse' : ''
             )}
           >
@@ -175,6 +176,7 @@ export function RealTimeStats() {
           </Card>
         );
       })}
+      </div>
     </div>
   );
 }

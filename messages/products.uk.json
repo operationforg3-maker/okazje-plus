@@ -2,6 +2,13 @@
   "title": "Продукти",
   "subtitle": "Найкращі товари з AliExpress",
   "recommendations": "Панель рекомендацій",
+  "insights": {
+    "seeOffer": "Переглянути пропозицію",
+    "seeMore": "Дивитися більше",
+    "bestOffersTitle": "Найкращі пропозиції",
+    "bestOffersDesc": "Перегляньте наші рекомендовані товари з найвищими оцінками",
+    "seeDeals": "Переглянути акції"
+  },
   "viewToggle": {
     "grid": "Вигляд сітки",
     "list": "Вигляд списку"
@@ -34,7 +41,22 @@
     },
     "clearAll": "Очистити фільтри",
     "savedLabel": "Збережені фільтри:",
-    "saveFilter": "Зберегти поточні фільтри"
+    "saveFilter": "Зберегти поточні фільтри",
+    "authRequiredToSave": "Увійдіть, щоб зберігати фільтри",
+    "promptFilterName": "Введіть назву для цього набору фільтрів:",
+    "savedSuccess": "Фільтр \"{name}\" збережено!",
+    "saveError": "Не вдалося зберегти фільтр",
+    "loadedSuccess": "Завантажено фільтр: {name}",
+    "deletedSuccess": "Фільтр видалено",
+    "deleteError": "Не вдалося видалити фільтр"
+  },
+  "statusView": {
+    "visibilityPlaceholder": "Видимість",
+    "approvedView": "Перегляд: Схвалені",
+    "waitingRoomView": "Перегляд: Черга",
+    "waitingRoomSuffix": "черга",
+    "autoSwitchToWaitingRoom": "Схвалених продуктів не знайдено, перемкнено на чергу.",
+    "autoSwitchToApproved": "У черзі немає продуктів, перемкнено на схвалені."
   },
   "viewMode": {
     "list": "Список",

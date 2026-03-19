@@ -274,26 +274,45 @@ export class AIRefiner {
         return normalized;
       }
 
-      const missing = locales.filter((locale) => !normalized[locale]);
-      if (missing.length > 0) {
+      const normalizeComparable = (input: string): string =>
+        String(input || '')
+          .toLowerCase()
+          .replace(/\s+/g, ' ')
+          .trim();
+
+      const sourceLocale = normalized[preferredSourceLocale]
+        ? preferredSourceLocale
+        : (normalized.en ? 'en' : 'pl');
+      const sourceText = normalized[sourceLocale] || fallbackBase;
+      const sourceComparable = normalizeComparable(sourceText);
+
+      // Traktujemy pola jako wymagające tłumaczenia nie tylko gdy są puste,
+      // ale również gdy są 1:1 skopiowane z języka źródłowego.
+      const localesToTranslate = locales.filter((locale) => {
+        if (locale === sourceLocale) return false;
+
+        const current = String(normalized[locale] || '').trim();
+        if (!current) return true;
+
+        return normalizeComparable(current) === sourceComparable;
+      });
+
+      if (localesToTranslate.length > 0) {
         try {
           const { translateContent } = await import('@/ai/flows/enrichment');
-          const sourceLocale = normalized[preferredSourceLocale]
-            ? preferredSourceLocale
-            : (normalized.en ? 'en' : 'pl');
 
           const translated = await translateContent({
-            text: normalized[sourceLocale] || fallbackBase,
+            text: sourceText,
             sourceLocale,
-            targetLocales: missing,
+            targetLocales: localesToTranslate,
           });
 
-          for (const locale of missing) {
+          for (const locale of localesToTranslate) {
             const candidate = String(translated.translations?.[locale] || '').trim();
             normalized[locale] = candidate || fallbackBase;
           }
         } catch {
-          for (const locale of missing) {
+          for (const locale of localesToTranslate) {
             normalized[locale] = normalized[locale] || fallbackBase;
           }
         }
@@ -328,8 +347,7 @@ export class AIRefiner {
     }
 
     if (Object.keys(specsSeed).length === 0) {
-      specsSeed = { info: 'Brak danych specyfikacji' };
-      this.addLog('warn', `Missing specs for product ${product.id} - using placeholder specs`);
+      this.addLog('warn', `Missing specs for product ${product.id} - no structured specs detected`);
     }
 
     // Clean up specs using AI
@@ -611,8 +629,8 @@ export class AIRefiner {
       // Calculate quality score
       refined.aiQualityScore = this.calculateQualityScore(product);
 
-      // Update status
-      refined.status = 'pending_approval';
+      // Preserve approved products as publicly visible after re-enrichment.
+      refined.status = product.status === 'approved' ? 'approved' : 'pending_approval';
     }
 
     refined.updatedAt = new Date().toISOString();

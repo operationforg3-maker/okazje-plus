@@ -2,6 +2,13 @@
   "title": "Produkte",
   "subtitle": "Beste Produkte von AliExpress",
   "recommendations": "Empfehlungs-Panel",
+  "insights": {
+    "seeOffer": "Angebot ansehen",
+    "seeMore": "Mehr anzeigen",
+    "bestOffersTitle": "Beste Angebote",
+    "bestOffersDesc": "Sieh dir unsere empfohlenen Produkte mit den besten Bewertungen an",
+    "seeDeals": "Deals ansehen"
+  },
   "viewToggle": {
     "grid": "Rasteransicht",
     "list": "Listenansicht"
@@ -34,7 +41,22 @@
     },
     "clearAll": "Filter löschen",
     "savedLabel": "Gespeicherte Filter:",
-    "saveFilter": "Aktuelle Filter speichern"
+    "saveFilter": "Aktuelle Filter speichern",
+    "authRequiredToSave": "Melde dich an, um Filter zu speichern",
+    "promptFilterName": "Gib einen Namen für dieses Filterset ein:",
+    "savedSuccess": "Filter \"{name}\" wurde gespeichert!",
+    "saveError": "Filter konnte nicht gespeichert werden",
+    "loadedSuccess": "Filter geladen: {name}",
+    "deletedSuccess": "Filter wurde gelöscht",
+    "deleteError": "Filter konnte nicht gelöscht werden"
+  },
+  "statusView": {
+    "visibilityPlaceholder": "Sichtbarkeit",
+    "approvedView": "Ansicht: Genehmigt",
+    "waitingRoomView": "Ansicht: Warteschlange",
+    "waitingRoomSuffix": "Warteschlange",
+    "autoSwitchToWaitingRoom": "Keine genehmigten Produkte gefunden, zur Warteschlange gewechselt.",
+    "autoSwitchToApproved": "Keine Produkte in der Warteschlange, zu genehmigt gewechselt."
   },
   "viewMode": {
     "list": "Liste",

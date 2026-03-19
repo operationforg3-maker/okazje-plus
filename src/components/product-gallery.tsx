@@ -8,17 +8,41 @@ import { withImageProxy } from '@/lib/image-proxy';
 
 interface ProductGalleryProps {
   images: { src: string; alt?: string }[];
+  priority?: boolean;
 }
 
-export function ProductGallery({ images }: ProductGalleryProps) {
+export function ProductGallery({ images, priority = false }: ProductGalleryProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  
+
   const validImages = Array.isArray(images)
     ? images.filter((img): img is { src: string; alt?: string } => typeof img?.src === 'string' && img.src.length > 0)
     : [];
   
   if (validImages.length === 0) return null;
-  
+
+  // Fast path for card thumbnails: avoid carousel state/controls when there is only one image.
+  if (validImages.length === 1) {
+    const singleImage = {
+      ...validImages[0],
+      src: withImageProxy(validImages[0].src),
+    };
+
+    return (
+      <div className="relative w-full">
+        <div className="relative w-full aspect-square bg-muted">
+          <Image
+            src={singleImage.src}
+            alt={typeof singleImage.alt === 'string' ? singleImage.alt : 'Zdjęcie produktu'}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-contain"
+            priority={priority}
+          />
+        </div>
+      </div>
+    );
+  }
+
   const proxiedImages = validImages.map((img) => ({
     ...img,
     src: withImageProxy(img.src),
@@ -55,7 +79,7 @@ export function ProductGallery({ images }: ProductGalleryProps) {
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-contain"
-          priority={currentIndex === 0}
+          priority={priority && currentIndex === 0}
         />
         
         {/* Nawigacja strzałkami (tylko jeśli jest więcej zdjęć) */}

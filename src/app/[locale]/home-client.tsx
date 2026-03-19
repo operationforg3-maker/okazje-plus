@@ -186,8 +186,8 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </div>
 
             {/* Quick Stats - Real time from database */}
-            <div className="max-w-3xl mx-auto">
-              {showStats ? <RealTimeStats /> : <div className="h-[160px]" aria-hidden="true" />}
+            <div className="max-w-3xl mx-auto min-h-[312px] md:min-h-[160px]">
+              {showStats ? <RealTimeStats /> : <div className="h-[312px] md:h-[160px]" aria-hidden="true" />}
             </div>
           </div>
         </div>

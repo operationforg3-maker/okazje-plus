@@ -356,13 +356,34 @@ export function getLocalizedCategoryName(
   lang: SupportedLanguage = 'pl'
 ): string {
   if (!category) return '';
-  
-  // Try translations first
-  if (category.translations && category.translations[lang]) {
-    return category.translations[lang].name;
+
+  const translations = category.translations || {};
+
+  // Preferred locale
+  const preferred = translations[lang]?.name;
+  if (preferred && preferred.trim().length > 0) {
+    return preferred;
   }
-  
-  // Fallback to base name (assumed Polish)
+
+  // Legacy compatibility for Ukrainian locale keyed as ua.
+  if (lang === 'uk') {
+    const ua = translations.ua?.name;
+    if (ua && ua.trim().length > 0) {
+      return ua;
+    }
+  }
+
+  // Fallback chain for non-PL routes: en -> pl -> base name
+  const english = translations.en?.name;
+  if (english && english.trim().length > 0) {
+    return english;
+  }
+
+  const polish = translations.pl?.name;
+  if (polish && polish.trim().length > 0) {
+    return polish;
+  }
+
   return category.name;
 }
 

@@ -40,6 +40,7 @@ interface ProductCardProps {
   product: Product;
   showFullDetails?: boolean;
   viewMode?: 'list' | 'grid';
+  fetchBestDeal?: boolean;
 }
 
 const safeText = (value: unknown, fallback = ''): string => {
@@ -49,7 +50,7 @@ const safeText = (value: unknown, fallback = ''): string => {
   return fallback;
 };
 
-function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: ProductCardProps) {
+function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetchBestDeal = true }: ProductCardProps) {
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(() => localeFromParams);
@@ -65,6 +66,11 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
   const { currency } = useCurrency();
 
   useEffect(() => {
+    if (!fetchBestDeal) {
+      setBestDeal(null);
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
@@ -78,7 +84,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid' }: Pr
     return () => {
       cancelled = true;
     };
-  }, [product.id]);
+  }, [fetchBestDeal, product.id]);
 
   const productExternalUrl = getExternalUrl(
     product?.affiliateUrl,

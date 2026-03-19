@@ -44,6 +44,7 @@ import {
   listForumThreadsData,
   rejectCategorySuggestionData,
 } from '@/lib/data/forum';
+import { ensureCategoryTranslations } from '@/lib/category-translations';
 
 const DEBUG_DATA_LOGS = process.env.NEXT_PUBLIC_DEBUG === 'true';
 // Jednorazowe ostrzeżenia aby nie spamować konsoli przy powtarzających się brakach indeksów / uprawnień.
@@ -827,7 +828,7 @@ export async function searchProductsForLinking(searchText: string): Promise<Prod
 
 export async function getCategories(): Promise<Category[]> {
   // Check cache first - categories rarely change, so cache for 1 hour
-  const cacheKey = 'categories:all';
+  const cacheKey = 'categories:all:v2';
   const cached = await cacheGet(cacheKey);
   if (cached) {
     if (DEBUG_DATA_LOGS) {
@@ -886,7 +887,11 @@ export async function getCategories(): Promise<Category[]> {
                     icon: ssData.icon,
                     description: ssData.description,
                     importKeywords: ssData.importKeywords,
-                    translations: ssData.translations,
+                    translations: ensureCategoryTranslations(
+                      ssData.translations,
+                      ssData.name ?? ssDoc.id,
+                      ssData.description
+                    ),
                     sortOrder: ssData.sortOrder,
                     image: ssData.image,
                   };
@@ -905,7 +910,11 @@ export async function getCategories(): Promise<Category[]> {
               slug: subData.slug ?? subDoc.id,
               icon: subData.icon,
               description: subData.description,
-              translations: subData.translations,
+              translations: ensureCategoryTranslations(
+                subData.translations,
+                subData.name ?? subDoc.id,
+                subData.description
+              ),
               sortOrder: subData.sortOrder,
               image: subData.image,
               highlight: subData.highlight,
@@ -950,7 +959,11 @@ export async function getCategories(): Promise<Category[]> {
         sortOrder: data.sortOrder,
         accentColor: data.accentColor,
         heroImage: data.heroImage,
-        translations: data.translations,
+        translations: ensureCategoryTranslations(
+          data.translations,
+          data.name ?? categoryDoc.id,
+          data.description
+        ),
         promo,
         tiles,
         subcategories,
@@ -1102,8 +1115,10 @@ export async function getNavigationShowcase(): Promise<NavigationShowcaseConfig 
  */
 export async function createCategory(data: { name: string; slug: string; icon?: string; description?: string; sortOrder?: number; accentColor?: string; heroImage?: string; }): Promise<string> {
   const ref = collection(db, 'categories');
+  const translations = ensureCategoryTranslations(undefined, data.name, data.description);
   const docRef = await addDoc(ref, {
     ...data,
+    translations,
     createdAt: serverTimestamp(),
     sortOrder: data.sortOrder ?? 0,
   });
@@ -1115,8 +1130,10 @@ export async function createCategory(data: { name: string; slug: string; icon?: 
  */
 export async function createSubcategory(categoryId: string, data: { name: string; slug: string; icon?: string; description?: string; sortOrder?: number; }): Promise<string> {
   const ref = collection(db, 'categories', categoryId, 'subcategories');
+  const translations = ensureCategoryTranslations(undefined, data.name, data.description);
   const docRef = await addDoc(ref, {
     ...data,
+    translations,
     createdAt: serverTimestamp(),
     sortOrder: data.sortOrder ?? 0,
   });
@@ -1128,8 +1145,10 @@ export async function createSubcategory(categoryId: string, data: { name: string
  */
 export async function createSubSubcategory(categoryId: string, subcategoryId: string, data: { name: string; slug: string; icon?: string; description?: string; sortOrder?: number; }): Promise<string> {
   const ref = collection(db, 'categories', categoryId, 'subcategories', subcategoryId, 'subcategories');
+  const translations = ensureCategoryTranslations(undefined, data.name, data.description);
   const docRef = await addDoc(ref, {
     ...data,
+    translations,
     createdAt: serverTimestamp(),
     sortOrder: data.sortOrder ?? 0,
   });

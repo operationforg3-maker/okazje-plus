@@ -2,6 +2,13 @@
   "title": "Produkty",
   "subtitle": "Najlepsze produkty z AliExpress",
   "recommendations": "Panel rekomendacji",
+  "insights": {
+    "seeOffer": "Zobacz ofertę",
+    "seeMore": "Zobacz więcej",
+    "bestOffersTitle": "Najlepsze oferty",
+    "bestOffersDesc": "Sprawdź nasze polecane produkty z najwyższymi ocenami",
+    "seeDeals": "Zobacz okazje"
+  },
   "viewToggle": {
     "grid": "Widok siatki",
     "list": "Widok listy"
@@ -34,7 +41,22 @@
     },
     "clearAll": "Wyczyść filtry",
     "savedLabel": "Zapisane filtry:",
-    "saveFilter": "Zapisz obecne filtry"
+    "saveFilter": "Zapisz obecne filtry",
+    "authRequiredToSave": "Zaloguj się, aby zapisać filtry",
+    "promptFilterName": "Podaj nazwę dla tego zestawu filtrów:",
+    "savedSuccess": "Filtr \"{name}\" został zapisany!",
+    "saveError": "Nie udało się zapisać filtra",
+    "loadedSuccess": "Załadowano filtr: {name}",
+    "deletedSuccess": "Filtr został usunięty",
+    "deleteError": "Nie udało się usunąć filtra"
+  },
+  "statusView": {
+    "visibilityPlaceholder": "Widoczność",
+    "approvedView": "Widok: Zatwierdzone",
+    "waitingRoomView": "Widok: Poczekalnia",
+    "waitingRoomSuffix": "poczekalnia",
+    "autoSwitchToWaitingRoom": "Brak zatwierdzonych produktów, przełączono na poczekalnię.",
+    "autoSwitchToApproved": "Brak produktów w poczekalni, przełączono na zatwierdzone."
   },
   "viewMode": {
     "list": "Lista",

@@ -6,6 +6,7 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { Category, Product, Deal, ProductCore } from '@/lib/types';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
+import { ensureCategoryTranslations } from '@/lib/category-translations';
 
 /**
  * Tworzy kategorię główną w Firestore (Admin SDK)
@@ -20,6 +21,7 @@ export async function createCategory(data: {
   heroImage?: string; 
 }): Promise<string> {
   const ref = adminDb.collection('categories');
+  const translations = ensureCategoryTranslations(undefined, data.name, data.description);
   // Idempotent: find existing by slug
   const existing = await ref.where('slug', '==', data.slug).limit(1).get();
   if (!existing.empty) {
@@ -27,6 +29,7 @@ export async function createCategory(data: {
   }
   const docRef = await ref.add({
     ...data,
+    translations,
     createdAt: FieldValue.serverTimestamp(),
     sortOrder: data.sortOrder ?? 0,
   });
@@ -47,6 +50,7 @@ export async function createSubcategory(
   }
 ): Promise<string> {
   const ref = adminDb.collection('categories').doc(categoryId).collection('subcategories');
+  const translations = ensureCategoryTranslations(undefined, data.name, data.description);
   // Idempotent: find existing by slug
   const existing = await ref.where('slug', '==', data.slug).limit(1).get();
   if (!existing.empty) {
@@ -54,6 +58,7 @@ export async function createSubcategory(
   }
   const docRef = await ref.add({
     ...data,
+    translations,
     createdAt: FieldValue.serverTimestamp(),
     sortOrder: data.sortOrder ?? 0,
   });
@@ -80,6 +85,7 @@ export async function createSubSubcategory(
     .collection('subcategories')
     .doc(subcategoryId)
     .collection('subcategories');
+  const translations = ensureCategoryTranslations(undefined, data.name, data.description);
   // Idempotent: find existing by slug
   const existing = await ref.where('slug', '==', data.slug).limit(1).get();
   if (!existing.empty) {
@@ -87,6 +93,7 @@ export async function createSubSubcategory(
   }
   const docRef = await ref.add({
     ...data,
+    translations,
     createdAt: FieldValue.serverTimestamp(),
     sortOrder: data.sortOrder ?? 0,
   });

@@ -1324,6 +1324,7 @@ export class SmartHarvester {
     productId: string,
     sourceProduct: RawProduct,
     source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+    targetStatus: DealM6['status'] = 'poczekalnia',
     categoryInfo?: {
       mainCategorySlug: string;
       subCategorySlug: string;
@@ -1390,7 +1391,7 @@ export class SmartHarvester {
       voteCount: 0,
       temperature: 0,
       commentsCount: 0,
-      status: 'poczekalnia',
+      status: targetStatus,
       createdAt: now,
       updatedAt: now,
       sourceProductId: sourceProduct.sourceProductId,
@@ -1413,6 +1414,8 @@ export class SmartHarvester {
         chunk.map(id =>
           adminDb.collection('deals')
             .where('productId', '==', id)
+            .where('status', '==', 'approved')
+            .where('isActive', '==', true)
             .get()
         )
       );
@@ -1420,7 +1423,18 @@ export class SmartHarvester {
       chunk.forEach((productId, idx) => {
         const dealsSnap = dealsSnapshots[idx];
         if (dealsSnap.empty) {
-          this.addLog('warn', `Brak ofert do przeliczenia bestPrice dla produktu: ${productId}`);
+          this.addLog('warn', `Brak aktywnych ofert approved do przeliczenia bestPrice dla produktu: ${productId}`);
+          const productRef = adminDb.collection('product_cores').doc(productId);
+          batch.update(productRef, {
+            bestPrice: {
+              amount: 0,
+              currency: 'PLN',
+            },
+            bestTotalPrice: null,
+            bestDealId: null,
+            linkedDealIds: [],
+            updatedAt: new Date().toISOString(),
+          });
           return;
         }
 
@@ -1851,6 +1865,7 @@ export class SmartHarvester {
                     existingProduct.id,
                     sourceProduct,
                     source,
+                    existingProduct.status === 'approved' ? 'approved' : 'poczekalnia',
                     {
                       mainCategorySlug: existingProduct.mainCategorySlug,
                       subCategorySlug: existingProduct.subCategorySlug,
@@ -1889,6 +1904,7 @@ export class SmartHarvester {
                     productId,
                     sourceProduct,
                     source,
+                    'poczekalnia',
                     categoryInfo
                   );
                   batch.set(dealRef, dealData);

@@ -2,6 +2,13 @@
   "title": "Produits",
   "subtitle": "Meilleurs produits AliExpress",
   "recommendations": "Panneau de recommandations",
+  "insights": {
+    "seeOffer": "Voir l'offre",
+    "seeMore": "Voir plus",
+    "bestOffersTitle": "Meilleures offres",
+    "bestOffersDesc": "Découvrez nos produits recommandés avec les meilleures notes",
+    "seeDeals": "Voir les promotions"
+  },
   "viewToggle": {
     "grid": "Vue en grille",
     "list": "Vue de la liste"
@@ -34,7 +41,22 @@
     },
     "clearAll": "Effacer les filtres",
     "savedLabel": "Filtres enregistrés :",
-    "saveFilter": "Enregistrer les filtres actuels"
+    "saveFilter": "Enregistrer les filtres actuels",
+    "authRequiredToSave": "Connectez-vous pour enregistrer les filtres",
+    "promptFilterName": "Entrez un nom pour cet ensemble de filtres :",
+    "savedSuccess": "Le filtre \"{name}\" a été enregistré !",
+    "saveError": "Impossible d'enregistrer le filtre",
+    "loadedSuccess": "Filtre chargé : {name}",
+    "deletedSuccess": "Le filtre a été supprimé",
+    "deleteError": "Impossible de supprimer le filtre"
+  },
+  "statusView": {
+    "visibilityPlaceholder": "Visibilité",
+    "approvedView": "Vue : Approuvés",
+    "waitingRoomView": "Vue : Salle d'attente",
+    "waitingRoomSuffix": "salle d'attente",
+    "autoSwitchToWaitingRoom": "Aucun produit approuvé trouvé, bascule vers la salle d'attente.",
+    "autoSwitchToApproved": "Aucun produit en salle d'attente, bascule vers les approuvés."
   },
   "viewMode": {
     "list": "Liste",

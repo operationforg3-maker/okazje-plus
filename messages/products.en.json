@@ -2,6 +2,13 @@
   "title": "Products",
   "subtitle": "Best products from AliExpress",
   "recommendations": "Recommendations Panel",
+  "insights": {
+    "seeOffer": "See offer",
+    "seeMore": "See more",
+    "bestOffersTitle": "Best offers",
+    "bestOffersDesc": "Check our recommended products with the highest ratings",
+    "seeDeals": "See deals"
+  },
   "viewToggle": {
     "grid": "Grid View",
     "list": "List View"
@@ -34,7 +41,22 @@
     },
     "clearAll": "Clear Filters",
     "savedLabel": "Saved filters:",
-    "saveFilter": "Save current filters"
+    "saveFilter": "Save current filters",
+    "authRequiredToSave": "Sign in to save filters",
+    "promptFilterName": "Enter a name for this filter set:",
+    "savedSuccess": "Filter \"{name}\" has been saved!",
+    "saveError": "Could not save filter",
+    "loadedSuccess": "Loaded filter: {name}",
+    "deletedSuccess": "Filter has been deleted",
+    "deleteError": "Could not delete filter"
+  },
+  "statusView": {
+    "visibilityPlaceholder": "Visibility",
+    "approvedView": "View: Approved",
+    "waitingRoomView": "View: Waiting room",
+    "waitingRoomSuffix": "waiting room",
+    "autoSwitchToWaitingRoom": "No approved products found, switched to waiting room.",
+    "autoSwitchToApproved": "No products in waiting room, switched to approved."
   },
   "viewMode": {
     "list": "List",

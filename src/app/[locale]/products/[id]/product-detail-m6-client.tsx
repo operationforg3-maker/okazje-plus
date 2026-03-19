@@ -116,7 +116,7 @@ export default function ProductDetailM6Client({
   };
 
   // Extract data with locale support
-  const title = getLocalizedText(productData.title, 'Produkt');
+  const title = getLocalizedText((productData as any)?.title || (product as any)?.name, 'Produkt');
   // Use HTML fullDescription if available, else plain text description
   const fullHtmlDescription = isM6 ? getLocalizedText(productCore?.fullDescription, '') : '';
   const description = isM6 
@@ -173,8 +173,13 @@ export default function ProductDetailM6Client({
   const ratingCount = isM6 ? (productCore?.rating?.count || 0) : (product?.ratingCard?.count || 0);
 
   // Specs - M6 has specs, legacy might have metadata.specifications
-  const specs = isM6 
-    ? (productCore?.specs || {})
+  const specs = isM6
+    ? (
+        productCore?.specsLocalized?.[locale]
+        || productCore?.specsLocalized?.pl
+        || productCore?.specs
+        || {}
+      )
     : (product?.metadata?.specifications?.reduce((acc: Record<string, string>, spec: any) => {
         const key = spec.key || spec.name || 'Unknown';
         acc[key] = spec.value;

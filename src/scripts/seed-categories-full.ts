@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { adminDb } from '../lib/firebase-admin';
+import { ensureCategoryTranslations } from '../lib/category-translations';
 
 type LocalePayload = {
   name?: string;
@@ -192,7 +193,7 @@ async function seedCategories() {
       media: main.media || {},
       importKeywords: uniq([...(main.importKeywords || []), ...(main.aliexpressKeywords || []), getName(main), main.slug]),
       searchKeywords: uniq([...(main.importKeywords || []), ...(main.aliexpressKeywords || []), getName(main), main.slug]),
-      translations: main.translations || {},
+      translations: ensureCategoryTranslations(main.translations, getName(main), getDescription(main)),
       subcategories: mainSub.map((s, idx) => ({
         name: getName(s),
         slug: s.slug,
@@ -231,7 +232,7 @@ async function seedCategories() {
         media: sub.media || {},
         importKeywords: uniq([...(sub.importKeywords || []), ...(sub.aliexpressKeywords || []), getName(sub), sub.slug]),
         searchKeywords: uniq([...(sub.importKeywords || []), ...(sub.aliexpressKeywords || []), getName(sub), sub.slug]),
-        translations: sub.translations || {},
+        translations: ensureCategoryTranslations(sub.translations, getName(sub), getDescription(sub)),
         subcategories: subSubList.map((ss, idx) => ({
           name: getName(ss),
           slug: ss.slug,
@@ -277,7 +278,7 @@ async function seedCategories() {
             getName(subSub),
             subSub.slug,
           ]),
-          translations: subSub.translations || {},
+          translations: ensureCategoryTranslations(subSub.translations, getName(subSub), getDescription(subSub)),
           createdAt: new Date().toISOString(),
         });
       }
