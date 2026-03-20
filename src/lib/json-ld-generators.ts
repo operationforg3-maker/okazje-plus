@@ -26,6 +26,19 @@ function getValidAbsoluteUrl(value: unknown): string | undefined {
   return undefined;
 }
 
+function isOverlayLikeImageUrl(url: string): boolean {
+  return /(overlay|watermark|badge|promo|sale-banner|sticker|label)/i.test(url);
+}
+
+function preferMerchantCompliantImages(urls: string[]): string[] {
+  if (!Array.isArray(urls) || urls.length === 0) {
+    return [];
+  }
+
+  const clean = urls.filter((url) => !isOverlayLikeImageUrl(url));
+  return clean.length > 0 ? clean : urls;
+}
+
 function stripHtml(input: string): string {
   return input.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -45,6 +58,98 @@ function getLocalizedValue(value: unknown, fallback = ''): string {
 
 function clampRating(value: number) {
   return Math.max(0, Math.min(5, value || 0));
+}
+
+function normalizeCurrency(value: unknown): string {
+  return typeof value === 'string' && value.trim() ? value.toUpperCase() : 'PLN';
+}
+
+function getReturnPolicyText(raw: unknown): string {
+  if (typeof raw === 'string') {
+    return raw;
+  }
+
+  if (raw && typeof raw === 'object') {
+    const value = raw as Record<string, unknown>;
+    if (typeof value.conditions === 'string') {
+      return value.conditions;
+    }
+    if (typeof value.days === 'number') {
+      return `${value.days} dni`;
+    }
+  }
+
+  return '';
+}
+
+function extractReturnWindowDays(policyText: string): number | undefined {
+  const match = policyText.match(/(\d{1,3})\s*(dni|day|days)/i);
+  if (!match) {
+    return undefined;
+  }
+
+  const parsed = Number(match[1]);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function buildMerchantReturnPolicy(policyText: string) {
+  if (!policyText) {
+    return undefined;
+  }
+
+  const normalized = policyText.toLowerCase();
+  const returnDays = extractReturnWindowDays(policyText);
+  if (normalized.includes('brak zwrot') || normalized.includes('nie podlega zwrotowi')) {
+    return {
+      '@type': 'MerchantReturnPolicy',
+      applicableCountry: 'PL',
+      returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+    };
+  }
+
+  return {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'PL',
+    returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    ...(returnDays && {
+      merchantReturnDays: returnDays,
+    }),
+    returnMethod: 'https://schema.org/ReturnByMail',
+    returnFees: normalized.includes('darmow')
+      ? 'https://schema.org/FreeReturn'
+      : 'https://schema.org/ReturnShippingFees',
+  };
+}
+
+function buildShippingDetails(input: {
+  shippingCost?: number;
+  freeShipping?: boolean;
+  currency?: string;
+}) {
+  const hasCost = typeof input.shippingCost === 'number' && Number.isFinite(input.shippingCost);
+  const isFreeShipping = input.freeShipping === true || (hasCost && (input.shippingCost || 0) <= 0);
+
+  if (!hasCost && !isFreeShipping) {
+    return undefined;
+  }
+
+  const shippingValue = isFreeShipping ? 0 : Math.max(0, input.shippingCost || 0);
+  return {
+    '@type': 'OfferShippingDetails',
+    shippingRate: {
+      '@type': 'MonetaryAmount',
+      value: shippingValue,
+      currency: normalizeCurrency(input.currency),
+    },
+    shippingDestination: {
+      '@type': 'DefinedRegion',
+      addressCountry: 'PL',
+    },
+  };
 }
 
 /**
@@ -77,9 +182,10 @@ export function generateProductJsonLd(
   }
   
   // Get images
-  const images = isM6
+  const rawImages = isM6
     ? (productCore?.images || []).map(getValidAbsoluteUrl).filter((img): img is string => Boolean(img)).slice(0, 5)
     : ([getValidAbsoluteUrl(product?.image)].filter((img): img is string => Boolean(img)));
+  const images = preferMerchantCompliantImages(rawImages);
   
   // Get prices
   const priceAmount = isM6 
@@ -148,15 +254,23 @@ export function generateProductJsonLd(
         availability: 'https://schema.org/InStock',
         offers: safeDeals.slice(0, 10).map((deal) => ({
           '@type': 'Offer',
-          url: `${PRODUCT_BASE_URL}/${productId}`,
+          url: deal?.id ? `${DEAL_BASE_URL}/${deal.id}` : `${PRODUCT_BASE_URL}/${productId}`,
           price: deal.price?.amount || 0,
-          priceCurrency: deal.price?.currency || priceCurrency,
-          availability: (deal as any)?.inStock === true || (deal as any)?.availability === 'in_stock'
-            ? 'https://schema.org/InStock'
-            : 'https://schema.org/OutOfStock',
+          priceCurrency: normalizeCurrency(deal.price?.currency || priceCurrency),
+            availability:
+              deal.stockStatus === 'in_stock' ||
+              deal.stockStatus === 'low_stock' ||
+              deal.isActive === true
+                ? 'https://schema.org/InStock'
+                : 'https://schema.org/OutOfStock',
+          shippingDetails: buildShippingDetails({
+            shippingCost: deal?.shipping?.cost,
+            freeShipping: (deal?.shipping?.cost || 0) <= 0,
+            currency: deal?.price?.currency || priceCurrency,
+          }),
           seller: {
             '@type': 'Organization',
-            name: deal.source || 'Unknown Seller',
+            name: deal.merchantName || deal.source || 'Unknown Seller',
           },
           priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
             .toISOString()
@@ -172,13 +286,19 @@ export function generateProductJsonLd(
         '@type': 'Offer',
         url: `${PRODUCT_BASE_URL}/${productId}`,
         price: priceAmount || 0,
-        priceCurrency,
+        priceCurrency: normalizeCurrency(priceCurrency),
         availability:
           product?.metadata?.stockStatus === 'in_stock'
             ? 'https://schema.org/InStock'
             : product?.metadata?.stockStatus === 'low_stock'
               ? 'https://schema.org/LimitedAvailability'
               : 'https://schema.org/OutOfStock',
+        shippingDetails: buildShippingDetails({
+          shippingCost: (product as any)?.shippingCost ?? (product as any)?.price?.shippingCost,
+          freeShipping: (product as any)?.freeShipping ?? (product as any)?.price?.freeShipping,
+          currency: priceCurrency,
+        }),
+        hasMerchantReturnPolicy: buildMerchantReturnPolicy(getReturnPolicyText((product as any)?.returnPolicy || product?.metadata?.returnPolicy)),
         seller: {
           '@type': 'Organization',
           name: product?.metadata?.merchant || 'Various',
@@ -258,7 +378,13 @@ export function generateDealJsonLd(deal: Deal) {
     : 'PLN';
   const sellerName = deal.merchant || 'Various';
   const dealUrl = `${DEAL_BASE_URL}/${deal.id}`;
-  const dealImage = getValidAbsoluteUrl(deal.image);
+  const dealImage = preferMerchantCompliantImages(
+    [getValidAbsoluteUrl(deal.image)].filter((img): img is string => Boolean(img))
+  )[0];
+  const returnPolicy =
+    getReturnPolicyText(deal.returnPolicy)
+    || getReturnPolicyText((deal as any)?.metadata?.returnPolicy)
+    || getReturnPolicyText((deal as any)?.importMetadata?.returnPolicy);
 
   return {
     '@context': 'https://schema.org',
@@ -267,7 +393,7 @@ export function generateDealJsonLd(deal: Deal) {
     description: dealDescription,
     ...(dealImage && { image: dealImage }),
     url: dealUrl,
-    priceCurrency,
+    priceCurrency: normalizeCurrency(priceCurrency),
     price,
     ...(deal.originalPrice && {
       priceSpecification: {
@@ -283,6 +409,12 @@ export function generateDealJsonLd(deal: Deal) {
     availability: deal.stockAlert === 'ending-soon'
       ? 'https://schema.org/LimitedAvailability'
       : 'https://schema.org/InStock',
+    shippingDetails: buildShippingDetails({
+      shippingCost: deal.shippingCost,
+      freeShipping: deal.freeShipping,
+      currency: priceCurrency,
+    }),
+    hasMerchantReturnPolicy: buildMerchantReturnPolicy(returnPolicy),
     seller: {
       '@type': 'Organization',
       name: sellerName,
@@ -334,7 +466,9 @@ export function generateHomePageJsonLd(
             ? deal.price.currency.toUpperCase()
             : 'PLN';
           const dealUrl = `${DEAL_BASE_URL}/${deal.id}`;
-          const dealImage = getValidAbsoluteUrl(deal.image);
+          const dealImage = preferMerchantCompliantImages(
+            [getValidAbsoluteUrl(deal.image)].filter((img): img is string => Boolean(img))
+          )[0];
 
           return {
             '@type': 'ListItem',
@@ -368,9 +502,11 @@ export function generateHomePageJsonLd(
           const m6BestPrice = Number((product as any)?.bestPrice?.amount) || 0;
           const productPrice = m6BestPrice > 0 ? m6BestPrice : legacyPrice;
           const productCurrency = String((product as any)?.bestPrice?.currency || 'PLN').toUpperCase();
-          const productImage = getValidAbsoluteUrl((product as any).image)
-            || getValidAbsoluteUrl((product as any).imageUrl)
-            || getValidAbsoluteUrl((product as any).images?.[0]);
+          const productImage = preferMerchantCompliantImages([
+            getValidAbsoluteUrl((product as any).image),
+            getValidAbsoluteUrl((product as any).imageUrl),
+            getValidAbsoluteUrl((product as any).images?.[0]),
+          ].filter((img): img is string => Boolean(img)))[0];
           const ratingValue = clampRating(Number((product as any)?.ratingCard?.average) || Number((product as any)?.rating?.score) || 0);
           const ratingCount = Number((product as any)?.ratingCard?.count) || Number((product as any)?.rating?.count) || 0;
 

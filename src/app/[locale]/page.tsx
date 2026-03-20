@@ -92,6 +92,7 @@ export async function generateMetadata({
   const currentLocale = locale || 'pl';
   const seo = HOME_SEO_BY_LOCALE[currentLocale] || HOME_SEO_BY_LOCALE.pl;
   const canonical = `${SITE_URL}/${currentLocale}`;
+  const isIndexedLocale = currentLocale === 'pl';
 
   return {
     title: seo.title,
@@ -122,7 +123,7 @@ export async function generateMetadata({
       canonical,
     },
     robots: {
-      index: true,
+      index: isIndexedLocale,
       follow: true,
     },
   };

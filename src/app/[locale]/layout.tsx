@@ -73,6 +73,7 @@ export async function generateMetadata({
     acc[key] = `${SITE_URL}${value.path}`;
     return acc;
   }, {});
+  const isIndexedLocale = finalLocale === 'pl';
 
   return {
     metadataBase: new URL(SITE_URL),
@@ -118,7 +119,7 @@ export async function generateMetadata({
       apple: '/icon_okazjeplus.png',
     },
     robots: {
-      index: true,
+      index: isIndexedLocale,
       follow: true,
     },
     alternates: {
