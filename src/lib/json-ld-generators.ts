@@ -362,9 +362,12 @@ export function generateHomePageJsonLd(
         itemListElement: topProducts.slice(0, 8).map((product, index) => {
           const productTitle = getLocalizedValue((product as any).title, (product as any).name || 'Produkt');
           const productDescription = getLocalizedValue((product as any).shortDescription, getLocalizedValue((product as any).description, ''));
-          const productPrice = typeof (product as any).price === 'object'
+          const legacyPrice = typeof (product as any).price === 'object'
             ? Number((product as any).price.amount) || 0
             : Number((product as any).price) || 0;
+          const m6BestPrice = Number((product as any)?.bestPrice?.amount) || 0;
+          const productPrice = m6BestPrice > 0 ? m6BestPrice : legacyPrice;
+          const productCurrency = String((product as any)?.bestPrice?.currency || 'PLN').toUpperCase();
           const productImage = getValidAbsoluteUrl((product as any).image)
             || getValidAbsoluteUrl((product as any).imageUrl)
             || getValidAbsoluteUrl((product as any).images?.[0]);
@@ -385,7 +388,7 @@ export function generateHomePageJsonLd(
                 offers: {
                   '@type': 'Offer',
                   price: productPrice,
-                  priceCurrency: 'PLN',
+                  priceCurrency: productCurrency,
                   availability: 'https://schema.org/InStock',
                 },
               }),
