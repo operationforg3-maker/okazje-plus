@@ -382,7 +382,7 @@ export function generateDealJsonLd(deal: Deal) {
     [getValidAbsoluteUrl(deal.image)].filter((img): img is string => Boolean(img))
   )[0];
   const returnPolicy =
-    getReturnPolicyText(deal.returnPolicy)
+    getReturnPolicyText((deal as any)?.returnPolicy)
     || getReturnPolicyText((deal as any)?.metadata?.returnPolicy)
     || getReturnPolicyText((deal as any)?.importMetadata?.returnPolicy);
 
