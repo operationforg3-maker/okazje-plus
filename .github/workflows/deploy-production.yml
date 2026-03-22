@@ -99,7 +99,9 @@ jobs:
 
       - name: Remove stale frameworks function (ssrokazjeplus)
         run: |
+          firebase functions:delete ssrokazjeplus --region us-central1 --project ${{ secrets.FIREBASE_PROJECT_ID }} --force || true
           firebase functions:delete ssrokazjeplus --region europe-west4 --project ${{ secrets.FIREBASE_PROJECT_ID }} --force || true
+          firebase functions:delete firebase-frameworks-${{ secrets.FIREBASE_PROJECT_ID }}:ssrokazjeplus --region us-central1 --project ${{ secrets.FIREBASE_PROJECT_ID }} --force || true
 
       - name: Deploy Hosting + Functions
         run: firebase deploy --only hosting,functions --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive --force
