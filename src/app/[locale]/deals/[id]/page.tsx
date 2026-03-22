@@ -18,6 +18,18 @@ interface PageProps {
 
 const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 
+function localeToOgLocale(locale: string): string {
+  const map: Record<string, string> = {
+    pl: 'pl_PL',
+    en: 'en_US',
+    de: 'de_DE',
+    fr: 'fr_FR',
+    es: 'es_ES',
+    uk: 'uk_UA',
+  };
+  return map[locale] || 'pl_PL';
+}
+
 // Normalizacja M6 → legacy Deal (UI wymaga legacy pól)
 function ensureLocalizedText(value: any, fallback: string): LocalizedText {
   if (typeof value === 'string') {
@@ -253,7 +265,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: metaDescription,
       url: canonicalUrl,
       siteName: 'Okazje Plus',
-      locale: 'pl_PL',
+      locale: localeToOgLocale(locale),
       type: 'website',
       images: [
         {
@@ -273,7 +285,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     alternates: {
       canonical: canonicalUrl,
       languages: Object.fromEntries(
-        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `https://okazjeplus.pl/${localeCode}/deals/${deal.id}`])
+        [
+          ...SUPPORTED_LOCALES.map((localeCode) => [localeCode, `https://okazjeplus.pl/${localeCode}/deals/${deal.id}`]),
+          ['x-default', `https://okazjeplus.pl/pl/deals/${deal.id}`],
+        ]
       ),
     },
     other: {
@@ -303,6 +318,9 @@ export async function generateStaticParams() {
 
 export default async function DealDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
+  const locale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
+    ? resolvedParams.locale
+    : 'pl';
   const data = await getDealData(resolvedParams.id);
   
   if (!data) {
@@ -325,7 +343,7 @@ export default async function DealDetailPage({ params }: PageProps) {
             humanizeCategorySlug(deal.subSubCategorySlug)
             || humanizeCategorySlug(deal.subCategorySlug)
             || humanizeCategorySlug(deal.mainCategorySlug),
-          path: buildCategoryPath('pl', deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug),
+          path: buildCategoryPath(locale, deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug),
         }
       : undefined,
     'deals'

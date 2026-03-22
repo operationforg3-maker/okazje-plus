@@ -24,9 +24,19 @@ jobs:
 
       - name: Verify autopilot/cron import path
         run: npm run verify:autopilot-path
+
+      - name: Verify future content guardrails
+        run: npm run verify:future-content
       
       - name: Run TypeScript check
         run: npm run typecheck || true
+
+      - name: Smoke AliExpress promotions (push only)
+        if: github.event_name == 'push'
+        run: npm run monitor:aliexpress-promotions
+        env:
+          ALIEXPRESS_APP_KEY: ${{ secrets.ALIEXPRESS_APP_KEY }}
+          ALIEXPRESS_APP_SECRET: ${{ secrets.ALIEXPRESS_APP_SECRET }}
 
       - name: Run lint
         run: npm run lint

@@ -30,11 +30,15 @@ import * as sgMail from "@sendgrid/mail";
 
 // KROK 1: Importuj typy z JEDNEGO źródła prawdy
 import {
-  Deal,
-  Product,
+  DealM6,
+  ProductCore,
   User,
   ProductRatingCard,
 } from "../../src/lib/types";
+
+// M6 Type Aliases for backward compatibility
+type Deal = DealM6;
+type Product = ProductCore;
 
 // Import price update functions
 import { updatePricesDaily, manualPriceUpdate } from "./scheduled-price-update";
@@ -44,8 +48,9 @@ import * as userStats from "./user-stats";
 
 // --- Typy pomocnicze dla danych wejściowych ---
 // Używamy Partial<T> aby pozwolić na niepełne dane z CSV
+// M6: Updated to use DealM6 - supports seller, coupon, stock metadata
 type ImportDealData = Partial<
-  Omit<Deal, "id" | "postedBy" | "postedAt" | "voteCount" | "commentsCount">
+  Omit<DealM6, "id" | "createdBy" | "createdAt" | "updatedAt" | "voteCount" | "commentsCount" | "status" | "temperature">
 > & {
   mainCategorySlug: string;
   subCategorySlug: string;
@@ -166,36 +171,64 @@ export const batchImportDeals = onCall(
 
     for (const [index, deal] of dealsToImport.entries()) {
       try {
-        if (!deal.title || !deal.link || !deal.mainCategorySlug ||
+        if (!deal.title || !deal.affiliateLink || !deal.mainCategorySlug ||
         !deal.subCategorySlug) {
           throw new Error(
-            `Wiersz ${index + 1}: Brak tytułu, linku lub pełnej` +
-          " kategoryzacji."
+            `Wiersz ${index + 1}: Brak tytułu (title), linku (affiliateLink) lub pełnej kategoryzacji.`
           );
         }
 
         const newDealRef = db.collection("deals").doc();
 
-        // Poprawny obiekt zgodny z interfejsem Deal
-        const newDealData: Omit<Deal, "id"> = {
-          title: deal.title,
-          description: typeof deal.description === 'string' 
-            ? { pl: deal.description, en: deal.description, de: deal.description || "" } 
-            : (deal.description || { pl: "", en: "", de: "" }),
-          price: typeof deal.price === "number" ? deal.price : 0,
-          originalPrice: deal.originalPrice,
-          link: deal.link,
-          image: deal.image || "",
-          imageHint: deal.imageHint || "",
-          category: deal.mainCategorySlug, // Dodane wymagane pole
+        // M6: Create DealM6 object with support for seller/coupon/stock metadata
+        const now = Timestamp.now().toDate().toISOString();
+        const newDealData: Omit<DealM6, "id"> = {
+          // Core Fields
+          title: typeof deal.title === 'object' ? deal.title : { pl: deal.title || "", en: deal.title || "", de: "", fr: "", es: "", uk: "" },
+          description: typeof deal.description === 'object' ? deal.description : { pl: deal.description || "", en: deal.description || "", de: "", fr: "", es: "", uk: "" },
+          // Pricing (M6 format)
+          price: typeof deal.price === 'object' 
+            ? deal.price 
+            : { amount: typeof deal.price === "number" ? deal.price : 0, currency: "PLN" },
+          // Shipping (M6 format)
+          shipping: typeof deal.shipping === 'object'
+            ? deal.shipping
+            : { cost: 0, timeDays: 7 },
+          // Source & Link
+          source: deal.source || "manual",
+          affiliateLink: deal.affiliateLink || "",
+          sourceUrl: deal.sourceUrl || deal.affiliateLink || "",
+          // Product Reference
+          productId: deal.productId || "",
+          // Taxonomy
           mainCategorySlug: deal.mainCategorySlug,
           subCategorySlug: deal.subCategorySlug,
-          postedBy: (request.auth?.uid) || "unknown",
-          postedAt: Timestamp.now().toDate().toISOString(), // Poprawiony błąd
+          // Status & Availability
+          stockStatus: deal.stockStatus || "in_stock",
+          isActive: true,
+          // Price History (Omnibus compliance)
+          priceHistory: [{
+            date: now.split('T')[0],
+            price: typeof deal.price === 'object' ? deal.price.amount : deal.price || 0,
+            currency: typeof deal.price === 'object' ? deal.price.currency : "PLN"
+          }],
+          // Engagement
           voteCount: 0,
           commentsCount: 0,
-          temperature: 0, // Początkowa temperatura
-          status: "draft", // Domyślny status do moderacji
+          temperature: 0,
+          // Moderation
+          status: "draft",
+          // Timestamps
+          createdAt: now,
+          updatedAt: now,
+          createdBy: request.auth?.uid,
+          // M6 New Fields: seller, coupon, stock metadata
+          seller: deal.seller,
+          couponCode: deal.couponCode,
+          metadata: {
+            coupon: (deal as any).metadata?.coupon,
+            skuStockMin: (deal as any).metadata?.skuStockMin
+          }
         };
         batch.set(newDealRef, newDealData);
         successCount++;
@@ -255,7 +288,9 @@ export const batchImportProducts = onCall(
       versatility: 0,
     };
 
-    for (const [index, product] of productsToImport.entries()) {
+    for (const [index, productRaw] of productsToImport.entries()) {
+      // Legacy: cast to any for backward compatibility (Product fields deprecated, use ProductCore)
+      const product = productRaw as any;
       try {
         if (!product.name || !product.affiliateUrl ||
             !product.mainCategorySlug || !product.subCategorySlug) {
@@ -267,10 +302,10 @@ export const batchImportProducts = onCall(
 
         const newProductRef = db.collection("products").doc();
 
-        // Poprawny obiekt zgodny z interfejsem Product
-        const name = product.name || (product as any).title || "Bez nazwy";
-        const description = product.description || "";
-        const newProductData: Omit<Product, "id"> = {
+        // Legacy: write to old 'products' collection (disabled by LEGACY_PRODUCTS_WRITES_ENABLED)
+        const name: string = product.name || product.title || "Bez nazwy";
+        const description: string = typeof product.description === 'string' ? product.description : "";
+        const newProductData: Record<string, any> = {
           name,
           description,
           longDescription: product.longDescription || description,
@@ -284,8 +319,8 @@ export const batchImportProducts = onCall(
           mainCategorySlug: product.mainCategorySlug,
           subCategorySlug: product.subCategorySlug,
           ratingCard: defaultRatingCard,
-          status: "draft", // Domyślny status do moderacji
-          category: product.mainCategorySlug, // Kompatybilność wsteczna
+          status: "draft",
+          category: product.mainCategorySlug,
         };
         batch.set(newProductRef, newProductData);
         successCount++;
@@ -2013,8 +2048,10 @@ export const checkSavedSearches = onDocumentCreated(
  * @return {boolean} True if deal matches filters
  */
 function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
+  // Legacy: cast to any for fields not in DealM6 (verified, tags, merchant)
+  const d = deal as any;
   // Price range
-  const priceVal = typeof deal.price === 'object' ? deal.price.amount : deal.price;
+  const priceVal = typeof deal.price === 'object' ? deal.price.amount : (deal.price as any);
   if (filters.minPrice && priceVal < filters.minPrice) return false;
   if (filters.maxPrice && priceVal > filters.maxPrice) return false;
 
@@ -2030,7 +2067,7 @@ function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
   if (filters.freeShipping && !deal.freeShipping) return false;
 
   // Verified
-  if (filters.verified && !deal.verified) return false;
+  if (filters.verified && !d.verified) return false;
 
   // Categories
   if (filters.mainCategories?.length > 0) {
@@ -2050,7 +2087,7 @@ function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
 
   // Tags
   if (filters.tags?.length > 0) {
-    const dealTags = deal.tags || [];
+    const dealTags = d.tags || [];
     const hasMatchingTag = filters.tags.some(
       (tag: string) => dealTags.includes(tag)
     );
@@ -2060,8 +2097,8 @@ function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
   // Merchants
   if (filters.merchants?.length > 0) {
     if (
-      !deal.merchant ||
-      !filters.merchants.includes(deal.merchant)
+      !d.merchant ||
+      !filters.merchants.includes(d.merchant)
     ) {
       return false;
     }
@@ -2069,8 +2106,8 @@ function matchesSavedSearchFilters(deal: Deal, filters: any): boolean {
 
   if (filters.excludeMerchants?.length > 0) {
     if (
-      deal.merchant &&
-      filters.excludeMerchants.includes(deal.merchant)
+      d.merchant &&
+      filters.excludeMerchants.includes(d.merchant)
     ) {
       return false;
     }

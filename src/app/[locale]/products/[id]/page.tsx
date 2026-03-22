@@ -20,6 +20,18 @@ interface PageProps {
 
 const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 
+function localeToOgLocale(locale: string): string {
+  const map: Record<string, string> = {
+    pl: 'pl_PL',
+    en: 'en_US',
+    de: 'de_DE',
+    fr: 'fr_FR',
+    es: 'es_ES',
+    uk: 'uk_UA',
+  };
+  return map[locale] || 'pl_PL';
+}
+
 // Server-side data fetching - używa M6 ProductCore + DealM6
 async function getProductData(id: string) {
   try {
@@ -276,7 +288,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: finalDescription.slice(0, 160),
       url: canonicalUrl,
       siteName: 'Okazje Plus',
-      locale: 'pl_PL',
+      locale: localeToOgLocale(effectiveLocale),
       type: 'website',
       images: [
         {
@@ -296,7 +308,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     alternates: {
       canonical: canonicalUrl,
       languages: Object.fromEntries(
-        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `https://okazjeplus.pl/${localeCode}/products/${productData.id}`])
+        [
+          ...SUPPORTED_LOCALES.map((localeCode) => [localeCode, `https://okazjeplus.pl/${localeCode}/products/${productData.id}`]),
+          ['x-default', `https://okazjeplus.pl/pl/products/${productData.id}`],
+        ]
       ),
     },
     other: {
@@ -335,7 +350,10 @@ export async function generateStaticParams() {
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
-  const { id } = await params;
+  const { id, locale } = await params;
+  const effectiveLocale = SUPPORTED_LOCALES.includes(locale as (typeof SUPPORTED_LOCALES)[number])
+    ? locale
+    : 'pl';
   const data = await getProductData(id);
   
   if (!data) {
@@ -368,7 +386,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
             || humanizeCategorySlug((productData as any)?.subCategorySlug)
             || humanizeCategorySlug((productData as any)?.mainCategorySlug),
           path: buildCategoryPath(
-            'pl',
+            effectiveLocale,
             (productData as any).mainCategorySlug,
             (productData as any)?.subCategorySlug,
             (productData as any)?.subSubCategorySlug

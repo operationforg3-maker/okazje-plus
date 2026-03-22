@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { gemini20Flash } from '@genkit-ai/vertexai';
+import { ai } from '../genkit';
+import { logger } from '@/lib/logging';
+import { parseJsonFromResponse } from '@/lib/vertex';
 import { translateContent } from '@/ai/flows/enrichment';
 
 /**
@@ -63,12 +67,136 @@ export type DealEnrichmentInput = z.infer<typeof dealEnrichmentInputSchema>;
 export type DealEnrichmentOutput = z.infer<typeof dealEnrichmentOutputSchema>;
 
 /**
- * Generate deal enrichment with AI
- * For now, uses template-based approach. Can integrate with Genkit later.
+ * Generate deal enrichment — AI-first with template fallback.
+ * AI path: single Gemini call generates all 6-locale content with native writing quality.
+ * Fallback: rule-based templates (fast, no API cost, but generic).
  */
 export async function enrichDeal(
   input: DealEnrichmentInput
 ): Promise<DealEnrichmentOutput> {
+  try {
+    return await enrichDealWithAI(input);
+  } catch (error) {
+    logger.warn('AI deal enrichment failed, falling back to templates', {
+      error: error instanceof Error ? error.message : String(error),
+      dealTitle: input.dealTitle,
+    });
+    return enrichDealWithTemplates(input);
+  }
+}
+
+/**
+ * AI-powered deal enrichment via Gemini.
+ * Generates native-quality titles, selling points, summaries, descriptions and highlights
+ * for all 6 locales in a single request — avoiding back-and-forth literal translation.
+ */
+async function enrichDealWithAI(input: DealEnrichmentInput): Promise<DealEnrichmentOutput> {
+  const sourceLocale = (input.sourceLocale || 'pl').toLowerCase();
+
+  const shippingLine =
+    input.shippingCost === 0
+      ? 'Free shipping included'
+      : `${input.shippingCost} PLN shipping, estimated ${input.shippingDays} day(s) delivery`;
+
+  const prompt = `You are a professional deal copywriter for a European price comparison marketplace (like Idealo or Ceneo).
+Write compelling, conversion-focused deal content in 6 languages: Polish (pl), English (en), German (de), French (fr), Spanish (es), Ukrainian (uk).
+Write NATIVE-QUALITY text — not literal translations of Polish. Each language must feel natural to a native speaker.
+
+DEAL DETAILS:
+- Product title: "${input.dealTitle}"
+- Title source language: ${sourceLocale}
+- Seller: ${input.merchantName} (rating: ${input.merchantRating}/5 stars)
+- Price: ${input.price} PLN
+- Shipping: ${shippingLine}
+- Deal type: ${input.dealType}
+- Platform: ${input.source}
+
+CONTENT RULES:
+1. titleTranslations — translate the product name natively into each of the 6 languages. If the source is already that language, keep it as-is.
+2. sellingPoints — 3–5 short bullet-ready benefits (price, shipping speed, seller trust, deal type). Concise, native language.
+3. offerSummary — 1–2 sentence pitch answering "why buy now?". Conversational, no clickbait.
+4. description — minimal HTML using <p> and optionally <ul>/<li>. 2–3 sentences or bullets highlighting the offer value. Do NOT invent specs not in the title.
+5. highlights — 3–4 checkmark-style strings (prefix with ✓). E.g.: "✓ Free shipping", "✓ Trusted seller 4.8/5".
+
+Return STRICTLY valid JSON only — no markdown fences, no extra keys:
+{
+  "titleTranslations": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
+  "sellingPoints": {
+    "pl": ["...", "..."], "en": ["...", "..."], "de": ["...", "..."],
+    "fr": ["...", "..."], "es": ["...", "..."], "uk": ["...", "..."]
+  },
+  "offerSummary": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
+  "description": {
+    "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>",
+    "fr": "<p>...</p>", "es": "<p>...</p>", "uk": "<p>...</p>"
+  },
+  "highlights": {
+    "pl": ["✓ ...", "✓ ..."], "en": ["✓ ...", "✓ ..."], "de": ["✓ ...", "✓ ..."],
+    "fr": ["✓ ...", "✓ ..."], "es": ["✓ ...", "✓ ..."], "uk": ["✓ ...", "✓ ..."]
+  }
+}`;
+
+  const response = await ai.generate({
+    model: gemini20Flash,
+    prompt,
+    config: { temperature: 0.4, maxOutputTokens: 2000 },
+  });
+
+  const parsed = parseJsonFromResponse(response.text ?? '');
+  const tt = (parsed.titleTranslations as Record<string, string>) || {};
+  const sp = (parsed.sellingPoints as Record<string, string[]>) || {};
+  const os = (parsed.offerSummary as Record<string, string>) || {};
+  const desc = (parsed.description as Record<string, string>) || {};
+  const hl = (parsed.highlights as Record<string, string[]>) || {};
+  const fallback = input.dealTitle;
+
+  return {
+    titlePL: tt.pl || (sourceLocale === 'pl' ? undefined : fallback),
+    titleEN: tt.en || fallback,
+    titleDE: tt.de || fallback,
+    titleFR: tt.fr || fallback,
+    titleES: tt.es || fallback,
+    titleUK: tt.uk || fallback,
+    sellingPoints: {
+      pl: sp.pl?.length ? sp.pl : [],
+      en: sp.en?.length ? sp.en : [],
+      de: sp.de?.length ? sp.de : [],
+      fr: sp.fr?.length ? sp.fr : [],
+      es: sp.es?.length ? sp.es : [],
+      uk: sp.uk?.length ? sp.uk : [],
+    },
+    offerSummary: {
+      pl: os.pl || '',
+      en: os.en || '',
+      de: os.de || '',
+      fr: os.fr || '',
+      es: os.es || '',
+      uk: os.uk || '',
+    },
+    description: {
+      pl: desc.pl || '',
+      en: desc.en || '',
+      de: desc.de || '',
+      fr: desc.fr || '',
+      es: desc.es || '',
+      uk: desc.uk || '',
+    },
+    highlights: {
+      pl: hl.pl?.length ? hl.pl : [],
+      en: hl.en?.length ? hl.en : [],
+      de: hl.de?.length ? hl.de : [],
+      fr: hl.fr?.length ? hl.fr : [],
+      es: hl.es?.length ? hl.es : [],
+      uk: hl.uk?.length ? hl.uk : [],
+    },
+  };
+}
+
+/**
+ * Template-based fallback — used when AI call fails.
+ * Uses translateContent for titles + deterministic rules for other fields.
+ */
+async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<DealEnrichmentOutput> {
   const sourceLocale = (input.sourceLocale || 'pl').toLowerCase();
   const targetLocales = ['pl', 'en', 'de', 'fr', 'es', 'uk'].filter((lang) => lang !== sourceLocale);
 
@@ -91,7 +219,6 @@ export async function enrichDeal(
   const titleES = sourceLocale === 'es' ? input.dealTitle : translatedTitles.es || input.dealTitle;
   const titleUK = sourceLocale === 'uk' ? input.dealTitle : translatedTitles.uk || input.dealTitle;
 
-  // For now, return structured data based on rules
   return {
     titlePL,
     titleEN,

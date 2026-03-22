@@ -314,6 +314,12 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
   const dealDescription = normalizeDisplayText(rawDealDescription);
   
   const couponCode = safeText(deal.couponCode);
+  const promotionCampaign = deal?.metadata?.promotionCampaign || deal?.importMetadata?.promotionCampaign;
+  const promotionLabel = safeText(promotionCampaign?.label || promotionCampaign?.name);
+  const promotionEndsAt = safeText(promotionCampaign?.endAt);
+  const promotionAppPrice = typeof promotionCampaign?.price?.appSale === 'number'
+    ? promotionCampaign.price.appSale
+    : undefined;
   const deliveryTime = safeText(deal.importMetadata?.deliveryTime);
   const warehouseInfo = safeText(deal.importMetadata?.warehouse);
   const returnPolicy = safeText(deal.importMetadata?.returnPolicy);
@@ -669,6 +675,12 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               Promocja
             </Badge>
           )}
+          {promotionLabel && (
+            <Badge className="bg-gradient-to-r from-fuchsia-600 to-rose-600 text-white shadow-md max-w-[180px]">
+              <Tag className="mr-1 h-3 w-3" />
+              <span className="truncate">{promotionLabel}</span>
+            </Badge>
+          )}
         </div>
         
         {/* Admin Quick Actions (Bottom-right overlay) */}
@@ -833,6 +845,17 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1" />
               Flash Sale
             </Badge>
+          )}
+          {promotionAppPrice !== undefined && promotionAppPrice > 0 && (
+            <Badge variant="outline" className="text-xs border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700">
+              Cena w app: {CurrencyManager.formatPrice(promotionAppPrice, currency || 'PLN')}
+            </Badge>
+          )}
+          {promotionEndsAt && (
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              Do: {new Date(promotionEndsAt).toLocaleDateString('pl-PL')}
+            </span>
           )}
           
           {/* Stock alert */}

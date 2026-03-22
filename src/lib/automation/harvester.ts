@@ -22,6 +22,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { chunkArray } from '@/lib/utils';
 import { matchCategoryByExternalIds, matchCategoryByText } from '@/lib/category-mapper';
 import { validateMerchantListingInput } from '@/lib/merchant-center-validator';
+import { parseAliExpressPromotionData } from '@/lib/aliexpress-promotion-utils';
 import { load as loadHtml } from 'cheerio';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
@@ -50,6 +51,7 @@ interface RawProduct {
   merchantName?: string;
   merchantRating?: number;
   specs?: Record<string, string>;
+  attributes?: Array<{ name: string; value: string }>;
   discountPercent?: number; // Procentowa obniżka ceny
   couponCode?: string;
   expiryDate?: string;
@@ -64,12 +66,24 @@ interface RawProduct {
   evaluateCount?: number; // AliExpress: Liczba opinii (alternatywa dla ratingCount)
   soldCount?: number; // AliExpress: Liczba sprzedanych/ocenionych (dla popularity metric)
   images?: string[]; // All product images (gallery)
+  appSalePrice?: number;
+  promotionCampaign?: any;
   variants?: Array<{ // Product variants (colors, sizes, etc.)
     id: string;
     name: string; // e.g., "Color", "Size"
     values: string[]; // e.g., ["Black", "White"], ["S", "M", "L"]
     sku?: string;
   }>;
+  warehouses?: string[];
+  shippingFromCountry?: string;
+  seller?: {
+    name: string;
+    rating?: number;
+    positiveRate?: string;
+    followers?: number;
+    storeUrl?: string;
+    storeId?: string;
+  };
   // Product identifiers (for deduplication & SEO)
   sku?: string;
   ean?: string;
@@ -81,6 +95,8 @@ interface RawProduct {
     terms?: string;
     previewUrl?: string;
     hasCoupons?: boolean;
+    minimumAvailableQuantity?: number;
+    promotionCampaign?: any;
   };
 }
 
@@ -1143,6 +1159,164 @@ export class SmartHarvester {
     return {};
   }
 
+  private normalizeAttributes(attrs: any): Array<{ name: string; value: string }> {
+    if (!attrs) return [];
+    if (Array.isArray(attrs)) {
+      return attrs
+        .map((item) => {
+          const name = String(item?.name || item?.label || item?.key || '').trim();
+          const value = String(item?.value || item?.val || '').trim();
+          return name && value ? { name, value } : null;
+        })
+        .filter(Boolean) as Array<{ name: string; value: string }>;
+    }
+    if (typeof attrs === 'object') {
+      return Object.entries(attrs)
+        .map(([name, value]) => {
+          const safeName = String(name || '').trim();
+          const safeValue = String(value || '').trim();
+          return safeName && safeValue ? { name: safeName, value: safeValue } : null;
+        })
+        .filter(Boolean) as Array<{ name: string; value: string }>;
+    }
+    return [];
+  }
+
+  private extractAttributesFromProductProps(props: any): Array<{ name: string; value: string }> {
+    if (!props) return [];
+
+    let propsArray: any[] = [];
+    if (Array.isArray(props)) {
+      propsArray = props;
+    } else if (typeof props === 'string') {
+      try {
+        const parsed = JSON.parse(props);
+        propsArray = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    return propsArray
+      .map((prop) => {
+        const name = String(prop?.attr_name || prop?.attrName || prop?.name || prop?.key || '').trim();
+        const value = String(prop?.attr_value || prop?.attrValue || prop?.value || '').trim();
+        return name && value ? { name, value } : null;
+      })
+      .filter(Boolean) as Array<{ name: string; value: string }>;
+  }
+
+  private normalizeWarehouses(value: any): string[] {
+    const countries = Array.isArray(value)
+      ? value
+      : (typeof value === 'string' ? value.split(/[,;|]/) : []);
+
+    return Array.from(
+      new Set(
+        countries
+          .map((item) => String(item || '').trim().toUpperCase())
+          .filter(Boolean)
+      )
+    );
+  }
+
+  private normalizeVariants(input: any): RawProduct['variants'] {
+    if (!Array.isArray(input) || input.length === 0) return undefined;
+
+    const grouped = new Map<string, Set<string>>();
+
+    const pushVariant = (name: string, value: string) => {
+      const safeName = String(name || '').trim();
+      const safeValue = String(value || '').trim();
+      if (!safeName || !safeValue) return;
+      if (!grouped.has(safeName)) grouped.set(safeName, new Set());
+      grouped.get(safeName)?.add(safeValue);
+    };
+
+    input.forEach((entry, idx) => {
+      if (entry && typeof entry === 'object' && Array.isArray(entry.values) && entry.name) {
+        entry.values.forEach((value: any) => pushVariant(entry.name, value));
+        return;
+      }
+
+      const arrayCandidates = [
+        entry?.sku_property_values,
+        entry?.skuProperties,
+        entry?.properties,
+        entry?.attrs,
+      ];
+
+      arrayCandidates.forEach((candidate) => {
+        if (!Array.isArray(candidate)) return;
+        candidate.forEach((prop: any) => {
+          pushVariant(
+            prop?.attr_name || prop?.attrName || prop?.name || prop?.property_name || 'Wariant',
+            prop?.attr_value || prop?.attrValue || prop?.value || prop?.display_name || prop?.property_value || ''
+          );
+        });
+      });
+
+      const stringCandidates = [
+        entry?.sku_attr,
+        entry?.skuAttr,
+        entry?.sku_name,
+        entry?.skuName,
+        entry?.sku_title,
+        entry?.skuTitle,
+      ].filter(Boolean);
+
+      stringCandidates.forEach((candidate: any) => {
+        String(candidate)
+          .split(/[;|]/)
+          .map((chunk) => chunk.trim())
+          .filter(Boolean)
+          .forEach((chunk) => {
+            const pair = chunk.split(/[:=]/);
+            if (pair.length >= 2) {
+              pushVariant(pair[0], pair.slice(1).join(':'));
+            } else {
+              pushVariant('Wariant', chunk);
+            }
+          });
+      });
+
+      if (grouped.size === 0 && entry?.sku_code) {
+        pushVariant('Wariant', entry.sku_code);
+      }
+    });
+
+    const variants = Array.from(grouped.entries()).map(([name, values], index) => ({
+      id: `${name.toLowerCase().replace(/\s+/g, '-')}-${index}`,
+      name,
+      values: Array.from(values),
+    }));
+
+    return variants.length > 0 ? variants : undefined;
+  }
+
+  private buildStructuredSpecifications(
+    specs: Record<string, string>,
+    attributes: Array<{ name: string; value: string }>
+  ): ProductCore['specificationsStructured'] {
+    const combined = new Map<string, string>();
+    Object.entries(specs || {}).forEach(([key, value]) => {
+      if (key && value) combined.set(key, value);
+    });
+    attributes.forEach((attr) => {
+      if (attr?.name && attr?.value && !combined.has(attr.name)) {
+        combined.set(attr.name, attr.value);
+      }
+    });
+
+    const items = Array.from(combined.entries()).map(([label, value], index) => ({
+      label,
+      value,
+      order: index,
+    }));
+
+    return items.length > 0 ? items : undefined;
+  }
+
   private async findProductByIdentity(identityHash: string): Promise<ProductCore | null> {
     if (!identityHash) return null;
 
@@ -1259,6 +1433,23 @@ export class SmartHarvester {
       : (sourceProduct.imageUrl ? [sourceProduct.imageUrl] : []);
     const primaryImage = images[0] || this.getFallbackImageUrl();
     const specs = this.normalizeSpecs(sourceProduct.specs);
+    const attributes = this.normalizeAttributes(sourceProduct.attributes);
+    const warehouses = this.normalizeWarehouses(sourceProduct.warehouses);
+    const shippingFromCountry = sourceProduct.shippingFromCountry || warehouses[0];
+    const variants = this.normalizeVariants(sourceProduct.variants);
+    const gallery = [
+      ...(sourceProduct.videoUrl ? [{ url: sourceProduct.videoUrl, type: 'VIDEO' as const, thumbnail: primaryImage, order: 0 }] : []),
+      ...images.map((url, index) => ({ url, type: 'IMAGE' as const, order: sourceProduct.videoUrl ? index + 1 : index })),
+    ];
+    const specificationsStructured = this.buildStructuredSpecifications(specs, attributes);
+    const seller = sourceProduct.seller || (sourceProduct.merchantName
+      ? {
+          name: sourceProduct.merchantName,
+          rating: sourceProduct.merchantRating,
+        }
+      : undefined);
+    const hasCoupons = Boolean(sourceProduct.couponCode || sourceProduct.offerMeta?.hasCoupons);
+    const promotionCampaign = sourceProduct.promotionCampaign || sourceProduct.offerMeta?.promotionCampaign;
 
     const identifiers = {
       ean: sourceProduct.ean ? normalizeProductIdentifier(sourceProduct.ean) : undefined,
@@ -1283,6 +1474,7 @@ export class SmartHarvester {
       subSubCategorySlug: categoryInfo.subSubCategorySlug,
       imageUrl: primaryImage,
       images: images.length > 0 ? images : [primaryImage],
+      gallery: gallery.length > 0 ? gallery : undefined,
       primaryImageHash: calculateImageHash(primaryImage),
       videoUrl: sourceProduct.videoUrl,
       reviewsSummary: this.toLocalizedText('Brak podsumowania opinii'),
@@ -1295,6 +1487,10 @@ export class SmartHarvester {
         amount: Number(sourceProduct.price || 0),
         currency: (sourceProduct.currency as any) || 'PLN',
       },
+      bestDealType: promotionCampaign?.flashDeal ? 'flash_deal' : (hasCoupons ? 'coupon' : (sourceProduct.discountPercent ? 'sale' : 'regular')),
+      hasCoupons: hasCoupons || undefined,
+      couponDealsCount: hasCoupons ? 1 : undefined,
+      bestDealCouponCode: sourceProduct.couponCode,
       bestTotalPrice: Number(sourceProduct.price || 0) + Number(sourceProduct.shippingCost || 0),
       linkedDealIds: [],
       searchTags: Array.from(new Set(
@@ -1307,6 +1503,25 @@ export class SmartHarvester {
       status: 'pending_approval',
       createdAt: now,
       updatedAt: now,
+      specificationsStructured,
+      attributes: attributes.length > 0 ? attributes : undefined,
+      variants,
+      logistics: {
+        deliveryDays: Math.max(1, Number(sourceProduct.shippingDays || 0) || 7),
+        isFreeShipping: Boolean(sourceProduct.freeShipping ?? (Number(sourceProduct.shippingCost || 0) <= 0)),
+        shippingCost: Math.max(0, Number(sourceProduct.shippingCost || 0)),
+      },
+      seller: seller
+        ? {
+            name: seller.name,
+            rating: seller.rating,
+            followers: seller.followers,
+            storeUrl: seller.storeUrl,
+            storeId: seller.storeId,
+            positiveRate: seller.positiveRate,
+          }
+        : undefined,
+      warehouses: warehouses.length > 0 ? warehouses : (shippingFromCountry ? [shippingFromCountry] : undefined),
       metadata: {
         source,
         originalId: sourceProduct.sourceProductId,
@@ -1315,6 +1530,11 @@ export class SmartHarvester {
         googleCategoryId: sourceProduct.googleCategoryId,
         aliexpressCategoryId: sourceProduct.aliexpressCategoryId,
         identifiers,
+        shippingFromCountry,
+        promotionCampaign,
+        appSalePrice: sourceProduct.appSalePrice,
+        promotionId: promotionCampaign?.id,
+        flashDeal: promotionCampaign?.flashDeal,
       },
     };
 
@@ -1347,6 +1567,15 @@ export class SmartHarvester {
     const galleryImages = Array.isArray(sourceProduct.images) && sourceProduct.images.length > 0
       ? sourceProduct.images
       : [primaryImage];
+    const freeShipping = Boolean(sourceProduct.freeShipping ?? (shippingCost <= 0));
+    const shippingFromCountry = sourceProduct.shippingFromCountry || sourceProduct.warehouses?.[0];
+    const promotionCampaign = sourceProduct.promotionCampaign || sourceProduct.offerMeta?.promotionCampaign;
+    const seller = sourceProduct.seller || (sourceProduct.merchantName
+      ? {
+          name: sourceProduct.merchantName,
+          rating: sourceProduct.merchantRating,
+        }
+      : undefined);
 
     const dealData: DealM6 = {
       id: dealRef.id,
@@ -1368,6 +1597,7 @@ export class SmartHarvester {
         cost: shippingCost,
         timeDays: Number(sourceProduct.shippingDays || 0) || 7,
         method: 'Standard',
+        fromCountry: shippingFromCountry,
       },
       source,
       affiliateLink: sourceProduct.sourceUrl || '',
@@ -1377,8 +1607,14 @@ export class SmartHarvester {
       merchantRating: sourceProduct.merchantRating,
       title: this.toLocalizedText(sourceProduct.title || ''),
       description: sourceProduct.description ? this.toLocalizedText(sourceProduct.description) : undefined,
-      dealType: sourceProduct.couponCode ? 'coupon' : (discountPercent ? 'sale' : 'regular'),
+      dealType: promotionCampaign?.flashDeal ? 'flash_deal' : (sourceProduct.couponCode ? 'coupon' : (discountPercent ? 'sale' : 'regular')),
       couponCode: sourceProduct.couponCode,
+      freeShipping,
+      minOrderValue: sourceProduct.minOrderValue,
+      availableQuantity: (sourceProduct as any).offerMeta?.minimumAvailableQuantity,
+      limitPerUser: sourceProduct.limitPerUser,
+      conditions: sourceProduct.conditions,
+      gallery: galleryImages,
       stockStatus: 'in_stock',
       stockLevel: (sourceProduct as any).offerMeta?.minimumAvailableQuantity,
       isActive: true,
@@ -1395,6 +1631,49 @@ export class SmartHarvester {
       status: targetStatus,
       createdAt: now,
       updatedAt: now,
+      seller: seller
+        ? {
+            id: seller.storeId,
+            name: seller.name,
+            url: seller.storeUrl,
+            rating: seller.rating,
+          }
+        : undefined,
+      salesMetrics: {
+        soldCount: sourceProduct.soldCount,
+        reviewCount: sourceProduct.ratingCount,
+        avgRating: sourceProduct.rating,
+      },
+      metadata: {
+        source,
+        importedAt: now,
+        originalId: sourceProduct.sourceProductId,
+        merchant: sourceProduct.merchantName,
+        sellerRating: sourceProduct.merchantRating,
+        productVideoUrl: sourceProduct.videoUrl,
+        warehouse: shippingFromCountry,
+        deliveryTime: `${Number(sourceProduct.shippingDays || 0) || 7} dni`,
+        shippingMethod: 'Standard',
+        previewUrl: sourceProduct.offerMeta?.previewUrl,
+        offerPreviewUrl: sourceProduct.offerMeta?.previewUrl,
+        orders: sourceProduct.soldCount,
+        evaluateCount: sourceProduct.ratingCount,
+        specifications: sourceProduct.attributes?.map((attr) => ({
+          name: attr.name,
+          value: attr.value,
+        })),
+        hasCoupons: sourceProduct.offerMeta?.hasCoupons,
+        promotionId: promotionCampaign?.id,
+        flashDeal: promotionCampaign?.flashDeal,
+        flashSale: sourceProduct.appSalePrice
+          ? {
+              active: true,
+              appSalePrice: sourceProduct.appSalePrice,
+              originalPrice: sourceProduct.originalPrice,
+            }
+          : undefined,
+        promotionCampaign,
+      },
       sourceProductId: sourceProduct.sourceProductId,
       sourceUrl: sourceProduct.sourceUrl || '',
     };
@@ -2530,11 +2809,17 @@ export class SmartHarvester {
           return min === Infinity ? 0 : min;
         };
 
+        const promotionData = parseAliExpressPromotionData(p, {
+          currency: String(p.price?.currency || p.target_sale_price_currency || p.target_app_sale_price_currency || 'PLN').toUpperCase(),
+          fallbackUrl: p.product_url || p.product_detail_url || p.promotion_link || '',
+        });
+
         const baseCandidates = [
           p.price?.current,
+          p.target_app_sale_price,
+          p.app_sale_price,
           p.target_sale_price,
           p.sale_price,
-          p.app_sale_price,
         ].map(parsePriceNumber).filter((v) => v > 0);
 
         let rawPrice = baseCandidates.length > 0 ? Math.min(...baseCandidates) : 0;
@@ -2585,14 +2870,7 @@ export class SmartHarvester {
           (p.discount_percent ?? p.discount ?? p.discount_rate ?? p.promotion_discount)
         );
 
-        const couponCodeRaw =
-          p.coupon_code ||
-          p.couponCode ||
-          p.promo_code ||
-          p.promotion_code ||
-          p.voucher_code ||
-          '';
-        const couponCode = String(couponCodeRaw || '').trim() || undefined;
+        const couponCode = promotionData.couponCode;
 
         const parseAmount = (value: any): number | undefined => {
           if (value === null || value === undefined || value === '') return undefined;
@@ -2602,14 +2880,14 @@ export class SmartHarvester {
           return Number.isFinite(num) ? num : undefined;
         };
 
-        const minOrderValue = parseAmount(
+        const minOrderValue = promotionData.couponMinOrder ?? parseAmount(
           p.coupon_min_spend ||
           p.min_spend ||
           p.min_order_amount ||
           p.min_order_value
         );
 
-        const hasCoupons = Boolean(couponCode || parseAmount(p.coupon_amount || p.coupon_discount || p.coupon_value));
+        const hasCoupons = promotionData.hasCoupons;
 
         const scrapeTarget = p.product_detail_url || p.product_url || p.promotion_link || '';
         const shouldScrape = (!p.product_description || !p.product_props) && Boolean(scrapeTarget);
@@ -2618,7 +2896,11 @@ export class SmartHarvester {
         // Phase 1A: Extract specs from title + product properties + SKU
         const specsFromTitle = extractDimensionsFromTitle(p.title || p.product_title || '');
         const specsFromProps = this.extractPropsFromProductProps(p.product_props);
+        const attributes = this.extractAttributesFromProductProps(p.product_props);
         const skuPriceRange = this.extractSkuPriceRange(p.sku_list);
+        const warehouses = this.normalizeWarehouses(p.ships_from_countries);
+        const shippingFromCountry = p.shipping?.from_country || p.ship_from_country || warehouses[0];
+        const variants = this.normalizeVariants(Array.isArray(p.variants) ? p.variants : p.sku_list);
         
         // Consolidate specs - add fallback to variants/sku_list if no props
         const specs: Record<string, string> = {
@@ -2684,8 +2966,11 @@ export class SmartHarvester {
           merchantName: p.store_info?.store_name || 'AliExpress',
           merchantRating: p.store_info?.score || 4.0,
           specs,
+          attributes,
           discountPercent,
           couponCode,
+          appSalePrice: promotionData.appSalePrice,
+          promotionCampaign: promotionData.promotionCampaign,
           freeShipping: p.shipping?.free === true || shippingResult.amount === 0,
           minOrderValue: typeof minOrderValue === 'number' && minOrderValue > 0 ? minOrderValue : undefined,
           offerMeta: hasCoupons || minAvailableQty ? {
@@ -2693,6 +2978,7 @@ export class SmartHarvester {
             previewUrl: p.promotion_link || p.product_url || undefined,
             hasCoupons: hasCoupons,
             minimumAvailableQuantity: minAvailableQty,
+            promotionCampaign: promotionData.promotionCampaign,
           } : undefined,
           rating: (() => {
             // Robust rating parser handling 0-5 and 0-100 scales
@@ -2706,7 +2992,18 @@ export class SmartHarvester {
             return 0;
           })(),
           ratingCount: p.rating?.count || p.volume || 0,
-          variants: Array.isArray(p.variants) ? p.variants : (p.sku_list || undefined), // Product variants (colors, sizes)
+          variants,
+          warehouses,
+          shippingFromCountry,
+          seller: p.store_info ? {
+            name: p.store_info.store_name || 'AliExpress',
+            rating: p.store_info.score || 4.0,
+            positiveRate: p.store_info.positive_rate || p.store_info.positiveRate,
+            followers: Number(p.store_info.followers || 0) || undefined,
+            storeUrl: p.store_info.store_url || p.store_info.storeUrl,
+            storeId: String(p.store_info.store_id || p.store_info.storeId || ''),
+          } : undefined,
+          soldCount: Number(p.volume || p.lastest_volume || 0) || undefined,
           // Product identifiers (for robust deduplication & SEO)
           sku: p.sku || undefined,
           ean: p.ean || p.barcode || undefined,
@@ -3036,7 +3333,37 @@ export class SmartHarvester {
         return vb - va;
       });
 
-      const mapped = sorted.slice(0, maxResults).map((p: any) => {
+      const selected = sorted.slice(0, maxResults);
+      const enrichedById = new Map<string, any>();
+
+      for (const group of chunkArray(selected, 5)) {
+        const results = await Promise.all(
+          group.map(async (product: any) => {
+            const productId = String(product?.product_id || product?.item_id || '').trim();
+            if (!productId) return null;
+
+            try {
+              const details = await client.getDetails(productId);
+              return details ? { productId, details } : null;
+            } catch (error) {
+              this.addLog('warn', `AliExpress auto-browse: detail fetch failed for ${productId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              return null;
+            }
+          })
+        );
+
+        for (const result of results) {
+          if (result?.productId && result.details) {
+            enrichedById.set(result.productId, result.details);
+          }
+        }
+      }
+
+      const mapped = selected.map((baseProduct: any) => {
+        const productId = String(baseProduct?.product_id || baseProduct?.item_id || '').trim();
+        const p = enrichedById.has(productId)
+          ? { ...baseProduct, ...enrichedById.get(productId) }
+          : baseProduct;
         const title = String(p?.product_title || p?.title || '').trim();
         const sourceProductId = String(p?.product_id || p?.item_id || '').trim();
         const imageUrl = String(p?.product_main_image_url || '').trim() || this.getFallbackImageUrl();
@@ -3046,27 +3373,59 @@ export class SmartHarvester {
         const salesVolume = parseNumber(p?.lastest_volume || p?.volume || 0);
         const evaluateRateRaw = parseNumber(p?.evaluate_rate);
         const rating = evaluateRateRaw > 5 ? evaluateRateRaw / 20 : evaluateRateRaw;
+        const promotionData = parseAliExpressPromotionData(p, {
+          currency: String(p?.target_sale_price_currency || p?.target_app_sale_price_currency || 'PLN').toUpperCase(),
+          fallbackUrl: String(p?.product_detail_url || p?.promotion_link || '').trim(),
+        });
 
         return {
           title,
-          description: '',
+          description: String(p?.product_description || '').trim(),
           imageUrl,
-          images: [imageUrl],
+          images: Array.from(new Set([
+            imageUrl,
+            ...(Array.isArray(p?.product_small_image_urls) ? p.product_small_image_urls : []),
+          ].filter(Boolean))),
           price,
           originalPrice: originalPrice > price ? originalPrice : undefined,
           currency: String(p?.target_sale_price_currency || 'PLN').toUpperCase(),
           shippingCost: 0,
-          shippingDays: 7,
+          shippingDays: parseNumber(p?.ship_to_days) || 7,
           sourceProductId,
           sourceUrl: String(p?.product_detail_url || p?.promotion_link || '').trim(),
-          merchantName: String(p?.shop_name || 'AliExpress').trim(),
-          specs: extractDimensionsFromTitle(title),
+          videoUrl: String(p?.product_video_url || '').trim() || undefined,
+          merchantName: String(p?.store_info?.store_name || p?.shop_name || 'AliExpress').trim(),
+          merchantRating: parseNumber(p?.store_info?.score) || undefined,
+          specs: {
+            ...extractDimensionsFromTitle(title),
+            ...this.extractPropsFromProductProps(p?.product_props),
+          },
+          attributes: this.extractAttributesFromProductProps(p?.product_props),
           discountPercent: discountPercent > 0 ? discountPercent : undefined,
+          couponCode: promotionData.couponCode,
+          appSalePrice: promotionData.appSalePrice,
+          promotionCampaign: promotionData.promotionCampaign,
           freeShipping: true,
           rating: rating > 0 ? rating : undefined,
           ratingCount: salesVolume > 0 ? salesVolume : undefined,
           evaluateCount: salesVolume > 0 ? salesVolume : undefined,
           soldCount: salesVolume > 0 ? salesVolume : undefined,
+          variants: this.normalizeVariants(p?.sku_list),
+          warehouses: this.normalizeWarehouses(p?.ships_from_countries),
+          seller: p?.store_info ? {
+            name: p.store_info.store_name || 'AliExpress',
+            rating: parseNumber(p.store_info.score) || undefined,
+            positiveRate: p.store_info.positive_rate || p.store_info.positiveRate,
+            followers: parseNumber(p.store_info.followers) || undefined,
+            storeUrl: p.store_info.store_url || p.store_info.storeUrl,
+            storeId: String(p.store_info.store_id || p.store_info.storeId || ''),
+          } : undefined,
+          offerMeta: promotionData.hasCoupons || promotionData.promotionCampaign ? {
+            promotionType: 'offer',
+            previewUrl: String(p?.promotion_link || p?.product_detail_url || '').trim() || undefined,
+            hasCoupons: promotionData.hasCoupons,
+            promotionCampaign: promotionData.promotionCampaign,
+          } : undefined,
           originalCategoryName: String(p?.second_level_category_name || p?.first_level_category_name || '').trim() || undefined,
         } as RawProduct;
       });

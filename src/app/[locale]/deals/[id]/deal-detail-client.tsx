@@ -359,6 +359,13 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
   };
 
   const currentDealType = deal.dealType && dealTypeInfo[deal.dealType];
+  const promotionCampaign = deal.metadata?.promotionCampaign;
+  const promotionAppPrice = typeof promotionCampaign?.price?.appSale === 'number'
+    ? promotionCampaign.price.appSale
+    : undefined;
+  const promotionCurrentPrice = typeof promotionCampaign?.price?.current === 'number'
+    ? promotionCampaign.price.current
+    : undefined;
 
   const handleCopyCoupon = () => {
     if (deal.couponCode) {
@@ -694,6 +701,51 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                     Kopiuj
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {promotionCampaign && (
+            <Card className="bg-gradient-to-r from-fuchsia-50 to-rose-50 border border-fuchsia-200">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-fuchsia-600 text-white">
+                    {promotionCampaign.label || promotionCampaign.name || 'Kampania AliExpress'}
+                  </Badge>
+                  {promotionCampaign.flashDeal && (
+                    <Badge className="bg-orange-600 text-white">Flash Sale</Badge>
+                  )}
+                  {promotionCampaign.appOnly && (
+                    <Badge variant="outline">Cena tylko w aplikacji</Badge>
+                  )}
+                  {promotionCampaign.active === true && (
+                    <Badge variant="outline" className="border-green-300 text-green-700 bg-green-50">Aktywna</Badge>
+                  )}
+                </div>
+
+                {(promotionAppPrice !== undefined || promotionCurrentPrice !== undefined) && (
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    {promotionCurrentPrice !== undefined && (
+                      <div>
+                        <p className="text-muted-foreground">Cena promocyjna</p>
+                        <p className="font-semibold">{CurrencyManager.formatPrice(promotionCurrentPrice, currency || 'PLN')}</p>
+                      </div>
+                    )}
+                    {promotionAppPrice !== undefined && (
+                      <div>
+                        <p className="text-muted-foreground">Cena w aplikacji</p>
+                        <p className="font-semibold text-fuchsia-700">{CurrencyManager.formatPrice(promotionAppPrice, currency || 'PLN')}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(promotionCampaign.startAt || promotionCampaign.endAt) && (
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    {promotionCampaign.startAt && <p>Start: {new Date(promotionCampaign.startAt).toLocaleString('pl-PL')}</p>}
+                    {promotionCampaign.endAt && <p>Koniec: {new Date(promotionCampaign.endAt).toLocaleString('pl-PL')}</p>}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

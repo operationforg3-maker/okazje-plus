@@ -257,6 +257,17 @@ export interface AffiliateProductRaw {
   target_app_sale_price?: string;
   target_app_sale_price_currency?: string;
 
+  /** Promotion / campaign details when present */
+  promotion_id?: string | number;
+  promotion_name?: string;
+  campaign_name?: string;
+  promotion_type?: string;
+  flash_deal?: boolean;
+  promotion_start_time?: string;
+  promotion_end_time?: string;
+  activity_start_time?: string;
+  activity_end_time?: string;
+
   /** Discount percentage as string, e.g. "23" */
   discount?: string;
 
@@ -291,6 +302,17 @@ export interface AffiliateProductRaw {
     code_availabletime_end?: string;
     code_promotionurl?: string;
   };
+
+  coupon_list?: Array<{
+    coupon_code?: string;
+    code?: string;
+    coupon_discount?: string;
+    discount_amount?: string;
+    amount?: string;
+    coupon_min_amount?: string;
+    min_order_amount?: string;
+    min_spend?: string;
+  }>;
 }
 
 /**

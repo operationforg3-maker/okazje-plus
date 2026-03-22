@@ -11,6 +11,7 @@ import { adminDb } from './firebase-admin';
 import { getAliExpressClient } from './integrations/aliexpress-client';
 import { convertPrice } from './fx';
 import { logger } from './logger';
+import { parseAliExpressPromotionData } from './aliexpress-promotion-utils';
 
 export interface PriceRefreshStats {
   checked: number;
@@ -118,8 +119,18 @@ export async function refreshProductPrices(
         stats.checked++;
 
         const currentPrice = (docSnap.get('price') as number) ?? 0;
-        const currency = (raw.target_sale_price_currency as string) || 'USD';
-        const rawPriceNum = Number(raw.target_sale_price ?? raw.sale_price ?? 0);
+        const promotionData = parseAliExpressPromotionData(raw, {
+          currency: (raw.target_sale_price_currency as string) || (raw.target_app_sale_price_currency as string) || 'USD',
+          fallbackUrl: (raw.promotion_link as string) || (raw.product_detail_url as string) || '',
+        });
+        const currency = (raw.target_sale_price_currency as string) || (raw.target_app_sale_price_currency as string) || 'USD';
+        const rawPriceCandidates = [
+          Number(raw.target_app_sale_price ?? 0),
+          Number(raw.app_sale_price ?? 0),
+          Number(raw.target_sale_price ?? 0),
+          Number(raw.sale_price ?? 0),
+        ].filter((value) => Number.isFinite(value) && value > 0);
+        const rawPriceNum = rawPriceCandidates.length > 0 ? Math.min(...rawPriceCandidates) : 0;
 
         if (!rawPriceNum || rawPriceNum <= 0) {
           // Brak ceny w odpowiedzi - tylko odśwież timestamp
@@ -170,6 +181,18 @@ export async function refreshProductPrices(
           'metadata.priceHistory': [...existingHistory, historyEntry].slice(
             -90,
           ),
+          'metadata.promotionId': promotionData.promotionId || null,
+          'metadata.flashDeal': promotionData.flashDeal || false,
+          'metadata.promotionCampaign': promotionData.promotionCampaign || null,
+          'metadata.appSalePrice': promotionData.appSalePrice || null,
+          'metadata.coupon': promotionData.hasCoupons
+            ? {
+                code: promotionData.couponCode,
+                discountAmount: promotionData.couponAmount,
+                minOrderAmount: promotionData.couponMinOrder,
+                totalCoupons: promotionData.totalCoupons,
+              }
+            : null,
           updatedAt: now,
         };
 
@@ -203,9 +226,29 @@ export async function refreshProductPrices(
 
               const dealUpdate: Record<string, any> = {
                 'price.amount': newPricePLN,
+                dealType: promotionData.dealType,
+                couponCode: promotionData.couponCode || null,
                 priceHistory: [...existingDealHistory, dealPriceEntry].slice(
                   -90,
                 ),
+                'metadata.promotionId': promotionData.promotionId || null,
+                'metadata.flashDeal': promotionData.flashDeal || false,
+                'metadata.flashSale': promotionData.appSalePrice
+                  ? {
+                      active: true,
+                      appSalePrice: promotionData.appSalePrice,
+                      originalPrice: Number(raw.target_original_price ?? raw.original_price ?? newPricePLN) || newPricePLN,
+                    }
+                  : null,
+                'metadata.promotionCampaign': promotionData.promotionCampaign || null,
+                'metadata.coupon': promotionData.hasCoupons
+                  ? {
+                      code: promotionData.couponCode,
+                      discountAmount: promotionData.couponAmount,
+                      minOrderAmount: promotionData.couponMinOrder,
+                      totalCoupons: promotionData.totalCoupons,
+                    }
+                  : null,
                 updatedAt: now,
               };
               if (newPromoLink) {

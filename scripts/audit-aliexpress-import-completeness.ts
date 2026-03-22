@@ -6,6 +6,7 @@ import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import type { DocumentData, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getAliExpressClient } from '../src/lib/integrations/aliexpress-client';
+import { parseAliExpressPromotionData } from '../src/lib/aliexpress-promotion-utils';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
@@ -33,6 +34,10 @@ type IssueCode =
   | 'missing_price_while_available'
   | 'missing_link_while_available'
   | 'missing_shipping_fields'
+  | 'missing_promotion_campaign_while_available'
+  | 'missing_coupon_metadata_while_available'
+  | 'missing_app_sale_price_while_available'
+  | 'missing_flash_deal_flag_while_available'
   | 'missing_localized_title'
   | 'missing_localized_description'
   | 'product_missing_images_while_available';
@@ -187,6 +192,12 @@ async function main() {
       continue;
     }
 
+    const promotionData = parseAliExpressPromotionData(detail, {
+      currency: detail?.target_sale_price_currency || detail?.target_app_sale_price_currency || 'PLN',
+      fallbackUrl: detail?.product_detail_url || detail?.promotion_link || '',
+    });
+    const dealMetadata = candidate.dealData?.metadata || {};
+
     const detailImageCount = getDetailImageCount(detail);
     const dealImageCount = getImageCount(candidate.dealData);
 
@@ -230,6 +241,42 @@ async function main() {
         productCoreId: candidate.productCoreId,
         sourceProductId: candidate.sourceProductId,
         code: 'missing_shipping_fields',
+      });
+    }
+
+    if (promotionData.promotionCampaign && !dealMetadata?.promotionCampaign) {
+      issues.push({
+        dealId: candidate.dealId,
+        productCoreId: candidate.productCoreId,
+        sourceProductId: candidate.sourceProductId,
+        code: 'missing_promotion_campaign_while_available',
+      });
+    }
+
+    if (promotionData.hasCoupons && !dealMetadata?.coupon && !candidate.dealData?.couponCode) {
+      issues.push({
+        dealId: candidate.dealId,
+        productCoreId: candidate.productCoreId,
+        sourceProductId: candidate.sourceProductId,
+        code: 'missing_coupon_metadata_while_available',
+      });
+    }
+
+    if (promotionData.appSalePrice && !(dealMetadata?.promotionCampaign?.price?.appSale || dealMetadata?.flashSale?.appSalePrice)) {
+      issues.push({
+        dealId: candidate.dealId,
+        productCoreId: candidate.productCoreId,
+        sourceProductId: candidate.sourceProductId,
+        code: 'missing_app_sale_price_while_available',
+      });
+    }
+
+    if (promotionData.flashDeal && !dealMetadata?.flashDeal) {
+      issues.push({
+        dealId: candidate.dealId,
+        productCoreId: candidate.productCoreId,
+        sourceProductId: candidate.sourceProductId,
+        code: 'missing_flash_deal_flag_while_available',
       });
     }
 

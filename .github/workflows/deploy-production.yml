@@ -33,6 +33,15 @@ jobs:
       - name: Verify autopilot/cron import path
         run: npm run verify:autopilot-path
 
+      - name: Verify future content guardrails
+        run: npm run verify:future-content
+
+      - name: Smoke AliExpress promotions
+        run: npm run monitor:aliexpress-promotions
+        env:
+          ALIEXPRESS_APP_KEY: ${{ secrets.ALIEXPRESS_APP_KEY }}
+          ALIEXPRESS_APP_SECRET: ${{ secrets.ALIEXPRESS_APP_SECRET }}
+
       - name: TypeScript check
         run: npm run typecheck
 

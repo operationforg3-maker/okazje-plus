@@ -12,12 +12,28 @@ interface Variant {
 
 interface VariantsM6Props {
   specs: Record<string, string>;
+  variants?: Array<{
+    id: string;
+    name: string;
+    values: string[];
+    sku?: string;
+  }>;
   onVariantChange?: (variantName: string, selectedValue: string) => void;
 }
 
-export default function VariantsM6({ specs, onVariantChange }: VariantsM6Props) {
+export default function VariantsM6({ specs, variants: inputVariants, onVariantChange }: VariantsM6Props) {
   // Parse variants from specs - pattern: variant_N_name
   const variants = useMemo<Variant[]>(() => {
+    if (Array.isArray(inputVariants) && inputVariants.length > 0) {
+      return inputVariants
+        .filter((variant) => variant?.name && Array.isArray(variant.values) && variant.values.length > 0)
+        .map((variant) => ({
+          name: variant.name,
+          options: Array.from(new Set(variant.values.filter(Boolean))),
+          selectedIndex: 0,
+        }));
+    }
+
     if (!specs || typeof specs !== 'object') return [];
 
     const variantMap = new Map<string, Set<string>>();
@@ -53,7 +69,7 @@ export default function VariantsM6({ specs, onVariantChange }: VariantsM6Props) 
       options: Array.from(options).sort(),
       selectedIndex: 0,
     }));
-  }, [specs]);
+  }, [inputVariants, specs]);
 
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(
     Object.fromEntries(variants.map((v) => [v.name, v.options[0]]))

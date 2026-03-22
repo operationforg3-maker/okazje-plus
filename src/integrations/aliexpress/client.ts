@@ -1026,8 +1026,13 @@ export class AliExpressClient {
         'product_small_image_urls',   // Additional gallery images
         'product_props',              // M6+: Technical attributes (limited by Affiliate API)
         'target_sale_price',
+        'target_app_sale_price',
+        'target_app_sale_price_currency',
         'original_price',
         'discount',
+        'promotion_id',
+        'flash_deal',
+        'promo_code_info',
         'ship_to_days',
         'evaluate_rate',
         'volume',                     // Sales volume

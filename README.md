@@ -7,6 +7,8 @@ Polska platforma z okazjami i produktami (Next.js 15 + Firebase + Genkit AI).
 
 > **Single Source of Truth:** [`docs/MASTER.md`](docs/MASTER.md)
 
+Operacje promocji AliExpress (runbook, monitoring, backfill): [`docs/ALIEXPRESS_PROMOTION_OPERATIONS.md`](docs/ALIEXPRESS_PROMOTION_OPERATIONS.md)
+
 Zawiera: architekturę M6, model danych, pipeline Harvestera, integracje API (AliExpress), SEO/Rich Results, UX Mobile-First, Firebase/GCloud infrastructure, roadmap monetyzacji.
 
 ## ✨ Aktywne funkcje (M6 — Marzec 2026)

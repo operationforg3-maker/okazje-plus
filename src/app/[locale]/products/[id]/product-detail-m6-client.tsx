@@ -40,6 +40,8 @@ import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCurrency } from '@/lib/unified-currency';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { getExternalUrl } from '@/lib/external-url';
+import { LogisticsBadge } from '@/components/product/LogisticsBadge';
+import { SellerInfo } from '@/components/product/SellerInfo';
 
 interface Props {
   productCore?: ProductCore;
@@ -125,10 +127,19 @@ export default function ProductDetailM6Client({
 
   // Images - M6 has images array, legacy has single image
   const imageUrls = isM6 
-    ? productCore?.images && Array.isArray(productCore.images) ? productCore.images : []
+    ? Array.from(new Set([
+        ...(productCore?.images && Array.isArray(productCore.images) ? productCore.images : []),
+        ...((productCore?.gallery || [])
+          .filter((item) => item?.type === 'IMAGE' && item?.url)
+          .map((item) => item.url)),
+      ].filter(Boolean)))
     : (product?.gallery && product?.gallery.length > 0 
         ? product?.gallery.map(g => g.src) 
         : [product?.image || '']);
+
+  const productVariants = isM6 && Array.isArray(productCore?.variants)
+    ? productCore.variants
+    : [];
 
   const bestDealTotal = isM6 && Array.isArray(deals) && deals.length > 0
     ? deals.reduce((bestTotal, current) => {
@@ -217,6 +228,21 @@ export default function ProductDetailM6Client({
     (productData as any)?.link
   );
   const outboundUrl = bestDealOutboundUrl || productOutboundUrl;
+  const logistics = productCore?.logistics || (bestDeal
+    ? {
+        deliveryDays: Math.max(1, Number(bestDeal.shipping?.timeDays || 0) || 7),
+        isFreeShipping: Boolean((bestDeal as any).freeShipping ?? ((bestDeal.shipping?.cost || 0) <= 0)),
+        shippingCost: Math.max(0, Number(bestDeal.shipping?.cost || 0)),
+      }
+    : undefined);
+  const shippingOrigin = bestDeal?.shipping?.fromCountry || productCore?.warehouses?.[0] || (productCore?.metadata as any)?.shippingFromCountry;
+  const bestDealSellingPoints = (bestDeal as any)?.metadata?.sellingPoints?.[locale]
+    || (bestDeal as any)?.metadata?.sellingPoints?.pl
+    || [];
+  const promotionCampaign = (bestDeal as any)?.metadata?.promotionCampaign;
+  const promotionAppPrice = typeof promotionCampaign?.price?.appSale === 'number'
+    ? promotionCampaign.price.appSale
+    : undefined;
 
   // Helper: map ProductCore -> minimal Product for SmartCart
   const asLegacyProduct = (): Product => {
@@ -353,8 +379,100 @@ export default function ProductDetailM6Client({
                   </p>
                 </div>
               )}
+
+              {bestDeal?.couponCode && (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-amber-800">Kod rabatowy</p>
+                      <p className="text-lg font-semibold text-amber-950">{bestDeal.couponCode}</p>
+                    </div>
+                    <Badge className="bg-amber-600 text-white hover:bg-amber-600">Kupon aktywny</Badge>
+                  </div>
+                </div>
+              )}
+
+              {promotionCampaign && (
+                <div className="mt-4 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-fuchsia-600 text-white hover:bg-fuchsia-600">
+                      {promotionCampaign.label || promotionCampaign.name || 'Kampania AliExpress'}
+                    </Badge>
+                    {promotionCampaign.flashDeal && (
+                      <Badge className="bg-orange-600 text-white hover:bg-orange-600">Flash Sale</Badge>
+                    )}
+                    {promotionCampaign.appOnly && (
+                      <Badge variant="outline">Cena tylko w aplikacji</Badge>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    {promotionCampaign.startAt && <span>Start: {new Date(promotionCampaign.startAt).toLocaleString('pl-PL')}</span>}
+                    {promotionCampaign.endAt && <span>Koniec: {new Date(promotionCampaign.endAt).toLocaleString('pl-PL')}</span>}
+                    {promotionAppPrice !== undefined && <span>Cena w aplikacji: {formatPrice(promotionAppPrice)}</span>}
+                  </div>
+                </div>
+              )}
+
+              {isM6 && (shippingOrigin || bestDeal?.minOrderValue || bestDeal?.limitPerUser || (bestDeal as any)?.freeShipping !== undefined) && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {Boolean((bestDeal as any)?.freeShipping ?? ((bestDeal?.shipping?.cost || 0) <= 0)) ? (
+                    <Badge className="bg-green-600 text-white hover:bg-green-600">Darmowa dostawa</Badge>
+                  ) : (
+                    <Badge variant="outline">Wysyłka: {formatPrice(bestDeal?.shipping?.cost || 0)}</Badge>
+                  )}
+                  {shippingOrigin && <Badge variant="outline">Wysyłka z: {shippingOrigin}</Badge>}
+                  {bestDeal?.minOrderValue && <Badge variant="outline">Min. zamówienie: {formatPrice(bestDeal.minOrderValue)}</Badge>}
+                  {bestDeal?.limitPerUser && <Badge variant="outline">Limit: {bestDeal.limitPerUser} na osobę</Badge>}
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          {isM6 && productVariants.length > 0 && (
+            <VariantsM6 specs={specs} variants={productVariants} />
+          )}
+
+          {isM6 && logistics && <LogisticsBadge logistics={logistics} compact={false} />}
+
+          {isM6 && productCore?.seller && <SellerInfo seller={productCore.seller as any} compact={false} />}
+
+          {isM6 && productCore?.warehouses && productCore.warehouses.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Magazyny i wysyłka</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {productCore.warehouses.map((warehouse) => (
+                    <Badge key={warehouse} variant={warehouse === 'PL' ? 'default' : 'outline'}>
+                      {warehouse === 'PL' ? 'Magazyn PL' : warehouse}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isM6 && bestDealSellingPoints.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  Najważniejsze zalety oferty
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {bestDealSellingPoints.slice(0, 6).map((point: string, index: number) => (
+                    <li key={`${point}-${index}`} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Actions */}
           <div className="flex gap-3">
@@ -519,7 +637,28 @@ export default function ProductDetailM6Client({
         </TabsContent>
 
         <TabsContent value="specs" className="mt-6">
-          <SpecsTable specs={specs} title="Specyfikacja techniczna" />
+          <div className="space-y-6">
+            {isM6 && productCore?.attributes && productCore.attributes.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Parametry źródłowe</CardTitle>
+                  <CardDescription>Dane bezpośrednio z importu produktu</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    {productCore.attributes.map((attribute, index) => (
+                      <div key={`${attribute.name}-${index}`} className="flex flex-col gap-1 rounded-lg border p-3">
+                        <span className="font-medium text-gray-900">{attribute.name}</span>
+                        <span className="text-gray-600">{attribute.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <SpecsTable specs={specs} title="Specyfikacja techniczna" />
+          </div>
         </TabsContent>
 
         <TabsContent value="reviews" className="mt-6">

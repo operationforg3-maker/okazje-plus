@@ -301,6 +301,34 @@ export interface ProductModerationState {
   rejectionReason?: string;
 }
 
+export interface PromotionCampaignInfo {
+  id?: string;
+  name?: string;
+  type?: 'coupon' | 'sale' | 'flash_sale' | 'app_exclusive' | 'campaign' | 'offer';
+  label?: string;
+  active?: boolean;
+  appOnly?: boolean;
+  flashDeal?: boolean;
+  startAt?: string;
+  endAt?: string;
+  promoUrl?: string;
+  price?: {
+    current?: number;
+    original?: number;
+    appSale?: number;
+    currency?: string;
+  };
+  coupon?: {
+    code?: string;
+    discountAmount?: number;
+    minOrderAmount?: number;
+    totalCoupons?: number;
+    availableFrom?: string;
+    availableTo?: string;
+    promotionUrl?: string;
+  };
+}
+
 export interface ProductImportMetadata {
   source: 'aliexpress' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'ebay';
   originalId?: string; // External ID from source platform
@@ -389,7 +417,18 @@ export interface ProductImportMetadata {
     rating?: number;
     followers?: number;
     positiveFeedback?: number;
+    positiveRate?: string;
+    storeId?: string;
+    storeUrl?: string;
   };
+  coupon?: {
+    code?: string;
+    discountAmount?: number;
+    minOrderAmount?: number;
+    totalCoupons?: number;
+  };
+  promotionCampaign?: PromotionCampaignInfo;
+  skuStockMin?: number;
   videoUrl?: string;
   appSalePrice?: number;
 }
@@ -513,6 +552,7 @@ export interface DealLegacy {
     merchantId?: string;
     orders?: number;
     brand?: string;
+    promotionCampaign?: PromotionCampaignInfo;
     // Price tracking for deals
     priceHistory?: Array<{
       price: number;
@@ -548,6 +588,7 @@ export interface DealLegacy {
     generationWarnings?: string[];
     dealTags?: string[];
     flashSale?: { active?: boolean; appSalePrice?: number; originalPrice?: number };
+    promotionCampaign?: PromotionCampaignInfo;
     stockAlert?: { lowStock?: boolean; available?: number; total?: number };
     shippingDetails?: { method?: string; deliveryTime?: string; fromCountry?: string; free?: boolean; cost?: number };
     merchantRating?: number;
@@ -2386,6 +2427,17 @@ export interface ProductCore {
    * Alternative format to specifications (flatter, better for display)
    */
   attributes?: Array<{ name: string; value: string }>;
+
+  /**
+   * Dostępne warianty produktu pogrupowane po atrybutach
+   * np. Kolor -> [Czarny, Biały], Bundle -> [2GB, 4GB]
+   */
+  variants?: Array<{
+    id: string;
+    name: string;
+    values: string[];
+    sku?: string;
+  }>;
   
   /**
    * M6+: Available warehouse locations (e.g., ['PL', 'CZ', 'CN'])
@@ -2465,6 +2517,12 @@ export interface DealM6 {
   description?: LocalizedText; // Offer-specific description (AI-generated for deals, may include HTML)
   dealType?: 'sale' | 'coupon' | 'flash_deal' | 'cashback' | 'regular';
   couponCode?: string;
+  freeShipping?: boolean;
+  minOrderValue?: number;
+  availableQuantity?: number;
+  limitPerUser?: number;
+  conditions?: string[];
+  gallery?: string[];
   
   // Availability
   stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock' | 'pre_order';

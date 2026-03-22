@@ -330,6 +330,10 @@ const sanitizeProductMetadata = (raw: any): Product['metadata'] | undefined => {
     freeShipping: raw.freeShipping === undefined ? undefined : ensureBoolean(raw.freeShipping),
     shippingCost: ensureOptionalNumber(raw.shippingCost),
     shippingMethod: ensureOptionalString(raw.shippingMethod),
+    promotionCampaign:
+      raw.promotionCampaign && typeof raw.promotionCampaign === 'object'
+        ? raw.promotionCampaign
+        : undefined,
   };
   pruneObject(metadata);
   return metadata;
@@ -406,6 +410,10 @@ const sanitizeDealMetadata = (raw: any): Deal['metadata'] | undefined => {
     merchantId: ensureOptionalString(raw.merchantId),
     orders: ensureOptionalNumber(raw.orders),
     brand: ensureOptionalString(raw.brand),
+    promotionCampaign:
+      raw.promotionCampaign && typeof raw.promotionCampaign === 'object'
+        ? raw.promotionCampaign
+        : undefined,
     priceHistory: sanitizePriceHistory(raw.priceHistory),
   };
   return pruneObject(metadata) as Deal['metadata'];
@@ -662,6 +670,112 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     return raw.map(tag => ensureString(tag, '')).filter(Boolean);
   };
 
+  const sanitizeLocalizedStringArrays = (value: any): { [locale: string]: string[] } | undefined => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const entries = Object.entries(value)
+      .map(([locale, items]) => {
+        const normalized = ensureStringArray(items, 30);
+        return normalized.length > 0 ? [locale, normalized] : null;
+      })
+      .filter(Boolean) as Array<[string, string[]]>;
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+  };
+
+  const sanitizeAttributes = (value: any): Array<{ name: string; value: string }> | undefined => {
+    if (!Array.isArray(value)) return undefined;
+    const normalized = value
+      .map((item) => {
+        const name = ensureOptionalString(item?.name);
+        const val = ensureOptionalString(item?.value);
+        return name && val ? { name, value: val } : null;
+      })
+      .filter(Boolean) as Array<{ name: string; value: string }>;
+    return normalized.length > 0 ? normalized : undefined;
+  };
+
+  const sanitizeVariants = (value: any): ProductCore['variants'] => {
+    if (!Array.isArray(value)) return undefined;
+    const normalized = value
+      .map((item, index) => {
+        const name = ensureOptionalString(item?.name);
+        const values = ensureStringArray(item?.values, 30);
+        if (!name || values.length === 0) return null;
+        return {
+          id: ensureString(item?.id, `${name.toLowerCase().replace(/\s+/g, '-')}-${index}`),
+          name,
+          values,
+          sku: ensureOptionalString(item?.sku),
+        };
+      })
+      .filter(Boolean) as NonNullable<ProductCore['variants']>;
+    return normalized.length > 0 ? normalized : undefined;
+  };
+
+  const sanitizeStructuredSpecifications = (value: any): ProductCore['specificationsStructured'] => {
+    if (!Array.isArray(value)) return undefined;
+    const normalized = value
+      .map((item, index) => {
+        const label = ensureOptionalString(item?.label);
+        const val = ensureOptionalString(item?.value);
+        if (!label || !val) return null;
+        return {
+          label,
+          value: val,
+          category: ensureOptionalString(item?.category) as any,
+          unit: ensureOptionalString(item?.unit),
+          order: ensureOptionalNumber(item?.order) ?? index,
+        };
+      })
+      .filter(Boolean) as NonNullable<ProductCore['specificationsStructured']>;
+    return normalized.length > 0 ? normalized : undefined;
+  };
+
+  const sanitizeGalleryItems = (value: any): ProductCore['gallery'] => {
+    if (!Array.isArray(value)) return undefined;
+    const normalized = value
+      .map((item, index) => {
+        const url = ensureOptionalString(item?.url);
+        if (!url) return null;
+        const type = ensureString(item?.type, 'IMAGE');
+        return {
+          url,
+          type: type === 'VIDEO' ? 'VIDEO' : 'IMAGE',
+          thumbnail: ensureOptionalString(item?.thumbnail),
+          alt: ensureOptionalString(item?.alt),
+          order: ensureOptionalNumber(item?.order) ?? index,
+        };
+      })
+      .filter(Boolean) as NonNullable<ProductCore['gallery']>;
+    return normalized.length > 0 ? normalized : undefined;
+  };
+
+  const sanitizeLogistics = (value: any): ProductCore['logistics'] => {
+    if (!value || typeof value !== 'object') return undefined;
+    const deliveryDays = ensureOptionalNumber(value?.deliveryDays);
+    if (deliveryDays === undefined) return undefined;
+    return {
+      deliveryDays,
+      deliveryDaysMax: ensureOptionalNumber(value?.deliveryDaysMax),
+      isFreeShipping: ensureBoolean(value?.isFreeShipping, false),
+      shippingCost: ensureNumber(value?.shippingCost, 0),
+      shippingCostUSD: ensureOptionalNumber(value?.shippingCostUSD),
+    };
+  };
+
+  const sanitizeSeller = (value: any): ProductCore['seller'] => {
+    if (!value || typeof value !== 'object') return undefined;
+    const name = ensureOptionalString(value?.name);
+    if (!name) return undefined;
+    return {
+      name,
+      rating: ensureOptionalNumber(value?.rating ?? value?.score),
+      followers: ensureOptionalNumber(value?.followers),
+      storeUrl: ensureOptionalString(value?.storeUrl),
+      storeId: ensureOptionalString(value?.storeId),
+      positiveRate: ensureOptionalString(value?.positiveRate),
+    };
+  };
+
   const sanitizeBestPrice = (raw: any): any => {
     if (!raw || typeof raw !== 'object') {
       return { amount: 0, currency: 'PLN' };
@@ -697,6 +811,9 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     rating: sanitizeRating((raw as any).rating),
     ratingCard: sanitizeRatingCard((raw as any).ratingCard),
     ratingSources: sanitizeRatingSources((raw as any).ratingSources),
+    features: sanitizeLocalizedStringArrays((raw as any).features),
+    pros: sanitizeLocalizedStringArrays((raw as any).pros),
+    cons: sanitizeLocalizedStringArrays((raw as any).cons),
     bestPrice: sanitizeBestPrice((raw as any).bestPrice),
     linkedDealIds: ensureStringArray((raw as any).linkedDealIds, 100),
     searchTags: sanitizeSearchTags((raw as any).searchTags),
@@ -731,5 +848,25 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     couponDealsCount: ensureOptionalNumber((raw as any).couponDealsCount),
     bestDealCouponCode: ensureOptionalString((raw as any).bestDealCouponCode),
     bestTotalPrice: ensureOptionalNumber((raw as any).bestTotalPrice),
+    specificationsStructured: sanitizeStructuredSpecifications((raw as any).specificationsStructured),
+    gallery: sanitizeGalleryItems((raw as any).gallery),
+    logistics: sanitizeLogistics((raw as any).logistics),
+    seller: sanitizeSeller((raw as any).seller),
+    attributes: sanitizeAttributes((raw as any).attributes),
+    variants: sanitizeVariants((raw as any).variants),
+    warehouses: ensureStringArray((raw as any).warehouses, 20),
+    averageMarketPrice:
+      (raw as any).averageMarketPrice && typeof (raw as any).averageMarketPrice === 'object'
+        ? {
+            amount: ensureNumber((raw as any).averageMarketPrice.amount, 0),
+            currency: ensureString((raw as any).averageMarketPrice.currency, 'PLN'),
+            range: (raw as any).averageMarketPrice.range && typeof (raw as any).averageMarketPrice.range === 'object'
+              ? {
+                  min: ensureNumber((raw as any).averageMarketPrice.range.min, 0),
+                  max: ensureNumber((raw as any).averageMarketPrice.range.max, 0),
+                }
+              : undefined,
+          }
+        : undefined,
   } as ProductCore;
 };

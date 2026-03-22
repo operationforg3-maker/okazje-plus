@@ -16,6 +16,7 @@ import { sanitizeProductPayload, sanitizeDealPayload } from './sanitizers';
 import { logger } from './logger';
 import { convertPrice } from './fx';
 import { validateMerchantListingInput } from './merchant-center-validator';
+import { parseAliExpressPromotionData } from './aliexpress-promotion-utils';
 
 export interface AliExpressImportConfig {
   profileId: string;
@@ -549,7 +550,17 @@ export async function importFromAliExpress(
       try {
         // Extract and normalize product data
         const title = rawProduct.product_title || rawProduct.title || rawProduct.item_title || '';
-        const price = Number(rawProduct.target_sale_price || rawProduct.sale_price || 0);
+        const promotionData = parseAliExpressPromotionData(rawProduct, {
+          currency: rawProduct.target_sale_price_currency || rawProduct.sale_price_currency || 'USD',
+          fallbackUrl: rawProduct.product_detail_url || rawProduct.promotion_link || '',
+        });
+        const priceCandidates = [
+          Number(rawProduct.target_app_sale_price || 0),
+          Number(rawProduct.app_sale_price || 0),
+          Number(rawProduct.target_sale_price || 0),
+          Number(rawProduct.sale_price || 0),
+        ].filter((value) => Number.isFinite(value) && value > 0);
+        const price = priceCandidates.length > 0 ? Math.min(...priceCandidates) : 0;
         const originalPrice = Number(rawProduct.target_original_price || rawProduct.original_price || null);
         const currency = rawProduct.target_sale_price_currency || 'USD';
         // Convert AliExpress rating (0-100 scale) to standard 0-5 scale
@@ -642,6 +653,55 @@ export async function importFromAliExpress(
         const parsedSpecifications = parseSpecEntries(rawProduct);
         const landingUrl = rawProduct.product_detail_url || rawProduct.promotion_link || '';
 
+        // === Seller / store_info ===
+        const storeInfo = rawProduct.store_info;
+        const seller = storeInfo
+          ? {
+              name: String(storeInfo.store_name || storeInfo.storeName || rawProduct.shop_title || rawProduct.shop_name || 'AliExpress'),
+              rating: Number(storeInfo.score ?? storeInfo.rating ?? 0) || undefined,
+              positiveRate: storeInfo.positive_rate || storeInfo.positiveRate
+                ? String(storeInfo.positive_rate || storeInfo.positiveRate)
+                : undefined,
+              followers: Number(storeInfo.followers || storeInfo.fan_count || 0) || undefined,
+              storeUrl: storeInfo.store_url || storeInfo.storeUrl || undefined,
+              storeId: String(storeInfo.store_id || storeInfo.storeId || rawProduct.shop_id || ''),
+            }
+          : rawProduct.shop_title || rawProduct.shop_name
+            ? {
+                name: String(rawProduct.shop_title || rawProduct.shop_name),
+                storeId: String(rawProduct.shop_id || ''),
+              }
+            : undefined;
+
+        const couponCode = promotionData.couponCode;
+        const couponAmount = promotionData.couponAmount;
+        const couponMinOrder = promotionData.couponMinOrder;
+        const hasCoupons = promotionData.hasCoupons;
+
+        // === SKU list: stock per variant + cheapest price ===
+        const skuList: any[] = Array.isArray(rawProduct.sku_list) ? rawProduct.sku_list : [];
+        // Min stock across variants (0 = out of stock, undefined = unknown)
+        const skuStockQties = skuList
+          .map((sku: any) => Number(sku.sku_available_quantity ?? sku.availability ?? -1))
+          .filter((q: number) => q >= 0);
+        const minimumAvailableQuantity: number | undefined =
+          skuStockQties.length > 0 ? Math.min(...skuStockQties) : undefined;
+        // Min price across variants (may be cheaper than product base price)
+        const skuPrices = skuList
+          .map((sku: any) =>
+            Number(sku.sku_sale_price ?? sku.sku_price ?? sku.price ?? 0)
+          )
+          .filter((p: number) => p > 0);
+        const rawCurrencyCode = rawProduct.target_sale_price_currency || 'USD';
+        const skuMinPriceRaw = skuPrices.length > 0 ? Math.min(...skuPrices) : 0;
+        const skuMinPricePLN =
+          skuMinPriceRaw > 0
+            ? await convertPrice(skuMinPriceRaw, rawCurrencyCode, 'PLN').catch(() => 0)
+            : 0;
+        // Use SKU min price if it's lower than the base price
+        const effectivePricePLN =
+          skuMinPricePLN > 0 && skuMinPricePLN < pricePLN ? skuMinPricePLN : pricePLN;
+
         const merchantValidation = validateMerchantListingInput({
           title,
           imageUrl: mainImage,
@@ -676,8 +736,8 @@ export async function importFromAliExpress(
           image: mainImage,
           imageHint: title,
           affiliateUrl: rawProduct.promotion_link || rawProduct.product_detail_url || '',
-          price: pricePLN,
-          originalPrice: originalPricePLN,
+          price: effectivePricePLN,
+          originalPrice: originalPricePLN ?? (effectivePricePLN < pricePLN ? pricePLN : undefined),
           discountPercent,
           currency: 'PLN',
           ratingCard: {
@@ -731,15 +791,27 @@ export async function importFromAliExpress(
                 source: 'import' as const,
               },
             ],
-            promotionId: rawProduct.promotion_id,
+            promotionId: promotionData.promotionId,
             commissionRate: rawProduct.commission_rate,
             evaluateCount: rawProduct.evaluate_count,
             evaluateRate: rawProduct.evaluate_rate,
+            flashDeal: promotionData.flashDeal || undefined,
             specifications: parsedSpecifications,
             warehouse: rawProduct.ship_from_country || rawProduct.warehouse_location,
             deliveryTime: rawProduct.delivery_time || rawProduct.estimated_delivery_time,
             freeShipping: rawProduct.free_shipping || rawProduct.is_free_shipping || false,
             productVideoUrl: rawProduct.product_video_url,
+            coupon: hasCoupons
+              ? {
+                  code: couponCode,
+                  discountAmount: couponAmount,
+                  minOrderAmount: couponMinOrder,
+                  totalCoupons: promotionData.totalCoupons,
+                }
+              : undefined,
+            promotionCampaign: promotionData.promotionCampaign,
+            skuStockMin: minimumAvailableQuantity,
+            appSalePrice: promotionData.appSalePrice,
           },
         };
 
@@ -831,26 +903,35 @@ export async function importFromAliExpress(
             subCategorySlug: profile.mapping.targetSubCategory,
             subSubCategorySlug: profile.mapping.targetSubSubCategory,
             price: {
-              amount: pricePLN,
+              amount: effectivePricePLN,
               currency: 'PLN',
             },
+            originalPrice: effectivePricePLN < pricePLN ? pricePLN : (originalPricePLN ?? undefined),
             shipping: {
               cost: 0,
               timeDays: parseInt(rawProduct.delivery_time || '14'),
-              fromCountry: rawProduct.ship_from_country || 'CN',
+              fromCountry: rawProduct.ship_from_country || storeInfo?.ship_from_country || 'CN',
             },
             source: 'aliexpress' as const,
             affiliateLink: rawProduct.promotion_link || rawProduct.product_detail_url || '',
             link: rawProduct.promotion_link || rawProduct.product_detail_url || '',
             affiliateUrl: rawProduct.promotion_link || rawProduct.product_detail_url || '',
             dealUrl: rawProduct.product_detail_url || rawProduct.promotion_link || '',
+            merchantName: seller?.name || rawProduct.shop_title || rawProduct.shop_name || 'AliExpress',
+            merchantRating: seller?.rating ?? undefined,
             title: { pl: title },
-            stockStatus: 'in_stock' as const,
+            dealType: promotionData.dealType,
+            couponCode: couponCode || undefined,
+            freeShipping: Boolean(rawProduct.free_shipping || rawProduct.is_free_shipping),
+            stockStatus: minimumAvailableQuantity === 0
+              ? ('out_of_stock' as const)
+              : ('in_stock' as const),
+            stockLevel: minimumAvailableQuantity,
             isActive: true,
             priceHistory: [
               {
                 date: new Date().toISOString().split('T')[0],
-                price: pricePLN,
+                price: effectivePricePLN,
                 currency: 'PLN',
               },
             ],
@@ -863,13 +944,44 @@ export async function importFromAliExpress(
             createdBy: config.triggeredByUid || 'system',
             sourceProductId: originalId,
             sourceUrl: rawProduct.product_detail_url || '',
+            seller: seller
+              ? {
+                  id: seller.storeId,
+                  name: seller.name,
+                  url: seller.storeUrl,
+                  rating: seller.rating,
+                  positiveRate: seller.positiveRate,
+                  followers: seller.followers,
+                }
+              : undefined,
             metadata: {
               source: 'aliexpress',
               originalId,
               importedAt: new Date().toISOString(),
               importedBy: config.triggeredByUid || 'system',
-              merchant: rawProduct.shop_title || rawProduct.shop_name,
-              merchantId: rawProduct.shop_id,
+              merchant: seller?.name || rawProduct.shop_title || rawProduct.shop_name,
+              merchantId: seller?.storeId || rawProduct.shop_id,
+              sellerPositiveRate: seller?.positiveRate,
+              sellerFollowers: seller?.followers,
+              coupon: hasCoupons
+                ? {
+                    code: couponCode,
+                    discountAmount: couponAmount,
+                    minOrderAmount: couponMinOrder,
+                    totalCoupons: promotionData.totalCoupons,
+                  }
+                : undefined,
+              promotionId: promotionData.promotionId,
+              flashDeal: promotionData.flashDeal || undefined,
+              flashSale: promotionData.appSalePrice
+                ? {
+                    active: true,
+                    appSalePrice: promotionData.appSalePrice,
+                    originalPrice: originalPricePLN ?? pricePLN,
+                  }
+                : undefined,
+              promotionCampaign: promotionData.promotionCampaign,
+              skuStockMin: minimumAvailableQuantity,
             },
           };
 
