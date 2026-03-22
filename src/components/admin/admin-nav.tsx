@@ -5,26 +5,22 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
-  Flame,
   ShoppingCart,
   Users,
   Layers,
   FileBarChart,
   Settings,
-  Upload,
-  Download,
   Search,
-  MessageSquare,
   AlertTriangle,
   TrendingUp,
   Database,
-  Zap,
   ChevronRight,
-  Sparkles,
-  Combine,
   Share2,
   MessageCircle,
   SearchCheck,
+  Wrench,
+  Rocket,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -32,8 +28,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 interface NavItem {
   title: string;
@@ -56,19 +53,35 @@ const navStructure: (NavItem | NavGroup)[] = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Forum',
-    icon: MessageCircle,
+    title: 'Moderacja i forum',
+    icon: ShieldCheck,
     items: [
-      { title: 'Moderacja', href: '/admin/forum/moderation', icon: AlertTriangle, badge: '0' },
+      { title: 'Panel moderacji', href: '/admin/moderation', icon: AlertTriangle },
+      { title: 'Wykrywanie duplikatów', href: '/admin/duplicates', icon: Search },
+      { title: 'Moderacja forum', href: '/admin/forum/moderation', icon: MessageCircle },
       { title: 'Kategorie', href: '/admin/forum/categories', icon: Layers },
     ],
   },
   {
-    title: 'Moderacja',
-    icon: AlertTriangle,
+    title: 'Import i pipeline',
+    icon: Rocket,
     items: [
-      { title: 'Panel Moderacji', href: '/admin/moderation', icon: AlertTriangle, badge: '0' },
-      { title: 'Duplikaty', href: '/admin/duplicates', icon: Search },
+      { title: 'Harvester', href: '/admin/harvester', icon: Wrench },
+      { title: 'Presety harvestera', href: '/admin/harvester-presets', icon: Layers },
+      { title: 'M6 import dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp },
+      { title: 'M6 pipeline visualizer', href: '/admin/m6-pipeline-visualizer', icon: Database },
+      { title: 'Nadzór Typesense queue', href: '/admin/typesense-queue', icon: SearchCheck, badge: 'OPS', badgeVariant: 'destructive' },
+    ],
+  },
+  {
+    title: 'Analityka i operacje',
+    icon: FileBarChart,
+    items: [
+      { title: 'Analityka', href: '/admin/analytics', icon: TrendingUp },
+      { title: 'Statystyki', href: '/admin/stats', icon: FileBarChart },
+      { title: 'Zakupy AliExpress', href: '/admin/aliexpress-purchases', icon: ShoppingCart },
+      { title: 'Baza danych', href: '/admin/database', icon: Database },
+      { title: 'Social media', href: '/admin/social-media', icon: Share2 },
     ],
   },
   {
@@ -80,40 +93,13 @@ const navStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
-    title: 'Analityka',
-    icon: FileBarChart,
-    items: [
-      { title: 'Dashboard Analytics', href: '/admin/analytics', icon: TrendingUp },
-      { title: 'Statystyki', href: '/admin/stats', icon: FileBarChart },
-      { title: 'Zakupy AliExpress', href: '/admin/aliexpress-purchases', icon: ShoppingCart, badge: 'NEW', badgeVariant: 'default' },
-    ],
-  },
-  {
-    title: 'Marketing',
-    icon: Share2,
-    items: [
-      { title: 'Automatyzacja social mediów', href: '/admin/social-media', icon: Share2, badge: 'NEW', badgeVariant: 'default' },
-    ],
-  },
-  {
-    title: 'M6 System',
-    icon: Zap,
-    items: [
-      { title: 'Import Dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp, badge: 'NEW', badgeVariant: 'default' },
-      { title: 'Harvester Presets', href: '/admin/harvester-presets', icon: Combine, badge: 'NEW', badgeVariant: 'default' },
-      { title: 'Pipeline Visualizer', href: '/admin/m6-pipeline-visualizer', icon: Layers, badge: 'NEW', badgeVariant: 'default' },
-      { title: 'Nadzór Typesense Queue', href: '/admin/typesense-queue', icon: SearchCheck, badge: 'OPS', badgeVariant: 'destructive' },
-      { title: 'UI Guide', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
-    ],
-  },
-  {
     title: 'Konfiguracja',
     icon: Settings,
     items: [
       { title: 'Ustawienia', href: '/admin/settings', icon: Settings },
-      { title: 'Setup & Seeding', href: '/admin/setup', icon: Database },
-      { title: 'Baza Danych', href: '/admin/database', icon: Database, badge: 'CLEAN' },
-      // { title: 'Nawigacja', href: '/admin/navigation', icon: Layers },
+      { title: 'OAuth', href: '/admin/settings/oauth', icon: Settings },
+      { title: 'Setup i seeding', href: '/admin/setup', icon: Database },
+      { title: 'Przewodnik M6 UI', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
     ],
   },
 ];
@@ -121,6 +107,7 @@ const navStructure: (NavItem | NavGroup)[] = [
 export function AdminNav() {
   const pathname = usePathname();
   const [openGroups, setOpenGroups] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
   const localePrefix = (() => {
     const first = pathname.split('/')[1];
     return ['pl', 'en', 'de'].includes(first) ? `/${first}` : '';
@@ -144,9 +131,39 @@ export function AdminNav() {
     return pathname.startsWith(target);
   };
 
+  const filteredNavStructure = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return navStructure;
+
+    const result: (NavItem | NavGroup)[] = [];
+    for (const item of navStructure) {
+      if ('items' in item) {
+        const filteredItems = item.items.filter((subItem) =>
+          `${subItem.title} ${subItem.href}`.toLowerCase().includes(normalizedQuery)
+        );
+        if (filteredItems.length > 0) {
+          result.push({ ...item, items: filteredItems });
+        }
+      } else if (`${item.title} ${item.href}`.toLowerCase().includes(normalizedQuery)) {
+        result.push(item);
+      }
+    }
+    return result;
+  }, [query]);
+
   return (
-    <nav className="space-y-1">
-      {navStructure.map((item) => {
+    <nav className="space-y-2">
+      <div className="px-2 pb-2">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Szukaj sekcji admina..."
+          className="h-9"
+          aria-label="Szukaj sekcji panelu administratora"
+        />
+      </div>
+
+      {filteredNavStructure.map((item) => {
         if ('items' in item) {
           // Group with subitems
           const isOpen = openGroups.includes(item.title);

@@ -17,6 +17,7 @@ import { PreRegistration } from "@/lib/types";
 import { Trophy, Users, Download, Search, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getFunctions, httpsCallable } from "firebase/functions";
+import { getAuth } from "firebase/auth";
 import { useTranslations } from 'next-intl';
 
 export default function PreRegistrationsPage() {
@@ -30,7 +31,18 @@ export default function PreRegistrationsPage() {
   const loadRegistrations = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/admin/pre-registrations');
+      const auth = getAuth();
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Brak zalogowanego administratora');
+      }
+      const idToken = await firebaseUser.getIdToken();
+
+      const res = await fetch('/api/admin/pre-registrations', {
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setRegistrations(data.registrations || []);

@@ -26,8 +26,10 @@ import {
 } from 'lucide-react';
 import type { TestSuiteResult, TestResult } from '@/lib/test-service';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth';
 
 export default function TestsTab() {
+  const { getIdToken } = useAuth();
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState<TestSuiteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,11 +124,16 @@ Wygenerowano automatycznie przez panel administracyjny Okazje Plus
     setTestResults(null);
 
     try {
+      const token = await getIdToken();
+      if (!token) {
+        throw new Error('Brak aktywnej sesji administratora');
+      }
+
       const response = await fetch('/api/admin/tests/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer admin' // TODO: Use real auth token
+          'Authorization': `Bearer ${token}`
         }
       });
 

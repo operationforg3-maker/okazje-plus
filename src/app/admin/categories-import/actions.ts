@@ -43,9 +43,9 @@ export async function runImportCategories(input: unknown) {
   const { categories } = parsed.data;
   const bySlug = new Map(categories.map(c => [c.slug, c]));
   const parentIdBySlug = new Map<string, string>();
-  let created = 0, skipped = 0;
+  let created = 0;
+  let skipped = 0;
 
-  // Najpierw utwórz kategorie główne
   for (const c of categories.filter(c => !c.parentSlug)) {
     try {
       const id = await createCategory({ name: c.name, slug: c.slug, sortOrder: c.sortOrder });
@@ -55,12 +55,11 @@ export async function runImportCategories(input: unknown) {
       skipped++;
     }
   }
-  // Następnie podkategorie (1 poziom)
+
   for (const c of categories.filter(c => !!c.parentSlug)) {
     const parentSlug = c.parentSlug!;
     const parentId = parentIdBySlug.get(parentSlug);
     if (!parentId) {
-      // jeśli nie istnieje w bieżącym wsadzie, spróbuj stworzyć rodzica ad-hoc
       const parent = bySlug.get(parentSlug);
       if (parent && !parent.parentSlug) {
         const pid = await createCategory({ name: parent.name, slug: parent.slug, sortOrder: parent.sortOrder });
@@ -68,7 +67,10 @@ export async function runImportCategories(input: unknown) {
       }
     }
     const finalParentId = parentIdBySlug.get(parentSlug);
-    if (!finalParentId) { skipped++; continue; }
+    if (!finalParentId) {
+      skipped++;
+      continue;
+    }
     try {
       await createSubcategory(finalParentId, { name: c.name, slug: c.slug, sortOrder: c.sortOrder });
       created++;

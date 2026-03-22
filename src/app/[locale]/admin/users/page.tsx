@@ -43,6 +43,7 @@ import { usePagination } from '@/hooks/use-pagination';
 interface UserWithMetadata extends User {
   createdAt?: any;
   disabled?: boolean;
+  status?: string;
 }
 
 export default function AdminUsersPage() {
@@ -138,11 +139,24 @@ export default function AdminUsersPage() {
     setProcessing(true);
     try {
       const newRole = selectedUser.role === 'admin' ? 'user' : 'admin';
+      const auth = getAuth();
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Brak zalogowanego administratora');
+      }
+      const idToken = await firebaseUser.getIdToken();
       
-      const response = await fetch(`/api/admin/users/${selectedUser.uid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole }),
+      const response = await fetch(`/api/admin/users/${selectedUser.uid}/moderate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          action: 'change-role',
+          role: newRole,
+          reason: 'Zmiana roli z panelu administratora',
+        }),
       });
 
       const data = await response.json();
@@ -175,12 +189,31 @@ export default function AdminUsersPage() {
 
     setProcessing(true);
     try {
-      const newDisabledState = !selectedUser.disabled;
+      const isBlocked = selectedUser.disabled || selectedUser.status === 'banned' || selectedUser.status === 'suspended';
+      const auth = getAuth();
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Brak zalogowanego administratora');
+      }
+      const idToken = await firebaseUser.getIdToken();
       
-      const response = await fetch(`/api/admin/users/${selectedUser.uid}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ disabled: newDisabledState }),
+      const response = await fetch(`/api/admin/users/${selectedUser.uid}/moderate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(
+          isBlocked
+            ? {
+                action: 'unsuspend',
+                reason: 'Odblokowanie z panelu administratora',
+              }
+            : {
+                action: 'ban',
+                reason: 'Blokada z panelu administratora',
+              }
+        ),
       });
 
       const data = await response.json();
@@ -188,7 +221,7 @@ export default function AdminUsersPage() {
       if (data.success) {
         toast({
           title: 'Sukces',
-          description: `Użytkownik został ${newDisabledState ? 'zablokowany' : 'odblokowany'}`,
+          description: `Użytkownik został ${isBlocked ? 'odblokowany' : 'zablokowany'}`,
         });
         await fetchUsers();
         setActionDialog(null);
@@ -294,9 +327,14 @@ export default function AdminUsersPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <Badge variant={user.disabled ? 'destructive' : 'outline'}>
-                          {user.disabled ? 'Zablokowany' : 'Aktywny'}
-                        </Badge>
+                        {(() => {
+                          const isBlocked = user.disabled || user.status === 'banned' || user.status === 'suspended';
+                          return (
+                            <Badge variant={isBlocked ? 'destructive' : 'outline'}>
+                              {isBlocked ? 'Zablokowany' : 'Aktywny'}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -332,9 +370,9 @@ export default function AdminUsersPage() {
                                 setSelectedUser(user);
                                 setActionDialog('block');
                               }}
-                              className={user.disabled ? undefined : "text-destructive focus:text-destructive"}
+                              className={(user.disabled || user.status === 'banned' || user.status === 'suspended') ? undefined : "text-destructive focus:text-destructive"}
                             >
-                              {user.disabled ? (
+                                {(user.disabled || user.status === 'banned' || user.status === 'suspended') ? (
                                 <>
                                   <CheckCircle className="mr-2 h-4 w-4" />
                                   Odblokuj
@@ -410,14 +448,21 @@ export default function AdminUsersPage() {
       <Dialog open={actionDialog === 'block'} onOpenChange={(open) => !open && setActionDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {selectedUser?.disabled ? 'Odblokuj użytkownika' : 'Zablokuj użytkownika'}
-            </DialogTitle>
-            <DialogDescription>
-              Czy na pewno chcesz {selectedUser?.disabled ? 'odblokować' : 'zablokować'} użytkownika{' '}
-              <strong>{selectedUser?.displayName || selectedUser?.email}</strong>?
-              {!selectedUser?.disabled && ' Użytkownik nie będzie mógł się zalogować.'}
-            </DialogDescription>
+              {(() => {
+                const isBlocked = !!(selectedUser?.disabled || selectedUser?.status === 'banned' || selectedUser?.status === 'suspended');
+                return (
+                  <>
+                    <DialogTitle>
+                      {isBlocked ? 'Odblokuj użytkownika' : 'Zablokuj użytkownika'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Czy na pewno chcesz {isBlocked ? 'odblokować' : 'zablokować'} użytkownika{' '}
+                      <strong>{selectedUser?.displayName || selectedUser?.email}</strong>?
+                      {!isBlocked && ' Użytkownik nie będzie mógł się zalogować.'}
+                    </DialogDescription>
+                  </>
+                );
+              })()}
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -431,11 +476,11 @@ export default function AdminUsersPage() {
               Anuluj
             </Button>
             <Button
-              variant={selectedUser?.disabled ? 'default' : 'destructive'}
+              variant={(selectedUser?.disabled || selectedUser?.status === 'banned' || selectedUser?.status === 'suspended') ? 'default' : 'destructive'}
               onClick={handleBlockUser}
               disabled={processing}
             >
-              {processing ? 'Przetwarzam...' : (selectedUser?.disabled ? 'Odblokuj' : 'Zablokuj')}
+              {processing ? 'Przetwarzam...' : ((selectedUser?.disabled || selectedUser?.status === 'banned' || selectedUser?.status === 'suspended') ? 'Odblokuj' : 'Zablokuj')}
             </Button>
           </DialogFooter>
         </DialogContent>

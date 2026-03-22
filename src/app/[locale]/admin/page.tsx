@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { withAuth } from '@/components/auth/withAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +12,6 @@ import {
   Flame, 
   Users, 
   TrendingUp, 
-  TrendingDown,
   Package,
   Activity,
   Eye,
@@ -21,15 +21,18 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle,
-  Settings
+  Settings,
+  RefreshCw,
+  Server,
+  ShieldCheck,
 } from 'lucide-react';
-import { getCounts, getHotDeals, getAdminDashboardStats } from '@/lib/data';
+import { getHotDeals, getAdminDashboardStats } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Deal, Product } from '@/lib/types';
+import { Deal } from '@/lib/types';
 import TestsTab from '@/components/admin/tests-tab';
 import { ExchangeRateAlert } from '@/components/admin/exchange-rate-alert';
 
@@ -91,33 +94,81 @@ interface DashboardStats {
   };
 }
 
+interface AdminHealth {
+  status: 'ok' | 'error';
+  checkedAt?: string;
+  system?: {
+    smokeReady?: boolean;
+    aliexpress?: {
+      appKeyConfigured?: boolean;
+      appSecretConfigured?: boolean;
+    };
+  };
+  totals?: {
+    deals: number;
+    products: number;
+    users: number;
+  };
+}
+
 function AdminPage() {
+  const pathname = usePathname();
   const [stats, setStats] = useState<Stats | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [hotDeals, setHotDeals] = useState<Deal[]>([]);
+  const [health, setHealth] = useState<AdminHealth | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const { getIdToken } = useAuth();
 
+  const localePrefix = (() => {
+    const first = pathname.split('/')[1];
+    return ['pl', 'en', 'de'].includes(first) ? `/${first}` : '';
+  })();
+
+  const adminHref = (path: string) => `${localePrefix}${path}`;
+
+  const fetchHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const token = await getIdToken();
+      if (!token) {
+        setHealth({ status: 'error' });
+        return;
+      }
+
+      const response = await fetch('/api/admin/health', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Health endpoint failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setHealth(data);
+    } catch {
+      setHealth({ status: 'error' });
+    } finally {
+      setHealthLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
-    DEBUG && console.log('[AdminPage] Component mounted, fetching data...');
     async function fetchStats() {
       try {
-        DEBUG && console.log('[AdminPage] Fetching dashboard stats...');
         const token = await getIdToken();
         const [dashStats, dealsData] = await Promise.all([
           getAdminDashboardStats(token || undefined),
           getHotDeals(5)
         ]);
-        DEBUG && console.log('[AdminPage] Data fetched successfully:', {
-          stats: dashStats?.totals,
-          deals: dealsData?.length
-        });
         setDashboardStats(dashStats);
         setStats(dashStats?.totals || { deals: 0, products: 0, users: 0 });
         setHotDeals(dealsData);
+        await fetchHealth();
       } catch (error) {
-        DEBUG && console.error('[AdminPage] Error fetching stats:', error);
         // Fallback to zeroed stats to keep UI stable when API fails
         const fallback: DashboardStats = {
           totals: { deals: 0, products: 0, users: 0 },
@@ -139,18 +190,15 @@ function AdminPage() {
         };
         setDashboardStats(fallback);
         setStats(fallback.totals);
+        await fetchHealth();
       } finally {
-        DEBUG && console.log('[AdminPage] Setting loading to false');
         setLoading(false);
       }
     }
     fetchStats();
   }, [getIdToken]);
-  const DEBUG = process.env.NEXT_PUBLIC_DEBUG === 'true';
-  DEBUG && console.log('[AdminPage] Render - loading:', loading, 'hasStats:', !!stats);
 
   if (loading) {
-    DEBUG && console.log('[AdminPage] Showing loading skeleton');
     return (
       <div className="space-y-6">
         <div>
@@ -190,19 +238,58 @@ function AdminPage() {
         <div className="flex gap-2">
           <ExchangeRateAlert />
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/setup">
+            <Link href={adminHref('/admin/setup')}>
               <Settings className="h-4 w-4 mr-2" />
-              Setup & Seeding
+              Setup i seeding
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/analytics">
+            <Link href={adminHref('/admin/analytics')}>
               <Activity className="h-4 w-4 mr-2" />
               Analityka
             </Link>
           </Button>
         </div>
       </div>
+
+      <Card className="border-l-4 border-l-emerald-500">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Server className="h-4 w-4 text-emerald-600" />
+            Health Check panelu admina
+          </CardTitle>
+          <CardDescription>
+            Szybki status backendu admina, kluczy AliExpress i liczników kolekcji.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+            <div className="rounded-md border p-3">
+              <div className="text-xs text-muted-foreground">Status API</div>
+              <div className="mt-1 font-semibold flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4" />
+                {health?.status === 'ok' ? 'OK' : 'Błąd'}
+              </div>
+            </div>
+            <div className="rounded-md border p-3">
+              <div className="text-xs text-muted-foreground">AliExpress smoke-ready</div>
+              <div className="mt-1 font-semibold">
+                {health?.system?.smokeReady ? 'Tak' : 'Nie'}
+              </div>
+            </div>
+            <div className="rounded-md border p-3">
+              <div className="text-xs text-muted-foreground">Skan danych</div>
+              <div className="mt-1 text-sm">
+                D: {health?.totals?.deals ?? '—'} · P: {health?.totals?.products ?? '—'} · U: {health?.totals?.users ?? '—'}
+              </div>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={fetchHealth} disabled={healthLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${healthLoading ? 'animate-spin' : ''}`} />
+            Odśwież health
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Quick Action Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -250,7 +337,7 @@ function AdminPage() {
             </CardContent>
           </Card>
 
-        <Link href="/admin/users">
+        <Link href={adminHref('/admin/users')}>
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-purple-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Użytkownicy</CardTitle>
@@ -271,7 +358,7 @@ function AdminPage() {
           </Card>
         </Link>
 
-        <Link href="/admin/forum/moderation">
+        <Link href={adminHref('/admin/forum/moderation')}>
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-green-500">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Forum</CardTitle>
@@ -333,7 +420,7 @@ function AdminPage() {
               </div>
             </div>
             <div className="mt-3 pt-2 border-t">
-              <Link href="/admin/harvester" className="text-xs text-blue-600 hover:underline">
+              <Link href={adminHref('/admin/harvester')} className="text-xs text-blue-600 hover:underline">
                 Detale → 
               </Link>
             </div>
@@ -387,7 +474,7 @@ function AdminPage() {
               {dashboardStats?.pending?.deals || 0} okazji, {dashboardStats?.pending?.products || 0} produktów
             </p>
             <Button asChild variant="link" size="sm" className="px-0 h-auto mt-2 text-amber-700 dark:text-amber-300">
-              <Link href="/admin/moderation">
+              <Link href={adminHref('/admin/moderation')}>
                 Przejdź do moderacji <ArrowRight className="h-3 w-3 ml-1" />
               </Link>
             </Button>
@@ -542,7 +629,7 @@ function AdminPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {hotDeals.slice(0, 5).map((deal, i) => (
+                {hotDeals.slice(0, 5).map((deal) => (
                   <div key={deal.id} className="flex items-start gap-3 border-b pb-3 last:border-0">
                     <div className="p-2 rounded-full bg-red-100 text-red-600">
                       <Flame className="h-4 w-4" />
@@ -587,28 +674,28 @@ function AdminPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Link 
-              href="/admin/moderation" 
+              href={adminHref('/admin/moderation')} 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950 transition-colors"
             >
               <AlertCircle className="h-8 w-8 text-orange-500" />
               <span className="text-sm font-medium text-center">Moderacja</span>
             </Link>
             <Link 
-              href="/admin/users" 
+              href={adminHref('/admin/users')} 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <Users className="h-8 w-8 text-primary" />
               <span className="text-sm font-medium text-center">Użytkownicy</span>
             </Link>
             <Link 
-              href="/admin/analytics" 
+              href={adminHref('/admin/analytics')} 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <TrendingUp className="h-8 w-8 text-primary" />
               <span className="text-sm font-medium text-center">Analityka</span>
             </Link>
             <Link 
-              href="/admin/settings" 
+              href={adminHref('/admin/settings')} 
               className="flex flex-col items-center gap-2 p-4 rounded-lg border border-border/40 hover:border-primary hover:bg-primary/5 transition-colors"
             >
               <span className="text-2xl">⚙️</span>

@@ -14,12 +14,12 @@ export const TranslationsPayloadSchema = z.object({
 export async function dryRunTranslate(input: unknown) {
   const parsed = TranslationsPayloadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.flatten() };
-  const { scope, mode, prompt } = parsed.data;
-  
+  const { scope } = parsed.data;
+
   const collection = scope === "product" ? "products" : "deals";
   const snapshot = await adminDb.collection(collection).where("status", "==", "approved").limit(3).get();
   const preview: Array<{ id: string; name: string; translations?: any; error?: string }> = [];
-  
+
   for (const doc of snapshot.docs) {
     const item = doc.data() as Product;
     if (scope === "product") {
@@ -40,19 +40,20 @@ export async function dryRunTranslate(input: unknown) {
       }
     }
   }
-  
+
   return { ok: true, translated: snapshot.size, preview };
 }
 
 export async function runTranslate(input: unknown) {
   const parsed = TranslationsPayloadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.flatten() };
-  const { scope, mode } = parsed.data;
-  
+  const { scope } = parsed.data;
+
   const collection = scope === "product" ? "products" : "deals";
   const snapshot = await adminDb.collection(collection).where("status", "==", "approved").limit(100).get();
-  let translated = 0, failed = 0;
-  
+  let translated = 0;
+  let failed = 0;
+
   for (const doc of snapshot.docs) {
     const item = doc.data() as Product;
     if (scope === "product") {
@@ -74,7 +75,7 @@ export async function runTranslate(input: unknown) {
       }
     }
   }
-  
+
   revalidatePath("/admin/translations");
   return { ok: true, translated, failed };
 }

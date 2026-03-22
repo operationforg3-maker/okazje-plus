@@ -6,8 +6,16 @@ import {routing} from './i18n/routing';
 const intlMiddleware = createMiddleware(routing);
 
 export default function middleware(request: NextRequest) {
-  // Since only PL is active, next-intl middleware handles all routing
-  // No need for manual redirects
+  // Legacy admin routes (/admin/*) are outdated and must be served from locale-aware panel.
+  // Force redirect so users always land on current, maintained admin UI.
+  const { pathname, search } = request.nextUrl;
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    const target = request.nextUrl.clone();
+    target.pathname = `/pl${pathname}`;
+    target.search = search;
+    return NextResponse.redirect(target);
+  }
+
   return intlMiddleware(request);
 }
 

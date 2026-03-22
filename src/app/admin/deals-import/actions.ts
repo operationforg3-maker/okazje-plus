@@ -14,7 +14,7 @@ const DealInputSchema = z.object({
   subCategorySlug: z.string(),
   subSubCategorySlug: z.string().optional(),
   merchant: z.string().optional(),
-  status: z.enum(["draft","approved","rejected"]).default("draft"),
+  status: z.enum(["draft", "approved", "rejected"]).default("draft"),
   externalOriginalId: z.string().optional(),
 });
 
@@ -31,7 +31,8 @@ export async function dryRunImportDeals(input: unknown) {
   const parsed = DealsPayloadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.flatten() };
   const { deals } = parsed.data;
-  let toCreate = 0, toUpdate = 0;
+  let toCreate = 0;
+  let toUpdate = 0;
   const preview: Array<{ deal: any; action: string; reason?: string; existingId?: string }> = [];
   for (const d of deals.slice(0, 50)) {
     const existingId = await findExistingDeal({ externalOriginalId: d.externalOriginalId, link: d.link });
@@ -50,7 +51,8 @@ export async function runImportDeals(input: unknown) {
   const parsed = DealsPayloadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.flatten() };
   const { deals, autoApprove } = parsed.data;
-  let created = 0, updated = 0;
+  let created = 0;
+  let updated = 0;
   for (const d of deals) {
     const existingId = await findExistingDeal({ externalOriginalId: d.externalOriginalId, link: d.link });
     if (existingId) {

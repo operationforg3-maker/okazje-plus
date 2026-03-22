@@ -31,6 +31,7 @@ import {
 import { useEffect, useState, useCallback } from 'react';
 import { getPendingDuplicateGroups, rejectDuplicateGroup, mergeProducts } from '@/lib/deduplication';
 import { DuplicateGroup } from '@/lib/types';
+import { getAuth } from 'firebase/auth';
 
 function DuplicatesPage() {
   const { toast } = useToast();
@@ -80,8 +81,12 @@ function DuplicatesPage() {
 
     setProcessingId(groupId);
     try {
-      // TODO: Get user ID from auth
-      const userId = 'admin-user';
+      const auth = getAuth();
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Brak zalogowanego administratora');
+      }
+      const userId = firebaseUser.uid;
       
       await mergeProducts(groupId, strategy, userId);
       
@@ -111,8 +116,12 @@ function DuplicatesPage() {
 
     setProcessingId(groupId);
     try {
-      // TODO: Get user ID from auth
-      const userId = 'admin-user';
+      const auth = getAuth();
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) {
+        throw new Error('Brak zalogowanego administratora');
+      }
+      const userId = firebaseUser.uid;
       
       await rejectDuplicateGroup(groupId, userId, 'Manual review: not duplicates');
       
