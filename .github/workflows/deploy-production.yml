@@ -12,6 +12,8 @@ concurrency:
 
 env:
   NODE_VERSION: '22'
+  ALIEXPRESS_APP_KEY: ${{ secrets.ALIEXPRESS_APP_KEY }}
+  ALIEXPRESS_APP_SECRET: ${{ secrets.ALIEXPRESS_APP_SECRET }}
 
 jobs:
   deploy:
@@ -37,11 +39,11 @@ jobs:
         run: npm run verify:future-content
 
       - name: Smoke AliExpress promotions
-        if: ${{ secrets.ALIEXPRESS_APP_KEY != '' && secrets.ALIEXPRESS_APP_SECRET != '' }}
+        if: ${{ env.ALIEXPRESS_APP_KEY != '' && env.ALIEXPRESS_APP_SECRET != '' }}
         run: npm run monitor:aliexpress-promotions
         env:
-          ALIEXPRESS_APP_KEY: ${{ secrets.ALIEXPRESS_APP_KEY }}
-          ALIEXPRESS_APP_SECRET: ${{ secrets.ALIEXPRESS_APP_SECRET }}
+          ALIEXPRESS_APP_KEY: ${{ env.ALIEXPRESS_APP_KEY }}
+          ALIEXPRESS_APP_SECRET: ${{ env.ALIEXPRESS_APP_SECRET }}
 
       - name: TypeScript check
         run: npm run typecheck

@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ALIEXPRESS_APP_KEY: ${{ secrets.ALIEXPRESS_APP_KEY }}
+      ALIEXPRESS_APP_SECRET: ${{ secrets.ALIEXPRESS_APP_SECRET }}
     
     steps:
       - uses: actions/checkout@v4
@@ -32,11 +35,11 @@ jobs:
         run: npm run typecheck || true
 
       - name: Smoke AliExpress promotions (push only)
-        if: github.event_name == 'push' && secrets.ALIEXPRESS_APP_KEY != '' && secrets.ALIEXPRESS_APP_SECRET != ''
+        if: ${{ github.event_name == 'push' && env.ALIEXPRESS_APP_KEY != '' && env.ALIEXPRESS_APP_SECRET != '' }}
         run: npm run monitor:aliexpress-promotions
         env:
-          ALIEXPRESS_APP_KEY: ${{ secrets.ALIEXPRESS_APP_KEY }}
-          ALIEXPRESS_APP_SECRET: ${{ secrets.ALIEXPRESS_APP_SECRET }}
+          ALIEXPRESS_APP_KEY: ${{ env.ALIEXPRESS_APP_KEY }}
+          ALIEXPRESS_APP_SECRET: ${{ env.ALIEXPRESS_APP_SECRET }}
 
       - name: Run lint
         run: npm run lint
