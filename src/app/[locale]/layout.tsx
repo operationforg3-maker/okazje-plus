@@ -73,7 +73,7 @@ export async function generateMetadata({
     acc[key] = `${SITE_URL}${value.path}`;
     return acc;
   }, {});
-  const isIndexedLocale = finalLocale === 'pl';
+  const isIndexedLocale = Boolean(LOCALE_CONFIG[finalLocale]);
 
   return {
     metadataBase: new URL(SITE_URL),

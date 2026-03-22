@@ -16,6 +16,8 @@ interface PageProps {
   params: { id: string; locale: string };
 }
 
+const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
+
 // Normalizacja M6 → legacy Deal (UI wymaga legacy pól)
 function ensureLocalizedText(value: any, fallback: string): LocalizedText {
   if (typeof value === 'string') {
@@ -188,14 +190,9 @@ async function getDealData(id: string) {
 // SEO: Generate metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
-  // Non-pl locales are duplicate content — mark noindex so Google doesn't spend
-  // crawl budget on them. Canonical always points to /pl/ anyway.
-  if (resolvedParams.locale && resolvedParams.locale !== 'pl') {
-    return {
-      robots: { index: false, follow: false },
-      alternates: { canonical: `https://okazjeplus.pl/pl/deals/${resolvedParams.id}` },
-    };
-  }
+  const locale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
+    ? resolvedParams.locale
+    : 'pl';
   const data = await getDealData(resolvedParams.id);
   
   if (!data) {
@@ -244,7 +241,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ...(deal.tags || []),
   ].filter(Boolean);
   
-  const canonicalUrl = `https://okazjeplus.pl/pl/deals/${deal.id}`;
+  const canonicalUrl = `https://okazjeplus.pl/${locale}/deals/${deal.id}`;
   
   return {
     title: metaTitle,
@@ -275,6 +272,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     alternates: {
       canonical: canonicalUrl,
+      languages: Object.fromEntries(
+        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `https://okazjeplus.pl/${localeCode}/deals/${deal.id}`])
+      ),
     },
     other: {
       'product:price:amount': String(pVal),

@@ -10,13 +10,21 @@ type CliOptions = {
 };
 
 const DEFAULT_COLLECTIONS = [
+  // Core marketplace entities (legacy + M6)
   'deals',
+  'products',
   'product_cores',
   'identity_matches',
+
+  // Import/runtime artifacts that can re-introduce stale state
+  'import_discarded',
+  'importRuns',
   'harvester_jobs',
   'aliexpress_autopilot_runs',
   'automation_alerts',
 ] as const;
+
+const REQUIRED_CONFIRMATION = 'RESET_MARKETPLACE_DATA';
 
 function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = {
@@ -91,9 +99,10 @@ async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const db = initAdmin();
 
-  console.log('=== M6 CANONICAL RESET PLAN ===');
+  console.log('=== MARKETPLACE RESET PLAN ===');
   console.log(`mode: ${options.execute ? 'EXECUTE' : 'DRY-RUN'}`);
   console.log(`collections: ${options.collections.join(', ')}`);
+  console.log(`confirmation token: ${REQUIRED_CONFIRMATION}`);
 
   const plan: Array<{ collection: string; count: number }> = [];
   for (const collectionName of options.collections) {
@@ -110,12 +119,12 @@ async function main(): Promise<void> {
 
   if (!options.execute) {
     console.log('\nDry-run complete. To execute:');
-    console.log('npm run reset:m6:canonical -- --execute --confirm=RESET_M6');
+    console.log(`npm run reset:m6:canonical -- --execute --confirm=${REQUIRED_CONFIRMATION}`);
     return;
   }
 
-  if (options.confirm !== 'RESET_M6') {
-    throw new Error('Missing --confirm=RESET_M6. Refusing destructive operation.');
+  if (options.confirm !== REQUIRED_CONFIRMATION) {
+    throw new Error(`Missing --confirm=${REQUIRED_CONFIRMATION}. Refusing destructive operation.`);
   }
 
   console.log('\nExecuting deletion...');
@@ -127,6 +136,12 @@ async function main(): Promise<void> {
 
     const deleted = await deleteCollectionInBatches(db, entry.collection);
     console.log(` - ${entry.collection}: deleted ${deleted}`);
+  }
+
+  console.log('\nPost-reset verification:');
+  for (const collectionName of options.collections) {
+    const count = await countCollection(db, collectionName);
+    console.log(` - ${collectionName}: ${count}`);
   }
 
   console.log('Reset completed.');

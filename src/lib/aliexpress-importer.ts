@@ -15,6 +15,7 @@ import { Product, Deal, ImportRun, ImportItemLog, ImportError, ImportProfile } f
 import { sanitizeProductPayload, sanitizeDealPayload } from './sanitizers';
 import { logger } from './logger';
 import { convertPrice } from './fx';
+import { validateMerchantListingInput } from './merchant-center-validator';
 
 export interface AliExpressImportConfig {
   profileId: string;
@@ -639,6 +640,33 @@ export async function importFromAliExpress(
           rawProduct.product_description || rawProduct.short_description || title
         );
         const parsedSpecifications = parseSpecEntries(rawProduct);
+        const landingUrl = rawProduct.product_detail_url || rawProduct.promotion_link || '';
+
+        const merchantValidation = validateMerchantListingInput({
+          title,
+          imageUrl: mainImage,
+          landingUrl,
+          price: pricePLN,
+          currency: 'PLN',
+        });
+
+        if (!merchantValidation.valid) {
+          result.stats.skipped++;
+          const reasonCodes = merchantValidation.issues.map((issue) => issue.code).join(',');
+          await logImportItem(result.importRunId, {
+            originalId,
+            action: 'skipped',
+            itemType: 'product',
+            reason: `Merchant validation failed: ${reasonCodes}`,
+            timestamp: new Date().toISOString(),
+            metadata: {
+              title,
+              price: pricePLN,
+              category: profile.mapping.targetMainCategory,
+            },
+          });
+          continue;
+        }
 
         // Build product data
         const productData: Partial<Product> = {

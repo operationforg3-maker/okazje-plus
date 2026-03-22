@@ -18,6 +18,8 @@ const OG_LOCALES: Record<string, string> = {
   uk: 'uk_UA',
 };
 
+const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
+
 const HOME_SEO_BY_LOCALE: Record<string, {
   title: string;
   description: string;
@@ -92,7 +94,7 @@ export async function generateMetadata({
   const currentLocale = locale || 'pl';
   const seo = HOME_SEO_BY_LOCALE[currentLocale] || HOME_SEO_BY_LOCALE.pl;
   const canonical = `${SITE_URL}/${currentLocale}`;
-  const isIndexedLocale = currentLocale === 'pl';
+  const isIndexedLocale = SUPPORTED_LOCALES.includes(currentLocale as (typeof SUPPORTED_LOCALES)[number]);
 
   return {
     title: seo.title,
@@ -121,6 +123,9 @@ export async function generateMetadata({
     },
     alternates: {
       canonical,
+      languages: Object.fromEntries(
+        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `${SITE_URL}/${localeCode}`])
+      ),
     },
     robots: {
       index: isIndexedLocale,

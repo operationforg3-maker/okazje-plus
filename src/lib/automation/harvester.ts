@@ -21,6 +21,7 @@ import { batchAssignCategories } from '@/ai/flows/convertiser-auto-category';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { chunkArray } from '@/lib/utils';
 import { matchCategoryByExternalIds, matchCategoryByText } from '@/lib/category-mapper';
+import { validateMerchantListingInput } from '@/lib/merchant-center-validator';
 import { load as loadHtml } from 'cheerio';
 // deep-mapper consolidated into mappers.ts; migrate when harvester uses Universal Product Schema
 // import { mapAliExpressToProductCoreDeepData } from '@/integrations/aliexpress/deep-mapper';
@@ -1814,6 +1815,38 @@ export class SmartHarvester {
 
             for (const sourceProduct of chunk) {
               try {
+                const merchantValidation = validateMerchantListingInput({
+                  title: sourceProduct.title,
+                  imageUrl: sourceProduct.imageUrl,
+                  landingUrl: sourceProduct.sourceUrl,
+                  price: sourceProduct.price,
+                  currency: sourceProduct.currency,
+                });
+
+                if (!merchantValidation.valid) {
+                  const reasons = merchantValidation.issues.map((issue) => issue.code).join(', ');
+                  this.addLog('warn', `Pomijam produkt niespełniający Merchant Center: ${sourceProduct.title || 'bez tytułu'} [${reasons}]`);
+
+                  await this.recordDiscardedItem({
+                    source,
+                    type: 'product',
+                    reason: `Walidacja merchant-ready nie przeszła: ${reasons}`,
+                    reasonCode: 'merchant_validation_failed',
+                    item: sourceProduct,
+                    query: currentQuery,
+                    categoryPath: currentQuery,
+                  });
+
+                  continue;
+                }
+
+                // Normalize critical fields before persistence to keep import deterministic.
+                sourceProduct.title = merchantValidation.normalized.title;
+                sourceProduct.imageUrl = merchantValidation.normalized.imageUrl;
+                sourceProduct.sourceUrl = merchantValidation.normalized.landingUrl;
+                sourceProduct.price = merchantValidation.normalized.price;
+                sourceProduct.currency = merchantValidation.normalized.currency;
+
                 // PRIORITY 1: Check for existing product by standard identifiers (EAN/GTIN/UPC/MPN)
                 let existingProduct = null;
                 let identityHash = '';

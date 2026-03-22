@@ -18,6 +18,8 @@ interface PageProps {
   params: Promise<{ id: string; locale: string }>;
 }
 
+const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
+
 // Server-side data fetching - używa M6 ProductCore + DealM6
 async function getProductData(id: string) {
   try {
@@ -172,13 +174,9 @@ async function getProductData(id: string) {
 // SEO: Generate metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id, locale } = await params;
-  // Non-pl locales are duplicate content — mark noindex.
-  if (locale && locale !== 'pl') {
-    return {
-      robots: { index: false, follow: false },
-      alternates: { canonical: `https://okazjeplus.pl/pl/products/${id}` },
-    };
-  }
+  const effectiveLocale = SUPPORTED_LOCALES.includes(locale as (typeof SUPPORTED_LOCALES)[number])
+    ? locale
+    : 'pl';
   const data = await getProductData(id);
   
   if (!data) {
@@ -258,7 +256,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     productData.subSubCategorySlug || '',
   ].filter(Boolean);
   
-  const canonicalUrl = `https://okazjeplus.pl/pl/products/${productData.id}`;
+  const canonicalUrl = `https://okazjeplus.pl/${effectiveLocale}/products/${productData.id}`;
   
   const productImage = isM6 && productCore ? (productCore.images?.[0] || '') : (product?.image || '');
   const stockStatus = isM6 
@@ -297,6 +295,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     alternates: {
       canonical: canonicalUrl,
+      languages: Object.fromEntries(
+        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `https://okazjeplus.pl/${localeCode}/products/${productData.id}`])
+      ),
     },
     other: {
       ...(priceAmount !== null && {

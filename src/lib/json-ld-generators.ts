@@ -64,6 +64,26 @@ function normalizeCurrency(value: unknown): string {
   return typeof value === 'string' && value.trim() ? value.toUpperCase() : 'PLN';
 }
 
+function parsePriceAmount(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, value);
+  }
+
+  if (typeof value === 'string') {
+    const cleaned = value
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(',', '.')
+      .replace(/[^\d.-]/g, '');
+    const parsed = Number.parseFloat(cleaned);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, parsed);
+    }
+  }
+
+  return 0;
+}
+
 function getReturnPolicyText(raw: unknown): string {
   if (typeof raw === 'string') {
     return raw;
@@ -372,7 +392,9 @@ export function generateBreadcrumbJsonLd(
 export function generateDealJsonLd(deal: Deal) {
   const dealTitle = getLocalizedValue(deal.title, 'Okazja');
   const dealDescription = stripHtml(getLocalizedValue(deal.description, ''));
-  const price = typeof deal.price === 'object' ? Number(deal.price.amount) || 0 : Number(deal.price) || 0;
+  const price = typeof deal.price === 'object'
+    ? parsePriceAmount(deal.price.amount)
+    : parsePriceAmount(deal.price);
   const priceCurrency = typeof deal.price === 'object' && typeof deal.price.currency === 'string'
     ? deal.price.currency.toUpperCase()
     : 'PLN';
@@ -386,29 +408,17 @@ export function generateDealJsonLd(deal: Deal) {
     || getReturnPolicyText((deal as any)?.metadata?.returnPolicy)
     || getReturnPolicyText((deal as any)?.importMetadata?.returnPolicy);
 
-  return {
-    '@context': 'https://schema.org',
+  const offerNode = {
     '@type': 'Offer',
-    name: dealTitle,
-    description: dealDescription,
-    ...(dealImage && { image: dealImage }),
     url: dealUrl,
     priceCurrency: normalizeCurrency(priceCurrency),
     price,
-    ...(deal.originalPrice && {
-      priceSpecification: {
-        '@type': 'PriceSpecification',
-        price,
-        priceCurrency,
-        valueAddedTaxIncluded: true,
-      },
-    }),
-    ...(deal.expiryDate && {
-      priceValidUntil: deal.expiryDate,
-    }),
     availability: deal.stockAlert === 'ending-soon'
       ? 'https://schema.org/LimitedAvailability'
       : 'https://schema.org/InStock',
+    ...(deal.expiryDate && {
+      priceValidUntil: deal.expiryDate,
+    }),
     shippingDetails: buildShippingDetails({
       shippingCost: deal.shippingCost,
       freeShipping: deal.freeShipping,
@@ -419,6 +429,24 @@ export function generateDealJsonLd(deal: Deal) {
       '@type': 'Organization',
       name: sellerName,
     },
+  };
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: dealTitle,
+    description: dealDescription,
+    ...(dealImage && { image: dealImage }),
+    url: dealUrl,
+    offers: offerNode,
+    ...(deal.originalPrice && {
+      priceSpecification: {
+        '@type': 'PriceSpecification',
+        price,
+        priceCurrency,
+        valueAddedTaxIncluded: true,
+      },
+    }),
     ...(deal.merchant && {
       brand: {
         '@type': 'Brand',

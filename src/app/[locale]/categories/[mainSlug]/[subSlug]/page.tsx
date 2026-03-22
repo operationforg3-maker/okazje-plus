@@ -12,8 +12,13 @@ interface CategoryPageProps {
   }>;
 }
 
+const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
+
 export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
   const resolvedParams = await params;
+  const effectiveLocale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
+    ? resolvedParams.locale
+    : 'pl';
   const { route } = await getResolvedProductCategoryRoute(resolvedParams.mainSlug, resolvedParams.subSlug);
 
   if (!route) {
@@ -29,10 +34,10 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     title: `${subName} | ${mainName} | Okazje Plus`,
     description: `Przeglądaj produkty w podkategorii ${subName} w sekcji ${mainName}.`,
     alternates: {
-      canonical: `https://okazjeplus.pl${buildCategoryPath('pl', route.mainSlug, route.subSlug)}`,
+      canonical: `https://okazjeplus.pl${buildCategoryPath(effectiveLocale, route.mainSlug, route.subSlug)}`,
     },
     robots: {
-      index: resolvedParams.locale === 'pl',
+      index: true,
       follow: true,
     },
   };

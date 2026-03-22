@@ -9,6 +9,7 @@ interface PageProps {
 }
 
 const BASE_URL = 'https://okazjeplus.pl';
+const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 
 function toAbsoluteHttpUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -80,7 +81,7 @@ function extractThumbnailUrl(product: any): string | null {
   return null;
 }
 
-async function getWatchData(id: string) {
+async function getWatchData(id: string, locale: string) {
   const data = await getProductWithDeals(id);
   if (!data?.product) return null;
 
@@ -108,22 +109,18 @@ async function getWatchData(id: string) {
     videoUrl,
     thumbnailUrl,
     uploadDate,
-    productPath: `/pl/products/${id}`,
-    watchPath: `/pl/watch/products/${id}`,
+    productPath: `/${locale}/products/${id}`,
+    watchPath: `/${locale}/watch/products/${id}`,
   };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, id } = await params;
+  const effectiveLocale = SUPPORTED_LOCALES.includes(locale as (typeof SUPPORTED_LOCALES)[number])
+    ? locale
+    : 'pl';
 
-  if (locale !== 'pl') {
-    return {
-      robots: { index: false, follow: false },
-      alternates: { canonical: `${BASE_URL}/pl/watch/products/${id}` },
-    };
-  }
-
-  const data = await getWatchData(id);
+  const data = await getWatchData(id, effectiveLocale);
   if (!data) {
     return {
       title: 'Wideo produktu niedostępne | Okazje Plus',
@@ -136,6 +133,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: data.description,
     alternates: {
       canonical: `${BASE_URL}${data.watchPath}`,
+      languages: Object.fromEntries(
+        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `${BASE_URL}/${localeCode}/watch/products/${id}`])
+      ),
     },
     robots: {
       index: true,
@@ -159,12 +159,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProductWatchPage({ params }: PageProps) {
   const { locale, id } = await params;
+  const effectiveLocale = SUPPORTED_LOCALES.includes(locale as (typeof SUPPORTED_LOCALES)[number])
+    ? locale
+    : 'pl';
 
-  if (locale !== 'pl') {
-    notFound();
-  }
-
-  const data = await getWatchData(id);
+  const data = await getWatchData(id, effectiveLocale);
   if (!data) {
     notFound();
   }
