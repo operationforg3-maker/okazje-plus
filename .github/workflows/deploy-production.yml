@@ -37,6 +37,7 @@ jobs:
         run: npm run verify:future-content
 
       - name: Smoke AliExpress promotions
+        if: ${{ secrets.ALIEXPRESS_APP_KEY != '' && secrets.ALIEXPRESS_APP_SECRET != '' }}
         run: npm run monitor:aliexpress-promotions
         env:
           ALIEXPRESS_APP_KEY: ${{ secrets.ALIEXPRESS_APP_KEY }}
