@@ -1163,28 +1163,14 @@ export class AliExpressClient {
       const responseData = result[responseKey];
       
       if (!responseData || responseData.resp_code !== 200) {
-        logger.warn('Logistics API returned error, assuming free shipping', { responseData });
-        return {
-          shippingCost: 0,
-          currency: 'PLN',
-          isFreeShipping: true,
-          estimatedDays: 14,
-          shippingMethod: 'Standard Shipping',
-          options: [],
-        };
+        logger.warn('Logistics API returned error, shipping unavailable', { responseData });
+        return null;
       }
       
       const freight = responseData.result?.freight;
       if (!Array.isArray(freight) || freight.length === 0) {
-        logger.info('No shipping options found, assuming free shipping');
-        return {
-          shippingCost: 0,
-          currency: 'PLN',
-          isFreeShipping: true,
-          estimatedDays: 14,
-          shippingMethod: 'Standard Shipping',
-          options: [],
-        };
+        logger.info('No shipping options found, shipping unavailable');
+        return null;
       }
       
       // Parse all shipping options
@@ -1215,16 +1201,8 @@ export class AliExpressClient {
         options: shippingOptions,
       };
     } catch (error) {
-      logger.error('Logistics API error, assuming free shipping', { error });
-      // Graceful degradation - assume free shipping on error
-      return {
-        shippingCost: 0,
-        currency: 'PLN',
-        isFreeShipping: true,
-        estimatedDays: 14,
-        shippingMethod: 'Standard Shipping',
-        options: [],
-      };
+      logger.error('Logistics API error, shipping unavailable', { error });
+      return null;
     }
   }
 

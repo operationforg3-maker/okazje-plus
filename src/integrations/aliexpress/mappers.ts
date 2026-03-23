@@ -143,7 +143,8 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
   const attributes = parseAttributes(raw); // M6+: Alternative attributes format
   const seller = parseSeller(raw); // M6+: Seller trust data
   const warehouses = parseWarehouses(raw); // M6+: Warehouse locations
-  const hasPLWarehouse = warehouses.includes('PL'); // M6+: Fast shipping flag
+  const rawShippingCost = parseFloat(String(raw.shipping_cost ?? raw.shipping_price ?? raw.freight_amount ?? 'NaN'));
+  const hasShippingCost = Number.isFinite(rawShippingCost) && rawShippingCost >= 0;
 
   // M6+: Marketing data (sales volume)
   const ordersCount = raw.lastest_volume ? parseInt(String(raw.lastest_volume), 10) : (raw.orders_count ? parseInt(String(raw.orders_count), 10) : 0);
@@ -170,10 +171,10 @@ export function mapAliExpressResponseToProduct(raw: any): UniversalProduct {
       currency: 'PLN',
       discount,
     },
-    logistics: shipDays ? {
-      deliveryDays: shipDays,
-      isFreeShipping: hasPLWarehouse || false, // M6+: PL warehouse = often free
-      shippingCost: 0,
+    logistics: (shipDays || hasShippingCost) ? {
+      deliveryDays: shipDays || 7,
+      isFreeShipping: hasShippingCost ? rawShippingCost === 0 : false,
+      shippingCost: hasShippingCost ? Math.round(rawShippingCost * 100) / 100 : 0,
     } : undefined,
     seller, // M6+: Seller info
     warehouses, // M6+: ['PL', 'CZ', 'CN']

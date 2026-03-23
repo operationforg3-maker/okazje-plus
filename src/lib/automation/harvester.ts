@@ -39,6 +39,7 @@ interface RawProduct {
   currency: string;
   shippingCost: number;
   shippingDays: number;
+  shippingVerified?: boolean;
   sourceProductId: string;
   sourceUrl: string;
   matchedL1Slug?: string;
@@ -115,6 +116,82 @@ export class SmartHarvester {
 
   private getFallbackImageUrl(): string {
     return PlaceHolderImages?.[0]?.imageUrl || '/placeholder.png';
+  }
+
+  private async resolveAliExpressShipping(
+    client: any,
+    product: any,
+    productId: string,
+    fallbackCurrency: string = 'PLN'
+  ): Promise<{
+    amount: number;
+    currency: string;
+    days: number;
+    freeShipping: boolean;
+    verified: boolean;
+  }> {
+    const parseNumber = (value: any): number => {
+      if (value === null || value === undefined || value === '') return 0;
+      const parsed = Number(String(value).replace(',', '.').replace('%', '').trim());
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const directCost = parseNumber(product?.shipping?.cost);
+    const directHasCost =
+      product?.shipping &&
+      (product?.shipping?.cost !== undefined || product?.shipping?.free !== undefined);
+
+    if (directHasCost) {
+      return {
+        amount: Math.max(0, directCost),
+        currency: String(product?.shipping?.currency || fallbackCurrency || 'PLN').toUpperCase(),
+        days: parseNumber(product?.shipping?.days || product?.ship_to_days || 7) || 7,
+        freeShipping: product?.shipping?.free === true || directCost === 0,
+        verified: true,
+      };
+    }
+
+    if (productId) {
+      try {
+        const logistics = await client.getLogisticsInfo(productId, 'PL', 1);
+        if (logistics) {
+          return {
+            amount: Math.max(0, Number(logistics.shippingCost || 0)),
+            currency: String(logistics.currency || 'PLN').toUpperCase(),
+            days: Number(logistics.estimatedDays || product?.ship_to_days || 7) || 7,
+            freeShipping: Boolean(logistics.isFreeShipping),
+            verified: true,
+          };
+        }
+      } catch {
+        // Keep graceful fallback below.
+      }
+    }
+
+    const fallbackCost = parseNumber(
+      product?.shipping_cost ??
+      product?.shipping_price ??
+      product?.shipping
+    );
+    const fallbackCurrencyCode = String(product?.shipping_currency || fallbackCurrency || 'PLN').toUpperCase();
+
+    if (fallbackCost > 0) {
+      return {
+        amount: fallbackCost,
+        currency: fallbackCurrencyCode,
+        days: parseNumber(product?.ship_to_days || product?.delivery_days || 7) || 7,
+        freeShipping: false,
+        verified: true,
+      };
+    }
+
+    return {
+      amount: 0,
+      currency: fallbackCurrencyCode,
+      days: parseNumber(product?.ship_to_days || product?.delivery_days || 7) || 7,
+      freeShipping: false,
+      verified: false,
+    };
   }
 
   private extractSourceCategoryHints(input: any): Pick<
@@ -1450,6 +1527,10 @@ export class SmartHarvester {
       : undefined);
     const hasCoupons = Boolean(sourceProduct.couponCode || sourceProduct.offerMeta?.hasCoupons);
     const promotionCampaign = sourceProduct.promotionCampaign || sourceProduct.offerMeta?.promotionCampaign;
+    const inferredFreeShipping = sourceProduct.shippingVerified !== undefined
+      ? (sourceProduct.shippingVerified ? Number(sourceProduct.shippingCost || 0) <= 0 : false)
+      : Number(sourceProduct.shippingCost || 0) <= 0;
+    const resolvedFreeShipping = Boolean(sourceProduct.freeShipping ?? inferredFreeShipping);
 
     const identifiers = {
       ean: sourceProduct.ean ? normalizeProductIdentifier(sourceProduct.ean) : undefined,
@@ -1508,7 +1589,7 @@ export class SmartHarvester {
       variants,
       logistics: {
         deliveryDays: Math.max(1, Number(sourceProduct.shippingDays || 0) || 7),
-        isFreeShipping: Boolean(sourceProduct.freeShipping ?? (Number(sourceProduct.shippingCost || 0) <= 0)),
+        isFreeShipping: resolvedFreeShipping,
         shippingCost: Math.max(0, Number(sourceProduct.shippingCost || 0)),
       },
       seller: seller
@@ -1535,6 +1616,7 @@ export class SmartHarvester {
         appSalePrice: sourceProduct.appSalePrice,
         promotionId: promotionCampaign?.id,
         flashDeal: promotionCampaign?.flashDeal,
+        shippingVerified: sourceProduct.shippingVerified,
       },
     };
 
@@ -1567,7 +1649,10 @@ export class SmartHarvester {
     const galleryImages = Array.isArray(sourceProduct.images) && sourceProduct.images.length > 0
       ? sourceProduct.images
       : [primaryImage];
-    const freeShipping = Boolean(sourceProduct.freeShipping ?? (shippingCost <= 0));
+    const inferredFreeShipping = sourceProduct.shippingVerified !== undefined
+      ? (sourceProduct.shippingVerified ? shippingCost <= 0 : false)
+      : shippingCost <= 0;
+    const freeShipping = Boolean(sourceProduct.freeShipping ?? inferredFreeShipping);
     const shippingFromCountry = sourceProduct.shippingFromCountry || sourceProduct.warehouses?.[0];
     const promotionCampaign = sourceProduct.promotionCampaign || sourceProduct.offerMeta?.promotionCampaign;
     const seller = sourceProduct.seller || (sourceProduct.merchantName
@@ -1654,6 +1739,7 @@ export class SmartHarvester {
         warehouse: shippingFromCountry,
         deliveryTime: `${Number(sourceProduct.shippingDays || 0) || 7} dni`,
         shippingMethod: 'Standard',
+        shippingVerified: sourceProduct.shippingVerified,
         previewUrl: sourceProduct.offerMeta?.previewUrl,
         offerPreviewUrl: sourceProduct.offerMeta?.previewUrl,
         orders: sourceProduct.soldCount,
@@ -2173,11 +2259,15 @@ export class SmartHarvester {
                     throw new Error('Existing product missing valid id');
                   }
 
+                  const allowAutoApprove =
+                    existingProduct.status === 'approved' &&
+                    (source !== 'aliexpress' || sourceProduct.shippingVerified !== false);
+
                   const { dealData, dealRef } = await this.prepareDeal(
                     existingProduct.id,
                     sourceProduct,
                     source,
-                    existingProduct.status === 'approved' ? 'approved' : 'poczekalnia',
+                    allowAutoApprove ? 'approved' : 'poczekalnia',
                     {
                       mainCategorySlug: existingProduct.mainCategorySlug,
                       subCategorySlug: existingProduct.subCategorySlug,
@@ -2606,6 +2696,7 @@ export class SmartHarvester {
       currency: string;
       shippingCost: number;
       shippingDays: number;
+      shippingVerified?: boolean;
       sourceProductId: string;
       sourceUrl: string;
       merchantName?: string;
@@ -2829,8 +2920,14 @@ export class SmartHarvester {
         }
         const rawOriginal = Number(p.price?.original ?? p.original_price ?? 0);
         const rawCurrency = String(p.price?.currency || p.target_sale_price_currency || 'PLN').toUpperCase();
-        const rawShipping = Number(p.shipping?.cost ?? 0);
-        const shippingCurrency = String(p.shipping?.currency || rawCurrency || 'PLN').toUpperCase();
+        const shippingResolved = await this.resolveAliExpressShipping(
+          client,
+          p,
+          String(p.item_id || p.product_id || ''),
+          rawCurrency
+        );
+        const rawShipping = shippingResolved.amount;
+        const shippingCurrency = shippingResolved.currency;
 
         const normalizePrice = async (amount: number, currency: string, label: string) => {
           if (!currency || currency === 'PLN') {
@@ -2959,7 +3056,8 @@ export class SmartHarvester {
           originalPrice,
           currency: priceResult.currency,
           shippingCost: shippingResult.amount,
-          shippingDays: p.ship_to_days || 7, // Default estimate
+          shippingDays: shippingResolved.days,
+          shippingVerified: shippingResolved.verified,
           sourceProductId: String(p.item_id || p.product_id || ''),
           sourceUrl: p.product_url || p.product_detail_url || p.promotion_link || '',
           videoUrl: p.product_video_url || p.video_url || undefined,
@@ -2971,7 +3069,7 @@ export class SmartHarvester {
           couponCode,
           appSalePrice: promotionData.appSalePrice,
           promotionCampaign: promotionData.promotionCampaign,
-          freeShipping: p.shipping?.free === true || shippingResult.amount === 0,
+          freeShipping: shippingResolved.verified ? shippingResolved.freeShipping : false,
           minOrderValue: typeof minOrderValue === 'number' && minOrderValue > 0 ? minOrderValue : undefined,
           offerMeta: hasCoupons || minAvailableQty ? {
             promotionType: 'offer',
@@ -3359,7 +3457,7 @@ export class SmartHarvester {
         }
       }
 
-      const mapped = selected.map((baseProduct: any) => {
+      const mapped = await Promise.all(selected.map(async (baseProduct: any) => {
         const productId = String(baseProduct?.product_id || baseProduct?.item_id || '').trim();
         const p = enrichedById.has(productId)
           ? { ...baseProduct, ...enrichedById.get(productId) }
@@ -3378,6 +3476,13 @@ export class SmartHarvester {
           fallbackUrl: String(p?.product_detail_url || p?.promotion_link || '').trim(),
         });
 
+        const shippingResolved = await this.resolveAliExpressShipping(
+          client,
+          p,
+          productId,
+          String(p?.target_sale_price_currency || 'PLN').toUpperCase()
+        );
+
         return {
           title,
           description: String(p?.product_description || '').trim(),
@@ -3389,8 +3494,9 @@ export class SmartHarvester {
           price,
           originalPrice: originalPrice > price ? originalPrice : undefined,
           currency: String(p?.target_sale_price_currency || 'PLN').toUpperCase(),
-          shippingCost: 0,
-          shippingDays: parseNumber(p?.ship_to_days) || 7,
+          shippingCost: shippingResolved.amount,
+          shippingDays: shippingResolved.days,
+          shippingVerified: shippingResolved.verified,
           sourceProductId,
           sourceUrl: String(p?.product_detail_url || p?.promotion_link || '').trim(),
           videoUrl: String(p?.product_video_url || '').trim() || undefined,
@@ -3405,7 +3511,7 @@ export class SmartHarvester {
           couponCode: promotionData.couponCode,
           appSalePrice: promotionData.appSalePrice,
           promotionCampaign: promotionData.promotionCampaign,
-          freeShipping: true,
+          freeShipping: shippingResolved.verified ? shippingResolved.freeShipping : false,
           rating: rating > 0 ? rating : undefined,
           ratingCount: salesVolume > 0 ? salesVolume : undefined,
           evaluateCount: salesVolume > 0 ? salesVolume : undefined,
@@ -3428,7 +3534,7 @@ export class SmartHarvester {
           } : undefined,
           originalCategoryName: String(p?.second_level_category_name || p?.first_level_category_name || '').trim() || undefined,
         } as RawProduct;
-      });
+      }));
 
       const filtered = mapped.filter((p) => p.title && p.sourceProductId && p.price > 0);
       this.addLog('info', `AliExpress auto-browse fetched ${filtered.length} products`);
