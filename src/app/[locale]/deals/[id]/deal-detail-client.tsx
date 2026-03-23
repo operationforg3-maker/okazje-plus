@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo, isFreeShipping } from '@/lib/i18n-utils';
 import { withImageProxy } from '@/lib/image-proxy';
@@ -139,6 +139,7 @@ interface Props {
 
 export default function DealDetailClient({ deal, product, relatedDeals }: Props) {
   const tCommon = useTranslations('common');
+  const locale = useLocale();
   const { getText } = useContentLanguage();
   const productData = product || null;
   const dealTitle = typeof deal.title === 'object' ? getText(deal.title) : deal.title;
@@ -462,9 +463,9 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     <div className="page-container pb-8 pt-2 md:pt-4">
       {/* Breadcrumbs - Navigation + Categories */}
       <div className="mb-4 md:mb-6 flex items-center space-x-2 text-xs md:text-sm text-muted-foreground overflow-x-auto">
-        <Link href="/" className="hover:text-primary transition-colors whitespace-nowrap">{tCommon('breadcrumb.home')}</Link>
+        <Link href={`/${locale}`} className="hover:text-primary transition-colors whitespace-nowrap">{tCommon('breadcrumb.home')}</Link>
         <ChevronRight className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-        <Link href="/deals" className="hover:text-primary transition-colors whitespace-nowrap">{tCommon('breadcrumb.deals')}</Link>
+        <Link href={`/${locale}/deals`} className="hover:text-primary transition-colors whitespace-nowrap">{tCommon('breadcrumb.deals')}</Link>
         
         {deal.mainCategorySlug && (
           <>
@@ -873,7 +874,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               </div>
               {linkedProductId && (
                 <Button asChild variant="outline" className="w-full mt-2">
-                  <Link href={`/products/${linkedProductId}`}>
+                  <Link href={`/${locale}/products/${linkedProductId}`}>
                     <Package className="mr-2 h-4 w-4" />
                     Zobacz stronę produktu
                   </Link>

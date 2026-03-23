@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -48,6 +48,7 @@ interface Props {
 
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
   const t = useTranslations('home');
+  const locale = useLocale();
   const categorySectionRef = useRef<HTMLElement | null>(null);
   const hotDealsSectionRef = useRef<HTMLElement | null>(null);
   const topProductsSectionRef = useRef<HTMLElement | null>(null);
@@ -164,21 +165,21 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             {/* Primary CTAs - Browse Categories + Add Deal */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto pt-2 md:pt-4">
               <Button size="sm" variant="outline" className="rounded-full font-semibold text-xs sm:text-base py-2 sm:py-3 h-auto" asChild>
-                <Link href="/deals">
+                <Link href={`/${locale}/deals`}>
                   <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   <span className="hidden sm:inline">Gorące okazje</span><span className="sm:hidden">Okazje</span>
                 </Link>
               </Button>
               
               <Button size="sm" className="rounded-full bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 font-semibold text-white shadow-lg text-xs sm:text-base py-2 sm:py-3 h-auto sm:col-span-2 md:col-span-1" asChild>
-                <Link href="/add-deal">
+                <Link href={`/${locale}/add-deal`}>
                   <Sparkles className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   <span className="hidden sm:inline">Dodaj okazję</span><span className="sm:hidden">Dodaj</span>
                 </Link>
               </Button>
               
               <Button size="sm" variant="outline" className="rounded-full font-semibold text-xs sm:text-base py-2 sm:py-3 h-auto" asChild>
-                <Link href="/products">
+                <Link href={`/${locale}/products`}>
                   <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   <span className="hidden sm:inline">Produkty</span><span className="sm:hidden">Artykuły</span>
                 </Link>
@@ -240,7 +241,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               <p className="text-muted-foreground">{t('hotDeals.subtitle')}</p>
             </div>
             <Button variant="outline" asChild>
-              <Link href="/deals">
+              <Link href={`/${locale}/deals`}>
                 {t('hotDeals.viewAll')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -282,7 +283,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               <p className="text-muted-foreground">{t('topProducts.subtitle')}</p>
             </div>
             <Button variant="outline" asChild>
-              <Link href="/products">
+              <Link href={`/${locale}/products`}>
                 {t('topProducts.viewAll')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

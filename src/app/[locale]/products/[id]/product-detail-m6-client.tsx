@@ -597,9 +597,9 @@ export default function ProductDetailM6Client({
       )}
 
       {/* Price Comparison Table (M6 only) */}
-      {isM6 && deals.length > 1 && (
+            {isM6 && deals.length > 1 && (
         <div className="mb-8" id="price-comparison">
-          <PriceComparisonTable productId={productId} onBuyClick={(deal: any) => {
+          <PriceComparisonTable productId={productId} initialDeals={deals} onBuyClick={(deal: any) => {
             // Optional: also add to cart after clicking buy
             try { addItem(asLegacyProduct(), 1); } catch {}
           }} />
@@ -721,7 +721,7 @@ export default function ProductDetailM6Client({
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-4">Zaloguj się aby ocenić produkt</p>
                   <Button asChild>
-                    <Link href="/login">Zaloguj się</Link>
+                    <Link href={`/${locale}/login`}>Zaloguj się</Link>
                   </Button>
                 </div>
               )}

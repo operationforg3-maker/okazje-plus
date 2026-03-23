@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useLocale } from 'next-intl';
 import { useAuth } from '@/lib/auth';
 import { addComment, getComments } from '@/lib/data';
 import { useCommentsCount } from '@/hooks/use-comments-count';
@@ -29,6 +30,7 @@ interface CommentSectionProps {
 
 export default function CommentSection({ collectionName, docId }: CommentSectionProps) {
   const { user } = useAuth();
+  const locale = useLocale();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [deletingComment, setDeletingComment] = useState<Comment | null>(null);
@@ -138,7 +140,7 @@ export default function CommentSection({ collectionName, docId }: CommentSection
             />
             <p className="text-sm text-muted-foreground flex items-center gap-2">
               <span>Musisz być zalogowany, aby dodać komentarz.</span>
-              <Link href="/login" className="text-primary hover:underline font-medium">
+              <Link href={`/${locale}/login`} className="text-primary hover:underline font-medium">
                 Zaloguj się
               </Link>
             </p>

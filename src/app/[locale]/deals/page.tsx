@@ -1498,7 +1498,7 @@ export default function DealsPage() {
                       Sprawdź produkty z najwyższymi ocenami i opiniami
                     </p>
                     <Button asChild variant="outline" size="sm" className="w-full">
-                      <Link href="/products">
+                      <Link href={`/${locale}/products`}>
                         Zobacz produkty
                       </Link>
                     </Button>

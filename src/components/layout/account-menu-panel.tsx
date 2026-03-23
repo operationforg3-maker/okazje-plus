@@ -144,15 +144,15 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
           </div>
 
           <div className="space-y-2">
-            <Link href="/profile" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+            <Link href={`/${locale}/profile`} onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
               <span className="flex items-center gap-2"><UserIcon className="h-4 w-4" /> {t('profile')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
-            <Link href="/profile?tab=favorites" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+            <Link href={`/${locale}/profile?tab=favorites`} onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
               <span className="flex items-center gap-2"><Heart className="h-4 w-4" /> {t('favorites')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
-            <Link href="/profile?tab=notifications" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+            <Link href={`/${locale}/profile?tab=notifications`} onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
               <span className="flex items-center gap-2"><Bell className="h-4 w-4" /> {t('notifications')}</span>
               <span className="flex items-center gap-2">
                 {unreadCount > 0 ? (
@@ -163,12 +163,12 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </span>
             </Link>
-            <Link href="/profile/settings" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+            <Link href={`/${locale}/profile/settings`} onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
               <span className="flex items-center gap-2"><Settings className="h-4 w-4" /> {t('settings')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </Link>
             {typeof user.role === 'string' && user.role === "admin" ? (
-              <Link href="/admin" onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+              <Link href={`/${locale}/admin`} onClick={onNavigate} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
                 <span className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4" /> {t('admin')}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </Link>
@@ -247,7 +247,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
             {t('login')}
           </p>
           <Button asChild className="w-full" onClick={onNavigate}>
-            <Link href="/login" className="flex items-center justify-center gap-2">
+            <Link href={`/${locale}/login`} className="flex items-center justify-center gap-2">
               <UserIcon className="h-4 w-4" />
               {t('login')}
             </Link>

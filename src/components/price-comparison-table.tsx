@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { useTranslations } from 'next-intl';
+import { DealM6 } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -19,6 +20,7 @@ import { getExternalUrl } from '@/lib/external-url';
 
 interface PriceComparisonTableProps {
   productId: string;
+  initialDeals?: DealM6[];
   onBuyClick?: (deal: any) => void;
 }
 
@@ -29,34 +31,66 @@ interface PriceComparisonTableProps {
  */
 export function PriceComparisonTable({
   productId,
+  initialDeals = [],
   onBuyClick,
 }: PriceComparisonTableProps) {
   const t = useTranslations('products');
-  const [deals, setDeals] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [deals, setDeals] = useState<any[]>(initialDeals);
+  const [loading, setLoading] = useState(initialDeals.length === 0);
   const { formatPrice } = useCurrency();
 
-  const loadDeals = useCallback(async () => {
-    setLoading(true);
-    try {
-      const dealsData = await getDealsForProduct(productId);
-      setDeals(dealsData);
-    } catch (error) {
-      console.error('Error loading deals:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [productId]);
-
   useEffect(() => {
+    // When server already provided linked offers, avoid duplicate Firestore query.
+    if (initialDeals.length > 0) {
+      setDeals(initialDeals);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadDeals = async () => {
+      setLoading(true);
+      try {
+        const dealsData = await getDealsForProduct(productId);
+        if (!cancelled) {
+          setDeals(dealsData);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error loading deals:', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadDeals();
-  }, [loadDeals]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialDeals, productId]);
+
+  const sortedDeals = useMemo(() => {
+    return [...deals].sort((a, b) => {
+      const aSourceCurrency = a?.price?.currency || 'PLN';
+      const bSourceCurrency = b?.price?.currency || 'PLN';
+      const aTotal = CurrencyManager.convertToPLN(a?.price?.amount || 0, aSourceCurrency)
+        + CurrencyManager.convertToPLN(a?.shipping?.cost || 0, aSourceCurrency);
+      const bTotal = CurrencyManager.convertToPLN(b?.price?.amount || 0, bSourceCurrency)
+        + CurrencyManager.convertToPLN(b?.shipping?.cost || 0, bSourceCurrency);
+      return aTotal - bTotal;
+    });
+  }, [deals]);
 
   if (loading) {
     return <div className="flex items-center justify-center p-8">{t('productDetail.priceComparison.loading')}</div>;
   }
 
-  if (deals.length === 0) {
+  if (sortedDeals.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
         <p>{t('productDetail.priceComparison.empty')}</p>
@@ -65,8 +99,8 @@ export function PriceComparisonTable({
   }
 
   // Calculate best deal (lowest total price)
-  const bestDealId = deals.length > 0
-    ? deals.reduce((best, current) => {
+  const bestDealId = sortedDeals.length > 0
+    ? sortedDeals.reduce((best, current) => {
         const bestTotal = (best.price?.amount || 0) + (best.shipping?.cost || 0);
         const currentTotal = (current.price?.amount || 0) + (current.shipping?.cost || 0);
         return currentTotal < bestTotal ? current : best;
@@ -77,7 +111,7 @@ export function PriceComparisonTable({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">{t('productDetail.priceComparison.title')}</h3>
-        <span className="text-sm text-gray-500">{t('productDetail.priceComparison.storesCount', { count: deals.length })}</span>
+        <span className="text-sm text-gray-500">{t('productDetail.priceComparison.storesCount', { count: sortedDeals.length })}</span>
       </div>
 
       <div className="border rounded-lg overflow-hidden">
@@ -94,7 +128,7 @@ export function PriceComparisonTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {deals.map((deal) => {
+            {sortedDeals.map((deal) => {
               // Convert to PLN (Base)
               const sourceCurrency = deal.price?.currency || 'PLN';
               const productPrice = CurrencyManager.convertToPLN(deal.price?.amount || 0, sourceCurrency);

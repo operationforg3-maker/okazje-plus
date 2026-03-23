@@ -4,10 +4,11 @@ import { getUptimeMs } from '@/lib/uptime';
 import { buildInfo } from '@/lib/build-info';
 import { useState, useEffect } from 'react';
 import { LogoSVGWrapper } from './logo-svg-wrapper';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 export function Footer() {
   const t = useTranslations('footer');
+  const locale = useLocale();
   const [hydrated, setHydrated] = useState(false);
   const [currentYear, setCurrentYear] = useState('2024');
 
@@ -34,7 +35,7 @@ export function Footer() {
       <div className="page-container py-10">
         <div className="grid gap-8 md:grid-cols-3 lg:grid-cols-12">
           <div className="lg:col-span-4 rounded-lg p-6\">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href={`/${locale}`} className="flex items-center gap-2">
               <LogoSVGWrapper className="h-10 md:h-12" />
             </Link>
             <p className="mt-4 text-sm text-muted-foreground">
@@ -49,20 +50,20 @@ export function Footer() {
           <div className="lg:col-span-3">
             <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('navigation')}</h3>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-muted-foreground">
-              <Link href="/deals" className="transition-colors hover:text-primary">{t('deals')}</Link>
-              <Link href="/products" className="transition-colors hover:text-primary">{t('products')}</Link>
-              <Link href="/forum" className="transition-colors hover:text-primary">{t('forum')}</Link>
-              <Link href="/add-deal" className="transition-colors hover:text-primary">{t('addDeal')}</Link>
+              <Link href={`/${locale}/deals`} className="transition-colors hover:text-primary">{t('deals')}</Link>
+              <Link href={`/${locale}/products`} className="transition-colors hover:text-primary">{t('products')}</Link>
+              <Link href={`/${locale}/forum`} className="transition-colors hover:text-primary">{t('forum')}</Link>
+              <Link href={`/${locale}/add-deal`} className="transition-colors hover:text-primary">{t('addDeal')}</Link>
             </div>
           </div>
 
           <div className="lg:col-span-3">
             <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('information')}</h3>
             <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-muted-foreground">
-              <Link href="/#o-projekcie" className="transition-colors hover:text-primary">{t('about')}</Link>
+              <Link href={`/${locale}#o-projekcie`} className="transition-colors hover:text-primary">{t('about')}</Link>
               <Link href="mailto:business@okazjeplus.pl" className="transition-colors hover:text-primary">{t('contact')}</Link>
-              <Link href="/polityka-prywatnosci" className="transition-colors hover:text-primary">{t('privacy')}</Link>
-              <Link href="/regulamin" className="transition-colors hover:text-primary">{t('terms')}</Link>
+              <Link href={`/${locale}/polityka-prywatnosci`} className="transition-colors hover:text-primary">{t('privacy')}</Link>
+              <Link href={`/${locale}/regulamin`} className="transition-colors hover:text-primary">{t('terms')}</Link>
             </div>
           </div>
 

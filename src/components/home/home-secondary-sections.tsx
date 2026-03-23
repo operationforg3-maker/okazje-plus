@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ import { ForumStats } from '@/components/home/real-time-stats';
 
 export default function HomeSecondarySections() {
   const t = useTranslations('home');
+  const locale = useLocale();
 
   return (
     <>
@@ -103,7 +104,7 @@ export default function HomeSecondarySections() {
 
             <div className="text-center mt-12">
               <Button size="lg" className="text-lg px-8 py-6" asChild>
-                <Link href="/login">
+                <Link href={`/${locale}/login`}>
                   <Users className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   {t('benefits.joinButton')}
                 </Link>
@@ -130,13 +131,13 @@ export default function HomeSecondarySections() {
 
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" variant="outline" asChild>
-                <Link href="/forum">
+                <Link href={`/${locale}/forum`}>
                   {t('forum.browseButton')}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button size="lg" asChild>
-                <Link href="/forum/new">
+                <Link href={`/${locale}/forum/new`}>
                   {t('forum.createButton')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -237,13 +238,13 @@ export default function HomeSecondarySections() {
             </p>
             <div className="flex flex-wrap justify-center gap-4 pt-4">
               <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
-                <Link href="/deals">
+                <Link href={`/${locale}/deals`}>
                   <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Przeglądaj okazje
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-white text-white hover:bg-white/10" asChild>
-                <Link href="/products">
+                <Link href={`/${locale}/products`}>
                   <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Katalog produktów
                 </Link>

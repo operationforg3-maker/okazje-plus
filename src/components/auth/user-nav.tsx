@@ -26,10 +26,12 @@ import { useState, useEffect } from 'react';
 import { AccountMenuPanel } from '@/components/layout/account-menu-panel';
 import ErrorBoundary from './error-boundary';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useLocale } from 'next-intl';
 
 export function UserNav() {
   const { user, loading } = useAuth();
   const { unreadCount } = useNotifications();
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function UserNav() {
     }
     return (
       <Button variant="outline" className="rounded-full" asChild>
-        <Link href="/login">Login</Link>
+        <Link href={`/${locale}/login`}>Login</Link>
       </Button>
     );
   }

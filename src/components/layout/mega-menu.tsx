@@ -883,25 +883,25 @@ export function MegaMenu() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Link href="/profile" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                      <Link href={`/${locale}/profile`} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
                         <span className="flex items-center gap-2"><UserIcon className="h-4 w-4" /> Profil</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </Link>
-                      <Link href="/profile?tab=favorites" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                      <Link href={`/${locale}/profile?tab=favorites`} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
                         <span className="flex items-center gap-2"><Sparkles className="h-4 w-4" /> Ulubione</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </Link>
-                      <Link href="/profile?tab=notifications" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                      <Link href={`/${locale}/profile?tab=notifications`} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
                         <span className="flex items-center gap-2"><Flame className="h-4 w-4" /> Powiadomienia</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </Link>
-                      <Link href="/leaderboard" className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
+                      <Link href={`/${locale}/leaderboard`} className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary">
                         <span className="flex items-center gap-2">🏆 Ranking</span>
                         <ArrowRight className="h-4 w-4 text-muted-foreground" />
                       </Link>
                       {user.role === "admin" ? (
                         <Link
-                          href="/admin"
+                          href={`/${locale}/admin`}
                           className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm transition-colors hover:border-primary"
                         >
                           <span className="flex items-center gap-2">
@@ -928,7 +928,7 @@ export function MegaMenu() {
                       Zaloguj się, aby zapisywać okazje i śledzić ulubione kategorie.
                     </p>
                     <Button asChild className="w-full">
-                      <Link href="/login" className="flex items-center justify-center gap-2">
+                      <Link href={`/${locale}/login`} className="flex items-center justify-center gap-2">
                         <UserIcon className="h-4 w-4" />
                         Zaloguj się
                       </Link>
