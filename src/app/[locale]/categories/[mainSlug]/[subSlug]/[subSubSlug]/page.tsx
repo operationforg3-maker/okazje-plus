@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { buildCategoryPath, getCategoryDisplayName } from '@/lib/category-routes';
 import { getResolvedProductCategoryRoute } from '@/lib/category-page-data';
 import { ProductsPageContent } from '../../../../products/page';
+import { generateCategoryBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -55,6 +56,9 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
  */
 export default async function CategoryPage({ params }: CategoryPageProps) {
   const resolvedParams = await params;
+  const effectiveLocale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
+    ? resolvedParams.locale
+    : 'pl';
   const { categories, route } = await getResolvedProductCategoryRoute(
     resolvedParams.mainSlug,
     resolvedParams.subSlug,
@@ -65,12 +69,31 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
+  const mainName = getCategoryDisplayName(route.mainCategory.name) || route.mainSlug;
+  const subName = getCategoryDisplayName(route.subCategory?.name) || route.subSlug || '';
+  const subSubName = getCategoryDisplayName(route.subSubCategory?.name) || route.subSubSlug || '';
+  const breadcrumbJsonLd = generateCategoryBreadcrumbJsonLd({
+    locale: effectiveLocale,
+    mainSlug: route.mainSlug,
+    mainName,
+    subSlug: route.subSlug,
+    subName,
+    subSubSlug: route.subSubSlug,
+    subSubName,
+  });
+
   return (
-    <ProductsPageContent
-      initialMainCategoryParam={route.mainSlug}
-      initialSubCategoryParam={route.subSlug}
-      initialSubSubCategoryParam={route.subSubSlug}
-      initialCategories={categories}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <ProductsPageContent
+        initialMainCategoryParam={route.mainSlug}
+        initialSubCategoryParam={route.subSlug}
+        initialSubSubCategoryParam={route.subSubSlug}
+        initialCategories={categories}
+      />
+    </>
   );
 }

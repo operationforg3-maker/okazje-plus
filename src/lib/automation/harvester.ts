@@ -1684,6 +1684,7 @@ export class SmartHarvester {
         method: 'Standard',
         fromCountry: shippingFromCountry,
       },
+      totalPrice: priceAmount + shippingCost,
       source,
       affiliateLink: sourceProduct.sourceUrl || '',
       affiliateUrl: sourceProduct.sourceUrl || '',

@@ -2502,6 +2502,8 @@ export interface DealM6 {
     method?: string; // e.g., "Standard", "Express"
     fromCountry?: string;
   };
+  /** Pre-computed total landed cost: price.amount + shipping.cost (for test consistency & display) */
+  totalPrice?: number;
   
   // Source & Affiliate
   source: 'aliexpress' | 'amazon' | 'allegro' | 'ebay' | 'convertiser' | 'manual';

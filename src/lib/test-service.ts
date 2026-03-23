@@ -13,9 +13,13 @@ import {
   doc,
   getDoc,
   limit,
-  orderBy 
+  orderBy,
+  documentId
 } from 'firebase/firestore';
 import { Deal } from './types';
+import { getGoogleProductPublicationState } from './google-product-publication';
+
+const REQUIRED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 
 export interface TestResult {
   id: string;
@@ -275,7 +279,91 @@ function hasLocalizedText(value: any): boolean {
 
 function hasAllLocales(value: any): boolean {
   if (!value || typeof value !== 'object') return false;
-  return Boolean(value.pl && value.en && value.de);
+  return REQUIRED_LOCALES.every((locale) => Boolean(String(value?.[locale] || '').trim()));
+}
+
+function isAbsoluteHttpUrl(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '#') return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function getDealBasePriceValue(deal: any): number | null {
+  const candidates: unknown[] = [
+    deal?.price?.amount,
+    deal?.smartPrice?.amount,
+    deal?.price,
+    deal?.legacyPrice,
+    deal?.smartPrice?.basePrice,
+  ];
+  for (const candidate of candidates) {
+    const parsed = toNumberOrNull(candidate);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+function getDealShippingValue(deal: any): number | null {
+  const candidates: unknown[] = [
+    deal?.shipping?.cost,
+    deal?.shippingCost,
+    deal?.smartPrice?.shippingCost,
+    deal?.metadata?.shippingDetails?.cost,
+  ];
+  for (const candidate of candidates) {
+    const parsed = toNumberOrNull(candidate);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+function getDealTotalValue(deal: any): number | null {
+  const candidates: unknown[] = [
+    deal?.totalPrice,
+    deal?.price?.totalPrice,
+    deal?.smartPrice?.totalPrice,
+  ];
+  for (const candidate of candidates) {
+    const parsed = toNumberOrNull(candidate);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+}
+
+function hasLocalizedContent(value: any): boolean {
+  if (!value || typeof value !== 'object') return false;
+  return REQUIRED_LOCALES.some((locale) => Boolean(String(value?.[locale] || '').trim()));
+}
+
+function hasAnyValidImage(data: any): boolean {
+  const directCandidates: unknown[] = [
+    data?.image,
+    data?.imageUrl,
+    data?.thumbnail,
+    data?.thumbnailUrl,
+  ];
+  if (directCandidates.some((candidate) => isAbsoluteHttpUrl(candidate))) {
+    return true;
+  }
+
+  const listCandidates: unknown[] = [data?.images, data?.gallery, data?.mediaUrls];
+  for (const list of listCandidates) {
+    if (Array.isArray(list) && list.some((item) => isAbsoluteHttpUrl(item))) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function testHarvesterLinkage(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
@@ -396,6 +484,277 @@ async function testRefinerDealLocalization(): Promise<{ status: TestResult['stat
     };
   } catch (error: any) {
     return { status: 'fail', message: `Refiner deal test failed: ${error.message}` };
+  }
+}
+
+async function testSixLocalesCoverage(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const [productsSnapshot, dealsSnapshot] = await Promise.all([
+      getDocs(query(collection(db, 'product_cores'), where('status', '==', 'approved'), limit(50))),
+      getDocs(query(collection(db, 'deals'), where('status', '==', 'approved'), limit(50))),
+    ]);
+
+    if (productsSnapshot.empty && dealsSnapshot.empty) {
+      return { status: 'warning', message: 'Brak danych do testu pokrycia 6 języków' };
+    }
+
+    let checked = 0;
+    let missing = 0;
+
+    for (const docSnap of productsSnapshot.docs) {
+      const product = docSnap.data() as any;
+      checked += 1;
+      const hasTitle = hasAllLocales(product?.title);
+      const hasDescription = hasAllLocales(product?.description || product?.fullDescription);
+      if (!hasTitle || !hasDescription) {
+        missing += 1;
+      }
+    }
+
+    for (const docSnap of dealsSnapshot.docs) {
+      const deal = docSnap.data() as any;
+      checked += 1;
+      if (!hasAllLocales(deal?.description)) {
+        missing += 1;
+      }
+    }
+
+    const ratio = checked > 0 ? Math.round((missing / checked) * 100) : 0;
+    if (ratio > 30) {
+      return {
+        status: 'fail',
+        message: `Niskie pokrycie 6 języków: ${missing}/${checked} rekordów bez pełnego zestawu locale`,
+        details: { checked, missing, requiredLocales: REQUIRED_LOCALES },
+      };
+    }
+
+    if (missing > 0) {
+      return {
+        status: 'warning',
+        message: `Częściowe pokrycie 6 języków: ${missing}/${checked} rekordów wymaga uzupełnienia`,
+        details: { checked, missing, requiredLocales: REQUIRED_LOCALES },
+      };
+    }
+
+    return {
+      status: 'pass',
+      message: `Pokrycie 6 języków OK (${checked} rekordów)` ,
+      details: { checked, requiredLocales: REQUIRED_LOCALES },
+    };
+  } catch (error: any) {
+    return { status: 'fail', message: `Test pokrycia 6 języków nie powiódł się: ${error.message}` };
+  }
+}
+
+async function testM6PriceConsistency(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const dealsSnapshot = await getDocs(query(collection(db, 'deals'), where('status', '==', 'approved'), limit(300)));
+    if (dealsSnapshot.empty) {
+      return { status: 'warning', message: 'Brak ofert approved do testu spójności cen' };
+    }
+
+    let analyzed = 0;
+    let withPriceAndShipping = 0;
+    let checked = 0;
+    let mismatches = 0;
+
+    for (const docSnap of dealsSnapshot.docs) {
+      const deal = docSnap.data() as any;
+      analyzed += 1;
+
+      const base = getDealBasePriceValue(deal);
+      const shipping = getDealShippingValue(deal);
+      if (base === null || shipping === null) continue;
+      withPriceAndShipping += 1;
+
+      const expected = Number((base + shipping).toFixed(2));
+      const comparableRaw = getDealTotalValue(deal);
+      if (comparableRaw === null) continue;
+
+      const comparable = Number(comparableRaw.toFixed(2));
+      checked += 1;
+      if (Math.abs(expected - comparable) > 0.05) {
+        mismatches += 1;
+      }
+    }
+
+    if (checked === 0) {
+      return {
+        status: 'warning',
+        message: 'Brak rekordów z pełnym zestawem pól cenowych do porównania (base+shipping+total)',
+        details: { analyzed, withPriceAndShipping, checked },
+      };
+    }
+
+    const ratio = Math.round((mismatches / checked) * 100);
+    const coverage = analyzed > 0 ? Math.round((checked / analyzed) * 100) : 0;
+    if (ratio > 10) {
+      return {
+        status: 'fail',
+        message: `Niespójność cen M6: ${mismatches}/${checked} ofert ma rozjazd price+shipping vs total`,
+        details: { analyzed, withPriceAndShipping, checked, mismatches, coverage },
+      };
+    }
+
+    if (coverage < 20) {
+      return {
+        status: 'warning',
+        message: `Niska pokrywalność testu cen: ${checked}/${analyzed} (${coverage}%)`,
+        details: { analyzed, withPriceAndShipping, checked, mismatches, coverage },
+      };
+    }
+
+    if (mismatches > 0) {
+      return {
+        status: 'warning',
+        message: `Wykryto drobne rozjazdy cen M6: ${mismatches}/${checked}`,
+        details: { analyzed, withPriceAndShipping, checked, mismatches, coverage },
+      };
+    }
+
+    return {
+      status: 'pass',
+      message: `Spójność cen M6 OK (${checked} ofert, coverage ${coverage}%)`,
+      details: { analyzed, withPriceAndShipping, checked, mismatches, coverage },
+    };
+  } catch (error: any) {
+    return { status: 'fail', message: `Test spójności cen nie powiódł się: ${error.message}` };
+  }
+}
+
+async function testOfferLinksValidity(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const dealsSnapshot = await getDocs(query(collection(db, 'deals'), where('status', '==', 'approved'), limit(120)));
+    if (dealsSnapshot.empty) {
+      return { status: 'warning', message: 'Brak ofert approved do testu linków' };
+    }
+
+    let invalid = 0;
+    const total = dealsSnapshot.docs.length;
+
+    for (const docSnap of dealsSnapshot.docs) {
+      const deal = docSnap.data() as any;
+      const candidate = deal.affiliateLink || deal.affiliateUrl || deal.dealUrl || deal.link || '';
+      if (!isAbsoluteHttpUrl(candidate)) {
+        invalid += 1;
+      }
+    }
+
+    const ratio = Math.round((invalid / total) * 100);
+    if (ratio > 10) {
+      return {
+        status: 'fail',
+        message: `Niepoprawne linki ofert: ${invalid}/${total}`,
+        details: { total, invalid },
+      };
+    }
+
+    if (invalid > 0) {
+      return {
+        status: 'warning',
+        message: `Część linków ofert wymaga poprawy: ${invalid}/${total}`,
+        details: { total, invalid },
+      };
+    }
+
+    return { status: 'pass', message: `Linki ofert OK (${total} sprawdzonych)` , details: { total } };
+  } catch (error: any) {
+    return { status: 'fail', message: `Test linków ofert nie powiódł się: ${error.message}` };
+  }
+}
+
+async function testProductImagesPresence(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const productsSnapshot = await getDocs(query(collection(db, 'product_cores'), where('status', '==', 'approved'), limit(120)));
+    if (productsSnapshot.empty) {
+      return { status: 'warning', message: 'Brak produktów approved do testu obrazów' };
+    }
+
+    let missing = 0;
+    const total = productsSnapshot.docs.length;
+
+    for (const docSnap of productsSnapshot.docs) {
+      const product = docSnap.data() as any;
+      const imageUrl = typeof product?.imageUrl === 'string' ? product.imageUrl : '';
+      const gallery = Array.isArray(product?.images) ? product.images : [];
+      const hasPrimary = isAbsoluteHttpUrl(imageUrl);
+      const hasAnyGallery = gallery.some((img: unknown) => isAbsoluteHttpUrl(img));
+      if (!hasPrimary && !hasAnyGallery) {
+        missing += 1;
+      }
+    }
+
+    const ratio = Math.round((missing / total) * 100);
+    if (ratio > 10) {
+      return {
+        status: 'fail',
+        message: `Brak poprawnych zdjęć produktów: ${missing}/${total}`,
+        details: { total, missing },
+      };
+    }
+
+    if (missing > 0) {
+      return {
+        status: 'warning',
+        message: `Część produktów bez poprawnych zdjęć: ${missing}/${total}`,
+        details: { total, missing },
+      };
+    }
+
+    return { status: 'pass', message: `Zdjęcia produktów OK (${total} sprawdzonych)` , details: { total } };
+  } catch (error: any) {
+    return { status: 'fail', message: `Test zdjęć produktów nie powiódł się: ${error.message}` };
+  }
+}
+
+async function testGooglePublicationEligibility(): Promise<{ status: TestResult['status']; message: string; details?: any }> {
+  try {
+    const productsSnapshot = await getDocs(query(collection(db, 'product_cores'), where('status', '==', 'approved'), limit(120)));
+    if (productsSnapshot.empty) {
+      return { status: 'warning', message: 'Brak produktów approved do testu eligibility (Google)' };
+    }
+
+    let eligible = 0;
+    const reasons: Record<string, number> = {};
+
+    for (const docSnap of productsSnapshot.docs) {
+      const product = { id: docSnap.id, ...docSnap.data() } as any;
+      const state = getGoogleProductPublicationState({ product, isM6: true, deals: [] });
+      if (state.eligible) {
+        eligible += 1;
+      } else {
+        for (const reason of state.reasons) {
+          reasons[reason] = (reasons[reason] || 0) + 1;
+        }
+      }
+    }
+
+    const total = productsSnapshot.docs.length;
+    const ratio = Math.round((eligible / total) * 100);
+
+    if (ratio < 70) {
+      return {
+        status: 'fail',
+        message: `Niska gotowość publikacyjna Google: ${eligible}/${total} (${ratio}%)`,
+        details: { total, eligible, ineligible: total - eligible, reasons },
+      };
+    }
+
+    if (ratio < 90) {
+      return {
+        status: 'warning',
+        message: `Gotowość publikacyjna Google do poprawy: ${eligible}/${total} (${ratio}%)`,
+        details: { total, eligible, ineligible: total - eligible, reasons },
+      };
+    }
+
+    return {
+      status: 'pass',
+      message: `Gotowość publikacyjna Google OK: ${eligible}/${total} (${ratio}%)`,
+      details: { total, eligible, ineligible: total - eligible },
+    };
+  } catch (error: any) {
+    return { status: 'fail', message: `Test eligibility Google nie powiódł się: ${error.message}` };
   }
 }
 
@@ -670,31 +1029,74 @@ async function testHotDeals(): Promise<{ status: 'pass' | 'fail' | 'warning'; me
 
 async function testDataQuality(): Promise<{ status: 'pass' | 'fail' | 'warning'; message: string; details?: any }> {
   try {
-    // Sprawdź deals bez obrazków
-    const dealsQuery = query(
-      collection(db, 'deals'),
-      where('status', '==', 'approved'),
-      limit(100)
-    );
+    // Sprawdź jakość danych ofert z fallbackiem obrazów do ProductCore (M6)
+    const dealsQuery = query(collection(db, 'deals'), where('status', '==', 'approved'), limit(100));
     const dealsSnapshot = await getDocs(dealsQuery);
-    const deals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Deal));
-    
-    const withoutImages = deals.filter(d => !d.image || d.image === '').length;
-    const withoutDescriptions = deals.filter(d => !d.description || (!d.description.pl && !d.description.en)).length;
+    const deals = dealsSnapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() } as Deal));
+
+    const productCoreIdsToCheck = new Set<string>();
+    for (const deal of deals as any[]) {
+      if (!hasAnyValidImage(deal) && typeof deal?.productCoreId === 'string' && deal.productCoreId) {
+        productCoreIdsToCheck.add(deal.productCoreId);
+      }
+    }
+
+    const productCoreHasImage = new Map<string, boolean>();
+    const ids = Array.from(productCoreIdsToCheck);
+    for (let i = 0; i < ids.length; i += 30) {
+      const chunk = ids.slice(i, i + 30);
+      if (chunk.length === 0) continue;
+      const coresSnapshot = await getDocs(
+        query(collection(db, 'product_cores'), where(documentId(), 'in', chunk))
+      );
+      for (const coreDoc of coresSnapshot.docs) {
+        productCoreHasImage.set(coreDoc.id, hasAnyValidImage(coreDoc.data()));
+      }
+    }
+
+    let withoutImages = 0;
+    let withoutDescriptions = 0;
+    let recoveredByProductCoreImage = 0;
+
+    for (const deal of deals as any[]) {
+      const directImage = hasAnyValidImage(deal);
+      const coreImage = typeof deal?.productCoreId === 'string' ? (productCoreHasImage.get(deal.productCoreId) || false) : false;
+      if (!directImage && !coreImage) {
+        withoutImages += 1;
+      }
+      if (!directImage && coreImage) {
+        recoveredByProductCoreImage += 1;
+      }
+
+      if (!hasLocalizedContent(deal?.description)) {
+        withoutDescriptions += 1;
+      }
+    }
+
     const percentage = deals.length > 0 ? Math.round((withoutImages / deals.length) * 100) : 0;
     
     if (percentage > 30) {
       return {
         status: 'warning',
         message: `${percentage}% deals without images, ${withoutDescriptions} without descriptions`,
-        details: { total: deals.length, noImages: withoutImages, noDescriptions: withoutDescriptions }
+        details: {
+          total: deals.length,
+          noImages: withoutImages,
+          noDescriptions: withoutDescriptions,
+          recoveredByProductCoreImage,
+        }
       };
     }
     
     return {
       status: 'pass',
       message: `Data quality OK (${percentage}% without images)`,
-      details: { total: deals.length, noImages: withoutImages }
+      details: {
+        total: deals.length,
+        noImages: withoutImages,
+        noDescriptions: withoutDescriptions,
+        recoveredByProductCoreImage,
+      }
     };
   } catch (error: any) {
     return { status: 'fail', message: `Data quality test failed: ${error.message}` };
@@ -1012,9 +1414,13 @@ export async function runAllTests(options?: TestAuthOptions): Promise<TestSuiteR
   results.push(await runTest('func-003', 'Harvester Linkage (Deal -> ProductCore)', 'functional', () => withOptionalAuth(testHarvesterLinkage, options)));
   results.push(await runTest('func-004', 'Refiner Product Localization', 'functional', () => withOptionalAuth(testRefinerProductLocalization, options)));
   results.push(await runTest('func-005', 'Refiner Deal Localization', 'functional', () => withOptionalAuth(testRefinerDealLocalization, options)));
-  results.push(await runTest('func-006', 'Comments Counter Accuracy', 'functional', () => withOptionalAuth(testCommentsCount, options)));
-  results.push(await runTest('func-007', 'Voting System Logic', 'functional', () => withOptionalAuth(testVotingSystem, options)));
-  results.push(await runTest('func-008', 'Categories Structure', 'functional', testCategoriesStructure));
+  results.push(await runTest('func-006', 'Translations Coverage (6 locales)', 'functional', () => withOptionalAuth(testSixLocalesCoverage, options)));
+  results.push(await runTest('func-007', 'M6 Price Consistency', 'functional', () => withOptionalAuth(testM6PriceConsistency, options)));
+  results.push(await runTest('func-008', 'Offer Links Validity', 'functional', () => withOptionalAuth(testOfferLinksValidity, options)));
+  results.push(await runTest('func-009', 'Product Images Presence', 'functional', () => withOptionalAuth(testProductImagesPresence, options)));
+  results.push(await runTest('func-010', 'Comments Counter Accuracy', 'functional', () => withOptionalAuth(testCommentsCount, options)));
+  results.push(await runTest('func-011', 'Voting System Logic', 'functional', () => withOptionalAuth(testVotingSystem, options)));
+  results.push(await runTest('func-012', 'Categories Structure', 'functional', testCategoriesStructure));
   
   // BUSINESS TESTS
   console.log('💼 Running business logic tests...');
@@ -1023,6 +1429,7 @@ export async function runAllTests(options?: TestAuthOptions): Promise<TestSuiteR
   results.push(await runTest('biz-003', 'User Activity Metrics', 'business', () => withOptionalAuth(testUserActivity, options)));
   results.push(await runTest('biz-004', 'Hot Deals Presence', 'business', () => withOptionalAuth(testHotDeals, options)));
   results.push(await runTest('biz-005', 'Data Quality Check', 'business', () => withOptionalAuth(testDataQuality, options)));
+  results.push(await runTest('biz-006', 'Google Publication Eligibility', 'business', () => withOptionalAuth(testGooglePublicationEligibility, options)));
 
   // SECURITY TESTS (read/write matrix)
   console.log('🔐 Running security rules tests...');

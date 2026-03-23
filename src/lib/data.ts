@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId, writeBatch } from "firebase/firestore";
+import { collection, collectionGroup, doc, getDoc, getDocs, query, where, orderBy, limit, runTransaction, increment, addDoc, serverTimestamp, setDoc, getCountFromServer, deleteDoc, updateDoc, documentId, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Category, Deal, Product, ProductCore, Comment, NavigationShowcaseConfig, Subcategory, CategoryPromo, ProductRating, Favorite, Notification, CategoryTile, ForumThread, ForumPost, ForumCategory, PostAttachment, CategorySuggestion } from "@/lib/types";
 import { sanitizeDealRecord, sanitizeProductRecord, sanitizeProductCoreRecord } from '@/lib/sanitizers';
@@ -837,148 +837,154 @@ export async function getCategories(): Promise<Category[]> {
     return cached as Category[];
   }
 
-  const categoriesRef = collection(db, "categories");
-  const snapshot = await getDocs(categoriesRef);
+  // Batch 3 Firestore reads instead of N + N*M + N individual reads.
+  // collectionGroup('subcategories') fetches all L2 + L3 subcategories in one round-trip.
+  // collectionGroup('tiles') fetches all category tiles similarly.
+  const [categoriesSnap, allSubsSnap, allTilesSnap] = await Promise.all([
+    getDocs(collection(db, 'categories')),
+    getDocs(collectionGroup(db, 'subcategories')),
+    getDocs(collectionGroup(db, 'tiles')),
+  ]);
+
   if (DEBUG_DATA_LOGS) {
-    console.log('[getCategories] Firestore snapshot loaded, docs count:', snapshot.docs.length);
+    console.log(
+      `[getCategories] Loaded: ${categoriesSnap.size} categories, ` +
+      `${allSubsSnap.size} subcollection subs, ${allTilesSnap.size} tiles (3 reads total).`
+    );
   }
 
-  const categories = await Promise.all(
-    snapshot.docs.map(async (categoryDoc) => {
-      const data = categoryDoc.data() as Partial<Category> & {
-        subcategories?: Array<Partial<Subcategory>>;
-        promo?: Partial<CategoryPromo> | null;
-      };
+  // Index L2 subcategories by parent category ID.
+  // Path pattern: categories/{catId}/subcategories/{subId} → 4 path segments.
+  const l2Map = new Map<string, Array<{ id: string; path: string; [k: string]: unknown }>>();
 
-      // Start with embedded subcategories array (legacy structure)
-      let subcategories: Subcategory[] = Array.isArray(data.subcategories)
-        ? data.subcategories.map((sub) => ({
-          ...sub,
-          id: sub.id ?? sub.slug,
-        }))
-        : [];
+  // Index L3 sub-subcategories by parent subcategory path.
+  // Path pattern: categories/{catId}/subcategories/{subId}/subcategories/{ssId} → 6 segments.
+  const l3Map = new Map<string, Array<{ id: string; [k: string]: unknown }>>();
 
-      // Try to load subcategories from dedicated subcollection (new structure)
-      const subcategoriesRef = collection(db, "categories", categoryDoc.id, "subcategories");
-      const subSnapshot = await getDocs(subcategoriesRef);
+  for (const subDoc of allSubsSnap.docs) {
+    const pathParts = subDoc.ref.path.split('/');
+    const entry = { id: subDoc.id, path: subDoc.ref.path, ...subDoc.data() };
 
-      if (!subSnapshot.empty) {
-        subcategories = await Promise.all(
-          subSnapshot.docs.map(async (subDoc) => {
-            const subData = subDoc.data() as Partial<Subcategory>;
-            
-            // Wczytaj sub-subkategorie (poziom 3) z embedded array lub subcollection
-            let subSubcategories = subData.subcategories ?? [];
-            
-            // Spróbuj również załadować z podkolekcji (jeśli istnieje)
-            try {
-              const subSubRef = collection(db, "categories", categoryDoc.id, "subcategories", subDoc.id, "subcategories");
-              const subSubSnap = await getDocs(subSubRef);
-              if (DEBUG_DATA_LOGS) {
-                console.log(`[getCategories] Loaded subsub for ${categoryDoc.id}/${subDoc.id}: ${subSubSnap.docs.length} items`);
-              }
-              if (!subSubSnap.empty) {
-                subSubcategories = subSubSnap.docs.map((ssDoc) => {
-                  const ssData = ssDoc.data();
-                  return {
-                    name: ssData.name ?? ssDoc.id,
-                    slug: ssData.slug ?? ssDoc.id,
-                    id: ssDoc.id,
-                    icon: ssData.icon,
-                    description: ssData.description,
-                    importKeywords: ssData.importKeywords,
-                    translations: ensureCategoryTranslations(
-                      ssData.translations,
-                      ssData.name ?? ssDoc.id,
-                      ssData.description
-                    ),
-                    sortOrder: ssData.sortOrder,
-                    image: ssData.image,
-                  };
-                }).sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-              }
-            } catch (err) {
-              // Jeśli subcollection nie istnieje, zostaw embedded array
-              if (DEBUG_DATA_LOGS) {
-                console.warn(`[getCategories] Failed to load subsub for ${categoryDoc.id}/${subDoc.id}:`, err);
-              }
-            }
+    if (pathParts.length === 4) {
+      // L2: categories/{catId}/subcategories/{subId}
+      const catId = pathParts[1];
+      if (!l2Map.has(catId)) l2Map.set(catId, []);
+      l2Map.get(catId)!.push(entry);
+    } else if (pathParts.length === 6) {
+      // L3: categories/{catId}/subcategories/{subId}/subcategories/{ssId}
+      const parentPath = pathParts.slice(0, 4).join('/');
+      if (!l3Map.has(parentPath)) l3Map.set(parentPath, []);
+      l3Map.get(parentPath)!.push(entry);
+    }
+  }
 
-            return {
-              id: subDoc.id,
-              name: subData.name ?? subDoc.id,
-              slug: subData.slug ?? subDoc.id,
-              icon: subData.icon,
-              description: subData.description,
-              translations: ensureCategoryTranslations(
-                subData.translations,
-                subData.name ?? subDoc.id,
-                subData.description
-              ),
-              sortOrder: subData.sortOrder,
-              image: subData.image,
-              highlight: subData.highlight,
-              subcategories: subSubcategories,
-            } satisfies Subcategory;
-          })
-        );
-        subcategories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-      }
+  // Index tiles by category ID.
+  // Path pattern: categories/{catId}/tiles/{tileId} → 4 segments.
+  const tilesMap = new Map<string, CategoryTile[]>();
+  for (const tileDoc of allTilesSnap.docs) {
+    const pathParts = tileDoc.ref.path.split('/');
+    if (pathParts.length === 4) {
+      const catId = pathParts[1];
+      if (!tilesMap.has(catId)) tilesMap.set(catId, []);
+      tilesMap.get(catId)!.push({ id: tileDoc.id, ...(tileDoc.data() as CategoryTile) });
+    }
+  }
 
-      const promo = data.promo
-        ? {
-            title: data.promo.title ?? data.name ?? categoryDoc.id,
-            subtitle: data.promo.subtitle,
-            description: data.promo.description,
-            image: data.promo.image,
-            link: data.promo.link,
-            cta: data.promo.cta,
-            badge: data.promo.badge,
-            color: data.promo.color,
-          }
-        : undefined;
+  const categories = categoriesSnap.docs.map((categoryDoc) => {
+    const data = categoryDoc.data() as Partial<Category> & {
+      subcategories?: Array<Partial<Subcategory>>;
+      promo?: Partial<CategoryPromo> | null;
+    };
 
-      // Wczytaj opcjonalne kafelki z podkolekcji categories/{id}/tiles
-      let tiles: CategoryTile[] = [];
-      try {
-        const tilesRef = collection(db, "categories", categoryDoc.id, "tiles");
-        const tilesSnap = await getDocs(tilesRef);
-        if (!tilesSnap.empty) {
-          tiles = tilesSnap.docs.map((t) => ({ id: t.id, ...(t.data() as CategoryTile) }));
+    // Prefer subcollection L2 subs; fall back to embedded array (legacy structure).
+    const l2Subs = l2Map.get(categoryDoc.id) || [];
+    const embeddedSubs: Array<Partial<Subcategory> & { id?: string }> = Array.isArray(data.subcategories)
+      ? data.subcategories.map((sub) => ({ ...sub, id: sub.id ?? sub.slug }))
+      : [];
+
+    const rawSubs = l2Subs.length > 0 ? l2Subs : embeddedSubs;
+
+    const subcategories: Subcategory[] = rawSubs
+      .map((subData: any) => {
+        const subId = subData.id || subData.slug;
+        // L3 lookup: "categories/{catId}/subcategories/{subId}"
+        const subPath = `categories/${categoryDoc.id}/subcategories/${subId}`;
+        const l3Subs = l3Map.get(subPath) || [];
+        const embeddedSubSubs: Subcategory[] = subData.subcategories ?? [];
+
+        const subSubcategories = (l3Subs.length > 0 ? l3Subs : embeddedSubSubs)
+          .map((ss: any) => ({
+            name: ss.name ?? ss.id,
+            slug: ss.slug ?? ss.id,
+            id: ss.id,
+            icon: ss.icon,
+            description: ss.description,
+            importKeywords: ss.importKeywords,
+            translations: ensureCategoryTranslations(ss.translations, ss.name ?? ss.id, ss.description),
+            sortOrder: ss.sortOrder,
+            image: ss.image,
+          }))
+          .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+        return {
+          id: subId,
+          name: subData.name ?? subId,
+          slug: subData.slug ?? subId,
+          icon: subData.icon,
+          description: subData.description,
+          translations: ensureCategoryTranslations(subData.translations, subData.name ?? subId, subData.description),
+          sortOrder: subData.sortOrder,
+          image: subData.image,
+          highlight: subData.highlight,
+          subcategories: subSubcategories,
+        } satisfies Subcategory;
+      })
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    const promo = data.promo
+      ? {
+          title: data.promo.title ?? data.name ?? categoryDoc.id,
+          subtitle: data.promo.subtitle,
+          description: data.promo.description,
+          image: data.promo.image,
+          link: data.promo.link,
+          cta: data.promo.cta,
+          badge: data.promo.badge,
+          color: data.promo.color,
         }
-      } catch (_) {
-        tiles = [];
-      }
+      : undefined;
 
-      return {
-        id: categoryDoc.id,
-        name: data.name ?? categoryDoc.id,
-        slug: data.slug ?? categoryDoc.id,
-        icon: data.icon,
-        description: data.description,
-        sortOrder: data.sortOrder,
-        accentColor: data.accentColor,
-        heroImage: data.heroImage,
-        translations: ensureCategoryTranslations(
-          data.translations,
-          data.name ?? categoryDoc.id,
-          data.description
-        ),
-        promo,
-        tiles,
-        subcategories,
-      } satisfies Category;
-    })
-  );
+    const tiles: CategoryTile[] = tilesMap.get(categoryDoc.id) || [];
+
+    return {
+      id: categoryDoc.id,
+      name: data.name ?? categoryDoc.id,
+      slug: data.slug ?? categoryDoc.id,
+      icon: data.icon,
+      description: data.description,
+      sortOrder: data.sortOrder,
+      accentColor: data.accentColor,
+      heroImage: data.heroImage,
+      translations: ensureCategoryTranslations(
+        data.translations,
+        data.name ?? categoryDoc.id,
+        data.description
+      ),
+      promo,
+      tiles,
+      subcategories,
+    } satisfies Category;
+  });
 
   const sortedCategories = categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
   if (DEBUG_DATA_LOGS) {
     console.log('[getCategories] Final result, count:', sortedCategories.length, 'with subcategories count:', sortedCategories.reduce((sum, c) => sum + (c.subcategories?.length || 0), 0));
   }
-  
+
   // Cache the result for 1 hour (3600 seconds)
   await cacheSet(cacheKey, sortedCategories, 3600);
-  
+
   return sortedCategories;
 }
 

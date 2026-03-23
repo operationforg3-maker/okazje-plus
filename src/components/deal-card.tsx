@@ -31,9 +31,8 @@ import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import { CardHeader } from '@/components/ui/card-header';
 import { getExternalUrl } from '@/lib/external-url';
-// TEMPORARILY REMOVED FOR DEBUGGING React #418:
-// import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
-// import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
+import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
+import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
 
 interface DealCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -389,18 +388,19 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
 
   const temperaturePercent = Math.min((temperature / 500) * 100, 100);
   
-  // ========================================================================
-  // DEEP DATA SMART BADGES - TEMPORARILY DISABLED FOR DEBUGGING
-  // ========================================================================
-  // const deepDataBadges = generateSmartBadges({
-  //   price: {
-  //     current: deal.price,
-  //     lowest30d: deal.lowestPriceIn30Days,
-  //   },
-  //   logistics: product?.logistics,
-  //   priceHistory: deal.priceHistory,
-  // });
-  const deepDataBadges = []; // Empty array to prevent errors
+  // Deep Data Smart Badges — odczytaj z priceHistory i logistics
+  const _rawPrice = typeof deal.price === 'number' ? deal.price
+    : typeof deal.price?.amount === 'number' ? deal.price.amount
+    : typeof deal.legacyPrice === 'number' ? deal.legacyPrice
+    : 0;
+  const deepDataBadges = generateSmartBadges({
+    price: {
+      current: _rawPrice,
+      lowest30d: deal.lowestPriceIn30Days,
+    },
+    logistics: product?.logistics,
+    priceHistory: deal.priceHistory,
+  });
 
   const handleVote = async (action: 'up' | 'down') => {
     if (!user) {
@@ -722,18 +722,14 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
         </h3>
         
         {/* Deep Data: Specs Teaser (Product.specificationsStructured) */}
-        {/* TEMPORARILY DISABLED FOR DEBUGGING
         {resolvedProduct?.specificationsStructured && resolvedProduct.specificationsStructured.length > 0 && (
           <SpecsTeaserInline specifications={resolvedProduct.specificationsStructured} maxSpecs={2} />
         )}
-        */}
         
         {/* Deep Data: Smart Badges (Auto-generated) */}
-        {/* TEMPORARILY DISABLED FOR DEBUGGING
         {deepDataBadges && deepDataBadges.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {deepDataBadges.filter(badge => badge && badge.text).map((badge, idx) => {
-              // Map badge color to inline style
               const getBadgeColor = (colorClass: string) => {
                 if (colorClass.includes('red')) return '#ef4444';
                 if (colorClass.includes('green')) return '#10b981';
@@ -741,10 +737,9 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
                 if (colorClass.includes('purple')) return '#a855f7';
                 return '#6b7280';
               };
-              
               return (
-                <Badge 
-                  key={idx} 
+                <Badge
+                  key={idx}
                   className="text-white text-xs"
                   style={{ backgroundColor: getBadgeColor(badge.color) }}
                 >
@@ -754,21 +749,18 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
             })}
           </div>
         )}
-        */}
         
         <p className="mt-2 text-xs sm:text-sm text-muted-foreground line-clamp-2">
           {dealDescription}
         </p>
         
         {/* Deep Data: Sparkline Price Trend */}
-        {/* TEMPORARILY DISABLED FOR DEBUGGING
         {deal.priceHistory && Array.isArray(deal.priceHistory) && deal.priceHistory.length > 1 && (
           <div className="mt-2 flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Trend ceny:</span>
             <Sparkline data={deal.priceHistory} width={80} height={16} />
           </div>
         )}
-        */}
 
         {/* Enhanced Metadata Row */}
         {(hasRealShipping || warrantyInfo.available || specifications.length > 0) && (

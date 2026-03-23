@@ -1,5 +1,6 @@
 // @ts-nocheck
 import type { Deal, Product, ProductImageEntry, ProductRatingCard, ProductRatingSources, LocalizedText } from '@/lib/types';
+import { sanitizeTextForGoogleAttribute, sanitizeTextForGoogleTitle } from '@/lib/google-product-text';
 
 type ProductMetadata = NonNullable<Product['metadata']>;
 type DealMetadata = NonNullable<Deal['metadata']>;
@@ -108,6 +109,25 @@ const ensureStringArray = (value: unknown, max = 50): string[] => {
     if (str) normalized.push(str);
   }
   return normalized;
+};
+
+const sanitizeOptionalText = (value: unknown, cleaner: (value: string) => string): string | undefined => {
+  const normalized = ensureOptionalString(value);
+  if (!normalized) return undefined;
+  const cleaned = cleaner(normalized);
+  return cleaned || undefined;
+};
+
+const sanitizeLocalizedTextValues = (
+  value: LocalizedText,
+  cleaner: (value: string) => string
+): LocalizedText => {
+  const cleanedEntries = Object.entries(value || {}).map(([locale, text]) => {
+    const cleaned = cleaner(ensureString(text, ''));
+    return [locale, cleaned] as const;
+  });
+
+  return Object.fromEntries(cleanedEntries) as LocalizedText;
 };
 
 const extractImageCandidate = (value: unknown): string | undefined => {
@@ -447,20 +467,24 @@ export const sanitizeProductPayload = (raw: Partial<Product>): Omit<Product, 'id
     ? (status as Product['status'])
     : 'draft';
 
-  const nameFallback = ensureString(raw.name || 'Produkt', 'Produkt');
+  const nameFallback = sanitizeTextForGoogleTitle(ensureString(raw.name || 'Produkt', 'Produkt')) || 'Produkt';
   const descriptionFallback = ensureString(raw.description || '', '');
   const longDescriptionFallback = ensureString(raw.longDescription || raw.description || '', '');
+  const sanitizedTitle = sanitizeLocalizedTextValues(
+    raw.title ? sanitizeLocalizedText(raw.title, nameFallback) : sanitizeLocalizedText(raw.name, 'Produkt'),
+    sanitizeTextForGoogleTitle
+  );
 
   return {
     name: nameFallback,
     description: descriptionFallback,
     longDescription: longDescriptionFallback,
-    title: raw.title ? sanitizeLocalizedText(raw.title, nameFallback) : sanitizeLocalizedText(raw.name, 'Produkt'),
+    title: sanitizedTitle,
     shortDescription: raw.shortDescription ? sanitizeLocalizedText(raw.shortDescription, descriptionFallback) : sanitizeLocalizedText(raw.description, ''),
     fullDescription: raw.fullDescription ? sanitizeLocalizedText(raw.fullDescription, longDescriptionFallback) : sanitizeLocalizedText(raw.longDescription || raw.description, ''),
     seoDescription: raw.seoDescription ? sanitizeLocalizedText(raw.seoDescription, descriptionFallback) : undefined,
     image: ensureString(raw.image, FALLBACK_IMAGE) || FALLBACK_IMAGE,
-    imageHint: ensureString(raw.imageHint || raw.name || 'produkt', 'produkt'),
+    imageHint: sanitizeTextForGoogleAttribute(ensureString(raw.imageHint || raw.name || 'produkt', 'produkt')) || 'produkt',
     affiliateUrl: ensureString(raw.affiliateUrl, FALLBACK_URL) || FALLBACK_URL,
     translations: raw.translations,
     ratingCard,
@@ -478,8 +502,10 @@ export const sanitizeProductPayload = (raw: Partial<Product>): Omit<Product, 'id
     category: ensureOptionalString(raw.category),
     gallery,
     seo: raw.seo,
-    seoKeywords: ensureStringArray(raw.seoKeywords, 30),
-    metaTitle: ensureOptionalString(raw.metaTitle),
+    seoKeywords: ensureStringArray(raw.seoKeywords, 30)
+      .map((keyword) => sanitizeTextForGoogleAttribute(keyword))
+      .filter(Boolean),
+    metaTitle: sanitizeOptionalText(raw.metaTitle, sanitizeTextForGoogleTitle),
     metaDescription: ensureOptionalString(raw.metaDescription),
     ai,
     moderation: raw.moderation,
@@ -633,8 +659,8 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
     const normalized: Record<string, string> = {};
     for (const [key, value] of Object.entries(raw)) {
-      const strKey = ensureString(key, '');
-      const strVal = ensureString(value, '');
+      const strKey = sanitizeTextForGoogleAttribute(ensureString(key, ''));
+      const strVal = sanitizeTextForGoogleAttribute(ensureString(value, ''));
       if (strKey && strVal) normalized[strKey] = strVal;
     }
     return Object.keys(normalized).length > 0 ? normalized : undefined;
@@ -667,7 +693,9 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
 
   const sanitizeSearchTags = (raw: any): string[] => {
     if (!Array.isArray(raw)) return [];
-    return raw.map(tag => ensureString(tag, '')).filter(Boolean);
+    return raw
+      .map(tag => sanitizeTextForGoogleAttribute(ensureString(tag, '')))
+      .filter(Boolean);
   };
 
   const sanitizeLocalizedStringArrays = (value: any): { [locale: string]: string[] } | undefined => {
@@ -685,8 +713,8 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     if (!Array.isArray(value)) return undefined;
     const normalized = value
       .map((item) => {
-        const name = ensureOptionalString(item?.name);
-        const val = ensureOptionalString(item?.value);
+        const name = sanitizeOptionalText(item?.name, sanitizeTextForGoogleAttribute);
+        const val = sanitizeOptionalText(item?.value, sanitizeTextForGoogleAttribute);
         return name && val ? { name, value: val } : null;
       })
       .filter(Boolean) as Array<{ name: string; value: string }>;
@@ -715,8 +743,8 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     if (!Array.isArray(value)) return undefined;
     const normalized = value
       .map((item, index) => {
-        const label = ensureOptionalString(item?.label);
-        const val = ensureOptionalString(item?.value);
+        const label = sanitizeOptionalText(item?.label, sanitizeTextForGoogleAttribute);
+        const val = sanitizeOptionalText(item?.value, sanitizeTextForGoogleAttribute);
         if (!label || !val) return null;
         return {
           label,
@@ -789,7 +817,7 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
   return {
     id,
     identityHash: ensureString((raw as any).identityHash, ''),
-    title: sanitizeLocalizedText((raw as any).title),
+    title: sanitizeLocalizedTextValues(sanitizeLocalizedText((raw as any).title), sanitizeTextForGoogleTitle),
     shortDescription: sanitizeLocalizedText((raw as any).shortDescription),
     fullDescription: sanitizeLocalizedText((raw as any).fullDescription || (raw as any).description),
     description: sanitizeLocalizedText((raw as any).description),
@@ -817,11 +845,13 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     bestPrice: sanitizeBestPrice((raw as any).bestPrice),
     linkedDealIds: ensureStringArray((raw as any).linkedDealIds, 100),
     searchTags: sanitizeSearchTags((raw as any).searchTags),
-    seoTitle: ensureOptionalString((raw as any).seoTitle),
+    seoTitle: sanitizeOptionalText((raw as any).seoTitle, sanitizeTextForGoogleTitle),
     seoDescription: ensureOptionalString((raw as any).seoDescription),
     seoTitleLocalized:
       (raw as any).seoTitleLocalized && typeof (raw as any).seoTitleLocalized === 'object'
-        ? (raw as any).seoTitleLocalized
+        ? Object.fromEntries(
+            Object.entries((raw as any).seoTitleLocalized).map(([locale, text]) => [locale, sanitizeTextForGoogleTitle(ensureString(text, ''))])
+          )
         : undefined,
     seoDescriptionLocalized:
       (raw as any).seoDescriptionLocalized && typeof (raw as any).seoDescriptionLocalized === 'object'

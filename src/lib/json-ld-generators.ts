@@ -670,3 +670,62 @@ export function generateVideoObjectJsonLd(input: {
     },
   };
 }
+
+/**
+ * Generate BreadcrumbList JSON-LD for category hierarchy pages.
+ * Supports up to 3 levels: main → sub → subSub.
+ *
+ * @param locale - active locale, used for canonical path construction
+ * @param mainSlug - top-level category slug
+ * @param mainName - display name for main category
+ * @param subSlug - optional sub-category slug
+ * @param subName  - optional sub-category display name
+ * @param subSubSlug - optional sub-sub slug
+ * @param subSubName - optional sub-sub display name
+ */
+export function generateCategoryBreadcrumbJsonLd(opts: {
+  locale: string;
+  mainSlug: string;
+  mainName: string;
+  subSlug?: string;
+  subName?: string;
+  subSubSlug?: string;
+  subSubName?: string;
+}) {
+  const { locale, mainSlug, mainName, subSlug, subName, subSubSlug, subSubName } = opts;
+
+  const items: Array<{ '@type': 'ListItem'; position: number; name: string; item: string }> = [
+    { '@type': 'ListItem', position: 1, name: 'Strona Główna', item: BASE_URL },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: mainName,
+      item: `${BASE_URL}/${locale}/categories/${encodeURIComponent(mainSlug)}`,
+    },
+  ];
+
+  if (subSlug && subName) {
+    items.push({
+      '@type': 'ListItem',
+      position: 3,
+      name: subName,
+      item: `${BASE_URL}/${locale}/categories/${encodeURIComponent(mainSlug)}/${encodeURIComponent(subSlug)}`,
+    });
+  }
+
+  if (subSubSlug && subSubName) {
+    items.push({
+      '@type': 'ListItem',
+      position: 4,
+      name: subSubName,
+      item: `${BASE_URL}/${locale}/categories/${encodeURIComponent(mainSlug)}/${encodeURIComponent(subSlug!)}/${encodeURIComponent(subSubSlug)}`,
+    });
+  }
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items,
+  };
+}
+

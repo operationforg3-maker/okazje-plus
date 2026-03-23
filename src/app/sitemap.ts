@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getRecommendedProducts, getCategories, getAllProductCores } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search';
+import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
 
 const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 
@@ -79,8 +80,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let productUrls: MetadataRoute.Sitemap = [];
   try {
     const products = await getRecommendedProducts(1000);
+    const eligibleProducts = products.filter((product) =>
+      getGoogleProductPublicationState({
+        product,
+        isM6: true,
+        deals: [],
+      }).eligible
+    );
     productUrls = SUPPORTED_LOCALES.flatMap((locale) =>
-      products.map((product) => ({
+      eligibleProducts.map((product) => ({
         url: `${baseUrl}/${locale}/products/${product.id}`,
         lastModified: new Date(),
         changeFrequency: 'weekly' as const,
@@ -96,6 +104,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const productCores = await getAllProductCores('approved', 1000);
     const withVideo = productCores.filter((product: any) => {
+      const publicationState = getGoogleProductPublicationState({
+        product,
+        isM6: true,
+        deals: [],
+      });
+
+      if (!publicationState.eligible) {
+        return false;
+      }
+
       if (typeof product?.videoUrl === 'string' && product.videoUrl.trim().length > 0) {
         return true;
       }

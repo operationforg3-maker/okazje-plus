@@ -7,6 +7,7 @@ import { getProductRatings, getProductWithDeals } from '@/lib/data';
 import { getProductWithDealsAdmin } from '@/lib/data-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
 import { generateProductJsonLd, generateBreadcrumbJsonLd, generateFaqJsonLd } from '@/lib/json-ld-generators';
+import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import ProductDetailM6Client from './product-detail-m6-client';
 
@@ -215,6 +216,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const publicationState = getGoogleProductPublicationState({
+    product: isM6 ? productCore : product,
+    isM6,
+    deals: isM6 ? deals || [] : [],
+  });
+
   const bestDealFromApprovedDeals = isM6 && Array.isArray(deals) && deals.length > 0
     ? deals.reduce((best, current) => {
         const bestShipping = best?.shipping?.cost || best?.shippingCost || 0;
@@ -314,6 +321,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         ]
       ),
     },
+    robots: publicationState.eligible
+      ? {
+          index: true,
+          follow: true,
+        }
+      : {
+          index: false,
+          follow: false,
+          googleBot: {
+            index: false,
+            follow: false,
+          },
+        },
     other: {
       ...(priceAmount !== null && {
         'product:price:amount': priceAmount.toString(),
@@ -375,8 +395,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
     ? ((productData as any).title.pl || (productData as any).title.en || 'Produkt')
     : ((productData as any)?.title || (productData as any)?.name || 'Produkt');
   
-  const jsonLd = generateProductJsonLd(productData, isM6, deals || [], productCore, product);
-  const breadcrumbList = generateBreadcrumbJsonLd(
+  const publicationState = getGoogleProductPublicationState({
+    product: isM6 ? productCore : product,
+    isM6,
+    deals: isM6 ? deals || [] : [],
+  });
+
+  const jsonLd = publicationState.eligible
+    ? generateProductJsonLd(productData, isM6, deals || [], productCore, product)
+    : null;
+  const breadcrumbList = publicationState.eligible ? generateBreadcrumbJsonLd(
     productName,
     productData.id,
     (productData as any)?.mainCategorySlug
@@ -393,8 +421,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
           ),
         }
       : undefined
-  );
-  const faqJsonLd = generateFaqJsonLd([
+  ) : null;
+  const faqJsonLd = publicationState.eligible ? generateFaqJsonLd([
     {
       question: `Jaka jest najniższa cena produktu ${productName}?`,
       answer: isM6 && productCore?.bestPrice?.amount
@@ -409,23 +437,29 @@ export default async function ProductDetailPage({ params }: PageProps) {
       question: `Czy ten produkt jest regularnie aktualizowany?`,
       answer: 'Tak, dane ofertowe są okresowo odświeżane przez system harvestera i procesy moderacji.',
     },
-  ]);
+  ]) : null;
   
   return (
     <>
       {/* JSON-LD dla SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      {breadcrumbList && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }}
+        />
+      )}
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       
       {/* Client component z interaktywnym UI */}
       <ProductDetailM6Client 
