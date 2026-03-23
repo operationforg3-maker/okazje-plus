@@ -20,7 +20,14 @@ export async function GET() {
   } catch (error) {
     console.error('[GET /api/admin/pre-registrations] Error', error);
 
-    if (error instanceof Error && (error.message === 'Unauthorized' || error.message === 'Admin access required')) {
+    if (error instanceof Error && (error.message === 'Unauthorized - authentication required' || error.message === 'Unauthorized')) {
+      return NextResponse.json(
+        { error: 'Wymagana autoryzacja' },
+        { status: 401 }
+      );
+    }
+
+    if (error instanceof Error && (error.message === 'Forbidden - admin role required' || error.message === 'Admin access required')) {
       return NextResponse.json(
         { error: 'Brak uprawnień administratora' },
         { status: 403 }
