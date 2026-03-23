@@ -379,12 +379,12 @@ export const generateMarketingContent = ai.defineFlow(
         uk: z.string(),
       }),
       fullDescription: z.object({
-        pl: z.string(), // HTML format
-        en: z.string(), // HTML format
-        de: z.string(), // HTML format
-        fr: z.string(), // HTML format
-        es: z.string(), // HTML format
-        uk: z.string(), // HTML format
+        pl: z.string(),
+        en: z.string(),
+        de: z.string(),
+        fr: z.string(),
+        es: z.string(),
+        uk: z.string(),
       }),
       features: z.object({
         pl: z.array(z.string()),
@@ -395,9 +395,10 @@ export const generateMarketingContent = ai.defineFlow(
         uk: z.array(z.string()),
       }),
       seo: z.object({
-         title: z.string(), // SEO optimized title
-         description: z.string(),
-         keywords: z.array(z.string())
+        title: z.string(),
+        description: z.string(),
+        keywords: z.array(z.string()),
+        faqItems: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
       }),
       averageMarketPrice: z.object({
         amount: z.number(),
@@ -409,10 +410,10 @@ export const generateMarketingContent = ai.defineFlow(
   },
   async (input) => {
     try {
-      const specsStr = Object.entries(input.specs).map(([k,v]) => `- ${k}: ${v}`).join('\n');
+      const specsStr = Object.entries(input.specs).map(([k, v]) => `- ${k}: ${v}`).join('\n');
 
       const prompt = `You are a Senior E-commerce Copywriter and SEO Specialist writing for European shoppers.
-    Create **original**, sales-focused content in six languages (PL primary, EN, DE, FR, ES, UK) without literal translation. Use the specs and your domain knowledge. Avoid generic fluff.
+You have access to Google Search — use it to verify product specs before writing. SEO is the highest priority for the Polish market (okazjeplus.pl).
 
 INPUT DATA:
 - Source: ${input.source || 'Unknown'}
@@ -421,80 +422,107 @@ INPUT DATA:
 - Technical Specs (may be incomplete):
 ${specsStr || '- none provided'}
 
-GLOBAL RULES:
+STEP 1 — RESEARCH (use Google Search):
+- Search for the product by its title/model number to find real specs, official product page, or trusted reviews.
+- Verify: RAM, storage, battery, screen, weight, connectivity, materials, compatibility.
+- Add confirmed data to specsAugmented. Mark web-sourced values with "(web)" prefix.
+- If uncertain after research, omit the spec entirely.
+
+STEP 2 — CONTENT RULES:
 - Polish must sound native and persuasive. No machine-translation tone.
 - Keep numbers and units explicit (e.g., "16GB RAM", "144 Hz", "5000 mAh").
-- Never invent fake brands/models. If brand missing, omit brand.
+- Never invent fake brands/models. If brand is missing, omit it.
 - Keep claims realistic; avoid hype like "best in the world".
+- Only use specs that were provided OR confirmed via search.
+
+STEP 3 — SEO (highest priority for okazjeplus.pl):
+- Target long-tail keywords (e.g. "etui do iPhone 15 Pro silikonowe przezroczyste" not just "case").
+- Include primary keyword in title, first sentence of description, and at least 2 bullet points.
+- seo.title: exactly 55-65 chars, start with main keyword, add 1-2 attributes. No keyword stuffing.
+- seo.description: exactly 150-160 chars. Format: "[Hook] [Key Spec 1] + [Key Spec 2]. [CTA or category]".
+- seo.keywords: 8-12 long-tail Polish search phrases (how users search, not product jargon).
+- seo.faqItems: 2-3 frequently asked questions with concise answers (used for FAQ schema — boosts CTR in Google).
 
 TITLES (pl/en/de/fr/es/uk):
 - Format: Brand (if known) + Model + 1-2 killer attributes.
 - Length target: 55-70 chars. Remove spammy keywords.
 
 FULL DESCRIPTION (HTML per language):
-- Structure with clear HTML tags, no markdown.
+- Structure with clear HTML tags only, no markdown.
 - Layout:
-  <p>Hook in 1 short sentence</p>
+  <p>Hook — 1 short sentence with primary keyword</p>
   <ul>
-    <li>Benefit or spec 1</li>
-    <li>Benefit or spec 2</li>
-    <li>Benefit or spec 3</li>
+    <li>Confirmed spec or benefit with concrete value</li>
+    <li>Confirmed spec or benefit with concrete value</li>
+    <li>Confirmed spec or benefit with concrete value</li>
   </ul>
-  <p>Closing reassurance (warranty, compatibility, ease of use)</p>
-- Use concrete details from specs; if missing, use safe, generic but useful benefits (e.g., "Solidna obudowa", "Prosta obsługa").
+  <p>Closing reassurance (compatibility, ease of use, availability)</p>
+- Polish description: naturally include 1-2 long-tail keyword phrases.
 
 SHORT DESCRIPTION (pl/en/de/fr/es/uk):
-- 2-3 sentences, max ~320 chars, focused on key value props.
+- 2-3 sentences, max 320 chars, focused on key value propositions.
 
 FEATURES (pl/en/de/fr/es/uk):
-- 4-6 bullet-ready strings, each containing a concrete value (number, material, dimension, or outcome).
-
-SPECS AUGMENTATION:
-- Add/normalize missing specs from title + description context (e.g. RAM, Storage, Screen, Battery, Material, Connectivity, Weight).
-- Do not invent impossible values. If uncertain, omit.
-
-SEO (PL market):
-- seo.title: 55-60 chars, include category keyword if natural.
-- seo.description: 150-170 chars, include 1-2 key specs; no price claims.
-- seo.keywords: 5-8 concise keywords.
+- 4-6 bullet-ready strings, each with a concrete value (number, material, dimension, or outcome).
 
 MARKET PRICE:
-- averageMarketPrice.amount in PLN (number), realistic street price for Poland; include range {min,max} when possible.
+- averageMarketPrice.amount in PLN, realistic current street price for Poland.
+- If you find current Polish market prices via search, use those. Otherwise estimate.
+- Include range {min, max} when possible.
 
-OUTPUT STRICTLY JSON MATCHING:
+OUTPUT STRICTLY AS JSON:
 {
   "title": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
   "shortDescription": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
-  "fullDescription": { "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>", "fr": "<p>...</p>", "es": "<p>...</p>", "uk": "<p>...</p>" },
+  "fullDescription": { "pl": "<p>...</p><ul>...</ul><p>...</p>", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
   "features": { "pl": ["..."], "en": ["..."], "de": ["..."], "fr": ["..."], "es": ["..."], "uk": ["..."] },
-  "seo": { "title": "...", "description": "...", "keywords": ["..."] },
+  "seo": {
+    "title": "...",
+    "description": "...",
+    "keywords": ["...", "..."],
+    "faqItems": [{ "question": "...", "answer": "..." }]
+  },
   "averageMarketPrice": { "amount": 123.00, "currency": "PLN", "range": { "min": 100, "max": 150 } },
-  "specsAugmented": { "RAM": "8GB", "Battery": "5000mAh" }
+  "specsAugmented": { "RAM": "(web) 8GB", "Battery": "5000mAh" }
 }`;
 
-      const response = await ai.generate({
-        model: gemini20Flash,
-        prompt,
-        config: { temperature: 0.5 }, // Slightly creative but grounded
-      });
+      // Używamy Google Search grounding — Gemini może sprawdzać specs/ceny w czasie rzeczywistym
+      let response;
+      try {
+        response = await ai.generate({
+          model: gemini20Flash,
+          prompt,
+          config: {
+            temperature: 0.3,
+            googleSearchRetrieval: {},
+          },
+        });
+      } catch (groundingError) {
+        // Fallback bez grounding (np. rate limit lub brak uprawnień do Google Search)
+        logger.warn("Google Search grounding unavailable, falling back to knowledge-only generation", { error: groundingError });
+        response = await ai.generate({
+          model: gemini20Flash,
+          prompt,
+          config: { temperature: 0.4 },
+        });
+      }
 
       const text = response.text ?? "";
       const parsed = parseJsonFromResponse(text);
 
-      // Fallback/Validation defaults
       return {
         title: parsed.title || { pl: input.originalTitle, en: input.originalTitle, de: input.originalTitle, fr: input.originalTitle, es: input.originalTitle, uk: input.originalTitle },
         shortDescription: parsed.shortDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "" },
         fullDescription: parsed.fullDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "" },
         features: parsed.features || { pl: [], en: [], de: [], fr: [], es: [], uk: [] },
-        seo: parsed.seo || { title: "", description: "", keywords: [] },
+        seo: parsed.seo || { title: "", description: "", keywords: [], faqItems: [] },
         averageMarketPrice: parsed.averageMarketPrice || undefined,
         specsAugmented: parsed.specsAugmented || undefined,
       };
 
     } catch (error) {
       logger.error("generateMarketingContent flow failed", { error, input });
-      throw error; // Re-throw to handle in Refiner
+      throw error;
     }
   }
 );
