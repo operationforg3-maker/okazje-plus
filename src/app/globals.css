@@ -449,7 +449,12 @@
     /* Tailwind v4 does not allow applying custom utilities from utilities layer inside base */
     border-color: hsl(var(--border));
   }
-  html,
+  html {
+    width: 100%;
+    max-width: 100%;
+    /* UWAGA: overflow-x NIE może być tu ustawione — niszczy position:sticky w navbar */
+  }
+
   body {
     width: 100%;
     max-width: 100%;
