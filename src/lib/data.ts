@@ -837,14 +837,140 @@ export async function getCategories(): Promise<Category[]> {
     return cached as Category[];
   }
 
-  // Batch 3 Firestore reads instead of N + N*M + N individual reads.
-  // collectionGroup('subcategories') fetches all L2 + L3 subcategories in one round-trip.
-  // collectionGroup('tiles') fetches all category tiles similarly.
-  const [categoriesSnap, allSubsSnap, allTilesSnap] = await Promise.all([
-    getDocs(collection(db, 'categories')),
-    getDocs(collectionGroup(db, 'subcategories')),
-    getDocs(collectionGroup(db, 'tiles')),
-  ]);
+  const loadCategoriesLegacy = async () => {
+    const categoriesRef = collection(db, 'categories');
+    const snapshot = await getDocs(categoriesRef);
+
+    return Promise.all(
+      snapshot.docs.map(async (categoryDoc) => {
+        const data = categoryDoc.data() as Partial<Category> & {
+          subcategories?: Array<Partial<Subcategory>>;
+          promo?: Partial<CategoryPromo> | null;
+        };
+
+        let subcategories: Subcategory[] = Array.isArray(data.subcategories)
+          ? data.subcategories.map((sub) => ({
+            ...sub,
+            id: sub.id ?? sub.slug,
+          }))
+          : [];
+
+        const subcategoriesRef = collection(db, 'categories', categoryDoc.id, 'subcategories');
+        const subSnapshot = await getDocs(subcategoriesRef);
+
+        if (!subSnapshot.empty) {
+          subcategories = await Promise.all(
+            subSnapshot.docs.map(async (subDoc) => {
+              const subData = subDoc.data() as Partial<Subcategory>;
+              let subSubcategories = subData.subcategories ?? [];
+
+              try {
+                const subSubRef = collection(db, 'categories', categoryDoc.id, 'subcategories', subDoc.id, 'subcategories');
+                const subSubSnap = await getDocs(subSubRef);
+                if (!subSubSnap.empty) {
+                  subSubcategories = subSubSnap.docs.map((ssDoc) => {
+                    const ssData = ssDoc.data();
+                    return {
+                      name: ssData.name ?? ssDoc.id,
+                      slug: ssData.slug ?? ssDoc.id,
+                      id: ssDoc.id,
+                      icon: ssData.icon,
+                      description: ssData.description,
+                      importKeywords: ssData.importKeywords,
+                      translations: ensureCategoryTranslations(
+                        ssData.translations,
+                        ssData.name ?? ssDoc.id,
+                        ssData.description
+                      ),
+                      sortOrder: ssData.sortOrder,
+                      image: ssData.image,
+                    };
+                  }).sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                }
+              } catch (err) {
+                if (DEBUG_DATA_LOGS) {
+                  console.warn(`[getCategories] Legacy fallback failed to load subsub for ${categoryDoc.id}/${subDoc.id}:`, err);
+                }
+              }
+
+              return {
+                id: subDoc.id,
+                name: subData.name ?? subDoc.id,
+                slug: subData.slug ?? subDoc.id,
+                icon: subData.icon,
+                description: subData.description,
+                translations: ensureCategoryTranslations(
+                  subData.translations,
+                  subData.name ?? subDoc.id,
+                  subData.description
+                ),
+                sortOrder: subData.sortOrder,
+                image: subData.image,
+                highlight: subData.highlight,
+                subcategories: subSubcategories,
+              } satisfies Subcategory;
+            })
+          );
+          subcategories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+        }
+
+        const promo = data.promo
+          ? {
+              title: data.promo.title ?? data.name ?? categoryDoc.id,
+              subtitle: data.promo.subtitle,
+              description: data.promo.description,
+              image: data.promo.image,
+              link: data.promo.link,
+              cta: data.promo.cta,
+              badge: data.promo.badge,
+              color: data.promo.color,
+            }
+          : undefined;
+
+        let tiles: CategoryTile[] = [];
+        try {
+          const tilesRef = collection(db, 'categories', categoryDoc.id, 'tiles');
+          const tilesSnap = await getDocs(tilesRef);
+          if (!tilesSnap.empty) {
+            tiles = tilesSnap.docs.map((t) => ({ id: t.id, ...(t.data() as CategoryTile) }));
+          }
+        } catch (_) {
+          tiles = [];
+        }
+
+        return {
+          id: categoryDoc.id,
+          name: data.name ?? categoryDoc.id,
+          slug: data.slug ?? categoryDoc.id,
+          icon: data.icon,
+          description: data.description,
+          sortOrder: data.sortOrder,
+          accentColor: data.accentColor,
+          heroImage: data.heroImage,
+          translations: ensureCategoryTranslations(
+            data.translations,
+            data.name ?? categoryDoc.id,
+            data.description
+          ),
+          promo,
+          tiles,
+          subcategories,
+        } satisfies Category;
+      })
+    );
+  };
+
+  let categories: Category[];
+
+  try {
+    // Batch 3 Firestore reads instead of N + N*M + N individual reads.
+    // collectionGroup('subcategories') fetches all L2 + L3 subcategories in one round-trip.
+    // collectionGroup('tiles') fetches all category tiles similarly.
+    const [categoriesSnap, allSubsSnap, allTilesSnap] = await Promise.all([
+      getDocs(collection(db, 'categories')),
+      getDocs(collectionGroup(db, 'subcategories')),
+      getDocs(collectionGroup(db, 'tiles')),
+    ]);
 
   if (DEBUG_DATA_LOGS) {
     console.log(
@@ -890,11 +1016,11 @@ export async function getCategories(): Promise<Category[]> {
     }
   }
 
-  const categories = categoriesSnap.docs.map((categoryDoc) => {
-    const data = categoryDoc.data() as Partial<Category> & {
-      subcategories?: Array<Partial<Subcategory>>;
-      promo?: Partial<CategoryPromo> | null;
-    };
+    categories = categoriesSnap.docs.map((categoryDoc) => {
+      const data = categoryDoc.data() as Partial<Category> & {
+        subcategories?: Array<Partial<Subcategory>>;
+        promo?: Partial<CategoryPromo> | null;
+      };
 
     // Prefer subcollection L2 subs; fall back to embedded array (legacy structure).
     const l2Subs = l2Map.get(categoryDoc.id) || [];
@@ -956,25 +1082,29 @@ export async function getCategories(): Promise<Category[]> {
 
     const tiles: CategoryTile[] = tilesMap.get(categoryDoc.id) || [];
 
-    return {
-      id: categoryDoc.id,
-      name: data.name ?? categoryDoc.id,
-      slug: data.slug ?? categoryDoc.id,
-      icon: data.icon,
-      description: data.description,
-      sortOrder: data.sortOrder,
-      accentColor: data.accentColor,
-      heroImage: data.heroImage,
-      translations: ensureCategoryTranslations(
-        data.translations,
-        data.name ?? categoryDoc.id,
-        data.description
-      ),
-      promo,
-      tiles,
-      subcategories,
-    } satisfies Category;
-  });
+      return {
+        id: categoryDoc.id,
+        name: data.name ?? categoryDoc.id,
+        slug: data.slug ?? categoryDoc.id,
+        icon: data.icon,
+        description: data.description,
+        sortOrder: data.sortOrder,
+        accentColor: data.accentColor,
+        heroImage: data.heroImage,
+        translations: ensureCategoryTranslations(
+          data.translations,
+          data.name ?? categoryDoc.id,
+          data.description
+        ),
+        promo,
+        tiles,
+        subcategories,
+      } satisfies Category;
+    });
+  } catch (error) {
+    console.warn('[getCategories] collectionGroup path failed, falling back to legacy reads:', error);
+    categories = await loadCategoriesLegacy();
+  }
 
   const sortedCategories = categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 

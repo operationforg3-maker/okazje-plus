@@ -101,6 +101,19 @@ service cloud.firestore {
       }
     }
 
+    // Collection group queries for category navigation optimization.
+    // Needed for collectionGroup('subcategories') and collectionGroup('tiles')
+    // used by src/lib/data.ts:getCategories() in server rendering.
+    match /{path=**}/subcategories/{subcategoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /{path=**}/tiles/{tileId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     ////////////////////////////////
     // DEALS
     ////////////////////////////////
