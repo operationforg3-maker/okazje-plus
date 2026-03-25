@@ -382,6 +382,10 @@ function ModerationPage() {
   const [approvedItems, setApprovedItems] = useState<any[]>([]);
   const [rejectedItems, setRejectedItems] = useState<any[]>([]);
   const [discardedItems, setDiscardedItems] = useState<any[]>([]);
+  const [discardedSelection, setDiscardedSelection] = useState<Record<string, boolean>>({});
+  const [discardedProcessing, setDiscardedProcessing] = useState(false);
+  const [discardedProgress, setDiscardedProgress] = useState(0);
+  const [discardedLastResult, setDiscardedLastResult] = useState<any>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [checkingClaims, setCheckingClaims] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
@@ -1306,6 +1310,221 @@ function ModerationPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Toolbar for discarded items - restore/delete actions */}
+              {discardedItems.length > 0 && (
+                <div className="mb-4 space-y-2 border rounded-md p-3 bg-muted/30">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold">
+                      Akcje: {Object.values(discardedSelection).filter(Boolean).length} zaznaczonych
+                    </span>
+                    <div className="ml-auto flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => {
+                          const all: Record<string, boolean> = {};
+                          discardedItems.forEach(item => all[item.id] = true);
+                          setDiscardedSelection(all);
+                        }}
+                        disabled={discardedProcessing}
+                      >
+                        Zaznacz wszystkie ({discardedItems.length})
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setDiscardedSelection({})}
+                        disabled={discardedProcessing || Object.values(discardedSelection).every(v => !v)}
+                      >
+                        Wyczyść
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={async () => {
+                        const selectedIds = Object.entries(discardedSelection).filter(([, v]) => v).map(([id]) => id);
+                        if (selectedIds.length === 0) {
+                          toast({ title: 'Błąd', description: 'Nie zaznaczono żadnych elementów', variant: 'destructive' });
+                          return;
+                        }
+                        setDiscardedProcessing(true);
+                        setDiscardedProgress(0);
+                        setDiscardedLastResult(null);
+                        try {
+                          const currentUser = auth.currentUser;
+                          if (!currentUser) {
+                            toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
+                            return;
+                          }
+
+                          const token = await currentUser.getIdToken();
+                          const progressInterval = setInterval(() => {
+                            setDiscardedProgress(prev => Math.min(prev + 1, selectedIds.length - 1));
+                          }, 100);
+
+                          const res = await fetch('/api/admin/moderation/restore-discarded', {
+                            method: 'POST',
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ 
+                              items: selectedIds.map(id => ({ id, type: 'product' })),
+                              targetStatus: 'pending'
+                            })
+                          });
+                          
+                          clearInterval(progressInterval);
+                          setDiscardedProgress(selectedIds.length);
+
+                          const data = await res.json();
+                          setDiscardedLastResult(data);
+
+                          if (res.ok && data.success) {
+                            toast({ 
+                              title: 'Sukces', 
+                              description: `Przywrócono ${data.processed}/${data.total} elementów`
+                            });
+                            setDiscardedSelection({});
+                            await new Promise(r => setTimeout(r, 500));
+                            await loadData();
+                          } else {
+                            toast({ 
+                              title: 'Błąd', 
+                              description: data.message || 'Nie udało się przywrócić',
+                              variant: 'destructive'
+                            });
+                          }
+                        } catch (error: any) {
+                          toast({ 
+                            title: 'Błąd sieciowy', 
+                            description: error.message || 'Nie udało się przywrócić',
+                            variant: 'destructive' 
+                          });
+                        } finally {
+                          setDiscardedProcessing(false);
+                          setDiscardedProgress(0);
+                        }
+                      }}
+                      disabled={discardedProcessing || Object.values(discardedSelection).every(v => !v)}
+                    >
+                      ↩️ Przywróć
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={async () => {
+                        const selectedIds = Object.entries(discardedSelection).filter(([, v]) => v).map(([id]) => id);
+                        if (selectedIds.length === 0) {
+                          toast({ title: 'Błąd', description: 'Nie zaznaczono żadnych elementów', variant: 'destructive' });
+                          return;
+                        }
+                        if (!window.confirm(`Czy na pewno chcesz trwale usunąć ${selectedIds.length} elementów?`)) return;
+                        
+                        setDiscardedProcessing(true);
+                        setDiscardedProgress(0);
+                        setDiscardedLastResult(null);
+                        try {
+                          const currentUser = auth.currentUser;
+                          if (!currentUser) {
+                            toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
+                            return;
+                          }
+
+                          const token = await currentUser.getIdToken();
+                          const progressInterval = setInterval(() => {
+                            setDiscardedProgress(prev => Math.min(prev + 1, selectedIds.length - 1));
+                          }, 100);
+
+                          const res = await fetch('/api/admin/moderation/delete-discarded', {
+                            method: 'POST',
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ ids: selectedIds })
+                          });
+                          
+                          clearInterval(progressInterval);
+                          setDiscardedProgress(selectedIds.length);
+
+                          const data = await res.json();
+                          setDiscardedLastResult(data);
+
+                          if (res.ok && data.success) {
+                            toast({ 
+                              title: 'Sukces', 
+                              description: `Usunięto ${data.processed}/${data.total} elementów`
+                            });
+                            setDiscardedSelection({});
+                            await new Promise(r => setTimeout(r, 500));
+                            await loadData();
+                          } else {
+                            toast({ 
+                              title: 'Błąd', 
+                              description: data.message || 'Nie udało się usunąć',
+                              variant: 'destructive'
+                            });
+                          }
+                        } catch (error: any) {
+                          toast({ 
+                            title: 'Błąd sieciowy', 
+                            description: error.message || 'Nie udało się usunąć',
+                            variant: 'destructive' 
+                          });
+                        } finally {
+                          setDiscardedProcessing(false);
+                          setDiscardedProgress(0);
+                        }
+                      }}
+                      disabled={discardedProcessing || Object.values(discardedSelection).every(v => !v)}
+                    >
+                      🗑️ Usuń
+                    </Button>
+                  </div>
+
+                  {/* Progress bar */}
+                  {discardedProcessing && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-xs">
+                        <span>Przetwarzanie...</span>
+                        <span className="text-slate-600">{discardedProgress}/{Object.values(discardedSelection).filter(Boolean).length}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-blue-600 h-full transition-all duration-200"
+                          style={{ width: `${Object.values(discardedSelection).filter(Boolean).length > 0 ? Math.round((discardedProgress / Object.values(discardedSelection).filter(Boolean).length) * 100) : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error details */}
+                  {discardedLastResult?.failures && discardedLastResult.failures.length > 0 && !discardedProcessing && (
+                    <div className="border border-red-300 bg-red-50 rounded-md p-2 text-sm">
+                      <div className="font-semibold text-red-800 mb-1">
+                        🚨 {discardedLastResult.failures.length} błędów:
+                      </div>
+                      <details className="cursor-pointer">
+                        <summary className="text-red-700 hover:text-red-900 font-medium">Pokaż szczegóły</summary>
+                        <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                          {discardedLastResult.failures.map((fail: any, idx: number) => (
+                            <div key={idx} className="text-xs text-red-800 font-mono bg-white/50 p-1 rounded">
+                              <strong>{fail.id}</strong>: {fail.error || 'Nieznany błąd'}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3, 4].map((i) => (
@@ -1386,6 +1605,93 @@ function ModerationPage() {
                             Podgląd źródła
                           </a>
                         )}
+                      </div>
+
+                      {/* Actions column for single item */}
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={discardedSelection[item.id] || false}
+                          onChange={(e) => {
+                            setDiscardedSelection(prev => ({
+                              ...prev,
+                              [item.id]: e.target.checked
+                            }));
+                          }}
+                          className="w-5 h-5 cursor-pointer"
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-green-700 hover:bg-green-50"
+                          onClick={async () => {
+                            try {
+                              const currentUser = auth.currentUser;
+                              if (!currentUser) {
+                                toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
+                                return;
+                              }
+                              const token = await currentUser.getIdToken();
+                              const res = await fetch('/api/admin/moderation/restore-discarded', {
+                                method: 'POST',
+                                headers: { 
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ 
+                                  items: [{ id: item.id, type: 'product' }],
+                                  targetStatus: 'pending'
+                                })
+                              });
+                              const data = await res.json();
+                              if (res.ok && data.success) {
+                                toast({ title: 'Sukces', description: 'Przywrócono' });
+                                await loadData();
+                              } else {
+                                toast({ title: 'Błąd', description: data.message, variant: 'destructive' });
+                              }
+                            } catch (error: any) {
+                              toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
+                            }
+                          }}
+                        >
+                          ↩️
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-red-700 hover:bg-red-50"
+                          onClick={async () => {
+                            if (!window.confirm('Czy na pewno chcesz trwale usunąć ten element?')) return;
+                            try {
+                              const currentUser = auth.currentUser;
+                              if (!currentUser) {
+                                toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
+                                return;
+                              }
+                              const token = await currentUser.getIdToken();
+                              const res = await fetch('/api/admin/moderation/delete-discarded', {
+                                method: 'POST',
+                                headers: { 
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({ ids: [item.id] })
+                              });
+                              const data = await res.json();
+                              if (res.ok && data.success) {
+                                toast({ title: 'Sukces', description: 'Usunięto' });
+                                await loadData();
+                              } else {
+                                toast({ title: 'Błąd', description: data.message, variant: 'destructive' });
+                              }
+                            } catch (error: any) {
+                              toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
+                            }
+                          }}
+                        >
+                          🗑️
+                        </Button>
                       </div>
                           </>
                         );
