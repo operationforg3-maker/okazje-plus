@@ -2737,15 +2737,22 @@ export class SmartHarvester {
 
   /**
    * Filter products to keep only top quality ones by rating/ratingCount
+   * M6 FIX: Accept products without ratings (new offers) and sort by quality
    */
   private filterTopQualityProducts(
     products: any[],
     limit: number
   ): any[] {
     return products
-      .filter(p => p.rating && p.rating >= 4.0) // Min 4-star rating
+      .filter(p => {
+        // Accept if: (a) no rating data (new products), or (b) rating >= 4.0
+        // Reject only if has explicit rating AND it's below 4.0
+        if (!p.rating || p.rating === 0) return true; // New products with no reviews
+        return p.rating >= 4.0; // Accept only if rating is good
+      })
       .sort((a, b) => {
         // Sort by: ratingCount (descending) then rating (descending)
+        // Products without ratings go to the end, but are still included
         if (b.ratingCount !== a.ratingCount) {
           return (b.ratingCount || 0) - (a.ratingCount || 0);
         }

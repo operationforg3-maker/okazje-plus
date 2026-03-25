@@ -584,7 +584,9 @@ export async function importFromAliExpress(
         if (filterConfig.maxPrice && pricePLN > filterConfig.maxPrice) {
           filterFailures.push(`maxPrice:${filterConfig.maxPrice}`);
         }
-        if (filterConfig.minRating && rating < filterConfig.minRating) {
+        // M6 FIX: Only reject if has explicit rating AND it's below minimum
+        // Accept products without ratings (rating = 0 for new products with no reviews)
+        if (filterConfig.minRating && rating > 0 && rating < filterConfig.minRating) {
           filterFailures.push(`minRating:${filterConfig.minRating}`);
         }
         if (filterConfig.minOrders && orders < filterConfig.minOrders) {
