@@ -4,6 +4,16 @@ import { adminDb } from "@/lib/firebase-admin";
 import { requireAdmin } from "@/lib/auth-server";
 import { FieldValue } from "firebase-admin/firestore";
 
+/**
+ * Single item moderation endpoint
+ * Body: { itemId, itemType: 'deal'|'product', action: 'approve'|'reject' }
+ * 
+ * ✅ Features:
+ * - Atomic Deal↔ProductCore synchronization
+ * - Google Indexing API integration
+ * - Full moderation logging
+ * - Proper error handling
+ */
 export async function POST(request: NextRequest) {
   try {
     // Weryfikacja tokena i uprawnień admina
@@ -39,43 +49,60 @@ export async function POST(request: NextRequest) {
     const beforeSnap = await itemRef.get();
     const previousStatus = beforeSnap.exists ? beforeSnap.data()?.status : 'unknown';
 
-    // Zaktualizuj status
-    const newStatus = action === "approve" ? "approved" : "rejected";
-    const updatePayload: Record<string, unknown> = {
-      status: newStatus,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    if (itemType === 'deal' && action === 'approve') {
-      updatePayload.approvedAt = new Date().toISOString();
-      updatePayload.promotedAt = new Date().toISOString();
+    if (!beforeSnap.exists) {
+      return NextResponse.json(
+        { success: false, message: `${itemType} nie znaleziony` },
+        { status: 404 }
+      );
     }
 
-    await itemRef.update(updatePayload);
+    // ============ ATOMIC UPDATE — Deal Status + ProductCore Sync ============
+    const newStatus = action === "approve" ? "approved" : "rejected";
+    const ts = FieldValue.serverTimestamp();
 
-    // Gdy admin ręcznie zatwierdza deala, zsynchronizuj powiązany ProductCore.
-    if (itemType === 'deal' && action === 'approve' && beforeSnap.exists) {
-      const dealData = beforeSnap.data() as any;
-      const productCoreId = dealData?.productCoreId || dealData?.productId;
+    const itemUpdatePayload: Record<string, unknown> = {
+      status: newStatus,
+      updatedAt: ts,
+    };
 
-      if (productCoreId) {
-        const productRef = adminDb.collection('product_cores').doc(String(productCoreId));
-        const productSnap = await productRef.get();
+    if (newStatus === 'approved') {
+      itemUpdatePayload.approvedAt = new Date().toISOString();
+      if (itemType === 'deal') {
+        itemUpdatePayload.promotedAt = new Date().toISOString();
+      }
+    } else if (newStatus === 'rejected') {
+      itemUpdatePayload.rejectedAt = new Date().toISOString();
+    }
 
-        if (productSnap.exists) {
-          const productStatus = productSnap.data()?.status;
-          if (productStatus === 'pending_approval' || productStatus === 'draft') {
-            await productRef.update({
-              status: 'approved',
-              approvedAt: new Date().toISOString(),
-              updatedAt: FieldValue.serverTimestamp(),
-            });
+    // Use transaction for atomic Deal↔ProductCore update
+    await adminDb.runTransaction(async (transaction) => {
+      // Update the item
+      transaction.update(itemRef, itemUpdatePayload);
+
+      // If approving a deal, auto-approve its ProductCore (if in pending state)
+      if (itemType === 'deal' && action === 'approve' && beforeSnap.exists) {
+        const dealData = beforeSnap.data() as any;
+        const productCoreId = dealData?.productCoreId || dealData?.productId;
+
+        if (productCoreId) {
+          const productRef = adminDb.collection('product_cores').doc(String(productCoreId));
+          const productSnap = await transaction.get(productRef);
+
+          if (productSnap.exists) {
+            const productStatus = productSnap.data()?.status;
+            if (productStatus === 'pending_approval' || productStatus === 'draft') {
+              transaction.update(productRef, {
+                status: 'approved',
+                approvedAt: new Date().toISOString(),
+                updatedAt: ts,
+              });
+            }
           }
         }
       }
-    }
+    });
 
-    // Log moderation action
+    // ============ LOGGING (outside transaction) ============
     try {
       await adminDb.collection('moderation_log').add({
         action,
@@ -92,27 +119,30 @@ export async function POST(request: NextRequest) {
       console.error('Failed to log moderation:', err);
     }
 
-    // Jeśli to deal i akcja to approval, spróbuj indeksować w Google
-    if (itemType === "deal" && action === "approve") {
-      try {
-        console.log(`[Moderation] Submitting deal ${itemId} to Google Indexing API...`);
-        const indexingResult = await requestDealIndexing(itemId, "URL_UPDATED");
-        console.log(`[Moderation] Google Indexing result:`, indexingResult);
-      } catch (indexingError) {
-        // Nie przerywa moderacji jeśli indexing nie powiódł się
-        console.error(`[Moderation] Warning: Google Indexing failed for deal ${itemId}:`, indexingError);
-      }
-    }
-
-    // Jeśli to deal i akcja to rejection, usuń z indeksu Google
-    if (itemType === "deal" && action === "reject") {
-      try {
-        console.log(`[Moderation] Removing deal ${itemId} from Google Indexing API...`);
-        const indexingResult = await requestDealIndexing(itemId, "URL_DELETED");
-        console.log(`[Moderation] Google Indexing removal result:`, indexingResult);
-      } catch (indexingError) {
-        console.error(`[Moderation] Warning: Google Indexing removal failed for deal ${itemId}:`, indexingError);
-      }
+    // ============ GOOGLE INDEXING (async, non-blocking) ============
+    if (itemType === "deal") {
+      (async () => {
+        try {
+          const indexAction = action === "approve" ? "URL_UPDATED" : "URL_DELETED";
+          console.log(`[Moderation] Submitting deal ${itemId} to Google Indexing API (${indexAction})...`);
+          const indexingResult = await requestDealIndexing(itemId, indexAction);
+          console.log(`[Moderation] Google Indexing result:`, indexingResult);
+        } catch (indexingError) {
+          console.error(`[Moderation] Warning: Google Indexing failed for deal ${itemId}:`, indexingError);
+          // Log failure for potential retry
+          try {
+            await adminDb.collection('indexing_failures').add({
+              dealId: itemId,
+              action: action === "approve" ? "URL_UPDATED" : "URL_DELETED",
+              error: String(indexingError),
+              timestamp: new Date().toISOString(),
+              attempt: 1,
+            });
+          } catch (logErr) {
+            console.error('[Moderation] Failed to log indexing failure:', logErr);
+          }
+        }
+      })().catch(err => console.error('[Moderation] Indexing async error:', err));
     }
 
     return NextResponse.json(
@@ -133,7 +163,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Brak uprawnień admina" }, { status: 403 });
     }
     return NextResponse.json(
-      { success: false, message: "Wystąpił błąd podczas przetwarzania żądania" },
+      { success: false, message: "Wystąpił błąd podczas przetwarzania żądania: " + error.message },
       { status: 500 }
     );
   }

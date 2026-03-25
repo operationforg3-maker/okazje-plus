@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 
+/**
+ * Get all IDs for moderation with optional status filter
+ * Query params:
+ * - type: 'deal' | 'product' (required)
+ * - statuses: comma-separated status values (optional, defaults to pending/draft for moderation)
+ * - limit: max results to return (optional, default unlimited)
+ * 
+ * ✅ Features:
+ * - Efficient by fetching only document IDs (not full docs)
+ * - Customizable status filtering
+ * - Supports both 'pending' (deals) and 'pending_approval' (products) semantics
+ */
 export async function GET(request: NextRequest) {
   try {
     // Weryfikacja tokenu admina
@@ -20,44 +32,84 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden - admin access required" }, { status: 403 });
     }
 
-    // Pobierz parametr type z query string
+    // Pobierz parametry z query string
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type"); // 'deal' lub 'product'
+    const statusParam = searchParams.get("statuses"); // comma-separated statuses
+    const limitParam = searchParams.get("limit");
+    const limit = limitParam ? Math.min(parseInt(limitParam), 10000) : 10000;
 
     if (!type || !["deal", "product"].includes(type)) {
       return NextResponse.json({ error: "Invalid type parameter" }, { status: 400 });
     }
 
-    // M6: product -> product_cores, pending -> pending_approval
+    // M6: product -> product_cores
     const collectionName = type === "deal" ? "deals" : "product_cores";
     
-    // Pobierz WSZYSTKIE statusy dla moderacji (approved, pending, draft, rejected)
-    const statuses = type === "product" 
-      ? ["draft", "pending_approval", "approved", "rejected"]
-      : ["draft", "pending", "approved", "rejected"];
-    
+    // Determine statuses to query
+    let statuses: string[];
+    if (statusParam) {
+      // Custom statuses provided (e.g., "approved,pending")
+      statuses = statusParam
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      
+      // Validate statuses
+      const validStatuses = type === "product"
+        ? ["draft", "pending_approval", "rejected", "approved"]
+        : ["draft", "pending", "rejected", "approved"];
+      
+      statuses = statuses.filter(s => validStatuses.includes(s));
+      
+      if (statuses.length === 0) {
+        return NextResponse.json({ 
+          error: "No valid statuses provided",
+          validStatuses 
+        }, { status: 400 });
+      }
+    } else {
+      // Default: only pending/draft (for moderation queue)
+      statuses = type === "product"
+        ? ["draft", "pending_approval"]
+        : ["draft", "pending"];
+    }
+
+    console.log(`[get-all-ids] Fetching ${type} with statuses: ${statuses.join(', ')}`);
+
+    // Fetch all matching documents (only IDs)
     const snapshots = await Promise.all(
-      statuses.map(status =>
-        adminDb.collection(collectionName)
+      statuses.slice(0, 10).map(status => // Max 10 queries per request to avoid request bloat
+        adminDb
+          .collection(collectionName)
           .where("status", "==", status)
-          .select() // Pobierz tylko IDs, nie całe dokumenty
+          .select() // Only fetch document IDs
+          .limit(limit)
           .get()
       )
     );
 
-    // Zbierz wszystkie IDs
+    // Collect all IDs
     const ids: string[] = [];
-    snapshots.forEach(snapshot => {
-      snapshot.docs.forEach(doc => ids.push(doc.id));
+    const totalCount: Record<string, number> = {};
+    
+    statuses.forEach((status, idx) => {
+      if (snapshots[idx]) {
+        const count = snapshots[idx].docs.length;
+        totalCount[status] = count;
+        snapshots[idx].docs.forEach(doc => ids.push(doc.id));
+      }
     });
 
-    // Usuń duplikaty (gdyby jakieś były)
+    // Remove duplicates
     const uniqueIds = [...new Set(ids)];
 
     return NextResponse.json({
       success: true,
       type,
+      statuses,
       total: uniqueIds.length,
+      countByStatus: totalCount,
       ids: uniqueIds
     });
 

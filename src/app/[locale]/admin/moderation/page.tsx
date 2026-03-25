@@ -30,11 +30,21 @@ import {
 
 interface BulkItem { id: string; type: 'deal' | 'product'; }
 
+interface BulkResult {
+  processed: number;
+  total: number;
+  failures?: Array<{ id: string; type: string; error?: string }>;
+  status?: string;
+  message?: string;
+}
+
 function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'; items: any[]; onAction: () => Promise<void> }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [processing, setProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
   const [loadingAllItems, setLoadingAllItems] = useState(false);
   const [totalItemsInDb, setTotalItemsInDb] = useState<number | null>(null);
+  const [lastResult, setLastResult] = useState<BulkResult | null>(null);
   const { toast } = useToast();
 
   const toggle = (id: string) => setSelected(p => ({ ...p, [id]: !p[id] }));
@@ -55,7 +65,7 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
       }
       const token = await currentUser.getIdToken();
       
-      // Pobierz wszystkie IDs z bazy
+      // Pobierz wszystkie IDs z bazy — z filtrem statusów dla kolejki moderacji
       const res = await fetch(`/api/admin/moderation/get-all-ids?type=${type}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -70,7 +80,7 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
       
       toast({ 
         title: 'Zaznaczono wszystkie', 
-        description: `Zaznaczono ${data.total} ${type === 'deal' ? 'okazji' : 'produktów'} z bazy danych` 
+        description: `Zaznaczono ${data.total} ${type === 'deal' ? 'okazji' : 'produktów'} z bazy danych (statusy: ${data.statuses?.join(', ') || 'default'})` 
       });
     } catch (error: any) {
       toast({ title: 'Błąd', description: error.message || 'Nie udało się pobrać wszystkich itemów', variant: 'destructive' });
@@ -80,6 +90,7 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
   };
   
   const allSelectedIds = Object.entries(selected).filter(([, v]) => v).map(([id]) => id);
+  const progressPercent = allSelectedIds.length > 0 ? Math.round((processingProgress / allSelectedIds.length) * 100) : 0;
 
   async function bulk(action: 'approve' | 'reject' | 'delete' | 'change-status', status?: string) {
     if (allSelectedIds.length === 0) {
@@ -94,6 +105,8 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
     if (!confirmed) return;
 
     setProcessing(true);
+    setProcessingProgress(0);
+    setLastResult(null);
     try {
       // Pobierz token użytkownika z Firebase auth
       const currentUser = auth.currentUser;
@@ -104,6 +117,11 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
       }
 
       const token = await currentUser.getIdToken();
+
+      // Simulate progress (update every 100ms while request is in flight)
+      const progressInterval = setInterval(() => {
+        setProcessingProgress(prev => Math.min(prev + 1, allSelectedIds.length - 1));
+      }, 100);
 
       const res = await fetch('/api/admin/moderation/bulk', {
         method: 'POST',
@@ -117,27 +135,51 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
           ...(status && { status })
         })
       });
-      const data = await res.json();
+      
+      clearInterval(progressInterval);
+      setProcessingProgress(allSelectedIds.length);
+
+      const data: BulkResult = await res.json();
+      setLastResult(data);
+
       if (res.ok && data.success) {
-        const message = data.message || `Przetworzono ${data.processed || allSelectedIds.length} elementów`;
-        const description = data.processed && data.total && data.processed < data.total 
-          ? `Przetworzono ${data.processed}/${data.total} elementów`
-          : undefined;
+        const hasFailures = data.failures && data.failures.length > 0;
+        const failureText = hasFailures ? ` (${data.failures.length} błędów)` : '';
+        
         toast({ 
-          title: 'Sukces', 
-          description: description || message,
-          duration: 5000
+          title: hasFailures ? 'Czę ściowy sukces' : 'Sukces', 
+          description: `Przetworzono ${data.processed}/${data.total} elementów${failureText}`,
+          duration: 7000,
+          variant: hasFailures ? 'default' : 'default'
         });
+
+        if (hasFailures) {
+          // Show error details dialog or alert
+          const failedIds = data.failures.map(f => `${f.id}: ${f.error || 'nieznany błąd'}`).join('\n');
+          console.group('Błędy podczas przetwarzania');
+          console.log(failedIds);
+          console.groupEnd();
+        }
+
         clear();
-        setTotalItemsInDb(null); // Reset counter po akcji
+        setTotalItemsInDb(null);
         await onAction();
       } else {
-        toast({ title: 'Błąd', description: data.message || 'Wystąpił błąd', variant: 'destructive' });
+        toast({ 
+          title: 'Błąd', 
+          description: data.message || 'Przetwarzanie nie powiodło się',
+          variant: 'destructive' 
+        });
       }
-    } catch (error) {
-      toast({ title: 'Błąd', description: 'Nie udało się przetworzyć akcji', variant: 'destructive' });
+    } catch (error: any) {
+      toast({ 
+        title: 'Błąd sieciowy', 
+        description: error.message || 'Nie udało się przetworzyć akcji',
+        variant: 'destructive' 
+      });
     } finally {
       setProcessing(false);
+      setProcessingProgress(0);
     }
   }
 
@@ -215,6 +257,43 @@ function BulkModerationBar({ type, items, onAction }: { type: 'deal' | 'product'
           🗑️ Usuń ({allSelectedIds.length})
         </Button>
       </div>
+
+      {/* Progress bar (shown while processing) */}
+      {processing && (
+        <div className="space-y-1">
+          <div className="flex justify-between items-center text-xs">
+            <span>Przetwarzanie...</span>
+            <span className="text-slate-600">{processingProgress}/{allSelectedIds.length}</span>
+          </div>
+          <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-blue-600 h-full transition-all duration-200"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Error details (shown after processing if there are failures) */}
+      {lastResult?.failures && lastResult.failures.length > 0 && !processing && (
+        <div className="border border-red-300 bg-red-50 rounded-md p-2 text-sm">
+          <div className="font-semibold text-red-800 mb-1">
+            🚨 {lastResult.failures.length} błędów podczas przetwarzania:
+          </div>
+          <details className="cursor-pointer group">
+            <summary className="text-red-700 hover:text-red-900 font-medium">
+              Pokaż szczegóły ({lastResult.failures.length})
+            </summary>
+            <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+              {lastResult.failures.map((fail, idx) => (
+                <div key={idx} className="text-xs text-red-800 font-mono bg-white/50 p-1 rounded border border-red-200">
+                  <strong>{fail.id}</strong> ({fail.type}): {fail.error || 'Nieznany błąd'}
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+      )}
 
       <div className="flex gap-1 flex-wrap max-h-32 overflow-y-auto">
         {items.map(item => {
