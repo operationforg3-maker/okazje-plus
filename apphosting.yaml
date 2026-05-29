@@ -50,7 +50,7 @@ env:
   
   # Firebase Admin SDK configuration (server-side, Runtime)
   - variable: FIREBASE_WEBAPP_CONFIG
-    value: '{"apiKey":"AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4","authDomain":"okazje-plus.firebaseapp.com","projectId":"okazje-plus","storageBucket":"okazje-plus.firebasestorage.app","messagingSenderId":"298894101105","appId":"1:298894101105:web:b8eec4c8d2cae659ee29d0"}'
+    value: '{"apiKey":"placeholder-key","authDomain":"placeholder.firebaseapp.com","projectId":"placeholder-project","storageBucket":"placeholder.appspot.com","messagingSenderId":"000000000000","appId":"1:000000000000:web:placeholder"}'
     availability:
       - RUNTIME
 

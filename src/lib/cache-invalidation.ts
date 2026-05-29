@@ -39,6 +39,17 @@ export async function invalidateHotDealsCache(): Promise<void> {
 }
 
 /**
+ * Invalidate individual product cache
+ * Call this when a product is restored or updated
+ */
+export async function invalidateProductCache(productId: string): Promise<void> {
+  await cacheDel(`product:${productId}`);
+  await cacheDel(`product:${productId}:details`);
+  await cacheDel(`product:${productId}:offers`);
+  console.log(`Invalidated cache for product ${productId}`);
+}
+
+/**
  * Invalidate recommended products cache
  * Call this when products are approved or rejected
  */

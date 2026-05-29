@@ -54,7 +54,7 @@ Response: {"type":"ISV","code":"IllegalTimestamp","message":"The timestamp is in
 
 **Environment Variables:**
 - ✅ `ALIEXPRESS_APP_KEY`: `526032` (present in .env.local & Secret Manager)
-- ✅ `ALIEXPRESS_APP_SECRET`: `r4h4or9ZlZYPCjsllrqLXufzwx0iToUV` (configured)
+- ✅ `ALIEXPRESS_APP_SECRET`: `***` (configured)
 - ✅ `ALIEXPRESS_API_BASE`: `https://api-sg.aliexpress.com/sync` (in Secret Manager)
 
 **Code Integration:**

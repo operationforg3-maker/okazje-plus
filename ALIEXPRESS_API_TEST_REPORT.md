@@ -38,7 +38,7 @@ Unexpected token '<', "<!DOCTYPE "... is not valid JSON
 
 ### 1. Klucze API prawdopodobnie nieaktywne
 - `ALIEXPRESS_APP_KEY=526032`
-- `ALIEXPRESS_APP_SECRET=r4h4or9ZlZYPCjsllrqLXufzwx0iToUV`
+- `ALIEXPRESS_APP_SECRET=***` (wartość ukryta)
 
 **Możliwe przyczyny 404:**
 1. ❌ Aplikacja nieaktywna w AliExpress Developer Console

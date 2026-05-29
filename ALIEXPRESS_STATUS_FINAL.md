@@ -16,7 +16,7 @@ npm run dev
 | Secret | Wartość | Wersja |
 |--------|---------|--------|
 | ALIEXPRESS_APP_KEY | 526032 | Latest |
-| ALIEXPRESS_APP_SECRET | r4h4or9ZlZYPCjsllrqLXufzwx0iToUV | Latest |
+| ALIEXPRESS_APP_SECRET | *** | Latest |
 | ALIEXPRESS_AFFILIATE_ID | Okazje Plus | v9 ✅ Zaktualizowano |
 | ALIEXPRESS_TRACKING_ID | Okazje Plus | v1 ✅ Nowe |
 | ALIEXPRESS_REGION | eu | v1 ✅ Nowe |

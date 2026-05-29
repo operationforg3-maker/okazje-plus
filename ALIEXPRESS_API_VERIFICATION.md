@@ -30,7 +30,7 @@ All 4 required secrets are present and active:
 
 **Value Verification:**
 - `ALIEXPRESS_APP_KEY`: `526032` ✅ (first 6 chars)
-- `ALIEXPRESS_APP_SECRET`: `r4h4or9ZlZYPCjsllrqLXufzwx0iToUV` ✅ (32 chars - proper length)
+- `ALIEXPRESS_APP_SECRET`: `***` ✅ (32 chars - proper length)
 - `ALIEXPRESS_API_BASE`: `https://api-sg.aliexpress.com/sync%...` ✅ (valid endpoint)
 
 ### 2. App Hosting Configuration (apphosting.yaml)
@@ -61,7 +61,7 @@ All 4 required secrets are present and active:
 ```bash
 # Confirmed present in .env.local:
 ALIEXPRESS_APP_KEY=526032
-ALIEXPRESS_APP_SECRET=r4h4or9ZlZYPCjsllrqLXufzwx0iToUV
+ALIEXPRESS_APP_SECRET=***
 ALIEXPRESS_API_ENDPOINT=https://openapi.aliexpress.com/gateway.do
 ALIEXPRESS_REGION=eu
 ```

@@ -7,7 +7,7 @@
 | Secret Name | Wartość | Status | Wersja |
 |------------|---------|--------|--------|
 | `ALIEXPRESS_APP_KEY` | `526032` | ✅ Bez zmian | - |
-| `ALIEXPRESS_APP_SECRET` | `r4h4or9ZlZYPCjsllrqLXufzwx0iToUV` | ✅ Bez zmian | - |
+| `ALIEXPRESS_APP_SECRET` | `***` | ✅ Bez zmian | - |
 | `ALIEXPRESS_API_BASE` | `https://openapi.aliexpress.com/gateway.do` | ✅ Zaktualizowano | v10 |
 | `ALIEXPRESS_API_ENDPOINT` | `https://openapi.aliexpress.com/gateway.do` | ✅ Utworzono | v1 |
 | `ALIEXPRESS_AFFILIATE_ID` | `Okazje Plus` | ✅ Zaktualizowano | v9 |
@@ -24,7 +24,7 @@ gcloud secrets list --filter="name:ALIEXPRESS" --format="table(name)"
 ### 1. `.env.local` - Lokalne zmienne środowiskowe
 ```env
 ALIEXPRESS_APP_KEY=526032
-ALIEXPRESS_APP_SECRET=r4h4or9ZlZYPCjsllrqLXufzwx0iToUV
+ALIEXPRESS_APP_SECRET=***
 ALIEXPRESS_API_ENDPOINT=https://openapi.aliexpress.com/gateway.do
 ALIEXPRESS_AFFILIATE_ID=Okazje Plus
 ALIEXPRESS_TRACKING_ID=Okazje Plus
