@@ -17,7 +17,7 @@ runConfig:
 # See https://firebase.google.com/docs/app-hosting/configure#environment-variables
 env:
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: AIzaSyBk-qFQwDIlsHSnhugoQSN7abcoMX3mTl4
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
     availability:
       - BUILD
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
@@ -37,7 +37,7 @@ env:
     availability:
       - BUILD
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: 1:298894101105:web:b8eec4c8d2cae659ee29d0
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
     availability:
       - BUILD
   
