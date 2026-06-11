@@ -7,7 +7,7 @@
         "firebase-tools@latest",
         "experimental:mcp",
         "--only",
-        "auth,firestore"
+        "auth,firestore,cloudrun,apphosting,logging"
       ]
     }
   }

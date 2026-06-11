@@ -1,5 +1,5 @@
 import {genkit} from 'genkit';
-import {vertexAI, gemini20Flash} from '@genkit-ai/vertexai';
+import {vertexAI, gemini15Pro} from '@genkit-ai/vertexai';
 
 // Vertex AI uses Application Default Credentials (ADC) or service account
 // No API key needed — Firebase App Hosting auto-provisions credentials
@@ -18,5 +18,5 @@ export const ai = genkit({
       location,
     }),
   ],
-  model: gemini20Flash,
+  model: gemini15Pro, // Używamy Gemini 1.5 Pro dla największego okna kontekstowego
 });

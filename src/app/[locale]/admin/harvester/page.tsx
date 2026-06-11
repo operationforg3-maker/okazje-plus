@@ -19,14 +19,10 @@ import ConvertiserAutoImport from '@/components/admin/convertiser-auto-import';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AIEnhancer } from '@/components/admin/ai-enhancer';
 import { withAuth } from '@/components/auth/withAuth';
-import { Combine, ListTree, Package, Sparkles, Clock, Shield, Database, Trash2, Rocket, Layers, PlayCircle } from 'lucide-react';
+import { Combine, Package, Sparkles, Clock, Rocket, Layers, PlayCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { JobsMonitor } from '@/components/admin/jobs-monitor';
 import { HarvesterJobsMonitor } from '@/components/admin/harvester-jobs-monitor';
 import { ScheduleManager } from '@/components/admin/schedule-manager';
-import { LinkVerifier } from '@/components/admin/link-verifier';
-import { FirebaseIndexManager } from '@/components/admin/firebase-index-manager';
-import { DatabaseCleaner } from '@/components/admin/database-cleaner';
 
 interface ConsoleLine {
   id: string;
@@ -221,10 +217,6 @@ function HarvesterPage() {
     ]);
   };
 
-  const clearLogs = () => {
-    setConsoleLogs([]);
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -241,12 +233,8 @@ function HarvesterPage() {
       <div className="grid grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="col-span-2 space-y-6">
-          <Tabs defaultValue="categories" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-8">
-              <TabsTrigger value="categories" className="gap-1 px-1 text-xs">
-                <ListTree className="h-4 w-4" />
-                <span>Kategorie</span>
-              </TabsTrigger>
+          <Tabs defaultValue="import" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="import" className="gap-1 px-1 text-xs">
                 <Package className="h-4 w-4" />
                 <span>Import</span>
@@ -263,25 +251,7 @@ function HarvesterPage() {
                 <Clock className="h-4 w-4" />
                 <span>Harmonogramy</span>
               </TabsTrigger>
-              <TabsTrigger value="links" className="gap-1 px-1 text-xs">
-                <Shield className="h-4 w-4" />
-                <span>Linki</span>
-              </TabsTrigger>
-              <TabsTrigger value="indexes" className="gap-1 px-1 text-xs">
-                <Database className="h-4 w-4" />
-                <span>Indexes</span>
-              </TabsTrigger>
-              <TabsTrigger value="cleanup" className="gap-1 px-1 text-xs">
-                <Trash2 className="h-4 w-4" />
-                <span>Czyszczenie</span>
-              </TabsTrigger>
             </TabsList>
-
-            <TabsContent value="categories" className="space-y-4">
-              <div className="p-4 border rounded-md bg-muted/50 text-center text-muted-foreground">
-                Ten moduł został zarchiwizowany.
-              </div>
-            </TabsContent>
 
             <TabsContent value="import" className="space-y-4">
               <div className="space-y-4 p-4 border rounded-md bg-muted/30">
@@ -415,18 +385,6 @@ function HarvesterPage() {
 
             <TabsContent value="schedule" className="space-y-4">
               <ScheduleManager onConsoleLog={addLog} />
-            </TabsContent>
-
-            <TabsContent value="links" className="space-y-4">
-              <LinkVerifier onConsoleLog={addLog} />
-            </TabsContent>
-
-            <TabsContent value="indexes" className="space-y-4">
-              <FirebaseIndexManager onConsoleLog={addLog} />
-            </TabsContent>
-
-            <TabsContent value="cleanup" className="space-y-4">
-              <DatabaseCleaner onConsoleLog={addLog} />
             </TabsContent>
           </Tabs>
         </div>

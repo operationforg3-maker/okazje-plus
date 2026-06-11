@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { DatabaseCleaner } from '@/components/admin/database-cleaner';
+import { FirebaseIndexManager } from '@/components/admin/firebase-index-manager';
+import { LinkVerifier } from '@/components/admin/link-verifier';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -42,8 +44,8 @@ export default function DatabasePage() {
       <Tabs defaultValue="cleaner" className="space-y-4">
         <TabsList>
           <TabsTrigger value="cleaner">Czyszczenie (Cleaner)</TabsTrigger>
-          <TabsTrigger value="maintenance" disabled>Konserwacja (M6)</TabsTrigger>
-          <TabsTrigger value="backups" disabled>Backupy</TabsTrigger>
+          <TabsTrigger value="indexes">Indeksy Firestore</TabsTrigger>
+          <TabsTrigger value="links">Weryfikacja Linków</TabsTrigger>
         </TabsList>
 
         <TabsContent value="cleaner" className="space-y-4">
@@ -59,7 +61,16 @@ export default function DatabasePage() {
              </CardContent>
            </Card>
         </TabsContent>
+
+        <TabsContent value="indexes" className="space-y-4">
+          <FirebaseIndexManager onConsoleLog={addLog} />
+        </TabsContent>
+
+        <TabsContent value="links" className="space-y-4">
+          <LinkVerifier onConsoleLog={addLog} />
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
+

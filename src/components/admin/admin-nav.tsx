@@ -98,7 +98,6 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Ustawienia', href: '/admin/settings', icon: Settings },
       { title: 'OAuth', href: '/admin/settings/oauth', icon: Settings },
-      { title: 'Setup i seeding', href: '/admin/setup', icon: Database },
       { title: 'Przewodnik M6 UI', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
     ],
   },
