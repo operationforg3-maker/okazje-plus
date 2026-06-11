@@ -2,9 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
-import {useParams} from 'next/navigation';
+import {useParams, usePathname} from 'next/navigation';
 import { Menu, ShoppingBag, Scale, Trash2 } from 'lucide-react';
 import { useComparison } from '@/components/deal-comparison-tool';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 import {
@@ -43,9 +44,16 @@ export function Navbar() {
   const cartMenuRef = React.useRef<HTMLDivElement>(null);
   const { items, itemCount, totalAmount, totalWithShipping, removeItem } = useSmartCart();
   const { formatPrice } = useCurrency();
+  const pathname = usePathname();
+  const [isAtTop, setIsAtTop] = React.useState(true);
 
   React.useEffect(() => {
     setIsMounted(true);
+    const handleScroll = () => {
+      setIsAtTop(window.scrollY < 180);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Close cart menu when clicking outside
@@ -148,9 +156,21 @@ export function Navbar() {
           </NavigationMenu>
 
           <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
-            <div className="hidden max-w-xl flex-1 sm:block">
-              <AutocompleteSearch />
-            </div>
+            {(() => {
+              const isHomepage = pathname === `${prefix}` || pathname === `${prefix}/` || pathname === '/' || pathname === '/pl' || pathname === '/pl/';
+              return (
+                <div 
+                  className={cn(
+                    "hidden max-w-xl flex-1 sm:block transition-all duration-300 ease-in-out",
+                    isHomepage && isAtTop
+                      ? "opacity-0 pointer-events-none scale-95"
+                      : "opacity-100 scale-100"
+                  )}
+                >
+                  <AutocompleteSearch />
+                </div>
+              );
+            })()}
             {/* Language, Currency, Theme moved to AccountMenuPanel */}
             {/* PRIMARY CTA: Add Deal - Now visible on md+ screens */}
             <Button asChild className="hidden md:inline-flex rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all">

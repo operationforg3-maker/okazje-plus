@@ -49,81 +49,34 @@ interface Props {
 export default function HomeClient({ initialHotDeals, initialTopProducts, categories }: Props) {
   const t = useTranslations('home');
   const locale = useLocale();
-  const categorySectionRef = useRef<HTMLElement | null>(null);
-  const hotDealsSectionRef = useRef<HTMLElement | null>(null);
-  const topProductsSectionRef = useRef<HTMLElement | null>(null);
   const secondarySectionRef = useRef<HTMLDivElement | null>(null);
-  const [showSearch, setShowSearch] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-  const [showCategoryGrid, setShowCategoryGrid] = useState(false);
-  const [showHotDealsCards, setShowHotDealsCards] = useState(false);
-  const [showTopProductsCards, setShowTopProductsCards] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const [showSecondarySections, setShowSecondarySections] = useState(false);
 
   const visibleHotDeals = initialHotDeals.slice(0, 4);
   const visibleTopProducts = initialTopProducts.slice(0, 4);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let rafId: number | null = null;
-
-    const revealSearch = () => setShowSearch(true);
-
-    if (typeof window !== 'undefined') {
-      rafId = window.requestAnimationFrame(() => {
-        timer = setTimeout(revealSearch, 350);
-      });
-    }
-
-    return () => {
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      if (timer) clearTimeout(timer);
-    };
-  }, []);
-
-  useEffect(() => {
-    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const enableStats = () => setShowStats(true);
-
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      (window as Window & { requestIdleCallback: (cb: IdleRequestCallback) => number }).requestIdleCallback(() => enableStats());
-    } else {
-      fallbackTimer = setTimeout(enableStats, 700);
-    }
-
-    return () => {
-      if (fallbackTimer) clearTimeout(fallbackTimer);
-    };
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const categoryNode = categorySectionRef.current;
-    const hotDealsNode = hotDealsSectionRef.current;
-    const topProductsNode = topProductsSectionRef.current;
     const secondaryNode = secondarySectionRef.current;
-    if (!categoryNode && !hotDealsNode && !topProductsNode && !secondaryNode) return;
+    if (!secondaryNode) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          if (entry.target === categoryNode) setShowCategoryGrid(true);
-          if (entry.target === hotDealsNode) setShowHotDealsCards(true);
-          if (entry.target === topProductsNode) setShowTopProductsCards(true);
           if (entry.target === secondaryNode) setShowSecondarySections(true);
         }
       },
-      { rootMargin: '80px 0px' }
+      { rootMargin: '120px 0px' }
     );
 
-    if (categoryNode) observer.observe(categoryNode);
-    if (hotDealsNode) observer.observe(hotDealsNode);
-    if (topProductsNode) observer.observe(topProductsNode);
-    if (secondaryNode) observer.observe(secondaryNode);
-
+    observer.observe(secondaryNode);
     return () => observer.disconnect();
   }, []);
 
@@ -155,7 +108,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto">
-              {showSearch ? (
+              {isMounted ? (
                 <AutocompleteSearch className="rounded-full border-2 focus-within:border-primary shadow-lg bg-background px-2 py-1" />
               ) : (
                 <div className="h-12 rounded-full border-2 bg-background/80" aria-hidden="true" />
@@ -188,7 +141,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
             {/* Quick Stats - Real time from database */}
             <div className="max-w-3xl mx-auto min-h-[312px] md:min-h-[160px]">
-              {showStats ? <RealTimeStats /> : <div className="h-[312px] md:h-[160px]" aria-hidden="true" />}
+              {isMounted ? <RealTimeStats /> : <div className="h-[312px] md:h-[160px]" aria-hidden="true" />}
             </div>
           </div>
         </div>
@@ -196,7 +149,6 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
       {/* CATEGORIES SHOWCASE - Mega Menu with Images */}
       <section
-        ref={categorySectionRef}
         className="py-16 bg-background"
         style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 500px' }}
       >
@@ -210,11 +162,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {categories.length > 0 ? (
             <div className="space-y-8">
-              {showCategoryGrid ? (
-                <CategoryGrid categories={categories} />
-              ) : (
-                <div className="min-h-[360px]" aria-hidden="true" />
-              )}
+              <CategoryGrid categories={categories} />
             </div>
           ) : (
             <Card className="p-12 text-center">
@@ -228,7 +176,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* HOT DEALS SECTION */}
-      <section ref={hotDealsSectionRef} className="py-16">
+      <section className="py-16">
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -250,13 +198,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {visibleHotDeals.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {showHotDealsCards ? (
-                visibleHotDeals.map((deal, idx) => (
-                  <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
-                ))
-              ) : (
-                <div className="col-span-full min-h-[420px]" aria-hidden="true" />
-              )}
+              {visibleHotDeals.map((deal, idx) => (
+                <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
+              ))}
             </div>
           ) : (
             <Card className="p-12 text-center">
@@ -270,7 +214,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
       </section>
 
       {/* TOP PRODUCTS SECTION */}
-      <section ref={topProductsSectionRef} className="py-16 bg-card/50">
+      <section className="py-16 bg-card/50">
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -292,13 +236,9 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
 
           {visibleTopProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {showTopProductsCards ? (
-                visibleTopProducts.map((product) => (
-                  <HomeProductCard key={product.id} product={product} />
-                ))
-              ) : (
-                <div className="col-span-full min-h-[420px]" aria-hidden="true" />
-              )}
+              {visibleTopProducts.map((product) => (
+                <HomeProductCard key={product.id} product={product} />
+              ))}
             </div>
           ) : (
             <Card className="p-12 text-center">
