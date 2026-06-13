@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { AliExpressAutopilotControl } from '@/components/admin/aliexpress-autopilot-control';
+import { ScheduleManager } from '@/components/admin/schedule-manager';
 
 function toSafeText(value: unknown, fallback = ""): string {
   if (typeof value === "string") return value;
@@ -1034,6 +1035,10 @@ export default function M6ImportDashboard() {
               <Play className="w-4 h-4" />
               Autopilot UX
             </TabsTrigger>
+            <TabsTrigger value="schedule" className="gap-2">
+              <Clock className="w-4 h-4" />
+              Harmonogramy
+            </TabsTrigger>
           </TabsList>
 
           {/* TAB: Historia jobów */}
@@ -1123,6 +1128,15 @@ export default function M6ImportDashboard() {
               authToken={authToken}
               setAuthError={setAuthError}
               onActionDone={refreshJobs}
+            />
+          </TabsContent>
+
+          {/* TAB: Schedules */}
+          <TabsContent value="schedule">
+            <ScheduleManager
+              onConsoleLog={(message, type) => {
+                console.log(`[ScheduleManager] ${type}: ${message}`);
+              }}
             />
           </TabsContent>
         </Tabs>

@@ -66,9 +66,8 @@ const navStructure: (NavItem | NavGroup)[] = [
     title: 'Import i pipeline',
     icon: Rocket,
     items: [
-      { title: 'Harvester', href: '/admin/harvester', icon: Wrench },
-      { title: 'Presety harvestera', href: '/admin/harvester-presets', icon: Layers },
       { title: 'M6 import dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp },
+      { title: 'Presety harvestera', href: '/admin/harvester-presets', icon: Layers },
       { title: 'M6 pipeline visualizer', href: '/admin/m6-pipeline-visualizer', icon: Database },
       { title: 'Nadzór Typesense queue', href: '/admin/typesense-queue', icon: SearchCheck, badge: 'OPS', badgeVariant: 'destructive' },
     ],
