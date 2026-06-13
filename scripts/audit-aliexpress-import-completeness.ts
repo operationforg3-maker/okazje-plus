@@ -125,14 +125,16 @@ async function loadCandidates(db: ReturnType<typeof getFirestore>): Promise<Cand
 }
 
 async function main() {
-  const keyPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
-  if (!fs.existsSync(keyPath)) {
-    throw new Error('Brak serviceAccountKey.json');
-  }
-
-  const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
   if (!getApps().length) {
-    initializeApp({ credential: cert(serviceAccount) });
+    const keyPath = path.resolve(process.cwd(), 'serviceAccountKey.json');
+    if (fs.existsSync(keyPath)) {
+      const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
+      initializeApp({ credential: cert(serviceAccount) });
+    } else {
+      initializeApp({
+        projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'okazje-plus'
+      });
+    }
   }
 
   const db = getFirestore();

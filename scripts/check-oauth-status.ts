@@ -19,13 +19,20 @@ dotenv.config({ path: resolve(process.cwd(), '.env.local') });
 
 // Initialize Firebase Admin
 if (getApps().length === 0) {
-  const serviceAccount = JSON.parse(
-    readFileSync(resolve(process.cwd(), 'serviceAccountKey.json'), 'utf-8')
-  );
-  
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
+  const serviceAccountPath = resolve(process.cwd(), 'serviceAccountKey.json');
+  const fs = require('fs');
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = JSON.parse(
+      fs.readFileSync(serviceAccountPath, 'utf-8')
+    );
+    initializeApp({
+      credential: cert(serviceAccount),
+    });
+  } else {
+    initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'okazje-plus'
+    });
+  }
 }
 
 const db = getFirestore();
