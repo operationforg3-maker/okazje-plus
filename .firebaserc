@@ -1,5 +1,13 @@
 {
   "projects": {
     "default": "okazje-plus"
+  },
+  "targets": {},
+  "etags": {
+    "okazje-plus": {
+      "extensionInstances": {
+        "firestore-typesense-search": "a1f4a9115e418a8b936c0803e5f38d8f68d2f387f7ba7637d072cc8b5f2c9fc3"
+      }
+    }
   }
 }
