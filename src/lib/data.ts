@@ -1678,9 +1678,9 @@ export async function getAdminDashboardStats(token?: string) {
       growth: { deals: 0, products: 0, users: 0 },
       categories: { 
         total: data?.categories?.total ?? 0, 
-        main: data?.categories?.total ?? 0, // Assumption: all in 'categories' are main for now
-        sub: 0, 
-        subSub: 0 
+        main: data?.categories?.main ?? 0, 
+        sub: data?.categories?.sub ?? 0, 
+        subSub: data?.categories?.subSub ?? 0 
       },
       imports: { 
         running: data?.imports?.running ?? 0, 
