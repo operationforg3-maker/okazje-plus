@@ -230,6 +230,9 @@ export async function POST(request: NextRequest) {
       console.error(`[Harvester ${jobId}] Background job failed:`, err);
     });
 
+    // Give the background job 2 seconds of guaranteed CPU processing before returning
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
     // 8. Return job ID immediately (UI can poll for updates)
     return NextResponse.json({
       success: true,

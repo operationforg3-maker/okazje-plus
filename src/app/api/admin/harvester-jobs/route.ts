@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // If jobId provided, fetch single job
     if (jobId) {
-      const jobDoc = await adminDb.collection('harvester_jobs').doc(jobId).get();
+      let jobDoc = await adminDb.collection('harvester_jobs').doc(jobId).get();
       if (!jobDoc.exists) {
         return NextResponse.json(
           { success: false, error: 'Job not found' },
@@ -43,7 +43,29 @@ export async function GET(request: NextRequest) {
         );
       }
       
-      const job = { id: jobDoc.id, ...jobDoc.data() } as HarvesterJob;
+      let job = { id: jobDoc.id, ...jobDoc.data() } as HarvesterJob;
+
+      // Under CPU-throttled Cloud Run, hold the connection open for up to 10 seconds
+      // if the job is running. This keeps the container awake and allocates CPU cycles
+      // to let the background harvester promise run to completion.
+      if (job.status === 'running') {
+        const checkIntervalMs = 2000;
+        const maxWaitMs = 10000;
+        let elapsed = 0;
+        
+        while (job.status === 'running' && elapsed < maxWaitMs) {
+          await new Promise((resolve) => setTimeout(resolve, checkIntervalMs));
+          elapsed += checkIntervalMs;
+          
+          jobDoc = await adminDb.collection('harvester_jobs').doc(jobId).get();
+          if (jobDoc.exists) {
+            job = { id: jobDoc.id, ...jobDoc.data() } as HarvesterJob;
+          } else {
+            break;
+          }
+        }
+      }
+
       const lastUpdatedAtMs = Date.parse((job as any).lastUpdatedAt || '');
       const isStaleRunning =
         job.status === 'running' &&
