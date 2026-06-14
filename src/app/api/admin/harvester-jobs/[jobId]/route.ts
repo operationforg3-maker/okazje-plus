@@ -1,6 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerAuthSession, requireAdmin } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
+import { HarvesterJob } from '@/lib/types';
+
+const HARVESTER_STALE_MS = 15 * 60 * 1000;
+
+/**
+ * Get a specific harvester job from history with keep-awake polling
+ * GET /api/admin/harvester-jobs/{jobId}
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { jobId: string } }
+) {
+  try {
+    // Verify admin role
+    await requireAdmin();
+
+    const jobId = params.jobId;
+    let jobDoc = await adminDb.collection('harvester_jobs').doc(jobId).get();
+    if (!jobDoc.exists) {
+      return NextResponse.json(
+        { success: false, error: 'Job not found' },
+        { status: 404 }
+      );
+    }
+    
+    let job = { id: jobDoc.id, ...jobDoc.data() } as HarvesterJob;
+
+    // Under CPU-throttled Cloud Run, hold the connection open for up to 10 seconds
+    // if the job is running. This keeps the container awake and allocates CPU cycles
+    // to let the background harvester promise run to completion.
+    if (job.status === 'running') {
+      const checkIntervalMs = 2000;
+      const maxWaitMs = 10000;
+      let elapsed = 0;
+      
+      while (job.status === 'running' && elapsed < maxWaitMs) {
+        await new Promise((resolve) => setTimeout(resolve, checkIntervalMs));
+        elapsed += checkIntervalMs;
+        
+        jobDoc = await adminDb.collection('harvester_jobs').doc(jobId).get();
+        if (jobDoc.exists) {
+          job = { id: jobDoc.id, ...jobDoc.data() } as HarvesterJob;
+        } else {
+          break;
+        }
+      }
+    }
+
+    const lastUpdatedAtMs = Date.parse((job as any).lastUpdatedAt || '');
+    const isStaleRunning =
+      job.status === 'running' &&
+      Number.isFinite(lastUpdatedAtMs) &&
+      Date.now() - lastUpdatedAtMs > HARVESTER_STALE_MS;
+
+    return NextResponse.json({
+      success: true,
+      job,
+      diagnostics: {
+        isStaleRunning,
+        staleAfterMinutes: Math.round(HARVESTER_STALE_MS / 60000),
+      },
+    });
+  } catch (error: any) {
+    console.error('[GET /api/admin/harvester-jobs/[jobId]]', {
+      jobId: params.jobId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || 'Nie udało się pobrać zadania',
+      },
+      { status: 500 }
+    );
+  }
+}
 
 /**
  * Delete a specific harvester job from history

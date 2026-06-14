@@ -138,6 +138,7 @@ function AdminPage() {
       }
 
       const response = await fetch('/api/admin/health', {
+        cache: 'no-store',
         headers: {
           Authorization: `Bearer ${token}`,
         },

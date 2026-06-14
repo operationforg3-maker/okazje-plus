@@ -98,11 +98,33 @@ export async function GET(request: NextRequest) {
 
     // 4. Execute query (Admin SDK)
     const snapshot = await q.get();
-    const allDocs = snapshot.docs.map((doc) => ({
+    let allDocs = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...(doc.data() as any),
     } as HarvesterJob));
     
+    // Under CPU-throttled Cloud Run, hold the connection open if any job is running.
+    // This keeps the container awake so background harvester promises can execute.
+    let runningJob = allDocs.find((j) => j.status === 'running');
+    if (runningJob) {
+      const checkIntervalMs = 2000;
+      const maxWaitMs = 10000;
+      let elapsed = 0;
+      
+      while (runningJob && elapsed < maxWaitMs) {
+        await new Promise((resolve) => setTimeout(resolve, checkIntervalMs));
+        elapsed += checkIntervalMs;
+        
+        const freshSnapshot = await q.get();
+        allDocs = freshSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as any),
+        } as HarvesterJob));
+        
+        runningJob = allDocs.find((j) => j.status === 'running');
+      }
+    }
+
     // Sort in-memory to guarantee descending chronological order
     const sortedJobs = allDocs.sort((a, b) => {
       const aTime = new Date(a.startedAt || 0).getTime();

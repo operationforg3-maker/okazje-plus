@@ -76,6 +76,7 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
     const fetchLogs = async () => {
       try {
         const res = await fetch(`/api/admin/refiner-logs?jobId=${jobId}`, {
+          cache: 'no-store',
           headers: { Authorization: `Bearer ${authToken}` },
         });
         const data = await res.json();
@@ -100,6 +101,7 @@ function BulkRefinerPanel({ authToken }: { authToken: string | null }) {
         ? '/api/admin/refiner/bulk'
         : `/api/admin/refiner/bulk?status=${status}`;
       const res = await fetch(url, {
+        cache: 'no-store',
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await res.json();
@@ -612,6 +614,7 @@ export default function M6ImportDashboard() {
     try {
       // Fetch Harvester Jobs
       const resHarvester = await fetch("/api/admin/harvester-jobs", {
+        cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -632,6 +635,7 @@ export default function M6ImportDashboard() {
 
       // Fetch Refiner Jobs
       const resRefiner = await fetch("/api/admin/refiner-jobs", {
+        cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
       });
       
@@ -644,6 +648,7 @@ export default function M6ImportDashboard() {
 
       // Fetch Pending Counts (Moderation)
       const resPending = await fetch("/api/admin/pending-counts", {
+        cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (resPending.ok) {
@@ -1469,6 +1474,7 @@ function HarvesterWizard({
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse = await fetch(`/api/admin/harvester-jobs?jobId=${jobId}`, {
+            cache: 'no-store',
             headers: { Authorization: `Bearer ${authToken}` },
           });
 
@@ -1489,6 +1495,7 @@ function HarvesterWizard({
             pollAttempts += 1;
 
             const listResponse = await fetch('/api/admin/harvester-jobs?limit=50', {
+              cache: 'no-store',
               headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -1549,6 +1556,7 @@ function HarvesterWizard({
             if (job.status === 'completed') {
               try {
                 const verifyRes = await fetch(`/api/admin/harvester/verify?jobId=${jobId}`, {
+                  cache: 'no-store',
                   headers: { Authorization: `Bearer ${authToken}` },
                 });
                 if (verifyRes.ok) {
@@ -1634,6 +1642,7 @@ function HarvesterWizard({
       const pollInterval = setInterval(async () => {
         try {
           const statusResponse = await fetch(`/api/admin/harvester-jobs?jobId=${jobId}`, {
+            cache: 'no-store',
             headers: { Authorization: `Bearer ${authToken}` },
           });
 
@@ -1654,6 +1663,7 @@ function HarvesterWizard({
             pollAttempts += 1;
 
             const listResponse = await fetch('/api/admin/harvester-jobs?limit=50', {
+              cache: 'no-store',
               headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -1714,6 +1724,7 @@ function HarvesterWizard({
             if (job.status === 'completed') {
               try {
                 const verifyRes = await fetch(`/api/admin/harvester/verify?jobId=${jobId}`, {
+                  cache: 'no-store',
                   headers: { Authorization: `Bearer ${authToken}` },
                 });
                 if (verifyRes.ok) {
