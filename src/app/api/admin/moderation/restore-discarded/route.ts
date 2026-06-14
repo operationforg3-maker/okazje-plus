@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
         // Fetch discarded item to get original data
         const discardedDoc = await adminDb.collection('import_discarded').doc(restoreItem.id).get();
-        if (!discardedDoc.exists()) {
+        if (!discardedDoc.exists) {
           perItemResults.push({
             id: restoreItem.id,
             success: false,
@@ -91,25 +91,143 @@ export async function POST(req: NextRequest) {
         const now = new Date().toISOString();
 
         if (restoreItem.type === 'product') {
-          // Create ProductCore from discarded data
+          // Parse category slugs from the category path
+          const catParts = String(discardedData.categoryPath || discardedData.query || '')
+            .split('/')
+            .map((p) => p.trim())
+            .filter(Boolean);
+          
+          const mainCategorySlug = catParts[0] || 'uncategorized';
+          const subCategorySlug = catParts[1] || 'uncategorized';
+          const subSubCategorySlug = catParts[2] || undefined;
+
+          // Localize title and description (M6 schema requirement)
+          const localizedTitle = {
+            pl: discardedData.title || 'Przywrócony produkt',
+            en: discardedData.title || 'Restored Product',
+            de: discardedData.title || 'Restored Product',
+          };
+          const localizedDesc = {
+            pl: discardedData.description || '',
+            en: discardedData.description || '',
+            de: discardedData.description || '',
+          };
+
+          const priceAmount = Number(discardedData.price || 0);
+
+          // 1. Create a ProductCore
+          const productRef = adminDb.collection('product_cores').doc();
+          const productId = productRef.id;
+
           const productData = {
-            title: discardedData.title || 'Restored Product',
-            imageUrl: discardedData.imageUrl || '',
-            description: discardedData.description || {},
+            id: productId,
+            identityHash: discardedData.identityHash || `restored_${restoreItem.id}_${Date.now()}`,
+            title: localizedTitle,
+            shortDescription: localizedTitle,
+            fullDescription: localizedDesc,
             specs: discardedData.specs || {},
+            coreSpecs: discardedData.specs || {},
+            rawSpecs: discardedData.specs || {},
+            mainCategorySlug,
+            subCategorySlug,
+            subSubCategorySlug,
+            imageUrl: discardedData.imageUrl || '',
+            images: discardedData.imageUrl ? [discardedData.imageUrl] : [],
+            reviewsSummary: {
+              pl: 'Brak podsumowania opinii (ręcznie przywrócony)',
+              en: 'No reviews summary (manually restored)',
+              de: 'Keine Bewertung (manuell wiederhergestellt)',
+            },
+            rating: {
+              score: 4.5,
+              count: 1,
+              provider: discardedData.source === 'aliexpress' ? 'aliexpress' : 'mixed',
+            },
+            bestPrice: {
+              amount: priceAmount,
+              currency: discardedData.currency || 'PLN',
+            },
+            bestDealId: '', // Will link to the deal below
+            bestTotalPrice: priceAmount,
+            linkedDealIds: [] as string[],
+            searchTags: Array.from(new Set(
+              `${discardedData.title || ''} ${mainCategorySlug} ${subCategorySlug}`
+                .toLowerCase()
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 15)
+            )),
             status: targetStatus,
             createdAt: discardedData.createdAt || now,
             updatedAt: now,
-            source: discardedData.source || 'manual',
-            sourceLinks: discardedData.sourceUrl ? { [discardedData.source || 'other']: discardedData.sourceUrl } : {},
-            qualityScore: 50, // Manual restore gets neutral score
-            ratings: { score: 0, count: 0 },
-            bestPrice: { amount: discardedData.price || 0, currency: 'PLN' },
-            searchTags: [],
+            metadata: {
+              source: discardedData.source || 'manual',
+              originalId: discardedData.sourceProductId || null,
+              restoredFromDiscarded: true,
+              restoredAt: now,
+            }
           };
 
-          const productRef = await adminDb.collection('product_cores').add(productData);
-          cacheInvalidations.push(productRef.id);
+          await productRef.set(productData);
+
+          // 2. Create the associated Deal (Offer) document
+          const dealRef = adminDb.collection('deals').doc();
+          const dealId = dealRef.id;
+
+          const dealData = {
+            id: dealId,
+            productId: productId,
+            productCoreId: productId,
+            mainCategorySlug,
+            subCategorySlug,
+            subSubCategorySlug,
+            image: discardedData.imageUrl || '',
+            images: discardedData.imageUrl ? [discardedData.imageUrl] : [],
+            price: {
+              amount: priceAmount,
+              currency: discardedData.currency || 'PLN',
+            },
+            originalPrice: discardedData.originalPrice || undefined,
+            shipping: {
+              cost: 0,
+              timeDays: 7,
+              method: 'Standard',
+            },
+            totalPrice: priceAmount,
+            source: discardedData.source || 'aliexpress',
+            affiliateLink: discardedData.sourceUrl || '',
+            affiliateUrl: discardedData.sourceUrl || '',
+            dealUrl: discardedData.sourceUrl || '',
+            merchantName: discardedData.merchantName || 'AliExpress',
+            merchantRating: 4.5,
+            title: localizedTitle,
+            description: localizedDesc,
+            stockStatus: 'in_stock',
+            isActive: true,
+            status: 'poczekalnia', // Force to moderation queue
+            voteCount: 0,
+            temperature: 0,
+            commentsCount: 0,
+            priceHistory: [
+              {
+                date: now.substring(0, 10),
+                price: priceAmount,
+                currency: discardedData.currency || 'PLN',
+              }
+            ],
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          await dealRef.set(dealData);
+
+          // 3. Link the deal back to the product core
+          await productRef.update({
+            linkedDealIds: [dealId],
+            bestDealId: dealId,
+          });
+
+          cacheInvalidations.push(productId);
 
           perItemResults.push({
             id: restoreItem.id,
@@ -118,37 +236,64 @@ export async function POST(req: NextRequest) {
           processedCount++;
         } else if (restoreItem.type === 'deal') {
           // Create Deal from discarded data
+          const localizedTitle = {
+            pl: discardedData.title || 'Przywrócona oferta',
+            en: discardedData.title || 'Restored Deal',
+            de: discardedData.title || 'Restored Deal',
+          };
+          const localizedDesc = {
+            pl: discardedData.description || '',
+            en: discardedData.description || '',
+            de: discardedData.description || '',
+          };
+
+          const priceAmount = Number(discardedData.price || 0);
+
+          const dealRef = adminDb.collection('deals').doc();
+          const dealId = dealRef.id;
+
           const dealData = {
-            title: discardedData.title || 'Restored Deal',
-            description: discardedData.description || '',
-            imageUrl: discardedData.imageUrl || '',
-            price: discardedData.price || 0,
+            id: dealId,
+            productId: discardedData.productId || 'restored_orphan_deal',
+            productCoreId: discardedData.productId || 'restored_orphan_deal',
+            image: discardedData.imageUrl || '',
+            images: discardedData.imageUrl ? [discardedData.imageUrl] : [],
+            price: {
+              amount: priceAmount,
+              currency: discardedData.currency || 'PLN',
+            },
             originalPrice: discardedData.originalPrice,
-            currency: discardedData.currency || 'PLN',
-            shippingCost: discardedData.shippingCost || 0,
-            totalPrice: (discardedData.price || 0) + (discardedData.shippingCost || 0),
+            shipping: {
+              cost: Number(discardedData.shippingCost || 0),
+              timeDays: 7,
+            },
+            totalPrice: priceAmount + Number(discardedData.shippingCost || 0),
             source: discardedData.source || 'manual',
-            sourceId: discardedData.sourceProductId || '',
-            sourceUrl: discardedData.sourceUrl || '',
+            affiliateLink: discardedData.sourceUrl || '',
+            affiliateUrl: discardedData.sourceUrl || '',
+            dealUrl: discardedData.sourceUrl || '',
             merchantName: discardedData.merchantName || 'Unknown',
             merchantRating: discardedData.merchantRating || 0,
             inStock: true,
             status: targetStatus,
-            votes: 0,
+            title: localizedTitle,
+            description: localizedDesc,
+            voteCount: 0,
             temperature: 0,
-            comments: 0,
+            commentsCount: 0,
+            isActive: true,
             createdAt: discardedData.createdAt || now,
             updatedAt: now,
             priceHistory: [
               {
-                price: discardedData.price || 0,
-                date: now,
-                source: 'import',
+                price: priceAmount,
+                date: now.substring(0, 10),
+                currency: discardedData.currency || 'PLN',
               },
             ],
           };
 
-          await adminDb.collection('deals').add(dealData);
+          await dealRef.set(dealData);
 
           perItemResults.push({
             id: restoreItem.id,
