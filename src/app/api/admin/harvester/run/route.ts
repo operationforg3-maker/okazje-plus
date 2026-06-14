@@ -199,18 +199,22 @@ export async function POST(request: NextRequest) {
     const initialJob = {
       id: jobId,
       status: 'running' as const,
-      source,
+      source: source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'manual',
       query: effectiveQuery,
       maxResults: max,
       productsFound: 0,
       productsCreated: 0,
       dealsCreated: 0,
+      dealsLinked: 0,
       duplicatesSkipped: 0,
       errors: [],
       startedAt: new Date().toISOString(),
       lastUpdatedAt: new Date().toISOString(),
       logs: [],
     };
+
+    // 6b. Save initial job record to Firestore synchronously to prevent CPU throttling from losing it
+    await adminDb.collection('harvester_jobs').doc(jobId).set(initialJob);
 
     // 7. Run harvest in background (don't await - async execution)
     harvester.harvestProducts(

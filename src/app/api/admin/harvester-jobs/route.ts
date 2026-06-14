@@ -62,10 +62,17 @@ export async function GET(request: NextRequest) {
 
     // 3. Build Firestore query (Admin SDK)
     let q: FirebaseFirestore.Query = adminDb.collection('harvester_jobs');
-    if (statusFilter && ['running', 'completed', 'failed', 'paused'].includes(statusFilter)) {
-      q = q.where('status', '==', statusFilter);
+    const hasStatusFilter = statusFilter && ['running', 'completed', 'failed', 'paused'].includes(statusFilter);
+
+    if (hasStatusFilter) {
+      // With status filter: Query filtered results up to 200 documents, then sort in memory
+      // to avoid requiring a composite index in Firestore for status + startedAt.
+      q = q.where('status', '==', statusFilter).limit(200);
+    } else {
+      // Without status filter: Order by startedAt descending directly in Firestore
+      // utilizing automatic single-field index.
+      q = q.orderBy('startedAt', 'desc').limit(limitParam);
     }
-    q = q.limit(limitParam);
 
     // 4. Execute query (Admin SDK)
     const snapshot = await q.get();
@@ -74,12 +81,15 @@ export async function GET(request: NextRequest) {
       ...(doc.data() as any),
     } as HarvesterJob));
     
-    // Sort in-memory (avoid Firestore composite index requirement)
-    const jobs = allDocs.sort((a, b) => {
+    // Sort in-memory to guarantee descending chronological order
+    const sortedJobs = allDocs.sort((a, b) => {
       const aTime = new Date(a.startedAt || 0).getTime();
       const bTime = new Date(b.startedAt || 0).getTime();
       return bTime - aTime;
     });
+
+    // Slice to the requested limit size (important when statusFilter retrieved 200 docs)
+    const jobs = hasStatusFilter ? sortedJobs.slice(0, limitParam) : sortedJobs;
 
     // 5. Return results
     return NextResponse.json({
