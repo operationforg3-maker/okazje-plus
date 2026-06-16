@@ -14,7 +14,7 @@ const HARVESTER_STALE_MS = 15 * 60 * 1000;
  * {
  *   source: 'convertiser' | 'aliexpress' | 'amazon' | 'allegro',
  *   query: string,
- *   maxResults: number (10-200)
+ *   maxResults: number (10-1000)
  *   mode?: 'single' | 'category-tree'
  *   rootCategorySlug?: string // optional: limit traversal to one main category
  *   categories?: string[] // optional: explicit category paths to iterate
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const max = Math.max(10, Math.min(200, maxResults || 50));
+    const max = Math.max(10, Math.min(1000, maxResults || 50));
 
     // 4. Resolve categories when running full tree mode
     // CONVERTISER: Always uses simple query mode - moderator categorizes manually

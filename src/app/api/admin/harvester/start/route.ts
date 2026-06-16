@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const limit = Math.min(Math.max(parseInt(maxResults) || 20, 1), 100);
+    const limit = Math.min(Math.max(parseInt(maxResults) || 20, 1), 1000);
 
     // Create harvester and run
     const jobId = uuid();

@@ -145,6 +145,26 @@ export class AIRefiner {
     let productsFailed = 0;
     const BATCH_SIZE = 10; // Process 10 products in parallel
 
+    // Initialize refiner job record in Firestore synchronously to prevent CPU throttling
+    const initialJob: RefinerJob = {
+      id: this.jobId,
+      status: 'running',
+      productIds,
+      refinationType,
+      productsProcessed: 0,
+      productsSuccessful: 0,
+      productsFailed: 0,
+      startedAt: jobStartTime,
+      completedAt: '',
+      lastUpdatedAt: jobStartTime,
+      logs: this.logs,
+    };
+    try {
+      await adminDb.collection('refiner_jobs').doc(this.jobId).set(initialJob);
+    } catch (dbErr) {
+      console.error(`Failed to write initial refiner job record for ${this.jobId}:`, dbErr);
+    }
+
     try {
       console.log(`Starting AI refinement job for ${productIds.length} products (dryRun=${dryRun}, batchSize=${BATCH_SIZE})`);
 

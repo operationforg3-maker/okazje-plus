@@ -2016,12 +2016,12 @@ function HarvesterWizard({
                   value={autoAliMaxResults}
                   onChange={(e) => setAutoAliMaxResults(parseInt(e.target.value) || 200)}
                   min={20}
-                  max={200}
+                  max={1000}
                   step={10}
                   disabled={autoAliIsImporting}
                   className="w-full"
                 />
-                <p className="text-xs text-slate-500">Maksymalna liczba produktów (20-200)</p>
+                <p className="text-xs text-slate-500">Maksymalna liczba produktów (20-1000)</p>
               </div>
 
               {autoAliProgress.status && (
@@ -2157,7 +2157,7 @@ function HarvesterWizard({
           <input
             type="range"
             min="10"
-            max="200"
+            max="1000"
             value={maxResults}
             onChange={(e) => setMaxResults(parseInt(e.target.value))}
             className="w-full"

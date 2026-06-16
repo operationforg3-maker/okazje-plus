@@ -2575,8 +2575,7 @@ export class SmartHarvester {
         }
       }
 
-      // Step 3: Update job record
-      const jobEndTime = new Date().toISOString();
+      // Step 3: Update job record info, but status remains 'running' while refiners execute
       const finalStatus: HarvesterJob['status'] =
         errors.length > 0 && productsCreated === 0 && dealsCreated === 0
           ? 'failed'
@@ -2584,7 +2583,7 @@ export class SmartHarvester {
 
       const job: HarvesterJob = {
         id: this.jobId,
-        status: finalStatus,
+        status: 'running', // Keep status 'running' during refinement to prevent CPU throttling
         source,
         query: queries.join(', '),
         maxResults,
@@ -2603,47 +2602,61 @@ export class SmartHarvester {
           perCategory: perCategoryTelemetry,
         },
         startedAt: jobStartTime,
-        completedAt: jobEndTime,
-        lastUpdatedAt: jobEndTime,
+        completedAt: '', // not completed yet
+        lastUpdatedAt: new Date().toISOString(),
         logs: this.logs,
       };
 
-      await this.updateJobRecord(job);
-
       this.addLog(
         'info',
-        `Harvest completed: Created ${productsCreated} products, ${dealsCreated} deals (${dealsLinked} linked to existing products)`
+        `Harvest stages complete: Created ${productsCreated} products, ${dealsCreated} deals. Starting refiners...`
       );
+      await this.updateJobRecord(job);
 
-      // Trigger asynchronous Deal Refiner for freshly created deals
+      // Trigger Deal Refiner for freshly created deals (synchronously)
       if (dealsToRefine.length > 0) {
         const finalDealRefinerStartedAt = Date.now();
-        this.addLog('info', `Uruchamiam Deal Refiner dla ${dealsToRefine.length} ofert (async)`);
+        this.addLog('info', `Uruchamiam Deal Refiner dla ${dealsToRefine.length} ofert`);
+        await this.updateJobRecord({ ...job, logs: this.logs });
         try {
           const result = await startDealRefinerJob(dealsToRefine);
-          this.addLog('info', `Deal Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+          this.addLog('info', `Deal Refiner zakończony: ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
         } catch (err) {
           this.addLog('error', 'Deal Refiner nie powiódł się', err);
         } finally {
           stageTotals.finalDealRefiner += Date.now() - finalDealRefinerStartedAt;
+          await this.updateJobRecord({ ...job, logs: this.logs });
         }
       }
 
+      // Trigger AI Refiner for freshly created products (synchronously)
       if (productsToRefine.length > 0) {
         const finalProductRefinerStartedAt = Date.now();
         const refinerJobId = `refiner_${this.jobId}`;
-        this.addLog('info', `Uruchamiam AI Refiner dla ${productsToRefine.length} produktów (async)`);
+        this.addLog('info', `Uruchamiam AI Refiner dla ${productsToRefine.length} produktów`);
+        await this.updateJobRecord({ ...job, logs: this.logs });
         try {
           const productRefiner = new AIRefiner(refinerJobId);
           const result = await productRefiner.refineProducts(productsToRefine, 'full_enrichment');
-          this.addLog('info', `AI Refiner zakończony (async): ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
+          this.addLog('info', `AI Refiner zakończony: ${result.productsSuccessful} OK, ${result.productsFailed} błędów`);
         } catch (err) {
           this.addLog('error', 'AI Refiner nie powiódł się', err);
         } finally {
           stageTotals.finalProductRefiner += Date.now() - finalProductRefinerStartedAt;
+          await this.updateJobRecord({ ...job, logs: this.logs });
         }
       }
 
+      // Now set final status and mark as completed
+      const jobEndTime = new Date().toISOString();
+      job.status = finalStatus;
+      job.completedAt = jobEndTime;
+      job.lastUpdatedAt = jobEndTime;
+      job.telemetry.totalDurationMs = Date.now() - Date.parse(jobStartTime);
+      job.telemetry.stageTotalsMs = stageTotals;
+      job.logs = this.logs;
+
+      await this.updateJobRecord(job);
       return job;
     } catch (err) {
       this.addLog('error', 'Harvest job failed', err);
@@ -2849,11 +2862,11 @@ export class SmartHarvester {
       this.addLog('info', `Found ${response.products.length} products from AliExpress. Fetching deep details for top items...`);
       
       // DEEP FETCH: Get detailed info (HTML descriptions) for top items
-      // Keep small batch to avoid long tail latency and rate limits
-      const productsToEnrich = rankedProducts.slice(0, 10);
+      // Keep batch size bounded by maxResults and a safe upper limit to avoid rate limits
+      const productsToEnrich = rankedProducts.slice(0, Math.min(maxResults, 100));
       
       const detailedProducts: any[] = [];
-      const detailDelayMs = 1200;
+      const detailDelayMs = 800;
 
       for (const p of productsToEnrich) {
         try {
