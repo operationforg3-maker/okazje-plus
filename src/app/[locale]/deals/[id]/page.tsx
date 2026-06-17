@@ -209,8 +209,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   if (!data) {
     return {
-      title: 'Okazja nie znaleziona',
+      title: 'Okazja nie znaleziona | Okazje Plus',
       description: 'Szukana okazja nie istnieje w naszej bazie.',
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
   

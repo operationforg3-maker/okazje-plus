@@ -194,8 +194,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   
   if (!data) {
     return {
-      title: 'Produkt nie znaleziony',
+      title: 'Produkt nie znaleziony | Okazje Plus',
       description: 'Szukany produkt nie istnieje w naszej bazie.',
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
   
