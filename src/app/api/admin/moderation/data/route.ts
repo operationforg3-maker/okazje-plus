@@ -8,7 +8,11 @@ export const dynamic = 'force-dynamic';
 const parseStatuses = (value: string | null, fallback: string[]) => {
   if (!value) return fallback;
   if (value === 'all') return fallback;
-  return value.split(',').map(s => s.trim()).filter(Boolean);
+  const list = value.split(',').map(s => s.trim()).filter(Boolean);
+  if (list.includes('pending') && !list.includes('poczekalnia')) {
+    list.push('poczekalnia');
+  }
+  return list;
 };
 
 const toMillis = (value: any): number => {
@@ -31,7 +35,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const limit = Math.min(200, parseInt(searchParams.get('limit') || '200', 10));
 
-    const dealStatuses = parseStatuses(searchParams.get('dealStatuses'), ['pending', 'draft']);
+    const dealStatuses = parseStatuses(searchParams.get('dealStatuses'), ['pending', 'poczekalnia', 'draft']);
     const productStatuses = parseStatuses(searchParams.get('productStatuses'), ['pending_approval', 'draft']);
     const includeRecent = searchParams.get('includeRecent') !== '0';
 

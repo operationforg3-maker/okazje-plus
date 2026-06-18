@@ -5,6 +5,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { startRefinerJob } from '@/lib/automation/refiner';
 import { startDealRefinerJob } from '@/lib/automation/deal-refiner';
 import { requestDealIndexing } from '@/lib/google-indexing';
+import { recalculateBestPrices } from '@/lib/automation/best-price';
 
 interface ModerationItem {
   id: string;
@@ -196,55 +197,137 @@ export async function POST(req: NextRequest) {
       await batch.commit();
     }
 
-    // ============ PHASE 2: DEAL↔ProductCore SYNCHRONIZATION (ATOMIC) ============
-    // When we approve deals, automatically approve their ProductCores if in pending state
+    // ============ PHASE 2: DEAL↔ProductCore SYNCHRONIZATION ============
+    const chunks = <T>(arr: T[], size: number): T[][] => 
+      Array.from({ length: Math.ceil(arr.length / size) }, (_, i) => arr.slice(i * size, (i + 1) * size));
+
+    const productsToRecalculate = new Set<string>();
+    
+    // Add explicitly moderated products to recalculation set
+    productIds.forEach(id => productsToRecalculate.add(id));
+
+    // Phase 2A: Sync Deal -> ProductCore (when approving deals, auto-approve their ProductCores)
     if (action === 'approve' && dealIds.length > 0) {
-      const dealsSnapshot = await adminDb
-        .collection('deals')
-        .where('__name__', 'in', dealIds.slice(0, 30)) // Firestore limit: max 30 in clause
-        .get();
+      const dealIdChunks = chunks(dealIds, 30);
+      for (const chunk of dealIdChunks) {
+        const dealsSnapshot = await adminDb
+          .collection('deals')
+          .where('__name__', 'in', chunk)
+          .get();
 
-      if (!dealsSnapshot.empty) {
-        const dealsByProductId: Record<string, any> = {};
-
-        for (const dealDoc of dealsSnapshot.docs) {
-          const dealData = dealDoc.data() as any;
-          const productCoreId = dealData?.productCoreId || dealData?.productId;
-          
+        const productCoreIdsToApprove = new Set<string>();
+        for (const doc of dealsSnapshot.docs) {
+          const dealData = doc.data();
+          const productCoreId = dealData.productCoreId || dealData.productId;
           if (productCoreId) {
-            if (!dealsByProductId[productCoreId]) {
-              dealsByProductId[productCoreId] = [];
-            }
-            dealsByProductId[productCoreId].push(dealData);
+            productCoreIdsToApprove.add(String(productCoreId));
+            productsToRecalculate.add(String(productCoreId));
           }
         }
 
-        // Fetch ProductCores and update if in pending state
-        const syncBatch = adminDb.batch();
-        const productCoreIds = Object.keys(dealsByProductId);
+        if (productCoreIdsToApprove.size > 0) {
+          const syncBatch = adminDb.batch();
+          const productCoreIdsList = Array.from(productCoreIdsToApprove);
+          const productCoreChunks = chunks(productCoreIdsList, 30);
 
-        for (let i = 0; i < productCoreIds.length; i += BATCH_SIZE) {
-          const productBatchIds = productCoreIds.slice(i, i + BATCH_SIZE);
-          const productsSnapshot = await adminDb
-            .collection('product_cores')
-            .where('__name__', 'in', productBatchIds)
-            .get();
+          for (const pChunk of productCoreChunks) {
+            const productsSnapshot = await adminDb
+              .collection('product_cores')
+              .where('__name__', 'in', pChunk)
+              .get();
 
-          for (const productDoc of productsSnapshot.docs) {
-            const productStatus = productDoc.data()?.status;
-            if (productStatus === 'pending_approval' || productStatus === 'draft') {
-              syncBatch.update(productDoc.ref, {
-                status: 'approved',
-                approvedAt: new Date().toISOString(),
-                updatedAt: ts,
-              });
+            for (const productDoc of productsSnapshot.docs) {
+              const productStatus = productDoc.data()?.status;
+              if (productStatus === 'pending_approval' || productStatus === 'draft') {
+                syncBatch.update(productDoc.ref, {
+                  status: 'approved',
+                  approvedAt: new Date().toISOString(),
+                  updatedAt: ts,
+                });
+              }
+            }
+          }
+          await syncBatch.commit();
+        }
+      }
+    }
+
+    // If rejecting deals, we still want to recalculate bestPrice for their products
+    if (action === 'reject' && dealIds.length > 0) {
+      const dealIdChunks = chunks(dealIds, 30);
+      for (const chunk of dealIdChunks) {
+        const dealsSnapshot = await adminDb
+          .collection('deals')
+          .where('__name__', 'in', chunk)
+          .get();
+
+        for (const doc of dealsSnapshot.docs) {
+          const dealData = doc.data();
+          const productCoreId = dealData.productCoreId || dealData.productId;
+          if (productCoreId) {
+            productsToRecalculate.add(String(productCoreId));
+          }
+        }
+      }
+    }
+
+    // Phase 2B: Sync ProductCore -> Deal (when approving/rejecting products, sync to their deals)
+    if (productIds.length > 0) {
+      const productIdChunks = chunks(productIds, 30);
+      for (const chunk of productIdChunks) {
+        const dealsSnapshot = await adminDb
+          .collection('deals')
+          .where('productId', 'in', chunk)
+          .get();
+
+        if (!dealsSnapshot.empty) {
+          const syncBatch = adminDb.batch();
+          let batchOps = 0;
+
+          for (const dealDoc of dealsSnapshot.docs) {
+            const dealData = dealDoc.data();
+            const currentStatus = dealData.status;
+
+            if (action === 'approve') {
+              if (['pending', 'draft', 'poczekalnia'].includes(currentStatus)) {
+                syncBatch.update(dealDoc.ref, {
+                  status: 'approved',
+                  approvedAt: new Date().toISOString(),
+                  promotedAt: new Date().toISOString(),
+                  updatedAt: ts,
+                });
+                batchOps++;
+              }
+            } else if (action === 'reject') {
+              if (currentStatus !== 'rejected') {
+                syncBatch.update(dealDoc.ref, {
+                  status: 'rejected',
+                  rejectedAt: new Date().toISOString(),
+                  updatedAt: ts,
+                });
+                batchOps++;
+              }
+            }
+
+            if (batchOps >= 400) {
+              await syncBatch.commit();
+              batchOps = 0;
             }
           }
 
-          if (i + BATCH_SIZE >= productCoreIds.length) {
+          if (batchOps > 0) {
             await syncBatch.commit();
           }
         }
+      }
+    }
+
+    // Phase 2C: Recalculate Best Prices
+    if (productsToRecalculate.size > 0) {
+      try {
+        await recalculateBestPrices(Array.from(productsToRecalculate));
+      } catch (bestPriceErr) {
+        console.error('[bulk moderation] Failed to recalculate best prices:', bestPriceErr);
       }
     }
 

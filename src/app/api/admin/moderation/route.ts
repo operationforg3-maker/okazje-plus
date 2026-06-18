@@ -3,6 +3,7 @@ import { requestDealIndexing } from "@/lib/google-indexing";
 import { adminDb } from "@/lib/firebase-admin";
 import { requireAdmin } from "@/lib/auth-server";
 import { FieldValue } from "firebase-admin/firestore";
+import { recalculateBestPrices } from "@/lib/automation/best-price";
 
 /**
  * Single item moderation endpoint
@@ -74,6 +75,17 @@ export async function POST(request: NextRequest) {
       itemUpdatePayload.rejectedAt = new Date().toISOString();
     }
 
+    let productIdToRecalculate: string | null = null;
+    if (itemType === 'product') {
+      productIdToRecalculate = itemId;
+    } else if (itemType === 'deal') {
+      const dealData = beforeSnap.data() as any;
+      const productCoreId = dealData?.productCoreId || dealData?.productId;
+      if (productCoreId) {
+        productIdToRecalculate = String(productCoreId);
+      }
+    }
+
     // Use transaction for atomic Deal↔ProductCore update
     await adminDb.runTransaction(async (transaction) => {
       // Update the item
@@ -100,7 +112,46 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+
+      // If approving/rejecting a product, sync status to all associated deals
+      if (itemType === 'product') {
+        const productDealsSnap = await adminDb.collection('deals')
+          .where('productId', '==', itemId)
+          .get();
+
+        for (const dealDoc of productDealsSnap.docs) {
+          const dealData = dealDoc.data();
+          const currentStatus = dealData.status;
+
+          if (action === 'approve') {
+            if (['pending', 'draft', 'poczekalnia'].includes(currentStatus)) {
+              transaction.update(dealDoc.ref, {
+                status: 'approved',
+                approvedAt: new Date().toISOString(),
+                promotedAt: new Date().toISOString(),
+                updatedAt: ts,
+              });
+            }
+          } else if (action === 'reject') {
+            if (currentStatus !== 'rejected') {
+              transaction.update(dealDoc.ref, {
+                status: 'rejected',
+                rejectedAt: new Date().toISOString(),
+                updatedAt: ts,
+              });
+            }
+          }
+        }
+      }
     });
+
+    if (productIdToRecalculate) {
+      try {
+        await recalculateBestPrices([productIdToRecalculate]);
+      } catch (bestPriceErr) {
+        console.error(`[Moderation] Warning: failed to recalculate best price for product ${productIdToRecalculate}:`, bestPriceErr);
+      }
+    }
 
     // ============ LOGGING (outside transaction) ============
     try {

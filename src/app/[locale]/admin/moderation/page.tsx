@@ -335,7 +335,7 @@ function ModerationPage() {
       const dealStatuses = dealStatusFilter === 'all' 
         ? undefined 
         : dealStatusFilter === 'pending' 
-        ? ['pending', 'draft'] 
+        ? ['pending', 'poczekalnia', 'draft'] 
         : [dealStatusFilter];
       
       const productStatuses = productStatusFilter === 'all'
