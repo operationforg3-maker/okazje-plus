@@ -7,7 +7,7 @@
 
 'use server';
 
-import { gemini20Flash } from '@genkit-ai/vertexai';
+import { gemini15Flash } from '@genkit-ai/vertexai';
 import { ai } from '../genkit';
 import { z } from 'zod';
 import { logger } from '@/lib/logging';
@@ -123,7 +123,7 @@ Return JSON ONLY in this format:
 }`;
 
   const response = await ai.generate({
-    model: gemini20Flash,
+    model: gemini15Flash,
     prompt,
     config: { temperature: 0.0, topK: 1 },
   });
@@ -198,7 +198,7 @@ IMPORTANT: You MUST return a valid JSON response with the structure:
 }`;
 
       const response = await ai.generate({
-        model: gemini20Flash,
+        model: gemini15Flash,
         prompt,
         config: {
           temperature: 0.3,

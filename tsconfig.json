@@ -45,6 +45,7 @@
     "okazje-plus",
     "src/legacy",
     "**/*.test.ts",
-    "src/lib/__tests__"
+    "src/lib/__tests__",
+    "scratch"
   ]
 }

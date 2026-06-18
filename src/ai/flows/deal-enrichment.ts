@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { gemini20Flash } from '@genkit-ai/vertexai';
+import { gemini15Flash } from '@genkit-ai/vertexai';
 import { ai } from '../genkit';
 import { logger } from '@/lib/logging';
 import { parseJsonFromResponse } from '@/lib/vertex';
@@ -137,7 +137,7 @@ Return STRICTLY valid JSON only — no markdown fences, no extra keys:
 }`;
 
   const response = await ai.generate({
-    model: gemini20Flash,
+    model: gemini15Flash,
     prompt,
     config: { temperature: 0.4, maxOutputTokens: 2000 },
   });

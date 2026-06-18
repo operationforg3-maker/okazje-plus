@@ -6,7 +6,7 @@
  * - Safety & moderation
  */
 
-import { gemini20Flash } from "@genkit-ai/vertexai";
+import { gemini15Flash } from "@genkit-ai/vertexai";
 import { ai } from "../genkit";
 import { logger } from "@/lib/logging";
 import { parseJsonFromResponse, moderateText } from "@/lib/vertex";
@@ -130,7 +130,7 @@ Return JSON:
 }`;
 
       const response = await ai.generate({
-        model: gemini20Flash,
+        model: gemini15Flash,
         prompt,
         config: { temperature: 0.4, maxOutputTokens: 500 },
       });
@@ -182,7 +182,7 @@ Guidelines:
 Return as JSON: { "seoTitle": "...", "seoDescription": "...", "features": ["...", "..."] }`;
 
       const response = await ai.generate({
-        model: gemini20Flash,
+        model: gemini15Flash,
         prompt,
         config: { temperature: 0.5, maxOutputTokens: 1000 },
       });
@@ -220,26 +220,43 @@ export const translateContent = ai.defineFlow(
   },
   async (input: TranslateContentInput) => {
     try {
+      const targetLocalesToTranslate = input.targetLocales.filter(l => l !== input.sourceLocale);
       const translations: Record<string, string> = {};
+      translations[input.sourceLocale] = input.text;
 
-      for (const targetLocale of input.targetLocales) {
-        if (targetLocale === input.sourceLocale) {
-          translations[targetLocale] = input.text;
-          continue;
-        }
+      if (targetLocalesToTranslate.length > 0) {
+        const prompt = `You are a professional e-commerce translator.
+Translate the following text from source language "${input.sourceLocale}" into these target languages: ${targetLocalesToTranslate.join(', ')}.
+Maintain formatting, HTML tags (like <p>, <ul>, <li>), readability, and tone. Do NOT translate product brand names or model codes unless they are descriptive.
 
-        const prompt = `Translate this text from ${input.sourceLocale} to ${targetLocale}.
-Maintain SEO quality and readability. Return ONLY the translated text, no explanations.
-
-Text: ${input.text}`;
+Text to translate:
+"${input.text}"`;
 
         const response = await ai.generate({
-          model: gemini20Flash,
+          model: gemini15Flash,
           prompt,
-          config: { temperature: 0.3, maxOutputTokens: 500 },
+          config: { 
+            temperature: 0.2, 
+            maxOutputTokens: 2000,
+          },
+          output: {
+            schema: TranslateContentOutputSchema,
+          }
         });
 
-        translations[targetLocale] = (response.text ?? "").trim();
+        const output = response.output as { translations: Record<string, string> } | null;
+        if (output && output.translations) {
+          for (const locale of targetLocalesToTranslate) {
+            translations[locale] = (output.translations[locale] || '').trim();
+          }
+        }
+      }
+
+      // Fill in any missing target locales with fallback text (source text)
+      for (const locale of input.targetLocales) {
+        if (!translations[locale]) {
+          translations[locale] = input.text;
+        }
       }
 
       return { translations };
@@ -269,7 +286,7 @@ Tags: searchable categories/attributes (max 10)
 Keywords: SEO-focused terms (max 10)`;
 
       const response = await ai.generate({
-        model: gemini20Flash,
+        model: gemini15Flash,
         prompt,
         config: { temperature: 0.4, maxOutputTokens: 300 },
       });
@@ -490,7 +507,7 @@ OUTPUT STRICTLY AS JSON:
       let response;
       try {
         response = await ai.generate({
-          model: gemini20Flash,
+          model: gemini15Flash,
           prompt,
           config: {
             temperature: 0.3,
@@ -501,7 +518,7 @@ OUTPUT STRICTLY AS JSON:
         // Fallback bez grounding (np. rate limit lub brak uprawnień do Google Search)
         logger.warn("Google Search grounding unavailable, falling back to knowledge-only generation", { error: groundingError });
         response = await ai.generate({
-          model: gemini20Flash,
+          model: gemini15Flash,
           prompt,
           config: { temperature: 0.4 },
         });
