@@ -1,7 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { doc, getDoc, collection, query, where, limit, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+
 import { Product, ProductRating, ProductCore, DealM6 } from '@/lib/types';
 import { getProductRatings, getProductWithDeals } from '@/lib/data';
 import { getProductWithDealsAdmin } from '@/lib/data-admin';
@@ -69,28 +68,27 @@ async function getProductData(id: string) {
 
       // Fetch related products from same subcategory (from ProductCore collection)
       const relatedProducts = productCore?.subCategorySlug
-        ? (() => {
-            const relatedQuery = query(
-              collection(db, "product_cores"),
-              where("subCategorySlug", "==", productCore.subCategorySlug),
-              where("status", "==", "approved"),
-              limit(4)
-            );
-            return getDocs(relatedQuery).then((relatedSnap) =>
-              relatedSnap.docs
-                .map(doc => {
-                  const data = doc.data() as any;
-                  return {
-                    id: doc.id,
-                    ...data,
-                    // Convert Firestore timestamps to ISO strings
-                    createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
-                    updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
-                  };
-                })
-                .filter(p => p.id !== id && p.id) // Filter out empty IDs
-                .slice(0, 3)
-            );
+        ? (async () => {
+            const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+            const adminDb = getAdminFirestore();
+            const relatedSnap = await adminDb.collection("product_cores")
+              .where("subCategorySlug", "==", productCore.subCategorySlug)
+              .where("status", "==", "approved")
+              .limit(4)
+              .get();
+            return relatedSnap.docs
+              .map(doc => {
+                const data = doc.data() as any;
+                return {
+                  id: doc.id,
+                  ...data,
+                  // Convert Firestore timestamps to ISO strings
+                  createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
+                  updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
+                };
+              })
+              .filter(p => p.id !== id && p.id) // Filter out empty IDs
+              .slice(0, 3);
           })()
         : Promise.resolve([]);
       
@@ -121,10 +119,11 @@ async function getProductData(id: string) {
     
     // Fallback to legacy Product if not found in ProductCore
     console.log(`[getProductData] M6 data not found, trying legacy products for ${id}`);
-    const docRef = doc(db, "products", id);
-    const docSnap = await getDoc(docRef);
+    const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+    const adminDb = getAdminFirestore();
+    const docSnap = await adminDb.collection("products").doc(id).get();
     
-    if (!docSnap.exists()) {
+    if (!docSnap.exists) {
       console.warn(`[getProductData] Product not found in both M6 and legacy: ${id}`);
       return null;
     }
@@ -144,13 +143,13 @@ async function getProductData(id: string) {
   let relatedProducts: Product[] = [];
   if (product.subCategorySlug) {
     try {
-      const relatedQuery = query(
-        collection(db, "products"),
-        where("subCategorySlug", "==", product.subCategorySlug),
-        where("status", "==", "approved"),
-        limit(4)
-      );
-      const relatedSnap = await getDocs(relatedQuery);
+      const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+      const adminDb = getAdminFirestore();
+      const relatedSnap = await adminDb.collection("products")
+        .where("subCategorySlug", "==", product.subCategorySlug)
+        .where("status", "==", "approved")
+        .limit(4)
+        .get();
       relatedProducts = relatedSnap.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Product))
         .filter(p => p.id !== id)
@@ -355,17 +354,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 // Optional: Generate static params for approved ProductCore records (top 100 by freshness)
 export async function generateStaticParams() {
-  // Używamy kolekcji product_cores (M6), żeby nie polegać na legacy products ani dodatkowych indeksach
-  const coresRef = collection(db, "product_cores");
-  const q = query(
-    coresRef,
-    where("status", "==", "approved"),
-    orderBy("updatedAt", "desc"),
-    limit(100)
-  );
-
   try {
-    const snapshot = await getDocs(q);
+    const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+    const adminDb = getAdminFirestore();
+    const snapshot = await adminDb.collection("product_cores")
+      .where("status", "==", "approved")
+      .orderBy("updatedAt", "desc")
+      .limit(100)
+      .get();
     return snapshot.docs.map((doc) => ({ id: doc.id }));
   } catch (error) {
     console.error("Error generating static params:", error);
