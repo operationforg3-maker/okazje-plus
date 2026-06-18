@@ -2098,6 +2098,25 @@ export async function getProductCore(productId: string): Promise<any | null> {
       return null;
     }
     
+    if (typeof window === 'undefined') {
+      const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+      const adminDb = getAdminFirestore();
+      const docSnap = await adminDb.collection('product_cores').doc(productId).get();
+      
+      if (!docSnap.exists) {
+        console.warn(`[getProductCore] Product core not found on server: ${productId}`);
+        return null;
+      }
+      
+      const data = docSnap.data();
+      return {
+        ...data,
+        id: docSnap.id,
+        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
+        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
+      };
+    }
+    
     const docRef = doc(db, "product_cores", productId);
     const docSnap = await getDoc(docRef);
     
@@ -2137,19 +2156,37 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
     const product = await getProductCore(productId);
     if (!product) return null;
 
-    const dealsRef = collection(db, "deals");
-    const q = query(dealsRef, where("productCoreId", "==", productId), where("status", "==", "approved"));
-    const dealsSnap = await getDocs(q);
-    const deals: any[] = dealsSnap.docs.map(d => {
-      const data = d.data();
-      return {
-        ...data,
-        id: d.id,
-        // Convert timestamps
-        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
-      };
-    });
+    let deals: any[] = [];
+    if (typeof window === 'undefined') {
+      const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+      const adminDb = getAdminFirestore();
+      const dealsSnap = await adminDb.collection('deals')
+        .where('productCoreId', '==', productId)
+        .where('status', '==', 'approved')
+        .get();
+      deals = dealsSnap.docs.map(d => {
+        const data = d.data();
+        return {
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+        };
+      });
+    } else {
+      const dealsRef = collection(db, "deals");
+      const q = query(dealsRef, where("productCoreId", "==", productId), where("status", "==", "approved"));
+      const dealsSnap = await getDocs(q);
+      deals = dealsSnap.docs.map(d => {
+        const data = d.data();
+        return {
+          ...data,
+          id: d.id,
+          createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+        };
+      });
+    }
 
     const bestDeal = deals.length > 0
       ? deals.reduce((best, current) => {
