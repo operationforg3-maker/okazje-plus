@@ -495,15 +495,297 @@ export class SmartHarvester {
   }
 
   private async scrapeAliExpressPage(url: string): Promise<{
+    title?: string;
     description?: string;
     specs?: Record<string, string>;
     images?: string[];
     mainImage?: string;
+    price?: number;
+    originalPrice?: number;
+    shippingCost?: number;
+    shippingDays?: number;
+    seller?: {
+      name: string;
+      rating?: number;
+      followers?: number;
+      storeUrl?: string;
+      storeId?: string;
+      positiveRate?: string;
+    };
   }> {
     if (!url || !url.startsWith('http')) {
       return {};
     }
 
+    const parseDeliveryDays = (text: string, referenceDate: Date = new Date()): number => {
+      const lower = text.toLowerCase();
+      const daysMatch = lower.match(/(\d+)\s*-?\s*day/i);
+      if (daysMatch) {
+        return parseInt(daysMatch[1], 10);
+      }
+      
+      const plMonths: Record<string, number> = {
+        'sty': 0, 'lut': 1, 'mar': 2, 'kwi': 3, 'maj': 4, 'cze': 5,
+        'lip': 6, 'sie': 7, 'wrz': 8, 'paź': 9, 'lis': 10, 'gru': 11
+      };
+      const enMonths: Record<string, number> = {
+        'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+        'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+      };
+
+      const tokens = text.replace(':', ' ').split(/\s+/).filter(Boolean);
+      let targetDate: Date | null = null;
+      
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i].toLowerCase();
+        const monthIndex = plMonths[token.slice(0, 3)] ?? enMonths[token.slice(0, 3)];
+        if (monthIndex !== undefined) {
+          let day = NaN;
+          if (i > 0) day = parseInt(tokens[i - 1], 10);
+          if (isNaN(day) && i < tokens.length - 1) day = parseInt(tokens[i + 1], 10);
+
+          if (!isNaN(day)) {
+            const year = referenceDate.getFullYear();
+            const cand = new Date(year, monthIndex, day);
+            if (cand.getTime() < referenceDate.getTime() - 30 * 24 * 3600 * 1000) {
+              cand.setFullYear(year + 1);
+            }
+            if (!targetDate || cand.getTime() < targetDate.getTime()) {
+              targetDate = cand;
+            }
+          }
+        }
+      }
+
+      if (targetDate) {
+        const diffMs = targetDate.getTime() - referenceDate.getTime();
+        return Math.max(1, Math.round(diffMs / (24 * 3600 * 1000)));
+      }
+
+      return 7;
+    };
+
+    // First try Puppeteer for fully rendered CSR content
+    try {
+      const puppeteer = await import('puppeteer');
+      const browser = await puppeteer.default.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+
+      try {
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+        await page.setExtraHTTPHeaders({ 'Accept-Language': 'pl-PL,pl;q=0.9,en-US;q=0.8' });
+        await page.setViewport({ width: 1280, height: 800 });
+
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
+
+        const scraped = (await page.evaluate(`(() => {
+          const text = (sel) => document.querySelector(sel)?.textContent?.trim() || null;
+          
+          const priceSelectors = [
+            '.price-default--current--F8OlYIo',
+            '[class*="price-default--current"]',
+            '.product-price-value',
+            '[class*="price-value"]',
+            '[class*="priceText"]',
+            '.price'
+          ];
+          let currentPriceText = null;
+          for (const sel of priceSelectors) {
+            currentPriceText = text(sel);
+            if (currentPriceText && currentPriceText.includes('zł')) break;
+          }
+
+          const originPriceSelectors = [
+            '.price--lastOrigin--vV459Fr',
+            '[class*="price--lastOrigin"]',
+            '[class*="price-original"]',
+            '[class*="original-price"]'
+          ];
+          let originalPriceText = null;
+          for (const sel of originPriceSelectors) {
+            originalPriceText = text(sel);
+            if (originalPriceText) break;
+          }
+
+          const storeNameSelectors = [
+            '.store-detail--storeName--Lk2FVZ4',
+            '[class*="store-detail--storeName"]',
+            '.store-info--name--E2VWTyv a',
+            '[class*="store-info--name"] a',
+            'a[data-pl="store-name"]'
+          ];
+          let storeName = null;
+          for (const sel of storeNameSelectors) {
+            storeName = text(sel);
+            if (storeName) break;
+          }
+
+          const storeLinkEl = document.querySelector('a[data-pl="store-name"]') || document.querySelector('[class*="store-info--name"] a');
+          const storeUrl = storeLinkEl ? storeLinkEl.getAttribute('href') : null;
+          const storeDescText = text('[class*="store-info--desc"]') || text('[class*="store-info--content"]') || '';
+
+          const shippingTexts = [];
+          const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+          let node;
+          const keywords = ['wysył', 'dostaw', 'shipp', 'deliver', 'darmow', 'bezpłat', 'free'];
+          while (node = walker.nextNode()) {
+            const val = node.textContent?.trim();
+            if (val) {
+              const lower = val.toLowerCase();
+              if (keywords.some(k => lower.includes(k))) {
+                const parent = node.parentElement;
+                if (parent && parent.tagName !== 'SCRIPT' && parent.tagName !== 'STYLE' && parent.tagName !== 'NOSCRIPT') {
+                  shippingTexts.push(val);
+                }
+              }
+            }
+          }
+
+          const metaDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content')
+            || document.querySelector('meta[name="description"]')?.getAttribute('content')
+            || '';
+
+          const metaImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content')
+            || document.querySelector('meta[property="og:image:secure_url"]')?.getAttribute('content')
+            || '';
+
+          let brand = null;
+          let sku = null;
+          let mpn = null;
+          let model = null;
+          const ldScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+          for (const s of ldScripts) {
+            try {
+              const parsed = JSON.parse(s.textContent || '');
+              const candidates = Array.isArray(parsed) ? parsed : [parsed];
+              for (const entry of candidates) {
+                const product = entry?.['@type'] === 'Product'
+                  ? entry
+                  : entry?.['@graph']?.find((item) => item?.['@type'] === 'Product');
+                if (product) {
+                  brand = typeof product.brand === 'string' ? product.brand : product.brand?.name;
+                  sku = product.sku;
+                  mpn = product.mpn;
+                  model = product.model;
+                }
+              }
+            } catch (e) {}
+          }
+
+          return {
+            title: document.title || null,
+            h1Title: text('h1'),
+            currentPriceText,
+            originalPriceText,
+            storeName,
+            storeUrl,
+            storeDescText,
+            shippingTexts,
+            description: metaDescription,
+            metaImage,
+            brand,
+            sku,
+            mpn,
+            model
+          };
+        })()`)) as any;
+
+        await browser.close();
+
+        if (scraped) {
+          const result: any = {};
+          result.title = scraped.h1Title || scraped.title || undefined;
+          result.description = scraped.description || undefined;
+
+          if (scraped.currentPriceText) {
+            const cleanPrice = scraped.currentPriceText.replace(',', '.').replace(/[^\d\.]/g, '');
+            const pVal = parseFloat(cleanPrice);
+            if (!isNaN(pVal)) result.price = pVal;
+          }
+          if (scraped.originalPriceText) {
+            const cleanOrigin = scraped.originalPriceText.replace(',', '.').replace(/[^\d\.]/g, '');
+            const oVal = parseFloat(cleanOrigin);
+            if (!isNaN(oVal)) result.originalPrice = oVal;
+          }
+
+          if (scraped.storeName) {
+            result.seller = {
+              name: scraped.storeName,
+              storeUrl: scraped.storeUrl ? (scraped.storeUrl.startsWith('http') ? scraped.storeUrl : 'https:' + scraped.storeUrl) : undefined,
+            };
+            if (scraped.storeDescText) {
+              const ratingMatch = scraped.storeDescText.match(/(\d+(?:\.\d+)?)\s*%/);
+              if (ratingMatch) {
+                result.seller.positiveRate = ratingMatch[1] + '%';
+                result.seller.rating = parseFloat(ratingMatch[1]) / 20;
+              }
+              const followersMatch = scraped.storeDescText.match(/(\d[\d\s]*)\s*(?:Obserwujący|Follower)/i);
+              if (followersMatch) {
+                result.seller.followers = parseInt(followersMatch[1].replace(/\s/g, ''), 10);
+              }
+            }
+          }
+
+          if (scraped.shippingTexts && scraped.shippingTexts.length > 0) {
+            const shippingText = scraped.shippingTexts.find((t: string) => t.toLowerCase().includes('wysyłka:') || t.toLowerCase().includes('shipping:'));
+            if (shippingText) {
+              const lower = shippingText.toLowerCase();
+              if (lower.includes('darmow') || lower.includes('bezpłat') || lower.includes('free') || lower.includes('gratis')) {
+                result.shippingCost = 0;
+              } else {
+                const match = shippingText.replace(',', '.').match(/([\d\.]+)/);
+                if (match) {
+                  result.shippingCost = parseFloat(match[1]);
+                }
+              }
+            } else {
+              const hasFree = scraped.shippingTexts.some((t: string) => {
+                const lower = t.toLowerCase();
+                return (lower.includes('darmowa') || lower.includes('free') || lower.includes('bezpłatna')) && lower.includes('wysył');
+              });
+              if (hasFree) {
+                result.shippingCost = 0;
+              }
+            }
+
+            const deliveryText = scraped.shippingTexts.find((t: string) => t.toLowerCase().includes('dostawa:') || t.toLowerCase().includes('delivery:') || t.toLowerCase().includes('delivered by'));
+            if (deliveryText) {
+              result.shippingDays = parseDeliveryDays(deliveryText);
+            }
+          }
+
+          const specs: Record<string, string> = {};
+          if (scraped.brand) specs.brand = String(scraped.brand);
+          if (scraped.sku) specs.sku = String(scraped.sku);
+          if (scraped.mpn) specs.mpn = String(scraped.mpn);
+          if (scraped.model) specs.model = String(scraped.model);
+          if (Object.keys(specs).length > 0) {
+            result.specs = specs;
+          }
+
+          const images: string[] = [];
+          if (scraped.metaImage && scraped.metaImage.startsWith('http')) {
+            images.push(scraped.metaImage);
+          }
+          if (images.length > 0) {
+            result.images = images;
+            result.mainImage = images[0];
+          }
+
+          return result;
+        }
+      } catch (innerErr) {
+        await browser.close().catch(() => {});
+        throw innerErr;
+      }
+    } catch (err: any) {
+      this.addLog('warn', `AliExpress: Puppeteer scraper failed, falling back to static Cheerio fetch`, err);
+    }
+
+    // Static Cheerio Fallback
     try {
       const response = await fetch(url, {
         headers: {
@@ -2926,6 +3208,10 @@ export class SmartHarvester {
           fallbackUrl: p.product_url || p.product_detail_url || p.promotion_link || '',
         });
 
+        const scrapeTarget = p.product_detail_url || p.product_url || p.promotion_link || '';
+        const shouldScrape = (!p.product_description || !p.product_props) && Boolean(scrapeTarget);
+        const scraped = shouldScrape ? await this.scrapeAliExpressPage(scrapeTarget) : {};
+
         const baseCandidates = [
           p.price?.current,
           p.target_app_sale_price,
@@ -2935,20 +3221,35 @@ export class SmartHarvester {
         ].map(parsePriceNumber).filter((v) => v > 0);
 
         let rawPrice = baseCandidates.length > 0 ? Math.min(...baseCandidates) : 0;
+        let rawCurrency = String(p.price?.currency || p.target_sale_price_currency || 'PLN').toUpperCase();
+        if (rawPrice === 0 && scraped?.price) {
+          rawPrice = scraped.price;
+          rawCurrency = 'PLN';
+        }
+
         const skuMin = getMinSkuPrice(p.sku_list || p.variants);
         if (skuMin > 0 && (rawPrice === 0 || skuMin < rawPrice)) {
           rawPrice = skuMin;
         }
-        const rawOriginal = Number(p.price?.original ?? p.original_price ?? 0);
-        const rawCurrency = String(p.price?.currency || p.target_sale_price_currency || 'PLN').toUpperCase();
+
+        let rawOriginal = Number(p.price?.original ?? p.original_price ?? 0);
+        if (rawOriginal === 0 && scraped?.originalPrice) {
+          rawOriginal = scraped.originalPrice;
+        }
+
         const shippingResolved = await this.resolveAliExpressShipping(
           client,
           p,
           String(p.item_id || p.product_id || ''),
           rawCurrency
         );
-        const rawShipping = shippingResolved.amount;
-        const shippingCurrency = shippingResolved.currency;
+        let rawShipping = shippingResolved.amount;
+        let shippingCurrency = shippingResolved.currency;
+        if (rawShipping === 0 && scraped?.shippingCost !== undefined && scraped.shippingCost > 0) {
+          rawShipping = scraped.shippingCost;
+          shippingCurrency = 'PLN';
+        }
+
 
         const normalizePrice = async (amount: number, currency: string, label: string) => {
           if (!currency || currency === 'PLN') {
@@ -3006,10 +3307,6 @@ export class SmartHarvester {
         );
 
         const hasCoupons = promotionData.hasCoupons;
-
-        const scrapeTarget = p.product_detail_url || p.product_url || p.promotion_link || '';
-        const shouldScrape = (!p.product_description || !p.product_props) && Boolean(scrapeTarget);
-        const scraped = shouldScrape ? await this.scrapeAliExpressPage(scrapeTarget) : {};
 
         // Phase 1A: Extract specs from title + product properties + SKU
         const specsFromTitle = extractDimensionsFromTitle(p.title || p.product_title || '');
@@ -3069,7 +3366,7 @@ export class SmartHarvester {
           : (fallbackImageUrl ? [fallbackImageUrl] : []);
 
         return {
-          title: p.title || p.product_title || '',
+          title: p.title || p.product_title || scraped?.title || '',
           description: p.product_description || scraped?.description || '', // RAW HTML from Deep Fetch or scrape fallback
           imageUrl: fallbackImageUrl,
           images: finalImages,
@@ -3077,20 +3374,20 @@ export class SmartHarvester {
           originalPrice,
           currency: priceResult.currency,
           shippingCost: shippingResult.amount,
-          shippingDays: shippingResolved.days,
-          shippingVerified: shippingResolved.verified,
+          shippingDays: shippingResolved.days || scraped?.shippingDays || 7,
+          shippingVerified: shippingResolved.verified || (scraped?.shippingCost !== undefined),
           sourceProductId: String(p.item_id || p.product_id || ''),
           sourceUrl: p.product_url || p.product_detail_url || p.promotion_link || '',
           videoUrl: p.product_video_url || p.video_url || undefined,
-          merchantName: p.store_info?.store_name || 'AliExpress',
-          merchantRating: p.store_info?.score || 4.0,
+          merchantName: p.store_info?.store_name || scraped?.seller?.name || 'AliExpress',
+          merchantRating: p.store_info?.score || scraped?.seller?.rating || 4.0,
           specs,
           attributes,
           discountPercent,
           couponCode,
           appSalePrice: promotionData.appSalePrice,
           promotionCampaign: promotionData.promotionCampaign,
-          freeShipping: shippingResolved.verified ? shippingResolved.freeShipping : false,
+          freeShipping: shippingResolved.verified ? shippingResolved.freeShipping : (scraped?.shippingCost === 0),
           minOrderValue: typeof minOrderValue === 'number' && minOrderValue > 0 ? minOrderValue : undefined,
           offerMeta: hasCoupons || minAvailableQty ? {
             promotionType: 'offer',
@@ -3121,7 +3418,14 @@ export class SmartHarvester {
             followers: Number(p.store_info.followers || 0) || undefined,
             storeUrl: p.store_info.store_url || p.store_info.storeUrl,
             storeId: String(p.store_info.store_id || p.store_info.storeId || ''),
-          } : undefined,
+          } : (scraped?.seller ? {
+            name: scraped.seller.name,
+            rating: scraped.seller.rating,
+            positiveRate: scraped.seller.positiveRate,
+            followers: scraped.seller.followers,
+            storeUrl: scraped.seller.storeUrl,
+            storeId: scraped.seller.storeId,
+          } : undefined),
           soldCount: Number(p.volume || p.lastest_volume || 0) || undefined,
           // Product identifiers (for robust deduplication & SEO)
           sku: p.sku || undefined,
