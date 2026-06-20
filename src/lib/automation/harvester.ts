@@ -2363,7 +2363,7 @@ export class SmartHarvester {
           // For category-tree mode: Filter by rating/quality (top products only)
           let filteredProducts = sourceProducts;
           if (isTreeMode && !autoBrowse && sourceProducts.length > 0) {
-            filteredProducts = this.filterTopQualityProducts(sourceProducts, Math.ceil(maxResults * 0.6));
+            filteredProducts = this.filterTopQualityProducts(sourceProducts, maxResults);
 
             const keptIds = new Set(filteredProducts.map((p) => p.sourceProductId || p.title));
             const discarded = sourceProducts.filter((p) => !keptIds.has(p.sourceProductId || p.title));
@@ -3040,10 +3040,10 @@ export class SmartHarvester {
   ): any[] {
     return products
       .filter(p => {
-        // Accept if: (a) no rating data (new products), or (b) rating >= 4.0
-        // Reject only if has explicit rating AND it's below 4.0
+        // Accept if: (a) no rating data (new products), or (b) rating >= 3.0
+        // Reject only if has explicit rating AND it's below 3.0
         if (!p.rating || p.rating === 0) return true; // New products with no reviews
-        return p.rating >= 4.0; // Accept only if rating is good
+        return p.rating >= 3.0; // Accept only if rating is good
       })
       .sort((a, b) => {
         // Sort by: ratingCount (descending) then rating (descending)

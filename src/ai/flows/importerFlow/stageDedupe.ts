@@ -49,33 +49,7 @@ export async function deduplicateProducts(
       continue;
     }
     
-    // Price filter
-    if (config.minPrice && product.price < config.minPrice) {
-      filtered_price++;
-      continue;
-    }
-    if (config.maxPrice && product.price > config.maxPrice) {
-      filtered_price++;
-      continue;
-    }
-    
-    // Rating filter - ONLY apply if config.minRating is set AND > 0
-    // Accept products without rating data (undefined/null/0)
-    if (config.minRating && config.minRating > 0 && product.rating !== undefined && product.rating !== null) {
-      if (product.rating > 0 && product.rating < config.minRating) {
-        filtered_rating++;
-        continue;
-      }
-    }
-    
-    // Popularity filter (orders/volume) - ONLY apply if config.minOrders is set AND > 0
-    // Accept products without orders data (undefined/null/0)
-    if (config.minOrders && config.minOrders > 0 && product.orders !== undefined && product.orders !== null) {
-      if (product.orders > 0 && product.orders < config.minOrders) {
-        filtered_orders++;
-        continue;
-      }
-    }
+    // Price, Rating, and Orders filtering disabled to save all products as requested.
     
     // All checks passed
     seenIds.add(product.id);
