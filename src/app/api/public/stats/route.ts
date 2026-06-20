@@ -49,36 +49,50 @@ export async function GET() {
       });
     }
 
-    const [approvedDeals, approvedProductCores, pendingProductCores, usersTotal] = await Promise.all([
-      typesenseServerClient.collections('deals').documents().search({
-        q: '*',
-        query_by: 'title,description,postedBy',
-        filter_by: 'status:=approved',
-        per_page: 1,
-      }, {}),
+    const [approvedProductCores, pendingProductCores, usersTotal] = await Promise.all([
       adminDb.collection('product_cores').where('status', '==', 'approved').count().get(),
       adminDb.collection('product_cores').where('status', '==', 'pending_approval').count().get(),
       usersTotalPromise,
     ]);
 
-    const totalApprovedDeals = Math.max(0, Number((approvedDeals as any).found || 0));
-
-    // Keep this lightweight for home page TTFB: estimate from top 250 deals only.
+    let totalApprovedDeals = 0;
     let totalSavings = 0;
-    const savingsSampleRes = await typesenseServerClient.collections('deals').documents().search({
-      q: '*',
-      query_by: 'title,description,postedBy',
-      filter_by: 'status:=approved',
-      sort_by: 'voteCount:desc',
-      per_page: 250,
-      page: 1,
-    }, {});
 
-    const savingsHits = ((savingsSampleRes as any).hits || []) as Array<{ document?: Record<string, unknown> }>;
-    totalSavings = savingsHits.reduce((sum, hit) => {
-      const voteCount = Number((hit.document?.voteCount as number | undefined) ?? 0);
-      return sum + (Number.isFinite(voteCount) ? voteCount : 0) * 10;
-    }, 0);
+    try {
+      if (!typesenseServerClient) {
+        throw new Error('Typesense client not initialized');
+      }
+
+      const [approvedDealsRes, savingsSampleRes] = await Promise.all([
+        typesenseServerClient.collections('deals').documents().search({
+          q: '*',
+          query_by: 'title,description,postedBy',
+          filter_by: 'status:=approved',
+          per_page: 1,
+        }, {}),
+        typesenseServerClient.collections('deals').documents().search({
+          q: '*',
+          query_by: 'title,description,postedBy',
+          filter_by: 'status:=approved',
+          sort_by: 'voteCount:desc',
+          per_page: 250,
+          page: 1,
+        }, {})
+      ]);
+
+      totalApprovedDeals = Math.max(0, Number((approvedDealsRes as any).found || 0));
+
+      const savingsHits = ((savingsSampleRes as any).hits || []) as Array<{ document?: Record<string, unknown> }>;
+      totalSavings = savingsHits.reduce((sum, hit) => {
+        const voteCount = Number((hit.document?.voteCount as number | undefined) ?? 0);
+        return sum + (Number.isFinite(voteCount) ? voteCount : 0) * 10;
+      }, 0);
+    } catch (typesenseError) {
+      console.warn('[Public Stats API] Typesense search failed, falling back to Firestore counts:', typesenseError);
+      const approvedDealsFirestore = await adminDb.collection('deals').where('status', '==', 'approved').count().get();
+      totalApprovedDeals = approvedDealsFirestore.data().count;
+      totalSavings = 0;
+    }
 
     const totalApprovedProducts = approvedProductCores.data().count + pendingProductCores.data().count;
 

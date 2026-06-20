@@ -5,6 +5,7 @@ import { LocalizedText, SmartPrice } from '@/lib/types';
 
 export interface RefineConfig extends ImportStageConfig {
   minQualityScore?: number;
+  bypassRefinement?: boolean;
 }
 
 const DEFAULT_CONFIG: RefineConfig = {
@@ -14,6 +15,7 @@ const DEFAULT_CONFIG: RefineConfig = {
   delayBetweenBatches: 2000,
   maxRetries: 2,
   minQualityScore: 40,
+  bypassRefinement: false,
 };
 
 // Zod Schema for strict AI output
@@ -63,6 +65,78 @@ export async function refineProductsBatch(
     
     try {
       console.log(`[Importer:Refine] [${i+1}/${products.length}] Refining: ${raw.title.slice(0, 40)}...`);
+
+      if (finalConfig.bypassRefinement) {
+        // Build basic specs HTML list from raw specs
+        let specsHtml = '<ul>';
+        if (raw.rawSpecs) {
+          for (const [k, v] of Object.entries(raw.rawSpecs)) {
+            specsHtml += `<li><strong>${k}</strong>: ${v}</li>`;
+          }
+        } else if (raw.specs) {
+          for (const [k, v] of Object.entries(raw.specs)) {
+            specsHtml += `<li><strong>${k}</strong>: ${v}</li>`;
+          }
+        } else {
+          specsHtml += `<li>Specyfikacja nie jest dostępna</li>`;
+        }
+        specsHtml += '</ul>';
+
+        const refined: EnrichedProduct = {
+          originalId: raw.id,
+          link: raw.link,
+          title: {
+            pl: raw.title,
+            en: raw.title,
+            de: raw.title
+          },
+          description: {
+            pl: raw.description || raw.title,
+            en: raw.description || raw.title,
+            de: raw.description || raw.title
+          },
+          specs: {
+            pl: specsHtml,
+            en: specsHtml,
+            de: specsHtml
+          },
+          seo: {
+            pl: { title: raw.title, description: (raw.description || raw.title).slice(0, 150), keywords: [] },
+            en: { title: raw.title, description: (raw.description || raw.title).slice(0, 150), keywords: [] },
+            de: { title: raw.title, description: (raw.description || raw.title).slice(0, 150), keywords: [] }
+          },
+          qualityScore: 100,
+          price: {
+            amount: raw.price,
+            currency: (raw.currency as any) || 'USD',
+            originalPrice: raw.originalPrice || raw.price,
+            shippingCost: 0,
+            totalPrice: raw.price,
+            freeShipping: raw.freeShipping || false
+          },
+          originalPriceValue: raw.originalPrice || raw.price,
+          discountValue: raw.discount || 0,
+          categorySlugEN,
+          subcategorySlugEN,
+          subsubcategorySlugEN,
+          image: raw.image,
+          gallery: raw.gallery || [],
+          rating: raw.rating,
+          orders: raw.orders,
+          storeName: raw.storeName,
+          storeUrl: raw.storeUrl,
+          shipping: raw.shipping,
+          warehouse: raw.warehouse,
+          deliveryTime: raw.deliveryTime,
+          freeShipping: raw.freeShipping,
+          attributes: raw.attributes || [],
+          specifications: raw.specifications || []
+        };
+
+        refinedProducts.push(refined);
+        console.log(`  ✓ Bypassed AI Refinement for raw ID: ${raw.id}`);
+        continue;
+      }
 
       const prompt = `
         You are an elite e-commerce data curator.

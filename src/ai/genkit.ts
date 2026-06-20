@@ -1,31 +1,32 @@
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { vertexAI } from '@genkit-ai/vertexai';
 
-const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'okazje-plus';
+const location = 'us-central1'; // Use us-central1 for full Gemini 2.5 support
 
 if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
-  console.log(`✅ Google AI initialized with API key (length: ${apiKey.length})`);
+  console.log(`✅ Vertex AI initialized for project ${projectId} in region ${location}`);
 }
 
 export const ai = genkit({
   plugins: [
-    googleAI({ apiKey })
+    vertexAI({ projectId, location })
   ],
-  model: 'googleai/gemini-2.5-flash',
+  model: 'refine-model',
 });
 
-// Alias model mapping to route Vertex AI model calls to Google AI (using Developer API Key)
-// This is necessary because Vertex AI models are unavailable or restricted in europe-west1/us-central1 endpoints,
-// whereas the Gemini Developer API is fully functional.
+// Alias model mapping to route Genkit model calls to Vertex AI
 const modelMapping: Record<string, string> = {
-  'vertexai/gemini-2.0-flash-exp': 'googleai/gemini-2.5-flash',
-  'vertexai/gemini-2.0-flash': 'googleai/gemini-2.5-flash',
-  'vertexai/gemini-1.5-flash': 'googleai/gemini-2.5-flash',
-  'vertexai/gemini-1.5-pro': 'googleai/gemini-2.5-pro',
-  'gemini-2.0-flash-exp': 'googleai/gemini-2.5-flash',
-  'gemini-1.5-flash': 'googleai/gemini-2.5-flash',
-  'gemini-1.5-pro': 'googleai/gemini-2.5-pro',
-  'gemini-2.0-flash': 'googleai/gemini-2.5-flash'
+  'refine-model': 'vertexai/gemini-2.5-flash',
+  'googleai/gemini-2.5-flash': 'vertexai/gemini-2.5-flash',
+  'vertexai/gemini-2.0-flash-exp': 'vertexai/gemini-2.5-flash',
+  'vertexai/gemini-2.0-flash': 'vertexai/gemini-2.5-flash',
+  'vertexai/gemini-1.5-flash': 'vertexai/gemini-2.5-flash',
+  'vertexai/gemini-1.5-pro': 'vertexai/gemini-2.5-pro',
+  'gemini-2.0-flash-exp': 'vertexai/gemini-2.5-flash',
+  'gemini-1.5-flash': 'vertexai/gemini-2.5-flash',
+  'gemini-1.5-pro': 'vertexai/gemini-2.5-pro',
+  'gemini-2.0-flash': 'vertexai/gemini-2.5-flash'
 };
 
 for (const [alias, target] of Object.entries(modelMapping)) {

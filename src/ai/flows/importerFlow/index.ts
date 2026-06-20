@@ -21,12 +21,15 @@ import { adminDb } from '@/lib/firebase-admin';
 async function logToJob(jobId: string | undefined, message: string, details?: any) {
   if (!jobId) return;
   try {
+    const entry: any = {
+      timestamp: new Date().toISOString(),
+      message,
+    };
+    if (details !== undefined) {
+      entry.details = details;
+    }
     await adminDb.collection('import_jobs').doc(jobId).update({
-      logs: FieldValue.arrayUnion({
-        timestamp: new Date().toISOString(),
-        message,
-        details,
-      }),
+      logs: FieldValue.arrayUnion(entry),
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
@@ -53,6 +56,7 @@ export interface PipelineConfig extends Partial<ImportJobConfig> {
   aliexpressCategoryIds?: string[];
   translateToPolish?: boolean; // Legacy flag, now implicit in Refiner
   currencyRate?: number;
+  bypassRefinement?: boolean;
   
   // Stage configs
   fetch?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
@@ -208,6 +212,7 @@ export async function runProductImportPipeline(
         delayBetweenBatches: config.enrich?.delayBetweenBatches ?? 2000,
         maxRetries: config.enrich?.maxRetries ?? 2,
         currencyRate: config.currencyRate ?? 4.0,
+        bypassRefinement: config.bypassRefinement,
       }
     );
     

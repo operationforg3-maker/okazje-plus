@@ -1,0 +1,182 @@
+[firebase-admin] No service account file. Using Application Default Credentials. If UNAUTHENTICATED appears run: gcloud auth application-default login
+Loading product 0zIDX01kHAw2mNULeQxo...
+Running enrichment...
+[MISSING SPECS FOR PRODUCT 0ZIDX01KHAW2MNULEQXO - NO STRUCTURED SPECS DETECTED] warn 
+✅ Google AI initialized with API key (length: 39)
+[GENERATING CREATIVE CONTENT FOR: NOWA, PRĄŻKOWANA, OVERSIZE'OWA BAWEŁNIANA BLUZKA Z ELEGANCKIM KOŁNIERZYKIEM I DŁUGIM RĘKAWEM, LUŹNA, CODZIENNA BLUZKA DAMSKA NA ROK 2025. (SOURCE: ALIEXPRESS)] info 
+[GENKIT ALIAS REDIRECT] Redirecting vertexai/gemini-1.5-flash -> googleai/gemini-2.5-flash. Input keys: [ 'messages', 'config', 'docs', 'tools', 'output' ]
+[GENKIT ALIAS REDIRECT] Redirecting vertexai/gemini-1.5-flash -> googleai/gemini-2.5-flash. Input keys: [ 'messages', 'config', 'docs', 'tools', 'output' ]
+{"timestamp":"2026-06-18T05:59:35.971Z","level":"warn","message":"Could not extract JSON from response","context":{"text":"```json\n{\n  \"tags\":"}}
+[GENKIT ALIAS REDIRECT] Redirecting vertexai/gemini-1.5-flash -> googleai/gemini-2.5-flash. Input keys: [ 'messages', 'config', 'docs', 'tools', 'output' ]
+{"timestamp":"2026-06-18T05:59:38.590Z","level":"warn","message":"Could not extract JSON from response","context":{"text":"```json\n{\n  \"titlePL\": \"Prążkowana bawełniana bl"}}
+[GENKIT ALIAS REDIRECT] Redirecting vertexai/gemini-1.5-flash -> googleai/gemini-2.5-flash. Input keys: [ 'messages', 'config', 'docs', 'tools', 'output' ]
+[GENKIT ALIAS REDIRECT] Redirecting vertexai/gemini-1.5-flash -> googleai/gemini-2.5-flash. Input keys: [ 'messages', 'config', 'docs', 'tools', 'output' ]
+GenkitError: RESOURCE_EXHAUSTED: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 19.073967382s.
+    at makeRequest (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:375:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateContent (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:94:20)
+    at async callGemini (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:763:22)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:826:11)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:391:26)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:142:24)
+    at async runInNewSpan (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:110:10)
+    at async actionFn.actionFn.run (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:340:18)
+    at async dispatch (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:263:24) {
+  source: undefined,
+  status: 'RESOURCE_EXHAUSTED',
+  detail: undefined,
+  code: 429,
+  originalMessage: 'Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n' +
+    '* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\n' +
+    'Please retry in 19.073967382s.'
+}
+{"timestamp":"2026-06-18T05:59:40.900Z","level":"error","message":"translateContent flow failed","context":{"error":{"status":"RESOURCE_EXHAUSTED","message":"Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\nPlease retry in 19.073967382s."},"input":{"text":"Poor reviews. Quality and durability issues reported.","sourceLocale":"en","targetLocales":["pl","de","fr","es","uk"]}}}
+[Refiner] Review summary translation failed: GenkitError: RESOURCE_EXHAUSTED: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 19.073967382s.
+    at makeRequest (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:375:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateContent (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:94:20)
+    at async callGemini (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:763:22)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:826:11)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:391:26)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:142:24)
+    at async runInNewSpan (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:110:10)
+    at async actionFn.actionFn.run (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:340:18)
+    at async dispatch (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:263:24) {
+  source: undefined,
+  status: 'RESOURCE_EXHAUSTED',
+  detail: undefined,
+  code: 429,
+  originalMessage: 'Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n' +
+    '* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\n' +
+    'Please retry in 19.073967382s.',
+  traceId: 'ee1ff2a2222e3c8ee585c05307d31580',
+  ignoreFailedSpan: true
+}
+[GENKIT ALIAS REDIRECT] Redirecting vertexai/gemini-1.5-flash -> googleai/gemini-2.5-flash. Input keys: [ 'messages', 'config', 'docs', 'tools', 'output' ]
+GenkitError: RESOURCE_EXHAUSTED: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 18.982463682s.
+    at makeRequest (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:375:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateContent (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:94:20)
+    at async callGemini (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:763:22)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:826:11)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:391:26)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:142:24)
+    at async runInNewSpan (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:110:10)
+    at async actionFn.actionFn.run (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:340:18)
+    at async dispatch (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:263:24) {
+  source: undefined,
+  status: 'RESOURCE_EXHAUSTED',
+  detail: undefined,
+  code: 429,
+  originalMessage: 'Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n' +
+    '* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\n' +
+    'Please retry in 18.982463682s.'
+}
+{"timestamp":"2026-06-18T05:59:40.987Z","level":"error","message":"extractProductTags flow failed","context":{"error":{"status":"RESOURCE_EXHAUSTED","message":"Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\nPlease retry in 18.982463682s."},"input":{"title":"Prążkowana Bluzka Oversize Bawełniana z Eleganckim Kołnierzykiem","description":"Materiał: (web) 95% bawełna, 5% elastan, Fason: (web) Oversize, luźny, Rękaw: (web) Długi, Kołnierzyk: (web) Elegancki","category":"uncategorized > uncategorized"}}}
+[Refiner] Search tag extraction failed: GenkitError: RESOURCE_EXHAUSTED: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 18.982463682s.
+    at makeRequest (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:375:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async generateContent (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/client.ts:94:20)
+    at async callGemini (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:763:22)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/google-genai/src/googleai/gemini.ts:826:11)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:391:26)
+    at async <anonymous> (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:142:24)
+    at async runInNewSpan (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/tracing/instrumentation.ts:110:10)
+    at async actionFn.actionFn.run (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:340:18)
+    at async dispatch (/Users/tomaszgorecki/Projekty/okazje-plus/node_modules/@genkit-ai/core/src/action.ts:263:24) {
+  source: undefined,
+  status: 'RESOURCE_EXHAUSTED',
+  detail: undefined,
+  code: 429,
+  originalMessage: 'Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n' +
+    '* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash\n' +
+    'Please retry in 18.982463682s.',
+  traceId: '0c6f8caeee7b08ba724cb1200acdb32d',
+  ignoreFailedSpan: true
+}
+
+✅ ENRICHED OBJECT: {
+  "specs": {
+    "Materiał": "(web) 95% bawełna, 5% elastan",
+    "Fason": "(web) Oversize, luźny",
+    "Rękaw": "(web) Długi",
+    "Kołnierzyk": "(web) Elegancki"
+  },
+  "coreSpecs": {
+    "Materiał": "(web) 95% bawełna, 5% elastan",
+    "Fason": "(web) Oversize, luźny",
+    "Rękaw": "(web) Długi",
+    "Kołnierzyk": "(web) Elegancki"
+  },
+  "rawSpecs": {},
+  "title": {
+    "pl": "Prążkowana Bluzka Oversize Bawełniana z Eleganckim Kołnierzykiem",
+    "en": "Ribbed Oversize Cotton Blouse with Elegant Collar Long Sleeve",
+    "de": "Gerippte Oversize Baumwollbluse mit elegantem Kragen Langarm",
+    "fr": "Chemisier Côtelé Oversize en Coton avec Col Élégant Manches Longues",
+    "es": "Blusa de Algodón Acanalada Oversize con Cuello Elegante Manga Larga",
+    "uk": "Ребриста Оверсайз Бавовняна Блузка з Елегантним Коміром Довгий Рукав"
+  },
+  "description": {
+    "pl": "<p>Wprowadź do swojej szafy nową jakość z naszą <b>prążkowaną bluzką oversize</b>, która łączy modny design z niezrównanym komfortem. Ta luźna, bawełniana bluzka z długim rękawem to idealny wybór na co dzień, a dzięki eleganckiemu kołnierzykowi sprawdzi się również w bardziej formalnych stylizacjach.</p><ul><li>Wykonana z wysokiej jakości bawełny (95%) z domieszką elastanu (5%) dla optymalnej elastyczności i trwałości.</li><li>Modny fason oversize zapewnia swobodę ruchów i pasuje do różnych typów sylwetek.</li><li>Elegancki kołnierzyk dodaje klasy, a długi rękaw gwarantuje komfort noszenia przez cały rok.</li></ul><p>Ta uniwersalna bluzka damska to must-have w garderobie każdej kobiety ceniącej sobie styl i wygodę. Dostępna w różnych kolorach, łatwo dopasujesz ją do swoich ulubionych spodni czy spódnic, tworząc wyjątkowe stylizacje na jesień i wiosnę.</p>",
+    "en": "<p>Introduce new quality to your wardrobe with our <b>ribbed oversize blouse</b>, combining fashionable design with unparalleled comfort. This loose, long-sleeve cotton blouse is an ideal choice for everyday wear, and thanks to its elegant collar, it will also work well in more formal styles.</p><ul><li>Made from high-quality cotton (95%) with a blend of elastane (5%) for optimal flexibility and durability.</li><li>Fashionable oversize cut ensures freedom of movement and suits various body types.</li><li>An elegant collar adds class, and long sleeves guarantee comfort throughout the year.</li></ul><p>This versatile women's blouse is a must-have in every woman's wardrobe who values style and comfort. Available in various colors, you can easily match it with your favorite pants or skirts, creating unique outfits for autumn and spring.</p>",
+    "de": "<p>Bringen Sie neue Qualität in Ihre Garderobe mit unserer <b>gerippten Oversize-Bluse</b>, die modisches Design mit unvergleichlichem Komfort verbindet. Diese lockere Baumwollbluse mit langen Ärmeln ist eine ideale Wahl für den Alltag und passt dank ihres eleganten Kragens auch zu formelleren Anlässen.</p><ul><li>Hergestellt aus hochwertiger Baumwolle (95%) mit einem Anteil an Elasthan (5%) für optimale Flexibilität und Haltbarkeit.</li><li>Der modische Oversize-Schnitt sorgt für Bewegungsfreiheit und passt zu verschiedenen Figurtypen.</li><li>Ein eleganter Kragen verleiht Klasse, und lange Ärmel garantieren ganzjährigen Tragekomfort.</li></ul><p>Diese vielseitige Damenbluse ist ein Must-have in der Garderobe jeder Frau, die Wert auf Stil und Komfort legt. Erhältlich in verschiedenen Farben, lässt sie sich leicht mit Ihren Lieblingshosen oder -röcken kombinieren, um einzigartige Outfits für Herbst und Frühling zu kreieren.</p>",
+    "fr": "<p>Apportez une nouvelle qualité à votre garde-robe avec notre <b>chemisier côtelé oversize</b>, alliant design tendance et confort inégalé. Ce chemisier ample en coton à manches longues est un choix idéal pour le quotidien, et grâce à son col élégant, il conviendra également aux styles plus formels.</p><ul><li>Fabriqué en coton de haute qualité (95%) avec un mélange d'élasthanne (5%) pour une flexibilité et une durabilité optimales.</li><li>La coupe oversize tendance assure une liberté de mouvement et convient à différentes morphologies.</li><li>Un col élégant ajoute de la classe, et les manches longues garantissent un confort tout au long de l'année.</li></ul><p>Ce chemisier polyvalent pour femme est un incontournable de la garde-robe de toute femme qui valorise le style et le confort. Disponible en différentes couleurs, vous pouvez facilement l'associer à vos pantalons ou jupes préférés, créant des tenues uniques pour l'automne et le printemps.</p>",
+    "es": "<p>Añade una nueva calidad a tu armario con nuestra <b>blusa acanalada oversize</b>, que combina un diseño moderno con una comodidad inigualable. Esta blusa de algodón suelta de manga larga es una opción ideal para el uso diario, y gracias a su elegante cuello, también funcionará bien en estilos más formales.</p><ul><li>Confeccionada en algodón de alta calidad (95%) con una mezcla de elastano (5%) para una flexibilidad y durabilidad óptimas.</li><li>El corte oversize de moda garantiza libertad de movimiento y se adapta a diferentes tipos de cuerpo.</li><li>Un cuello elegante añade clase, y las mangas largas garantizan comodidad durante todo el año.</li></ul><p>Esta versátil blusa de mujer es un imprescindible en el armario de toda mujer que valora el estilo y la comodidad. Disponible en varios colores, puedes combinarla fácilmente con tus pantalones o faldas favoritos, creando conjuntos únicos para otoño y primavera.</p>",
+    "uk": "<p>Додайте нову якість до свого гардеробу з нашою <b>ребристою блузкою оверсайз</b>, що поєднує модний дизайн з неперевершеним комфортом. Ця вільна бавовняна блузка з довгим рукавом є ідеальним вибором для повсякденного носіння, а завдяки елегантному коміру вона також чудово підійде для більш офіційних образів.</p><ul><li>Виготовлена з високоякісної бавовни (95%) з додаванням еластану (5%) для оптимальної еластичності та довговічності.</li><li>Модний крій оверсайз забезпечує свободу рухів і підходить для різних типів фігури.</li><li>Елегантний комір додає класу, а довгі рукави гарантують комфорт протягом усього року.</li></ul><p>Ця універсальна жіноча блузка є обов'язковою річчю в гардеробі кожної жінки, яка цінує стиль та комфорт. Доступна в різних кольорах, ви легко зможете поєднати її зі своїми улюбленими брюками або спідницями, створюючи унікальні образи для осені та весни.</p>"
+  },
+  "fullDescription": {
+    "pl": "<p>Wprowadź do swojej szafy nową jakość z naszą <b>prążkowaną bluzką oversize</b>, która łączy modny design z niezrównanym komfortem. Ta luźna, bawełniana bluzka z długim rękawem to idealny wybór na co dzień, a dzięki eleganckiemu kołnierzykowi sprawdzi się również w bardziej formalnych stylizacjach.</p><ul><li>Wykonana z wysokiej jakości bawełny (95%) z domieszką elastanu (5%) dla optymalnej elastyczności i trwałości.</li><li>Modny fason oversize zapewnia swobodę ruchów i pasuje do różnych typów sylwetek.</li><li>Elegancki kołnierzyk dodaje klasy, a długi rękaw gwarantuje komfort noszenia przez cały rok.</li></ul><p>Ta uniwersalna bluzka damska to must-have w garderobie każdej kobiety ceniącej sobie styl i wygodę. Dostępna w różnych kolorach, łatwo dopasujesz ją do swoich ulubionych spodni czy spódnic, tworząc wyjątkowe stylizacje na jesień i wiosnę.</p>",
+    "en": "<p>Introduce new quality to your wardrobe with our <b>ribbed oversize blouse</b>, combining fashionable design with unparalleled comfort. This loose, long-sleeve cotton blouse is an ideal choice for everyday wear, and thanks to its elegant collar, it will also work well in more formal styles.</p><ul><li>Made from high-quality cotton (95%) with a blend of elastane (5%) for optimal flexibility and durability.</li><li>Fashionable oversize cut ensures freedom of movement and suits various body types.</li><li>An elegant collar adds class, and long sleeves guarantee comfort throughout the year.</li></ul><p>This versatile women's blouse is a must-have in every woman's wardrobe who values style and comfort. Available in various colors, you can easily match it with your favorite pants or skirts, creating unique outfits for autumn and spring.</p>",
+    "de": "<p>Bringen Sie neue Qualität in Ihre Garderobe mit unserer <b>gerippten Oversize-Bluse</b>, die modisches Design mit unvergleichlichem Komfort verbindet. Diese lockere Baumwollbluse mit langen Ärmeln ist eine ideale Wahl für den Alltag und passt dank ihres eleganten Kragens auch zu formelleren Anlässen.</p><ul><li>Hergestellt aus hochwertiger Baumwolle (95%) mit einem Anteil an Elasthan (5%) für optimale Flexibilität und Haltbarkeit.</li><li>Der modische Oversize-Schnitt sorgt für Bewegungsfreiheit und passt zu verschiedenen Figurtypen.</li><li>Ein eleganter Kragen verleiht Klasse, und lange Ärmel garantieren ganzjährigen Tragekomfort.</li></ul><p>Diese vielseitige Damenbluse ist ein Must-have in der Garderobe jeder Frau, die Wert auf Stil und Komfort legt. Erhältlich in verschiedenen Farben, lässt sie sich leicht mit Ihren Lieblingshosen oder -röcken kombinieren, um einzigartige Outfits für Herbst und Frühling zu kreieren.</p>",
+    "fr": "<p>Apportez une nouvelle qualité à votre garde-robe avec notre <b>chemisier côtelé oversize</b>, alliant design tendance et confort inégalé. Ce chemisier ample en coton à manches longues est un choix idéal pour le quotidien, et grâce à son col élégant, il conviendra également aux styles plus formels.</p><ul><li>Fabriqué en coton de haute qualité (95%) avec un mélange d'élasthanne (5%) pour une flexibilité et une durabilité optimales.</li><li>La coupe oversize tendance assure une liberté de mouvement et convient à différentes morphologies.</li><li>Un col élégant ajoute de la classe, et les manches longues garantissent un confort tout au long de l'année.</li></ul><p>Ce chemisier polyvalent pour femme est un incontournable de la garde-robe de toute femme qui valorise le style et le confort. Disponible en différentes couleurs, vous pouvez facilement l'associer à vos pantalons ou jupes préférés, créant des tenues uniques pour l'automne et le printemps.</p>",
+    "es": "<p>Añade una nueva calidad a tu armario con nuestra <b>blusa acanalada oversize</b>, que combina un diseño moderno con una comodidad inigualable. Esta blusa de algodón suelta de manga larga es una opción ideal para el uso diario, y gracias a su elegante cuello, también funcionará bien en estilos más formales.</p><ul><li>Confeccionada en algodón de alta calidad (95%) con una mezcla de elastano (5%) para una flexibilidad y durabilidad óptimas.</li><li>El corte oversize de moda garantiza libertad de movimiento y se adapta a diferentes tipos de cuerpo.</li><li>Un cuello elegante añade clase, y las mangas largas garantizan comodidad durante todo el año.</li></ul><p>Esta versátil blusa de mujer es un imprescindible en el armario de toda mujer que valora el estilo y la comodidad. Disponible en varios colores, puedes combinarla fácilmente con tus pantalones o faldas favoritos, creando conjuntos únicos para otoño y primavera.</p>",
+    "uk": "<p>Додайте нову якість до свого гардеробу з нашою <b>ребристою блузкою оверсайз</b>, що поєднує модний дизайн з неперевершеним комфортом. Ця вільна бавовняна блузка з довгим рукавом є ідеальним вибором для повсякденного носіння, а завдяки елегантному коміру вона також чудово підійде для більш офіційних образів.</p><ul><li>Виготовлена з високоякісної бавовни (95%) з додаванням еластану (5%) для оптимальної еластичності та довговічності.</li><li>Модний крій оверсайз забезпечує свободу рухів і підходить для різних типів фігури.</li><li>Елегантний комір додає класу, а довгі рукави гарантують комфорт протягом усього року.</li></ul><p>Ця універсальна жіноча блузка є обов'язковою річчю в гардеробі кожної жінки, яка цінує стиль та комфорт. Доступна в різних кольорах, ви легко зможете поєднати її зі своїми улюбленими брюками або спідницями, створюючи унікальні образи для осені та весни.</p>"
+  },
+  "shortDescription": {
+    "pl": "Odkryj komfort i styl z naszą prążkowaną bluzką oversize, idealną na każdą okazję. Wykonana z miękkiej bawełny z domieszką elastanu, zapewnia swobodę ruchów i doskonałe dopasowanie. Elegancki kołnierzyk i długi rękaw sprawiają, że to uniwersalny element Twojej garderoby.",
+    "en": "Discover comfort and style with our ribbed oversize blouse, perfect for any occasion. Made from soft cotton with a touch of elastane, it ensures freedom of movement and a perfect fit. The elegant collar and long sleeves make it a versatile addition to your wardrobe.",
+    "de": "Entdecken Sie Komfort und Stil mit unserer gerippten Oversize-Bluse, perfekt für jeden Anlass. Hergestellt aus weicher Baumwolle mit Elasthan-Anteil, bietet sie Bewegungsfreiheit und eine hervorragende Passform. Der elegante Kragen und die langen Ärmel machen sie zu einem vielseitigen Kleidungsstück für Ihre Garderobe.",
+    "fr": "Découvrez le confort et le style avec notre chemisier côtelé oversize, parfait pour toutes les occasions. Fabriqué en coton doux avec une touche d'élasthanne, il assure une liberté de mouvement et un ajustement parfait. Le col élégant et les manches longues en font un ajout polyvalent à votre garde-robe.",
+    "es": "Descubre la comodidad y el estilo con nuestra blusa acanalada oversize, perfecta para cualquier ocasión. Confeccionada en suave algodón con un toque de elastano, garantiza libertad de movimiento y un ajuste perfecto. El cuello elegante y las mangas largas la convierten en una adición versátil a tu armario.",
+    "uk": "Відкрийте для себе комфорт та стиль з нашою ребристою блузкою оверсайз, ідеальною для будь-якої нагоди. Виготовлена з м'якої бавовни з додаванням еластану, вона забезпечує свободу рухів та ідеальну посадку. Елегантний комір та довгий рукав роблять її універсальним елементом вашого гардеробу."
+  },
+  "seoTitle": "Prążkowana Bluzka Oversize Bawełniana z Kołnierzykiem Długi Rękaw",
+  "seoDescription": "Modna prążkowana bluzka oversize z bawełny z eleganckim kołnierzykiem. Luźny krój i długi rękaw zapewniają komfort. Idealna na co dzień i do pracy.",
+  "searchTags": [
+    "prążkowana",
+    "bluzka",
+    "oversize",
+    "bawełniana",
+    "eleganckim",
+    "kołnierzykiem",
+    "uncategorized"
+  ],
+  "averageMarketPrice": {
+    "amount": 59.99,
+    "currency": "PLN",
+    "range": {
+      "min": 30,
+      "max": 80
+    }
+  },
+  "reviewsSummary": {
+    "pl": "Poor reviews. Quality and durability issues reported.",
+    "en": "Poor reviews. Quality and durability issues reported.",
+    "de": "Poor reviews. Quality and durability issues reported.",
+    "fr": "Poor reviews. Quality and durability issues reported.",
+    "es": "Poor reviews. Quality and durability issues reported.",
+    "uk": "Poor reviews. Quality and durability issues reported."
+  },
+  "aiQualityScore": 65,
+  "status": "approved",
+  "updatedAt": "2026-06-18T05:59:40.988Z"
+}

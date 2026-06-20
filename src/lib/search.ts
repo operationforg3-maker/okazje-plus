@@ -532,8 +532,9 @@ export async function getDealByIdTypesense(dealId: string): Promise<Deal | null>
   }
 
   if (!typesenseClient) {
-    console.warn('Typesense client unavailable for getDealByIdTypesense. Returning null.');
-    return null;
+    console.warn('Typesense client unavailable for getDealByIdTypesense. Falling back to Firestore.');
+    const firestoreDeal = await readDealFromFirestore();
+    return firestoreDeal ? (firestoreDeal as Deal) : null;
   }
 
   try {

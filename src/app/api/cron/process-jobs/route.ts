@@ -85,13 +85,10 @@ const localizeText = (value: unknown): string => {
 };
 
 async function mapQueueDocument(entity: TypesenseQueueEntity, itemId: string): Promise<any | null> {
-  const sourceCollection = entity === 'deals' ? 'deals' : 'products';
-  const docSnap = await adminDb.collection(sourceCollection).doc(itemId).get();
-
-  if (!docSnap.exists) return null;
-
-  const data = docSnap.data() as Record<string, any>;
   if (entity === 'deals') {
+    const docSnap = await adminDb.collection('deals').doc(itemId).get();
+    if (!docSnap.exists) return null;
+    const data = docSnap.data() as Record<string, any>;
     return {
       id: itemId,
       title: localizeText(data.title),
@@ -108,21 +105,31 @@ async function mapQueueDocument(entity: TypesenseQueueEntity, itemId: string): P
     };
   }
 
+  // entity === 'products'
+  // Try product_cores first (M6 canonical), fallback to legacy products
+  let docSnap = await adminDb.collection('product_cores').doc(itemId).get();
+  if (!docSnap.exists) {
+    docSnap = await adminDb.collection('products').doc(itemId).get();
+  }
+
+  if (!docSnap.exists) return null;
+
+  const data = docSnap.data() as Record<string, any>;
   return {
     id: itemId,
-    name: ensureStringValue(data.name, localizeText(data.title)),
-    description: ensureStringValue(data.description, localizeText(data.shortDescription)),
-    longDescription: ensureStringValue(data.longDescription, localizeText(data.fullDescription)),
-    image: ensureStringValue(data.image, data.imageUrl || ''),
-    affiliateUrl: ensureStringValue(data.affiliateUrl, '#'),
-    price: ensureNumberValue(data.price?.amount ?? data.price, 0),
+    name: ensureStringValue(data.name || data.title, localizeText(data.title)),
+    description: ensureStringValue(data.description || data.shortDescription, localizeText(data.shortDescription)),
+    longDescription: ensureStringValue(data.longDescription || data.fullDescription, localizeText(data.fullDescription)),
+    image: ensureStringValue(data.image || data.imageUrl, data.imageUrl || ''),
+    affiliateUrl: ensureStringValue(data.affiliateUrl || data.url, '#'),
+    price: ensureNumberValue(data.bestPrice?.amount ?? data.price?.amount ?? data.price, 0),
     originalPrice: data.originalPrice !== undefined ? ensureNumberValue(data.originalPrice, 0) : undefined,
     mainCategorySlug: ensureStringValue(data.mainCategorySlug, 'inne'),
     subCategorySlug: ensureStringValue(data.subCategorySlug, 'inne'),
     subSubCategorySlug: ensureStringValue(data.subSubCategorySlug, ''),
     status: ensureStringValue(data.status, 'draft'),
-    ratingCard_average: ensureNumberValue(data.ratingCard?.average, 0),
-    ratingCard_count: Math.round(ensureNumberValue(data.ratingCard?.count, 0)),
+    ratingCard_average: ensureNumberValue(data.ratingCard?.average ?? data.rating?.score, 0),
+    ratingCard_count: Math.round(ensureNumberValue(data.ratingCard?.count ?? data.rating?.count, 0)),
   };
 }
 
