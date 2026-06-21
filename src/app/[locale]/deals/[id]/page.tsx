@@ -74,13 +74,8 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
 
   const title = ensureLocalizedText(raw?.title, product?.title?.pl || 'Okazja');
   
-  // M6: Prioritize ProductCore full HTML description if deal description is missing
-  let descriptionInput = raw?.description;
-  if (!descriptionInput && product) {
-    if (product.fullDescription) descriptionInput = product.fullDescription;
-    else if (product.description) descriptionInput = product.description;
-    else if (product.shortDescription) descriptionInput = product.shortDescription;
-  }
+  // M6: Prioritize ProductCore full HTML description if available, fallback to deal description
+  let descriptionInput = product?.fullDescription || product?.description || raw?.description;
   
   // Logic to ensure we have a valid LocalizedText
   const description = (descriptionInput && typeof descriptionInput === 'object' && descriptionInput.pl)

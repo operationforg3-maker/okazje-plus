@@ -68,6 +68,7 @@ export interface EnrichedProduct extends Omit<Partial<AliExpressProduct>, 'title
   title: LocalizedText;
   description: LocalizedText;
   specs: LocalizedText; // HTML formatted list per language
+  specsLocalized?: Record<string, Record<string, string>>;
   
   // Temporary / Working fields during import
   titlePL?: string;
@@ -108,7 +109,7 @@ export interface EnrichedProduct extends Omit<Partial<AliExpressProduct>, 'title
   
   // SEO Metadata
   seo: {
-    [key in 'pl' | 'en' | 'de']?: {
+    [key in 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk']?: {
       title: string;
       description: string;
       keywords: string[];

@@ -109,7 +109,14 @@ export async function saveProductsToFirestore(
       const productCorePayload: Partial<ProductCore> = {
         title: product.title,
         shortDescription: product.description,
-        fullDescription: product.description,
+        fullDescription: product.descriptionHtml ? {
+          pl: product.descriptionHtml,
+          en: product.descriptionHtml,
+          de: product.descriptionHtml,
+          fr: product.descriptionHtml,
+          es: product.descriptionHtml,
+          uk: product.descriptionHtml,
+        } : product.description,
         description: product.description,
         
         mainCategorySlug: product.categorySlugEN,
@@ -137,9 +144,10 @@ export async function saveProductsToFirestore(
           rating: Number(product.rating || 4.5),
         } : undefined,
 
-        specs: product.rawSpecs || {},
-        coreSpecs: product.rawSpecs || {},
+        specs: product.specsLocalized?.pl || product.rawSpecs || {},
+        coreSpecs: product.specsLocalized?.en || product.rawSpecs || {},
         rawSpecs: product.rawSpecs || {},
+        specsLocalized: product.specsLocalized || {},
         
         // Alternative format to specs (array for listing display)
         attributes: product.attributes || [],

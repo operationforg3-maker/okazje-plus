@@ -13,6 +13,7 @@
  */
 
 import { AliExpressProduct, ImportStageConfig } from './types';
+import { getAliExpressProductDetailsDirect } from '@/integrations/aliexpress/details';
 
 export interface EnhanceConfig extends ImportStageConfig {
   siteUrl: string;
@@ -41,28 +42,16 @@ interface ProductDetails {
 }
 
 /**
- * Fetch detailed product information from AliExpress /item endpoint
+ * Fetch detailed product information from AliExpress in-process
  */
-async function fetchProductDetails(productId: string, siteUrl: string): Promise<ProductDetails | null> {
+async function fetchProductDetails(productId: string, siteUrl?: string): Promise<ProductDetails | null> {
   try {
-    console.log(`[Importer:Enhance] Fetching details for product: ${productId}`);
+    console.log(`[Importer:Enhance] Fetching details in-process for product: ${productId}`);
     
-    const url = `${siteUrl}/api/admin/aliexpress/item?id=${productId}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    if (!response.ok) {
-      console.error(`[Importer:Enhance] API error (${response.status}) for product ${productId}`);
-      return null;
-    }
-
-    const data = await response.json();
-    const product = data.product;
+    const { product } = await getAliExpressProductDetailsDirect(productId);
 
     if (!product) {
-      console.warn(`[Importer:Enhance] No product data in response for ${productId}`);
+      console.warn(`[Importer:Enhance] No product data returned for ${productId}`);
       return null;
     }
 

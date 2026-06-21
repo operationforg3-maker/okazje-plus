@@ -375,6 +375,16 @@ export class AIRefiner {
     refined.coreSpecs = { ...(refined.specs || {}) };
     refined.rawSpecs = { ...specsSeed };
     
+    // Set localized specs initially
+    refined.specsLocalized = {
+      pl: refined.specs || {},
+      en: refined.coreSpecs || {},
+      de: refined.coreSpecs || {},
+      fr: refined.coreSpecs || {},
+      es: refined.coreSpecs || {},
+      uk: refined.coreSpecs || {}
+    };
+    
     // M6 UPGRADE: Use intelligent generator instead of iterative translation
     // This addresses "AI should improve, not just translate"
     if (refinationType === 'full_enrichment') {
@@ -455,6 +465,15 @@ export class AIRefiner {
           refined.coreSpecs = { ...(refined.specs || {}) };
         }
 
+        refined.specsLocalized = {
+          pl: refined.specs || {},
+          en: refined.coreSpecs || {},
+          de: refined.coreSpecs || {},
+          fr: refined.coreSpecs || {},
+          es: refined.coreSpecs || {},
+          uk: refined.coreSpecs || {}
+        };
+
         // M6+ Market Price Estimation
         if (refinedContent.averageMarketPrice && refinedContent.averageMarketPrice.amount && refinedContent.averageMarketPrice.currency) {
           refined.averageMarketPrice = refinedContent.averageMarketPrice as { amount: number; currency: string; range?: { min: number; max: number; } };
@@ -530,6 +549,15 @@ export class AIRefiner {
             ...titleResult.specsExtracted
           };
           refined.coreSpecs = { ...(refined.specs || {}) };
+          
+          refined.specsLocalized = {
+            pl: refined.specs || {},
+            en: refined.coreSpecs || {},
+            de: refined.coreSpecs || {},
+            fr: refined.coreSpecs || {},
+            es: refined.coreSpecs || {},
+            uk: refined.coreSpecs || {}
+          };
         }
       } catch (e) {
         console.error('[Refiner] Title cleanup failed:', e);

@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useLocale } from 'next-intl';
 import { Flame, Store, Tag } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,12 +57,13 @@ function formatPrice(value: any, fallbackCurrency = 'PLN'): string | null {
 }
 
 export default function HomeDealCard({ deal, priority = false }: HomeDealCardProps) {
+  const locale = useLocale();
   const title = getLocalizedText(deal?.title, 'Oferta');
   const image = getDealImage(deal);
   // Both paths go through image proxy for security; Next.js <Image> handles WebP conversion and caching.
   // withImageProxy routes allowed CDN hostnames through /api/image-proxy (same origin → no CORS, proper cache headers).
   const imageUrl = withImageProxy(image);
-  const href = `/deals/${deal?.id}`;
+  const href = `/${locale}/deals/${deal?.id}`;
   const source = getLocalizedText(deal?.merchant || deal?.metadata?.merchant || deal?.source, 'Oferta');
   const price = formatPrice(deal?.price ?? deal?.legacyPrice, deal?.currency || 'PLN');
   const originalPrice = typeof deal?.originalPrice === 'number'

@@ -28,7 +28,7 @@ import {
   Trash2,
   Plus,
 } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { OAuthToken } from '@/lib/types';
 
@@ -373,4 +373,18 @@ function OAuthSettingsPage() {
   );
 }
 
-export default withAuth(OAuthSettingsPage);
+const AuthenticatedOAuthSettingsPage = withAuth(OAuthSettingsPage);
+
+export default function Page() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div className="animate-pulse h-10 bg-muted rounded w-1/3"></div>
+        <div className="animate-pulse h-32 bg-muted rounded"></div>
+        <div className="animate-pulse h-64 bg-muted rounded"></div>
+      </div>
+    }>
+      <AuthenticatedOAuthSettingsPage />
+    </Suspense>
+  );
+}

@@ -150,8 +150,27 @@ export async function searchProductsTypesense(
 
   // final.md: public reads should go through Typesense, no Firestore fallback.
   if (!typesenseClient) {
-    console.warn('Typesense client unavailable for product search. Returning empty result.');
-    return [];
+    console.warn('Typesense client unavailable for product search. Falling back to Firestore.');
+    try {
+      const { getProductCoresByFiltersData } = await import('@/lib/data/products');
+      return await getProductCoresByFiltersData(
+        {
+          categoryId: mainCategorySlug,
+          subCategorySlug,
+          subSubCategorySlug,
+          priceLimitMin: minPrice,
+          priceLimitMax: maxPrice,
+          minRating,
+          searchTerm: q !== '*' ? q : undefined,
+          statusFilter,
+        },
+        sortBy as any,
+        safeLimit
+      );
+    } catch (fallbackErr) {
+      console.error('Firestore fallback for searchProductsTypesense failed:', fallbackErr);
+      return [];
+    }
   }
 
   const filters: string[] = [];
@@ -205,8 +224,27 @@ export async function searchProductsTypesense(
     const hits = (res.hits || []).map((h: any) => ({ id: h.document.id, ...h.document })) as ProductCore[];
     return hits;
   } catch (err) {
-    console.warn('Typesense search failed:', err);
-    return [];
+    console.warn('Typesense search failed. Falling back to Firestore:', err);
+    try {
+      const { getProductCoresByFiltersData } = await import('@/lib/data/products');
+      return await getProductCoresByFiltersData(
+        {
+          categoryId: mainCategorySlug,
+          subCategorySlug,
+          subSubCategorySlug,
+          priceLimitMin: minPrice,
+          priceLimitMax: maxPrice,
+          minRating,
+          searchTerm: q !== '*' ? q : undefined,
+          statusFilter,
+        },
+        sortBy as any,
+        safeLimit
+      );
+    } catch (fallbackErr) {
+      console.error('Firestore fallback for searchProductsTypesense failed:', fallbackErr);
+      return [];
+    }
   }
 }
 
@@ -266,8 +304,26 @@ export async function searchDealsTypesense(
 
   // final.md: public reads should go through Typesense, no Firestore fallback.
   if (!typesenseClient) {
-    console.warn('Typesense client unavailable for deal search. Returning empty result.');
-    return [];
+    console.warn('Typesense client unavailable for deal search. Falling back to Firestore.');
+    try {
+      const { getDealsByFiltersData } = await import('@/lib/data/deals');
+      return await getDealsByFiltersData(
+        {
+          categoryId: mainCategorySlug,
+          subCategorySlug,
+          subSubCategorySlug,
+          priceLimitMin: minPrice,
+          priceLimitMax: maxPrice,
+          searchTerm: query !== '*' ? query : undefined,
+          statusFilter,
+        },
+        sortBy as any,
+        safeLimit
+      );
+    } catch (fallbackErr) {
+      console.error('Firestore fallback for searchDealsTypesense failed:', fallbackErr);
+      return [];
+    }
   }
   
   const filters: string[] = [];
@@ -327,8 +383,26 @@ export async function searchDealsTypesense(
 
     return hits;
   } catch (err) {
-    console.warn('Typesense deals search failed:', err);
-    return [];
+    console.warn('Typesense deals search failed. Falling back to Firestore:', err);
+    try {
+      const { getDealsByFiltersData } = await import('@/lib/data/deals');
+      return await getDealsByFiltersData(
+        {
+          categoryId: mainCategorySlug,
+          subCategorySlug,
+          subSubCategorySlug,
+          priceLimitMin: minPrice,
+          priceLimitMax: maxPrice,
+          searchTerm: query !== '*' ? query : undefined,
+          statusFilter,
+        },
+        sortBy as any,
+        safeLimit
+      );
+    } catch (fallbackErr) {
+      console.error('Firestore fallback for searchDealsTypesense failed:', fallbackErr);
+      return [];
+    }
   }
 }
 

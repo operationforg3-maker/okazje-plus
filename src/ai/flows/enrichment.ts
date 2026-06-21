@@ -6,7 +6,6 @@
  * - Safety & moderation
  */
 
-import { gemini15Flash } from "@genkit-ai/vertexai";
 import { ai } from "../genkit";
 import { logger } from "@/lib/logging";
 import { parseJsonFromResponse, moderateText } from "@/lib/vertex";
@@ -89,6 +88,13 @@ const BatchEnrichOutputSchema = z.object({
   results: z.array(z.any()),
 });
 
+const CleanProductTitleOutputSchema = z.object({
+  titlePL: z.string(),
+  titleEN: z.string(),
+  titleDE: z.string(),
+  specsExtracted: z.record(z.string()).optional(),
+});
+
 // ===== Flow: Clean Product Title =====
 // New flow to humanize and clean up spammy product titles
 export const cleanProductTitle = ai.defineFlow(
@@ -98,12 +104,7 @@ export const cleanProductTitle = ai.defineFlow(
       originalTitle: z.string(),
       specs: z.record(z.string()).optional(),
     }),
-    outputSchema: z.object({
-      titlePL: z.string(),
-      titleEN: z.string(),
-      titleDE: z.string(),
-      specsExtracted: z.record(z.string()).optional(),
-    }),
+    outputSchema: CleanProductTitleOutputSchema,
   },
   async (input) => {
     try {
@@ -130,13 +131,16 @@ Return JSON:
 }`;
 
       const response = await ai.generate({
-        model: gemini15Flash,
+        model: 'vertexai/gemini-2.5-flash',
         prompt,
-        config: { temperature: 0.4, maxOutputTokens: 500 },
+        config: { temperature: 0.4, maxOutputTokens: 2000 },
+        output: { schema: CleanProductTitleOutputSchema },
       });
 
-      const text = response.text ?? "";
-      const parsed = parseJsonFromResponse(text);
+      const parsed = response.output;
+      if (!parsed) {
+        throw new Error("Empty structured output from gemini");
+      }
 
       return {
         titlePL: parsed.titlePL || input.originalTitle,
@@ -182,13 +186,16 @@ Guidelines:
 Return as JSON: { "seoTitle": "...", "seoDescription": "...", "features": ["...", "..."] }`;
 
       const response = await ai.generate({
-        model: gemini15Flash,
+        model: 'vertexai/gemini-2.5-flash',
         prompt,
-        config: { temperature: 0.5, maxOutputTokens: 1000 },
+        config: { temperature: 0.5, maxOutputTokens: 3000 },
+        output: { schema: ProductDescriptionOutputSchema },
       });
 
-      const text = response.text ?? "";
-      const parsed = parseJsonFromResponse(text);
+      const parsed = response.output;
+      if (!parsed) {
+        throw new Error("Empty structured output from gemini");
+      }
 
       // Moderate output
       const modResult = await moderateText(parsed.seoDescription || "");
@@ -233,11 +240,11 @@ Text to translate:
 "${input.text}"`;
 
         const response = await ai.generate({
-          model: gemini15Flash,
+          model: 'vertexai/gemini-2.5-flash',
           prompt,
           config: { 
             temperature: 0.2, 
-            maxOutputTokens: 2000,
+            maxOutputTokens: 5000,
           },
           output: {
             schema: TranslateContentOutputSchema,
@@ -286,13 +293,16 @@ Tags: searchable categories/attributes (max 10)
 Keywords: SEO-focused terms (max 10)`;
 
       const response = await ai.generate({
-        model: gemini15Flash,
+        model: 'vertexai/gemini-2.5-flash',
         prompt,
-        config: { temperature: 0.4, maxOutputTokens: 300 },
+        config: { temperature: 0.4, maxOutputTokens: 2000 },
+        output: { schema: ProductTagsOutputSchema },
       });
 
-      const text = response.text ?? "";
-      const parsed = parseJsonFromResponse(text);
+      const parsed = response.output;
+      if (!parsed) {
+        throw new Error("Empty structured output from gemini");
+      }
 
       return {
         tags: parsed.tags || [],
@@ -367,6 +377,53 @@ export const batchEnrichProducts = ai.defineFlow(
   }
 );
 
+export const MarketingContentOutputSchema = z.object({
+  title: z.object({
+    pl: z.string().optional(),
+    en: z.string().optional(),
+    de: z.string().optional(),
+    fr: z.string().optional(),
+    es: z.string().optional(),
+    uk: z.string().optional(),
+  }),
+  shortDescription: z.object({
+    pl: z.string().optional(),
+    en: z.string().optional(),
+    de: z.string().optional(),
+    fr: z.string().optional(),
+    es: z.string().optional(),
+    uk: z.string().optional(),
+  }),
+  fullDescription: z.object({
+    pl: z.string().optional(),
+    en: z.string().optional(),
+    de: z.string().optional(),
+    fr: z.string().optional(),
+    es: z.string().optional(),
+    uk: z.string().optional(),
+  }),
+  features: z.object({
+    pl: z.array(z.string()).optional(),
+    en: z.array(z.string()).optional(),
+    de: z.array(z.string()).optional(),
+    fr: z.array(z.string()).optional(),
+    es: z.array(z.string()).optional(),
+    uk: z.array(z.string()).optional(),
+  }).optional(),
+  seo: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    keywords: z.array(z.string()).optional(),
+    faqItems: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
+  }).optional(),
+  averageMarketPrice: z.object({
+    amount: z.number().optional(),
+    currency: z.string().optional(),
+    range: z.object({ min: z.number().optional(), max: z.number().optional() }).optional(),
+  }).optional(),
+  specsAugmented: z.record(z.string()).optional(),
+});
+
 // ===== Flow: Generate Marketing Content (The "Creator" Flow) =====
 // Replaces simple translation with intelligent content generation
 export const generateMarketingContent = ai.defineFlow(
@@ -378,52 +435,7 @@ export const generateMarketingContent = ai.defineFlow(
       category: z.string().optional(),
       source: z.string().optional(),
     }),
-    outputSchema: z.object({
-      title: z.object({
-        pl: z.string(),
-        en: z.string(),
-        de: z.string(),
-        fr: z.string(),
-        es: z.string(),
-        uk: z.string(),
-      }),
-      shortDescription: z.object({
-        pl: z.string(),
-        en: z.string(),
-        de: z.string(),
-        fr: z.string(),
-        es: z.string(),
-        uk: z.string(),
-      }),
-      fullDescription: z.object({
-        pl: z.string(),
-        en: z.string(),
-        de: z.string(),
-        fr: z.string(),
-        es: z.string(),
-        uk: z.string(),
-      }),
-      features: z.object({
-        pl: z.array(z.string()),
-        en: z.array(z.string()),
-        de: z.array(z.string()),
-        fr: z.array(z.string()),
-        es: z.array(z.string()),
-        uk: z.array(z.string()),
-      }),
-      seo: z.object({
-        title: z.string(),
-        description: z.string(),
-        keywords: z.array(z.string()),
-        faqItems: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
-      }),
-      averageMarketPrice: z.object({
-        amount: z.number(),
-        currency: z.string(),
-        range: z.object({ min: z.number(), max: z.number() }).optional(),
-      }).optional(),
-      specsAugmented: z.record(z.string()).optional(),
-    }),
+    outputSchema: MarketingContentOutputSchema,
   },
   async (input) => {
     try {
@@ -507,25 +519,34 @@ OUTPUT STRICTLY AS JSON:
       let response;
       try {
         response = await ai.generate({
-          model: gemini15Flash,
+          model: 'vertexai/gemini-2.5-flash',
           prompt,
           config: {
             temperature: 0.3,
+            maxOutputTokens: 8192,
             googleSearchRetrieval: {},
           },
+          output: {
+            schema: MarketingContentOutputSchema,
+          }
         });
       } catch (groundingError) {
         // Fallback bez grounding (np. rate limit lub brak uprawnień do Google Search)
         logger.warn("Google Search grounding unavailable, falling back to knowledge-only generation", { error: groundingError });
         response = await ai.generate({
-          model: gemini15Flash,
+          model: 'vertexai/gemini-2.5-flash',
           prompt,
-          config: { temperature: 0.4 },
+          config: { temperature: 0.4, maxOutputTokens: 8192 },
+          output: {
+            schema: MarketingContentOutputSchema,
+          }
         });
       }
 
-      const text = response.text ?? "";
-      const parsed = parseJsonFromResponse(text);
+      const parsed = response.output;
+      if (!parsed) {
+        throw new Error("Empty structured output from gemini");
+      }
 
       return {
         title: parsed.title || { pl: input.originalTitle, en: input.originalTitle, de: input.originalTitle, fr: input.originalTitle, es: input.originalTitle, uk: input.originalTitle },

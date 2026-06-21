@@ -875,6 +875,9 @@ export default function ProductDetailM6Client({
                         {productCore.description.pl && <TabsTrigger value="pl">Polski</TabsTrigger>}
                         {productCore.description.en && <TabsTrigger value="en">English</TabsTrigger>}
                         {productCore.description.de && <TabsTrigger value="de">Deutsch</TabsTrigger>}
+                        {productCore.description.fr && <TabsTrigger value="fr">Français</TabsTrigger>}
+                        {productCore.description.es && <TabsTrigger value="es">Español</TabsTrigger>}
+                        {productCore.description.uk && <TabsTrigger value="uk">Українська</TabsTrigger>}
                       </TabsList>
                       {productCore.description.pl && (
                         <TabsContent value="pl" className="mt-4">
@@ -894,6 +897,27 @@ export default function ProductDetailM6Client({
                         <TabsContent value="de" className="mt-4">
                           <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
                             {productCore.description.de}
+                          </div>
+                        </TabsContent>
+                      )}
+                      {productCore.description.fr && (
+                        <TabsContent value="fr" className="mt-4">
+                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
+                            {productCore.description.fr}
+                          </div>
+                        </TabsContent>
+                      )}
+                      {productCore.description.es && (
+                        <TabsContent value="es" className="mt-4">
+                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
+                            {productCore.description.es}
+                          </div>
+                        </TabsContent>
+                      )}
+                      {productCore.description.uk && (
+                        <TabsContent value="uk" className="mt-4">
+                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
+                            {productCore.description.uk}
                           </div>
                         </TabsContent>
                       )}

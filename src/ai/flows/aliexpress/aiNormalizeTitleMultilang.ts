@@ -1,6 +1,5 @@
 "use server";
 
-import { gemini15Flash } from '@genkit-ai/vertexai';
 import { z } from 'zod';
 import { ai } from '@/ai/genkit';
 
@@ -35,7 +34,7 @@ Return JSON like:
 {"pl":"...", "en":"...", "de":"..."}
     `;
 
-    const llmResponse = await ai.generate({ model: gemini15Flash, prompt, config: { temperature: 0.3 } });
+    const llmResponse = await ai.generate({ model: 'vertexai/gemini-2.5-flash', prompt, config: { temperature: 0.3 } });
     const text = (llmResponse.text ?? '').trim();
     try {
       const parsed = JSON.parse(text);

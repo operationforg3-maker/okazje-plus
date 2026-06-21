@@ -1,7 +1,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { searchProductsTypesense, searchDealsTypesense } from '@/lib/search';
 import ProductListCard from '@/components/product-list-card';
@@ -34,6 +34,27 @@ interface SearchFilters {
 }
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="page-container py-8 md:py-12">
+        <div className="animate-pulse space-y-6">
+          <div className="h-10 bg-muted rounded w-1/3"></div>
+          <div className="h-6 bg-muted rounded w-1/2"></div>
+          <div className="h-10 bg-muted rounded"></div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-80 bg-muted rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    }>
+      <SearchPageContent />
+    </Suspense>
+  );
+}
+
+function SearchPageContent() {
   const t = useTranslations('search');
   const tActions = useTranslations('common.actions');
   const searchParams = useSearchParams();

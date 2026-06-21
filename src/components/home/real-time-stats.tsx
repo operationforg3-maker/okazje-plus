@@ -68,7 +68,7 @@ export function RealTimeStats() {
 
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/public/stats', { cache: 'force-cache' });
+        const response = await fetch('/api/public/stats', { cache: 'no-store' });
 
         if (response.ok) {
           const data = await response.json();
@@ -191,7 +191,7 @@ export function ForumStats() {
     const fetchStats = async () => {
       try {
         const response = await fetch('/api/forum/stats', {
-          cache: 'force-cache',
+          cache: 'no-store',
         });
 
         if (response.ok) {

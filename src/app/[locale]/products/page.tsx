@@ -2,7 +2,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { searchProductsTypesense } from '@/lib/search';
 import ProductCard from '@/components/product-card';
@@ -1196,5 +1196,24 @@ export function ProductsPageContent({
 }
 
 export default function ProductsPage() {
-  return <ProductsPageContent />;
+  return (
+    <Suspense fallback={
+      <div className="page-container py-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-12 bg-muted rounded"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="h-96 bg-muted rounded md:col-span-1"></div>
+            <div className="space-y-4 md:col-span-3">
+              <div className="h-32 bg-muted rounded"></div>
+              <div className="h-32 bg-muted rounded"></div>
+              <div className="h-32 bg-muted rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ProductsPageContent />
+    </Suspense>
+  );
 }

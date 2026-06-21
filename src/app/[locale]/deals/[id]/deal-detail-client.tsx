@@ -334,11 +334,25 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     setImages(computedImages);
 
     // Specyfikacje
-    const specs = (deal.metadata as any)?.specifications 
+    const rawSpecs = (deal.metadata as any)?.specifications 
       || (productData as any)?.metadata?.specifications
+      || (productData as any)?.specsLocalized?.[locale]
+      || (productData as any)?.specsLocalized?.pl
       || (productData as any)?.specs
-      || [];
-    setSpecifications(specs);
+      || (deal.metadata as any)?.specs;
+
+    let computedSpecs: any[] = [];
+    if (rawSpecs) {
+      if (Array.isArray(rawSpecs)) {
+        computedSpecs = rawSpecs;
+      } else if (typeof rawSpecs === 'object') {
+        computedSpecs = Object.entries(rawSpecs).map(([key, value]) => ({
+          name: key,
+          value: String(value)
+        }));
+      }
+    }
+    setSpecifications(computedSpecs);
   }, [deal, productData, dealTitle]);
 
   const nextImage = () => {
@@ -1062,7 +1076,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as typeof activeTab)} className="mb-12">
         <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
           <TabsTrigger value="discussion">Dyskusja ({liveComments.count})</TabsTrigger>
-          {((deal.metadata as any)?.specifications && (deal.metadata as any).specifications.length > 0) && (
+          {specifications && specifications.length > 0 && (
             <TabsTrigger value="specifications">Specyfikacja</TabsTrigger>
           )}
         </TabsList>
@@ -1072,7 +1086,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
         </TabsContent>
 
         {/* Product specifications from Auto-Import */}
-        {((deal.metadata as any)?.specifications && (deal.metadata as any).specifications.length > 0) && (
+        {specifications && specifications.length > 0 && (
           <TabsContent value="specifications" className="mt-6">
             <Card>
               <CardHeader>
@@ -1083,7 +1097,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               </CardHeader>
               <CardContent>
                 <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(deal.metadata as any).specifications.map((spec: any, idx: number) => (
+                  {specifications.map((spec: any, idx: number) => (
                     <div key={`spec-${idx}-${spec.name || spec.key}`} className="border-b pb-2">
                       <dt className="text-sm font-medium text-muted-foreground">{spec.name || spec.key}</dt>
                       <dd className="mt-1 text-sm font-semibold">{spec.value}</dd>

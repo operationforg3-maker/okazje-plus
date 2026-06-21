@@ -1059,7 +1059,7 @@ export class AliExpressClient {
       if (this.token && process.env.ALIEXPRESS_USE_OAUTH === 'true') {
         logger.debug('Attempting OAuth endpoint (only if app supports it)');
         const body = {
-          product_id: params.productId,
+          product_ids: params.productId,
           ...baseParams,
         };
         return await this.request<AliExpressProductDetailsResponse>('/product/details', body);
@@ -1067,7 +1067,7 @@ export class AliExpressClient {
 
       // Singapore /sync with signature auth (PRIMARY for Affiliate API)
       const topParams = {
-        product_id: params.productId,
+        product_ids: params.productId,
         ...baseParams,
       };
 
@@ -1109,7 +1109,10 @@ export class AliExpressClient {
 
     const response = await this.getProductDetails({ productId });
 
-    const product = (response as any)?.resp_result?.result?.products?.product?.[0];
+    const productsList = (response as any)?.resp_result?.result?.products;
+    const product = Array.isArray(productsList)
+      ? productsList[0]
+      : (productsList?.product?.[0] || (response as any)?.resp_result?.result?.products?.[0] || (response as any)?.product);
     if (!product) {
       console.warn(`[AliExpress M6] No data found for ${productId}`);
       return null;

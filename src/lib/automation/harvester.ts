@@ -517,361 +517,43 @@ export class SmartHarvester {
       return {};
     }
 
-    const parseDeliveryDays = (text: string, referenceDate: Date = new Date()): number => {
-      const lower = text.toLowerCase();
-      const daysMatch = lower.match(/(\d+)\s*-?\s*day/i);
-      if (daysMatch) {
-        return parseInt(daysMatch[1], 10);
-      }
-      
-      const plMonths: Record<string, number> = {
-        'sty': 0, 'lut': 1, 'mar': 2, 'kwi': 3, 'maj': 4, 'cze': 5,
-        'lip': 6, 'sie': 7, 'wrz': 8, 'paź': 9, 'lis': 10, 'gru': 11
-      };
-      const enMonths: Record<string, number> = {
-        'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
-        'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
-      };
-
-      const tokens = text.replace(':', ' ').split(/\s+/).filter(Boolean);
-      let targetDate: Date | null = null;
-      
-      for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i].toLowerCase();
-        const monthIndex = plMonths[token.slice(0, 3)] ?? enMonths[token.slice(0, 3)];
-        if (monthIndex !== undefined) {
-          let day = NaN;
-          if (i > 0) day = parseInt(tokens[i - 1], 10);
-          if (isNaN(day) && i < tokens.length - 1) day = parseInt(tokens[i + 1], 10);
-
-          if (!isNaN(day)) {
-            const year = referenceDate.getFullYear();
-            const cand = new Date(year, monthIndex, day);
-            if (cand.getTime() < referenceDate.getTime() - 30 * 24 * 3600 * 1000) {
-              cand.setFullYear(year + 1);
-            }
-            if (!targetDate || cand.getTime() < targetDate.getTime()) {
-              targetDate = cand;
-            }
-          }
-        }
-      }
-
-      if (targetDate) {
-        const diffMs = targetDate.getTime() - referenceDate.getTime();
-        return Math.max(1, Math.round(diffMs / (24 * 3600 * 1000)));
-      }
-
-      return 7;
-    };
-
-    // First try Puppeteer for fully rendered CSR content
     try {
-      const puppeteer = await import('puppeteer');
-      const browser = await puppeteer.default.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
+      const match = url.match(/\/item\/(\d+)\.html/i);
+      const productId = match ? match[1] : '';
+      if (!productId) {
+        this.addLog('warn', `AliExpress Scraper: Could not extract product ID from URL: ${url}`);
+        return {};
+      }
 
-      try {
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
-        await page.setExtraHTTPHeaders({ 'Accept-Language': 'pl-PL,pl;q=0.9,en-US;q=0.8' });
-        await page.setViewport({ width: 1280, height: 800 });
+      this.addLog('info', `AliExpress Scraper: Scraping live details for ID: ${productId}`);
+      const { scrapeAliExpressProduct } = await import('@/integrations/aliexpress/scraper');
+      const scraped = await scrapeAliExpressProduct(productId);
 
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
-
-        const scraped = (await page.evaluate(`(() => {
-          const text = (sel) => document.querySelector(sel)?.textContent?.trim() || null;
-          
-          const priceSelectors = [
-            '.price-default--current--F8OlYIo',
-            '[class*="price-default--current"]',
-            '.product-price-value',
-            '[class*="price-value"]',
-            '[class*="priceText"]',
-            '.price'
-          ];
-          let currentPriceText = null;
-          for (const sel of priceSelectors) {
-            currentPriceText = text(sel);
-            if (currentPriceText && currentPriceText.includes('zł')) break;
-          }
-
-          const originPriceSelectors = [
-            '.price--lastOrigin--vV459Fr',
-            '[class*="price--lastOrigin"]',
-            '[class*="price-original"]',
-            '[class*="original-price"]'
-          ];
-          let originalPriceText = null;
-          for (const sel of originPriceSelectors) {
-            originalPriceText = text(sel);
-            if (originalPriceText) break;
-          }
-
-          const storeNameSelectors = [
-            '.store-detail--storeName--Lk2FVZ4',
-            '[class*="store-detail--storeName"]',
-            '.store-info--name--E2VWTyv a',
-            '[class*="store-info--name"] a',
-            'a[data-pl="store-name"]'
-          ];
-          let storeName = null;
-          for (const sel of storeNameSelectors) {
-            storeName = text(sel);
-            if (storeName) break;
-          }
-
-          const storeLinkEl = document.querySelector('a[data-pl="store-name"]') || document.querySelector('[class*="store-info--name"] a');
-          const storeUrl = storeLinkEl ? storeLinkEl.getAttribute('href') : null;
-          const storeDescText = text('[class*="store-info--desc"]') || text('[class*="store-info--content"]') || '';
-
-          const shippingTexts = [];
-          const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-          let node;
-          const keywords = ['wysył', 'dostaw', 'shipp', 'deliver', 'darmow', 'bezpłat', 'free'];
-          while (node = walker.nextNode()) {
-            const val = node.textContent?.trim();
-            if (val) {
-              const lower = val.toLowerCase();
-              if (keywords.some(k => lower.includes(k))) {
-                const parent = node.parentElement;
-                if (parent && parent.tagName !== 'SCRIPT' && parent.tagName !== 'STYLE' && parent.tagName !== 'NOSCRIPT') {
-                  shippingTexts.push(val);
-                }
-              }
-            }
-          }
-
-          const metaDescription = document.querySelector('meta[property="og:description"]')?.getAttribute('content')
-            || document.querySelector('meta[name="description"]')?.getAttribute('content')
-            || '';
-
-          const metaImage = document.querySelector('meta[property="og:image"]')?.getAttribute('content')
-            || document.querySelector('meta[property="og:image:secure_url"]')?.getAttribute('content')
-            || '';
-
-          let brand = null;
-          let sku = null;
-          let mpn = null;
-          let model = null;
-          const ldScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-          for (const s of ldScripts) {
-            try {
-              const parsed = JSON.parse(s.textContent || '');
-              const candidates = Array.isArray(parsed) ? parsed : [parsed];
-              for (const entry of candidates) {
-                const product = entry?.['@type'] === 'Product'
-                  ? entry
-                  : entry?.['@graph']?.find((item) => item?.['@type'] === 'Product');
-                if (product) {
-                  brand = typeof product.brand === 'string' ? product.brand : product.brand?.name;
-                  sku = product.sku;
-                  mpn = product.mpn;
-                  model = product.model;
-                }
-              }
-            } catch (e) {}
-          }
-
-          return {
-            title: document.title || null,
-            h1Title: text('h1'),
-            currentPriceText,
-            originalPriceText,
-            storeName,
-            storeUrl,
-            storeDescText,
-            shippingTexts,
-            description: metaDescription,
-            metaImage,
-            brand,
-            sku,
-            mpn,
-            model
-          };
-        })()`)) as any;
-
-        await browser.close();
-
-        if (scraped) {
-          const result: any = {};
-          result.title = scraped.h1Title || scraped.title || undefined;
-          result.description = scraped.description || undefined;
-
-          if (scraped.currentPriceText) {
-            const cleanPrice = scraped.currentPriceText.replace(',', '.').replace(/[^\d\.]/g, '');
-            const pVal = parseFloat(cleanPrice);
-            if (!isNaN(pVal)) result.price = pVal;
-          }
-          if (scraped.originalPriceText) {
-            const cleanOrigin = scraped.originalPriceText.replace(',', '.').replace(/[^\d\.]/g, '');
-            const oVal = parseFloat(cleanOrigin);
-            if (!isNaN(oVal)) result.originalPrice = oVal;
-          }
-
-          if (scraped.storeName) {
-            result.seller = {
-              name: scraped.storeName,
-              storeUrl: scraped.storeUrl ? (scraped.storeUrl.startsWith('http') ? scraped.storeUrl : 'https:' + scraped.storeUrl) : undefined,
-            };
-            if (scraped.storeDescText) {
-              const ratingMatch = scraped.storeDescText.match(/(\d+(?:\.\d+)?)\s*%/);
-              if (ratingMatch) {
-                result.seller.positiveRate = ratingMatch[1] + '%';
-                result.seller.rating = parseFloat(ratingMatch[1]) / 20;
-              }
-              const followersMatch = scraped.storeDescText.match(/(\d[\d\s]*)\s*(?:Obserwujący|Follower)/i);
-              if (followersMatch) {
-                result.seller.followers = parseInt(followersMatch[1].replace(/\s/g, ''), 10);
-              }
-            }
-          }
-
-          if (scraped.shippingTexts && scraped.shippingTexts.length > 0) {
-            const shippingText = scraped.shippingTexts.find((t: string) => t.toLowerCase().includes('wysyłka:') || t.toLowerCase().includes('shipping:'));
-            if (shippingText) {
-              const lower = shippingText.toLowerCase();
-              if (lower.includes('darmow') || lower.includes('bezpłat') || lower.includes('free') || lower.includes('gratis')) {
-                result.shippingCost = 0;
-              } else {
-                const match = shippingText.replace(',', '.').match(/([\d\.]+)/);
-                if (match) {
-                  result.shippingCost = parseFloat(match[1]);
-                }
-              }
-            } else {
-              const hasFree = scraped.shippingTexts.some((t: string) => {
-                const lower = t.toLowerCase();
-                return (lower.includes('darmowa') || lower.includes('free') || lower.includes('bezpłatna')) && lower.includes('wysył');
-              });
-              if (hasFree) {
-                result.shippingCost = 0;
-              }
-            }
-
-            const deliveryText = scraped.shippingTexts.find((t: string) => t.toLowerCase().includes('dostawa:') || t.toLowerCase().includes('delivery:') || t.toLowerCase().includes('delivered by'));
-            if (deliveryText) {
-              result.shippingDays = parseDeliveryDays(deliveryText);
-            }
-          }
-
-          const specs: Record<string, string> = {};
-          if (scraped.brand) specs.brand = String(scraped.brand);
-          if (scraped.sku) specs.sku = String(scraped.sku);
-          if (scraped.mpn) specs.mpn = String(scraped.mpn);
-          if (scraped.model) specs.model = String(scraped.model);
-          if (Object.keys(specs).length > 0) {
-            result.specs = specs;
-          }
-
-          const images: string[] = [];
-          if (scraped.metaImage && scraped.metaImage.startsWith('http')) {
-            images.push(scraped.metaImage);
-          }
-          if (images.length > 0) {
-            result.images = images;
-            result.mainImage = images[0];
-          }
-
-          return result;
-        }
-      } catch (innerErr) {
-        await browser.close().catch(() => {});
-        throw innerErr;
+      if (scraped) {
+        return {
+          title: scraped.title,
+          description: scraped.descriptionHtml, // Map descriptionHtml to description
+          specs: scraped.specs,
+          images: scraped.images,
+          mainImage: scraped.mainImage,
+          seller: scraped.seller ? {
+            name: scraped.seller.name,
+            rating: scraped.seller.rating,
+            followers: scraped.seller.followers,
+            storeUrl: scraped.seller.storeUrl,
+            positiveRate: scraped.seller.positiveRate,
+          } : undefined,
+          price: scraped.price,
+          originalPrice: scraped.originalPrice,
+          shippingCost: scraped.shippingCost,
+          shippingDays: scraped.shippingDays,
+        };
       }
     } catch (err: any) {
-      this.addLog('warn', `AliExpress: Puppeteer scraper failed, falling back to static Cheerio fetch`, err);
+      this.addLog('warn', `AliExpress Scraper failed: ${err.message || err}`);
     }
 
-    // Static Cheerio Fallback
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9,pl;q=0.8,de;q=0.7',
-        },
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (!response.ok) {
-        return {};
-      }
-
-      const html = await response.text();
-      if (!html || html.length < 200) {
-        return {};
-      }
-
-      const $ = loadHtml(html);
-      const specs: Record<string, string> = {};
-      const images: string[] = [];
-
-      let description = $('meta[property="og:description"]').attr('content')
-        || $('meta[name="description"]').attr('content')
-        || '';
-
-      const metaImage = $('meta[property="og:image"]').attr('content')
-        || $('meta[property="og:image:secure_url"]').attr('content')
-        || '';
-
-      if (metaImage && metaImage.startsWith('http')) {
-        images.push(metaImage);
-      }
-
-      $('script[type="application/ld+json"]').each((_, el) => {
-        const jsonText = $(el).text();
-        if (!jsonText) return;
-
-        try {
-          const parsed = JSON.parse(jsonText);
-          const candidates = Array.isArray(parsed) ? parsed : [parsed];
-          candidates.forEach((entry) => {
-            const product = entry?.['@type'] === 'Product'
-              ? entry
-              : entry?.['@graph']?.find((item: any) => item?.['@type'] === 'Product');
-
-            if (!product) return;
-
-            const brand = typeof product.brand === 'string'
-              ? product.brand
-              : product.brand?.name;
-            if (brand) specs.brand = String(brand);
-
-            if (product.sku) specs.sku = String(product.sku);
-            if (product.mpn) specs.mpn = String(product.mpn);
-            if (product.model) specs.model = String(product.model);
-
-            const productImages = product.image;
-            if (Array.isArray(productImages)) {
-              productImages
-                .filter((img) => typeof img === 'string' && img.startsWith('http'))
-                .forEach((img) => images.push(img));
-            } else if (typeof productImages === 'string' && productImages.startsWith('http')) {
-              images.push(productImages);
-            }
-
-            if (!description && product.description) {
-              description = String(product.description);
-            }
-          });
-        } catch {
-          return;
-        }
-      });
-
-      const dedupedImages = Array.from(new Set(images)).slice(0, 15);
-
-      return {
-        description: description || undefined,
-        specs: Object.keys(specs).length > 0 ? specs : undefined,
-        images: dedupedImages.length > 0 ? dedupedImages : undefined,
-        mainImage: dedupedImages[0],
-      };
-    } catch {
-      return {};
-    }
+    return {};
   }
 
   /**

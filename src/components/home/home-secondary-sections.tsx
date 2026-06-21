@@ -243,7 +243,7 @@ export default function HomeSecondarySections() {
                   Przeglądaj okazje
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-white text-white hover:bg-white/10" asChild>
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-white/40 bg-black/15 backdrop-blur-[2px] text-white hover:bg-black/35 hover:border-white transition-all shadow-sm" asChild>
                 <Link href={`/${locale}/products`}>
                   <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Katalog produktów

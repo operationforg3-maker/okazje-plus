@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useLocale } from 'next-intl';
 import { Package, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { withImageProxy } from '@/lib/image-proxy';
@@ -45,8 +46,9 @@ function formatPrice(value: any, fallbackCurrency = 'PLN'): string | null {
 }
 
 export default function HomeProductCard({ product }: HomeProductCardProps) {
+  const locale = useLocale();
   const title = getLocalizedText(product?.title || product?.name, 'Produkt');
-  const href = `/products/${product?.slug || product?.id}`;
+  const href = `/${locale}/products/${product?.slug || product?.id}`;
   const image = getProductImage(product);
   // Generate responsive image URL with size params for proxy optimization
   const imageUrl = `/api/image-proxy?url=${encodeURIComponent(image)}&w=600&h=450&q=60&f=auto`;
