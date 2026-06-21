@@ -206,6 +206,6 @@ env:
       - RUNTIME
 
   - variable: REDIS_URL
-    value: redis://10.122.50.67:6379
+    secret: REDIS_URL
     availability:
       - RUNTIME
