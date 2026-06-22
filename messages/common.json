@@ -100,7 +100,16 @@
     "youSave": "Oszczędzasz {amount}",
     "isNew": "Nowość",
     "viewProduct": "Zobacz produkt",
-    "by": "przez"
+    "by": "przez",
+    "soldOut": "Wyprzedane",
+    "promo": "Promocja",
+    "discount": "Zniżka {percent}%",
+    "promoCoupon": "Promocja / Kupon",
+    "couponsAvailable": "Kupony dostępne",
+    "dealPreview": "Podgląd oferty",
+    "lowStock": "Niski stan",
+    "more": "więcej",
+    "coupon": "Kupon"
   },
   "comments": {
     "title": "Komentarze",

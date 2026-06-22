@@ -30,6 +30,8 @@ import {
 } from "@/lib/data";
 import { Category, Deal, Product } from "@/lib/types";
 import { FEATURES } from "@/lib/config";
+import { getLocalizedCategoryName, type SupportedLanguage } from "@/lib/i18n-utils";
+import { useTranslations } from "next-intl";
 
 const priceFormatter = new Intl.NumberFormat("pl-PL", {
   style: "currency",
@@ -43,7 +45,7 @@ const formatCurrency = (value?: number | null) => {
   return priceFormatter.format(value);
 };
 
-// Helper to extract name from either string or LocalizedText object
+// Helper to extract name from either string or LocalizedText object (fallback, prefer getLocalizedCategoryName)
 function getName(name: any): string {
   if (typeof name === 'string') return name;
   if (name && typeof name === 'object') {
@@ -81,11 +83,14 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
   activeIndex: number;
   setActiveIndex: (i: number) => void;
 }) {
-  const t = useTranslations('common');
+  const t = useTranslations('nav');
+  const params = useParams();
+  const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
   return (
-      <nav className="space-y-1.5" aria-label="Kategorie">
+      <nav className="space-y-1.5" aria-label={t('categories')}>
         {categories.map((category, index) => {
           const isActive = index === activeIndex;
+          const catName = getLocalizedCategoryName(category, locale as SupportedLanguage);
           return (
             <button
               key={category.id}
@@ -95,7 +100,7 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
               onClick={() => setActiveIndex(index)}
               aria-selected={isActive}
               aria-current={isActive ? 'true' : undefined}
-              aria-label={`Wybierz kategorię ${getName(category.name)}`}
+              aria-label={t('selectCategory', { name: catName })}
               className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm font-medium transition-all ${
                 isActive
                   ? "bg-secondary text-secondary-foreground shadow-sm"
@@ -110,7 +115,7 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
                 ) : (
                   <Sparkles className="h-4 w-4 shrink-0" />
                 )}
-                <span className="truncate">{getName(category.name)}</span>
+                <span className="truncate">{catName}</span>
               </span>
               <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
             </button>
@@ -123,18 +128,19 @@ function CategoryColumn({ categories, activeIndex, setActiveIndex }: {
 function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) {
   const params = useParams();
   const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
+  const t = useTranslations('nav');
   return (
     <div className="flex flex-col gap-6">
       <div className="space-y-2">
         <nav className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
           <Link href="/" className="transition-colors hover:text-primary">
-            Strona główna
+            {t('home')}
           </Link>
           <span className="opacity-60">/</span>
           {activeCategory ? (
-            <span className="text-primary">{getName(activeCategory.name)}</span>
+            <span className="text-primary">{getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}</span>
           ) : (
-            <span>Kategorie</span>
+            <span>{t('categories')}</span>
           )}
         </nav>
         {activeCategory?.description && (
@@ -149,7 +155,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
         >
           <Image
             src={proxyImage(activeCategory.heroImage)}
-            alt={getName(activeCategory.name)}
+            alt={getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}
             width={960}
             height={320}
             className="h-80 w-full object-cover transition-transform group-hover:scale-110"
@@ -157,16 +163,16 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
           <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-background/10" />
           <div className="absolute inset-0 flex flex-col justify-end gap-2 p-6">
             <Badge className="w-fit bg-background/80 text-xs uppercase text-muted-foreground" variant="secondary">
-              Kolekcja
+              {t('collection')}
             </Badge>
-            <h3 className="text-xl font-semibold text-foreground">{getName(activeCategory.name)}</h3>
+            <h3 className="text-xl font-semibold text-foreground">{getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}</h3>
             {activeCategory.description && (
               <p className="max-w-xl text-sm text-muted-foreground">
                 {activeCategory.description}
               </p>
             )}
             <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">
-              Zobacz wszystkie <ArrowRight className="h-4 w-4" />
+              {t('seeAll')} <ArrowRight className="h-4 w-4" />
             </span>
           </div>
         </Link>
@@ -199,9 +205,9 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-foreground truncate">{getName(subcategory.name)}</h4>
+                      <h4 className="font-semibold text-foreground truncate">{getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}</h4>
                       {subcategory.highlight && (
-                        <Badge className="text-[10px] uppercase flex-shrink-0" variant="secondary">Polecane</Badge>
+                        <Badge className="text-[10px] uppercase flex-shrink-0" variant="secondary">{t('featured')}</Badge>
                       )}
                     </div>
                     {subcategory.description && (
@@ -228,7 +234,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
                           {subSubcategory.icon && (
                             <span className="text-base shrink-0">{subSubcategory.icon}</span>
                           )}
-                          <span className="flex-1 truncate font-medium group-hover:text-primary">{getName(subSubcategory.name)}</span>
+                          <span className="flex-1 truncate font-medium group-hover:text-primary">{getLocalizedCategoryName(subSubcategory as any, locale as SupportedLanguage)}</span>
                           <ArrowRight className="h-3 w-3 shrink-0 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
                         </Link>
                       );
@@ -240,7 +246,7 @@ function SubTreeColumn({ activeCategory }: { activeCategory: Category | null }) 
           })}
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/60 p-6 text-sm text-muted-foreground">Brak podkategorii w tej kategorii.</div>
+        <div className="rounded-xl border border-dashed border-border/60 p-6 text-sm text-muted-foreground">{t('noSubcategories')}</div>
       )}
 
       {activeCategory?.promo ? (
@@ -288,6 +294,8 @@ export function MegaMenu() {
   const { user, loading: authLoading, logout } = useAuth();
   const params = useParams();
   const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
+  const t = useTranslations('nav');
+  const tNav = t;
   const [menuState, setMenuState] = React.useState({
     categories: [] as Category[],
     promotedItems: [] as ShowcaseItem[],
@@ -486,7 +494,7 @@ export function MegaMenu() {
   return (
     <NavigationMenuItem>
       <NavigationMenuTrigger className={navigationMenuTriggerStyle()}>
-        Katalog
+        {t('catalog')}
       </NavigationMenuTrigger>
   <NavigationMenuContent className="w-screen max-w-none border-t border-border/60 bg-background/95 shadow-lg backdrop-blur animate-fade">
         {menuState.isLoading ? (
@@ -497,7 +505,7 @@ export function MegaMenu() {
           </div>
         ) : menuState.categories.length === 0 ? (
           <div className="flex items-center justify-center px-6 py-16 text-sm text-muted-foreground">
-            Brak zdefiniowanych kategorii. Dodaj je w panelu administracyjnym.
+            {t('noCategories')}
           </div>
         ) : (
           <div className="grid gap-6 px-4 py-8 md:grid-cols-[minmax(220px,1fr)_minmax(520px,2.5fr)_minmax(260px,1.2fr)] md:px-12">
@@ -507,15 +515,15 @@ export function MegaMenu() {
 
             <div className="flex flex-col gap-6">
               <div className="space-y-2">
-                <nav className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                              <nav className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
                   <Link href="/" className="transition-colors hover:text-primary">
-                    Strona główna
+                    {t('home')}
                   </Link>
                   <span className="opacity-60">/</span>
                   {activeCategory ? (
-                    <span className="text-primary">{getName(activeCategory.name)}</span>
+                    <span className="text-primary">{getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}</span>
                   ) : (
-                    <span>Kategorie</span>
+                    <span>{t('categories')}</span>
                   )}
                 </nav>
                 {activeCategory?.description && (
@@ -530,7 +538,7 @@ export function MegaMenu() {
                 >
                   <Image
                     src={activeCategory.heroImage}
-                    alt={getName(activeCategory.name)}
+                    alt={getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}
                     width={960}
                     height={320}
                     className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -538,16 +546,16 @@ export function MegaMenu() {
                   <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/40 to-background/10" />
                   <div className="absolute inset-0 flex flex-col justify-end gap-2 p-6">
                     <Badge className="w-fit bg-background/80 text-xs uppercase text-muted-foreground" variant="secondary">
-                      Kolekcja
+                      {t('collection')}
                     </Badge>
-                    <h3 className="text-xl font-semibold text-foreground">{getName(activeCategory.name)}</h3>
+                    <h3 className="text-xl font-semibold text-foreground">{getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}</h3>
                     {activeCategory.description && (
                       <p className="max-w-xl text-sm text-muted-foreground">
                         {activeCategory.description}
                       </p>
                     )}
                     <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">
-                      Zobacz wszystkie <ArrowRight className="h-4 w-4" />
+                      {t('seeAll')} <ArrowRight className="h-4 w-4" />
                     </span>
                   </div>
                 </Link>
@@ -593,11 +601,11 @@ export function MegaMenu() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-semibold text-foreground truncate">
-                                {getName(subcategory.name)}
+                                {getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}
                               </h4>
                               {subcategory.highlight && (
                                 <Badge className="text-[10px] uppercase flex-shrink-0" variant="secondary">
-                                  Polecane
+                                  {t('featured')}
                                 </Badge>
                               )}
                             </div>
@@ -613,42 +621,42 @@ export function MegaMenu() {
                         {/* Szybkie skróty do okazji w podkategorii */}
                         <div className="pl-6 pt-1 flex flex-wrap items-center gap-2 text-xs">
                           <Link
-                            href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}`}
+                            href={`/${locale}/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}`}
                             className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
                           >
-                            <Flame className="h-3.5 w-3.5" /> Okazje
+                            <Flame className="h-3.5 w-3.5" /> {t('quickFilterDeals')}
                           </Link>
                           <Link
-                            href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&sort=hottest`}
+                            href={`/${locale}/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&sort=hottest`}
                             className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
                           >
-                            🔥 Gorące
+                            🔥 {t('quickFilterHot')}
                           </Link>
                           {FEATURES.MEGA_MENU_FILTER_SHORTCUTS && (
                             <>
                               <Link
-                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&sort=newest`}
+                                href={`/${locale}/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&sort=newest`}
                                 className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
                               >
-                                🕒 Nowe
+                                🕒 {t('quickFilterNew')}
                               </Link>
                               <Link
-                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&type=coupon`}
+                                href={`/${locale}/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&type=coupon`}
                                 className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
                               >
-                                🎟️ Kupony
+                                🎟️ {t('quickFilterCoupons')}
                               </Link>
                               <Link
-                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&type=freebie`}
+                                href={`/${locale}/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&type=freebie`}
                                 className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
                               >
-                                🆓 Za darmo
+                                🆓 {t('quickFilterFree')}
                               </Link>
                               <Link
-                                href={`/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&freeShipping=1`}
+                                href={`/${locale}/deals?mainCategory=${targetCategory}${targetSub ? `&subCategory=${targetSub}` : ''}&freeShipping=1`}
                                 className="inline-flex items-center gap-1 rounded border border-border/40 bg-background/70 px-2 py-1 hover:border-primary hover:text-primary"
                               >
-                                🚚 Darmowa dostawa
+                                🚚 {t('quickFilterFreeShipping')}
                               </Link>
                             </>
                           )}
@@ -673,7 +681,7 @@ export function MegaMenu() {
                                     <span className="text-base">{subSubcategory.icon}</span>
                                   )}
                                   <span className="flex-1 truncate text-foreground group-hover:text-primary">
-                                    {subSubcategory.name}
+                                    {getLocalizedCategoryName(subSubcategory as any, locale as SupportedLanguage)}
                                   </span>
                                   <ArrowRight className="h-3 w-3 flex-shrink-0 text-muted-foreground opacity-0 transition-all group-hover:opacity-100" />
                                 </Link>
@@ -687,7 +695,7 @@ export function MegaMenu() {
                 </div>
               ) : (
                 <div className="rounded-xl border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
-                  Brak podkategorii w tej kategorii.
+                  {t('noSubcategories')}
                 </div>
               )}
 

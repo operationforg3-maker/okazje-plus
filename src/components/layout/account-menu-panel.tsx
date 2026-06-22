@@ -31,6 +31,7 @@ interface AccountMenuPanelProps {
 
 export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCount = 0 }: AccountMenuPanelProps) {
   const t = useTranslations('nav');
+  const tCommon = useTranslations('common');
   const router = useRouter();
   
   if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
@@ -126,16 +127,16 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
               {user.photoURL && typeof user.photoURL === 'string' ? (
-                <AvatarImage src={user.photoURL} alt={user.displayName ?? "Użytkownik"} />
+                <AvatarImage src={user.photoURL} alt={user.displayName ?? tCommon('labels.user')} />
               ) : null}
               <AvatarFallback>
                 {typeof user.displayName === 'string' ? user.displayName.charAt(0).toUpperCase() : 
-                 typeof user.email === 'string' ? user.email.charAt(0).toUpperCase() : 'U'}
+                 typeof user.email === 'string' ? user.email.charAt(0).toUpperCase() : tCommon('labels.user').charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <p className="text-sm font-semibold leading-tight text-foreground">
-                {typeof user.displayName === 'string' ? user.displayName : "Użytkownik"}
+                {typeof user.displayName === 'string' ? user.displayName : tCommon('labels.user')}
               </p>
               {typeof user.email === 'string' ? (
                 <p className="text-xs text-muted-foreground line-clamp-1">{user.email}</p>

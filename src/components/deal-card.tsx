@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart } from "lucide-react";
 import React, { useEffect, useState } from 'react';
+import { useFormatter } from 'next-intl';
 import { toast } from 'sonner';
 import { useSmartCart } from '@/lib/cart-context';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
@@ -197,6 +198,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
   const prefix = `/${locale}`;
   const baseState = useCardBaseState(deal, 'deal');
   const { getText, addToComparison, user, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
+  const formatter = useFormatter();
   const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
   const { mainName: categoryLabel } = useCategoryName(
     deal.mainCategorySlug || resolvedProduct?.mainCategorySlug,
@@ -553,9 +555,15 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
     setIsNew(diffDays <= 7);
 
     // Calculate relative time
-    const relTime = getRelativeTime(deal.postedAt);
-    setRelativeTime(relTime);
-  }, [deal.postedAt]);
+    const ts = toTimestampSafe(deal.postedAt);
+    if (ts) {
+      try {
+        setRelativeTime(formatter.relativeTime(new Date(ts), new Date()));
+      } catch (err) {
+        setRelativeTime('');
+      }
+    }
+  }, [deal.postedAt, formatter]);
 
 
   return (
@@ -595,7 +603,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
             <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
                <Flame className="w-3 h-3" />
                <span className="font-medium">
-                 {((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount)} kupiło
+                 {t('labels.boughtCount', { count: ((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount || 0) })}
                </span>
             </div>
           )}
@@ -660,19 +668,19 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           {deal.importMetadata?.stockStatus === 'low_stock' && (
             <Badge variant="outline" className="border-yellow-600 text-yellow-600 bg-white/90 shadow-md">
               <AlertTriangle className="mr-1 h-3 w-3" />
-              Niski stan
+              {t('labels.lowStock')}
             </Badge>
           )}
           {deal.importMetadata?.stockStatus === 'out_of_stock' && (
             <Badge variant="outline" className="border-red-600 text-red-600 bg-white/90 shadow-md">
               <AlertTriangle className="mr-1 h-3 w-3" />
-              Wyprzedane
+              {t('labels.soldOut')}
             </Badge>
           )}
           {deal.importMetadata?.promotionId && (
             <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md">
               <Tag className="mr-1 h-3 w-3" />
-              Promocja
+              {t('labels.promo')}
             </Badge>
           )}
           {promotionLabel && (
@@ -983,7 +991,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
                       </div>
                     ))}
                     {deal.importMetadata.specifications.length > 5 && (
-                      <div className="text-[11px] opacity-70">+{deal.importMetadata.specifications.length - 5} więcej</div>
+                      <div className="text-[11px] opacity-70">+{deal.importMetadata.specifications.length - 5} {t('labels.more')}</div>
                     )}
                   </div>
                 </TooltipContent>
@@ -994,9 +1002,9 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
 
         {isPromotionDeal ? (
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="text-sm px-2 py-0.5">Promocja / Kupon</Badge>
+            <Badge variant="secondary" className="text-sm px-2 py-0.5">{t('labels.promoCoupon')}</Badge>
             {deal?.metadata?.hasCoupons && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5">Kupony dostępne</Badge>
+              <Badge variant="outline" className="text-xs px-2 py-0.5">{t('labels.couponsAvailable')}</Badge>
             )}
           </div>
         ) : (
@@ -1007,10 +1015,10 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               <Badge variant="destructive" className="text-sm px-2 py-0.5">-{priceData.discount}%</Badge>
             )}
             {priceData.formattedSavings ? (
-              <span className="ml-auto text-sm font-semibold text-green-600">Oszczędzasz {priceData.formattedSavings}</span>
+              <span className="ml-auto text-sm font-semibold text-green-600">{t('labels.youSave', { amount: priceData.formattedSavings })}</span>
             ) : (
               typeof priceData.discount === 'number' && priceData.discount > 0 && (
-                <span className="ml-auto text-sm font-semibold text-green-600">Zniżka {priceData.discount}%</span>
+                <span className="ml-auto text-sm font-semibold text-green-600">{t('labels.discount', { percent: priceData.discount })}</span>
               )
             )}
           </div>
@@ -1021,7 +1029,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           <div className="flex items-center justify-between text-sm">
             <span className="flex items-center gap-1 text-muted-foreground">
               <Flame className="h-4 w-4" />
-              Temperatura
+              {t('labels.temperature')}
             </span>
             <span className="font-semibold">{temperature} pkt</span>
           </div>
@@ -1117,7 +1125,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
               >
-                Podgląd oferty
+                {t('labels.dealPreview')}
               </a>
             </Button>
           )}

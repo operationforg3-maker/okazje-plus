@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { searchDealsTypesense, searchProductsTypesense } from '@/lib/search';
 import type { Deal, ProductCore } from '@/lib/types';
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 
 type MobileSearchModuleProps = {
   prefix: string;
@@ -61,6 +62,7 @@ function dealImage(deal: Deal): string {
 }
 
 export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModuleProps) {
+  const t = useTranslations('search');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<ProductCore[]>([]);
@@ -117,15 +119,15 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Szukaj produktów i okazji..."
+          placeholder={t('placeholder')}
           className="pl-9"
-          aria-label="Szukaj produktów i okazji"
+          aria-label={t('placeholder')}
           autoFocus
         />
       </div>
 
       {query.trim().length < 2 ? (
-        <p className="text-sm text-muted-foreground">Wpisz co najmniej 2 znaki, aby zobaczyć wyniki.</p>
+        <p className="text-sm text-muted-foreground">{t('minChars')}</p>
       ) : loading ? (
         <div className="space-y-2">
           <Skeleton className="h-10 w-full" />
@@ -134,7 +136,7 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="text-xs text-muted-foreground">Znaleziono {total} wyników</div>
+          <div className="text-xs text-muted-foreground">{t('results.found', { count: total })}</div>
 
           <div className="grid grid-cols-3 gap-2">
             <Button
@@ -143,7 +145,7 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
               variant={activeTab === 'all' ? 'default' : 'outline'}
               onClick={() => setActiveTab('all')}
             >
-              Wszystkie
+              {t('all')}
             </Button>
             <Button
               type="button"
@@ -151,7 +153,7 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
               variant={activeTab === 'deals' ? 'default' : 'outline'}
               onClick={() => setActiveTab('deals')}
             >
-              Okazje
+              {t('tabs.deals')}
             </Button>
             <Button
               type="button"
@@ -159,15 +161,15 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
               variant={activeTab === 'products' ? 'default' : 'outline'}
               onClick={() => setActiveTab('products')}
             >
-              Produkty
+              {t('tabs.products')}
             </Button>
           </div>
 
           {(activeTab === 'all' || activeTab === 'deals') && (
             <section className="space-y-2">
-              <h4 className="text-sm font-semibold">Okazje</h4>
+              <h4 className="text-sm font-semibold">{t('tabs.deals')}</h4>
               {deals.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Brak okazji dla tego zapytania.</p>
+                <p className="text-sm text-muted-foreground">{t('noDeals')}</p>
               ) : (
                 <div className="space-y-1">
                   {deals.map((deal) => (
@@ -196,9 +198,9 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
 
           {(activeTab === 'all' || activeTab === 'products') && (
             <section className="space-y-2">
-              <h4 className="text-sm font-semibold">Produkty</h4>
+              <h4 className="text-sm font-semibold">{t('tabs.products')}</h4>
               {products.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Brak produktów dla tego zapytania.</p>
+                <p className="text-sm text-muted-foreground">{t('noProducts')}</p>
               ) : (
                 <div className="space-y-1">
                   {products.map((product) => (
@@ -230,7 +232,7 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
             onClick={onNavigate}
             className="block rounded-md bg-primary px-3 py-2 text-center text-sm font-medium text-primary-foreground"
           >
-            Zobacz pełne wyniki
+            {t('viewAllResults')}
           </Link>
         </div>
       )}

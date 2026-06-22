@@ -100,7 +100,16 @@
     "youSave": "You save {amount}",
     "isNew": "New",
     "viewProduct": "View product",
-    "by": "by"
+    "by": "by",
+    "soldOut": "Sold out",
+    "promo": "Promotion",
+    "discount": "Discount {percent}%",
+    "promoCoupon": "Promo / Coupon",
+    "couponsAvailable": "Coupons available",
+    "dealPreview": "Deal preview",
+    "lowStock": "Low stock",
+    "more": "more",
+    "coupon": "Coupon"
   },
   "comments": {
     "title": "Comments",

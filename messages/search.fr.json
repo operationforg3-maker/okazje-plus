@@ -24,7 +24,7 @@
     "empty": "Aucune recherche enregistrée."
   },
   "results": {
-    "found": "{{count}} résultat(s) trouvé(s)",
+    "found": "{count} résultat(s) trouvé(s)",
     "empty": "Aucun résultat trouvé",
     "emptyDescription": "Essayez d'utiliser d'autres mots-clés ou parcourez les catégories."
   },

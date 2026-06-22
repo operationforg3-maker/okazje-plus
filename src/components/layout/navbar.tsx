@@ -203,16 +203,16 @@ export function Navbar() {
               {cartMenuOpen && isMounted && (
                 <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg z-50" role="dialog" aria-labelledby="cart-title" aria-modal="true">
                   <div className="p-4">
-                    <h3 id="cart-title" className="font-semibold text-lg mb-3">Twoje zakupy</h3>
+                    <h3 id="cart-title" className="font-semibold text-lg mb-3">{t('yourPurchases')}</h3>
                     
                     {/* Cart Preview */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">Koszyk</span>
+                        <span className="text-sm text-muted-foreground">{t('cart')}</span>
                         <span className="text-xs">{itemCount} szt.</span>
                       </div>
                       {items.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Twój koszyk jest pusty.</p>
+                        <p className="text-sm text-muted-foreground">{t('cartEmpty')}</p>
                       ) : (
                         <div className="space-y-3">
                           {items.slice(0, 3).map((item) => {
@@ -235,13 +235,13 @@ export function Navbar() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{title}</p>
-                                  <p className="text-xs text-muted-foreground">Ilość: {item.quantity}</p>
+                                  <p className="text-xs text-muted-foreground">{t('quantity')}: {item.quantity}</p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-sm font-semibold">{formatPrice(price)}</span>
                                     {freeShip ? (
-                                      <span className="text-xs text-green-600">Darmowa wysyłka</span>
+                                      <span className="text-xs text-green-600">{t('freeShipping')}</span>
                                     ) : (
-                                      <span className="text-xs text-muted-foreground">+ wysyłka {formatPrice(shippingCost)}</span>
+                                      <span className="text-xs text-muted-foreground">+ {t('cart')} {formatPrice(shippingCost)}</span>
                                     )}
                                   </div>
                                 </div>
@@ -250,8 +250,8 @@ export function Navbar() {
                                   size="icon"
                                   className="text-destructive"
                                   onClick={() => removeItem(((item.product as any)?.id ?? (item.deal as any)?.id))}
-                                  aria-label={`Usuń ${title} z koszyka`}
-                                  title={`Usuń ${title}`}
+                                  aria-label={t('removeItemAria', { title })}
+                                  title={t('removeItemAria', { title })}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -259,11 +259,11 @@ export function Navbar() {
                             );
                           })}
                           {items.length > 3 && (
-                            <p className="text-xs text-muted-foreground">+ {items.length - 3} więcej pozycji</p>
+                            <p className="text-xs text-muted-foreground">{t('moreItems', { count: items.length - 3 })}</p>
                           )}
                           <div className="pt-2 border-t">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Suma:</span>
+                              <span className="text-muted-foreground">{t('total')}</span>
                               <span className="font-semibold">{Number.isFinite(totalWithShipping) ? formatPrice(totalWithShipping) : '—'}</span>
                             </div>
                           </div>
@@ -275,10 +275,10 @@ export function Navbar() {
                           className="flex-1 text-center py-2 px-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
                           onClick={() => setCartMenuOpen(false)}
                         >
-                          Przejdź do koszyka
+                          {t('goToCart')}
                         </Link>
                         <Button variant="outline" className="px-3" onClick={() => setCartMenuOpen(false)}>
-                          Zamknij
+                          {t('close')}
                         </Button>
                       </div>
                     </div>

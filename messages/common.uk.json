@@ -100,7 +100,16 @@
     "youSave": "Ви заощаджуєте {amount}",
     "isNew": "Новинка",
     "viewProduct": "Переглянути продукт",
-    "by": "від"
+    "by": "від",
+    "soldOut": "Розпродано",
+    "promo": "Акція",
+    "discount": "Знижка {percent}%",
+    "promoCoupon": "Промокод / Купон",
+    "couponsAvailable": "Доступні купони",
+    "dealPreview": "Перегляд пропозиції",
+    "lowStock": "Мало в наявності",
+    "more": "більше",
+    "coupon": "Купон"
   },
   "comments": {
     "title": "Коментарі",

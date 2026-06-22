@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Star, ShoppingCart, ExternalLink, Clock, Tag, Heart, Scale, Flame } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale, useTranslations, useFormatter } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { getExternalUrl } from '@/lib/external-url';
 import { useContentLanguage } from '@/hooks/use-content-language';
@@ -103,6 +103,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   const { getText } = useContentLanguage();
   const baseState = useCardBaseState(product, 'product');
   const { isFavorited, isFavoriteLoading, toggleFavorite, addToComparison, t: tCommon } = baseState;
+  const formatter = useFormatter();
   const { addItem } = useSmartCart();
   const { formatPrice } = useCurrency();
   const { mainName: categoryLabel } = useCategoryName(product.mainCategorySlug, product.subCategorySlug, product.subSubCategorySlug);
@@ -143,7 +144,21 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   })();
 
   useEffect(() => {
-    const relTime = getRelativeTime(product.createdAt);
+    let relTime = 'niedawno';
+    if (product.createdAt) {
+      try {
+        const date = new Date(
+          typeof product.createdAt === 'object' && typeof (product.createdAt as any).toDate === 'function'
+            ? (product.createdAt as any).toDate()
+            : typeof product.createdAt === 'object' && typeof (product.createdAt as any).seconds === 'number'
+              ? ((product.createdAt as any).seconds * 1000) + (((product.createdAt as any).nanoseconds || 0) / 1e6)
+              : product.createdAt
+        );
+        if (!isNaN(date.getTime())) {
+          relTime = formatter.relativeTime(date, new Date());
+        }
+      } catch (err) {}
+    }
     
     // Determine raw price and source currency
     let rawPrice = bestTotalPrice ?? product?.bestPrice?.amount ?? price;
@@ -167,7 +182,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
       relativeTime: relTime,
       formattedPrice: formatted,
     });
-  }, [product.createdAt, price, bestTotalPrice, product?.bestPrice?.amount, product?.bestPrice?.currency, bestDeal, formatPrice]);
+  }, [product.createdAt, price, bestTotalPrice, product?.bestPrice?.amount, product?.bestPrice?.currency, bestDeal, formatPrice, formatter]);
 
   useEffect(() => {
     setImageSrc(withImageProxy(primaryImage) || '/placeholder.png');
@@ -219,12 +234,12 @@ export default function ProductListCard({ product }: ProductListCardProps) {
         <div className="absolute left-2 top-2 flex flex-col gap-1">
           {isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg text-xs">
-              {t('card.new', { default: 'Nowość' } as any)}
+              {tCommon('labels.isNew')}
             </Badge>
           )}
           {hasCoupons && (
             <Badge className="bg-purple-600 text-white shadow-lg text-xs">
-              🎟️ Kupon
+              🎟️ {tCommon('labels.coupon')}
             </Badge>
           )}
         </div>
@@ -235,7 +250,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
                <Flame className="w-3 h-3" />
                <span className="font-medium">
-                 {((product as any)?.marketing?.ordersCount)} kupiło
+                 {tCommon('labels.boughtCount', { count: ((product as any)?.marketing?.ordersCount || 0) })}
                </span>
             </div>
           </div>

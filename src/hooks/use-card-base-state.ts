@@ -39,7 +39,7 @@ interface CardBaseState {
   addToComparison: (item: Deal | Product) => void;
   
   // Translations
-  t: (key: string) => string;
+  t: (key: string, values?: any) => string;
 }
 
 export function useCardBaseState(

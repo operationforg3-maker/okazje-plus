@@ -10,6 +10,7 @@ import { VoteControls } from '@/components/vote-controls';
 import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart, Heart, AlertTriangle, Scale, Package } from 'lucide-react';
 import { useSmartCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
+import { useFormatter } from 'next-intl';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo } from '@/lib/i18n-utils';
@@ -176,6 +177,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
   const { mainName: categoryLabel } = useCategoryName(deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug);
   const baseState = useCardBaseState(deal, 'deal');
   const { getText, addToComparison, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
+  const formatter = useFormatter();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [dealData, setDealData] = useState<{
@@ -230,7 +232,13 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
     const diffDays = (now.getTime() - posted.getTime()) / (1000 * 60 * 60 * 24);
     const isNewDeal = diffDays <= 7;
     
-    const relTime = getRelativeTime(deal.postedAt);
+    let relTime = '';
+    const ts = toTimestampSafe(deal.postedAt);
+    if (ts) {
+      try {
+        relTime = formatter.relativeTime(new Date(ts), new Date());
+      } catch (err) {}
+    }
     
     // Format prices using unified currency system
     const userCurrency = currency || 'PLN';
@@ -328,7 +336,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
               <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm w-fit">
                 <Flame className="w-3 h-3" />
                 <span className="font-medium whitespace-nowrap">
-                  {((deal as any)?.marketing?.ordersCount)} kupiło
+                  {t('labels.boughtCount', { count: ((deal as any)?.marketing?.ordersCount || 0) })}
                 </span>
               </div>
           )}
@@ -396,7 +404,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Flame className="h-3 w-3" />
-                Temperatura
+                {t('labels.temperature')}
               </span>
               <span className="font-semibold">{deal.temperature} pkt</span>
             </div>
@@ -419,16 +427,16 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
               <Badge variant="destructive">-{dealData.discount}%</Badge>
             )}
             {dealData.formattedSavings && (
-              <span className="text-xs font-semibold text-green-600">Oszczędzasz {dealData.formattedSavings}</span>
+              <span className="text-xs font-semibold text-green-600">{t('labels.youSave', { amount: dealData.formattedSavings })}</span>
             )}
           </div>
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1" title="Głosy">
+            <span className="flex items-center gap-1" title={t('labels.votes')}>
               <ArrowUp className="h-3 w-3" />
               {typeof deal.voteCount === 'number' ? deal.voteCount : 0}
             </span>
-            <span className="flex items-center gap-1" title="Komentarze">
+            <span className="flex items-center gap-1" title={t('comments.title')}>
               <MessageSquare className="h-3 w-3" />
               {liveComments.count}
             </span>
