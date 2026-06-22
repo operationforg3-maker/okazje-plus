@@ -97,7 +97,10 @@
     "user": "Utilisateur",
     "temperature": "Température",
     "boughtCount": "{count} achetés",
-    "youSave": "Vous économisez {amount}"
+    "youSave": "Vous économisez {amount}",
+    "isNew": "Nouveau",
+    "viewProduct": "Voir le produit",
+    "by": "par"
   },
   "comments": {
     "title": "Commentaires",
@@ -172,5 +175,13 @@
     "voteRemoved": "Vote supprimé",
     "voteChanged": "Vote modifié",
     "voteAdded": "Vote ajouté"
+  },
+  "share": {
+    "share": "Partager",
+    "copied": "Copié !",
+    "copyLink": "Copier le lien",
+    "linkCopied": "Lien copié dans le presse-papier !",
+    "copyError": "Impossible de copier le lien",
+    "shareOpened": "Fenêtre de partage {platform} ouverte"
   }
 }

@@ -1473,7 +1473,7 @@ function DealsPageContent() {
                       </div>
                       <Button asChild className="w-full" size="sm">
                         <Link href={`/products/${productOfTheDay.id}`}>
-                          Zobacz produkt
+                          {tCommon('labels.viewProduct')}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>

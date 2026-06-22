@@ -335,7 +335,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
           {dealData.isNew && (
             <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg text-xs">
               <Sparkles className="mr-1 h-3 w-3" />
-              Nowość
+              {t('labels.isNew')}
             </Badge>
           )}
         </div>
@@ -374,7 +374,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
             </span>
             <span aria-hidden>•</span>
             <span>
-              przez <span className="font-medium text-foreground">{postedBy}</span>
+              {t('labels.by')} <span className="font-medium text-foreground">{postedBy}</span>
             </span>
             {categoryLabel && (
               <>
@@ -504,7 +504,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
               <Button asChild size="sm" variant="outline" className="w-full gap-1">
                 <Link href={productPageUrl} onClick={(e) => e.stopPropagation()}>
                   <Package className="h-4 w-4" />
-                  Zobacz produkt
+                  {t('labels.viewProduct')}
                 </Link>
               </Button>
             )}

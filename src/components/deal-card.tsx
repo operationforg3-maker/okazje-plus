@@ -620,7 +620,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           {isNewArrival && (
             <Badge className="bg-blue-500 text-white shadow-md">
               <Sparkles className="mr-1 h-3 w-3" />
-              Nowość
+              {t('labels.isNew')}
             </Badge>
           )}
           {isNew && (
@@ -1211,7 +1211,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               variant="outline"
               size="icon"
               className="h-11 w-11"
-              aria-label="Zobacz produkt"
+              aria-label={t('labels.viewProduct')}
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

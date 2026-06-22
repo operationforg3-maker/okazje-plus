@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { trackShare } from "@/lib/analytics";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getApp } from "firebase/app";
+import { useTranslations } from "next-intl";
 
 interface ShareButtonProps {
   type: 'deal' | 'product';
@@ -35,6 +36,7 @@ export default function ShareButton({
 }: ShareButtonProps) {
   const isIconOnly = size === 'icon';
   const [copied, setCopied] = useState(false);
+  const t = useTranslations('common');
 
   const handleShare = async (method: 'facebook' | 'twitter' | 'copy_link' | 'whatsapp' | 'telegram') => {
     // Analytics tracking (client-side)
@@ -66,7 +68,7 @@ export default function ShareButton({
           '_blank',
           'width=600,height=400'
         );
-        toast.success("Otwarto okno udostępniania Facebook");
+        toast.success(t('share.shareOpened', { platform: 'Facebook' }));
         break;
 
       case 'twitter':
@@ -75,7 +77,7 @@ export default function ShareButton({
           '_blank',
           'width=600,height=400'
         );
-        toast.success("Otwarto okno udostępniania X (Twitter)");
+        toast.success(t('share.shareOpened', { platform: 'X' }));
         break;
 
       case 'whatsapp':
@@ -84,7 +86,7 @@ export default function ShareButton({
           '_blank',
           'width=600,height=400'
         );
-        toast.success("Otwarto okno udostępniania WhatsApp");
+        toast.success(t('share.shareOpened', { platform: 'WhatsApp' }));
         break;
 
       case 'telegram':
@@ -93,16 +95,16 @@ export default function ShareButton({
           '_blank',
           'width=600,height=400'
         );
-        toast.success("Otwarto okno udostępniania Telegram");
+        toast.success(t('share.shareOpened', { platform: 'Telegram' }));
         break;
 
       case 'copy_link':
         navigator.clipboard.writeText(fullUrl).then(() => {
           setCopied(true);
-          toast.success("Link skopiowany do schowka!");
+          toast.success(t('share.linkCopied'));
           setTimeout(() => setCopied(false), 2000);
         }).catch(() => {
-          toast.error("Nie udało się skopiować linku");
+          toast.error(t('share.copyError'));
         });
         break;
     }
@@ -113,7 +115,7 @@ export default function ShareButton({
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size={size}>
           <Share2 className={`h-4 w-4${isIconOnly ? '' : ' mr-2'}`} />
-          {!isIconOnly && 'Udostępnij'}
+          {!isIconOnly && t('share.share')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
@@ -137,12 +139,12 @@ export default function ShareButton({
           {copied ? (
             <>
               <Check className="h-4 w-4 mr-2 text-green-600" />
-              Skopiowano!
+              {t('share.copied')}
             </>
           ) : (
             <>
               <LinkIcon className="h-4 w-4 mr-2" />
-              Kopiuj link
+              {t('share.copyLink')}
             </>
           )}
         </DropdownMenuItem>

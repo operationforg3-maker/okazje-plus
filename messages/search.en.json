@@ -24,7 +24,7 @@
     "empty": "No saved searches"
   },
   "results": {
-    "found": "Found {{count}} results",
+    "found": "Found {count} results",
     "empty": "No results found",
     "emptyDescription": "Try using different keywords or browse categories"
   },

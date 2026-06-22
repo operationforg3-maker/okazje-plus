@@ -97,7 +97,10 @@
     "user": "User",
     "temperature": "Temperature",
     "boughtCount": "{count} bought",
-    "youSave": "You save {amount}"
+    "youSave": "You save {amount}",
+    "isNew": "New",
+    "viewProduct": "View product",
+    "by": "by"
   },
   "comments": {
     "title": "Comments",
@@ -172,5 +175,13 @@
     "voteRemoved": "Vote removed",
     "voteChanged": "Vote changed",
     "voteAdded": "Vote added"
+  },
+  "share": {
+    "share": "Share",
+    "copied": "Copied!",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied to clipboard!",
+    "copyError": "Failed to copy link",
+    "shareOpened": "Opened {platform} sharing window"
   }
 }

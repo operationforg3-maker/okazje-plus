@@ -651,7 +651,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-4">
               <div className="flex items-center gap-1">
                 <User className="h-4 w-4" />
-                <span>Dodane przez <span className="font-medium text-foreground">{deal.postedBy}</span></span>
+                <span>{tCommon('labels.addedBy')} <span className="font-medium text-foreground">{deal.postedBy}</span></span>
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />

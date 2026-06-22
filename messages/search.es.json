@@ -24,7 +24,7 @@
     "empty": "No hay búsquedas guardadas."
   },
   "results": {
-    "found": "Se encontraron {{count}} resultados",
+    "found": "Se encontraron {count} resultados",
     "empty": "No se encontraron resultados",
     "emptyDescription": "Intenta usar otras palabras clave o explora las categorías."
   },
