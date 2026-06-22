@@ -18,5 +18,10 @@
   "login": "Log in",
   "changeLanguage": "Change language",
   "changeCurrency": "Change currency",
-  "changeTheme": "Change theme"
+  "changeTheme": "Change theme",
+  "waitingRoom": "Waiting Room",
+  "search": "Search",
+  "account": "Account",
+  "mobileNavigation": "Mobile navigation",
+  "openSearch": "Open search"
 }

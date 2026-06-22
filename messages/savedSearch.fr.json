@@ -36,5 +36,7 @@
   "created": "Créé le :",
   "namePlaceholder": "par exemple : Ordinateurs portables à moins de 3000 zł",
   "descriptionPlaceholder": "Détails supplémentaires...",
-  "dialogDescription": "Recevez des notifications dès que de nouvelles opportunités correspondant à vos critères sont disponibles."
+  "dialogDescription": "Recevez des notifications dès que de nouvelles opportunités correspondant à vos critères sont disponibles.",
+  "enableNotifications": "Activer les notifications",
+  "disableNotifications": "Désactiver les notifications"
 }

@@ -18,5 +18,10 @@
   "login": "Anmelden",
   "changeLanguage": "Sprache ändern",
   "changeCurrency": "Währung ändern",
-  "changeTheme": "Thema ändern"
+  "changeTheme": "Thema ändern",
+  "waitingRoom": "Warteschlange",
+  "search": "Suche",
+  "account": "Konto",
+  "mobileNavigation": "Mobile Navigation",
+  "openSearch": "Suche öffnen"
 }

@@ -28,5 +28,11 @@
     "empty": "No results found",
     "emptyDescription": "Try using different keywords or browse categories"
   },
-  "loading": "Searching..."
+  "loading": "Searching...",
+  "placeholder": "Search products and deals...",
+  "minChars": "Enter at least 2 characters to see results.",
+  "all": "All",
+  "viewAllResults": "View all results",
+  "noDeals": "No deals found for this query.",
+  "noProducts": "No products found for this query."
 }

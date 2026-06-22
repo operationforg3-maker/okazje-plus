@@ -119,6 +119,7 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Szukaj produktów i okazji..."
           className="pl-9"
+          aria-label="Szukaj produktów i okazji"
           autoFocus
         />
       </div>

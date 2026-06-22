@@ -19,17 +19,30 @@ export interface ScrapedAliExpressData {
   shippingDays?: number;
   price?: number;
   originalPrice?: number;
+  variants?: Array<{
+    id: string;
+    name: string;
+    values: string[];
+  }>;
+  skuList?: Array<{
+    skuId: string;
+    available: boolean;
+    attributes: Array<{ name: string; value: string; image?: string }>;
+    price?: number;
+    stock?: number;
+    image?: string;
+  }>;
 }
 
 /**
- * Scrapes detailed product information from AliExpress (including specifications and description HTML)
- * by rendering the page in Puppeteer and intercepting dynamic content.
+ * Scrapes detailed product information from AliExpress (including specifications, description HTML, and variants)
+ * by rendering the page in Puppeteer (simulating mobile layout) and intercepting dynamic content.
  * 
  * @param productId AliExpress product ID
  */
 export async function scrapeAliExpressProduct(productId: string): Promise<ScrapedAliExpressData> {
   const url = `https://pl.aliexpress.com/item/${productId}.html`;
-  console.log(`[AliExpress Scraper] Launching Puppeteer for item: ${productId}`);
+  console.log(`[AliExpress Scraper] Launching Puppeteer for item (mobile UA): ${productId}`);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -37,42 +50,152 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-web-security',
+      '--disable-blink-features=AutomationControlled',
       '--disable-features=IsolateOrigins,site-per-process'
     ]
   });
 
   const result: ScrapedAliExpressData = {
     specs: {},
-    images: []
+    images: [],
+    variants: [],
+    skuList: []
   };
 
   try {
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+    
+    // Set mobile user agent and viewport to load H5/mobile layout which is less protected by captcha
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1');
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'pl-PL,pl;q=0.9,en-US;q=0.8'
     });
-    await page.setViewport({ width: 1280, height: 1000 });
+    await page.setViewport({ width: 375, height: 812, isMobile: true, hasTouch: true });
+
+    // Inject webdriver overrides
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+      (window as any).chrome = {
+        runtime: {},
+        loadTimes: function() {},
+        csi: function() {},
+        app: {}
+      };
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['pl-PL', 'pl', 'en-US', 'en'],
+      });
+    });
 
     let pcDescUrl = '';
+    let mtopVariants: any[] = [];
+    let mtopSkuList: any[] = [];
 
-    // Listen to network responses to extract the description CDN URL from MTOP response
+    // Listen to network responses to extract variants and description CDN URL from H5 MTOP response
     page.on('response', async (response) => {
       const respUrl = response.url();
-      if (respUrl.includes('mtop.aliexpress.pdp.pc.query')) {
+      
+      // Look for H5 detail query response
+      if (respUrl.includes('mtop.aliexpress.pdp.msite.query')) {
         try {
-          let text = await response.text();
+          const buffer = await response.buffer();
+          let text = buffer.toString('utf-8');
           text = text.trim();
+          
           // Handle JSONP wrapper if present
           const jsonpMatch = text.match(/^\s*\w+\(([\s\S]*)\)\s*;?\s*$/);
           if (jsonpMatch) {
-            text = jsonpMatch[1];
+            text = jsonpMatch[1].trim();
           }
+          
           const mtopJson = JSON.parse(text);
-          const descConfig = mtopJson?.data?.result?.DESC || mtopJson?.result?.DESC;
-          if (descConfig?.pcDescUrl) {
-            pcDescUrl = descConfig.pcDescUrl;
-            console.log(`[AliExpress Scraper] Found pcDescUrl: ${pcDescUrl.slice(0, 100)}...`);
+          const resObj = mtopJson?.data?.result || mtopJson?.result || mtopJson;
+          
+          if (resObj) {
+            // 1. Extract pcDescUrl for description HTML block
+            const descConfig = resObj.DESC;
+            if (descConfig?.pcDescUrl || descConfig?.msiteDescUrl) {
+              pcDescUrl = descConfig.pcDescUrl || descConfig.msiteDescUrl;
+              console.log(`[AliExpress Scraper] Found descUrl from mobile MTOP: ${pcDescUrl.slice(0, 100)}...`);
+            }
+
+            // 2. Extract variants properties (e.g. Color, Size)
+            const rawProperties = resObj.SKU?.skuProperties || [];
+            mtopVariants = rawProperties.map((prop: any) => ({
+              id: String(prop.skuPropertyId),
+              name: prop.skuPropertyName,
+              values: prop.skuPropertyValues?.map((val: any) => val.propertyValueName) || [],
+            }));
+
+            // 3. Extract concrete SKU list mapping combinations to specific SKU properties
+            const skuPaths = resObj.SKU?.skuPaths || [];
+            const skuPriceInfoMap = resObj.PRICE?.skuPriceInfoMap || {};
+            const skuImagesMap = resObj.HEADER_IMAGE_PC?.skuImagesMap || {};
+            const skuQuantityMap = resObj.QUANTITY_PC?.allSkuQuantityView || {};
+
+            // Build helper maps for fast property name lookup
+            const valueIdToNameMap = new Map<string, string>();
+            const valueIdToImageMap = new Map<string, string>();
+            rawProperties.forEach((prop: any) => {
+              prop.skuPropertyValues?.forEach((val: any) => {
+                valueIdToNameMap.set(String(val.propertyValueId), val.propertyValueName);
+                if (val.skuPropertyImagePath) {
+                  valueIdToImageMap.set(String(val.propertyValueId), val.skuPropertyImagePath);
+                }
+              });
+            });
+
+            mtopSkuList = skuPaths.map((pathEntry: any) => {
+              const skuId = String(pathEntry.skuIdStr || pathEntry.skuId);
+              const stock = pathEntry.skuStock ?? 0;
+              const available = pathEntry.salable !== false && stock > 0;
+
+              const attributes: Array<{ name: string; value: string; image?: string }> = [];
+              const pathString = pathEntry.path || '';
+              const segments = pathString.split(';');
+
+              segments.forEach((seg: string) => {
+                const [propId, valId] = seg.split(':');
+                if (propId && valId) {
+                  const prop = rawProperties.find((p: any) => String(p.skuPropertyId) === propId);
+                  const propName = prop ? prop.skuPropertyName : `Prop_${propId}`;
+                  const valName = valueIdToNameMap.get(valId) || `Val_${valId}`;
+                  const valImage = valueIdToImageMap.get(valId);
+
+                  attributes.push({
+                    name: propName,
+                    value: valName,
+                    ...(valImage ? { image: valImage } : {}),
+                  });
+                }
+              });
+
+              // Parse price from salePriceLocal (e.g., "490,85zł|490|85")
+              const priceInfo = skuPriceInfoMap[skuId];
+              let price: number | undefined;
+              if (priceInfo?.salePriceLocal) {
+                const parts = priceInfo.salePriceLocal.split('|');
+                if (parts.length >= 3) {
+                  price = Number(parts[1] + '.' + parts[2]);
+                }
+              }
+
+              // Extract image from skuImagesMap
+              const imageList = skuImagesMap[skuId];
+              const image = (Array.isArray(imageList) && imageList.length > 0) ? imageList[0] : undefined;
+
+              return {
+                skuId,
+                available,
+                attributes,
+                price,
+                stock,
+                image
+              };
+            });
+
+            console.log(`[AliExpress Scraper] Captured ${mtopVariants.length} variants & ${mtopSkuList.length} SKUs from MTOP`);
           }
         } catch (e: any) {
           console.warn(`[AliExpress Scraper] Response read error for ${respUrl.slice(0, 80)}: ${e.message}`);
@@ -96,26 +219,10 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
       })()`);
     } catch (scrollErr) {}
 
-    // Wait for dynamic content
-    await new Promise(r => setTimeout(r, 3000));
+    // Wait for dynamic content to render and network queries to settle
+    await new Promise(r => setTimeout(r, 4500));
 
-    // Try to auto-click "Zobacz więcej" / "Show more" button in specifications to render all specs
-    try {
-      await page.evaluate(`(() => {
-        const specSection = document.querySelector('#nav-specification') || document.querySelector('[class*="specification--"]');
-        if (specSection) {
-          const btn = specSection.querySelector('button') || Array.from(specSection.querySelectorAll('div')).find(
-            d => d.textContent?.includes('Zobacz więcej') || d.textContent?.includes('Show More')
-          );
-          if (btn) (btn as any).click();
-        }
-      })()`);
-      await new Promise(r => setTimeout(r, 500));
-    } catch (btnErr) {
-      // Ignored
-    }
-
-    // Extract specs and basic metadata from DOM using string evaluation to avoid esbuild __name helpers
+    // Evaluate basic specifications from DOM as fallback
     const domData = await page.evaluate(`(() => {
       const text = (sel) => document.querySelector(sel)?.textContent?.trim() || null;
 
@@ -132,7 +239,7 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
         }
       });
 
-      // If specifications wrapper exists but has different structure
+      // Alternate structure
       if (Object.keys(specs).length === 0) {
         const specList = document.querySelector('#nav-specification ul') || document.querySelector('[class*="specification--list"]');
         if (specList) {
@@ -153,7 +260,7 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
       }
 
       // Title
-      const h1Title = text('h1');
+      const h1Title = text('h1') || text('[class*="title--"]');
       const docTitle = document.title || '';
 
       // Video
@@ -202,6 +309,10 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
     if (domData.images?.length) {
       result.mainImage = domData.images[0];
     }
+    
+    // Set variants and skuList from MTOP parser
+    result.variants = mtopVariants;
+    result.skuList = mtopSkuList;
 
     if (domData.storeName) {
       result.seller = {
@@ -257,7 +368,7 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
 
     await browser.close();
 
-    // Step 2: Fetch the description HTML block directly from CDN using intercepted pcDescUrl
+    // Fetch the description HTML block directly from CDN using intercepted pcDescUrl
     if (pcDescUrl) {
       try {
         console.log(`[AliExpress Scraper] Fetching description HTML from CDN URL...`);

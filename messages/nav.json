@@ -18,5 +18,10 @@
   "login": "Zaloguj się",
   "changeLanguage": "Zmień język",
   "changeCurrency": "Zmień walutę",
-  "changeTheme": "Zmień motyw"
+  "changeTheme": "Zmień motyw",
+  "waitingRoom": "Poczekalnia",
+  "search": "Szukaj",
+  "account": "Konto",
+  "mobileNavigation": "Nawigacja mobilna",
+  "openSearch": "Otwórz wyszukiwarkę"
 }

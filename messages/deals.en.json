@@ -74,7 +74,11 @@
     "categories": "Categories",
     "allDeals": "All",
     "showAll": "Show All",
-    "hideEmpty": "Hide Empty"
+    "hideEmpty": "Hide Empty",
+    "expandCategory": "Expand category",
+    "collapseCategory": "Collapse category",
+    "expandSubcategory": "Expand subcategory",
+    "collapseSubcategory": "Collapse subcategory"
   },
   "card": {
     "price": "Price",

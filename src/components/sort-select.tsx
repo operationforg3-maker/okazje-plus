@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SORT_OPTIONS } from '@/lib/filter-config';
 
 export function SortSelect() {
   const router = useRouter();
@@ -28,14 +29,15 @@ export function SortSelect() {
   return (
     <div className="w-[180px] h-10">
       <Select value={currentSort} onValueChange={handleSortChange}>
-        <SelectTrigger className="h-10">
+        <SelectTrigger className="h-10" aria-label={t('sort')}>
           <SelectValue placeholder={t('sort')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="newest">{t('sortOptions.newest')}</SelectItem>
-          <SelectItem value="popularity">{t('sortOptions.popularity')}</SelectItem>
-          <SelectItem value="price_asc">{t('sortOptions.price_asc')}</SelectItem>
-          <SelectItem value="price_desc">{t('sortOptions.price_desc')}</SelectItem>
+          {Object.entries(SORT_OPTIONS).map(([key]) => (
+            <SelectItem key={key} value={key}>
+              {t(`sortOptions.${key}`)}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>

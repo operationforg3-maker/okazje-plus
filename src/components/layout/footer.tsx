@@ -48,8 +48,8 @@ export function Footer() {
           </div>
 
           <div className="lg:col-span-3">
-            <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('navigation')}</h3>
-            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-muted-foreground">
+            <h3 className="font-headline text-sm font-bold uppercase tracking-wide text-zinc-900 dark:text-zinc-100">{t('navigation')}</h3>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-zinc-700 dark:text-zinc-300 font-medium">
               <Link href={`/${locale}/deals`} className="transition-colors hover:text-primary">{t('deals')}</Link>
               <Link href={`/${locale}/products`} className="transition-colors hover:text-primary">{t('products')}</Link>
               <Link href={`/${locale}/forum`} className="transition-colors hover:text-primary">{t('forum')}</Link>
@@ -58,8 +58,8 @@ export function Footer() {
           </div>
 
           <div className="lg:col-span-3">
-            <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('information')}</h3>
-            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-muted-foreground">
+            <h3 className="font-headline text-sm font-bold uppercase tracking-wide text-zinc-900 dark:text-zinc-100">{t('information')}</h3>
+            <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-zinc-700 dark:text-zinc-300 font-medium">
               <Link href={`/${locale}#o-projekcie`} className="transition-colors hover:text-primary">{t('about')}</Link>
               <Link href="mailto:business@okazjeplus.pl" className="transition-colors hover:text-primary">{t('contact')}</Link>
               <Link href={`/${locale}/polityka-prywatnosci`} className="transition-colors hover:text-primary">{t('privacy')}</Link>
@@ -68,13 +68,13 @@ export function Footer() {
           </div>
 
           <div className="lg:col-span-2">
-            <h3 className="font-headline text-sm font-semibold uppercase tracking-wide text-muted-foreground">{t('social')}</h3>
+            <h3 className="font-headline text-sm font-bold uppercase tracking-wide text-zinc-900 dark:text-zinc-100">{t('social')}</h3>
             <div className="mt-4 flex gap-3">
-              <Link href="https://www.facebook.com/people/Okazje-Plus/61583646609859" className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.facebook.com/people/Okazje-Plus/61583646609859" className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 text-zinc-700 dark:text-zinc-300 transition-colors hover:border-primary hover:text-primary" target="_blank" rel="noopener noreferrer">
                 <Facebook className="h-5 w-5" />
                 <span className="sr-only">{t('facebook')}</span>
               </Link>
-              <Link href="https://www.instagram.com/okazje_plus/" className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 text-muted-foreground transition-colors hover:border-primary hover:text-primary" target="_blank" rel="noopener noreferrer">
+              <Link href="https://www.instagram.com/okazje_plus/" className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 text-zinc-700 dark:text-zinc-300 transition-colors hover:border-primary hover:text-primary" target="_blank" rel="noopener noreferrer">
                 <Instagram className="h-5 w-5" />
                 <span className="sr-only">{t('instagram')}</span>
               </Link>

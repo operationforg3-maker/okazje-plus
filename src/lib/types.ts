@@ -2361,6 +2361,7 @@ export interface ProductCore {
    * Semantic embeddings vector for AI search (e.g., 768 dims)
    */
   embeddings?: number[];
+  embedding?: number[];
   /**
    * AI rating of product quality (0-100), aligns with master schema
    */
@@ -2608,6 +2609,7 @@ export interface DealM6 {
   // Import/Source Info
   sourceProductId?: string; // ID in source system (e.g., AliExpress product ID)
   sourceUrl: string; // Original product URL
+  embedding?: number[];
 }
 
 /**

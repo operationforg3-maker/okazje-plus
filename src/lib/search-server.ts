@@ -1,0 +1,446 @@
+import { Deal, ProductCore } from '@/lib/types';
+
+export type Suggestion = {
+  type: 'product' | 'deal';
+  id: string;
+  label: string;
+  subLabel?: string;
+};
+import { collection, doc, documentId, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+const DEAL_IMAGE_FALLBACK = '/icon_okazjeplus.svg';
+const MAX_PAGE_SIZE = 250;
+
+const clampPageSize = (value?: number, fallback = 50): number => {
+  const raw = typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : fallback;
+  return Math.min(MAX_PAGE_SIZE, Math.max(1, raw));
+};
+
+function resolveImageCandidate(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const resolved = resolveImageCandidate(item);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+  if (typeof value === 'object') {
+    return (
+      resolveImageCandidate((value as any).src)
+      || resolveImageCandidate((value as any).url)
+      || resolveImageCandidate((value as any).image)
+      || resolveImageCandidate((value as any).imageUrl)
+    );
+  }
+  return null;
+}
+
+function resolveDealImage(record: any): string {
+  return (
+    resolveImageCandidate(record?.image)
+    || resolveImageCandidate(record?.imageUrl)
+    || resolveImageCandidate(record?.mainImage)
+    || resolveImageCandidate(record?.product_main_image_url)
+    || resolveImageCandidate(record?.thumbnail)
+    || resolveImageCandidate(record?.images)
+    || resolveImageCandidate(record?.gallery)
+    || resolveImageCandidate(record?.metadata?.image)
+    || resolveImageCandidate(record?.metadata?.imageUrl)
+    || resolveImageCandidate(record?.metadata?.mainImage)
+    || resolveImageCandidate(record?.importMetadata?.image)
+    || resolveImageCandidate(record?.importMetadata?.imageUrl)
+    || resolveImageCandidate(record?.importMetadata?.mainImage)
+    || DEAL_IMAGE_FALLBACK
+  );
+}
+
+function chunkIds(ids: string[], chunkSize = 30): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    chunks.push(ids.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+async function hydrateFallbackDealImages(deals: Deal[]): Promise<Deal[]> {
+  const idsToHydrate = deals
+    .filter((deal) => !deal?.image || deal.image === DEAL_IMAGE_FALLBACK)
+    .map((deal) => String(deal.id || ''))
+    .filter(Boolean);
+
+  if (idsToHydrate.length === 0) return deals;
+
+  const batches = chunkIds([...new Set(idsToHydrate)]);
+  const resolved = new Map<string, string>();
+
+  await Promise.all(
+    batches.map(async (batch) => {
+      const snap = await getDocs(query(collection(db, 'deals'), where(documentId(), 'in', batch)));
+      snap.docs.forEach((docSnap) => {
+        const image = resolveDealImage(docSnap.data());
+        if (image && image !== DEAL_IMAGE_FALLBACK) {
+          resolved.set(docSnap.id, image);
+        }
+      });
+    })
+  );
+
+  if (resolved.size === 0) return deals;
+
+  return deals.map((deal) => {
+    const hydratedImage = resolved.get(String(deal.id || ''));
+    if (!hydratedImage) return deal;
+    return { ...deal, image: hydratedImage };
+  });
+}
+
+export type ProductSearchOptions = {
+  mainCategorySlug?: string;
+  subCategorySlug?: string;
+  subSubCategorySlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  limit?: number;
+  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'popularity' | 'newest';
+  statusFilter?: 'approved' | 'waiting_room';
+};
+
+export async function searchProductsTypesense(
+  q: string,
+  opts: ProductSearchOptions = {}
+): Promise<ProductCore[]> {
+  const { limit = 50 } = opts;
+  const safeLimit = clampPageSize(limit, 50);
+  return searchProductsFirestoreFallback(q, opts, safeLimit);
+}
+
+export type DealSearchOptions = {
+  mainCategorySlug?: string;
+  subCategorySlug?: string;
+  subSubCategorySlug?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minTemperature?: number;
+  limit?: number;
+  sortBy?: 'relevance' | 'temperature' | 'hot' | 'price_asc' | 'price_desc' | 'newest' | 'discount_desc' | 'popularity';
+  statusFilter?: 'approved' | 'waiting_room';
+};
+
+export async function searchDealsTypesense(
+  q: string,
+  opts: DealSearchOptions = {}
+): Promise<Deal[]> {
+  const { limit = 50 } = opts;
+  const safeLimit = clampPageSize(limit, 50);
+  return searchDealsFirestoreFallback(q, opts, safeLimit);
+}
+
+function stripHtmlTags(value: unknown): string {
+  if (typeof value !== 'string' || value.length === 0) return '';
+
+  return value
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestion | null {
+  const id = typeof document?.id === 'string' ? document.id : '';
+  if (!id) return null;
+
+  const rawLabel = type === 'deal'
+    ? document?.title ?? document?.name ?? document?.description
+    : document?.name ?? document?.title ?? document?.description;
+  const rawSubLabel = type === 'deal'
+    ? document?.description ?? document?.title
+    : document?.description ?? document?.name;
+
+  const label = stripHtmlTags(rawLabel);
+  const subLabel = stripHtmlTags(rawSubLabel);
+
+  if (!label) return null;
+
+  return {
+    type,
+    id,
+    label,
+    subLabel: subLabel && subLabel !== label ? subLabel : undefined,
+  };
+}
+
+export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
+  const safeLimit = clampPageSize(limit, 5);
+
+  try {
+    const { generateEmbeddings } = await import('@/ai/embeddings');
+    const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+    const queryVector = await generateEmbeddings(q);
+
+    // Run parallel vector search on product_cores and deals
+    const [productsSnap, dealsSnap] = await Promise.all([
+      adminDb.collection('product_cores')
+        .where('status', '==', 'approved')
+        .findNearest({
+          vectorField: 'embedding',
+          queryVector: FieldValue.vector(queryVector),
+          distanceMeasure: 'COSINE',
+          limit: safeLimit,
+        }).get(),
+      adminDb.collection('deals')
+        .where('status', '==', 'approved')
+        .findNearest({
+          vectorField: 'embedding',
+          queryVector: FieldValue.vector(queryVector),
+          distanceMeasure: 'COSINE',
+          limit: safeLimit,
+        }).get()
+    ]);
+
+    const out: Suggestion[] = [];
+
+    // Normalize products suggestions
+    productsSnap.docs.forEach((docSnap: any) => {
+      const doc = docSnap.data();
+      const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'product');
+      if (suggestion) out.push(suggestion);
+    });
+
+    // Normalize deals suggestions
+    dealsSnap.docs.forEach((docSnap: any) => {
+      const doc = docSnap.data();
+      const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'deal');
+      if (suggestion) out.push(suggestion);
+    });
+
+    return out.slice(0, safeLimit);
+  } catch (err) {
+    console.warn('Firestore autocomplete failed:', err);
+    return [];
+  }
+}
+
+export async function getDealByIdTypesense(dealId: string): Promise<Deal | null> {
+  if (!dealId) return null;
+
+  try {
+    const snap = await getDoc(doc(db, 'deals', dealId));
+    if (!snap.exists()) return null;
+    return { id: snap.id, ...snap.data() } as Deal;
+  } catch (error) {
+    console.warn('Firestore fallback for getDealByIdTypesense failed:', error);
+    return null;
+  }
+}
+
+async function searchProductsFirestoreFallback(
+  q: string,
+  opts: ProductSearchOptions,
+  safeLimit: number
+): Promise<ProductCore[]> {
+  const {
+    mainCategorySlug,
+    subCategorySlug,
+    subSubCategorySlug,
+    minPrice,
+    maxPrice,
+    minRating,
+    sortBy = 'relevance',
+    statusFilter = 'approved',
+  } = opts;
+
+  try {
+    if (q !== '*') {
+      const { generateEmbeddings } = await import('@/ai/embeddings');
+      const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+      const queryVector = await generateEmbeddings(q);
+
+      const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
+      const queryBase = adminDb.collection('product_cores')
+        .where('status', '==', targetStatus);
+
+      let snap;
+      try {
+        snap = await queryBase.findNearest({
+          vectorField: 'embedding',
+          queryVector: FieldValue.vector(queryVector),
+          distanceMeasure: 'COSINE',
+          limit: safeLimit * 3,
+        }).get();
+      } catch (err: any) {
+        const errStr = String(err);
+        if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
+          console.warn('[Search Fallback] Composite vector index missing or building. Falling back to status-less query...');
+          snap = await adminDb.collection('product_cores').findNearest({
+            vectorField: 'embedding',
+            queryVector: FieldValue.vector(queryVector),
+            distanceMeasure: 'COSINE',
+            limit: safeLimit * 3,
+          }).get();
+        } else {
+          throw err;
+        }
+      }
+
+      let docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+      docs = docs.filter((d: any) => d.status === targetStatus);
+
+      // Post-filtering
+      if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
+      if (subCategorySlug) docs = docs.filter((d: any) => d.subCategorySlug === subCategorySlug);
+      if (subSubCategorySlug) docs = docs.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
+      if (minPrice !== undefined) docs = docs.filter((d: any) => (d.bestPrice?.amount || d.price || 0) >= Number(minPrice));
+      if (maxPrice !== undefined) docs = docs.filter((d: any) => (d.bestPrice?.amount || d.price || 0) <= Number(maxPrice));
+      if (minRating !== undefined) docs = docs.filter((d: any) => (d.ratingCard?.average || d.rating || 0) >= Number(minRating));
+
+      return docs.slice(0, safeLimit) as ProductCore[];
+    } else {
+      const { getProductCoresByFiltersData } = await import('@/lib/data/products');
+      return await getProductCoresByFiltersData(
+        {
+          categoryId: mainCategorySlug,
+          subCategorySlug,
+          subSubCategorySlug,
+          priceLimitMin: minPrice,
+          priceLimitMax: maxPrice,
+          minRating,
+          searchTerm: undefined,
+          statusFilter,
+        },
+        sortBy as any,
+        safeLimit
+      );
+    }
+  } catch (err) {
+    console.error('Firestore fallback for searchProductsTypesense failed:', err);
+    return [];
+  }
+}
+
+async function searchDealsFirestoreFallback(
+  q: string,
+  opts: DealSearchOptions,
+  safeLimit: number
+): Promise<Deal[]> {
+  const {
+    mainCategorySlug,
+    subCategorySlug,
+    subSubCategorySlug,
+    minPrice,
+    maxPrice,
+    minTemperature,
+    sortBy = 'relevance',
+    statusFilter = 'approved',
+  } = opts;
+
+  const query = q.trim().length > 0 ? q : '*';
+
+  try {
+    if (query !== '*') {
+      const { generateEmbeddings } = await import('@/ai/embeddings');
+      const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+      const queryVector = await generateEmbeddings(query);
+
+      const statuses = statusFilter === 'waiting_room'
+        ? ['pending', 'poczekalnia', 'pending_approval', 'approval']
+        : ['approved'];
+
+      const resultsArray = await Promise.all(
+        statuses.map(async (status) => {
+          const queryBase = adminDb.collection('deals').where('status', '==', status);
+          let snap;
+          try {
+            snap = await queryBase.findNearest({
+              vectorField: 'embedding',
+              queryVector: FieldValue.vector(queryVector),
+              distanceMeasure: 'COSINE',
+              limit: safeLimit * 3,
+            }).get();
+          } catch (err: any) {
+            const errStr = String(err);
+            if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
+              console.warn('[Search Fallback] Deals composite vector index missing or building. Falling back to status-less query...');
+              snap = await adminDb.collection('deals').findNearest({
+                vectorField: 'embedding',
+                queryVector: FieldValue.vector(queryVector),
+                distanceMeasure: 'COSINE',
+                limit: safeLimit * 3,
+              }).get();
+            } else {
+              throw err;
+            }
+          }
+          let docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+          return docs.filter((d: any) => d.status === status);
+        })
+      );
+
+      let docs = resultsArray.flat();
+
+      // Post-filtering
+      if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
+      if (subCategorySlug) docs = docs.filter((d: any) => d.subCategorySlug === subCategorySlug);
+      if (subSubCategorySlug) docs = docs.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
+      if (minPrice !== undefined) docs = docs.filter((d: any) => {
+        const priceVal = typeof d.price === 'object' && d.price ? (d.price as any).amount : (typeof d.price === 'number' ? d.price : 0);
+        return ((d as any).priceV2?.amount || priceVal) >= Number(minPrice);
+      });
+      if (maxPrice !== undefined) docs = docs.filter((d: any) => {
+        const priceVal = typeof d.price === 'object' && d.price ? (d.price as any).amount : (typeof d.price === 'number' ? d.price : 0);
+        return ((d as any).priceV2?.amount || priceVal) <= Number(maxPrice);
+      });
+      if (minTemperature !== undefined) docs = docs.filter((d: any) => (d.temperature || 0) >= Number(minTemperature));
+
+      // Sorting
+      docs.sort((a: any, b: any) => {
+        if (sortBy === 'temperature' || sortBy === 'hot' || sortBy === 'popularity') return (b.temperature || 0) - (a.temperature || 0);
+        if (sortBy === 'price_asc') {
+          const aPrice = (a as any).priceV2?.amount || (typeof a.price === 'object' && a.price ? (a.price as any).amount : (typeof a.price === 'number' ? a.price : 0));
+          const bPrice = (b as any).priceV2?.amount || (typeof b.price === 'object' && b.price ? (b.price as any).amount : (typeof b.price === 'number' ? b.price : 0));
+          return aPrice - bPrice;
+        }
+        if (sortBy === 'price_desc') {
+          const aPrice = (a as any).priceV2?.amount || (typeof a.price === 'object' && a.price ? (a.price as any).amount : (typeof a.price === 'number' ? a.price : 0));
+          const bPrice = (b as any).priceV2?.amount || (typeof b.price === 'object' && b.price ? (b.price as any).amount : (typeof b.price === 'number' ? b.price : 0));
+          return bPrice - aPrice;
+        }
+        if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        return 0; // relevance
+      });
+
+      return await hydrateFallbackDealImages(docs.slice(0, safeLimit) as Deal[]);
+    } else {
+      const { getDealsByFiltersData } = await import('@/lib/data/deals');
+      return await getDealsByFiltersData(
+        {
+          categoryId: mainCategorySlug,
+          subCategorySlug,
+          subSubCategorySlug,
+          priceLimitMin: minPrice,
+          priceLimitMax: maxPrice,
+          searchTerm: undefined,
+          statusFilter,
+        },
+        sortBy as any,
+        safeLimit
+      );
+    }
+  } catch (err) {
+    console.error('Firestore fallback for searchDealsTypesense failed:', err);
+    return [];
+  }
+}

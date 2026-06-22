@@ -98,7 +98,7 @@ export function Navbar() {
           {/* Mobile Nav */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button variant="ghost" size="icon" className="rounded-full" aria-label={t('openMenu')}>
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">{t('openMenu')}</span>
               </Button>
@@ -319,8 +319,8 @@ export function Navbar() {
         </div>
 
         {/* Secondary quick links (mobile-friendly scroll) */}
-        <nav className="flex items-center gap-2 overflow-x-auto text-xs text-muted-foreground" aria-label="Szybkie linki">
-          <span className="rounded-full px-3 py-1 font-medium text-foreground/70" role="status">{t('seasonalHits')}</span>
+        <nav className="flex items-center gap-2 overflow-x-auto text-xs text-zinc-700 dark:text-zinc-300 font-medium" aria-label="Szybkie linki">
+          <span className="rounded-full px-3 py-1 font-bold text-foreground" role="status">{t('seasonalHits')}</span>
           <Link href={`${prefix}/deals?sort=hot`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Gorące okazje">{t('hottest')}</Link>
           <Link href={`${prefix}/deals?sort=new`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Nowe okazje">{t('newest')}</Link>
           <Link href={`${prefix}/products?sort=trending`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Popularne produkty">{t('trending')}</Link>

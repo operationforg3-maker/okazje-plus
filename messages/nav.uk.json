@@ -18,5 +18,10 @@
   "login": "Увійти",
   "changeLanguage": "Змінити мову",
   "changeCurrency": "Змінити валюту",
-  "changeTheme": "Змінити тему"
+  "changeTheme": "Змінити тему",
+  "waitingRoom": "Черга",
+  "search": "Пошук",
+  "account": "Акаунт",
+  "mobileNavigation": "Мобільна навігація",
+  "openSearch": "Відкрити пошук"
 }

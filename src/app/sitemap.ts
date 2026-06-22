@@ -1,7 +1,11 @@
 import type { MetadataRoute } from 'next';
 import { getRecommendedProducts, getCategories, getAllProductCores } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search';
+import { searchDealsTypesense } from '@/lib/search-server';
 import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
+
+// Sitemap fetches up to ~3000 records from Firebase/Typesense — must be dynamic (not statically generated at build time)
+export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 

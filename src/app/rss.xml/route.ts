@@ -1,5 +1,5 @@
 import { getRecommendedProducts } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search';
+import { searchDealsTypesense } from '@/lib/search-server';
 import type { Deal, Product } from '@/lib/types';
 
 function escapeXml(text: string): string {

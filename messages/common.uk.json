@@ -16,7 +16,9 @@
     "noSuggestions": "Немає пропозицій",
     "enterToSearch": "Натисніть Enter для повнотекстового пошуку",
     "noResults": "Немає результатів",
-    "searching": "Пошук..."
+    "searching": "Пошук...",
+    "searchBarLabel": "Шукати продукти та пропозиції",
+    "resultsLabel": "Результати пошуку"
   },
   "breadcrumb": {
     "home": "Головна сторінка",
@@ -91,7 +93,11 @@
     "status": "Статус",
     "votes": "Голоси",
     "shares": "Поширити",
-    "addedBy": "Додано:"
+    "addedBy": "Додано:",
+    "user": "Користувач",
+    "temperature": "Температура",
+    "boughtCount": "{count} купили",
+    "youSave": "Ви заощаджуєте {amount}"
   },
   "comments": {
     "title": "Коментарі",
@@ -139,7 +145,9 @@
     "saveError": "Не вдалося зберегти",
     "deleteError": "Не вдалося видалити",
     "loadError": "Не вдалося завантажити",
-    "unknownError": "Невідома помилка"
+    "unknownError": "Невідома помилка",
+    "notFoundTitle": "Сторінку не знайдено (404)",
+    "notFoundDescription": "Вибачте, але сторінка, яку ви шукаєте, не існує, була видалена або її адреса змінилася."
   },
   "messages": {
     "success": "Успіх",
@@ -160,6 +168,9 @@
     "priceAlertEnabled": "📢 Вас буде повідомлено про зміни ціни!",
     "dealExpired": "Пропозиція недійсна",
     "thankYouForVote": "Дякуємо за ваш голос!",
-    "voteError": "Помилка під час голосування"
+    "voteError": "Помилка під час голосування",
+    "voteRemoved": "Голос видалено",
+    "voteChanged": "Голос змінено",
+    "voteAdded": "Голос додано"
   }
 }

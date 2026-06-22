@@ -36,5 +36,7 @@
   "created": "Utworzono:",
   "namePlaceholder": "np. Laptopy do 3000 zł",
   "descriptionPlaceholder": "Dodatkowe szczegóły...",
-  "dialogDescription": "Otrzymuj powiadomienia gdy pojawią się nowe okazje pasujące do Twoich kryteriów"
+  "dialogDescription": "Otrzymuj powiadomienia gdy pojawią się nowe okazje pasujące do Twoich kryteriów",
+  "enableNotifications": "Włącz powiadomienia",
+  "disableNotifications": "Wyłącz powiadomienia"
 }

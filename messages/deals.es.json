@@ -74,7 +74,11 @@
     "categories": "Categorías",
     "allDeals": "Todos",
     "showAll": "Mostrar todo",
-    "hideEmpty": "Ocultar vacíos"
+    "hideEmpty": "Ocultar vacíos",
+    "expandCategory": "Expandir categoría",
+    "collapseCategory": "Contraer categoría",
+    "expandSubcategory": "Expandir subcategoría",
+    "collapseSubcategory": "Contraer subcategoría"
   },
   "card": {
     "price": "Precio",

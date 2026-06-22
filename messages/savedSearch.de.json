@@ -36,5 +36,7 @@
   "created": "Erstellt:",
   "namePlaceholder": "z.B. Laptops unter 300 €",
   "descriptionPlaceholder": "Zusätzliche Details...",
-  "dialogDescription": "Erhalten Sie Benachrichtigungen, wenn neue Angebote erscheinen, die Ihren Kriterien entsprechen"
+  "dialogDescription": "Erhalten Sie Benachrichtigungen, wenn neue Angebote erscheinen, die Ihren Kriterien entsprechen",
+  "enableNotifications": "Benachrichtigungen aktivieren",
+  "disableNotifications": "Benachrichtigungen deaktivieren"
 }

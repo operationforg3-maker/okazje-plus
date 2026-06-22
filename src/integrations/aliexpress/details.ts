@@ -118,7 +118,10 @@ export async function getAliExpressProductDetailsDirect(id: string) {
     },
     attributes,
     specs,
-    variants: Array.isArray(variants) ? variants : [],
+    variants: (scrapedData?.variants && scrapedData.variants.length > 0)
+      ? scrapedData.variants
+      : (Array.isArray(variants) ? variants : []),
+    skuList: scrapedData?.skuList || [],
     videoUrl: product.product_video_url || scrapedData?.videoUrl || null,
     categoryId: product.category_id || product.first_level_category_id || null,
     categoryName: product.category_name || product.first_level_category_name || '',

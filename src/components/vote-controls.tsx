@@ -66,11 +66,11 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
         setUserVote(prevVote);
         if (delta !== 0) setVoteCount((prev) => prev - delta);
         if (res.status === 429) {
-          toast.error('Zbyt wiele głosów - poczekaj chwilę');
+          toast.error(t('errors.voteError'));
         } else if (res.status === 401) {
-          toast.error('Musisz być zalogowany aby głosować');
+          toast.error(t('auth.loginToVote'));
         } else {
-          toast.error(json.message || 'Błąd podczas głosowania');
+          toast.error(json.message || t('errors.voteError'));
         }
         return;
       }
@@ -97,7 +97,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
         navigator.vibrate([50]);
       }
-      toast.success(`Głos ${direction === 'up' ? 'za' : 'przeciw'} został zapisany`);
+      toast.success(t('messages.thankYouForVote'));
       
     } catch (error) {
       // Rollback optimistic update on network/runtime errors.
@@ -138,7 +138,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Głosuj za"
+        aria-label={t('auth.voteUp')}
         onClick={() => handleVote('up')}
         disabled={isLoading}
         className={userVote === 1 ? 'text-green-600 bg-green-100/80 hover:bg-green-100' : undefined}
@@ -149,7 +149,7 @@ export function VoteControls({ dealId, initialVoteCount }: VoteControlsProps) {
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Głosuj przeciw"
+        aria-label={t('auth.voteDown')}
         onClick={() => handleVote('down')}
         disabled={isLoading}
         className={userVote === -1 ? 'text-red-600 bg-red-100/80 hover:bg-red-100' : undefined}

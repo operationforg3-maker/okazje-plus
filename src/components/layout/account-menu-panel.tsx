@@ -200,6 +200,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
                     "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
                   )}
                   title={t('changeLanguage')}
+                  aria-label={t('changeLanguage')}
                 >
                   {locale}
                 </Link>
@@ -219,6 +220,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
                     "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
                   )}
                   title={t('changeCurrency')}
+                  aria-label={t('changeCurrency')}
                 >
                   {currency}
                 </button>
@@ -235,6 +237,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
                   "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
                 )}
                 title={t('changeTheme')}
+                aria-label={t('changeTheme')}
               >
                 {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>

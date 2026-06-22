@@ -83,7 +83,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
             aria-autocomplete="list"
             aria-expanded={open}
             aria-controls="autocomplete-popover"
-            aria-label="Wyszukaj produkty i okazje"
+            aria-label={t('search.searchBarLabel')}
             autoComplete="off"
             data-lpignore="true"
             data-form-type="other"
@@ -92,7 +92,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
             aria-haspopup="listbox"
           />
           {loading && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" aria-label="Wyszukiwanie..." aria-live="polite" />
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" aria-label={t('search.searching')} aria-live="polite" />
           )}
         </div>
       </form>
@@ -100,7 +100,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
         <div
           id="autocomplete-popover"
           role="listbox"
-          aria-label="Wyniki wyszukiwania"
+          aria-label={t('search.resultsLabel')}
           className="absolute left-0 right-0 mt-1 rounded-lg border bg-popover shadow-lg z-50 p-2 space-y-1"
         >
           {suggestions.map((s, i) => (

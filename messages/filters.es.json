@@ -25,5 +25,7 @@
     "discount_desc": "El mayor descuento",
     "reviews_count": "Más comentados",
     "popularity": "Más populares"
-  }
+  },
+  "minPrice": "Precio mínimo",
+  "maxPrice": "Precio máximo"
 }

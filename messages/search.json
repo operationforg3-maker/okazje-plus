@@ -28,5 +28,11 @@
     "empty": "Nie znaleziono wyników",
     "emptyDescription": "Spróbuj użyć innych słów kluczowych lub przeglądnij kategorie"
   },
-  "loading": "Wyszukiwanie..."
+  "loading": "Wyszukiwanie...",
+  "placeholder": "Szukaj produktów i okazji...",
+  "minChars": "Wpisz co najmniej 2 znaki, aby zobaczyć wyniki.",
+  "all": "Wszystkie",
+  "viewAllResults": "Zobacz pełne wyniki",
+  "noDeals": "Brak okazji dla tego zapytania.",
+  "noProducts": "Brak produktów dla tego zapytania."
 }

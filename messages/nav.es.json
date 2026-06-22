@@ -18,5 +18,10 @@
   "login": "Iniciar sesión",
   "changeLanguage": "Cambiar idioma",
   "changeCurrency": "Cambiar divisa",
-  "changeTheme": "Cambiar tema"
+  "changeTheme": "Cambiar tema",
+  "waitingRoom": "Sala de espera",
+  "search": "Buscar",
+  "account": "Cuenta",
+  "mobileNavigation": "Navegación móvil",
+  "openSearch": "Abrir búsqueda"
 }

@@ -289,7 +289,8 @@ export async function getDealsByFiltersData(
       if (filters.subSubCategorySlug && subSubCat !== filters.subSubCategorySlug) return false;
 
       if (filters.priceRange) {
-        const price = (deal as any).priceV2?.amount || deal.price || 0;
+        const priceVal = typeof deal.price === 'object' && deal.price ? (deal.price as any).amount : (typeof deal.price === 'number' ? deal.price : 0);
+        const price = (deal as any).priceV2?.amount || priceVal;
         if (price < filters.priceRange.min || price > filters.priceRange.max) return false;
       }
 
@@ -297,7 +298,9 @@ export async function getDealsByFiltersData(
 
       if (filters.discountOnly && !deal.originalPrice) return false;
       if (filters.minDiscount && deal.originalPrice) {
-        const discount = ((deal.originalPrice - ((deal as any).priceV2?.amount || deal.price)) / deal.originalPrice) * 100;
+        const priceVal = typeof deal.price === 'object' && deal.price ? (deal.price as any).amount : (typeof deal.price === 'number' ? deal.price : 0);
+        const price = (deal as any).priceV2?.amount || priceVal;
+        const discount = ((deal.originalPrice - price) / deal.originalPrice) * 100;
         if (discount < filters.minDiscount) return false;
       }
 
@@ -319,18 +322,26 @@ export async function getDealsByFiltersData(
       const da = a as Deal;
       const db = b as Deal;
       switch (sortBy) {
-        case 'price_asc':
-          return ((da as any).priceV2?.amount || da.price || 0) - ((db as any).priceV2?.amount || db.price || 0);
-        case 'price_desc':
-          return ((db as any).priceV2?.amount || db.price || 0) - ((da as any).priceV2?.amount || da.price || 0);
+        case 'price_asc': {
+          const aPrice = (da as any).priceV2?.amount || (typeof da.price === 'object' && da.price ? (da.price as any).amount : (typeof da.price === 'number' ? da.price : 0));
+          const bPrice = (db as any).priceV2?.amount || (typeof db.price === 'object' && db.price ? (db.price as any).amount : (typeof db.price === 'number' ? db.price : 0));
+          return aPrice - bPrice;
+        }
+        case 'price_desc': {
+          const aPrice = (da as any).priceV2?.amount || (typeof da.price === 'object' && da.price ? (da.price as any).amount : (typeof da.price === 'number' ? da.price : 0));
+          const bPrice = (db as any).priceV2?.amount || (typeof db.price === 'object' && db.price ? (db.price as any).amount : (typeof db.price === 'number' ? db.price : 0));
+          return bPrice - aPrice;
+        }
         case 'rating_desc':
           return ((db as any).rating || 0) - ((da as any).rating || 0);
         case 'newest':
           return new Date((db as any).createdAt || 0).getTime() - new Date((da as any).createdAt || 0).getTime();
         case 'discount_desc':
           if (da.originalPrice && db.originalPrice) {
-            const aDiscount = ((da.originalPrice - ((da as any).priceV2?.amount || da.price)) / da.originalPrice) * 100;
-            const bDiscount = ((db.originalPrice - ((db as any).priceV2?.amount || db.price)) / db.originalPrice) * 100;
+            const aPrice = (da as any).priceV2?.amount || (typeof da.price === 'object' && da.price ? (da.price as any).amount : (typeof da.price === 'number' ? da.price : 0));
+            const bPrice = (db as any).priceV2?.amount || (typeof db.price === 'object' && db.price ? (db.price as any).amount : (typeof db.price === 'number' ? db.price : 0));
+            const aDiscount = ((da.originalPrice - aPrice) / da.originalPrice) * 100;
+            const bDiscount = ((db.originalPrice - bPrice) / db.originalPrice) * 100;
             return bDiscount - aDiscount;
           }
           return 0;

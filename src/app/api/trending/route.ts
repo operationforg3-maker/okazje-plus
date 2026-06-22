@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { searchDealsTypesense } from '@/lib/search';
+import { searchDealsTypesense } from '@/lib/search-server';
 import { trendingDealPrediction } from '@/ai/flows/trending-deal-prediction';
 
 export const dynamic = 'force-dynamic';

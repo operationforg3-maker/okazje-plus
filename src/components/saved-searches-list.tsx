@@ -132,12 +132,12 @@ export default function SavedSearchesList() {
                     <CardDescription>{search.description}</CardDescription>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => toggleNotifications(search.id!, search.notificationsEnabled)}
-                    aria-label={search.notificationsEnabled ? "Wyłącz powiadomienia" : "Włącz powiadomienia"}
+                    aria-label={search.notificationsEnabled ? t('disableNotifications') : t('enableNotifications')}
                   >
                     {search.notificationsEnabled ? (
                       <Bell className="h-4 w-4" />
@@ -152,7 +152,7 @@ export default function SavedSearchesList() {
                       setSearchToEdit(search);
                       setEditDialogOpen(true);
                     }}
-                    aria-label="Edytuj wyszukiwanie"
+                    aria-label={t('edit')}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -163,7 +163,7 @@ export default function SavedSearchesList() {
                       setSearchToDelete(search.id!);
                       setDeleteDialogOpen(true);
                     }}
-                    aria-label="Usuń wyszukiwanie"
+                    aria-label={t('delete')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

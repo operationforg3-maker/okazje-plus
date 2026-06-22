@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import typesenseServerClient from '@/lib/typesense-server';
 import { cacheGet, cacheSet } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // Cache for 5 minutes
 
-const PUBLIC_STATS_CACHE_KEY = 'public:stats:v3';
+const PUBLIC_STATS_CACHE_KEY = 'public:stats:v4';
 const PUBLIC_STATS_TTL_SECONDS = 300;
 const PUBLIC_CACHE_CONTROL = 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600';
 
@@ -21,77 +20,31 @@ export async function GET() {
       });
     }
 
-    // final.md: public offer reads should use Typesense (not Firestore).
     const usersTotalPromise = adminDb.collection('users').count().get();
 
-    if (!typesenseServerClient) {
-      const [usersTotal, approvedDeals, approvedProductCores] = await Promise.all([
-        usersTotalPromise,
-        adminDb.collection('deals').where('status', '==', 'approved').count().get(),
-        adminDb.collection('product_cores').where('status', '==', 'approved').count().get(),
-      ]);
-
-      const payload = {
-        success: true,
-        dealsCount: approvedDeals.data().count,
-        productsCount: approvedProductCores.data().count,
-        usersCount: usersTotal.data().count,
-        totalSavings: 0,
-        source: 'firestore_fallback',
-        timestamp: new Date().toISOString(),
-      };
-
-      await cacheSet(PUBLIC_STATS_CACHE_KEY, payload, PUBLIC_STATS_TTL_SECONDS);
-      return NextResponse.json(payload, {
-        headers: {
-          'Cache-Control': PUBLIC_CACHE_CONTROL,
-        },
-      });
-    }
-
-    const [approvedProductCores, pendingProductCores, usersTotal] = await Promise.all([
+    const [approvedDealsFirestore, approvedProductCores, pendingProductCores, usersTotal] = await Promise.all([
+      adminDb.collection('deals').where('status', '==', 'approved').count().get(),
       adminDb.collection('product_cores').where('status', '==', 'approved').count().get(),
       adminDb.collection('product_cores').where('status', '==', 'pending_approval').count().get(),
       usersTotalPromise,
     ]);
 
-    let totalApprovedDeals = 0;
+    const totalApprovedDeals = approvedDealsFirestore.data().count;
     let totalSavings = 0;
 
     try {
-      if (!typesenseServerClient) {
-        throw new Error('Typesense client not initialized');
-      }
+      const topDealsSnap = await adminDb.collection('deals')
+        .where('status', '==', 'approved')
+        .orderBy('voteCount', 'desc')
+        .limit(250)
+        .get();
 
-      const [approvedDealsRes, savingsSampleRes] = await Promise.all([
-        typesenseServerClient.collections('deals').documents().search({
-          q: '*',
-          query_by: 'title,description,postedBy',
-          filter_by: 'status:=approved',
-          per_page: 1,
-        }, {}),
-        typesenseServerClient.collections('deals').documents().search({
-          q: '*',
-          query_by: 'title,description,postedBy',
-          filter_by: 'status:=approved',
-          sort_by: 'voteCount:desc',
-          per_page: 250,
-          page: 1,
-        }, {})
-      ]);
-
-      totalApprovedDeals = Math.max(0, Number((approvedDealsRes as any).found || 0));
-
-      const savingsHits = ((savingsSampleRes as any).hits || []) as Array<{ document?: Record<string, unknown> }>;
-      totalSavings = savingsHits.reduce((sum, hit) => {
-        const voteCount = Number((hit.document?.voteCount as number | undefined) ?? 0);
+      totalSavings = topDealsSnap.docs.reduce((sum: number, doc: any) => {
+        const voteCount = Number(doc.data().voteCount ?? 0);
         return sum + (Number.isFinite(voteCount) ? voteCount : 0) * 10;
       }, 0);
-    } catch (typesenseError) {
-      console.warn('[Public Stats API] Typesense search failed, falling back to Firestore counts:', typesenseError);
-      const approvedDealsFirestore = await adminDb.collection('deals').where('status', '==', 'approved').count().get();
-      totalApprovedDeals = approvedDealsFirestore.data().count;
-      totalSavings = 0;
+    } catch (savingsError) {
+      console.warn('[Public Stats API] Failed to compute savings from Firestore:', savingsError);
     }
 
     const totalApprovedProducts = approvedProductCores.data().count + pendingProductCores.data().count;

@@ -1,0 +1,413 @@
+{
+  "requests": [
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.msite.query/1.0/?jsv=2.5.1&appKey=12574478&t=1782064246908&sign=fd43541882b247a1cb238916d0a4f090&api=mtop.aliexpress.pdp.msite.query&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp1&data=%7B%22productId%22%3A%221005009279188100%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22country%22%3A%22PL%22%2C%22province%22%3A%22%22%2C%22city%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22sourceType%22%3A%22%22%2C%22pdp_ext_f%22%3A%22%22%2C%22pdpNPI%22%3A%22%22%2C%22channel%22%3A%22%22%2C%22ext%22%3A%22%7B%5C%22aff_short_key%5C%22%3A%5C%22%5C%22%2C%5C%22aff_fsk%5C%22%3A%5C%22%5C%22%2C%5C%22af%5C%22%3A%5C%22%5C%22%2C%5C%22foreverRandomToken%5C%22%3A%5C%2290a4da1a860b4473beb7d024a68231fd%5C%22%2C%5C%22site%5C%22%3A%5C%22pol%5C%22%2C%5C%22crawler%5C%22%3Afalse%2C%5C%22x-m-biz-bx-region%5C%22%3A%5C%22%5C%22%2C%5C%22signedIn%5C%22%3Afalse%2C%5C%22host%5C%22%3A%5C%22pl.aliexpress.com%5C%22%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    },
+    {
+      "url": "https://pl.aliexpress.com/aeglodetailweb/api/seo/seodata?productId=1005009279188100&subject=Succebuy+15-55L+Przeno%C5%9Bna+Lod%C3%B3wka+Elektryczna+Kompresorowa+12V%2F24V+DC+110-240V+AC+Zamra%C5%BCarka+Ch%C5%82odziarka+do+Domu&channel=detail&device=msite",
+      "method": "GET",
+      "headers": {
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        "accept-language": "en-GB,en;q=0.9",
+        "accept": "application/json, text/plain, */*",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "bx-v": "2.5.36"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.traffic.web.cross.trace.report/1.0/?jsv=2.5.1&appKey=24815441&t=1782064247510&sign=c3f900f998fb399f1fb6685844fccf97&api=mtop.aliexpress.traffic.web.cross.trace.report&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp2&data=%7B%22currentUrl%22%3A%22https%3A%2F%2Fs.click.aliexpress.com%2FcrossTrace.htm%3FitemId%3D1005009279188100%26sellerId%3D1103582642%26url%3Dhttps%253A%252F%252Fpl.aliexpress.com%252Fitem%252F1005009279188100.html%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.traffic.web.cross.trace.report/1.0/?jsv=2.5.1&appKey=24815441&t=1782064247561&sign=719d841265c83ee4254519471aeb0b49&api=mtop.aliexpress.traffic.web.cross.trace.report&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp3&data=%7B%22currentUrl%22%3A%22https%3A%2F%2Fs.click.aliexpress.com%2FcrossTrace.htm%3FitemId%3D1005009279188100%26sellerId%3D1103582642%26url%3Dhttps%253A%252F%252Fpl.aliexpress.com%252Fitem%252F1005009279188100.html%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.ae.cookie.render/1.0/?jsv=2.5.1&appKey=12574478&t=1782064247577&sign=dc8d9074aeb3e90774494660a96deb23&api=mtop.ae.cookie.render&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp4&data=%7B%22count%22%3A%220%22%2C%22bizCode%22%3A%22aliexpress%22%2C%22platform%22%3A%22pc%22%2C%22country%22%3A%22PL%22%2C%22locale%22%3A%22pl_PL%22%2C%22currency%22%3A%22PLN%22%2C%22clientAppVersion%22%3A%220%22%2C%22appVersionName%22%3A%22%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.ae.cookie.render/1.0/?jsv=2.5.1&appKey=12574478&t=1782064247613&sign=fddb4ed2617c2cbd3474e40d6fe0c938&api=mtop.ae.cookie.render&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp5&data=%7B%22count%22%3A%220%22%2C%22bizCode%22%3A%22aliexpress%22%2C%22platform%22%3A%22pc%22%2C%22country%22%3A%22PL%22%2C%22locale%22%3A%22pl_PL%22%2C%22currency%22%3A%22PLN%22%2C%22clientAppVersion%22%3A%220%22%2C%22appVersionName%22%3A%22%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.alibaba.global.ug.ut.device.web.event.report/1.0/?jsv=2.5.1&appKey=12574478&t=1782064248150&sign=a461e32a69d002a7b7afd8caebcbe232&api=mtop.alibaba.global.ug.ut.device.web.event.report&v=1.0&timeout=10000&type=originaljson&dataType=jsonp",
+      "method": "POST",
+      "headers": {
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        "accept-language": "en-GB,en;q=0.9",
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.usertouch.houyi.launchrule.runtime.pull/2.0/?jsv=2.5.1&appKey=24815441&t=1782064248156&sign=8cb2c4431f1e0081caa95d2b0d692958&api=mtop.aliexpress.usertouch.houyi.launchRule.runtime.pull&v=2.0&type=originaljson&timeout=10000&dataType=jsonp",
+      "method": "POST",
+      "headers": {
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        "accept-language": "en-GB,en;q=0.9",
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
+      }
+    },
+    {
+      "url": "https://aplus.aliexpress.com/g.gif?logtype=1&title=Succebuy%2015-55L%20Przeno%C5%9Bna%20Lod%C3%B3wka%20Elektryczna%20Kompresorowa%2012V%2F24V%20DC%20110-240V%20AC%20Zamra%C5%BCarka%20Ch%C5%82odziarka%20do%20Domu%20-%20AliExpress%2015&pre=&scr=375x812&_p_url=https%3A%2F%2Fpl.aliexpress.com%2Fitem%2F1005009279188100.html&cna=eBK/Im5lNzQCAU1BapBZrLnB&spm-cnt=a2g0n.detail.0.0.133348d03ddDJF&aplus=&sidx=aplusSidx&ckx=aplusCkx&pageid=19eeb4e705f22008378afd12f97010dc7b7fd159f6&dmtrack_b=%7Bifm%3D0%7Clogin%3D0%7D&dmtrack_c=%7Bacs_rt%3D90a4da1a860b4473beb7d024a68231fd%7Caep_usuc_f%3Dsite%253Dpol%2526c_tp%253DPLN%2526region%253DPL%2526b_locale%253Dpl_PL%7Caeu_cid%3D-%7D&ali_beacon_id=-&ali_apache_id=33.3.137.9.1782064246802.855885.1&ali_apache_track=-&ali_apache_tracktmp=-&_p_uid=-&p=1&o=ios16.5&b=other&s=375x812&w=webkit&ism=iphone&cache=3ae3a35&lver=8.15.25&jsver=aplus_int&pver=0.7.12&mansndlog=1&tag=0&stag=2&lstag=0&_slog=0",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "aplus.aliexpress.com",
+        ":method": "GET",
+        ":path": "/g.gif?logtype=1&title=Succebuy%2015-55L%20Przeno%C5%9Bna%20Lod%C3%B3wka%20Elektryczna%20Kompresorowa%2012V%2F24V%20DC%20110-240V%20AC%20Zamra%C5%BCarka%20Ch%C5%82odziarka%20do%20Domu%20-%20AliExpress%2015&pre=&scr=375x812&_p_url=https%3A%2F%2Fpl.aliexpress.com%2Fitem%2F1005009279188100.html&cna=eBK/Im5lNzQCAU1BapBZrLnB&spm-cnt=a2g0n.detail.0.0.133348d03ddDJF&aplus=&sidx=aplusSidx&ckx=aplusCkx&pageid=19eeb4e705f22008378afd12f97010dc7b7fd159f6&dmtrack_b=%7Bifm%3D0%7Clogin%3D0%7D&dmtrack_c=%7Bacs_rt%3D90a4da1a860b4473beb7d024a68231fd%7Caep_usuc_f%3Dsite%253Dpol%2526c_tp%253DPLN%2526region%253DPL%2526b_locale%253Dpl_PL%7Caeu_cid%3D-%7D&ali_beacon_id=-&ali_apache_id=33.3.137.9.1782064246802.855885.1&ali_apache_track=-&ali_apache_tracktmp=-&_p_uid=-&p=1&o=ios16.5&b=other&s=375x812&w=webkit&ism=iphone&cache=3ae3a35&lver=8.15.25&jsver=aplus_int&pver=0.7.12&mansndlog=1&tag=0&stag=2&lstag=0&_slog=0",
+        ":scheme": "https",
+        "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522goTimtZnh9w70_2Er-7sxRsf6liL1N_faKUAHZBqY9WCHZdqfj0DeCWAMf6O3Hv2dGBwXtUDo95c3t5NuBuFi_NN_rzV8B5fpKUv6KF6ALdzWFn1krb1lZk-e43-fC_fuv47cu66TB1q91rb6kEFlZk-p5ENC9QXB-84kGREtsCf_sJVbwRFd1yVuOS4Lk5PLt723GRE8sCYQtSVQMlhG9WVuZJV8XfALt7VuKRerYZPC_1k8YNvBNAyfnThsGXy_V44oe4RjTRNKrze-1DfUCW3urW5o6xXgKk0ka-WKEjyeq4CWQxF81xngkWNqhJOOK0u7O8H_FW97vUOQFOe2EpEgrWDY3S24CkLx6xe6ejpzY4cfHJ6ViYxp4_92QLf4FugF9I5iLbwxvzMUgSUYu-utr1EMerbcG5CtTd9Xtcy2HlwqXc342sNO6-mtXqbcG5CtThntuuCb61em%2522%252C%2522epssw%2522%253A%252213*vyWVVGrGGIGzAGrOJ3SHB_jOUaDzl-5zGB76B3OOB3E6B0qTXjn0oaykCxMZvRqeGwrMGQqHjzwrGw4_wrn-GGGGGM4gw-UA49Mt27sY9krOWa5ECgWqbK0HbIGGJwwIwxf3EyGmsKGVmppO-qMwXITTnlAZbVA4aCSwwQrAQ5GKrDVLqHN5W5RIVAdvDV23zTUITGGGGIRvGGGGGGbvZjjgJs8KIsk1Irs7YoXSiRksGGOWcCw1XrztEPeSiguMgkYCcND0FosdbRfLjZIC8oCFP94zCXK9ZYEEx0RKGGGGQMbss0JGGGOwyXF830..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D; cna=eBK/Im5lNzQCAU1BapBZrLnB",
+        "priority": "i",
+        "sec-fetch-dest": "image",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.usertouch.poplayer.get/2.0/?jsv=2.5.1&appKey=24815441&t=1782064248749&sign=92f460522996f589c5f43acd7dff0ddc&type=originaljson&api=mtop.aliexpress.usertouch.poplayer.get&v=2.0&dataType=jsonp",
+      "method": "POST",
+      "headers": {
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        "accept-language": "en-GB,en;q=0.9",
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        ":authority": "acs.aliexpress.com",
+        ":method": "POST",
+        ":path": "/h5/mtop.aliexpress.usertouch.poplayer.get/2.0/?jsv=2.5.1&appKey=24815441&t=1782064248749&sign=92f460522996f589c5f43acd7dff0ddc&type=originaljson&api=mtop.aliexpress.usertouch.poplayer.get&v=2.0&dataType=jsonp",
+        ":scheme": "https",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "content-length": "1407",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gMor0ONw2kcb2SOiQAqe7oMLPnZ8VkR1xDNQKvD3F7VuAXg4YjhrP6ZQRMPnKSi7NYZkYJcsg72uxkjmnJezK_burtX0dJV3-DNIYpr-c4sQNQEEKfZe1Ct6fYH84kA61nP9lFZ3KHNHlzYjxVy61Ct6cDx0x2dsdMAFKr2Li8jurav4mJwzx84uKKP0LRQhZXqH3KyQKT2u-gD0oJ2QxWc3xKk0MJr3EXqH3xVYKUx-ib97ezvWJXpFZUwaz5DugMci084PyYVVxMm4QzPGfSShxmyrpr0mPgxai4gnVomki1EmBqGu3l-FL-uZnu2r9hI8qADm-zoeROFKux0_uqBWe-orQDyazsvz90GrYznM1iFoumnUVqOPfWUnl0UtVIjzjVH7V2cDKMVEoJjPE6emK1mKz6bUr-e41KJ4Z9QsovnaE0QdJzUL359c2wQLr-e41KJVJwU8J-P6ngC..%2522%252C%2522epssw%2522%253A%252213*vNrnpGtGGIGaAGrOV-pRwGQRWHC6B3OGlHJzlr8HlfJzlfhSH_5kY-ykiTt8BI_Ul-prw-DzJw2ABOr5wTewwQrHbCjimANx_FiCsrhGXSo9xk-ECgWqQBrHbIGGej3Iwxf3XyPQ9Q6kIJIGDnMwHBuTnV6KmwVCodrHGGGfgLGG7xA3I_MRGRpzCUgizLMzwmGQG6b0iO5vG6b0TOITspaIJ0bBO6YRG4WC_FZuf60bGGbh7wTab5QtESPRSEgMgV4VnSicMo4o1jUC9kMXII4vt2RXKPMg8I19ss8pKyOwGGOwQ6mdss4GImyGX0..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "priority": "u=1, i",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/evaluation.productevaluation/102/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=d514e90579ae30fd8136ca7029cdc503&api=evaluation.productEvaluation&v=102&type=jsonp&dataType=jsonp&callback=mtopjsonp6&data=%7B%22productId%22%3A%221005009279188100%22%2C%22page%22%3A1%2C%22pageSize%22%3A8%2C%22_lang%22%3A%22pl_PL%22%2C%22filter%22%3A%22image%22%2C%22sort%22%3A%22complex_default%22%2C%22country%22%3A%22PL%22%2C%22sellerAdminSeq%22%3A2680418462%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "acs.aliexpress.com",
+        ":method": "GET",
+        ":path": "/h5/evaluation.productevaluation/102/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=d514e90579ae30fd8136ca7029cdc503&api=evaluation.productEvaluation&v=102&type=jsonp&dataType=jsonp&callback=mtopjsonp6&data=%7B%22productId%22%3A%221005009279188100%22%2C%22page%22%3A1%2C%22pageSize%22%3A8%2C%22_lang%22%3A%22pl_PL%22%2C%22filter%22%3A%22image%22%2C%22sort%22%3A%22complex_default%22%2C%22country%22%3A%22PL%22%2C%22sellerAdminSeq%22%3A2680418462%7D",
+        ":scheme": "https",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gHfZ00xz6IjQDyrlzaA4UB_vCWO9sIrSistXoZbD5hxMGi6egMINCmOXhj-coH16fNOggEj5YhYMiIch-ELwocDMI20HlExDnstfgrROOOGXfldVogO4VuN7NNQ9_Iq7VW-8d8ODoSt0dd2CiT87VuN7OgZSJqZ5ljq4ipYvxFcMnK4etU8WiFxMjy-HuUHmjiA08y8XoVYMnfbHKEYXinjDiy7HvERDSiA08wxpoUYCxGa6Wd4_HiUqj0t6Q3bMYjjlTFvZBNxEijfezd-oNHlmi68NkpXhCfVyxO6c1Bfgx0dhy9sM8QPqueWP-CYND7h9sabhnd54h4KALwXWL93_We5Nzs8yQD4wD1sNgdCuVXKGL6C219ZZNnpcd1pR1kcwZTQ61tj3ojxVKEjyrmLho0fAQmD2IeLeVyzejqH5KZCyS1HxHdpv83an6xHvIeLeVyzEHxp9He-7-fC..%2522%252C%2522epssw%2522%253A%252213*c0QlGGQGGIGcAr86V-pABrS-4rWOGQOGlHJzlrOOGwuzlfhSvPAIQTK0CxTLYu2WwrRYlrqHjzjABGxowrn-bIWGGM4gmANA4p3nsrhGXSo9p95ECkzcvQoHbD7wGCEKuGpDTBQmsJNKIJpO-dCvhITTnV6KbV6Co7SwGGGApLb0huVLRIh5WzRRCUkvD9F2BhoMG6b0GIbfLFIKGGGcoOa0J7bdp6k1Irs7_FLfHLkss0G-I6gjb5iPDjHEHKxMgkYCcN_FgY4ostkLjsMXII4vtTRfH8_9ZI1970OAGGGGQMGGGMnmGGbs8jiG30..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/evaluation.detailevalution/100/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=4c9803f419b22c0feaacb98abcbe425e&api=evaluation.detailEvalution&v=100&type=jsonp&dataType=jsonp&callback=mtopjsonp7&data=%7B%22productId%22%3A%221005009279188100%22%2C%22page%22%3A1%2C%22pageSize%22%3A2%2C%22evaListNum%22%3A2%2C%22_lang%22%3A%22pl_PL%22%2C%22sort%22%3A%22complex_default%22%2C%22country%22%3A%22PL%22%2C%22sellerAdminSeq%22%3A2680418462%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "acs.aliexpress.com",
+        ":method": "GET",
+        ":path": "/h5/evaluation.detailevalution/100/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=4c9803f419b22c0feaacb98abcbe425e&api=evaluation.detailEvalution&v=100&type=jsonp&dataType=jsonp&callback=mtopjsonp7&data=%7B%22productId%22%3A%221005009279188100%22%2C%22page%22%3A1%2C%22pageSize%22%3A2%2C%22evaListNum%22%3A2%2C%22_lang%22%3A%22pl_PL%22%2C%22sort%22%3A%22complex_default%22%2C%22country%22%3A%22PL%22%2C%22sellerAdminSeq%22%3A2680418462%7D",
+        ":scheme": "https",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gJ5q03tUMCjSRCqh8wAaLQ_9h7OvwCrIs1t6SNbMlnxD1G6y_gIVhcO6Cf-GS31XcZO0_FjC4nYDsCclrFL2SmDDn40k5FxMI1t1_PRANtG6codNSMOaAkNQOZQvgCqQA7-LFJOMS5tgFK25s98QAkNQNMZIyVZC5fqasLY9qEcDIn4yZe8BsExDmz-k7eHimGAgzz86SqYDIjbkEFY6shjMsz7k2FRMoGAgzaxJSUbdqiaXkK4bBGUZmq-X3HbD4fjhaEvqHZxrsffy8K-nO3lis_8VWLXlhjVeqt6GGQf0qDdlJTsDzBPZ7UWFrIYVXWhviwblIK5aC2KOUaXBUT3bkU5V818e3042XssV_KC3AbKcU_CwGTZqOhpGFspdGuc2t9QXGOjuSfxNEFjrZcLlSDfO3cDwnULyAzzymVHCENCeosHtBKp9zHaoMAH9nULyAzzrBApvBU-QrjC..%2522%252C%2522epssw%2522%253A%252213*c0WPUIAGGIGDAGrOOwMbwrS-4rxzlrOGGBuzlrOOGwuzlGqTvPAIQRzMiT-LYLqel-pfJ0tORYHVlGq3wAtGbIqSQXpJwENx_FiCerhGXSo9Wa5pJ1WqvQoHb_MOej3Iw7-mEyGmsis4IJIGDPCvHbL-r6nrbVAwOPvdmyGAmJGG8aPfRIyRGtRRVAuCxRXt7U-2GGGGGIbfLFIKGGbvZjIuJ0bBIkd1ITT-YoXSi60bGGG-IGTaXrztESPRHKxMgpRrRhl0FcoH1jUC9nc-8oCFPnRXH8DAKw19sssHZIGGGGGGGMSaQMGGOeDG30..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/interlocution.getproductquestion/100/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=057b3ed2fa56345051c2e446b349585e&api=interlocution.getProductQuestion&v=100&type=jsonp&dataType=jsonp&callback=mtopjsonp8&data=%7B%22productId%22%3A%221005009279188100%22%2C%22currentPage%22%3A1%2C%22pageSize%22%3A5%2C%22_lang%22%3A%22pl_PL%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    },
+    {
+      "url": "https://recom-acs.aliexpress.com/h5/mtop.relationrecommend.aliexpressrecommend.recommend/1.0/?jsv=2.5.1&appKey=24815441&t=1782064249628&sign=8d891056883b745c00075c48de7c5d31&api=mtop.relationrecommend.AliexpressRecommend.recommend&v=1.0&timeout=10000&type=originaljson&dataType=jsonp",
+      "method": "POST",
+      "headers": {
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        "accept-language": "en-GB,en;q=0.9",
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
+      }
+    },
+    {
+      "url": "https://recom-acs.aliexpress.com/h5/mtop.relationrecommend.aliexpressrecommend.recommend/1.0/?jsv=2.5.1&appKey=24815441&t=1782064249629&sign=16402a1b9805962fd1af9d6e81070109&api=mtop.relationrecommend.AliexpressRecommend.recommend&v=1.0&timeout=10000&type=originaljson&dataType=jsonp",
+      "method": "POST",
+      "headers": {
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        "accept-language": "en-GB,en;q=0.9",
+        "accept": "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064249801&sign=55575effe0259d39c5d115714306ef5a&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp9&data=%7B%22productIdList%22%3A%221005006672974640%2C1005008152464766%2C1005009177973100%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "acs.aliexpress.com",
+        ":method": "GET",
+        ":path": "/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064249801&sign=55575effe0259d39c5d115714306ef5a&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp9&data=%7B%22productIdList%22%3A%221005006672974640%2C1005008152464766%2C1005009177973100%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+        ":scheme": "https",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gbVx0nbT2aLvecC5vIXuIZF8WE7o6T4qPozBscmDCuE87uM1ul2D6FaaS-AmmPiTXumzoCb4ouhS7V9jff9jF3gmWhtshfa7eozInfVT7C3_5l7qjZWuurlZ1Mj3B644uT9B7eSo1NaSsVLNnVu_urlwzg5yxv4VBqoBoVG_fbiSWVcs5qg1ybgI-fOjCI9WV0us1fMj1_GSW2os5mM1yzir5fi_fx_-N0us1cZs1UfOJcfr4CePxyrbys0v1CN-kxC_l0Osz73xHDajXCO67qHxAriRmOqYZAExH7fvYqe7JuuYb6RqGAebdjNOvsh788qjylspB0wLg5H3MMpEcSoavjwRVIhsw2UtK8b6p02_z7H8M9YZzS4_gvcCTnigEyFtW5SNwkUbDJMQGnIrDWVdqvKnvVvfyapwQxgyoX4ZCGQCe7g-xaXMQdkYG4nhyapwQxgryDblIdJZHS1..%2522%252C%2522epssw%2522%253A%252213*c40S4IrGGIGzA-5zV-pbw-Lnife6Bx5zlHj6B38Hlfj6B3uMvPAIQRzMCxraTu2Wl-prwrqHYizrGjOlwrn-wQrGGM4gw-UA4pFcsryIS8uAxk-pJ8a3iitHbD7w9gt_jM-mEybQ9Q6kasGGDnMwMMBFR6nrmwnUChrHbIWtSLGKrlA3RIQ2GRpzmkxiz3IOgap5TGGGIGbfT6b0TOpdEFzTJ7bdhlP1Irs7YoXSiRkss0GQGwt7a6ZNXdeSSESTV6YCkv0FgY4o1jULjqc-II1WBqRXKPTAKw19x0bHZIGGssssssbFGGbs8aTIX0..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064249801&sign=cdf68a45bad6d9f82a7f2f781b6a81a5&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp10&data=%7B%22productIdList%22%3A%221005006732036222%2C1005008200940213%2C1005009656449734%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=11f45ff45a2d61daeda46e998fe7eb02&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp11&data=%7B%22productIdList%22%3A%221005012370809686%2C1005010002122754%2C1005011806419183%2C1005009836325308%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "acs.aliexpress.com",
+        ":method": "GET",
+        ":path": "/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=11f45ff45a2d61daeda46e998fe7eb02&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp11&data=%7B%22productIdList%22%3A%221005012370809686%2C1005010002122754%2C1005011806419183%2C1005009836325308%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+        ":scheme": "https",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gwRK0i0JXVUddQGsDWDME2d9yyuGeAYF5H8bZgj3FhK9zh6S83v3wzTyrpVhxUsJ2hjw-70e-hC1zawCV_wCCl_hyuZ5d_T6BH8fK_AJz7QWP3uFq2kM8e5PNmmDejYe8AwbzroGN4T1ZaUrKa7W8e5z7clamtYEewSbra1WV1s1ya17O_1SWO_Pr_NCFWw_fG75N_6CNf11yZS5PM6SWFsNP_sWV9gO1G75Ngt5NUAskgcNb7pZmE-BWxb3N7OOJ9hWRGN57CQdpiTC27N7zwBdcestxYxpsTKdpCcL0wp6kh7p4jPFOTpBh6O-DXC6udxCW3iYeG9vTQBD9meVABSyD69tfWC56ZLRnd07HGvW7CB99x4P7BYWTtfjgkskIEdRyQor6nLBvK6XOkIrWIAxjtEcDa2IWVezU9_a-sYPF03jBC_OmVDuU8WpONImWVezU9_NWi0iE8yPpB1..%2522%252C%2522epssw%2522%253A%252213*UQ_VBwAGGIGzA-5zjrGrGQS-ifKOGa5zBdAOGa5nGw76B3tXvPHkYTK0TXCZvG_UwrOfJ3qHJwtrGwW5wrn-wQrGGXpJw-Ux_FiC3AyIS8o9Wa5pJszcQBMOwwGGJwwAA7-mXyPQ9JNKj1vSHCy3PIT-r-AZmwzwOPvdGGG-KRGG8aPfI_r2GRpzY9UvD5Mgzr_sGGGGiO9fL0GGTO9vZje1Js8KO67swTT-XDNufMHYVx4-IGt7F76898PRig3fvjRrcND0Fo4o1jcmpkMX8oCFP94zKPTAKw19ss1KGMOwss8wQrjGGGOwh2Tw30..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=26f4be91f644b1c50c438d447faf9df5&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp12&data=%7B%22productIdList%22%3A%221005012308512600%2C1005009810886160%2C1005011807826728%2C1005009976987424%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "acs.aliexpress.com",
+        ":method": "GET",
+        ":path": "/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=26f4be91f644b1c50c438d447faf9df5&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp12&data=%7B%22productIdList%22%3A%221005012308512600%2C1005009810886160%2C1005011807826728%2C1005009976987424%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+        ":scheme": "https",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gsAS0h9dGHd4Xeu-vuu45nJc9L5QNqlNvy_pSeFzJ_CJJ2sXA68rrW8dph83a9nlaBtX4FpPU_BJkEQNJMURp7hAMabRyMCpJy_p0nKCK4jFvMteJLuq_f8kr6fpRclZ_H7wF8R5vk5dZspWlJ2K_f8ky-eo_NlwLrQXPwSd9TIRHsIc-MIpv9LAHibhJuQLwqTAmiQRv8BRHoQh87Qpv63Xkibd9aKdeqTAmwCdvUXQAZqVbUghqh_vvo_HyiNL9IMfFGT8LWFpGa652UIXuERfPTsOLOZtKCT9yCbBtVeCAeJJ4ZxI1m1vN3ORh6GQi_86H36XFDNfnKLM9t9mfRYMy39OBQhjPHtvSdfJwDVPqpLv9iR-8Ws9QFffoBo0wM9vpQWltun5lQT6OpsPM5S_JwyQlOVClGujlJ23nt4H1yDpQCBRoZ5rlqweeTQclGujlJ2heZbVaqgbLLC..%2522%252C%2522epssw%2522%253A%252213*UQWPm0tGGIGKA-5zOwMbwrjOifeGwGrOlHJzl-5nGw3OGQuMXjlkY-ykCxMZvT2Wl-pfJ0tOjzjABGN_wfWHwQMOwyjiXkclqbMt27sGXSuAFDJECkzcbK0GGrMOej3Iw7-mXy_msKGVj1oGDnMwPITTnlAZwjYwOPvdmyGEP5GG8aPfRIQ2G6X3CUkl9RMUz6GJG6b0iO9fL0GGGGbvZjaYJ0bnwmKRGxUxYor_CRkss0G-I6gjb5iPDKPTHKqTVf4VcND0FiOKbRt3-UMXII8FP9bMCXK9ZDZ5QMRKGGGGss4GGHdYGGbs4WLEX0..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=277de0fa1fdb0051e6b6db82d3731673&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp13&data=%7B%22productIdList%22%3A%221005011781281637%2C1005009973504853%2C1005011654268504%2C1005009977696918%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "acs.aliexpress.com",
+        ":method": "GET",
+        ":path": "/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=277de0fa1fdb0051e6b6db82d3731673&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp13&data=%7B%22productIdList%22%3A%221005011781281637%2C1005009973504853%2C1005011654268504%2C1005009977696918%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+        ":scheme": "https",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gLps0GAAdEpeLBmtkPoUVeRhHCWbhDkPkosvqneaDOB9Dm_Blt-Zj--AMU-0Qs3GQKTB73dN_OC9vHIPDZEOMRHdpGjOXZBvDosv8eLficbVkZT2DCoEUY-MjtXvc4krUESy15J1krWAI9d6ASVxUY-MXWFiUgkygkIBfi7AH1QO96QhmZQvksKd9wjcDPIYBDtd-wIOk5CO9yIc0RIvktnBvwjAHGLA6Dtd-iBAkUVQlM4FzhicSUspkrsDXwwYHpGC1atTg-evdG11WhQBYHJCf1_Rg_a-iLtJXLjXn0FflnR97MYjF26pCF9OOtMbKO-W9F1B1qwCtBKkH6OnP7xkXFORwdHIfETpqQX9Bq2NSIKpHwJt0-_Ja3XCxKu3BZOpMd5GnP31AdtWhIsy6877DiPbA_2fAaoIASV0t6qDFocvaLCOxMWZADN261IhAaoIASVc6MjFQDiQgCC..%2522%252C%2522epssw%2522%253A%252213*UyAYr0rGGIGzAr86J3Sbw-LnYw86B386GB7Gw-5nGw76BNhSSmtIQRzMCxraTu2WwrOrwrMGYilVlG4wwrn-wQMSQM4gmANA4piCerhY9So9FDBakszciitGGT7wGCEKuM-mEyGSuDs4j1vSHIW2PIT-r-AZbVAwOz3GwQr-_RGKrlA3qHW2GtRRmkxCxftoPue3TGGGiO9fL0GGGGGTspptJ7bdp6d1Irs72Z5fH7mss0GQGwTaa6Z89FHEigdnGsYCnSi0FosdstkLj1HHiDeFP9bMAmIdc019QMRKG6ssss4GGtDGGGGGGLIn30..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=57ae4db2a9f554571fa16cf83369a3bc&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp14&data=%7B%22productIdList%22%3A%221005012370725790%2C1005012101613757%2C1005010599948366%2C1005012173045249%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html",
+        ":authority": "acs.aliexpress.com",
+        ":method": "GET",
+        ":path": "/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=57ae4db2a9f554571fa16cf83369a3bc&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp14&data=%7B%22productIdList%22%3A%221005012370725790%2C1005012101613757%2C1005010599948366%2C1005012173045249%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+        ":scheme": "https",
+        "accept": "*/*",
+        "accept-encoding": "gzip, deflate, br, zstd",
+        "cookie": "ali_apache_id=33.3.137.9.1782064246802.855885.1; xman_us_f=x_locale=pl_PL&x_l=0&x_c_chg=1&acs_rt=90a4da1a860b4473beb7d024a68231fd&intl_locale=pl_PL; acs_usuc_t=x_csrf=jipwmjkuq4fs&acs_rt=90a4da1a860b4473beb7d024a68231fd; xman_t=wPxi0KoemdWMywuVK/6ZNYq1gA9gFwd3BlJJ7mXo7u97502v497ebLz3Vbb8/WL8; _m_h5_tk=2bba26dd13e2e2c31a0fee2280d21517_1782066677597; _m_h5_tk_enc=8ee44f862edd293d6b7a760fd8e11903; xman_f=govSWaKG3zDHmGnzWd3ECkLst1C+a/HMX0xIYS5ppkEePZzz/YT3dLOFE791ppRuD4axipcAqthqghnADKxK4Qxy4cCpFEBP+w8Zp2MZxtP2cmOBzTC2JqrHDjI2BC50ZnARKucf8u8=; aep_usuc_f=site=pol&c_tp=PLN&region=PL&b_locale=pl_PL&ae_u_p_s=1&ups_u_t=&ups_d=0|0|0|0; cna=eBK/Im5lNzQCAU1BapBZrLnB; _baxia_sec_cookie_=%257B%2522lwrid%2522%253A%2522AgGe605weZEVgd6cUYeizBu75DQy%2522%252C%2522tfstk%2522%253A%2522gqvK0QmJWcEdziHskJcMZDp92koGvfxFfe-bEab3NFL94F1SYUA3eutyqB2h-3_JyFbwx8mexFB14gNCPTNC1Psh2za5OTt66e-ftTvJ48IWVUoFrDlMYHWPFq0DwxxeYfNb4ouGF0t1EgErtgSWYHWzbVkaosxEwM7bqg6WPO_12gW7dT6SX1sPqTwCNJN_5NS5FT1CFA612i75Vw1SXh_NVT_WP6iOCNS5FaT5FUAsDaDN78dZon8BXxs3F89Ov6HWANw5bdId9ZtCy8w74MCdlH_t-bYpI_Ld9dDLuMd6DFSpzxyFd_dBG99-kvB60CYCXUgYwNOvLLCDpqFVRp7yk9Ot5JB5BiKRiCm7MNAWbdC9pjqPbpxWLsXj3y_ksnpR2LurBEKBJI1XdyIyWKvxSsUckgVIXcFza6saxtxPN4nj6dsOoccua75pdGQmXcFza6sNXZmiZ7PP9p1..%2522%252C%2522epssw%2522%253A%252213*UyKnWwtGGIGIAGrOV-IrGwQRYw4OGQ86BdEGw-5nGw76BNhSH_5kYTK0iTtaTLqel-IMGQMGYinABOGwwAtGwQMSQM4gw-clqO3n3AyISsrOFDJECYCoii2SQGGGGCAIwxf3XyPQ9JNKj1vSHPCvM7JTnknrbVEUChvdwQrfvJGG8aA3qHW2GtRRVAuiz35jGmlkTOIK86JvGOIKGGOdEFFwJs8KNOgSV-UxYor_C60bVx4-IMw1XrV898PRSEknGFRrkvLcMo4ozWdC99IC8oDWBqRXH8Cg8DZ5x0RKGGGGsssss0yGGGbs4WJMn0..%2522%252C%2522lwrtk%2522%253A%2522AAIEajiU9z4mG2m3FurvlPZzYYufOPMuyx3HHQo84j3AF8Ti3O08jq8%253D%2522%257D",
+        "sec-fetch-dest": "script",
+        "sec-fetch-mode": "no-cors",
+        "sec-fetch-site": "same-site"
+      }
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=9014e1e47548108adaea6f8fa1cd19df&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp15&data=%7B%22productIdList%22%3A%221005012374358972%2C1005011559994487%2C1005012033022081%2C1005012100583095%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "method": "GET",
+      "headers": {
+        "accept-language": "en-GB,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+        "referer": "https://pl.aliexpress.com/item/1005009279188100.html"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.msite.query/1.0/?jsv=2.5.1&appKey=12574478&t=1782064246908&sign=fd43541882b247a1cb238916d0a4f090&api=mtop.aliexpress.pdp.msite.query&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp1&data=%7B%22productId%22%3A%221005009279188100%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22country%22%3A%22PL%22%2C%22province%22%3A%22%22%2C%22city%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22sourceType%22%3A%22%22%2C%22pdp_ext_f%22%3A%22%22%2C%22pdpNPI%22%3A%22%22%2C%22channel%22%3A%22%22%2C%22ext%22%3A%22%7B%5C%22aff_short_key%5C%22%3A%5C%22%5C%22%2C%5C%22aff_fsk%5C%22%3A%5C%22%5C%22%2C%5C%22af%5C%22%3A%5C%22%5C%22%2C%5C%22foreverRandomToken%5C%22%3A%5C%2290a4da1a860b4473beb7d024a68231fd%5C%22%2C%5C%22site%5C%22%3A%5C%22pol%5C%22%2C%5C%22crawler%5C%22%3Afalse%2C%5C%22x-m-biz-bx-region%5C%22%3A%5C%22%5C%22%2C%5C%22signedIn%5C%22%3Afalse%2C%5C%22host%5C%22%3A%5C%22pl.aliexpress.com%5C%22%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp1({\"api\":\"mtop.aliexpress.pdp.msite.query\",\"data\":{\"result\":{\"POPUP\":{\"popupMap\":{},\"sortedPopup\":[]},\"HEADER_IMAGE_PC\":{\"currentSkuImages\":[\"https://ae-pic-a1.aliexpress-media.com/kf/Scef1f89839ab421ba6666cbbde3e3cb6A.jpg\"],\"imagePathList\":[\"https://ae-pic-a1.aliexpress-media.com/kf/Sb13daba5100e45a5b956bcd69eefc6db3.jpg\",\"https://ae-pic-a1.aliexpress-media.com/kf/Se63cc356b7d84052893320bf315afcf7q.jpg\",\"https://ae-pic-a1.aliexpress-media.com/kf/S510912dee7f345e4b050027332b88a4c7.jpg\""
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.traffic.web.cross.trace.report/1.0/?jsv=2.5.1&appKey=24815441&t=1782064247510&sign=c3f900f998fb399f1fb6685844fccf97&api=mtop.aliexpress.traffic.web.cross.trace.report&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp2&data=%7B%22currentUrl%22%3A%22https%3A%2F%2Fs.click.aliexpress.com%2FcrossTrace.htm%3FitemId%3D1005009279188100%26sellerId%3D1103582642%26url%3Dhttps%253A%252F%252Fpl.aliexpress.com%252Fitem%252F1005009279188100.html%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp2({\"api\":\"mtop.aliexpress.traffic.web.cross.trace.report\",\"data\":{},\"ret\":[\"FAIL_SYS_TOKEN_EMPTY::令牌为空\"],\"traceId\":\"2103956a17820642475953306e121b\",\"v\":\"1.0\"})"
+    },
+    {
+      "url": "https://pl.aliexpress.com/aeglodetailweb/api/seo/seodata?productId=1005009279188100&subject=Succebuy+15-55L+Przeno%C5%9Bna+Lod%C3%B3wka+Elektryczna+Kompresorowa+12V%2F24V+DC+110-240V+AC+Zamra%C5%BCarka+Ch%C5%82odziarka+do+Domu&channel=detail&device=msite",
+      "status": 200,
+      "textPreview": "{\"body\":{\"aboutThis\":\"\",\"bottomContextView\":{\"context\":\"Oszczędzaj pieniądze z Aliexpress 15! Najwyższy czas na zabawę w najlepszej cenie! Aby się tu dostać, nic nie może być prostsze, użytkownicy szukali 15, na przykład nasz Succebuy 15-55L Przenośna Lodówka Elektryczna Kompresorowa 12V/24V DC 110-240V AC Zamrażarka Chłodziarka do Domu to Twój wybór. A drodzy klienci, na co się zakochacie? Odkryj pełen zakres naszej taniej 200355155! Succebuy 15-55L Przenośna Lodówka Elektryczna Kompresorowa 12"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.traffic.web.cross.trace.report/1.0/?jsv=2.5.1&appKey=24815441&t=1782064247561&sign=719d841265c83ee4254519471aeb0b49&api=mtop.aliexpress.traffic.web.cross.trace.report&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp3&data=%7B%22currentUrl%22%3A%22https%3A%2F%2Fs.click.aliexpress.com%2FcrossTrace.htm%3FitemId%3D1005009279188100%26sellerId%3D1103582642%26url%3Dhttps%253A%252F%252Fpl.aliexpress.com%252Fitem%252F1005009279188100.html%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp3({\"api\":\"mtop.aliexpress.traffic.web.cross.trace.report\",\"data\":{},\"ret\":[\"SUCCESS::调用成功\"],\"traceId\":\"2103956a17820642476373308e121b\",\"v\":\"1.0\"})"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.ae.cookie.render/1.0/?jsv=2.5.1&appKey=12574478&t=1782064247577&sign=dc8d9074aeb3e90774494660a96deb23&api=mtop.ae.cookie.render&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp4&data=%7B%22count%22%3A%220%22%2C%22bizCode%22%3A%22aliexpress%22%2C%22platform%22%3A%22pc%22%2C%22country%22%3A%22PL%22%2C%22locale%22%3A%22pl_PL%22%2C%22currency%22%3A%22PLN%22%2C%22clientAppVersion%22%3A%220%22%2C%22appVersionName%22%3A%22%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp4({\"api\":\"mtop.ae.cookie.render\",\"data\":{\"acceptCookies\":true,\"acceptCookiesFatigue\":180,\"country\":\"PL\",\"displayStyle\":\"NEW\",\"inGdpr\":true,\"later\":false,\"personalizeCookies\":true,\"rejectCookies\":false,\"trigger\":\"ipCountry:PL|findIpStatus:true|\"},\"ret\":[\"SUCCESS::调用成功\"],\"traceId\":\"2103956a17820642476503309e121b\",\"v\":\"1.0\"})"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.ae.cookie.render/1.0/?jsv=2.5.1&appKey=12574478&t=1782064247613&sign=fddb4ed2617c2cbd3474e40d6fe0c938&api=mtop.ae.cookie.render&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mtopjsonp5&data=%7B%22count%22%3A%220%22%2C%22bizCode%22%3A%22aliexpress%22%2C%22platform%22%3A%22pc%22%2C%22country%22%3A%22PL%22%2C%22locale%22%3A%22pl_PL%22%2C%22currency%22%3A%22PLN%22%2C%22clientAppVersion%22%3A%220%22%2C%22appVersionName%22%3A%22%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp5({\"api\":\"mtop.ae.cookie.render\",\"data\":{\"acceptCookies\":true,\"acceptCookiesFatigue\":180,\"country\":\"PL\",\"displayStyle\":\"NEW\",\"inGdpr\":true,\"later\":false,\"personalizeCookies\":true,\"rejectCookies\":false,\"trigger\":\"ipCountry:PL|findIpStatus:true|\"},\"ret\":[\"SUCCESS::调用成功\"],\"traceId\":\"2103956a17820642476893310e121b\",\"v\":\"1.0\"})"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.alibaba.global.ug.ut.device.web.event.report/1.0/?jsv=2.5.1&appKey=12574478&t=1782064248150&sign=a461e32a69d002a7b7afd8caebcbe232&api=mtop.alibaba.global.ug.ut.device.web.event.report&v=1.0&timeout=10000&type=originaljson&dataType=jsonp",
+      "status": 200,
+      "textPreview": "{\"api\":\"mtop.alibaba.global.ug.ut.device.web.event.report\",\"data\":{\"data\":{\"status\":true}},\"ret\":[\"SUCCESS::invoke success\"],\"traceId\":\"2103956a17820642482243319e121b\",\"v\":\"1.0\"}"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.usertouch.houyi.launchrule.runtime.pull/2.0/?jsv=2.5.1&appKey=24815441&t=1782064248156&sign=8cb2c4431f1e0081caa95d2b0d692958&api=mtop.aliexpress.usertouch.houyi.launchRule.runtime.pull&v=2.0&type=originaljson&timeout=10000&dataType=jsonp",
+      "status": 200,
+      "textPreview": "{\"api\":\"mtop.aliexpress.usertouch.houyi.launchrule.runtime.pull\",\"data\":{\"result\":[{\"activityId\":\"90664\",\"content\":{\"onClick\":\"\",\"expInfo\":\"{\\\"isUL\\\":true,\\\"hasApp\\\":\\\"U\\\",\\\"reportClickUrl\\\":\\\"https://aliexpress.onelink.me/AsEC?pid=ae_smartbanner\\\",\\\"globalBkt\\\":\\\"BSL\\\",\\\"downloadUrl\\\":\\\"https://s.click.aliexpress.com/i/_DlKspEL\\\",\\\"forceDownload\\\":false}\",\"isAutoCall\":true,\"title\":\"Wypróbuj apkę i oszczędzaj\",\"callType\":\"scheme\",\"platform\":\"ios\",\"subTitle\":\"Ciesz się większą liczbą ofert w nasz"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.usertouch.poplayer.get/2.0/?jsv=2.5.1&appKey=24815441&t=1782064248749&sign=92f460522996f589c5f43acd7dff0ddc&type=originaljson&api=mtop.aliexpress.usertouch.poplayer.get&v=2.0&dataType=jsonp",
+      "status": 200,
+      "textPreview": "{\"api\":\"mtop.aliexpress.usertouch.poplayer.get\",\"data\":{\"popLayerRuleMap\":{},\"success\":true,\"traces\":[],\"updateTime\":1782064248831},\"ret\":[\"SUCCESS::调用成功\"],\"v\":\"2.0\"}"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/interlocution.getproductquestion/100/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=057b3ed2fa56345051c2e446b349585e&api=interlocution.getProductQuestion&v=100&type=jsonp&dataType=jsonp&callback=mtopjsonp8&data=%7B%22productId%22%3A%221005009279188100%22%2C%22currentPage%22%3A1%2C%22pageSize%22%3A5%2C%22_lang%22%3A%22pl_PL%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp8({\"api\":\"interlocution.getproductquestion\",\"data\":{\"currentPage\":\"1\",\"displayQaInfo\":{\"msiteMoreButtionDesc\":\"Chcę zgłosić treść, która mnie dotyczy\",\"msiteMoreButtionTitle\":\"Zgłoś tę treść/kupującego\",\"msiteMoreTitle\":\"Więcej opcji\",\"waitResponse\":\"Oczekiwanie na uwagi kupujących\",\"qaTitle\":\"Pytania i odpowiedzi\"},\"hasNextPage\":\"true\",\"pageSize\":\"5\",\"product\":{\"imgUrl\":\"https://ae-pic-a1.aliexpress-media.com/kf/S6c4f3a187078495392c2aa20e6a1ea7fm/402x402.png\",\"productId\":\"100500927918"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/evaluation.detailevalution/100/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=4c9803f419b22c0feaacb98abcbe425e&api=evaluation.detailEvalution&v=100&type=jsonp&dataType=jsonp&callback=mtopjsonp7&data=%7B%22productId%22%3A%221005009279188100%22%2C%22page%22%3A1%2C%22pageSize%22%3A2%2C%22evaListNum%22%3A2%2C%22_lang%22%3A%22pl_PL%22%2C%22sort%22%3A%22complex_default%22%2C%22country%22%3A%22PL%22%2C%22sellerAdminSeq%22%3A2680418462%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp7({\"api\":\"evaluation.detailevalution\",\"data\":{\"evaList\":[{\"aigc\":false,\"anonymous\":true,\"buyerAddFbContent\":\"\",\"buyerAddFbDays\":0,\"buyerCountry\":\"IT\",\"buyerEval\":100,\"buyerFbType\":{\"crowdSourcingPersonName\":\"AliExpress Shopper\",\"sourceLang\":\"pl\",\"typeTranslationAccepted\":\"crowdsourcing\"},\"buyerFeedback\":\"ho acquistato il 22 litri e ci vanno benissimo 9 bottiglie da 2 litri perciò molto spazioso.arrivato in soli 6 giorni in italia...non è pesante ed è molto silenzioso....collegato alla "
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/evaluation.productevaluation/102/?jsv=2.5.1&appKey=12574478&t=1782064249602&sign=d514e90579ae30fd8136ca7029cdc503&api=evaluation.productEvaluation&v=102&type=jsonp&dataType=jsonp&callback=mtopjsonp6&data=%7B%22productId%22%3A%221005009279188100%22%2C%22page%22%3A1%2C%22pageSize%22%3A8%2C%22_lang%22%3A%22pl_PL%22%2C%22filter%22%3A%22image%22%2C%22sort%22%3A%22complex_default%22%2C%22country%22%3A%22PL%22%2C%22sellerAdminSeq%22%3A2680418462%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp6({\"api\":\"evaluation.productevaluation\",\"data\":{\"currentPage\":1,\"displayReviewInfo\":{\"showOriginLang\":\"Pokaż oryginalny język\",\"msiteMoreButtionDesc\":\"Chcę zgłosić treść, która mnie dotyczy\",\"msiteMoreTitle\":\"Więcej opcji\",\"addititonCommentDays\":\"Additional Comments after {0} days\",\"reviewTips\":\"Treść została częściowo przetłumaczona na twój ustawiony język\",\"sortByDefault\":\"Sortuj domyślnie\",\"translate\":\"Przetłumacz\",\"noReviewWord\":\"No matching results found.\",\"customerReviews\":\"Custo"
+    },
+    {
+      "url": "https://recom-acs.aliexpress.com/h5/mtop.relationrecommend.aliexpressrecommend.recommend/1.0/?jsv=2.5.1&appKey=24815441&t=1782064249628&sign=8d891056883b745c00075c48de7c5d31&api=mtop.relationrecommend.AliexpressRecommend.recommend&v=1.0&timeout=10000&type=originaljson&dataType=jsonp",
+      "status": 200,
+      "textPreview": "{\"api\":\"mtop.relationrecommend.aliexpressrecommend.recommend\",\"data\":{\"result\":[{\"layoutInfo\":{\"listHeader\":[\"rcmdTitle\"]},\"jarvisContext\":{},\"mods\":{\"listItems\":[{\"image\":{\"imgUrl\":\"//ae-pic-a1.aliexpress-media.com/kf/Sfa81cd12db4f4d0fb4bf95b17252e1efb.jpg\",\"imgWidth\":350,\"imgHeight\":350,\"imgType\":\"0\"},\"itemType\":\"rmdproductV3\",\"redirectedId\":\"1005006672974640\",\"productId\":\"1005006672974640\",\"tHeadItemType\":\"dx_detail_rcmd_head_cell\",\"transitionaryExpFrame\":true,\"itemCardType\":\"pc_normal_card\","
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064249801&sign=cdf68a45bad6d9f82a7f2f781b6a81a5&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp10&data=%7B%22productIdList%22%3A%221005006732036222%2C1005008200940213%2C1005009656449734%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp10({\"api\":\"mtop.aliexpress.pdp.main.batchquerycache\",\"data\":{\"result\":{\"1005009656449734\":{\"globalData\":{\"hideShipFrom\":true,\"pageScene\":\"GLOBAL\",\"fromCache\":true,\"curPagePriceInfo\":{\"pageType\":\"C\",\"promotionInfo\":\"{\\\"n_tag\\\":\\\"-29919\\\",\\\"d\\\":\\\"61063428\\\",\\\"u\\\":\\\"4636432542\\\",\\\"m03_new_user\\\":\\\"-29895\\\",\\\"disPrice\\\":\\\"440.19\\\"}\"},\"packageDTO\":{\"sellByLot\":\"false\",\"length\":47,\"width\":31,\"weight\":22,\"processingTime\":7,\"height\":52},\"appSwitchInfo\":{\"callHouyiResource\":false,\"hideFloatCart"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064249801&sign=55575effe0259d39c5d115714306ef5a&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp9&data=%7B%22productIdList%22%3A%221005006672974640%2C1005008152464766%2C1005009177973100%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp9({\"api\":\"mtop.aliexpress.pdp.main.batchquerycache\",\"data\":{\"result\":{\"1005006672974640\":{\"globalData\":{\"hideShipFrom\":true,\"pageScene\":\"GLOBAL\",\"fromCache\":true,\"curPagePriceInfo\":{\"pageType\":\"C\",\"promotionInfo\":\"{\\\"n_tag\\\":\\\"-29919\\\",\\\"d\\\":\\\"333e77b9\\\",\\\"u\\\":\\\"1908419836\\\",\\\"m03_new_user\\\":\\\"-29895\\\",\\\"pisId\\\":\\\"5000000208907852\\\",\\\"disPrice\\\":\\\"210.36\\\"}\"},\"packageDTO\":{\"sellByLot\":\"false\",\"length\":23,\"width\":21,\"weight\":14.2,\"processingTime\":7,\"height\":26},\"appSwitchInfo\":{\"callHou"
+    },
+    {
+      "url": "https://recom-acs.aliexpress.com/h5/mtop.relationrecommend.aliexpressrecommend.recommend/1.0/?jsv=2.5.1&appKey=24815441&t=1782064249629&sign=16402a1b9805962fd1af9d6e81070109&api=mtop.relationrecommend.AliexpressRecommend.recommend&v=1.0&timeout=10000&type=originaljson&dataType=jsonp",
+      "status": 200,
+      "textPreview": "{\"api\":\"mtop.relationrecommend.aliexpressrecommend.recommend\",\"data\":{\"result\":[{\"layoutInfo\":{\"listHeader\":[\"rcmdTitle\"]},\"jarvisContext\":{},\"mods\":{\"listItems\":[{\"image\":{\"imgUrl\":\"//ae-pic-a1.aliexpress-media.com/kf/S54deeb3ffbc94c51bbc4fae09efe6c470.jpg\",\"imgWidth\":350,\"imgHeight\":350,\"imgType\":\"0\"},\"itemType\":\"rmdproductV3\",\"redirectedId\":\"1005012370809686\",\"productId\":\"1005012370809686\",\"tHeadItemType\":\"dx_detail_rcmd_head_cell\",\"transitionaryExpFrame\":true,\"itemCardType\":\"pc_normal_card\","
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=26f4be91f644b1c50c438d447faf9df5&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp12&data=%7B%22productIdList%22%3A%221005012308512600%2C1005009810886160%2C1005011807826728%2C1005009976987424%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp12({\"api\":\"mtop.aliexpress.pdp.main.batchquerycache\",\"data\":{\"result\":{\"1005009976987424\":{\"globalData\":{\"hideShipFrom\":true,\"pageScene\":\"GLOBAL\",\"fromCache\":true,\"curPagePriceInfo\":{\"pageType\":\"C\",\"promotionInfo\":\"{\\\"n_tag\\\":\\\"-29919\\\",\\\"d\\\":\\\"8fcd6a94\\\",\\\"u\\\":\\\"1860851313\\\",\\\"m03_new_user\\\":\\\"-29895\\\",\\\"disPrice\\\":\\\"708.99\\\"}\"},\"packageDTO\":{\"sellByLot\":\"false\",\"length\":66,\"width\":44,\"weight\":16.37,\"processingTime\":7,\"height\":62},\"appSwitchInfo\":{\"callHouyiResource\":false,\"hideFloatC"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=11f45ff45a2d61daeda46e998fe7eb02&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp11&data=%7B%22productIdList%22%3A%221005012370809686%2C1005010002122754%2C1005011806419183%2C1005009836325308%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp11({\"api\":\"mtop.aliexpress.pdp.main.batchquerycache\",\"data\":{\"result\":{\"1005011806419183\":{\"globalData\":{\"hideShipFrom\":true,\"pageScene\":\"GLOBAL\",\"fromCache\":true,\"curPagePriceInfo\":{\"pageType\":\"C\",\"promotionInfo\":\"{\\\"n_tag\\\":\\\"-29919\\\",\\\"d\\\":\\\"a2d08b07\\\",\\\"u\\\":\\\"2621534739\\\",\\\"m03_new_user\\\":\\\"-29895\\\",\\\"pisId\\\":\\\"5000000209779968\\\",\\\"disPrice\\\":\\\"441.81\\\"}\"},\"packageDTO\":{\"sellByLot\":\"false\",\"length\":81,\"width\":51,\"weight\":22.8,\"processingTime\":7,\"height\":60},\"appSwitchInfo\":{\"callHo"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=277de0fa1fdb0051e6b6db82d3731673&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp13&data=%7B%22productIdList%22%3A%221005011781281637%2C1005009973504853%2C1005011654268504%2C1005009977696918%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp13({\"api\":\"mtop.aliexpress.pdp.main.batchquerycache\",\"data\":{\"result\":{\"1005009973504853\":{\"globalData\":{\"hideShipFrom\":true,\"pageScene\":\"GLOBAL\",\"fromCache\":true,\"curPagePriceInfo\":{\"pageType\":\"C\",\"promotionInfo\":\"{\\\"n_tag\\\":\\\"-29919\\\",\\\"d\\\":\\\"19f5b5e6\\\",\\\"u\\\":\\\"2813489215\\\",\\\"m03_new_user\\\":\\\"-29895\\\",\\\"pisId\\\":\\\"5000000209795048\\\",\\\"disPrice\\\":\\\"989.99\\\"}\"},\"packageDTO\":{\"sellByLot\":\"false\",\"length\":75,\"width\":75,\"weight\":21.1,\"processingTime\":7,\"height\":64},\"appSwitchInfo\":{\"callHo"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=57ae4db2a9f554571fa16cf83369a3bc&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp14&data=%7B%22productIdList%22%3A%221005012370725790%2C1005012101613757%2C1005010599948366%2C1005012173045249%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp14({\"api\":\"mtop.aliexpress.pdp.main.batchquerycache\",\"data\":{\"result\":{\"1005012101613757\":{\"globalData\":{\"hideShipFrom\":true,\"pageScene\":\"GLOBAL\",\"fromCache\":true,\"curPagePriceInfo\":{\"pageType\":\"C\",\"promotionInfo\":\"{\\\"n_tag\\\":\\\"-29919\\\",\\\"d\\\":\\\"b5cd3982\\\",\\\"u\\\":\\\"1655546012\\\",\\\"m03_new_user\\\":\\\"-29895\\\",\\\"pisId\\\":\\\"5000000209779968\\\",\\\"disPrice\\\":\\\"507.27\\\"}\"},\"packageDTO\":{\"sellByLot\":\"false\",\"length\":58,\"width\":30,\"weight\":26.58,\"processingTime\":7,\"height\":29},\"appSwitchInfo\":{\"callH"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.main.batchquerycache/1.0/?jsv=2.5.1&appKey=12574478&t=1782064250181&sign=9014e1e47548108adaea6f8fa1cd19df&api=mtop.aliexpress.pdp.main.batchQueryCache&v=1.0&type=originaljsonp&dataType=originaljsonp&callback=mtopjsonp15&data=%7B%22productIdList%22%3A%221005012374358972%2C1005011559994487%2C1005012033022081%2C1005012100583095%22%2C%22_lang%22%3A%22pl_PL%22%2C%22_currency%22%3A%22PLN%22%2C%22_state%22%3A%22%22%2C%22_city%22%3A%22%22%2C%22quantity%22%3A1%2C%22selectedSkuIds%22%3A%22%22%2C%22clientType%22%3A%22msite%22%2C%22ext%22%3A%22%7B%7D%22%7D",
+      "status": 200,
+      "textPreview": " mtopjsonp15({\"api\":\"mtop.aliexpress.pdp.main.batchquerycache\",\"data\":{\"result\":{\"1005012374358972\":{\"globalData\":{\"hideShipFrom\":true,\"pageScene\":\"GLOBAL\",\"fromCache\":true,\"curPagePriceInfo\":{\"pageType\":\"C\",\"promotionInfo\":\"{\\\"n_tag\\\":\\\"-29913\\\",\\\"d\\\":\\\"330f1a17\\\",\\\"u\\\":\\\"1880619823\\\",\\\"m03_new_user\\\":\\\"-29895\\\",\\\"disPrice\\\":\\\"1242.59\\\"}\"},\"packageDTO\":{\"sellByLot\":\"false\",\"length\":54,\"width\":26,\"weight\":21.6,\"processingTime\":7,\"height\":33},\"appSwitchInfo\":{\"callHouyiResource\":false,\"hideFloatC"
+    }
+  ]
+}

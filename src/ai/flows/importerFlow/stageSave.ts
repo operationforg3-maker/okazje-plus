@@ -4,6 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { calculateIdentityHash } from '@/lib/automation/identity-matcher';
 import { LocalizedText, ProductCore, DealM6 } from '@/lib/types';
 import { queueProductForIndexing, queueDealForIndexing } from '@/search/typesenseQueue';
+import { generateEmbeddings } from '@/ai/embeddings';
 
 export interface SaveConfig extends ImportStageConfig {
   skipExisting?: boolean;
@@ -100,6 +101,19 @@ export async function saveProductsToFirestore(
       const productCoreId = existingProductDoc ? existingProductDoc.id : adminDb.collection('product_cores').doc().id;
       const now = new Date().toISOString();
 
+      // Generate embedding for search
+      let embedding: number[] | undefined = undefined;
+      try {
+        const titleText = product.title?.pl || product.title?.en || '';
+        const descText = product.description?.pl || product.description?.en || '';
+        const textForEmbedding = `${titleText} ${descText}`.trim();
+        if (textForEmbedding) {
+          embedding = await generateEmbeddings(textForEmbedding);
+        }
+      } catch (err) {
+        console.error(`  ⚠️ Failed to generate embedding for product ${product.originalId}:`, err);
+      }
+
       // 3. Resolve shipping & logistics
       const shippingCost = product.shipping ? parseNumber(product.shipping) : 0;
       const deliveryDays = product.deliveryTime ? (parseInt(product.deliveryTime, 10) || 7) : 7;
@@ -146,11 +160,11 @@ export async function saveProductsToFirestore(
 
         specs: product.specsLocalized?.pl || product.rawSpecs || {},
         coreSpecs: product.specsLocalized?.en || product.rawSpecs || {},
-        rawSpecs: product.rawSpecs || {},
-        specsLocalized: product.specsLocalized || {},
+        embedding: embedding ? FieldValue.vector(embedding) as any : undefined,
         
         // Alternative format to specs (array for listing display)
         attributes: product.attributes || [],
+        variants: product.variants || [],
 
         status: 'approved', // Auto-approve refined items
         updatedAt: now,
@@ -278,6 +292,7 @@ export async function saveProductsToFirestore(
         
         sourceProductId: product.originalId,
         sourceUrl: product.link || product.affiliateUrl || '',
+        embedding: embedding ? FieldValue.vector(embedding) as any : undefined,
         
         metadata: {
           source: 'aliexpress',
@@ -287,6 +302,7 @@ export async function saveProductsToFirestore(
           warehouse: product.warehouse,
           deliveryTime: `${deliveryDays} dni`,
           shippingMethod: 'Standard',
+          variants: product.skuList || [],
         }
       };
 

@@ -182,7 +182,7 @@ export function UnifiedFilterSidebar({
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2 space-y-2">
               <Select value={sortBy} onValueChange={(value) => onSortChange(value as SortBy)}>
-                <SelectTrigger className="h-9">
+                <SelectTrigger className="h-9" aria-label={t('sort')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -365,7 +365,11 @@ export function UnifiedFilterSidebar({
             {filters.priceRange && (
               <Badge variant="secondary" className="gap-1">
                 {formatPrice(filters.priceRange.min)} - {formatPrice(filters.priceRange.max)}
-                <button onClick={() => handlePriceChange([0, 10000])} className="ml-1 hover:text-destructive">
+                <button
+                  onClick={() => handlePriceChange([0, 10000])}
+                  className="ml-1 hover:text-destructive"
+                  aria-label="Usuń filtr ceny"
+                >
                   ✕
                 </button>
               </Badge>
@@ -373,7 +377,11 @@ export function UnifiedFilterSidebar({
             {filters.rating?.minStars && (
               <Badge variant="secondary" className="gap-1">
                 ⭐ {filters.rating.minStars}+
-                <button onClick={() => onFiltersChange({ ...filters, rating: undefined })} className="ml-1 hover:text-destructive">
+                <button
+                  onClick={() => onFiltersChange({ ...filters, rating: undefined })}
+                  className="ml-1 hover:text-destructive"
+                  aria-label="Usuń filtr oceny"
+                >
                   ✕
                 </button>
               </Badge>
@@ -381,7 +389,11 @@ export function UnifiedFilterSidebar({
             {filters.availability?.inStockOnly && (
               <Badge variant="secondary" className="gap-1">
                 {t('onlyAvailable')}
-                <button onClick={() => handleAvailabilityChange(false)} className="ml-1 hover:text-destructive">
+                <button
+                  onClick={() => handleAvailabilityChange(false)}
+                  className="ml-1 hover:text-destructive"
+                  aria-label="Usuń filtr dostępności"
+                >
                   ✕
                 </button>
               </Badge>
@@ -389,7 +401,11 @@ export function UnifiedFilterSidebar({
             {filters.promo?.discountOnly && (
               <Badge variant="secondary" className="gap-1">
                 {t('onlyDiscount')}
-                <button onClick={() => handleDiscountChange(false)} className="ml-1 hover:text-destructive">
+                <button
+                  onClick={() => handleDiscountChange(false)}
+                  className="ml-1 hover:text-destructive"
+                  aria-label="Usuń filtr promocji"
+                >
                   ✕
                 </button>
               </Badge>

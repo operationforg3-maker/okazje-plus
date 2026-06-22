@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import HomeClient from './home-client';
 import { getRecommendedProducts, getCategories } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search';
+import { searchDealsTypesense } from '@/lib/search-server';
 import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
 
 // Cache home page more aggressively for better performance

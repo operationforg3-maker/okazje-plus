@@ -258,7 +258,7 @@
     --secondary-foreground: 222 84% 4.9%; /* Ciemnogranatowy */
 
     --muted: 210 40% 96.1%; /* Jasny niebieski - tła subtlne */
-    --muted-foreground: 215.4 16.3% 46.9%; /* Szary - tekst wyciszony */
+    --muted-foreground: 215.4 16.3% 34%; /* Szary - tekst wyciszony (zwiększony kontrast dla WCAG AA) */
 
     --accent: 24.6 95% 53.1%; /* Pomarańczowy (orange) - promocje, hot deals */
     --accent-foreground: 0 0% 98%; /* Prawie biały */

@@ -2,10 +2,25 @@ import Link from 'next/link';
 import { Gavel } from 'lucide-react';
 import { LegalPageLayout } from '@/components/layout/legal-page-layout';
 
-export const metadata = {
-  title: 'Regulamin - Okazje+',
-  description: 'Regulamin świadczenia usług serwisu Okazje+',
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  return {
+    title: 'Regulamin - Okazje+',
+    description: 'Regulamin świadczenia usług serwisu Okazje+',
+    alternates: {
+      canonical: `https://okazjeplus.pl/${locale}/regulamin`,
+      languages: {
+        pl: 'https://okazjeplus.pl/pl/regulamin',
+        en: 'https://okazjeplus.pl/en/regulamin',
+        de: 'https://okazjeplus.pl/de/regulamin',
+        fr: 'https://okazjeplus.pl/fr/regulamin',
+        es: 'https://okazjeplus.pl/es/regulamin',
+        uk: 'https://okazjeplus.pl/uk/regulamin',
+        'x-default': 'https://okazjeplus.pl/pl/regulamin',
+      },
+    },
+  };
+}
 
 export default function RegulaminPage() {
   return (

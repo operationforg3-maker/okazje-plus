@@ -16,7 +16,9 @@
     "noSuggestions": "Sin sugerencias",
     "enterToSearch": "Presiona Enter para realizar una búsqueda de texto completo.",
     "noResults": "Sin resultados",
-    "searching": "Buscando..."
+    "searching": "Buscando...",
+    "searchBarLabel": "Buscar productos y ofertas",
+    "resultsLabel": "Resultados de búsqueda"
   },
   "breadcrumb": {
     "home": "Página principal",
@@ -91,7 +93,11 @@
     "status": "Estado",
     "votes": "Voces",
     "shares": "Compartir",
-    "addedBy": "Añadido por"
+    "addedBy": "Añadido por",
+    "user": "Usuario",
+    "temperature": "Temperatura",
+    "boughtCount": "{count} comprados",
+    "youSave": "Ahorras {amount}"
   },
   "comments": {
     "title": "Comentarios",
@@ -139,7 +145,9 @@
     "saveError": "No se pudo guardar.",
     "deleteError": "No se pudo eliminar.",
     "loadError": "No se pudo cargar",
-    "unknownError": "Error desconocido"
+    "unknownError": "Error desconocido",
+    "notFoundTitle": "Página no encontrada (404)",
+    "notFoundDescription": "Lo sentimos, la página que buscas no existe, ha sido eliminada o su dirección ha sido cambiada."
   },
   "messages": {
     "success": "Éxito",
@@ -160,6 +168,9 @@
     "priceAlertEnabled": "📢 ¡Recibirás una notificación cuando cambie el precio!",
     "dealExpired": "Oferta expirada",
     "thankYouForVote": "¡Gracias por votar!",
-    "voteError": "Error al votar"
+    "voteError": "Error al votar",
+    "voteRemoved": "Voto eliminado",
+    "voteChanged": "Voto cambiado",
+    "voteAdded": "Voto añadido"
   }
 }

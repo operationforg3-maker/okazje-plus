@@ -847,6 +847,7 @@ export function ProductsPageContent({
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder={t('filters.search')}
+                    aria-label={t('filters.search')}
                     className="pl-9"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -863,7 +864,7 @@ export function ProductsPageContent({
                   <div className="flex flex-wrap gap-3">
                     {/* Sortowanie */}
                     <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                      <SelectTrigger className="w-[200px] h-10">
+                      <SelectTrigger className="w-[200px] h-10" aria-label={t('filters.sort')}>
                         <TrendingUp className="mr-2 h-4 w-4" />
                         <SelectValue placeholder={t('filters.sort')} />
                       </SelectTrigger>
@@ -877,7 +878,7 @@ export function ProductsPageContent({
                     </Select>
 
                     <Select value={productStatusView} onValueChange={(value: ProductStatusView) => setProductStatusView(value)}>
-                      <SelectTrigger className="w-[220px] h-10">
+                      <SelectTrigger className="w-[220px] h-10" aria-label={t('statusView.visibilityPlaceholder')}>
                         <Clock className="mr-2 h-4 w-4" />
                         <SelectValue placeholder={t('statusView.visibilityPlaceholder')} />
                       </SelectTrigger>
@@ -942,6 +943,7 @@ export function ProductsPageContent({
                               deleteSavedFilter(filter.name);
                             }}
                             className="ml-1 hover:text-destructive"
+                            aria-label={`Usuń filtr ${filter.name}`}
                           >
                             ×
                           </button>
@@ -988,6 +990,7 @@ export function ProductsPageContent({
                         size="sm"
                         className="h-8 px-3"
                         onClick={() => setViewMode('grid')}
+                        aria-label={t('viewMode.grid')}
                       >
                         <LayoutGrid className="h-4 w-4 mr-1" />
                         <span className="hidden sm:inline">{t('viewMode.grid')}</span>
@@ -997,6 +1000,7 @@ export function ProductsPageContent({
                         size="sm"
                         className="h-8 px-3"
                         onClick={() => setViewMode('list')}
+                        aria-label={t('viewMode.list')}
                       >
                         <List className="h-4 w-4 mr-1" />
                         <span className="hidden sm:inline">{t('viewMode.list')}</span>

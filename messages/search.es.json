@@ -28,5 +28,11 @@
     "empty": "No se encontraron resultados",
     "emptyDescription": "Intenta usar otras palabras clave o explora las categorías."
   },
-  "loading": "Buscando..."
+  "loading": "Buscando...",
+  "placeholder": "Buscar productos y ofertas...",
+  "minChars": "Ingrese al menos 2 caracteres para ver los resultados.",
+  "all": "Todos",
+  "viewAllResults": "Ver todos los resultados",
+  "noDeals": "No se encontraron ofertas para esta búsqueda.",
+  "noProducts": "No se encontraron productos para esta búsqueda."
 }

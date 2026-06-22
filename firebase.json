@@ -2,7 +2,7 @@
   "hosting": {
     "source": ".",
     "frameworksBackend": {
-      "region": "us-central1",
+      "region": "europe-west1",
       "memory": "1GiB"
     },
     "ignore": [

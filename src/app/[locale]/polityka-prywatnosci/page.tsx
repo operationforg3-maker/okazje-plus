@@ -2,10 +2,25 @@ import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import { LegalPageLayout } from '@/components/layout/legal-page-layout';
 
-export const metadata = {
-  title: 'Polityka Prywatności - Okazje+',
-  description: 'Polityka prywatności i ochrony danych osobowych serwisu Okazje+',
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  return {
+    title: 'Polityka Prywatności - Okazje+',
+    description: 'Polityka prywatności i ochrony danych osobowych serwisu Okazje+',
+    alternates: {
+      canonical: `https://okazjeplus.pl/${locale}/polityka-prywatnosci`,
+      languages: {
+        pl: 'https://okazjeplus.pl/pl/polityka-prywatnosci',
+        en: 'https://okazjeplus.pl/en/polityka-prywatnosci',
+        de: 'https://okazjeplus.pl/de/polityka-prywatnosci',
+        fr: 'https://okazjeplus.pl/fr/polityka-prywatnosci',
+        es: 'https://okazjeplus.pl/es/polityka-prywatnosci',
+        uk: 'https://okazjeplus.pl/uk/polityka-prywatnosci',
+        'x-default': 'https://okazjeplus.pl/pl/polityka-prywatnosci',
+      },
+    },
+  };
+}
 
 export default function PolitykaPrywatnosciPage() {
   return (

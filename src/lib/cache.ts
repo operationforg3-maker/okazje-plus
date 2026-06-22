@@ -13,6 +13,17 @@ async function initRedis() {
   // Set flag immediately to prevent concurrent init attempts
   redisChecked = true;
 
+  // Local development fallback: do not use remote Redis to prevent network latency
+  if (
+    process.env.NODE_ENV === 'development' &&
+    process.env.REDIS_URL &&
+    !process.env.REDIS_URL.includes('localhost') &&
+    !process.env.REDIS_URL.includes('127.0.0.1')
+  ) {
+    console.info('ℹ️ Local development: Bypassing remote Redis to avoid network latency. Using local in-memory LRU cache.');
+    return;
+  }
+
   if (!process.env.REDIS_URL) {
     if (process.env.NODE_ENV === 'production') {
       console.info('REDIS_URL not set — using in-memory LRU cache as fallback.');
@@ -25,7 +36,7 @@ async function initRedis() {
       // Dynamic import only on server-side at runtime
       const Redis = (await import('ioredis')).default;
       
-      // Use defensive config to fail fast if Redis is unreachable (e.g. local build vs remote Redis)
+      // Use defensive config to fail fast if Redis is unreachable
       const client = new Redis(process.env.REDIS_URL!, {
         connectTimeout: 2000,         // 2s timeout for initial connection
         maxRetriesPerRequest: 1,      // Don't retry requests endlessly
@@ -36,10 +47,9 @@ async function initRedis() {
         }
       });
 
-      // Handle errors silentily initially
+      // Handle errors silently
       client.on('error', (err: any) => {
-        // Suppress initial connection errors to avoid console spam during build/dev
-        // if we are just failing to connect to a private instance
+        // Suppress initial connection errors
       });
 
       try {
@@ -47,7 +57,6 @@ async function initRedis() {
         redis = client;
         console.log('✅ Redis connected successfully');
       } catch (connErr) {
-        // console.warn('⚠️ Redis connection failed (using LRU fallback):', (connErr as Error).message);
         try { await client.quit(); } catch {} 
         redis = null;
       }
@@ -62,54 +71,66 @@ async function initRedis() {
 }
 
 const lru = new LRUCache<string, any>({
-  max: 500,
+  max: 1000, // Zwiększamy max limit dla lepszego L1 cachu
   ttl: 1000 * 3600,
   updateAgeOnGet: true,
 });
 
 export async function cacheGet(key: string): Promise<any | null> {
+  // L1 Cache: Sprawdź najpierw lokalną pamięć podręczną (0ms)
+  const cachedVal = lru.get(key);
+  if (cachedVal !== undefined) {
+    return cachedVal;
+  }
+
   await initRedis();
   if (redis) {
     try {
       const v = await redis.get(key);
-      return v ? JSON.parse(v) : null;
+      if (v) {
+        const parsed = JSON.parse(v);
+        // Zapisz do L1 Cache
+        lru.set(key, parsed);
+        return parsed;
+      }
+      return null;
     } catch (e) {
-      // If Redis fails mid-operation, just use LRU
-      // console.warn('Redis GET failed, falling back to LRU:', e); 
-      return lru.get(key) ?? null;
+      return null;
     }
   }
-  return lru.get(key) ?? null;
+  return null;
 }
 
 export async function cacheSet(key: string, value: any, ttlSeconds = 60): Promise<void> {
+  // L1 Cache: Zapisz lokalnie natychmiast
+  lru.set(key, value, { ttl: ttlSeconds * 1000 });
+
   await initRedis();
   if (redis) {
     try {
-      await redis.set(key, JSON.stringify(value), 'EX', Math.max(1, Math.floor(ttlSeconds)));
+      // L2 Cache: Zapisz w Redis asynchronicznie (brak await, nie blokujemy żądania)
+      redis.set(key, JSON.stringify(value), 'EX', Math.max(1, Math.floor(ttlSeconds))).catch(() => {});
       return;
     } catch (e) {
-      // console.warn('Redis SET failed, falling back to LRU:', e);
-      lru.set(key, value, { ttl: ttlSeconds * 1000 });
       return;
     }
   }
-  lru.set(key, value, { ttl: ttlSeconds * 1000 });
 }
 
 export async function cacheDel(key: string): Promise<void> {
+  // L1 Cache: Usuń lokalnie natychmiast
+  lru.delete(key);
+
   await initRedis();
   if (redis) {
     try {
-      await redis.del(key);
+      // L2 Cache: Usuń z Redis asynchronicznie (brak await)
+      redis.del(key).catch(() => {});
       return;
     } catch (e) {
-      // console.warn('Redis DEL failed, falling back to LRU del:', e);
-      lru.delete(key);
       return;
     }
   }
-  lru.delete(key);
 }
 
 // Simple Redis-backed rate limiter (per-key). Returns true if allowed, false if rate limited.
@@ -121,11 +142,10 @@ export async function rateLimit(key: string, limit = 60, windowSeconds = 60): Pr
     const redisKey = `rl:${key}`;
     const cur = await redis.incr(redisKey);
     if (cur === 1) {
-      await redis.expire(redisKey, windowSeconds);
+      await redis.expire(redisKey, windowSeconds).catch(() => {});
     }
     return cur <= limit;
   } catch (e) {
-    // console.warn('Redis rateLimit check failed — allowing request:', e);
     return true;
   }
 }

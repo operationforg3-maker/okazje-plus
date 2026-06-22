@@ -24,6 +24,19 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
+
+    const name = error?.name || '';
+    const message = error?.message || '';
+    const isChunkError =
+      name === 'ChunkLoadError' ||
+      message.includes('Loading chunk') ||
+      message.includes('Failed to fetch dynamically imported module') ||
+      message.includes('Loading CSS chunk');
+
+    if (isChunkError && typeof window !== 'undefined') {
+      console.warn('[ErrorBoundary] Chunk load error detected. Forcing page reload to fetch the latest assets.');
+      window.location.reload();
+    }
   }
 
   render() {

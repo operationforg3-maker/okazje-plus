@@ -133,9 +133,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: data.description,
     alternates: {
       canonical: `${BASE_URL}${data.watchPath}`,
-      languages: Object.fromEntries(
-        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `${BASE_URL}/${localeCode}/watch/products/${id}`])
-      ),
+      languages: {
+        ...Object.fromEntries(
+          SUPPORTED_LOCALES.map((localeCode) => [localeCode, `${BASE_URL}/${localeCode}/watch/products/${id}`])
+        ),
+        'x-default': `${BASE_URL}/pl/watch/products/${id}`,
+      },
     },
     robots: {
       index: true,

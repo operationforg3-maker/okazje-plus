@@ -42,6 +42,15 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     description: `Przeglądaj produkty w kategorii ${subSubName}.`,
     alternates: {
       canonical: `https://okazjeplus.pl${buildCategoryPath(effectiveLocale, route.mainSlug, route.subSlug, route.subSubSlug)}`,
+      languages: {
+        ...Object.fromEntries(
+          SUPPORTED_LOCALES.map((localeCode) => [
+            localeCode,
+            `https://okazjeplus.pl${buildCategoryPath(localeCode, route.mainSlug, route.subSlug, route.subSubSlug)}`,
+          ])
+        ),
+        'x-default': `https://okazjeplus.pl${buildCategoryPath('pl', route.mainSlug, route.subSlug, route.subSubSlug)}`,
+      },
     },
     robots: {
       index: true,

@@ -1,0 +1,17 @@
+{
+  "ret": [
+    "FAIL_SYS_USER_VALIDATE",
+    "RGV587_ERROR::SM::哎哟喂,被挤爆啦,请稍后重试"
+  ],
+  "data": {
+    "url": "https://acs.aliexpress.com:443//h5/mtop.aliexpress.pdp.pc.query/1.0/_____tmd_____/punish?x5secdata=xgb5e1f3163f242b0bka938d507438679779c4134c94b7335a5c1782063935a-1168960602a-1317347523abaxc3eajrecaptcha33b768d608d379b55671d4897601bdeb44c__bx__acs.aliexpress.com:443/h5/mtop.aliexpress.pdp.pc.query/1.0&x5step=2&action=captcharecaptcha&pureCaptcha=",
+    "dialogSize": {
+      "width": "420px",
+      "height": "480px"
+    }
+  },
+  "dialogSize": {
+    "width": "420px",
+    "height": "480px"
+  }
+}

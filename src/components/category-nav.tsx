@@ -104,6 +104,7 @@ export default function CategoryNav({
                     size="sm"
                     className="h-8 w-8 p-0"
                     onClick={() => toggleCategory(category.id)}
+                    aria-label={isExpanded ? t('sidebar.collapseCategory') : t('sidebar.expandCategory')}
                   >
                     {isExpanded ? (
                       <ChevronDown className="h-4 w-4" />
@@ -161,6 +162,7 @@ export default function CategoryNav({
                               size="sm"
                               className="h-8 w-8 p-0"
                               onClick={() => toggleSubcategory(subcategory.slug)}
+                              aria-label={isSubExpanded ? t('sidebar.collapseSubcategory') : t('sidebar.expandSubcategory')}
                             >
                               {isSubExpanded ? (
                                 <ChevronDown className="h-3 w-3" />

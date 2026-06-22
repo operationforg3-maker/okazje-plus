@@ -34,6 +34,7 @@ interface ProductDetails {
   descriptionHtml: string;
   attributes: any[];
   variants: any[];
+  skuList: any[];
   images: string[];
   warehouse: string;
   deliveryTime: string;
@@ -60,6 +61,7 @@ async function fetchProductDetails(productId: string, siteUrl?: string): Promise
       descriptionHtml: product.descriptionHtml || '',
       attributes: product.attributes || [],
       variants: product.variants || [],
+      skuList: product.skuList || [],
       images: product.images || [],
       warehouse: product.shippingInfo?.warehouse || '',
       deliveryTime: product.shippingInfo?.deliveryTime || '',
@@ -154,6 +156,7 @@ export async function enhanceProductDetails(
           attributes: details.attributes,
           specifications: details.attributes, // Alias for compatibility
           variants: details.variants,
+          skuList: details.skuList,
           images: details.images.length > 0 ? details.images : product.images,
           warehouse: details.warehouse,
           deliveryTime: details.deliveryTime,

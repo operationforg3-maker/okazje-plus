@@ -16,7 +16,9 @@
     "noSuggestions": "No suggestions",
     "enterToSearch": "Press Enter to search full-text",
     "noResults": "No results",
-    "searching": "Searching..."
+    "searching": "Searching...",
+    "searchBarLabel": "Search products and deals",
+    "resultsLabel": "Search results"
   },
   "breadcrumb": {
     "home": "Home",
@@ -91,7 +93,11 @@
     "status": "Status",
     "votes": "Votes",
     "shares": "Shares",
-    "addedBy": "Added by"
+    "addedBy": "Added by",
+    "user": "User",
+    "temperature": "Temperature",
+    "boughtCount": "{count} bought",
+    "youSave": "You save {amount}"
   },
   "comments": {
     "title": "Comments",
@@ -139,7 +145,9 @@
     "saveError": "Failed to save",
     "deleteError": "Failed to delete",
     "loadError": "Failed to load",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "notFoundTitle": "Page not found (404)",
+    "notFoundDescription": "Sorry, the page you are looking for does not exist, has been removed, or its address has been changed."
   },
   "messages": {
     "success": "Success",
@@ -160,6 +168,9 @@
     "priceAlertEnabled": "📢 You'll be notified about price changes!",
     "dealExpired": "Deal expired",
     "thankYouForVote": "Thank you for voting!",
-    "voteError": "Voting error"
+    "voteError": "Voting error",
+    "voteRemoved": "Vote removed",
+    "voteChanged": "Vote changed",
+    "voteAdded": "Vote added"
   }
 }

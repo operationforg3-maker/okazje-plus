@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Deal, LocalizedText } from '@/lib/types';
 import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
-import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search';
+import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search-server';
 import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';

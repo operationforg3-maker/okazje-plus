@@ -1,0 +1,137 @@
+[firebase-admin] Using GOOGLE_APPLICATION_CREDENTIALS file
+Loading product X5QamlDx8QicyxHd3Q8R...
+Running enrichment...
+[MISSING SPECS FOR PRODUCT X5QAMLDX8QICYXHD3Q8R - NO STRUCTURED SPECS DETECTED] warn 
+✅ Vertex AI initialized for project okazje-plus in region us-central1
+[GENERATING CREATIVE CONTENT FOR: 5ML PORTABLE REFILLABLE PERFUME ATOMIZER - BOTTOM FILL SPRAY BOTTLE (SOURCE: ALIEXPRESS)] info 
+
+✅ ENRICHED OBJECT: {
+  "specs": {
+    "Pojemność": "(web) 5 ml",
+    "Materiał zewnętrzny": "(web) Aluminium",
+    "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+    "Mechanizm napełniania": "(web) Od dołu",
+    "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+    "Liczba psiknięć": "(web) ok. 60-70"
+  },
+  "coreSpecs": {
+    "Pojemność": "(web) 5 ml",
+    "Materiał zewnętrzny": "(web) Aluminium",
+    "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+    "Mechanizm napełniania": "(web) Od dołu",
+    "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+    "Liczba psiknięć": "(web) ok. 60-70"
+  },
+  "rawSpecs": {},
+  "specsLocalized": {
+    "pl": {
+      "Pojemność": "(web) 5 ml",
+      "Materiał zewnętrzny": "(web) Aluminium",
+      "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+      "Mechanizm napełniania": "(web) Od dołu",
+      "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+      "Liczba psiknięć": "(web) ok. 60-70"
+    },
+    "en": {
+      "Pojemność": "(web) 5 ml",
+      "Materiał zewnętrzny": "(web) Aluminium",
+      "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+      "Mechanizm napełniania": "(web) Od dołu",
+      "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+      "Liczba psiknięć": "(web) ok. 60-70"
+    },
+    "de": {
+      "Pojemność": "(web) 5 ml",
+      "Materiał zewnętrzny": "(web) Aluminium",
+      "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+      "Mechanizm napełniania": "(web) Od dołu",
+      "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+      "Liczba psiknięć": "(web) ok. 60-70"
+    },
+    "fr": {
+      "Pojemność": "(web) 5 ml",
+      "Materiał zewnętrzny": "(web) Aluminium",
+      "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+      "Mechanizm napełniania": "(web) Od dołu",
+      "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+      "Liczba psiknięć": "(web) ok. 60-70"
+    },
+    "es": {
+      "Pojemność": "(web) 5 ml",
+      "Materiał zewnętrzny": "(web) Aluminium",
+      "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+      "Mechanizm napełniania": "(web) Od dołu",
+      "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+      "Liczba psiknięć": "(web) ok. 60-70"
+    },
+    "uk": {
+      "Pojemność": "(web) 5 ml",
+      "Materiał zewnętrzny": "(web) Aluminium",
+      "Materiał wewnętrzny": "(web) Szkło/Tworzywo sztuczne",
+      "Mechanizm napełniania": "(web) Od dołu",
+      "Wymiary": "(web) ok. 8.5 x 1.7 cm",
+      "Liczba psiknięć": "(web) ok. 60-70"
+    }
+  },
+  "title": {
+    "pl": "Przenośny Atomizer do Perfum 5ml – Łatwe Napełnianie, Aluminium",
+    "en": "5ml Portable Refillable Perfume Atomizer – Bottom Fill, Aluminum",
+    "de": "Tragbarer Parfümzerstäuber 5ml – Unten befüllbar, Aluminium",
+    "fr": "Atomiseur de Parfum Portable 5ml – Remplissage par le Bas, Aluminium",
+    "es": "Atomizador de Perfume Portátil 5ml – Relleno Inferior, Aluminio",
+    "uk": "Портативний Атомайзер для Парфумів 5мл – Нижнє Заповнення, Алюміній"
+  },
+  "description": {
+    "pl": "<p>Zawsze miej swój ulubiony zapach pod ręką dzięki temu przenośnemu atomizerowi do perfum 5ml, idealnemu na każdą okazję.</p><ul><li>Pojemność 5 ml – wystarczająca na około 60-70 psiknięć, idealna na krótkie wyjazdy lub do codziennego użytku.</li><li>Łatwe napełnianie od dołu – uzupełnij swój ulubiony zapach w kilka sekund, bez rozlewania i użycia dodatkowych narzędzi.</li><li>Wytrzymała obudowa z aluminium – chroni perfumy przed uszkodzeniami i światłem, zapewniając długotrwałe użytkowanie.</li><li>Kompaktowy rozmiar (ok. 8.5 x 1.7 cm) – mieści się w każdej torebce, kieszeni czy kosmetyczce, idealny do podróży samolotem (TSA-approved).</li><li>Wewnętrzny pojemnik ze szkła lub trwałego tworzywa sztucznego – zapewnia bezpieczeństwo przechowywania zapachu.</li><li>Wskaźnik poziomu perfum – przezroczyste okienko pozwala łatwo kontrolować ilość pozostałego płynu.</li></ul><p>Ciesz się świeżością ulubionego zapachu w każdej chwili i miejscu, bez konieczności noszenia dużego flakonu. Ten atomizer to niezastąpiony gadżet dla każdego miłośnika perfum.</p>",
+    "en": "<p>Always have your favorite fragrance at hand with this 5ml portable perfume atomizer, perfect for any occasion.</p><ul><li>5ml capacity – sufficient for approximately 60-70 sprays, ideal for short trips or daily use.</li><li>Easy bottom-fill – refill your favorite scent in seconds, without spills or additional tools.</li><li>Durable aluminum casing – protects perfumes from damage and light, ensuring long-lasting use.</li><li>Compact size (approx. 8.5 x 1.7 cm) – fits in any purse, pocket, or cosmetic bag, ideal for air travel (TSA-approved).</li><li>Inner container made of glass or durable plastic – ensures safe storage of the fragrance.</li><li>Perfume level indicator – a transparent window allows easy monitoring of the remaining liquid.</li></ul><p>Enjoy the freshness of your favorite scent anytime, anywhere, without the need to carry a large bottle. This atomizer is an indispensable gadget for every perfume lover.</p>",
+    "de": "<p>Haben Sie Ihren Lieblingsduft immer griffbereit mit diesem tragbaren 5ml Parfümzerstäuber, perfekt für jeden Anlass.</p><ul><li>5ml Fassungsvermögen – ausreichend für ca. 60-70 Sprühstöße, ideal für Kurztrips oder den täglichen Gebrauch.</li><li>Einfaches Nachfüllen von unten – füllen Sie Ihren Lieblingsduft in Sekundenschnelle nach, ohne Verschütten und ohne zusätzliche Werkzeuge.</li><li>Robustes Aluminiumgehäuse – schützt Parfüms vor Beschädigungen und Licht und gewährleistet eine lange Nutzungsdauer.</li><li>Kompakte Größe (ca. 8.5 x 1.7 cm) – passt in jede Handtasche, Hosentasche oder Kosmetiktasche, ideal für Flugreisen (TSA-zugelassen).</li><li>Innenbehälter aus Glas oder strapazierfähigem Kunststoff – gewährleistet eine sichere Aufbewahrung des Duftes.</li><li>Füllstandsanzeige für Parfüm – ein transparentes Fenster ermöglicht eine einfache Kontrolle der verbleibenden Flüssigkeitsmenge.</li></ul><p>Genießen Sie die Frische Ihres Lieblingsduftes jederzeit und überall, ohne eine große Flasche mit sich führen zu müssen. Dieser Zerstäuber ist ein unverzichtbares Gadget für jeden Parfümliebhaber.</p>",
+    "fr": "<p>Ayez toujours votre parfum préféré à portée de main grâce à cet atomiseur de parfum portable de 5ml, parfait pour toutes les occasions.</p><ul><li>Capacité de 5ml – suffisante pour environ 60-70 pulvérisations, idéale pour les courts voyages ou l'utilisation quotidienne.</li><li>Remplissage facile par le bas – rechargez votre parfum préféré en quelques secondes, sans déversement ni outils supplémentaires.</li><li>Boîtier en aluminium durable – protège les parfums des dommages et de la lumière, assurant une utilisation à long terme.</li><li>Taille compacte (environ 8.5 x 1.7 cm) – se glisse dans n'importe quel sac à main, poche ou trousse de maquillage, idéal pour les voyages en avion (approuvé TSA).</li><li>Récipient intérieur en verre ou en plastique durable – assure un stockage sûr du parfum.</li><li>Indicateur de niveau de parfum – une fenêtre transparente permet de contrôler facilement la quantité de liquide restante.</li></ul><p>Profitez de la fraîcheur de votre parfum préféré à tout moment, n'importe où, sans avoir besoin de transporter une grande bouteille. Cet atomiseur est un gadget indispensable pour tout amateur de parfum.</p>",
+    "es": "<p>Ten siempre tu fragancia favorita a mano con este atomizador de perfume portátil de 5ml, perfecto para cualquier ocasión.</p><ul><li>Capacidad de 5ml – suficiente para aproximadamente 60-70 pulverizaciones, ideal para viajes cortos o uso diario.</li><li>Fácil llenado inferior – recarga tu aroma favorito en segundos, sin derrames ni herramientas adicionales.</li><li>Carcasa de aluminio duradera – protege los perfumes de daños y la luz, asegurando un uso prolongado.</li><li>Tamaño compacto (aprox. 8.5 x 1.7 cm) – cabe en cualquier bolso, bolsillo o neceser, ideal para viajes en avión (aprobado por la TSA).</li><li>Contenedor interior de vidrio o plástico duradero – garantiza un almacenamiento seguro de la fragancia.</li><li>Indicador de nivel de perfume – una ventana transparente permite controlar fácilmente la cantidad de líquido restante.</li></ul><p>Disfruta de la frescura de tu fragancia favorita en cualquier momento y lugar, sin necesidad de llevar una botella grande. Este atomizador es un accesorio indispensable para todo amante de los perfumes.</p>",
+    "uk": "<p>Завжди майте свій улюблений аромат під рукою завдяки цьому портативному атомайзеру для парфумів 5 мл, ідеальному для будь-якої нагоди.</p><ul><li>Об'єм 5 мл – достатньо для приблизно 60-70 розпилень, ідеально підходить для коротких поїздок або щоденного використання.</li><li>Легке нижнє заповнення – поповніть свій улюблений аромат за лічені секунди, без розливання та використання додаткових інструментів.</li><li>Міцний алюмінієвий корпус – захищає парфуми від пошкоджень та світла, забезпечуючи тривале використання.</li><li>Компактний розмір (приблизно 8.5 x 1.7 см) – поміщається в будь-яку сумочку, кишеню або косметичку, ідеально підходить для авіаперельотів (схвалено TSA).</li><li>Внутрішній контейнер зі скла або міцного пластику – забезпечує безпечне зберігання аромату.</li><li>Індикатор рівня парфумів – прозоре віконце дозволяє легко контролювати кількість рідини, що залишилася.</li></ul><p>Насолоджуйтесь свіжістю улюбленого аромату в будь-який час і в будь-якому місці, без необхідності носити великий флакон. Цей атомайзер – незамінний гаджет для кожного поціновувача парфумів.</p>"
+  },
+  "fullDescription": {
+    "pl": "<p>Zawsze miej swój ulubiony zapach pod ręką dzięki temu przenośnemu atomizerowi do perfum 5ml, idealnemu na każdą okazję.</p><ul><li>Pojemność 5 ml – wystarczająca na około 60-70 psiknięć, idealna na krótkie wyjazdy lub do codziennego użytku.</li><li>Łatwe napełnianie od dołu – uzupełnij swój ulubiony zapach w kilka sekund, bez rozlewania i użycia dodatkowych narzędzi.</li><li>Wytrzymała obudowa z aluminium – chroni perfumy przed uszkodzeniami i światłem, zapewniając długotrwałe użytkowanie.</li><li>Kompaktowy rozmiar (ok. 8.5 x 1.7 cm) – mieści się w każdej torebce, kieszeni czy kosmetyczce, idealny do podróży samolotem (TSA-approved).</li><li>Wewnętrzny pojemnik ze szkła lub trwałego tworzywa sztucznego – zapewnia bezpieczeństwo przechowywania zapachu.</li><li>Wskaźnik poziomu perfum – przezroczyste okienko pozwala łatwo kontrolować ilość pozostałego płynu.</li></ul><p>Ciesz się świeżością ulubionego zapachu w każdej chwili i miejscu, bez konieczności noszenia dużego flakonu. Ten atomizer to niezastąpiony gadżet dla każdego miłośnika perfum.</p>",
+    "en": "<p>Always have your favorite fragrance at hand with this 5ml portable perfume atomizer, perfect for any occasion.</p><ul><li>5ml capacity – sufficient for approximately 60-70 sprays, ideal for short trips or daily use.</li><li>Easy bottom-fill – refill your favorite scent in seconds, without spills or additional tools.</li><li>Durable aluminum casing – protects perfumes from damage and light, ensuring long-lasting use.</li><li>Compact size (approx. 8.5 x 1.7 cm) – fits in any purse, pocket, or cosmetic bag, ideal for air travel (TSA-approved).</li><li>Inner container made of glass or durable plastic – ensures safe storage of the fragrance.</li><li>Perfume level indicator – a transparent window allows easy monitoring of the remaining liquid.</li></ul><p>Enjoy the freshness of your favorite scent anytime, anywhere, without the need to carry a large bottle. This atomizer is an indispensable gadget for every perfume lover.</p>",
+    "de": "<p>Haben Sie Ihren Lieblingsduft immer griffbereit mit diesem tragbaren 5ml Parfümzerstäuber, perfekt für jeden Anlass.</p><ul><li>5ml Fassungsvermögen – ausreichend für ca. 60-70 Sprühstöße, ideal für Kurztrips oder den täglichen Gebrauch.</li><li>Einfaches Nachfüllen von unten – füllen Sie Ihren Lieblingsduft in Sekundenschnelle nach, ohne Verschütten und ohne zusätzliche Werkzeuge.</li><li>Robustes Aluminiumgehäuse – schützt Parfüms vor Beschädigungen und Licht und gewährleistet eine lange Nutzungsdauer.</li><li>Kompakte Größe (ca. 8.5 x 1.7 cm) – passt in jede Handtasche, Hosentasche oder Kosmetiktasche, ideal für Flugreisen (TSA-zugelassen).</li><li>Innenbehälter aus Glas oder strapazierfähigem Kunststoff – gewährleistet eine sichere Aufbewahrung des Duftes.</li><li>Füllstandsanzeige für Parfüm – ein transparentes Fenster ermöglicht eine einfache Kontrolle der verbleibenden Flüssigkeitsmenge.</li></ul><p>Genießen Sie die Frische Ihres Lieblingsduftes jederzeit und überall, ohne eine große Flasche mit sich führen zu müssen. Dieser Zerstäuber ist ein unverzichtbares Gadget für jeden Parfümliebhaber.</p>",
+    "fr": "<p>Ayez toujours votre parfum préféré à portée de main grâce à cet atomiseur de parfum portable de 5ml, parfait pour toutes les occasions.</p><ul><li>Capacité de 5ml – suffisante pour environ 60-70 pulvérisations, idéale pour les courts voyages ou l'utilisation quotidienne.</li><li>Remplissage facile par le bas – rechargez votre parfum préféré en quelques secondes, sans déversement ni outils supplémentaires.</li><li>Boîtier en aluminium durable – protège les parfums des dommages et de la lumière, assurant une utilisation à long terme.</li><li>Taille compacte (environ 8.5 x 1.7 cm) – se glisse dans n'importe quel sac à main, poche ou trousse de maquillage, idéal pour les voyages en avion (approuvé TSA).</li><li>Récipient intérieur en verre ou en plastique durable – assure un stockage sûr du parfum.</li><li>Indicateur de niveau de parfum – une fenêtre transparente permet de contrôler facilement la quantité de liquide restante.</li></ul><p>Profitez de la fraîcheur de votre parfum préféré à tout moment, n'importe où, sans avoir besoin de transporter une grande bouteille. Cet atomiseur est un gadget indispensable pour tout amateur de parfum.</p>",
+    "es": "<p>Ten siempre tu fragancia favorita a mano con este atomizador de perfume portátil de 5ml, perfecto para cualquier ocasión.</p><ul><li>Capacidad de 5ml – suficiente para aproximadamente 60-70 pulverizaciones, ideal para viajes cortos o uso diario.</li><li>Fácil llenado inferior – recarga tu aroma favorito en segundos, sin derrames ni herramientas adicionales.</li><li>Carcasa de aluminio duradera – protege los perfumes de daños y la luz, asegurando un uso prolongado.</li><li>Tamaño compacto (aprox. 8.5 x 1.7 cm) – cabe en cualquier bolso, bolsillo o neceser, ideal para viajes en avión (aprobado por la TSA).</li><li>Contenedor interior de vidrio o plástico duradero – garantiza un almacenamiento seguro de la fragancia.</li><li>Indicador de nivel de perfume – una ventana transparente permite controlar fácilmente la cantidad de líquido restante.</li></ul><p>Disfruta de la frescura de tu fragancia favorita en cualquier momento y lugar, sin necesidad de llevar una botella grande. Este atomizador es un accesorio indispensable para todo amante de los perfumes.</p>",
+    "uk": "<p>Завжди майте свій улюблений аромат під рукою завдяки цьому портативному атомайзеру для парфумів 5 мл, ідеальному для будь-якої нагоди.</p><ul><li>Об'єм 5 мл – достатньо для приблизно 60-70 розпилень, ідеально підходить для коротких поїздок або щоденного використання.</li><li>Легке нижнє заповнення – поповніть свій улюблений аромат за лічені секунди, без розливання та використання додаткових інструментів.</li><li>Міцний алюмінієвий корпус – захищає парфуми від пошкоджень та світла, забезпечуючи тривале використання.</li><li>Компактний розмір (приблизно 8.5 x 1.7 см) – поміщається в будь-яку сумочку, кишеню або косметичку, ідеально підходить для авіаперельотів (схвалено TSA).</li><li>Внутрішній контейнер зі скла або міцного пластику – забезпечує безпечне зберігання аромату.</li><li>Індикатор рівня парфумів – прозоре віконце дозволяє легко контролювати кількість рідини, що залишилася.</li></ul><p>Насолоджуйтесь свіжістю улюбленого аромату в будь-який час і в будь-якому місці, без необхідності носити великий флакон. Цей атомайзер – незамінний гаджет для кожного поціновувача парфумів.</p>"
+  },
+  "shortDescription": {
+    "pl": "Miej swój ulubiony zapach zawsze pod ręką dzięki temu przenośnemu atomizerowi do perfum o pojemności 5ml. Innowacyjne napełnianie od dołu sprawia, że uzupełnianie jest błyskawiczne i bezproblemowe. Wytrzymała aluminiowa obudowa i kompaktowy rozmiar czynią go idealnym towarzyszem podróży.",
+    "en": "Keep your favorite fragrance always at hand with this 5ml portable perfume atomizer. The innovative bottom-fill design makes refilling quick and mess-free. Its durable aluminum casing and compact size make it an ideal travel companion.",
+    "de": "Haben Sie Ihren Lieblingsduft immer griffbereit mit diesem tragbaren 5ml Parfümzerstäuber. Das innovative Bottom-Fill-Design macht das Nachfüllen schnell und sauber. Sein robustes Aluminiumgehäuse und die kompakte Größe machen ihn zum idealen Reisebegleiter.",
+    "fr": "Gardez votre parfum préféré toujours à portée de main grâce à cet atomiseur de parfum portable de 5ml. Le design innovant de remplissage par le bas rend le rechargement rapide et sans effort. Son boîtier en aluminium durable et sa taille compacte en font un compagnon de voyage idéal.",
+    "es": "Ten tu fragancia favorita siempre a mano con este atomizador de perfume portátil de 5ml. El innovador diseño de llenado inferior hace que la recarga sea rápida y sin derrames. Su duradera carcasa de aluminio y tamaño compacto lo convierten en el compañero de viaje ideal.",
+    "uk": "Завжди майте свій улюблений аромат під рукою завдяки цьому портативному атомайзеру для парфумів об'ємом 5 мл. Інноваційне нижнє заповнення робить поповнення швидким і безпроблемним. Міцний алюмінієвий корпус і компактний розмір роблять його ідеальним супутником у подорожах."
+  },
+  "seoTitle": "Przenośny Atomizer do Perfum 5ml – Łatwe Napełnianie, Aluminium",
+  "seoDescription": "Zawsze miej swój ulubiony zapach pod ręką! Ten przenośny atomizer do perfum 5ml z łatwym napełnianiem od dołu i aluminiową obudową to idealny towarzysz podróży. Odkryj wygodę!",
+  "searchTags": [
+    "Fashion and Beauty",
+    "moda-uroda",
+    "Cosmetics",
+    "kosmetyki",
+    "Perfumes",
+    "perfumy"
+  ],
+  "averageMarketPrice": {
+    "amount": 10,
+    "currency": "PLN",
+    "range": {
+      "min": 4.9,
+      "max": 29.99
+    }
+  },
+  "reviewsSummary": {
+    "pl": "Poor reviews. Quality and durability issues reported.",
+    "en": "Poor reviews. Quality and durability issues reported.",
+    "de": "Poor reviews. Quality and durability issues reported.",
+    "fr": "Poor reviews. Quality and durability issues reported.",
+    "es": "Poor reviews. Quality and durability issues reported.",
+    "uk": "Poor reviews. Quality and durability issues reported."
+  },
+  "aiQualityScore": 55,
+  "status": "approved",
+  "updatedAt": "2026-06-21T10:46:35.585Z"
+}

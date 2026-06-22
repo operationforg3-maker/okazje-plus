@@ -43,6 +43,7 @@ export interface AliExpressProduct {
   attributes?: any[]; // Added: raw attributes
   specifications?: any[]; // Added: specifications alias
   variants?: any[]; // Added: variants
+  skuList?: any[]; // Added: concrete SKU details (options, price, image, stock)
   warehouse?: string; // Added: warehouse
   deliveryTime?: string; // Added: deliveryTime
   freeShipping?: boolean; // Added: freeShipping

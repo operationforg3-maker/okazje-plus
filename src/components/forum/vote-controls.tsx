@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useTranslations } from 'next-intl';
 
 interface VoteControlsProps {
   postId: string;
@@ -24,6 +25,7 @@ export function VoteControls({
   initialDownvotes = 0,
   className,
 }: VoteControlsProps) {
+  const t = useTranslations('common');
   const { user } = useAuth();
   const [voteState, setVoteState] = useState({
     upvotes: initialUpvotes,
@@ -54,7 +56,7 @@ export function VoteControls({
 
   const handleVote = async (voteType: "up" | "down") => {
     if (!user) {
-      toast.error("Zaloguj się, aby głosować");
+      toast.error(t('auth.loginToVote'));
       return;
     }
 
@@ -81,7 +83,7 @@ export function VoteControls({
             setVoteState(prev => ({ ...prev, downvotes: Math.max(0, prev.downvotes - 1), userVote: null }));
           }
 
-          toast.success("Głos usunięty");
+          toast.success(t('messages.voteRemoved'));
         } else {
           // Jeśli kliknął inny głos, zamień głos
           await setDoc(voteRef, {
@@ -105,7 +107,7 @@ export function VoteControls({
             setVoteState(prev => ({ ...prev, upvotes: prev.upvotes + 1, downvotes: Math.max(0, prev.downvotes - 1), userVote: voteType }));
           }
 
-          toast.success("Głos zmieniony");
+          toast.success(t('messages.voteChanged'));
         }
       } else {
         // Nowy głos
@@ -124,11 +126,11 @@ export function VoteControls({
           setVoteState(prev => ({ ...prev, downvotes: prev.downvotes + 1, userVote: voteType }));
         }
 
-        toast.success("Głos dodany");
+        toast.success(t('messages.voteAdded'));
       }
     } catch (error) {
       console.error("Error voting:", error);
-      toast.error("Błąd podczas głosowania");
+      toast.error(t('errors.voteError'));
     } finally {
       setVoteState(prev => ({ ...prev, loading: false }));
     }
@@ -148,8 +150,8 @@ export function VoteControls({
         )}
         onClick={() => handleVote("up")}
         disabled={voteState.loading}
-        title={`Głosuj pozytywnie (${voteState.upvotes})`}
-        aria-label={`Głosuj pozytywnie (${voteState.upvotes})`}
+        title={`${t('auth.voteUp')} (${voteState.upvotes})`}
+        aria-label={`${t('auth.voteUp')} (${voteState.upvotes})`}
       >
         <ThumbsUp className="h-4 w-4" />
       </Button>
@@ -175,8 +177,8 @@ export function VoteControls({
         )}
         onClick={() => handleVote("down")}
         disabled={voteState.loading}
-        title={`Głosuj negatywnie (${voteState.downvotes})`}
-        aria-label={`Głosuj negatywnie (${voteState.downvotes})`}
+        title={`${t('auth.voteDown')} (${voteState.downvotes})`}
+        aria-label={`${t('auth.voteDown')} (${voteState.downvotes})`}
       >
         <ThumbsDown className="h-4 w-4" />
       </Button>

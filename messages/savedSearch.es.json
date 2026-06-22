@@ -36,5 +36,7 @@
   "created": "Publicado:",
   "namePlaceholder": "Por ejemplo: Portátiles hasta 3000 zł",
   "descriptionPlaceholder": "Detalles adicionales...",
-  "dialogDescription": "Recibe notificaciones cuando aparezcan nuevas oportunidades que coincidan con tus criterios."
+  "dialogDescription": "Recibe notificaciones cuando aparezcan nuevas oportunidades que coincidan con tus criterios.",
+  "enableNotifications": "Activar notificaciones",
+  "disableNotifications": "Desactivar notificaciones"
 }

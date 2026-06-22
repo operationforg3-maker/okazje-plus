@@ -74,7 +74,11 @@
     "categories": "Категорії",
     "allDeals": "Усі",
     "showAll": "Показати все",
-    "hideEmpty": "Приховати порожні"
+    "hideEmpty": "Приховати порожні",
+    "expandCategory": "Розгорнути категорію",
+    "collapseCategory": "Згорнути категорію",
+    "expandSubcategory": "Розгорнути підкатегорію",
+    "collapseSubcategory": "Згорнути підкатегорію"
   },
   "card": {
     "price": "Ціна",

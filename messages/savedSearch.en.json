@@ -36,5 +36,7 @@
   "created": "Created:",
   "namePlaceholder": "e.g. Laptops under $300",
   "descriptionPlaceholder": "Additional details...",
-  "dialogDescription": "Receive notifications when new deals matching your criteria appear"
+  "dialogDescription": "Receive notifications when new deals matching your criteria appear",
+  "enableNotifications": "Enable notifications",
+  "disableNotifications": "Disable notifications"
 }

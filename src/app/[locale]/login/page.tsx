@@ -9,6 +9,18 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const t = await getTranslations({ locale, namespace: 'login' });
   return {
     title: t('title'),
+    alternates: {
+      canonical: `https://okazjeplus.pl/${locale}/login`,
+      languages: {
+        pl: 'https://okazjeplus.pl/pl/login',
+        en: 'https://okazjeplus.pl/en/login',
+        de: 'https://okazjeplus.pl/de/login',
+        fr: 'https://okazjeplus.pl/fr/login',
+        es: 'https://okazjeplus.pl/es/login',
+        uk: 'https://okazjeplus.pl/uk/login',
+        'x-default': 'https://okazjeplus.pl/pl/login',
+      },
+    },
   };
 }
 
