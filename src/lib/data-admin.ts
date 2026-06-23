@@ -459,8 +459,19 @@ export async function getSubSubcategories(categoryId: string, subcategoryId: str
 export async function getProductCoreAdmin(productId: string): Promise<ProductCore | null> {
   try {
     const docRef = adminDb.collection('product_cores').doc(productId);
-    const docSnap = await docRef.get();
+    let docSnap = await docRef.get();
     
+    if (!docSnap.exists) {
+      const lowercasedId = productId.toLowerCase();
+      const querySnap = await adminDb.collection('product_cores')
+        .where('idLowercase', '==', lowercasedId)
+        .limit(1)
+        .get();
+      if (!querySnap.empty) {
+        docSnap = querySnap.docs[0];
+      }
+    }
+
     if (!docSnap.exists) return null;
     
     const data = docSnap.data();
@@ -501,7 +512,7 @@ export async function getProductWithDealsAdmin(productId: string): Promise<{ pro
     // Fetch Deals linked to this productCore
     const dealsSnap = await adminDb
       .collection('deals')
-      .where('productCoreId', '==', productId)
+      .where('productCoreId', '==', product.id)
       .get();
       
     // Admin sees ALL deals (including draft/expired), filtering should happen in UI if needed

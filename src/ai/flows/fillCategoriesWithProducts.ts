@@ -723,7 +723,10 @@ export async function fillCategoriesWithProducts() {
   }
   
   // Invalidate cached categories to odświeżyć mega-menu na serwerze/SSR
-  try { await cacheDel('categories:all'); } catch (_) {}
+  try { 
+    await cacheDel('categories:all'); 
+    await cacheDel('categories:all:v2'); 
+  } catch (_) {}
 
   const summary = `✅ Katalog wypełniony!\n\n` +
     `📊 Statystyki:\n` +

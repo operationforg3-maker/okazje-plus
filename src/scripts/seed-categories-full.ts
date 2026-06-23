@@ -66,8 +66,8 @@ function uniq(values: Array<string | undefined | null>): string[] {
 function getName(node: CategoryNode): string {
   return (
     node.translations?.pl?.name ||
-    node.translations?.en?.name ||
     node.name ||
+    node.translations?.en?.name ||
     node.slug
   );
 }
@@ -75,8 +75,8 @@ function getName(node: CategoryNode): string {
 function getDescription(node: CategoryNode): string {
   return (
     node.translations?.pl?.description ||
-    node.translations?.en?.description ||
     node.description ||
+    node.translations?.en?.description ||
     ''
   );
 }

@@ -13,6 +13,8 @@ import { cacheDel } from '@/lib/cache';
  */
 export async function invalidateCategoriesCache(): Promise<void> {
   await cacheDel('categories:all');
+  await cacheDel('categories:all:v2');
+  await cacheDel('public:products:bootstrap:v1');
   console.log('Invalidated categories cache');
 }
 

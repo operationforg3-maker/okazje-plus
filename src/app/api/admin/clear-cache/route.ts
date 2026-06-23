@@ -16,8 +16,10 @@ export async function GET() {
     // Clear category-related cache keys
     const cacheKeys = [
       'categories:all',
+      'categories:all:v2',
       'categories:with_content_products',
       'categories:with_content_deals',
+      'public:products:bootstrap:v1',
     ];
     
     for (const key of cacheKeys) {

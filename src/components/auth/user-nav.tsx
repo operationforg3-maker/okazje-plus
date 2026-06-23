@@ -8,7 +8,8 @@ import {
   Settings,
   Heart,
   Bell,
-  ArrowRight
+  ArrowRight,
+  Globe
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -73,12 +74,45 @@ export function UserNav() {
 
   if (!user) {
     if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-      console.log('[UserNav] No user - showing login button');
+      console.log('[UserNav] No user - rendering login button & settings dropdown');
     }
     return (
-      <Button variant="outline" className="rounded-full" asChild>
-        <Link href={`/${locale}/login`}>Login</Link>
-      </Button>
+      <ErrorBoundary>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="rounded-full bg-background/50 border-border/60 hover:bg-muted/50 hover:border-primary/60 transition-all font-semibold" asChild>
+            <Link href={`/${locale}/login`}>Login</Link>
+          </Button>
+          
+          <DropdownMenu open={open} onOpenChange={setOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="relative h-10 w-10 rounded-full p-0 ring-1 ring-border/40 hover:ring-primary/60 hover:bg-muted/50"
+                aria-label="Ustawienia strony"
+              >
+                <Globe className="h-5 w-5" />
+                {open && (
+                  <span className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-primary shadow-md" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={8}
+              className="p-0 border border-border/60 bg-transparent shadow-none w-auto"
+            >
+              <ErrorBoundary>
+                <AccountMenuPanel
+                  user={null}
+                  loading={loading}
+                  onLogout={handleLogout}
+                  onNavigate={() => setOpen(false)}
+                />
+              </ErrorBoundary>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </ErrorBoundary>
     );
   }
 

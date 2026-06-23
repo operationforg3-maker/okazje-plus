@@ -179,85 +179,85 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
               <span className="flex items-center gap-2"><LogOut className="h-4 w-4" /> {t('logout')}</span>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </button>
-
-            {/* Separator */}
-            <div className="my-2 h-px bg-border/40" />
-
-            {/* Language, Currency, Theme - Switch/Toggle Buttons */}
-            <div className="flex items-center gap-2 justify-start">
-              {/* Language Switch (literowy kod) */}
-              {isMountedLang && (
-                <Link
-                  href={`/${SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length]}${basePath}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Keep dropdown open after language change by setting sessionStorage flag
-                    if (typeof window !== 'undefined') {
-                      sessionStorage.setItem('keepDropdownOpen', 'true');
-                    }
-                  }}
-                  className={cn(
-                    "h-9 px-3 rounded-full flex items-center justify-center text-xs font-bold uppercase transition-all border hover:shadow-md",
-                    "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
-                  )}
-                  title={t('changeLanguage')}
-                  aria-label={t('changeLanguage')}
-                >
-                  {locale}
-                </Link>
-              )}
-
-              {/* Currency Switch (kod waluty) */}
-              {isMountedCurr && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const currentIdx = SUPPORTED_CURRENCIES.findIndex(c => c.code === currency);
-                    const nextCurr = SUPPORTED_CURRENCIES[(currentIdx + 1) % SUPPORTED_CURRENCIES.length];
-                    switchCurrency(nextCurr.code);
-                  }}
-                  className={cn(
-                    "h-9 px-3 rounded-full flex items-center justify-center text-xs font-semibold transition-all border hover:shadow-md",
-                    "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
-                  )}
-                  title={t('changeCurrency')}
-                  aria-label={t('changeCurrency')}
-                >
-                  {currency}
-                </button>
-              )}
-
-              {/* Theme Switch (ikona) */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  cycleTheme();
-                }}
-                className={cn(
-                  "h-9 w-9 rounded-full flex items-center justify-center transition-all border hover:shadow-md",
-                  "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
-                )}
-                title={t('changeTheme')}
-                aria-label={t('changeTheme')}
-              >
-                {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
-            </div>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="space-y-4 mb-4">
+          <p className="text-sm font-semibold text-foreground">
             {t('login')}
           </p>
-          <Button asChild className="w-full" onClick={onNavigate}>
-            <Link href={`/${locale}/login`} className="flex items-center justify-center gap-2">
+          <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-full" onClick={onNavigate}>
+            <Link href={`/${locale}/login`} className="flex items-center justify-center gap-2 font-medium">
               <UserIcon className="h-4 w-4" />
               {t('login')}
             </Link>
           </Button>
         </div>
       )}
+
+      {/* Separator */}
+      <div className="my-3 h-px bg-border/40" />
+
+      {/* Language, Currency, Theme - Switch/Toggle Buttons */}
+      <div className="flex items-center gap-2 justify-start">
+        {/* Language Switch (literowy kod) */}
+        {isMountedLang && (
+          <Link
+            href={`/${SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length]}${basePath}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              // Keep dropdown open after language change by setting sessionStorage flag
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('keepDropdownOpen', 'true');
+              }
+            }}
+            className={cn(
+              "h-9 px-3 rounded-full flex items-center justify-center text-xs font-bold uppercase transition-all border hover:shadow-md",
+              "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
+            )}
+            title={t('changeLanguage')}
+            aria-label={t('changeLanguage')}
+          >
+            {locale}
+          </Link>
+        )}
+
+        {/* Currency Switch (kod waluty) */}
+        {isMountedCurr && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const currentIdx = SUPPORTED_CURRENCIES.findIndex(c => c.code === currency);
+              const nextCurr = SUPPORTED_CURRENCIES[(currentIdx + 1) % SUPPORTED_CURRENCIES.length];
+              switchCurrency(nextCurr.code);
+            }}
+            className={cn(
+              "h-9 px-3 rounded-full flex items-center justify-center text-xs font-semibold transition-all border hover:shadow-md",
+              "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
+            )}
+            title={t('changeCurrency')}
+            aria-label={t('changeCurrency')}
+          >
+            {currency}
+          </button>
+        )}
+
+        {/* Theme Switch (ikona) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            cycleTheme();
+          }}
+          className={cn(
+            "h-9 w-9 rounded-full flex items-center justify-center transition-all border hover:shadow-md",
+            "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
+          )}
+          title={t('changeTheme')}
+          aria-label={t('changeTheme')}
+        >
+          {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      </div>
     </div>
   );
 }

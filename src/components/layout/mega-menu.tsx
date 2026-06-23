@@ -589,7 +589,7 @@ export function MegaMenu() {
                             <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
                               <Image
                                 src={subcategory.image}
-                                alt={getName(subcategory.name)}
+                                alt={getLocalizedCategoryName(subcategory as any, locale as SupportedLanguage)}
                                 fill
                                 sizes="64px"
                                 className="object-cover transition-transform duration-300 group-hover:scale-110"

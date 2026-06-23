@@ -64,6 +64,7 @@ export function Footer() {
               <Link href="mailto:business@okazjeplus.pl" className="transition-colors hover:text-primary">{t('contact')}</Link>
               <Link href={`/${locale}/polityka-prywatnosci`} className="transition-colors hover:text-primary">{t('privacy')}</Link>
               <Link href={`/${locale}/regulamin`} className="transition-colors hover:text-primary">{t('terms')}</Link>
+              <Link href={`/${locale}/polityka-zwrotow`} className="transition-colors hover:text-primary">{t('returns')}</Link>
             </div>
           </div>
 

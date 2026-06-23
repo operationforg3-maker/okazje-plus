@@ -232,9 +232,23 @@ export const translateContent = ai.defineFlow(
       translations[input.sourceLocale] = input.text;
 
       if (targetLocalesToTranslate.length > 0) {
+        const TranslateModelOutputSchema = z.object({
+          translations: z.array(z.object({
+            locale: z.string(),
+            text: z.string(),
+          })),
+        });
+
         const prompt = `You are a professional e-commerce translator.
 Translate the following text from source language "${input.sourceLocale}" into these target languages: ${targetLocalesToTranslate.join(', ')}.
-Maintain formatting, HTML tags (like <p>, <ul>, <li>), readability, and tone. Do NOT translate product brand names or model codes unless they are descriptive.
+Maintain formatting, HTML tags, readability, and tone.
+
+Return JSON in this format:
+{
+  "translations": [
+    ${targetLocalesToTranslate.map(locale => `{"locale": "${locale}", "text": "translation in ${locale}"}`).join(',\n    ')}
+  ]
+}
 
 Text to translate:
 "${input.text}"`;
@@ -247,14 +261,18 @@ Text to translate:
             maxOutputTokens: 5000,
           },
           output: {
-            schema: TranslateContentOutputSchema,
+            schema: TranslateModelOutputSchema,
           }
         });
 
-        const output = response.output as { translations: Record<string, string> } | null;
-        if (output && output.translations) {
-          for (const locale of targetLocalesToTranslate) {
-            translations[locale] = (output.translations[locale] || '').trim();
+        console.log("[translateContent] raw text:", response.text);
+        const output = response.output;
+        console.log("[translateContent] output:", JSON.stringify(output, null, 2));
+        if (output && Array.isArray(output.translations)) {
+          for (const item of output.translations) {
+            if (item.locale && item.text) {
+              translations[item.locale] = item.text.trim();
+            }
           }
         }
       }

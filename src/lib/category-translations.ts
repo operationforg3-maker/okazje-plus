@@ -28,12 +28,16 @@ export function ensureCategoryTranslations(
   }
 
   const bestName =
+    clean(source?.pl?.name) ||
+    clean(fallbackName) ||
     ORDERED_FALLBACK_LOCALES.map((locale) => clean(source?.[locale]?.name)).find(Boolean) ||
-    clean(fallbackName);
+    '';
 
   const bestDescription =
+    clean(source?.pl?.description) ||
+    clean(fallbackDescription) ||
     ORDERED_FALLBACK_LOCALES.map((locale) => clean(source?.[locale]?.description)).find(Boolean) ||
-    clean(fallbackDescription);
+    '';
 
   const normalized = {} as Record<CategoryTranslationLocale, { name: string; description?: string }>;
 
@@ -41,10 +45,12 @@ export function ensureCategoryTranslations(
     const currentName = clean(source?.[locale]?.name);
     const currentDescription = clean(source?.[locale]?.description);
 
-    normalized[locale] = {
-      name: currentName || bestName,
-      ...(currentDescription || bestDescription ? { description: currentDescription || bestDescription } : {}),
-    };
+    if (currentName || currentDescription || locale === 'pl' || locale === 'en') {
+      normalized[locale] = {
+        name: currentName || bestName,
+        ...(currentDescription || bestDescription ? { description: currentDescription || bestDescription } : {}),
+      };
+    }
   }
 
   return normalized;

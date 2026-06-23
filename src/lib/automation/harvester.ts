@@ -1507,6 +1507,7 @@ export class SmartHarvester {
     const productRef = adminDb.collection('product_cores').doc();
     const productData: ProductCore = {
       id: productRef.id,
+      idLowercase: productRef.id.toLowerCase(),
       identityHash,
       title: this.toLocalizedText(title || 'Brak tytulu'),
       shortDescription: this.toLocalizedText(shortDescription || 'Brak opisu'),

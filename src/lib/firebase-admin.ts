@@ -99,7 +99,15 @@ if (!getApps().length) {
 
   if (!adminApp) {
     if (isAppHosting) {
-      throw new Error('Brak poprawnych poświadczeń Firebase Admin na App Hosting. Ustaw Secret FIREBASE_SERVICE_ACCOUNT_JSON (pełny JSON) lub popraw GOOGLE_APPLICATION_CREDENTIALS.');
+      try {
+        console.log('[firebase-admin] Running on App Hosting/Cloud Run. Initializing with Application Default Credentials (ADC)...');
+        adminApp = initializeApp({
+          credential: applicationDefault(),
+        });
+      } catch (e) {
+        console.error('[firebase-admin] Failed to initialize with ADC on App Hosting:', e);
+        throw new Error('Brak poprawnych poświadczeń Firebase Admin na App Hosting. Ustaw Secret FIREBASE_SERVICE_ACCOUNT_JSON (pełny JSON) lub popraw GOOGLE_APPLICATION_CREDENTIALS.');
+      }
     } else if (hasServiceAccountFile) {
       try {
         const raw = readFileSync(serviceAccountPath, 'utf8');

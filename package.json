@@ -142,6 +142,9 @@
     "tsx": "^4.20.6",
     "zod-validation-error": "^3.5.0"
   },
+  "engines": {
+    "node": "22"
+  },
   "optionalDependencies": {
     "fsevents": "2.3.3"
   }

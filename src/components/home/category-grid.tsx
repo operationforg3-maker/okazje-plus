@@ -11,14 +11,7 @@ import { ChevronRight, Grid3x3, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 
-// Helper to extract name from either string or LocalizedText object
-function getName(name: any): string {
-  if (typeof name === 'string') return name;
-  if (name && typeof name === 'object') {
-    return name.pl || name.en || name.de || 'Kategoria';
-  }
-  return 'Kategoria';
-}
+import { getLocalizedCategoryName, SupportedLanguage } from '@/lib/i18n-utils';
 
 interface CategoryGridProps {
   categories: Category[];
@@ -91,7 +84,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                         'text-lg font-bold transition-colors group-hover/title:text-primary',
                         style.accent
                       )}>
-                        {getName(category.name)}
+                        {getLocalizedCategoryName(category, locale as SupportedLanguage)}
                       </h3>
                       {totalProducts > 0 && (
                         <div className="text-xs text-muted-foreground mt-0.5">
@@ -115,7 +108,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                             )}
                             className="text-xs px-2 py-1 rounded-md bg-secondary/50 hover:bg-primary/10 hover:text-primary transition-colors"
                           >
-                            {sub.name}
+                            {getLocalizedCategoryName(sub, locale as SupportedLanguage)}
                           </Link>
                         ))}
                       </div>
@@ -163,7 +156,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="font-semibold text-sm group-hover/sub:text-primary transition-colors">
-                                {sub.name}
+                                {getLocalizedCategoryName(sub, locale as SupportedLanguage)}
                               </div>
                               {sub.subcategories && sub.subcategories.length > 0 && (
                                 <div className="text-xs text-muted-foreground">
@@ -189,7 +182,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                                   className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-secondary hover:text-primary transition-colors group/subsub"
                                 >
                                   <div className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover/subsub:bg-primary" />
-                                  <span className="flex-1">{subsub.name}</span>
+                                  <span className="flex-1">{getLocalizedCategoryName(subsub, locale as SupportedLanguage)}</span>
                                   <ChevronRight className="h-3 w-3 opacity-0 group-hover/subsub:opacity-100 transition-opacity" />
                                 </Link>
                               ))}

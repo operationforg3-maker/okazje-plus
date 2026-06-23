@@ -21,6 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { route: '/forum', changeFrequency: 'daily', priority: 0.7 },
     { route: '/regulamin', changeFrequency: 'weekly', priority: 0.3 },
     { route: '/polityka-prywatnosci', changeFrequency: 'weekly', priority: 0.3 },
+    { route: '/polityka-zwrotow', changeFrequency: 'weekly', priority: 0.3 },
   ];
 
   const staticUrls = SUPPORTED_LOCALES.flatMap((locale) => {

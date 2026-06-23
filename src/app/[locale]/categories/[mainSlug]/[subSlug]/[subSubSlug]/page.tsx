@@ -34,9 +34,9 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     };
   }
 
-  const mainName = getCategoryDisplayName(route.mainCategory.name) || route.mainSlug;
-  const subName = getCategoryDisplayName(route.subCategory?.name) || route.subSlug || '';
-  const subSubName = getCategoryDisplayName(route.subSubCategory?.name) || route.subSubSlug || '';
+  const mainName = getCategoryDisplayName(route.mainCategory.name, effectiveLocale) || route.mainSlug;
+  const subName = getCategoryDisplayName(route.subCategory?.name, effectiveLocale) || route.subSlug || '';
+  const subSubName = getCategoryDisplayName(route.subSubCategory?.name, effectiveLocale) || route.subSubSlug || '';
   return {
     title: `${subSubName} | ${subName} | ${mainName} | Okazje Plus`,
     description: `Przeglądaj produkty w kategorii ${subSubName}.`,
@@ -78,9 +78,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  const mainName = getCategoryDisplayName(route.mainCategory.name) || route.mainSlug;
-  const subName = getCategoryDisplayName(route.subCategory?.name) || route.subSlug || '';
-  const subSubName = getCategoryDisplayName(route.subSubCategory?.name) || route.subSubSlug || '';
+  const mainName = getCategoryDisplayName(route.mainCategory.name, effectiveLocale) || route.mainSlug;
+  const subName = getCategoryDisplayName(route.subCategory?.name, effectiveLocale) || route.subSlug || '';
+  const subSubName = getCategoryDisplayName(route.subSubCategory?.name, effectiveLocale) || route.subSubSlug || '';
   const breadcrumbJsonLd = generateCategoryBreadcrumbJsonLd({
     locale: effectiveLocale,
     mainSlug: route.mainSlug,

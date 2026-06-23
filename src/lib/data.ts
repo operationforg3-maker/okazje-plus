@@ -2101,35 +2101,64 @@ export async function getProductCore(productId: string): Promise<any | null> {
     if (typeof window === 'undefined') {
       const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
       const adminDb = getAdminFirestore();
-      const docSnap = await adminDb.collection('product_cores').doc(productId).get();
+      let docSnap = await adminDb.collection('product_cores').doc(productId).get();
+      let data = docSnap.exists ? docSnap.data() : null;
+      let finalId = docSnap.id;
       
       if (!docSnap.exists) {
+        const lowercasedId = productId.toLowerCase();
+        const querySnap = await adminDb.collection('product_cores')
+          .where('idLowercase', '==', lowercasedId)
+          .limit(1)
+          .get();
+        if (!querySnap.empty) {
+          const docRes = querySnap.docs[0];
+          data = docRes.data();
+          finalId = docRes.id;
+        }
+      }
+      
+      if (!data) {
         console.warn(`[getProductCore] Product core not found on server: ${productId}`);
         return null;
       }
       
-      const data = docSnap.data();
       return {
         ...data,
-        id: docSnap.id,
+        id: finalId,
         createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
         updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
       };
     }
     
+    let data: any = null;
+    let finalId = productId;
+    
     const docRef = doc(db, "product_cores", productId);
     const docSnap = await getDoc(docRef);
     
-    if (!docSnap.exists()) {
+    if (docSnap.exists()) {
+      data = docSnap.data();
+      finalId = docSnap.id;
+    } else {
+      const lowercasedId = productId.toLowerCase();
+      const q = query(collection(db, "product_cores"), where("idLowercase", "==", lowercasedId), limit(1));
+      const querySnap = await getDocs(q);
+      if (!querySnap.empty) {
+        const docRes = querySnap.docs[0];
+        data = docRes.data();
+        finalId = docRes.id;
+      }
+    }
+    
+    if (!data) {
       console.warn(`[getProductCore] Product core not found: ${productId}`);
       return null;
     }
     
-    // Spread data first, then force docSnap.id to prevent empty 'id' field in data from overwriting
-    const data = docSnap.data();
     const product = {
       ...data,
-      id: docSnap.id,
+      id: finalId,
       // Convert Firestore timestamps to ISO strings for client serialization
       createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
       updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
@@ -2161,7 +2190,7 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
       const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
       const adminDb = getAdminFirestore();
       const dealsSnap = await adminDb.collection('deals')
-        .where('productCoreId', '==', productId)
+        .where('productCoreId', '==', product.id)
         .where('status', '==', 'approved')
         .get();
       deals = dealsSnap.docs.map(d => {
@@ -2175,7 +2204,7 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
       });
     } else {
       const dealsRef = collection(db, "deals");
-      const q = query(dealsRef, where("productCoreId", "==", productId), where("status", "==", "approved"));
+      const q = query(dealsRef, where("productCoreId", "==", product.id), where("status", "==", "approved"));
       const dealsSnap = await getDocs(q);
       deals = dealsSnap.docs.map(d => {
         const data = d.data();

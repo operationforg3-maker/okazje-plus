@@ -2221,6 +2221,7 @@ export interface SocialPostLog {
  */
 export interface ProductCore {
   id: string;
+  idLowercase?: string;
   
   // Identity & Uniqueness
   identityHash: string; // SHA-256 of normalized title + primary image hash

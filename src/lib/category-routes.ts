@@ -12,11 +12,13 @@ export interface ResolvedCategoryRoute {
 const getSlug = (value: { slug?: string; id?: string } | null | undefined): string =>
   String(value?.slug || value?.id || '').trim();
 
-export const getCategoryDisplayName = (value: unknown): string => {
+export const getCategoryDisplayName = (value: unknown, lang?: string): string => {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object') {
     const localized = value as Record<string, unknown>;
-    const preferred = [localized.pl, localized.en, localized.de]
+    const localesToTry = lang ? [lang, 'pl', 'en', 'de', 'fr', 'es', 'uk'] : ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+    const preferred = localesToTry
+      .map((l) => localized[l])
       .find((entry) => typeof entry === 'string' && entry.trim().length > 0);
     if (typeof preferred === 'string') return preferred;
   }

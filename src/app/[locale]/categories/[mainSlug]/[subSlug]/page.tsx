@@ -29,8 +29,8 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
     };
   }
 
-  const mainName = getCategoryDisplayName(route.mainCategory.name) || route.mainSlug;
-  const subName = getCategoryDisplayName(route.subCategory?.name) || route.subSlug || '';
+  const mainName = getCategoryDisplayName(route.mainCategory.name, effectiveLocale) || route.mainSlug;
+  const subName = getCategoryDisplayName(route.subCategory?.name, effectiveLocale) || route.subSlug || '';
   return {
     title: `${subName} | ${mainName} | Okazje Plus`,
     description: `Przeglądaj produkty w podkategorii ${subName} w sekcji ${mainName}.`,
@@ -68,8 +68,8 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     notFound();
   }
 
-  const mainName = getCategoryDisplayName(route.mainCategory.name) || route.mainSlug;
-  const subName = getCategoryDisplayName(route.subCategory?.name) || route.subSlug || '';
+  const mainName = getCategoryDisplayName(route.mainCategory.name, effectiveLocale) || route.mainSlug;
+  const subName = getCategoryDisplayName(route.subCategory?.name, effectiveLocale) || route.subSlug || '';
   const breadcrumbJsonLd = generateCategoryBreadcrumbJsonLd({
     locale: effectiveLocale,
     mainSlug: route.mainSlug,

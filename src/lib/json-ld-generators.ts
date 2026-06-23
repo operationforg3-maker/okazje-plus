@@ -172,6 +172,117 @@ function buildShippingDetails(input: {
   };
 }
 
+function extractColor(productData: any): string | undefined {
+  if (Array.isArray(productData.variants)) {
+    const colorVar = productData.variants.find((v: any) => 
+      v?.name && /^(kolor|color|colour)$/i.test(v.name)
+    );
+    if (colorVar && Array.isArray(colorVar.values) && colorVar.values.length > 0) {
+      return colorVar.values[0];
+    }
+  }
+
+  const specs = productData.specs || {};
+  for (const [key, val] of Object.entries(specs)) {
+    if (/^(kolor|color|colour)$/i.test(key) && typeof val === 'string') {
+      return val.trim();
+    }
+  }
+  
+  if (Array.isArray(productData.attributes)) {
+    const attr = productData.attributes.find((a: any) => 
+      a?.name && /^(kolor|color|colour)$/i.test(a.name)
+    );
+    if (attr && typeof attr.value === 'string') {
+      return attr.value.trim();
+    }
+  }
+
+  const title = getLocalizedValue(productData.title, productData.name || '').toLowerCase();
+  const desc = getLocalizedValue(productData.description || productData.shortDescription, '').toLowerCase();
+  
+  const colorsPL = ['czarny', 'biały', 'czerwony', 'niebieski', 'zielony', 'żółty', 'szary', 'różowy', 'fioletowy', 'pomarańczowy', 'brązowy', 'złoty', 'srebrny', 'granatowy', 'beżowy', 'militarny', 'khaki'];
+  const colorsEN = ['black', 'white', 'red', 'blue', 'green', 'yellow', 'grey', 'gray', 'pink', 'purple', 'orange', 'brown', 'gold', 'silver', 'navy', 'beige', 'khaki'];
+
+  for (const col of colorsPL) {
+    if (title.includes(col) || desc.includes(col)) {
+      return col.charAt(0).toUpperCase() + col.slice(1);
+    }
+  }
+  for (const col of colorsEN) {
+    if (title.includes(col) || desc.includes(col)) {
+      return col.charAt(0).toUpperCase() + col.slice(1);
+    }
+  }
+
+  return undefined;
+}
+
+function extractSize(productData: any): string | undefined {
+  if (Array.isArray(productData.variants)) {
+    const sizeVar = productData.variants.find((v: any) => 
+      v?.name && /^(rozmiar|size)$/i.test(v.name)
+    );
+    if (sizeVar && Array.isArray(sizeVar.values) && sizeVar.values.length > 0) {
+      return sizeVar.values[0];
+    }
+  }
+
+  const specs = productData.specs || {};
+  for (const [key, val] of Object.entries(specs)) {
+    if (/^(rozmiar|size)$/i.test(key) && typeof val === 'string') {
+      return val.trim();
+    }
+  }
+  
+  if (Array.isArray(productData.attributes)) {
+    const attr = productData.attributes.find((a: any) => 
+      a?.name && /^(rozmiar|size)$/i.test(a.name)
+    );
+    if (attr && typeof attr.value === 'string') {
+      return attr.value.trim();
+    }
+  }
+
+  const title = getLocalizedValue(productData.title, productData.name || '');
+  const sizeMatch = title.match(/\b(S|M|L|XL|XXL|XXXL|3XL|4XL)\b/);
+  if (sizeMatch) {
+    return sizeMatch[1];
+  }
+
+  return undefined;
+}
+
+function extractGender(productData: any): 'male' | 'female' | 'unisex' {
+  const title = getLocalizedValue(productData.title, productData.name || '').toLowerCase();
+  const desc = getLocalizedValue(productData.description || productData.shortDescription, '').toLowerCase();
+
+  const maleKeywords = ['męsk', 'men', 'dla mężczyzn', 'for men', 'male'];
+  const femaleKeywords = ['damsk', 'women', 'dla kobiet', 'for women', 'female', 'dziewczęc'];
+
+  if (femaleKeywords.some(k => title.includes(k) || desc.includes(k))) {
+    return 'female';
+  }
+  if (maleKeywords.some(k => title.includes(k) || desc.includes(k))) {
+    return 'male';
+  }
+
+  return 'unisex';
+}
+
+function extractAgeGroup(productData: any): 'adult' | 'kids' | 'toddler' | 'infant' | 'newborn' {
+  const title = getLocalizedValue(productData.title, productData.name || '').toLowerCase();
+  const desc = getLocalizedValue(productData.description || productData.shortDescription, '').toLowerCase();
+
+  const kidsKeywords = ['dziecięc', 'dla dzieci', 'kids', 'children', 'baby', 'toddler', 'niemowl', 'chłopięc', 'dziewczęc', 'junior'];
+  
+  if (kidsKeywords.some(k => title.includes(k) || desc.includes(k))) {
+    return 'kids';
+  }
+
+  return 'adult';
+}
+
 /**
  * Generate Product schema.org JSON-LD for rich snippets
  * Supports both M6 (ProductCore + Deals) and legacy (Product) models
@@ -234,6 +345,12 @@ export function generateProductJsonLd(
     ? Math.max(...safeDeals.map(d => d.price?.amount || 0))
     : priceAmount;
   
+  // Extract color, size, gender, ageGroup
+  const color = extractColor(productData);
+  const size = extractSize(productData);
+  const gender = extractGender(productData);
+  const ageGroup = extractAgeGroup(productData);
+
   const baseSchema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -246,6 +363,13 @@ export function generateProductJsonLd(
     brand: {
       '@type': 'Brand',
       name: isM6 ? 'Various' : (product?.metadata?.brand || 'Various'),
+    },
+    ...(color && { color }),
+    ...(size && { size }),
+    audience: {
+      '@type': 'PeopleAudience',
+      suggestedGender: gender,
+      suggestedAgeGroup: ageGroup,
     },
     aggregateRating:
       ratingCount > 0
@@ -277,17 +401,20 @@ export function generateProductJsonLd(
           url: deal?.id ? `${DEAL_BASE_URL}/${deal.id}` : `${PRODUCT_BASE_URL}/${productId}`,
           price: deal.price?.amount || 0,
           priceCurrency: normalizeCurrency(deal.price?.currency || priceCurrency),
-            availability:
-              deal.stockStatus === 'in_stock' ||
-              deal.stockStatus === 'low_stock' ||
-              deal.isActive === true
-                ? 'https://schema.org/InStock'
-                : 'https://schema.org/OutOfStock',
+          availability:
+            deal.stockStatus === 'in_stock' ||
+            deal.stockStatus === 'low_stock' ||
+            deal.isActive === true
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
           shippingDetails: buildShippingDetails({
             shippingCost: deal?.shipping?.cost,
             freeShipping: (deal?.shipping?.cost || 0) <= 0,
             currency: deal?.price?.currency || priceCurrency,
           }),
+          hasMerchantReturnPolicy: buildMerchantReturnPolicy(
+            getReturnPolicyText((deal as any)?.returnPolicy) || getReturnPolicyText((deal as any)?.metadata?.returnPolicy) || '14 dni na zwrot'
+          ),
           seller: {
             '@type': 'Organization',
             name: deal.merchantName || deal.source || 'Unknown Seller',

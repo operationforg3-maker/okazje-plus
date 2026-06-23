@@ -262,6 +262,7 @@ export async function buildCategoriesFromSeeds(seeds: CategorySeed[]): Promise<B
   }
 
   await cacheDel('categories:all');
+  await cacheDel('categories:all:v2');
 
   return {
     mainCount,
