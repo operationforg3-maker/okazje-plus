@@ -306,15 +306,14 @@ export class AIRefiner {
       const sourceText = normalized[sourceLocale] || fallbackBase;
       const sourceComparable = normalizeComparable(sourceText);
 
-      // Traktujemy pola jako wymagające tłumaczenia nie tylko gdy są puste,
-      // ale również gdy są 1:1 skopiowane z języka źródłowego.
+      // Traktujemy pola jako wymagające tłumaczenia tylko gdy są puste.
+      // Zapobiega to automatycznemu tłumaczeniu oryginalnych nazw marek i produktów (np. "Anker", "iPhone"),
+      // które są takie same we wszystkich językach.
       const localesToTranslate = locales.filter((locale) => {
         if (locale === sourceLocale) return false;
 
         const current = String(normalized[locale] || '').trim();
-        if (!current) return true;
-
-        return normalizeComparable(current) === sourceComparable;
+        return !current;
       });
 
       if (localesToTranslate.length > 0) {

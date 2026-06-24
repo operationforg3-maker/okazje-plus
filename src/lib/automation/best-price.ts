@@ -14,6 +14,10 @@ export async function recalculateBestPrices(productIds: string[]): Promise<void>
     const chunk = uniqueIds.slice(i, i + CHUNK_SIZE);
     const batch = adminDb.batch();
 
+    const productSnapshots = await Promise.all(
+      chunk.map(id => adminDb.collection('product_cores').doc(id).get())
+    );
+
     const dealsSnapshots = await Promise.all(
       chunk.map(id =>
         adminDb.collection('deals')
@@ -25,6 +29,15 @@ export async function recalculateBestPrices(productIds: string[]): Promise<void>
     );
 
     chunk.forEach((productId, idx) => {
+      const productSnap = productSnapshots[idx];
+      const productData = productSnap.exists ? productSnap.data() : null;
+      const productStatus = productData?.status || 'pending_approval';
+
+      if (productStatus !== 'approved') {
+        console.log(`[recalculateBestPrices] Skipping pending/draft product: ${productId} (status: ${productStatus})`);
+        return;
+      }
+
       const dealsSnap = dealsSnapshots[idx];
       const productRef = adminDb.collection('product_cores').doc(productId);
 

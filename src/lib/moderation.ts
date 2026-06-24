@@ -97,7 +97,7 @@ export async function generateModerationScore(
     logger.info('Generating moderation score', { itemId, itemType });
 
     // Fetch the item
-    const collectionName = itemType === 'product' ? 'products' : 'deals';
+    const collectionName = itemType === 'product' ? 'product_cores' : 'deals';
     const itemSnap = await adminDb.collection(collectionName).doc(itemId).get();
 
     if (!itemSnap.exists) {
@@ -364,7 +364,7 @@ export async function moderateQueueItem(
     // Update the actual item (product or deal)
     const itemRef = doc(
       db,
-      queueItem.itemType === 'product' ? 'products' : 'deals',
+      queueItem.itemType === 'product' ? 'product_cores' : 'deals',
       queueItem.itemId
     );
 
@@ -436,7 +436,7 @@ export async function bulkModerateQueueItems(
           // Update the actual item
           const itemRef = doc(
             db,
-            queueItem.itemType === 'product' ? 'products' : 'deals',
+            queueItem.itemType === 'product' ? 'product_cores' : 'deals',
             queueItem.itemId
           );
 

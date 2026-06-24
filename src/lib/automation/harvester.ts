@@ -1742,6 +1742,10 @@ export class SmartHarvester {
       const chunk = uniqueIds.slice(i, i + CHUNK_SIZE);
       const batch = adminDb.batch();
 
+      const productSnapshots = await Promise.all(
+        chunk.map(id => adminDb.collection('product_cores').doc(id).get())
+      );
+
       const dealsSnapshots = await Promise.all(
         chunk.map(id =>
           adminDb.collection('deals')
@@ -1753,10 +1757,20 @@ export class SmartHarvester {
       );
 
       chunk.forEach((productId, idx) => {
+        const productSnap = productSnapshots[idx];
+        const productData = productSnap.exists ? productSnap.data() : null;
+        const productStatus = productData?.status || 'pending_approval';
+
+        if (productStatus !== 'approved') {
+          this.addLog('info', `Omijam przeliczanie bestPrice dla niezatwierdzonego produktu: ${productId} (status: ${productStatus})`);
+          return;
+        }
+
         const dealsSnap = dealsSnapshots[idx];
+        const productRef = adminDb.collection('product_cores').doc(productId);
+
         if (dealsSnap.empty) {
           this.addLog('warn', `Brak aktywnych ofert approved do przeliczenia bestPrice dla produktu: ${productId}`);
-          const productRef = adminDb.collection('product_cores').doc(productId);
           batch.update(productRef, {
             bestPrice: {
               amount: 0,
@@ -1784,7 +1798,6 @@ export class SmartHarvester {
         const bestTotalPrice = Number(bestDeal.price?.amount || 0) + Number(bestDeal.shipping?.cost || 0);
         const bestCurrency = (bestDeal.price?.currency as any) || 'PLN';
 
-        const productRef = adminDb.collection('product_cores').doc(productId);
         batch.update(productRef, {
           bestPrice: {
             amount: bestTotalPrice,
@@ -2225,9 +2238,7 @@ export class SmartHarvester {
                     throw new Error('Existing product missing valid id');
                   }
 
-                  const allowAutoApprove =
-                    existingProduct.status === 'approved' &&
-                    (source !== 'aliexpress' || sourceProduct.shippingVerified !== false);
+                  const allowAutoApprove = existingProduct.status === 'approved';
 
                   const { dealData, dealRef } = await this.prepareDeal(
                     existingProduct.id,
