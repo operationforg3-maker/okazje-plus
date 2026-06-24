@@ -1,0 +1,24 @@
+# Okazje Plus - Project Rules and Guidelines
+
+## Technology Stack
+- **Framework**: Next.js 15 (App Router, Internationalization)
+- **Database & Auth**: Cloud Firestore, Firebase Auth
+- **Search**: Typesense Search (Browse traffic, temperature time-decay ranking)
+- **AI Integrations**: Firebase Genkit AI, Vertex AI (Gemini 2.0 Flash)
+- **Infrastructure**: Firebase App Hosting (backend), Cloud Functions, Google Cloud Secret Manager
+
+## Key Developer Conventions
+- **Data Mutations**: Place all data layer operations inside `src/lib/data/` (never directly in UI components).
+- **Public Content Status**: Approved public deals/products must have `status: "approved"`.
+- **UI Localization**: Polish language files are in `messages/pl/*.json`. Use next-intl namespaces.
+- **Rich Results**: All product pages must render valid JSON-LD metadata schema.org (Product, AggregateOffer, AggregateRating, BreadcrumbList, FAQPage). Verify using schema tools.
+
+## Production Deployment Method
+The production build and deployment pipeline is migrated from GitHub Actions to **Google Cloud Build** (using Secret Manager for build credentials).
+
+- **CI/CD Configuration**: `cloudbuild.yaml` in repository root.
+- **Trigger**: Automatic on pushes to `main` branch via Google Cloud Build Trigger.
+- **Manual Deployment**: To manually trigger the build and deploy pipeline from local workspace, run:
+  ```bash
+  gcloud builds submit --config=cloudbuild.yaml --project=okazje-plus --substitutions=COMMIT_SHA=$(git rev-parse HEAD)
+  ```

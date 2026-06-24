@@ -15,3 +15,4 @@
 
 node_modules
 #!include:.gitignore
+!src/lib/test-service.ts

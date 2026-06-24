@@ -839,18 +839,24 @@ npm run audit:aliexpress-import
 # lub: POST /api/admin/tests/run (z tokenem admina)
 ```
 
-### GitHub Actions deploy produkcyjny
+### Google Cloud Build deploy produkcyjny
 
-- Workflow: `.github/workflows/deploy-production.yml`
-- Trigger: `push` do `main` lub ręczny `workflow_dispatch`
-- Quality gate przed deployem:
-  1. `npm ci`
-  2. `npm run verify:autopilot-path`
-  3. `npm run typecheck`
-  4. `npm run lint`
-  5. `npm run build`
-  6. `okazje-plus/npm run build`
-- Następnie workflow robi deploy Hosting + Functions + Firestore rules/indexes.
+- Konfiguracja: `cloudbuild.yaml`
+- Trigger: Połączenie repozytorium GitHub z GCP Cloud Build i uruchomienie triggera przy pushu do gałęzi `main`.
+- Kroki potoku budowania i wdrażania:
+  1. `install-deps`: `npm ci` (instalacja zależności aplikacji frontendowej)
+  2. `verify-guardrails`: `npm run verify:future-content` (kontrola dat przyszłych i zawartości)
+  3. `typecheck`: `npm run typecheck` (walidacja typów TypeScript)
+  4. `lint`: `npm run lint` (sprawdzenie lintera)
+  5. `build-next`: `npm run build` (kompilacja aplikacji Next.js do wdrożenia na App Hosting)
+  6. `install-deps-functions`: `npm ci` w folderze `okazje-plus` (zależności Cloud Functions)
+  7. `build-functions`: `npm run build` w folderze `okazje-plus` (kompilacja Cloud Functions)
+  8. `deploy-all`: Wdrażanie wszystkich komponentów za pomocą Firebase CLI:
+     - Generowanie lokalnego pliku `.env.okazje-plus` dla funkcji z sekretów Google Secret Manager (`CRON_SECRET`, `CONVERTISER_API_TOKEN`).
+     - Wdrażanie Cloud Functions (`firebase deploy --only functions`)
+     - Wdrażanie aplikacji Next.js na App Hosting poprzez utworzenie nowego rolloutu (`firebase apphosting:rollouts:create`) powiązanego z COMMIT_SHA.
+     - Wdrażanie reguł i indeksów Firestore (`firebase deploy --only firestore:rules,firestore:indexes`)
+
 
 ---
 
