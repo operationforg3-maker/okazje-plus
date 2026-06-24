@@ -159,6 +159,22 @@ function stripHtmlTags(value: unknown): string {
     .trim();
 }
 
+function resolveLocalizedString(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const candidate = obj.pl || obj.en || obj.de || obj.fr || obj.es || obj.uk;
+    if (typeof candidate === 'string') return candidate;
+    
+    // Fallback to any string property
+    for (const val of Object.values(obj)) {
+      if (typeof val === 'string') return val;
+    }
+  }
+  return '';
+}
+
 function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestion | null {
   const id = typeof document?.id === 'string' ? document.id : '';
   if (!id) return null;
@@ -170,8 +186,11 @@ function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestio
     ? document?.description ?? document?.title
     : document?.description ?? document?.name;
 
-  const label = stripHtmlTags(rawLabel);
-  const subLabel = stripHtmlTags(rawSubLabel);
+  const resolvedLabel = resolveLocalizedString(rawLabel);
+  const resolvedSubLabel = resolveLocalizedString(rawSubLabel);
+
+  const label = stripHtmlTags(resolvedLabel);
+  const subLabel = stripHtmlTags(resolvedSubLabel);
 
   if (!label) return null;
 
@@ -191,31 +210,61 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
     const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
     const queryVector = await generateEmbeddings(q);
 
-    // Run parallel vector search on product_cores and deals
-    const [productsSnap, dealsSnap] = await Promise.all([
-      adminDb.collection('product_cores')
-        .where('status', '==', 'approved')
-        .findNearest({
-          vectorField: 'embedding',
-          queryVector: FieldValue.vector(queryVector),
-          distanceMeasure: 'COSINE',
-          limit: safeLimit,
-        }).get(),
-      adminDb.collection('deals')
-        .where('status', '==', 'approved')
-        .findNearest({
-          vectorField: 'embedding',
-          queryVector: FieldValue.vector(queryVector),
-          distanceMeasure: 'COSINE',
-          limit: safeLimit,
-        }).get()
-    ]);
+    // Run parallel vector search on product_cores and deals with fallback for composite index
+    let productsSnap;
+    let dealsSnap;
+
+    try {
+      [productsSnap, dealsSnap] = await Promise.all([
+        adminDb.collection('product_cores')
+          .where('status', '==', 'approved')
+          .findNearest({
+            vectorField: 'embedding',
+            queryVector: FieldValue.vector(queryVector),
+            distanceMeasure: 'COSINE',
+            limit: safeLimit,
+          }).get(),
+        adminDb.collection('deals')
+          .where('status', '==', 'approved')
+          .findNearest({
+            vectorField: 'embedding',
+            queryVector: FieldValue.vector(queryVector),
+            distanceMeasure: 'COSINE',
+            limit: safeLimit,
+          }).get()
+      ]);
+    } catch (err: any) {
+      const errStr = String(err);
+      if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
+        console.warn('[Autocomplete] Composite index missing. Falling back to status-less query...');
+        [productsSnap, dealsSnap] = await Promise.all([
+          adminDb.collection('product_cores')
+            .findNearest({
+              vectorField: 'embedding',
+              queryVector: FieldValue.vector(queryVector),
+              distanceMeasure: 'COSINE',
+              limit: safeLimit * 2,
+            }).get(),
+          adminDb.collection('deals')
+            .findNearest({
+              vectorField: 'embedding',
+              queryVector: FieldValue.vector(queryVector),
+              distanceMeasure: 'COSINE',
+              limit: safeLimit * 2,
+            }).get()
+        ]);
+      } else {
+        throw err;
+      }
+    }
 
     const out: Suggestion[] = [];
 
     // Normalize products suggestions
     productsSnap.docs.forEach((docSnap: any) => {
       const doc = docSnap.data();
+      // Post-filter by status if index fallback bypassed status query
+      if (doc.status !== 'approved') return;
       const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'product');
       if (suggestion) out.push(suggestion);
     });
@@ -223,6 +272,8 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
     // Normalize deals suggestions
     dealsSnap.docs.forEach((docSnap: any) => {
       const doc = docSnap.data();
+      // Post-filter by status if index fallback bypassed status query
+      if (doc.status !== 'approved') return;
       const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'deal');
       if (suggestion) out.push(suggestion);
     });
