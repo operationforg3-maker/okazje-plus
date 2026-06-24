@@ -351,6 +351,34 @@ export class AIRefiner {
       );
     }
 
+    if (Object.keys(specsSeed).length < 2) {
+      try {
+        const titleText = typeof product.title === 'object'
+          ? (product.title.pl || product.title.en || product.title.de || '')
+          : (product.title || '');
+        const descriptionText = typeof product.fullDescription === 'object'
+          ? (product.fullDescription.pl || product.fullDescription.en || product.fullDescription.de || '')
+          : (product.fullDescription || '');
+
+        if (titleText.length > 5 || descriptionText.length > 10) {
+          const { extractSpecsFromText } = await import('@/ai/flows/enrichment');
+          const extractionResult = await extractSpecsFromText({
+            title: titleText,
+            description: descriptionText,
+            category: categoryContext.label,
+          });
+          if (extractionResult?.specs && Object.keys(extractionResult.specs).length > 0) {
+            specsSeed = {
+              ...specsSeed,
+              ...extractionResult.specs,
+            };
+          }
+        }
+      } catch (err) {
+        this.addLog('warn', `Spec extraction from text failed`, err);
+      }
+    }
+
     if (Object.keys(specsSeed).length === 0) {
       const titleText = typeof product.title === 'object'
         ? (product.title.pl || product.title.en || product.title.de || '')
@@ -361,7 +389,10 @@ export class AIRefiner {
       const fallbackText = `${titleText} ${descriptionText}`.trim();
       const extracted = fallbackText ? extractDimensionsFromTitle(fallbackText) : {};
       if (Object.keys(extracted).length > 0) {
-        specsSeed = extracted;
+        specsSeed = {
+          ...specsSeed,
+          ...extracted
+        };
       }
     }
 

@@ -582,3 +582,62 @@ OUTPUT STRICTLY AS JSON:
     }
   }
 );
+
+// ===== Flow: Extract Specs from Text =====
+export const extractSpecsFromText = ai.defineFlow(
+  {
+    name: "extractSpecsFromText",
+    inputSchema: z.object({
+      title: z.string(),
+      description: z.string(),
+      category: z.string().optional(),
+    }),
+    outputSchema: z.object({
+      specs: z.record(z.string()),
+    }),
+  },
+  async (input) => {
+    try {
+      const prompt = `Analyze the e-commerce product details below and extract all technical specifications, attributes, features, and catalog details (e.g., RAM, Storage, Screen size, Resolution, Color, Material, Battery capacity, Weight, Compatibility, Dimensions) into a list of name/value pairs.
+If a parameter is not explicitly mentioned or cannot be inferred with certainty, do not include it.
+
+Product Title: "${input.title}"
+Category: "${input.category || 'General'}"
+Description:
+"${input.description}"
+
+Return JSON object: { "specs": [ { "name": "RAM", "value": "16GB" } ] }`;
+
+      const response = await ai.generate({
+        model: 'vertexai/gemini-2.5-flash',
+        prompt,
+        config: { temperature: 0.1, maxOutputTokens: 2000 },
+        output: {
+          schema: z.object({
+            specs: z.array(
+              z.object({
+                name: z.string(),
+                value: z.string(),
+              })
+            ),
+          }),
+        },
+      });
+
+      const parsed = response.output;
+      const specsRecord: Record<string, string> = {};
+      if (parsed && Array.isArray(parsed.specs)) {
+        for (const item of parsed.specs) {
+          if (item.name && item.value) {
+            specsRecord[item.name] = item.value;
+          }
+        }
+      }
+
+      return { specs: specsRecord };
+    } catch (error) {
+      logger.error("extractSpecsFromText flow failed", { error, input });
+      return { specs: {} };
+    }
+  }
+);
