@@ -122,7 +122,8 @@ export class SmartHarvester {
     client: any,
     product: any,
     productId: string,
-    fallbackCurrency: string = 'PLN'
+    fallbackCurrency: string = 'PLN',
+    skipLogisticsApi: boolean = false
   ): Promise<{
     amount: number;
     currency: string;
@@ -151,7 +152,7 @@ export class SmartHarvester {
       };
     }
 
-    if (productId) {
+    if (productId && !skipLogisticsApi) {
       try {
         const logistics = await client.getLogisticsInfo(productId, 'PL', 1);
         if (logistics) {
@@ -1150,7 +1151,7 @@ export class SmartHarvester {
     isTreeMode: boolean;
     autoBrowse: boolean;
   }): number {
-    if (params.source === 'convertiser' && params.autoBrowse) {
+    if ((params.source === 'convertiser' || params.source === 'aliexpress') && params.autoBrowse) {
       return 600_000;
     }
 
@@ -2935,7 +2936,8 @@ export class SmartHarvester {
           client,
           p,
           String(p.item_id || p.product_id || ''),
-          rawCurrency
+          rawCurrency,
+          detailedProducts.length > 5
         );
         let rawShipping = shippingResolved.amount;
         let shippingCurrency = shippingResolved.currency;
@@ -3499,7 +3501,8 @@ export class SmartHarvester {
           client,
           p,
           productId,
-          String(p?.target_sale_price_currency || 'PLN').toUpperCase()
+          String(p?.target_sale_price_currency || 'PLN').toUpperCase(),
+          true // Always skip logistics API in auto-browse bulk import
         );
 
         return {
