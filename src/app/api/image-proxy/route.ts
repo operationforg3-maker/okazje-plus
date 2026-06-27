@@ -6,6 +6,10 @@ const ALLOWED_HOSTS = new Set([
   'images.unsplash.com',
   'picsum.photos',
   'ae-pic-a1.aliexpress-media.com',
+  'ae-pic-a2.aliexpress-media.com',
+  'ae-pic-a3.aliexpress-media.com',
+  'ae01.alicdn.com',
+  'ae02.alicdn.com',
 ]);
 
 export async function GET(request: NextRequest) {
