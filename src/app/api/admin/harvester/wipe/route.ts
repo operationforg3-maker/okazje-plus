@@ -5,7 +5,8 @@ import { adminDb } from '@/lib/firebase-admin';
 /**
  * POST /api/admin/harvester/wipe
  * 
- * Wipes entire database (deals, product_cores, identity_matches, harvester_jobs)
+ * Wipes entire database (deals, product_cores, identity_matches, harvester_jobs,
+ * refiner_jobs, import_jobs)
  * DANGEROUS - requires double confirmation
  */
 export async function POST() {
@@ -13,7 +14,14 @@ export async function POST() {
     await requireAdmin();
 
     // Wipe all collections in batches
-    const collections = ['deals', 'product_cores', 'identity_matches', 'harvester_jobs'];
+    const collections = [
+      'deals',
+      'product_cores',
+      'identity_matches',
+      'harvester_jobs',
+      'refiner_jobs',   // previously orphaned on every wipe
+      'import_jobs',    // previously orphaned on every wipe
+    ];
     const results: Record<string, number> = {};
     
     for (const collectionName of collections) {

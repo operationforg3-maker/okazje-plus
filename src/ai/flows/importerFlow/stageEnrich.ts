@@ -180,7 +180,7 @@ export async function refineProductsBatch(
         5. Generate SEO metadata optimized for search engine and generative AI overview optimization (GEO/AIO).
       `;
 
-      // Enable Google Search Grounding for live technical spec lookup
+      // Google Search grounding wyłączone — kosztuje $35/1000 zapytań.
       const { output: result } = await ai.generate({
         model: 'vertexai/gemini-2.5-flash',
         prompt: prompt,
@@ -188,7 +188,7 @@ export async function refineProductsBatch(
         config: { 
           temperature: 0.3,
           maxOutputTokens: 8192,
-          googleSearchRetrieval: {},
+          // googleSearchRetrieval: {}, // DISABLED - $35/1000 queries
         }
       });
 

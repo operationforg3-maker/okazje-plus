@@ -603,16 +603,14 @@ export class AIRefiner {
         product.metadata
       );
 
-      // Generate SEO metadata
-      refined.seoTitle = await this.generateSeoTitle(
+      // Jeden call LLM zamiast dwóch (oszczędność ~50% tokenów per produkt)
+      const seoMeta = await this.generateSeoMetadata(
         refined.title || product.title,
+        refined.specs || product.specs || {},
         categoryContext.label
       );
-      refined.seoDescription = await this.generateSeoDescription(
-        refined.title || product.title,
-        refined.specs || product.specs,
-        categoryContext.label
-      );
+      refined.seoTitle = seoMeta.seoTitle;
+      refined.seoDescription = seoMeta.seoDescription;
 
       // M6 Update: Generate richly formatted HTML descriptions with structure
       // Include specs table, features list, and proper formatting
@@ -979,51 +977,32 @@ export class AIRefiner {
   }
 
   /**
-   * Generate SEO-optimized title using Vertex AI
+   * Generate SEO title + description in a SINGLE LLM call (was 2 separate calls before — 2x cost).
    */
-  private async generateSeoTitle(title: LocalizedText, categoryLabel: string): Promise<string> {
-    try {
-      const { generateProductDescription } = await import('@/ai/flows/enrichment');
-      const titleText = title.pl || title.en || '';
-      
-      const result = await generateProductDescription({
-        productTitle: titleText,
-        productCategory: categoryLabel,
-        targetLocale: 'pl',
-      });
-      
-      return result.seoTitle;
-    } catch (error) {
-      console.error('[Refiner] SEO title generation failed:', error);
-      const titleText = title.pl || title.en || 'Produkt';
-      return `${titleText} - ${categoryLabel} | Porownanie cen`;
-    }
-  }
-
-  /**
-   * Generate SEO meta description using Vertex AI
-   */
-  private async generateSeoDescription(
+  private async generateSeoMetadata(
     title: LocalizedText,
     specs: Record<string, string>,
     categoryLabel: string
-  ): Promise<string> {
+  ): Promise<{ seoTitle: string; seoDescription: string }> {
+    const titleText = title.pl || title.en || 'Produkt';
+    const fallback = {
+      seoTitle: `${titleText} - ${categoryLabel} | Porównanie cen`,
+      seoDescription: `Porównaj ceny produktu ${titleText} w kategorii ${categoryLabel}. ${Object.keys(specs).join(', ')}. Najlepsze oferty dostępne teraz.`,
+    };
     try {
       const { generateProductDescription } = await import('@/ai/flows/enrichment');
-      const titleText = title.pl || title.en || '';
-      
       const result = await generateProductDescription({
         productTitle: titleText,
         productCategory: categoryLabel,
         targetLocale: 'pl',
       });
-      
-      return result.seoDescription;
+      return {
+        seoTitle: result.seoTitle,
+        seoDescription: result.seoDescription,
+      };
     } catch (error) {
-      console.error('[Refiner] SEO description generation failed:', error);
-      const titleText = title.pl || title.en || 'Produkt';
-      const specsText = Object.keys(specs).join(', ');
-      return `Porownaj ceny produktu ${titleText} w kategorii ${categoryLabel}. ${specsText}. Najlepsze oferty dostepne teraz.`;
+      console.error('[Refiner] SEO metadata generation failed:', error);
+      return fallback;
     }
   }
 

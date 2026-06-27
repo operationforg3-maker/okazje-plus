@@ -533,7 +533,8 @@ OUTPUT STRICTLY AS JSON:
   "specsAugmented": { "RAM": "(web) 8GB", "Battery": "5000mAh" }
 }`;
 
-      // Używamy Google Search grounding — Gemini może sprawdzać specs/ceny w czasie rzeczywistym
+      // Google Search grounding wyłączone — kosztuje $35/1000 zapytań (~$3024/mies. przy obecnym wolumenie).
+      // Model generuje content z własnej wiedzy, co jest wystarczające dla automatycznych importów.
       let response;
       try {
         response = await ai.generate({
@@ -542,15 +543,15 @@ OUTPUT STRICTLY AS JSON:
           config: {
             temperature: 0.3,
             maxOutputTokens: 8192,
-            googleSearchRetrieval: {},
+            // googleSearchRetrieval: {}, // DISABLED - $35/1000 queries
           },
           output: {
             schema: MarketingContentOutputSchema,
           }
         });
-      } catch (groundingError) {
-        // Fallback bez grounding (np. rate limit lub brak uprawnień do Google Search)
-        logger.warn("Google Search grounding unavailable, falling back to knowledge-only generation", { error: groundingError });
+      } catch (generationError) {
+        // Fallback z wyższą temperaturą przy błędzie
+        logger.warn("Generation failed, retrying with higher temperature", { error: generationError });
         response = await ai.generate({
           model: 'vertexai/gemini-2.5-flash',
           prompt,
