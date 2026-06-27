@@ -34,6 +34,12 @@ function normalizeLimit(limitInput: unknown): number {
 function listingProjection(product: any) {
   const tags = Array.isArray(product?.metadata?.tags) ? product.metadata.tags.slice(0, 8) : [];
 
+  // ProductCore nie ma pola `image` — resolve z images[] lub imageUrl
+  const primaryImage: string | undefined =
+    (Array.isArray(product.images) && product.images[0]) ||
+    product.imageUrl ||
+    undefined;
+
   return {
     id: product.id,
     slug: product.slug,
@@ -43,7 +49,7 @@ function listingProjection(product: any) {
     description: product.description,
     bestPrice: product.bestPrice,
     rating: product.rating,
-    image: product.image,
+    image: primaryImage,                                              // ← fix: wcześniej zawsze undefined
     images: Array.isArray(product.images) ? product.images.slice(0, 4) : [],
     gallery: Array.isArray(product.gallery) ? product.gallery.slice(0, 4) : [],
     affiliateUrl: product.affiliateUrl,
@@ -59,6 +65,7 @@ function listingProjection(product: any) {
     },
   };
 }
+
 
 function normalizeSearchText(value: unknown): string {
   if (!value) return '';

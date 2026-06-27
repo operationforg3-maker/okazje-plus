@@ -289,11 +289,13 @@ export async function getDealByIdTypesense(dealId: string): Promise<Deal | null>
   if (!dealId) return null;
 
   try {
-    const snap = await getDoc(doc(db, 'deals', dealId));
-    if (!snap.exists()) return null;
+    // Admin SDK — działa server-side bez auth (client SDK rzucał błąd SSR → null → 404)
+    const { adminDb } = await import('@/lib/firebase-admin');
+    const snap = await adminDb.collection('deals').doc(dealId).get();
+    if (!snap.exists) return null;
     return { id: snap.id, ...snap.data() } as Deal;
   } catch (error) {
-    console.warn('Firestore fallback for getDealByIdTypesense failed:', error);
+    console.warn('getDealByIdTypesense failed:', error);
     return null;
   }
 }
