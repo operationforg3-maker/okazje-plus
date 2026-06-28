@@ -377,6 +377,33 @@ function AdminPage() {
 
       {/* System Status & Categories */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card className="border-l-4 border-l-violet-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Prototypy UX</CardTitle>
+            <Eye className="h-4 w-4 text-violet-500" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">Szybki dostęp do wszystkich ukrytych wariantów podglądowych.</p>
+            <div className="grid gap-2">
+              <Link href={adminHref('/preview')} className="rounded-xl border border-muted px-4 py-3 text-sm text-slate-700 transition hover:border-primary hover:bg-primary/5">
+                Podgląd główny /preview
+              </Link>
+              <Link href={adminHref('/preview/design-1')} className="rounded-xl border border-muted px-4 py-3 text-sm text-slate-700 transition hover:border-primary hover:bg-primary/5">
+                Design 1 — AI Concierge
+              </Link>
+              <Link href={adminHref('/preview/design-2')} className="rounded-xl border border-muted px-4 py-3 text-sm text-slate-700 transition hover:border-primary hover:bg-primary/5">
+                Design 2 — Editorial Magazine
+              </Link>
+              <Link href={adminHref('/preview/design-3')} className="rounded-xl border border-muted px-4 py-3 text-sm text-slate-700 transition hover:border-primary hover:bg-primary/5">
+                Design 3 — Speedboard
+              </Link>
+              <Link href={adminHref('/preview/design-4')} className="rounded-xl border border-muted px-4 py-3 text-sm text-slate-700 transition hover:border-primary hover:bg-primary/5">
+                Design 4 — Conversational Funnel
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Categories Card */}
         <Card className="border-l-4 border-l-cyan-500">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
