@@ -332,26 +332,46 @@ export default function ProductDetailM6Client({
           </div>
 
           {/* Best Price Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-                {t('productDetail.priceComparison.bestPriceBadge')}
+          <Card className="border-2 border-green-500 shadow-md">
+            <CardHeader className="bg-green-50/50 pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-green-700">
+                  <TrendingUp className="w-5 h-5" />
+                  {t('productDetail.priceComparison.bestPriceBadge')}
+                </span>
+                {bestDeal?.source && (
+                  <Badge variant="outline" className="capitalize border-green-200 bg-white text-green-700">
+                    Sklep: {bestDeal.source}
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-green-600 mb-4">
-                {formattedPriceWithCurrency}
+            <CardContent className="pt-4 space-y-4">
+              <div>
+                <div className="text-4xl font-extrabold text-green-600 tracking-tight">
+                  {formattedPriceWithCurrency}
+                </div>
+                {bestDeal && (
+                  <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-0.5">
+                    <p>Cena produktu: {formatPrice(CurrencyManager.convertToPLN(bestDeal.price?.amount || 0, bestDeal.price?.currency || 'PLN'))}</p>
+                    <p>Koszt dostawy: {bestDeal.shipping?.cost > 0 
+                      ? formatPrice(CurrencyManager.convertToPLN(bestDeal.shipping.cost, bestDeal.price?.currency || 'PLN'))
+                      : 'DARMOWA'}</p>
+                    {bestDeal.shipping?.timeDays && (
+                      <p>Szacowany czas dostawy: {t('productDetail.priceComparison.deliveryDays', { count: bestDeal.shipping.timeDays })}</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               {isM6 && !bestDeal && (
-                <div className="mb-4 p-3 bg-muted/40 rounded-lg text-sm border border-muted text-muted-foreground">
+                <div className="p-3 bg-muted/40 rounded-lg text-sm border border-muted text-muted-foreground">
                   {t('productDetail.priceComparison.empty')}
                 </div>
               )}
               
               {marketPriceInfo && (
-                <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm border border-muted">
+                <div className="p-3 bg-muted/50 rounded-lg text-sm border border-muted">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-muted-foreground">{t('productDetail.priceComparison.marketPrice.label')}:</span>
                     <span className="font-medium line-through text-muted-foreground">{marketPriceInfo.formatted}</span>
@@ -368,17 +388,28 @@ export default function ProductDetailM6Client({
                 </div>
               )}
 
+              {outboundUrl && (
+                <Button asChild size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base shadow-sm">
+                  <a href={outboundUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                    <ShoppingCart className="w-5 h-5" />
+                    {t('productDetail.simple.buyNow')}
+                    <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
+                  </a>
+                </Button>
+              )}
+
               {isM6 && deals.length > 0 && (
-                <div className="space-y-2 text-sm text-gray-600">
+                <div className="pt-2 border-t space-y-2 text-xs text-gray-500">
                   <p className="flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    {t('productDetail.m6.dealsAvailable', { count: deals.length })}
+                    <Package className="w-3.5 h-3.5" />
+                    {t('productDetail.m6.dealsAvailable', { count: deals.length })} (Najtańsza oferta wyróżniona powyżej)
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p>
                     {t('productDetail.m6.compareHint')}
                   </p>
                 </div>
               )}
+
 
               {bestDeal?.couponCode && (
                 <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
@@ -476,15 +507,6 @@ export default function ProductDetailM6Client({
 
           {/* Actions */}
           <div className="flex gap-3">
-            {/* Kup teraz */}
-            {outboundUrl && (
-              <Button asChild size="lg" className="flex-1">
-                <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  {t('productDetail.simple.buyNow')}
-                </a>
-              </Button>
-            )}
             {/* Do koszyka */}
             <Button
               size="lg"
