@@ -73,7 +73,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       deals.map((deal) => ({
         url: `${baseUrl}/${locale}/deals/${deal.id}`,
         lastModified: deal.updatedAt ? new Date(deal.updatedAt) : new Date(),
-        changeFrequency: 'daily' as const,
+        changeFrequency: 'hourly' as const,                             // ← zmiana z 'daily'
         priority: 0.8,
       }))
     );
@@ -96,7 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       eligibleProducts.map((product) => ({
         url: `${baseUrl}/${locale}/products/${product.id}`,
         lastModified: new Date(),
-        changeFrequency: 'weekly' as const,
+        changeFrequency: 'hourly' as const,                             // ← zmiana z 'weekly'
         priority: 0.7,
       }))
     );
@@ -134,7 +134,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       withVideo.map((product: any) => ({
         url: `${baseUrl}/${locale}/watch/products/${product.id}`,
         lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
-        changeFrequency: 'weekly' as const,
+        changeFrequency: 'hourly' as const,                             // ← zmiana z 'weekly'
         priority: 0.65,
       }))
     );
