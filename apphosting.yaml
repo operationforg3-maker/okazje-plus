@@ -48,11 +48,6 @@ env:
       - BUILD
       - RUNTIME
   
-  # Firebase Admin SDK configuration (server-side, Runtime)
-  - variable: FIREBASE_WEBAPP_CONFIG
-    value: '{"apiKey":"placeholder-key","authDomain":"placeholder.firebaseapp.com","projectId":"placeholder-project","storageBucket":"placeholder.appspot.com","messagingSenderId":"000000000000","appId":"1:000000000000:web:placeholder"}'
-    availability:
-      - RUNTIME
 
   # Firebase Admin Service Account (JSON) provided via Secret Manager
   # Code reads this from env var FIREBASE_SERVICE_ACCOUNT_JSON and initializes admin SDK with cert()
