@@ -282,39 +282,91 @@ async function searchProductsFirestoreFallback(
 
   try {
     if (q !== '*') {
-      const { generateEmbeddings } = await import('@/ai/embeddings');
       const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
-      const queryVector = await generateEmbeddings(q);
-
       const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
-      const queryBase = adminDb.collection('product_cores')
-        .where('status', '==', targetStatus);
+      
+      let docs: any[] = [];
+      let vectorSearchSuccess = false;
 
-      let snap;
       try {
-        snap = await queryBase.findNearest({
-          vectorField: 'embedding',
-          queryVector: FieldValue.vector(queryVector),
-          distanceMeasure: 'COSINE',
-          limit: safeLimit * 3,
-        }).get();
-      } catch (err: any) {
-        const errStr = String(err);
-        if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
-          console.warn('[Search Fallback] Composite vector index missing or building. Falling back to status-less query...');
-          snap = await adminDb.collection('product_cores').findNearest({
+        const { generateEmbeddings } = await import('@/ai/embeddings');
+        const queryVector = await generateEmbeddings(q);
+
+        const queryBase = adminDb.collection('product_cores')
+          .where('status', '==', targetStatus);
+
+        let snap;
+        try {
+          snap = await queryBase.findNearest({
             vectorField: 'embedding',
             queryVector: FieldValue.vector(queryVector),
             distanceMeasure: 'COSINE',
             limit: safeLimit * 3,
           }).get();
-        } else {
-          throw err;
+        } catch (err: any) {
+          const errStr = String(err);
+          if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
+            console.warn('[Search Fallback] Composite vector index missing or building. Falling back to status-less query...');
+            snap = await adminDb.collection('product_cores').findNearest({
+              vectorField: 'embedding',
+              queryVector: FieldValue.vector(queryVector),
+              distanceMeasure: 'COSINE',
+              limit: safeLimit * 3,
+            }).get();
+          } else {
+            throw err;
+          }
         }
+
+        docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+        docs = docs.filter((d: any) => d.status === targetStatus);
+        vectorSearchSuccess = true;
+      } catch (err) {
+        console.warn('[Search Fallback] Vector search failed or suspended. Falling back to keyword search...', err);
       }
 
-      let docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
-      docs = docs.filter((d: any) => d.status === targetStatus);
+      // Keyword search fallback
+      if (!vectorSearchSuccess) {
+        const keywords = q.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
+        if (keywords.length > 0) {
+          const getWordVariations = (word: string) => {
+            const w = word.trim();
+            if (!w) return [];
+            const lower = w.toLowerCase();
+            const upper = w.toUpperCase();
+            const capitalized = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+            return [...new Set([w, lower, upper, capitalized])];
+          };
+
+          let snap;
+          try {
+            snap = await adminDb.collection('product_cores')
+              .where('status', '==', targetStatus)
+              .where('searchTags', 'array-contains-any', getWordVariations(keywords[0]))
+              .limit(100)
+              .get();
+          } catch (queryErr) {
+            console.warn('[Search Fallback] tags array-contains-any query failed. Fetching recent products...', queryErr);
+            snap = await adminDb.collection('product_cores')
+              .where('status', '==', targetStatus)
+              .limit(100)
+              .get();
+          }
+
+          docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+
+          // Post-filter matching all keywords in title, description, or tags
+          docs = docs.filter((d: any) => {
+            const titleStr = typeof d.title === 'object' ? String(d.title?.pl || d.title?.en || '').toLowerCase() : String(d.title || '').toLowerCase();
+            const descStr = typeof d.description === 'object' ? String(d.description?.pl || d.description?.en || '').toLowerCase() : String(d.description || '').toLowerCase();
+            const tags = Array.isArray(d.searchTags) ? d.searchTags.map((t: string) => t.toLowerCase()) : [];
+            
+            return keywords.every(kw => 
+              titleStr.includes(kw) || descStr.includes(kw) || tags.includes(kw)
+            );
+          });
+        }
+      }
 
       // Post-filtering
       if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
@@ -368,45 +420,125 @@ async function searchDealsFirestoreFallback(
 
   try {
     if (query !== '*') {
-      const { generateEmbeddings } = await import('@/ai/embeddings');
       const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
-      const queryVector = await generateEmbeddings(query);
-
       const statuses = statusFilter === 'waiting_room'
         ? ['pending', 'poczekalnia', 'pending_approval', 'approval']
         : ['approved'];
 
-      const resultsArray = await Promise.all(
-        statuses.map(async (status) => {
-          const queryBase = adminDb.collection('deals').where('status', '==', status);
-          let snap;
-          try {
-            snap = await queryBase.findNearest({
-              vectorField: 'embedding',
-              queryVector: FieldValue.vector(queryVector),
-              distanceMeasure: 'COSINE',
-              limit: safeLimit * 3,
-            }).get();
-          } catch (err: any) {
-            const errStr = String(err);
-            if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
-              console.warn('[Search Fallback] Deals composite vector index missing or building. Falling back to status-less query...');
-              snap = await adminDb.collection('deals').findNearest({
+      let docs: any[] = [];
+      let vectorSearchSuccess = false;
+
+      try {
+        const { generateEmbeddings } = await import('@/ai/embeddings');
+        const queryVector = await generateEmbeddings(query);
+
+        const resultsArray = await Promise.all(
+          statuses.map(async (status) => {
+            const queryBase = adminDb.collection('deals').where('status', '==', status);
+            let snap;
+            try {
+              snap = await queryBase.findNearest({
                 vectorField: 'embedding',
                 queryVector: FieldValue.vector(queryVector),
                 distanceMeasure: 'COSINE',
                 limit: safeLimit * 3,
               }).get();
-            } else {
-              throw err;
+            } catch (err: any) {
+              const errStr = String(err);
+              if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
+                console.warn('[Search Fallback] Deals composite vector index missing or building. Falling back to status-less query...');
+                snap = await adminDb.collection('deals').findNearest({
+                  vectorField: 'embedding',
+                  queryVector: FieldValue.vector(queryVector),
+                  distanceMeasure: 'COSINE',
+                  limit: safeLimit * 3,
+                }).get();
+              } else {
+                throw err;
+              }
             }
-          }
-          let docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
-          return docs.filter((d: any) => d.status === status);
-        })
-      );
+            let docsVal = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+            return docsVal.filter((d: any) => d.status === status);
+          })
+        );
 
-      let docs = resultsArray.flat();
+        docs = resultsArray.flat();
+        vectorSearchSuccess = true;
+      } catch (err) {
+        console.warn('[Search Fallback] Deals vector search failed or suspended. Falling back to keyword search...', err);
+      }
+
+      // Keyword search fallback for deals
+      if (!vectorSearchSuccess) {
+        const keywords = query.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
+        if (keywords.length > 0) {
+          // 1. Direct title/desc match on recent 300 deals
+          const resultsArray = await Promise.all(
+            statuses.map(async (status) => {
+              const snap = await adminDb.collection('deals')
+                .where('status', '==', status)
+                .orderBy('createdAt', 'desc')
+                .limit(300)
+                .get();
+              return snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+            })
+          );
+          let recentDeals = resultsArray.flat();
+          
+          // Filter direct matches
+          let directMatchDeals = recentDeals.filter((d: any) => {
+            const titleStr = typeof d.title === 'object' ? String(d.title?.pl || d.title?.en || '').toLowerCase() : String(d.title || '').toLowerCase();
+            const descStr = typeof d.description === 'object' ? String(d.description?.pl || d.description?.en || '').toLowerCase() : String(d.description || '').toLowerCase();
+            return keywords.every(kw => titleStr.includes(kw) || descStr.includes(kw));
+          });
+
+          // 2. Relational match via product search
+          let productMatchDeals: any[] = [];
+          const getWordVariations = (word: string) => {
+            const w = word.trim();
+            if (!w) return [];
+            const lower = w.toLowerCase();
+            const upper = w.toUpperCase();
+            const capitalized = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+            return [...new Set([w, lower, upper, capitalized])];
+          };
+
+          const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
+          let prodSnap;
+          try {
+            prodSnap = await adminDb.collection('product_cores')
+              .where('status', '==', targetStatus)
+              .where('searchTags', 'array-contains-any', getWordVariations(keywords[0]))
+              .limit(20)
+              .get();
+          } catch {
+            prodSnap = { docs: [] };
+          }
+
+          const matchedProductIds = prodSnap.docs.map((docSnap: any) => docSnap.id);
+          if (matchedProductIds.length > 0) {
+            const chunkedProductIds = chunkIds(matchedProductIds, 10);
+            const relationalDealsList = await Promise.all(
+              chunkedProductIds.map(async (chunk) => {
+                const snap = await adminDb.collection('deals')
+                  .where('status', 'in', statuses)
+                  .where('productId', 'in', chunk)
+                  .limit(50)
+                  .get();
+                return snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+              })
+            );
+            productMatchDeals = relationalDealsList.flat();
+          }
+
+          // Combine & deduplicate
+          const combinedMap = new Map<string, any>();
+          for (const d of [...directMatchDeals, ...productMatchDeals]) {
+            combinedMap.set(d.id, d);
+          }
+          docs = Array.from(combinedMap.values());
+        }
+      }
 
       // Post-filtering
       if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
