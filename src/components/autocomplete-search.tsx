@@ -110,13 +110,13 @@ export function AutocompleteSearch({ className }: { className?: string }) {
               onClick={() => handlePick(s)}
               className="w-full text-left rounded-sm px-3 py-2 hover:bg-muted focus:bg-muted outline-none flex flex-col transition-colors-fast"
             >
-              <span className="font-medium text-sm flex items-center space-sm">
+              <span className="font-medium text-sm flex items-center gap-2 text-foreground">
                 {s.type === 'deal' ? (
-                  <><Flame className="h-4 w-4 text-orange-500" /> {t('labels.deal')}</>
+                  <Flame className="h-4 w-4 text-orange-500 shrink-0" />
                 ) : (
-                  <><ShoppingBag className="h-4 w-4 text-primary" /> {t('labels.product')}</>
+                  <ShoppingBag className="h-4 w-4 text-primary shrink-0" />
                 )}
-                {s.label}
+                <span className="line-clamp-1">{s.label}</span>
               </span>
               {s.subLabel && (
                 <span className="text-xs text-muted-foreground line-clamp-1">{s.subLabel}</span>
