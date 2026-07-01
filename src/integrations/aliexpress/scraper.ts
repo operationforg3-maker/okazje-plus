@@ -128,6 +128,33 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
               values: prop.skuPropertyValues?.map((val: any) => val.propertyValueName) || [],
             }));
 
+            // 2.5 Extract shipping cost and delivery days
+            const shippingLayoutList = resObj.SHIPPING?.deliveryLayoutInfo || resObj.SHIPPING?.originalLayoutResultList;
+            if (Array.isArray(shippingLayoutList) && shippingLayoutList.length > 0) {
+              let cheapestCost = Infinity;
+              let cheapestDays = 7;
+              
+              for (const option of shippingLayoutList) {
+                const bizData = option.bizData;
+                if (!bizData) continue;
+                
+                const amount = bizData.displayAmount !== undefined
+                  ? Number(bizData.displayAmount)
+                  : (bizData.shippingFee === 'free' ? 0 : parseFloat(String(bizData.formattedAmount || '0').replace(',', '.')));
+                
+                if (Number.isFinite(amount) && amount < cheapestCost) {
+                  cheapestCost = amount;
+                  cheapestDays = Number(bizData.deliveryDayMax || bizData.deliveryDayMin || 7);
+                }
+              }
+              
+              if (cheapestCost !== Infinity) {
+                result.shippingCost = cheapestCost;
+                result.shippingDays = cheapestDays;
+                console.log(`[AliExpress Scraper] Extracted shipping cost from MTOP: ${cheapestCost} PLN, days: ${cheapestDays}`);
+              }
+            }
+
             // 3. Extract concrete SKU list mapping combinations to specific SKU properties
             const skuPaths = resObj.SKU?.skuPaths || [];
             const skuPriceInfoMap = resObj.PRICE?.skuPriceInfoMap || {};
