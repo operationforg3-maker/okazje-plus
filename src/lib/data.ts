@@ -2115,6 +2115,20 @@ export async function getProductCore(productId: string): Promise<any | null> {
           const docRes = querySnap.docs[0];
           data = docRes.data();
           finalId = docRes.id;
+        } else {
+          // Fallback to slug search
+          const slugQueries = await Promise.all([
+            adminDb.collection('product_cores').where('slug.pl', '==', productId).limit(1).get(),
+            adminDb.collection('product_cores').where('slug.en', '==', productId).limit(1).get(),
+            adminDb.collection('product_cores').where('slug', '==', productId).limit(1).get()
+          ]);
+          for (const res of slugQueries) {
+            if (!res.empty) {
+              data = res.docs[0].data();
+              finalId = res.docs[0].id;
+              break;
+            }
+          }
         }
       }
       
@@ -2148,6 +2162,19 @@ export async function getProductCore(productId: string): Promise<any | null> {
         const docRes = querySnap.docs[0];
         data = docRes.data();
         finalId = docRes.id;
+      } else {
+        const slugQueries = await Promise.all([
+          getDocs(query(collection(db, "product_cores"), where("slug.pl", "==", productId), limit(1))),
+          getDocs(query(collection(db, "product_cores"), where("slug.en", "==", productId), limit(1))),
+          getDocs(query(collection(db, "product_cores"), where("slug", "==", productId), limit(1)))
+        ]);
+        for (const res of slugQueries) {
+          if (!res.empty) {
+            data = res.docs[0].data();
+            finalId = res.docs[0].id;
+            break;
+          }
+        }
       }
     }
     

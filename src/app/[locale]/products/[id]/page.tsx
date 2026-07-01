@@ -121,16 +121,26 @@ async function getProductData(id: string) {
     console.log(`[getProductData] M6 data not found, trying legacy products for ${id}`);
     const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
     const adminDb = getAdminFirestore();
-    const docSnap = await adminDb.collection("products").doc(id).get();
+    let docSnap = await adminDb.collection("products").doc(id).get();
+    let docData = docSnap.exists ? docSnap.data() : null;
+    let docId = docSnap.id;
     
-    if (!docSnap.exists) {
+    if (!docData) {
+      const slugSnap = await adminDb.collection("products").where("slug", "==", id).limit(1).get();
+      if (!slugSnap.empty) {
+        docData = slugSnap.docs[0].data();
+        docId = slugSnap.docs[0].id;
+      }
+    }
+    
+    if (!docData) {
       console.warn(`[getProductData] Product not found in both M6 and legacy: ${id}`);
       return null;
     }
   
-  const productData = docSnap.data();
+  const productData = docData;
   const product = {
-    id: docSnap.id,
+    id: docId,
     ...productData,
     // Ensure required fields have defaults
     ratingCard: productData.ratingCard || { average: 0, count: 0 },
