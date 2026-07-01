@@ -145,6 +145,18 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
         const { amount, currency } = extractPriceInfo(pc.bestPrice);
         rawPrice = amount;
         sourceCurrency = currency;
+        
+        // Extract shipping cost and original price from bestPrice or logistics
+        const bp = pc.bestPrice as any;
+        if (bp.shippingCost !== undefined) {
+          rawShipping = bp.shippingCost;
+        } else if (bp.shipping?.cost !== undefined) {
+          rawShipping = bp.shipping.cost;
+        } else if (pc.logistics?.shippingCost !== undefined) {
+          rawShipping = pc.logistics.shippingCost;
+        }
+        
+        if (bp.originalPrice) rawOriginalPrice = bp.originalPrice;
       }
     } else {
       const { amount, currency } = extractPriceInfo(product.price);
@@ -154,7 +166,8 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
       if (typeof product.price === 'object' && product.price !== null) {
         const p = product.price as any;
         if (p.originalPrice) rawOriginalPrice = p.originalPrice;
-        if (p.shippingCost) rawShipping = p.shippingCost;
+        const shippingCostVal = p.shipping?.cost !== undefined ? p.shipping.cost : p.shippingCost;
+        if (shippingCostVal !== undefined) rawShipping = shippingCostVal;
       }
     }
 

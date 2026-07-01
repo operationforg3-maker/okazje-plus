@@ -209,7 +209,8 @@ export default function ProductListCard({ product }: ProductListCardProps) {
         if (!cancelled) {
           setBestDeal(deal);
           if (deal && deal.price?.amount) {
-            const total = (deal.price.amount || 0) + (deal.shipping?.cost || 0);
+            const dealShippingCost = deal.shipping?.cost ?? (deal as any).shippingCost ?? 0;
+            const total = (deal.price.amount || 0) + dealShippingCost;
             if (total > 0) setBestTotalPrice(total);
           }
         }
