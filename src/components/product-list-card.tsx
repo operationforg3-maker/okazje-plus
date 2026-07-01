@@ -184,7 +184,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     }
 
     // Convert to PLN Base (CurrencyManager expects Source -> Base)
-    const priceInPLN = convertToPLN(rawPrice, sourceCurrency);
+    const priceInPLN = convertToPLN(rawPrice, sourceCurrency as any);
 
     // Format (hook formatPrice assumes input is in Base Currency PLN)
     const formatted = formatPrice(priceInPLN);

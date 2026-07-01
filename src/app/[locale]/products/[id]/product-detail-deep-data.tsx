@@ -188,16 +188,19 @@ export default function ProductDetailDeepData({ productCore, deals }: ProductDet
                             <div>
                               <p className="font-medium">{deal.merchantName || deal.source}</p>
                               <p className="text-sm text-muted-foreground">
-                                Dostawa: {deal.shipping?.timeDays || 'N/A'} dni
+                                Dostawa: {deal.shipping?.timeDays || (deal as any).shippingTimeDays || 'N/A'} dni
                               </p>
                             </div>
                             <div className="text-right">
                               <p className="font-bold">{formatPrice(deal.price.amount)}</p>
-                              {deal.shipping?.cost > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                  + {formatPrice(deal.shipping.cost)} wysyłka
-                                </p>
-                              )}
+                              {(() => {
+                                const dealShippingCost = deal.shipping?.cost ?? (deal as any).shippingCost;
+                                return dealShippingCost !== undefined && dealShippingCost > 0 ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    + {formatPrice(dealShippingCost)} wysyłka
+                                  </p>
+                                ) : null;
+                              })()}
                             </div>
                           </div>
                         </button>

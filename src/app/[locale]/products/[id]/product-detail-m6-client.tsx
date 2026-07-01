@@ -228,11 +228,17 @@ export default function ProductDetailM6Client({
     (productData as any)?.link
   );
   const outboundUrl = bestDealOutboundUrl || productOutboundUrl;
+  const bestDealShippingCost = bestDeal
+    ? (bestDeal.shipping?.cost !== undefined
+        ? Number(bestDeal.shipping.cost)
+        : ((bestDeal as any).shippingCost !== undefined ? Number((bestDeal as any).shippingCost) : undefined))
+    : undefined;
+
   const logistics = productCore?.logistics || (bestDeal
     ? {
-        deliveryDays: Math.max(1, Number(bestDeal.shipping?.timeDays || 0) || 7),
-        isFreeShipping: Boolean((bestDeal as any).freeShipping ?? ((bestDeal.shipping?.cost || 0) <= 0)),
-        shippingCost: Math.max(0, Number(bestDeal.shipping?.cost || 0)),
+        deliveryDays: Math.max(1, Number(bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays || 0) || 7),
+        isFreeShipping: Boolean((bestDeal as any).freeShipping ?? ((bestDealShippingCost ?? 0) <= 0)),
+        shippingCost: Math.max(0, Number(bestDealShippingCost ?? 0)),
       }
     : undefined);
   const shippingOrigin = bestDeal?.shipping?.fromCountry || productCore?.warehouses?.[0] || (productCore?.metadata as any)?.shippingFromCountry;
@@ -354,11 +360,11 @@ export default function ProductDetailM6Client({
                 {bestDeal && (
                   <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-0.5">
                     <p>Cena produktu: {formatPrice(CurrencyManager.convertToPLN(bestDeal.price?.amount || 0, bestDeal.price?.currency || 'PLN'))}</p>
-                    <p>Koszt dostawy: {bestDeal.shipping?.cost > 0 
-                      ? formatPrice(CurrencyManager.convertToPLN(bestDeal.shipping.cost, bestDeal.price?.currency || 'PLN'))
-                      : 'DARMOWA'}</p>
-                    {bestDeal.shipping?.timeDays && (
-                      <p>Szacowany czas dostawy: {t('productDetail.priceComparison.deliveryDays', { count: bestDeal.shipping.timeDays })}</p>
+                    <p>Koszt dostawy: {bestDealShippingCost !== undefined && bestDealShippingCost > 0 
+                      ? formatPrice(CurrencyManager.convertToPLN(bestDealShippingCost, bestDeal.price?.currency || 'PLN'))
+                      : (bestDeal.freeShipping || bestDealShippingCost === 0 ? 'DARMOWA' : 'Do ustalenia')}</p>
+                    {(bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays) && (
+                      <p>Szacowany czas dostawy: {t('productDetail.priceComparison.deliveryDays', { count: bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays })}</p>
                     )}
                   </div>
                 )}
@@ -444,13 +450,13 @@ export default function ProductDetailM6Client({
                 </div>
               )}
 
-              {isM6 && (shippingOrigin || bestDeal?.minOrderValue || bestDeal?.limitPerUser || (bestDeal as any)?.freeShipping !== undefined) && (
+              {isM6 && (shippingOrigin || bestDeal?.minOrderValue || bestDeal?.limitPerUser || bestDealShippingCost !== undefined || (bestDeal as any)?.freeShipping !== undefined) && (
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {Boolean((bestDeal as any)?.freeShipping ?? ((bestDeal?.shipping?.cost || 0) <= 0)) ? (
+                  {((bestDeal as any)?.freeShipping || (bestDealShippingCost !== undefined && bestDealShippingCost <= 0)) ? (
                     <Badge className="bg-green-600 text-white hover:bg-green-600">Darmowa dostawa</Badge>
-                  ) : (
-                    <Badge variant="outline">Wysyłka: {formatPrice(bestDeal?.shipping?.cost || 0)}</Badge>
-                  )}
+                  ) : bestDealShippingCost !== undefined ? (
+                    <Badge variant="outline">Wysyłka: {formatPrice(bestDealShippingCost)}</Badge>
+                  ) : null}
                   {shippingOrigin && <Badge variant="outline">Wysyłka z: {shippingOrigin}</Badge>}
                   {bestDeal?.minOrderValue && <Badge variant="outline">Min. zamówienie: {formatPrice(bestDeal.minOrderValue)}</Badge>}
                   {bestDeal?.limitPerUser && <Badge variant="outline">Limit: {bestDeal.limitPerUser} na osobę</Badge>}

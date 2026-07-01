@@ -212,7 +212,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
   const dealImage = resolveDealImage(deal);
   
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
-  const { formatPrice, convertToPLN } = useCurrency();
+  const { formatPrice, convertToPLN, currency } = useCurrency();
 
   const isHot = deal.temperature >= 300;
   const { addDeal } = useSmartCart();

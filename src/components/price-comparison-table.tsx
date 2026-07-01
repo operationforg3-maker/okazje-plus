@@ -132,7 +132,8 @@ export function PriceComparisonTable({
               // Convert to PLN (Base)
               const sourceCurrency = deal.price?.currency || 'PLN';
               const productPrice = CurrencyManager.convertToPLN(deal.price?.amount || 0, sourceCurrency);
-              const shippingCost = CurrencyManager.convertToPLN(deal.shipping?.cost || 0, sourceCurrency);
+              const rawShipping = deal.shipping?.cost !== undefined ? deal.shipping.cost : (deal.shippingCost ?? 0);
+              const shippingCost = CurrencyManager.convertToPLN(rawShipping, sourceCurrency);
               const originalPriceInPLN = deal.originalPrice ? CurrencyManager.convertToPLN(deal.originalPrice, sourceCurrency) : 0;
               
               const totalPrice = productPrice + shippingCost;
