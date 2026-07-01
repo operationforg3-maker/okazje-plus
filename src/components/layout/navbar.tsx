@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import {useParams, usePathname} from 'next/navigation';
-import { Menu, ShoppingBag, Scale, Trash2 } from 'lucide-react';
+import { Menu, ShoppingBag, Scale, Trash2, Search } from 'lucide-react';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -178,6 +178,17 @@ export function Navbar() {
                 + {t('addDeal')}
               </Link>
             </Button>
+            {/* Mobile Search Trigger */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="sm:hidden rounded-full h-10 w-10 p-0"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-search'))}
+              aria-label="Szukaj"
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+
             {/* Cart & Comparison Menu */}
             <div className="relative" ref={cartMenuRef}>
               <Button 
