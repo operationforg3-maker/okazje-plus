@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useLocale } from 'next-intl';
 import { Package, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { withImageProxy } from '@/lib/image-proxy';
+import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
 
 interface HomeProductCardProps {
   product: any;
@@ -50,8 +50,8 @@ export default function HomeProductCard({ product }: HomeProductCardProps) {
   const title = getLocalizedText(product?.title || product?.name, 'Produkt');
   const href = `/${locale}/products/${product?.slug || product?.id}`;
   const image = getProductImage(product);
-  // Generate responsive image URL with size params for proxy optimization
-  const imageUrl = `/api/image-proxy?url=${encodeURIComponent(image)}&w=600&h=450&q=60&f=auto`;
+  const imageUrl = withImageProxy(image);
+
   const price = formatPrice((product as any)?.bestPrice ?? product?.price, product?.currency || 'PLN');
   const rating = typeof product?.rating === 'number'
     ? product.rating
@@ -71,6 +71,7 @@ export default function HomeProductCard({ product }: HomeProductCardProps) {
             className="object-cover h-full w-full"
             loading="lazy"
             quality={60}
+            unoptimized={isAliExpressImage(image)}
           />
         </div>
 

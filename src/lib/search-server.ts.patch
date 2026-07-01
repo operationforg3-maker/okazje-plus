@@ -1,0 +1,95 @@
+--- src/lib/search-server.ts
++++ src/lib/search-server.ts
+@@ -293,36 +293,22 @@
+ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
+   const safeLimit = clampPageSize(limit, 5);
+ 
+   try {
+-    const { generateEmbeddings } = await import('@/ai/embeddings');
+     const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+-    const queryVector = await generateEmbeddings(q);
+ 
+-    // Run parallel vector search on product_cores and deals with fallback for composite index
+     let productsSnap;
+     let dealsSnap;
+ 
++    const qLower = q.toLowerCase();
+     try {
+       [productsSnap, dealsSnap] = await Promise.all([
+         adminDb.collection('product_cores')
+           .where('status', '==', 'approved')
+-          .findNearest({
+-            vectorField: 'embedding',
+-            queryVector: FieldValue.vector(queryVector),
+-            distanceMeasure: 'COSINE',
+-            limit: safeLimit,
+-          }).get(),
++          .limit(40).get(),
+         adminDb.collection('deals')
+           .where('status', '==', 'approved')
+-          .findNearest({
+-            vectorField: 'embedding',
+-            queryVector: FieldValue.vector(queryVector),
+-            distanceMeasure: 'COSINE',
+-            limit: safeLimit,
+-          }).get()
++          .limit(40).get()
+       ]);
+     } catch (err: any) {
+       const errStr = String(err);
+-      if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
+-        console.warn('[Autocomplete] Composite index missing. Falling back to status-less query...');
+         [productsSnap, dealsSnap] = await Promise.all([
+           adminDb.collection('product_cores')
+-            .findNearest({
+-              vectorField: 'embedding',
+-              queryVector: FieldValue.vector(queryVector),
+-              distanceMeasure: 'COSINE',
+-              limit: safeLimit,
+-            }).get(),
++            .limit(40).get(),
+           adminDb.collection('deals')
+-            .findNearest({
+-              vectorField: 'embedding',
+-              queryVector: FieldValue.vector(queryVector),
+-              distanceMeasure: 'COSINE',
+-              limit: safeLimit,
+-            }).get()
++            .limit(40).get()
+         ]);
+-      } else {
+-        throw err;
+-      }
+     }
+ 
+     const suggestions: Suggestion[] = [];
+ 
+     if (productsSnap) {
+       for (const doc of productsSnap.docs) {
+         const data = doc.data();
+         const titleStr = typeof data.title === 'object' ? (data.title?.pl || data.title?.en || '') : (data.title || '');
++        if (!titleStr.toLowerCase().includes(qLower)) continue;
++        
+         let image = Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : (data.imageUrl || '');
+         if (typeof image === 'object' && image?.src) image = image.src;
+         else if (typeof image === 'object' && image?.url) image = image.url;
+ 
+         suggestions.push({
+           id: doc.id,
+           title: titleStr,
+           type: 'product',
+           url: `/products/${data.slug || doc.id}`,
+           image: image || '/placeholder.png'
+         });
+       }
+     }
+ 
+     if (dealsSnap) {
+       for (const doc of dealsSnap.docs) {
+         const data = doc.data();
+         const titleStr = typeof data.title === 'object' ? (data.title?.pl || data.title?.en || '') : (data.title || '');
++        if (!titleStr.toLowerCase().includes(qLower)) continue;
++
+         let image = Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : (data.imageUrl || '');
+         if (typeof image === 'object' && image?.src) image = image.src;
+         else if (typeof image === 'object' && image?.url) image = image.url;

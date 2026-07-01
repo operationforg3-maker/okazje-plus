@@ -13,11 +13,11 @@ import { cn } from '@/lib/utils';
 import { getExternalUrl } from '@/lib/external-url';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { useSmartCart } from '@/lib/cart-context';
-import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { useCurrency } from '@/lib/unified-currency';
 import { useCategoryName } from '@/hooks/use-category-name';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import ShareButton from '@/components/share-button';
-import { withImageProxy } from '@/lib/image-proxy';
+import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
 
 interface ProductListCardProps {
   product: ProductCore;
@@ -57,7 +57,11 @@ const resolveProductImage = (product: ProductCore): string => {
     || resolveImageCandidate((product as any).metadata?.imageUrl)
     || resolveImageCandidate((product as any).metadata?.image);
 
-  return image || '/placeholder.png';
+  if (!image) return '/placeholder.png';
+  if (image.startsWith('//')) {
+    return `https:${image}`;
+  }
+  return image;
 };
 
 const getRelativeTime = (timestamp: any): string => {
@@ -97,15 +101,21 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   const t = useTranslations('products');
   const prefix = locale ? `/${locale}` : '';
   
-  // Ensure product has ID for links (fallback: use identityHash if no ID)
-  const productId = product.id || (product as any).identityHash || 'unknown';
-  
   const { getText } = useContentLanguage();
-  const baseState = useCardBaseState(product, 'product');
+  
+  // Try to get the slug first
+  const rawSlug = (product as any).slug;
+  const safeSlug = typeof rawSlug === 'string' ? rawSlug : (rawSlug ? getText(rawSlug) : null);
+  
+  // Ensure product has ID for links (fallback: use identityHash if no ID)
+  const rawId = product.id || (product as any).docId || (product as any)._id || (product as any).identityHash;
+  const safeId = typeof rawId === 'object' ? String(rawId) : rawId;
+  const productId = safeSlug || safeId || 'unknown';
+  const baseState = useCardBaseState(product, 'product', { disableInitialFavoriteCheck: true });
   const { isFavorited, isFavoriteLoading, toggleFavorite, addToComparison, t: tCommon } = baseState;
   const formatter = useFormatter();
   const { addItem } = useSmartCart();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, convertToPLN } = useCurrency();
   const { mainName: categoryLabel } = useCategoryName(product.mainCategorySlug, product.subCategorySlug, product.subSubCategorySlug);
   const [productData, setProductData] = useState({
     relativeTime: 'niedawno',
@@ -113,6 +123,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
   });
   const primaryImage = resolveProductImage(product);
   const [imageSrc, setImageSrc] = useState(() => withImageProxy(primaryImage) || '/placeholder.png');
+  const isAliExpress = isAliExpressImage(primaryImage);
   const [bestDeal, setBestDeal] = useState<any | null>(null);
   const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? product?.bestPrice?.amount ?? null);
   const hasCoupons = Boolean((product as any).hasCoupons || (product as any).metadata?.hasCoupons || (bestDeal && ((bestDeal.dealType === 'coupon') || bestDeal.couponCode)));
@@ -173,7 +184,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
     }
 
     // Convert to PLN Base (CurrencyManager expects Source -> Base)
-    const priceInPLN = CurrencyManager.convertToPLN(rawPrice, sourceCurrency);
+    const priceInPLN = convertToPLN(rawPrice, sourceCurrency);
 
     // Format (hook formatPrice assumes input is in Base Currency PLN)
     const formatted = formatPrice(priceInPLN);
@@ -229,6 +240,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             sizes="(max-width: 640px) 100vw, 160px"
             className="object-contain transition-transform duration-300 group-hover:scale-105"
             onError={() => setImageSrc('/placeholder.png')}
+            unoptimized={isAliExpress}
           />
         </div>
         <div className="absolute left-2 top-2 flex flex-col gap-1">
@@ -317,7 +329,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             {/* We don't have original price easily available in ProductCore top-level usually, but if we did */}
             {(product as any)?.bestPrice?.originalAmount && (product as any).bestPrice.originalAmount > (product as any).bestPrice.amount && (
                <p className="text-base text-muted-foreground line-through">
-                 {formatPrice(CurrencyManager.convertToPLN((product as any).bestPrice.originalAmount, (product as any).bestPrice.currency || 'PLN'))}
+                 {formatPrice(convertToPLN((product as any).bestPrice.originalAmount, (product as any).bestPrice.currency || 'PLN'))}
                </p>
             )}
            </div>
@@ -381,12 +393,14 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           </Button>
         ) : (
           <Button
+            asChild
             size="lg"
-            className="w-full whitespace-nowrap bg-emerald-600 text-white opacity-80"
-            disabled
+            className="w-full whitespace-nowrap bg-emerald-600 text-white"
           >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            {t('card.go')}
+            <Link href={`${prefix}/products/${productId}`}>
+              <ExternalLink className="h-4 w-4 mr-2 opacity-70" />
+              {t('card.go')}
+            </Link>
           </Button>
         )}
 

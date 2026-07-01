@@ -1,0 +1,28 @@
+--- src/lib/image-proxy.ts
++++ src/lib/image-proxy.ts
+@@ -4,11 +4,6 @@
+   'static.convertiser.com',
+   'images.unsplash.com',
+   'picsum.photos',
+-  'ae-pic-a1.aliexpress-media.com',
+-  'ae-pic-a2.aliexpress-media.com',
+-  'ae-pic-a3.aliexpress-media.com',
+-  'ae01.alicdn.com',
+-  'ae02.alicdn.com',
+ ]);
+ 
+ export function withImageProxy(url?: string): string {
+@@ -25,3 +20,12 @@
+ 
+   return url;
+ }
++
++export function isAliExpressImage(url?: string): boolean {
++  if (!url || typeof url !== 'string') return false;
++  try {
++    const parsed = new URL(url);
++    return parsed.hostname.includes('aliexpress-media.com') || parsed.hostname.includes('alicdn.com');
++  } catch {
++    return false;
++  }
++}

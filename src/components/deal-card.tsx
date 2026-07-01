@@ -26,7 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { useCurrency } from '@/lib/unified-currency';
 import { extractPriceInfo, getDiscountPercent } from '@/lib/i18n-utils';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
@@ -196,10 +196,10 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(localeFromParams);
   const prefix = `/${locale}`;
-  const baseState = useCardBaseState(deal, 'deal');
+  const baseState = useCardBaseState(deal, 'deal', { disableInitialFavoriteCheck: true });
   const { getText, addToComparison, user, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
   const formatter = useFormatter();
-  const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
+  const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount, true);
   const { mainName: categoryLabel } = useCategoryName(
     deal.mainCategorySlug || resolvedProduct?.mainCategorySlug,
     deal.subCategorySlug || resolvedProduct?.subCategorySlug,
@@ -213,7 +213,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
-  const { currency } = useCurrency();
+  const { currency, formatPrice, convertToPLN } = useCurrency();
   const { addDeal } = useSmartCart();
   const isPromotionDeal = deal?.dealType === 'coupon' || deal?.metadata?.promotionType === 'offer';
   const offerPreviewUrl = deal?.metadata?.offerPreviewUrl || deal?.metadata?.previewUrl || deal?.sourceUrl || deal?.link;
@@ -260,8 +260,8 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
     
     // Ensure we work with PLN for CurrencyManager
     // If source is not PLN, we must convert TO PLN first
-    const priceInPLN = CurrencyManager.convertToPLN(safePrice, sourceCurrency);
-    const formatted = CurrencyManager.formatPrice(priceInPLN, userCurrency);
+    const priceInPLN = convertToPLN(safePrice, sourceCurrency);
+    const formatted = formatPrice(priceInPLN);
 
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
@@ -269,8 +269,8 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
     let shipping: string | null = null;
 
     if (typeof deal.originalPrice === 'number') {
-      const origInPLN = CurrencyManager.convertToPLN(deal.originalPrice, sourceCurrency);
-      formattedOrig = CurrencyManager.formatPrice(origInPLN, userCurrency);
+      const origInPLN = convertToPLN(deal.originalPrice, sourceCurrency);
+      formattedOrig = formatPrice(origInPLN);
 
       if (deal.originalPrice > 0) {
         calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
@@ -278,13 +278,13 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
 
       if (deal.originalPrice > safePrice) {
         const savingsInPLN = origInPLN - priceInPLN;
-        savings = CurrencyManager.formatPrice(savingsInPLN, userCurrency);
+        savings = formatPrice(savingsInPLN);
       }
     }
 
     if (typeof deal.shippingCost === 'number' && deal.shippingCost > 0) {
-      const shippingInPLN = CurrencyManager.convertToPLN(deal.shippingCost, sourceCurrency);
-      shipping = CurrencyManager.formatPrice(shippingInPLN, userCurrency);
+      const shippingInPLN = convertToPLN(deal.shippingCost, sourceCurrency);
+      shipping = formatPrice(shippingInPLN);
     }
 
     const fallbackDiscount = typeof deal.discountPercent === 'number' ? deal.discountPercent : null;
@@ -776,7 +776,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
             {hasRealShipping && shippingInfo.cost > 0 && (
               <Badge variant="outline" className="text-xs">
                 <Truck className="w-3 h-3 mr-1" />
-                Dostawa: {CurrencyManager.formatPrice(shippingInfo.cost, currency || 'PLN')}
+                Dostawa: {formatPrice(shippingInfo.cost)}
               </Badge>
             )}
             {hasRealShipping && shippingInfo.estimatedDays && (
@@ -848,7 +848,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           )}
           {promotionAppPrice !== undefined && promotionAppPrice > 0 && (
             <Badge variant="outline" className="text-xs border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700">
-              Cena w app: {CurrencyManager.formatPrice(promotionAppPrice, currency || 'PLN')}
+              Cena w app: {formatPrice(promotionAppPrice)}
             </Badge>
           )}
           {promotionEndsAt && (
@@ -934,7 +934,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           )}
           {deal.cashback && (
             <span className="font-semibold text-green-600">
-              Cashback: {typeof deal.cashback.amount === 'number' && deal.cashback.amount > 0 ? CurrencyManager.formatPrice(deal.cashback.amount, currency || 'PLN') : `${deal.cashback.percentage}%`}
+              Cashback: {typeof deal.cashback.amount === 'number' && deal.cashback.amount > 0 ? formatPrice(deal.cashback.amount) : `${deal.cashback.percentage}%`}
               {deal.cashback.provider && ` (${safeText(deal.cashback.provider)})`}
             </span>
           )}

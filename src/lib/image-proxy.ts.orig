@@ -3,6 +3,11 @@ const PROXY_HOSTS = new Set([
   'static.convertiser.com',
   'images.unsplash.com',
   'picsum.photos',
+  'ae-pic-a1.aliexpress-media.com',
+  'ae-pic-a2.aliexpress-media.com',
+  'ae-pic-a3.aliexpress-media.com',
+  'ae01.alicdn.com',
+  'ae02.alicdn.com',
 ]);
 
 export function withImageProxy(url?: string): string {
@@ -18,14 +23,4 @@ export function withImageProxy(url?: string): string {
   }
 
   return url;
-}
-
-export function isAliExpressImage(url?: string): boolean {
-  if (!url || typeof url !== 'string') return false;
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.includes('aliexpress-media.com') || parsed.hostname.includes('alicdn.com');
-  } catch {
-    return false;
-  }
 }

@@ -26,7 +26,7 @@ import { trackFirestoreView, trackFirestoreClick, trackFirestoreShare } from '@/
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 // import ProductEditDialog from '@/components/admin/product-edit-dialog';
 import { useSmartCart } from '@/lib/cart-context';
-import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { useCurrency } from '@/lib/unified-currency';
 import { 
   extractPriceInfo, 
   getDiscountPercent 
@@ -50,20 +50,20 @@ const safeText = (value: unknown, fallback = ''): string => {
   return fallback;
 };
 
-function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetchBestDeal = true }: ProductCardProps) {
+function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetchBestDeal = false }: ProductCardProps) {
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(() => localeFromParams);
   const prefix = `/${locale}`;
-  const baseState = useCardBaseState(product, 'product');
+  const baseState = useCardBaseState(product, 'product', { disableInitialFavoriteCheck: true });
   const { getText, addToComparison, user, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
   const { addItem, isInCart } = useSmartCart();
-  const { count: commentsCount } = useCommentsCount('products', product.id);
+  const { count: commentsCount } = useCommentsCount('products', product.id, undefined, true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [hasTrackedView, setHasTrackedView] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [bestDeal, setBestDeal] = useState<any | null>(null);
-  const { currency } = useCurrency();
+  const { formatPrice, convertToPLN } = useCurrency();
 
   useEffect(() => {
     if (!fetchBestDeal) {
@@ -133,8 +133,6 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
 
   // Price formatting
   useEffect(() => {
-    const userCurrency = currency || 'PLN';
-    
     const isPC = !!(product as any).bestPrice;
     let rawPrice = 0;
     let rawOriginalPrice = 0;
@@ -160,36 +158,34 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
       }
     }
 
-    const priceInPLN = CurrencyManager.convertToPLN(rawPrice, sourceCurrency);
-    const originalInPLN = CurrencyManager.convertToPLN(rawOriginalPrice, sourceCurrency);
-    const shippingInPLN = CurrencyManager.convertToPLN(rawShipping, sourceCurrency);
+    const priceInPLN = convertToPLN(rawPrice, sourceCurrency);
+    const originalInPLN = convertToPLN(rawOriginalPrice, sourceCurrency);
+    const shippingInPLN = convertToPLN(rawShipping, sourceCurrency);
 
-    const formatted = CurrencyManager.formatPrice(priceInPLN, userCurrency);
-    let formattedOrig: string | null = null;
-    let calculatedDiscount: number | null = null;
-    let formattedShip: string | null = null;
-    let savings: string | null = null;
+    const formatted = formatPrice(priceInPLN);
+    let formattedOrig = '';
+    let savings = '';
+    let formattedShip = 'Darmowa';
 
-    if (rawOriginalPrice > 0) {
-      formattedOrig = CurrencyManager.formatPrice(originalInPLN, userCurrency);
-      if (originalInPLN > priceInPLN) {
-        calculatedDiscount = Math.round(100 - (priceInPLN / originalInPLN) * 100);
-        savings = CurrencyManager.formatPrice(originalInPLN - priceInPLN, userCurrency);
+    if (originalInPLN > priceInPLN) {
+      formattedOrig = formatPrice(originalInPLN);
+      if (priceInPLN > 0) {
+        savings = formatPrice(originalInPLN - priceInPLN);
       }
     }
 
-    if (rawShipping > 0) {
-      formattedShip = CurrencyManager.formatPrice(shippingInPLN, userCurrency);
+    if (shippingInPLN > 0) {
+      formattedShip = formatPrice(shippingInPLN);
     }
 
     setPriceData({
       formattedPrice: formatted,
       formattedOriginal: formattedOrig,
       formattedShipping: formattedShip,
-      discount: calculatedDiscount,
+      discount: (originalInPLN > priceInPLN) ? Math.round(100 - (priceInPLN / originalInPLN) * 100) : null,
       savings,
     });
-  }, [currency, product.price, (product as any).bestPrice]);
+  }, [product.price, (product as any).bestPrice]);
 
   const titleText = typeof product.title === 'string' 
     ? product.title 
@@ -212,7 +208,9 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
 
   // Metadata
   const metadata = product.metadata || {};
-  const variants = (metadata as any).variants || [];
+  const legacyVariants = (metadata as any).variants || [];
+  const m6Variants = (product as any).variants || [];
+  const variants = m6Variants.length > 0 ? m6Variants : legacyVariants;
   const specifications = (metadata as any).specifications || [];
   const shippingInfo = (metadata as any).shipping || {};
   const warrantyInfo = (metadata as any).warranty || {};
@@ -257,24 +255,41 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   };
 
   // Product URL
-  const productId = product.id || (product as any)._id || (product as any).docId;
-  const productUrl = `${prefix}/products/${(product as any).slug || productId || 'missing-id'}`;
+  const rawId = product.id || (product as any)._id || (product as any).docId;
+  const productId = typeof rawId === 'object' ? String(rawId) : rawId;
+  const rawSlug = (product as any).slug;
+  const safeSlug = typeof rawSlug === 'string' ? rawSlug : (rawSlug ? getText(rawSlug) : null);
+  const productUrl = `${prefix}/products/${safeSlug || productId || 'missing-id'}`;
   
   // Resolve images from Product (gallery/image) or ProductCore (images)
   const rawGallery = Array.isArray(product.gallery) ? product.gallery : [];
   const coreImages = Array.isArray((product as any).images) ? (product as any).images : [];
   
+  const sanitizeImage = (rawImage: any) => {
+    if (typeof rawImage === 'object') {
+      rawImage = (rawImage as any).src || (rawImage as any).url || (rawImage as any).imageUrl || '/placeholder.png';
+    }
+    
+    if (typeof rawImage === 'string' && rawImage.startsWith('//')) {
+      rawImage = `https:${rawImage}`;
+    }
+    
+    return rawImage;
+  };
+
   // Combine all potential sources
   let allImages: { src: string }[] = [];
   
   if (rawGallery.length > 0) {
     allImages = rawGallery.map(img => ({
-      src: typeof img === 'string' ? img : img.src,
-    }));
+      src: sanitizeImage(img),
+    })).filter(img => img.src);
   } else if (coreImages.length > 0) {
-    allImages = coreImages.map((img: string) => ({ src: img }));
+    allImages = coreImages.map((img: string) => ({ src: sanitizeImage(img) }));
   } else if (typeof product.image === 'string' && product.image) {
-    allImages = [{ src: product.image }];
+    allImages = [{ src: sanitizeImage(product.image) }];
+  } else if (typeof (product as any).imageUrl === 'string' && (product as any).imageUrl) {
+    allImages = [{ src: sanitizeImage((product as any).imageUrl) }];
   }
 
   const primaryImageSrc = allImages.length > 0 ? allImages[0].src : '/placeholder.png';
@@ -362,8 +377,10 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
                   </a>
                 </Button>
               ) : (
-                <Button disabled className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold h-9 text-xs opacity-80 shadow-sm">
-                  Kup teraz <ExternalLink className="w-3 h-3 ml-2" />
+                <Button asChild className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold h-9 text-xs shadow-sm">
+                  <Link href={productUrl}>
+                    Kup teraz <ExternalLink className="w-3 h-3 ml-2 opacity-70" />
+                  </Link>
                 </Button>
               )}
               <div className="flex gap-2">
@@ -407,6 +424,12 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
       >
         {/* Badges Column (Right Top) */}
         <div className="absolute right-2 top-2 flex flex-col space-sm z-10 gap-1 items-end">
+          {galleryImages.length > 1 && (
+            <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-[10px] shadow-sm text-foreground">
+              <Eye className="mr-1 h-3 w-3" />
+              {galleryImages.length} zdjęć
+            </Badge>
+          )}
           {/* Social Proof */}
           {ordersCount > 10 && (
             <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
@@ -562,11 +585,13 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
           </Button>
         ) : (
           <Button
-            disabled
-            className="w-full bg-emerald-600 text-white font-bold text-sm h-9 opacity-80 shadow-sm"
+            asChild
+            className="w-full bg-emerald-600 text-white font-bold text-sm h-9 shadow-sm"
           >
-            <ExternalLink className="w-4 h-4 mr-2" />
-            Kup teraz
+            <Link href={productUrl}>
+              <ExternalLink className="w-4 h-4 mr-2 opacity-70" />
+              Kup teraz
+            </Link>
           </Button>
         )}
 

@@ -1,0 +1,26 @@
+--- src/components/product-list-card.tsx
++++ src/components/product-list-card.tsx
+@@ -17,7 +17,7 @@
+ import { useCategoryName } from '@/hooks/use-category-name';
+ import { useCardBaseState } from '@/hooks/use-card-base-state';
+ import ShareButton from '@/components/share-button';
+-import { withImageProxy } from '@/lib/image-proxy';
++import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
+ 
+ interface ProductListCardProps {
+   product: ProductCore;
+@@ -124,6 +124,7 @@
+   const primaryImage = resolveProductImage(product);
+   const [imageSrc, setImageSrc] = useState(() => withImageProxy(primaryImage) || '/placeholder.png');
++  const isAliExpress = isAliExpressImage(primaryImage);
+   const [bestDeal, setBestDeal] = useState<any | null>(null);
+   const [bestTotalPrice, setBestTotalPrice] = useState<number | null>(product?.bestTotalPrice ?? product?.bestPrice?.amount ?? null);
+   const hasCoupons = Boolean((product as any).hasCoupons || (product as any).metadata?.hasCoupons || (bestDeal && ((bestDeal.dealType === 'coupon') || bestDeal.couponCode)));
+@@ -238,6 +239,7 @@
+             sizes="(max-width: 640px) 100vw, 160px"
+             className="object-contain transition-transform duration-300 group-hover:scale-105"
+             onError={() => setImageSrc('/placeholder.png')}
++            unoptimized={isAliExpress}
+           />
+         </div>
+         <div className="absolute left-2 top-2 flex flex-col gap-1">

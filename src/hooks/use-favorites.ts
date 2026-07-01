@@ -14,15 +14,15 @@ interface UseFavoritesReturn {
 /**
  * Hook do zarządzania ulubionych dla okazji i produktów
  */
-export function useFavorites(itemId: string, itemType: 'deal' | 'product'): UseFavoritesReturn {
+export function useFavorites(itemId: string, itemType: 'deal' | 'product', disableInitialCheck?: boolean): UseFavoritesReturn {
   const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isChecking, setIsChecking] = useState(true);
+  const [isChecking, setIsChecking] = useState(!disableInitialCheck);
 
   // Sprawdź początkowy stan
   useEffect(() => {
-    if (!user) {
+    if (!user || disableInitialCheck) {
       setIsFavorited(false);
       setIsChecking(false);
       return;
@@ -40,7 +40,7 @@ export function useFavorites(itemId: string, itemType: 'deal' | 'product'): UseF
     };
 
     checkFavoriteStatus();
-  }, [user, itemId, itemType]);
+  }, [user, itemId, itemType, disableInitialCheck]);
 
   const toggleFavorite = useCallback(async () => {
     if (!user) {

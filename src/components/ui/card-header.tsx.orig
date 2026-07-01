@@ -14,7 +14,7 @@ import Image from 'next/image';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
+import { withImageProxy } from '@/lib/image-proxy';
 
 export interface CardHeaderProps {
   image: string;
@@ -50,8 +50,6 @@ export function CardHeader({
   children,
   priority = false,
 }: CardHeaderProps) {
-  const isAliExpress = isAliExpressImage(image);
-
   return (
     <div className={cn('relative bg-muted overflow-hidden rounded-t-lg', className)}>
       {/* Image */}
@@ -65,7 +63,6 @@ export function CardHeader({
           loading={priority ? 'eager' : 'lazy'}
           priority={priority}
           quality={75}
-          unoptimized={isAliExpress}
         />
       </div>
 

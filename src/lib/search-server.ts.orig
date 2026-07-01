@@ -206,40 +206,76 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
   const safeLimit = clampPageSize(limit, 5);
 
   try {
-    const { adminDb } = await import('@/lib/firebase-admin');
+    const { generateEmbeddings } = await import('@/ai/embeddings');
+    const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+    const queryVector = await generateEmbeddings(q);
 
-    const qLower = q.toLowerCase();
-    
-    // Fetch a batch of approved products and deals
-    const [productsSnap, dealsSnap] = await Promise.all([
-      adminDb.collection('product_cores')
-        .where('status', '==', 'approved')
-        .limit(40).get(),
-      adminDb.collection('deals')
-        .where('status', '==', 'approved')
-        .limit(40).get()
-    ]);
+    // Run parallel vector search on product_cores and deals with fallback for composite index
+    let productsSnap;
+    let dealsSnap;
+
+    try {
+      [productsSnap, dealsSnap] = await Promise.all([
+        adminDb.collection('product_cores')
+          .where('status', '==', 'approved')
+          .findNearest({
+            vectorField: 'embedding',
+            queryVector: FieldValue.vector(queryVector),
+            distanceMeasure: 'COSINE',
+            limit: safeLimit,
+          }).get(),
+        adminDb.collection('deals')
+          .where('status', '==', 'approved')
+          .findNearest({
+            vectorField: 'embedding',
+            queryVector: FieldValue.vector(queryVector),
+            distanceMeasure: 'COSINE',
+            limit: safeLimit,
+          }).get()
+      ]);
+    } catch (err: any) {
+      const errStr = String(err);
+      if (errStr.includes('FAILED_PRECONDITION') || errStr.includes('index') || errStr.includes('Index')) {
+        console.warn('[Autocomplete] Composite index missing. Falling back to status-less query...');
+        [productsSnap, dealsSnap] = await Promise.all([
+          adminDb.collection('product_cores')
+            .findNearest({
+              vectorField: 'embedding',
+              queryVector: FieldValue.vector(queryVector),
+              distanceMeasure: 'COSINE',
+              limit: safeLimit * 2,
+            }).get(),
+          adminDb.collection('deals')
+            .findNearest({
+              vectorField: 'embedding',
+              queryVector: FieldValue.vector(queryVector),
+              distanceMeasure: 'COSINE',
+              limit: safeLimit * 2,
+            }).get()
+        ]);
+      } else {
+        throw err;
+      }
+    }
 
     const out: Suggestion[] = [];
 
-    // Filter products locally by search query
+    // Normalize products suggestions
     productsSnap.docs.forEach((docSnap: any) => {
       const doc = docSnap.data();
-      const titleStr = typeof doc.title === 'object' ? String(doc.title?.pl || doc.title?.en || '') : String(doc.title || '');
-      if (titleStr.toLowerCase().includes(qLower)) {
-        const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'product');
-        if (suggestion) out.push(suggestion);
-      }
+      // Post-filter by status if index fallback bypassed status query
+      if (doc.status !== 'approved') return;
+      const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'product');
+      if (suggestion) out.push(suggestion);
     });
 
-    // Filter deals locally by search query
+    // Normalize deals suggestions
     dealsSnap.docs.forEach((docSnap: any) => {
       const doc = docSnap.data();
-      const titleStr = typeof doc.title === 'object' ? String(doc.title?.pl || doc.title?.en || '') : String(doc.title || '');
-      if (titleStr.toLowerCase().includes(qLower)) {
-        const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'deal');
-        if (suggestion) out.push(suggestion);
-      }
+      // Post-filter by status if index fallback bypassed status query
+      if (doc.status !== 'approved') return;
+      const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'deal');
+      if (suggestion) out.push(suggestion);
     });
 
     return out.slice(0, safeLimit);

@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "notebooks": {
+      "command": "node",
+      "args": [
+        "/Users/tomaszgorecki/.antigravity-ide/extensions/googlecloudtools.datacloud-0.5.2-universal/mcp_servers/cli/mcp_proxy_bundle.js",
+        "notebooks-antigravityide"
+      ]
+    },
+    "visualization": {
+      "command": "node",
+      "args": [
+        "/Users/tomaszgorecki/.antigravity-ide/extensions/googlecloudtools.datacloud-0.5.2-universal/mcp_servers/cli/mcp_proxy_bundle.js",
+        "visualization-antigravityide"
+      ]
+    },
+    "datacloud_knowledge_catalog_remote": {
+      "serverUrl": "https://dataplex.googleapis.com/mcp",
+      "authProviderType": "google_credentials",
+      "headers": {
+        "User-Agent": "datacloud.antigravity ide"
+      },
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/cloud-platform"
+        ]
+      }
+    },
+    "datacloud_dataproc_remote": {
+      "serverUrl": "https://dataproc-europe-west2.googleapis.com/mcp",
+      "authProviderType": "google_credentials",
+      "headers": {
+        "User-Agent": "datacloud.antigravity ide"
+      },
+      "oauth": {
+        "scopes": [
+          "https://www.googleapis.com/auth/dataproc"
+        ]
+      }
+    }
+  }
+}

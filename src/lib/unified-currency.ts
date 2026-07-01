@@ -11,6 +11,8 @@
  * - Event-based currency change notifications
  */
 
+'use client';
+
 import { useEffect, useState, useCallback } from 'react';
 
 export type Currency = 'PLN' | 'USD' | 'EUR' | 'GBP';
@@ -59,7 +61,7 @@ const CURRENCY_SYMBOLS: Record<Currency, string> = {
  * Singleton manager for exchange rates and currency operations
  * This class handles fetching, caching, and converting between currencies
  */
-class CurrencyManager {
+export class CurrencyManager {
   private static rates: ExchangeRates = {
     PLN: 1.0,
     USD: FALLBACK_RATES.USD,
@@ -360,11 +362,6 @@ export function useCurrency() {
     setCurrency,
   };
 }
-
-/**
- * Export CurrencyManager for use in non-React contexts (e.g., import pipeline)
- */
-export { CurrencyManager };
 
 /**
  * Export type for use in TypeScript files

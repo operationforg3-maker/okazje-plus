@@ -64,7 +64,19 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'ae-pic-a1.aliexpress-media.com',
+        hostname: '*.aliexpress-media.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.alicdn.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '*.alicdn.com',
         port: '',
         pathname: '/**',
       },

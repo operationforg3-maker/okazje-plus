@@ -37,7 +37,7 @@ import ShareButton from '@/components/share-button';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
-import { useCurrency } from '@/lib/unified-currency';
+import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { getExternalUrl } from '@/lib/external-url';
 import { LogisticsBadge } from '@/components/product/LogisticsBadge';
@@ -134,7 +134,7 @@ export default function ProductDetailM6Client({
           .map((item) => item.url)),
       ].filter(Boolean)))
     : (product?.gallery && product?.gallery.length > 0 
-        ? product?.gallery.map(g => g.src) 
+        ? product?.gallery.map((g: any) => g.src || g.url) 
         : [product?.image || '']);
 
   const productVariants = isM6 && Array.isArray(productCore?.variants)
@@ -982,7 +982,7 @@ export default function ProductDetailM6Client({
                   <CardContent className="p-4">
                     <div className="relative aspect-square mb-4 rounded-lg overflow-hidden bg-gray-100">
                       <Image
-                        src={relatedProduct.images?.[0] || relatedProduct.image}
+                        src={relatedProduct.images?.[0] || relatedProduct.image || relatedProduct.imageUrl || '/placeholder.png'}
                         alt={relatedProduct.title?.pl || relatedProduct.name}
                         fill
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

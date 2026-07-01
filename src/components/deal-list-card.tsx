@@ -12,12 +12,12 @@ import { useSmartCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import { useFormatter } from 'next-intl';
 import AdminEditButton from '@/components/admin/admin-edit-button';
-import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
+import { useCurrency } from '@/lib/unified-currency';
 import { extractPriceInfo } from '@/lib/i18n-utils';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import ShareButton from '@/components/share-button';
 import { toast } from 'sonner';
-import { withImageProxy } from '@/lib/image-proxy';
+import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
 import { getExternalUrl } from '@/lib/external-url';
 
 interface DealListCardProps {
@@ -173,9 +173,9 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
   const params = useParams();
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
-  const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount);
+  const liveComments = useCommentsCount('deals', deal.id, deal.commentsCount, true);
   const { mainName: categoryLabel } = useCategoryName(deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug);
-  const baseState = useCardBaseState(deal, 'deal');
+  const baseState = useCardBaseState(deal, 'deal', { disableInitialFavoriteCheck: true });
   const { getText, addToComparison, isFavorited, isFavoriteLoading, toggleFavorite, t } = baseState;
   const formatter = useFormatter();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -212,7 +212,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
   const dealImage = resolveDealImage(deal);
   
   const postedBy = safeText(deal.postedBy, 'Użytkownik');
-  const { currency } = useCurrency();
+  const { formatPrice, convertToPLN } = useCurrency();
 
   const isHot = deal.temperature >= 300;
   const { addDeal } = useSmartCart();
@@ -250,16 +250,16 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
     const safePrice = Number(priceAmount) || 0;
     
     // Ensure we work with PLN for CurrencyManager
-    const priceInPLN = CurrencyManager.convertToPLN(safePrice, sourceCurrency);
-    const formatted = CurrencyManager.formatPrice(priceInPLN, userCurrency);
+    const priceInPLN = convertToPLN(safePrice, sourceCurrency);
+    const formatted = formatPrice(priceInPLN);
     
     let formattedOrig: string | null = null;
     let calculatedDiscount: number | null = null;
     let savings: string | null = null;
     
     if (typeof deal.originalPrice === 'number') {
-      const origInPLN = CurrencyManager.convertToPLN(deal.originalPrice, sourceCurrency);
-      formattedOrig = CurrencyManager.formatPrice(origInPLN, userCurrency);
+      const origInPLN = convertToPLN(deal.originalPrice, sourceCurrency);
+      formattedOrig = formatPrice(origInPLN);
       
       if (deal.originalPrice > 0) {
         calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
@@ -267,7 +267,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
       
       if (deal.originalPrice > safePrice) {
         const savingsInPLN = origInPLN - priceInPLN;
-        savings = CurrencyManager.formatPrice(savingsInPLN, userCurrency);
+        savings = formatPrice(savingsInPLN);
       }
     }
     
@@ -306,7 +306,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
   const productPageUrl = linkedProductId ? `${prefix}/products/${linkedProductId}` : null;
 
   // Generate responsive image URL with size params for proxy optimization
-  const imageUrl = `/api/image-proxy?url=${encodeURIComponent(dealImage)}&w=320&h=240&q=55&f=auto`;
+  const imageUrl = withImageProxy(dealImage);
 
   return (
     <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
@@ -322,6 +322,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
             sizes="160px"
             quality={55}
             className="object-contain transition-transform duration-300 group-hover:scale-105"
+            unoptimized={isAliExpressImage(dealImage)}
           />
         </div>
         <div className="absolute left-2 top-2 flex flex-col gap-1">

@@ -6,13 +6,19 @@ import { collection, onSnapshot, getCountFromServer } from 'firebase/firestore';
 export function useCommentsCount(
   collectionName: 'deals' | 'products',
   docId: string,
-  initialCount?: number
+  initialCount?: number,
+  disableRealtime?: boolean
 ) {
   const [baseCount, setBaseCount] = useState<number>(typeof initialCount === 'number' ? initialCount : 0);
   const [optimisticDelta, setOptimisticDelta] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
+    // Jeśli nie potrzebujemy aktualizacji na żywo, nie uruchamiajmy listenerów Firestore
+    if (disableRealtime) {
+      return;
+    }
+
     let unsub: (() => void) | undefined;
     let cancelled = false;
     async function setup() {
@@ -75,7 +81,7 @@ export function useCommentsCount(
       cancelled = true;
       if (unsub) unsub();
     };
-  }, [collectionName, docId, initialCount]);
+  }, [collectionName, docId, initialCount, disableRealtime]);
 
   const increment = useCallback((delta = 1) => {
     setOptimisticDelta((d) => d + delta);

@@ -1,0 +1,1043 @@
+🔍 Checking Harvester Job: harvest_1782320439315_mxywan
+--- Job Data ---
+{
+  "id": "harvest_1782320439315_mxywan",
+  "status": "running",
+  "source": "aliexpress",
+  "maxResults": 200,
+  "duplicatesSkipped": 0,
+  "errors": [],
+  "currentCategory": "__AUTO_BROWSE__",
+  "query": "__AUTO_BROWSE__",
+  "startedAt": "2026-06-24T17:00:39.370Z",
+  "totalCategories": 1,
+  "telemetry": {
+    "stageTotalsMs": {
+      "bestPriceRecalc": 0,
+      "dealRefinerBatch": 0,
+      "aiCategorization": 0,
+      "fetch": 0,
+      "moderation": 0,
+      "processing": 0,
+      "finalProductRefiner": 0,
+      "finalDealRefiner": 0
+    },
+    "perCategory": [],
+    "totalDurationMs": 0
+  },
+  "processedCategories": [],
+  "productsFound": 198,
+  "productsCreated": 2,
+  "dealsCreated": 180,
+  "dealsLinked": 178,
+  "lastUpdatedAt": "2026-06-24T17:15:36.889Z",
+  "logs": [
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: XqNcni5zY9NQP0Ltx5En",
+      "timestamp": "2026-06-24T17:02:54.463Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product XqNcni5zY9NQP0Ltx5En, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.463Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: Cliu0GsQFfzAVznkiymq",
+      "timestamp": "2026-06-24T17:02:54.507Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product Cliu0GsQFfzAVznkiymq, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.507Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: LAyeKcvtH39MuMLnhydO",
+      "timestamp": "2026-06-24T17:02:54.566Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product LAyeKcvtH39MuMLnhydO, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.566Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 7vC1qLJYY1NPAJ8T55rn",
+      "timestamp": "2026-06-24T17:02:54.611Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 7vC1qLJYY1NPAJ8T55rn, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.611Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: diJKmfLRU3tJFCN5CqHR",
+      "timestamp": "2026-06-24T17:02:54.654Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product diJKmfLRU3tJFCN5CqHR, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.654Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: glSgDNzKQRYQywcS4xy7",
+      "timestamp": "2026-06-24T17:02:54.713Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product glSgDNzKQRYQywcS4xy7, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.713Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: TBjLAEhXYYjBBf6OW4pR",
+      "timestamp": "2026-06-24T17:02:54.756Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product TBjLAEhXYYjBBf6OW4pR, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.757Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: jg27mo9iX0czWvKw8mCY",
+      "timestamp": "2026-06-24T17:02:54.799Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product jg27mo9iX0czWvKw8mCY, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.799Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: gX7MzInS1k6ggpIa72QH",
+      "timestamp": "2026-06-24T17:02:54.843Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product gX7MzInS1k6ggpIa72QH, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.843Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: ZwBaKClZ5JetGxy4Jlbm",
+      "timestamp": "2026-06-24T17:02:54.892Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product ZwBaKClZ5JetGxy4Jlbm, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.892Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: si8fPt44u9Yq6x8gPEod",
+      "timestamp": "2026-06-24T17:02:54.941Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product si8fPt44u9Yq6x8gPEod, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.941Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: ZpHhoGpWUK6PPqEVTaGk",
+      "timestamp": "2026-06-24T17:02:54.988Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product ZpHhoGpWUK6PPqEVTaGk, creating new deal",
+      "timestamp": "2026-06-24T17:02:54.988Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: BgoChWJKLgUx228hQtjt",
+      "timestamp": "2026-06-24T17:02:55.032Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product BgoChWJKLgUx228hQtjt, creating new deal",
+      "timestamp": "2026-06-24T17:02:55.032Z"
+    },
+    {
+      "level": "info",
+      "message": "Committing batch of 99 products.",
+      "timestamp": "2026-06-24T17:02:55.032Z"
+    },
+    {
+      "level": "info",
+      "message": "Batch committed successfully.",
+      "timestamp": "2026-06-24T17:02:56.808Z"
+    },
+    {
+      "level": "info",
+      "message": "Added 99 deals to moderation queue",
+      "timestamp": "2026-06-24T17:06:32.366Z"
+    },
+    {
+      "level": "info",
+      "message": "Updating bestPrice for 99 products in batch.",
+      "timestamp": "2026-06-24T17:06:32.366Z"
+    },
+    {
+      "level": "info",
+      "message": "Uruchamiam Deal Refiner dla 50 ofert (batch/auto)",
+      "timestamp": "2026-06-24T17:06:34.880Z"
+    },
+    {
+      "level": "warn",
+      "message": "Category attempt failed: __AUTO_BROWSE__ (1/2)",
+      "timestamp": "2026-06-24T17:10:41.164Z",
+      "details": {
+        "message": "Przekroczono limit czasu (600000 ms) dla: __AUTO_BROWSE__",
+        "stack": "Error: Przekroczono limit czasu (600000 ms) dla: __AUTO_BROWSE__\n    at Timeout.<anonymous> (/workspace/.next/standalone/.next/server/chunks/430.js:34:37879)\n    at listOnTimeout (node:internal/timers:585:17)\n    at process.processTimers (node:internal/timers:521:7)"
+      }
+    },
+    {
+      "level": "info",
+      "message": "Retrying category: __AUTO_BROWSE__",
+      "timestamp": "2026-06-24T17:10:41.681Z"
+    },
+    {
+      "level": "info",
+      "message": "Processing query/category: __AUTO_BROWSE__ (attempt 2/2)",
+      "timestamp": "2026-06-24T17:10:41.917Z"
+    },
+    {
+      "level": "info",
+      "message": "Auto-browse AliExpress hot catalog (limit=200)",
+      "timestamp": "2026-06-24T17:10:41.993Z"
+    },
+    {
+      "level": "info",
+      "message": "AliExpress auto-browse fetched 99 products",
+      "timestamp": "2026-06-24T17:15:31.097Z"
+    },
+    {
+      "level": "info",
+      "message": "Fetched 99 products from aliexpress for \"__AUTO_BROWSE__\", using 99 after quality filter",
+      "timestamp": "2026-06-24T17:15:31.097Z"
+    },
+    {
+      "level": "info",
+      "message": "Processing 99 products in 1 batches.",
+      "timestamp": "2026-06-24T17:15:31.097Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: uN5UjnL9eNcQmxrBDlgZ",
+      "timestamp": "2026-06-24T17:15:31.156Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product uN5UjnL9eNcQmxrBDlgZ, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.156Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: n9JbdccLTljrJ51XThcf",
+      "timestamp": "2026-06-24T17:15:31.287Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product n9JbdccLTljrJ51XThcf, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.287Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: dS26oWkO0mo5mHEbbY5d",
+      "timestamp": "2026-06-24T17:15:31.331Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product dS26oWkO0mo5mHEbbY5d, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.331Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: oDAU3W6n4BX905b92tkD",
+      "timestamp": "2026-06-24T17:15:31.386Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product oDAU3W6n4BX905b92tkD, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.386Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: IFTVrAbPQtXPXzTocnDD",
+      "timestamp": "2026-06-24T17:15:31.440Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product IFTVrAbPQtXPXzTocnDD, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.440Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: KhKfiX3Ei5nQqyOxQe4e",
+      "timestamp": "2026-06-24T17:15:31.487Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product KhKfiX3Ei5nQqyOxQe4e, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.487Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: XcI2OBtMy0n0g8S2kSsm",
+      "timestamp": "2026-06-24T17:15:31.538Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product XcI2OBtMy0n0g8S2kSsm, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.538Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 53XoxTfY12aAVqi4P4kB",
+      "timestamp": "2026-06-24T17:15:31.585Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 53XoxTfY12aAVqi4P4kB, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.585Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: J632yyTX9r6KP2iktMIl",
+      "timestamp": "2026-06-24T17:15:31.632Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product J632yyTX9r6KP2iktMIl, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.632Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: ZyVHz1TnhPMDUHukjrin",
+      "timestamp": "2026-06-24T17:15:31.689Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product ZyVHz1TnhPMDUHukjrin, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.689Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: xDoW5xvFWwb2QWyPH7Lo",
+      "timestamp": "2026-06-24T17:15:31.736Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product xDoW5xvFWwb2QWyPH7Lo, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.736Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 1h1iT0FVLNMzOxLIGkHS",
+      "timestamp": "2026-06-24T17:15:31.780Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 1h1iT0FVLNMzOxLIGkHS, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.780Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: fJwgpFInF0s7R4gPgzlN",
+      "timestamp": "2026-06-24T17:15:31.830Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product fJwgpFInF0s7R4gPgzlN, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.830Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: cq5L5oe9WMXnf0uRFOsV",
+      "timestamp": "2026-06-24T17:15:31.929Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product cq5L5oe9WMXnf0uRFOsV, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.929Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: aY36LMeLkLDsWBQuSCHg",
+      "timestamp": "2026-06-24T17:15:31.980Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product aY36LMeLkLDsWBQuSCHg, creating new deal",
+      "timestamp": "2026-06-24T17:15:31.980Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: NyxezVI869DVwGhtBadU",
+      "timestamp": "2026-06-24T17:15:32.024Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product NyxezVI869DVwGhtBadU, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.025Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: N1eEFon9H8OmRf3dhKZj",
+      "timestamp": "2026-06-24T17:15:32.070Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product N1eEFon9H8OmRf3dhKZj, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.070Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: Bl2qM7KTgPRU2mSx3lN1",
+      "timestamp": "2026-06-24T17:15:32.115Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product Bl2qM7KTgPRU2mSx3lN1, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.116Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: zer1UZjcqJItxdQF9tdI",
+      "timestamp": "2026-06-24T17:15:32.165Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product zer1UZjcqJItxdQF9tdI, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.165Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: RZIRzMuQP0NJDy82mFq0",
+      "timestamp": "2026-06-24T17:15:32.213Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product RZIRzMuQP0NJDy82mFq0, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.213Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: abywyPM4eKgj3mmT2wy9",
+      "timestamp": "2026-06-24T17:15:32.261Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product abywyPM4eKgj3mmT2wy9, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.261Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: UTmPpqwbhyoQm5dgT9rR",
+      "timestamp": "2026-06-24T17:15:32.401Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product UTmPpqwbhyoQm5dgT9rR, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.401Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: wsP53OvzAswME9rv4tgP",
+      "timestamp": "2026-06-24T17:15:32.442Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product wsP53OvzAswME9rv4tgP, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.442Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: xWGZGubrvMlQ5xRADyGn",
+      "timestamp": "2026-06-24T17:15:32.488Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product xWGZGubrvMlQ5xRADyGn, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.488Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: FMrYJkGvEWJqCS0cTL35",
+      "timestamp": "2026-06-24T17:15:32.528Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product FMrYJkGvEWJqCS0cTL35, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.528Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: CQ303suqAQrlLmvvO0jO",
+      "timestamp": "2026-06-24T17:15:32.573Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product CQ303suqAQrlLmvvO0jO, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.573Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: fYdtEVbYN5noZnXNGcBR",
+      "timestamp": "2026-06-24T17:15:32.625Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product fYdtEVbYN5noZnXNGcBR, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.626Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: MX7qqN1P3AUszrSncA6E",
+      "timestamp": "2026-06-24T17:15:32.680Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product MX7qqN1P3AUszrSncA6E, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.680Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 0XYbNhSPY9CJtxfRPud8",
+      "timestamp": "2026-06-24T17:15:32.734Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 0XYbNhSPY9CJtxfRPud8, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.734Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 6AFzsnQIRXYwJeTNK3Be",
+      "timestamp": "2026-06-24T17:15:32.783Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 6AFzsnQIRXYwJeTNK3Be, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.784Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: Iwup1C0e60gw9XOurZAl",
+      "timestamp": "2026-06-24T17:15:32.832Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product Iwup1C0e60gw9XOurZAl, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.832Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: Q1hoVEytz2Y1SaX9HYqK",
+      "timestamp": "2026-06-24T17:15:32.885Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product Q1hoVEytz2Y1SaX9HYqK, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.886Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 4qnjuMnv7gsffCv64hj0",
+      "timestamp": "2026-06-24T17:15:32.934Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 4qnjuMnv7gsffCv64hj0, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.934Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: p8GzKTTaaQBn4EHMqukG",
+      "timestamp": "2026-06-24T17:15:32.979Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product p8GzKTTaaQBn4EHMqukG, creating new deal",
+      "timestamp": "2026-06-24T17:15:32.979Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: yasXgx88p7WbavT3Md8F",
+      "timestamp": "2026-06-24T17:15:33.022Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product yasXgx88p7WbavT3Md8F, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.022Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: o1f7o3y5j7KCa135btpG",
+      "timestamp": "2026-06-24T17:15:33.064Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product o1f7o3y5j7KCa135btpG, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.064Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: dJyS1Ks1VgkuecgTBvVq",
+      "timestamp": "2026-06-24T17:15:33.113Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product dJyS1Ks1VgkuecgTBvVq, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.113Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: iIl64FQTw2TOkQ3OfrE5",
+      "timestamp": "2026-06-24T17:15:33.156Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product iIl64FQTw2TOkQ3OfrE5, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.157Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: hrQNFE24AkCF8b1x61SO",
+      "timestamp": "2026-06-24T17:15:33.200Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product hrQNFE24AkCF8b1x61SO, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.200Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: QAuCS02oLnoppJ5Qm11r",
+      "timestamp": "2026-06-24T17:15:33.243Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product QAuCS02oLnoppJ5Qm11r, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.243Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: OEml3qGzTeShV5HzTaTY",
+      "timestamp": "2026-06-24T17:15:33.299Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product OEml3qGzTeShV5HzTaTY, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.299Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: EkadUEfc72ZXB2n6uaPg",
+      "timestamp": "2026-06-24T17:15:33.433Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product EkadUEfc72ZXB2n6uaPg, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.433Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: wgDfrIxWXUu0bozlIusw",
+      "timestamp": "2026-06-24T17:15:33.474Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product wgDfrIxWXUu0bozlIusw, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.475Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: oAmRpnBJi2iuB1wckvrt",
+      "timestamp": "2026-06-24T17:15:33.513Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product oAmRpnBJi2iuB1wckvrt, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.513Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 0mYT1tL5Na7mLRiFHhzQ",
+      "timestamp": "2026-06-24T17:15:33.559Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 0mYT1tL5Na7mLRiFHhzQ, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.559Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: LEpGwwXBq4WFO04fA0Tt",
+      "timestamp": "2026-06-24T17:15:33.613Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product LEpGwwXBq4WFO04fA0Tt, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.613Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: p8WaEwcjRmxkfRSB2Ldk",
+      "timestamp": "2026-06-24T17:15:33.667Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product p8WaEwcjRmxkfRSB2Ldk, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.667Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: jkl5yH1BQcFrul01V2cn",
+      "timestamp": "2026-06-24T17:15:33.716Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product jkl5yH1BQcFrul01V2cn, creating new deal",
+      "timestamp": "2026-06-24T17:15:33.716Z"
+    },
+    {
+      "level": "info",
+      "message": "Creating new product for: 547B dla modeli japonii/usa na lata 2016-18 boczne skrzydło samochodu szkło lustrzane lewy/prawy",
+      "timestamp": "2026-06-24T17:15:33.738Z"
+    },
+    {
+      "level": "info",
+      "message": "Resolved category: uncategorized/uncategorized",
+      "timestamp": "2026-06-24T17:15:35.351Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: uukVWevgNmBt4XL5zZkW",
+      "timestamp": "2026-06-24T17:15:35.394Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product uukVWevgNmBt4XL5zZkW, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.394Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: cOyYqVxgXY498Y5qojCJ",
+      "timestamp": "2026-06-24T17:15:35.435Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product cOyYqVxgXY498Y5qojCJ, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.436Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: FDwVTP01qzxviIKUMkfR",
+      "timestamp": "2026-06-24T17:15:35.483Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product FDwVTP01qzxviIKUMkfR, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.483Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: Sat85nLj2skJvrFJddso",
+      "timestamp": "2026-06-24T17:15:35.528Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product Sat85nLj2skJvrFJddso, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.528Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 7XRaXfImyv4Urq5yPNmk",
+      "timestamp": "2026-06-24T17:15:35.578Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 7XRaXfImyv4Urq5yPNmk, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.578Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: nY8NuJj6bK23GwbMzsxG",
+      "timestamp": "2026-06-24T17:15:35.621Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product nY8NuJj6bK23GwbMzsxG, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.621Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: GTmhTLA0g843yK1BQSKh",
+      "timestamp": "2026-06-24T17:15:35.664Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product GTmhTLA0g843yK1BQSKh, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.664Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 8rOx2DyWsi7O073PMfTx",
+      "timestamp": "2026-06-24T17:15:35.718Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 8rOx2DyWsi7O073PMfTx, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.718Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 95kd1RJLiNXQ1X8LUMOK",
+      "timestamp": "2026-06-24T17:15:35.761Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 95kd1RJLiNXQ1X8LUMOK, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.761Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: Ify76urRAI50N6La5zZB",
+      "timestamp": "2026-06-24T17:15:35.801Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product Ify76urRAI50N6La5zZB, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.801Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: XTEQCSZOQjOvZRRWR5kq",
+      "timestamp": "2026-06-24T17:15:35.845Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product XTEQCSZOQjOvZRRWR5kq, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.845Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: bpoqQCA8sEf7GCEv9oLt",
+      "timestamp": "2026-06-24T17:15:35.889Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product bpoqQCA8sEf7GCEv9oLt, creating new deal",
+      "timestamp": "2026-06-24T17:15:35.889Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: PwuvnupPshVObWOov5bM",
+      "timestamp": "2026-06-24T17:15:36.016Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product PwuvnupPshVObWOov5bM, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.016Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: FEyavgCRdTjilqERjqHX",
+      "timestamp": "2026-06-24T17:15:36.059Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product FEyavgCRdTjilqERjqHX, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.059Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: yN16hkW9F24yHcMJoFr3",
+      "timestamp": "2026-06-24T17:15:36.098Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product yN16hkW9F24yHcMJoFr3, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.098Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: GhqCay4RLVlATs0TbdVM",
+      "timestamp": "2026-06-24T17:15:36.140Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product GhqCay4RLVlATs0TbdVM, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.140Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 0C1T2V0n63EXY4jhUR8f",
+      "timestamp": "2026-06-24T17:15:36.184Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 0C1T2V0n63EXY4jhUR8f, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.184Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: KMuPLTmcHwkO6gmmNSqI",
+      "timestamp": "2026-06-24T17:15:36.224Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product KMuPLTmcHwkO6gmmNSqI, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.224Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: hSBn3I5PMjqCPnFzjx4Z",
+      "timestamp": "2026-06-24T17:15:36.266Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product hSBn3I5PMjqCPnFzjx4Z, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.266Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: SxuaAYvYDQymrMVsWoa0",
+      "timestamp": "2026-06-24T17:15:36.310Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product SxuaAYvYDQymrMVsWoa0, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.310Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: kfJzBTHflAO885FOimQ8",
+      "timestamp": "2026-06-24T17:15:36.351Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product kfJzBTHflAO885FOimQ8, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.351Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: dxWutnTrfzrNTC7r4M9B",
+      "timestamp": "2026-06-24T17:15:36.395Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product dxWutnTrfzrNTC7r4M9B, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.395Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: vD2W0YLtG2QN2ZOo5F5Q",
+      "timestamp": "2026-06-24T17:15:36.442Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product vD2W0YLtG2QN2ZOo5F5Q, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.442Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: zLSV5OhdQsY06qpfxnV6",
+      "timestamp": "2026-06-24T17:15:36.484Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product zLSV5OhdQsY06qpfxnV6, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.484Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: l7xSK7EitGf4ha5QyND5",
+      "timestamp": "2026-06-24T17:15:36.531Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product l7xSK7EitGf4ha5QyND5, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.532Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: xiPlkqpVlRonVRAjkGWP",
+      "timestamp": "2026-06-24T17:15:36.582Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product xiPlkqpVlRonVRAjkGWP, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.582Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 09SKr7kameN8tuNfNUDG",
+      "timestamp": "2026-06-24T17:15:36.624Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 09SKr7kameN8tuNfNUDG, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.624Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: lqc864fqtA6GfqCbwSMQ",
+      "timestamp": "2026-06-24T17:15:36.672Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product lqc864fqtA6GfqCbwSMQ, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.672Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 4NbqX3vox8c0tPFPRW7B",
+      "timestamp": "2026-06-24T17:15:36.723Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 4NbqX3vox8c0tPFPRW7B, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.723Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: 2TIXsYzP0rYjdDxeprwB",
+      "timestamp": "2026-06-24T17:15:36.769Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product 2TIXsYzP0rYjdDxeprwB, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.769Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: pTbgGS2hbJgbknQKpiUP",
+      "timestamp": "2026-06-24T17:15:36.810Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product pTbgGS2hbJgbknQKpiUP, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.810Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product by identity hash: UIlKHunNWNCwmzKwUc03",
+      "timestamp": "2026-06-24T17:15:36.852Z"
+    },
+    {
+      "level": "info",
+      "message": "Found existing product UIlKHunNWNCwmzKwUc03, creating new deal",
+      "timestamp": "2026-06-24T17:15:36.852Z"
+    }
+  ]
+}
+
+--- Logs Subcollection ---
+No logs subcollection found.

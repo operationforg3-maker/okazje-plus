@@ -13,6 +13,7 @@
  * state.toggleFavorite()
  */
 
+import { useMemo } from 'react';
 import { Deal, Product } from '@/lib/types';
 import { useCurrency } from '@/lib/unified-currency';
 import { useContentLanguage } from '@/hooks/use-content-language';
@@ -44,18 +45,23 @@ interface CardBaseState {
 
 export function useCardBaseState(
   item: Deal | Product | any,
-  type: 'deal' | 'product' = 'deal'
+  type: 'deal' | 'product' = 'deal',
+  options?: { disableInitialFavoriteCheck?: boolean }
 ): CardBaseState {
   const { formatPrice } = useCurrency();
   const { getText } = useContentLanguage();
   const { user } = useAuth();
-  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(item.id, type);
+  const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(
+    item.id, 
+    type,
+    options?.disableInitialFavoriteCheck
+  );
   const { addToComparison } = useComparison();
   const t = useTranslations('common');
   
   const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
   
-  return {
+  return useMemo(() => ({
     formatPrice,
     getText,
     user,
@@ -65,5 +71,15 @@ export function useCardBaseState(
     toggleFavorite,
     addToComparison,
     t,
-  };
+  }), [
+    formatPrice,
+    getText,
+    user,
+    isAdmin,
+    isFavorited,
+    isFavoriteLoading,
+    toggleFavorite,
+    addToComparison,
+    t
+  ]);
 }
