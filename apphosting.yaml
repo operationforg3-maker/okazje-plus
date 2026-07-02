@@ -6,6 +6,7 @@ runConfig:
   maxInstances: 100
   concurrency: 200
   cpu: 2
+  memoryMiB: 2048
   timeoutSeconds: 3600
   network:
     vpcAccess:
