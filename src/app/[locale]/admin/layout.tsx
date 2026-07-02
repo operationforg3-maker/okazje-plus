@@ -51,6 +51,12 @@ export default function AdminLayout({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [pathname]);
 
+  const isUXPreview = normalizedPathname.startsWith('/admin/ux-preview');
+
+  if (isUXPreview) {
+    return <AdminAuthGuard>{children}</AdminAuthGuard>;
+  }
+
   return (
     <AdminAuthGuard>
       <SidebarProvider>
