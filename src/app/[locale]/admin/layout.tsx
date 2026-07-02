@@ -54,7 +54,7 @@ export default function AdminLayout({
   const isUXPreview = normalizedPathname.startsWith('/admin/ux-preview');
 
   if (isUXPreview) {
-    return <AdminAuthGuard>{children}</AdminAuthGuard>;
+    return <>{children}</>;
   }
 
   return (
