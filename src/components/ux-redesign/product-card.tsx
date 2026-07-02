@@ -50,7 +50,9 @@ function formatPrice(value: number, currency = 'PLN'): string {
 export function UXRedesignProductCard({ product }: UXRedesignProductCardProps) {
   const locale = useLocale();
   const title = getLocalizedText(product?.title || product?.name, 'Produkt');
-  const href = `/${locale}/products/${product?.slug || product?.id}`;
+  const rawSlug = product?.slug;
+  const safeSlug = typeof rawSlug === 'string' ? rawSlug : (rawSlug ? getLocalizedText(rawSlug) : null);
+  const href = `/${locale}/products/${safeSlug || product?.id}`;
   const image = getProductImage(product);
   const imageUrl = withImageProxy(image);
   const currency = product?.currency || 'PLN';
