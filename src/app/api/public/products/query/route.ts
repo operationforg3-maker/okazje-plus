@@ -21,7 +21,7 @@ type QueryBody = {
   limit?: number;
 };
 
-const MAX_LIMIT = 80;
+const MAX_LIMIT = 500;
 const DEFAULT_LIMIT = 48;
 const CACHE_TTL_SECONDS = 45;
 
@@ -105,14 +105,12 @@ export async function POST(request: NextRequest) {
       statuses.map(async (status) => {
         let q: FirebaseFirestore.Query = adminDb.collection('product_cores').where('status', '==', status);
 
-        if (filters.categoryId) {
-          q = q.where('mainCategorySlug', '==', filters.categoryId);
-        }
-        if (filters.subCategorySlug) {
-          q = q.where('subCategorySlug', '==', filters.subCategorySlug);
-        }
         if (filters.subSubCategorySlug) {
           q = q.where('subSubCategorySlug', '==', filters.subSubCategorySlug);
+        } else if (filters.subCategorySlug) {
+          q = q.where('subCategorySlug', '==', filters.subCategorySlug);
+        } else if (filters.categoryId) {
+          q = q.where('mainCategorySlug', '==', filters.categoryId);
         }
 
         try {

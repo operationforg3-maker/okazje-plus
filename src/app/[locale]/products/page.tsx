@@ -96,6 +96,10 @@ export function ProductsPageContent({
   const subSubCategoryParam = searchParams.get('subSubCategory') || searchParams.get('subsubcategory') || initialSubSubCategoryParam;
   const statusParam = searchParams.get('status');
   const [products, setProducts] = useState<ProductCore[]>([]);
+  const [limit, setLimit] = useState(24);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
   const [categories, setCategories] = useState<Category[]>(() => initialCategories);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
@@ -270,11 +274,21 @@ export function ProductsPageContent({
     } catch {}
   }, []);
 
-  // Pobierz ProductCore przy zmianie kategorii / subkategorii / wyszukiwaniu / filtrów
+  // Reset limit when filters change
+  useEffect(() => {
+    setLimit(24);
+    setHasMore(true);
+  }, [selectedMainCategorySlug, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy, productStatusView]);
+
+  // Pobierz ProductCore przy zmianie kategorii / subkategorii / wyszukiwaniu / filtrów / limitu
   useEffect(() => {
     let cancelled = false;
     async function fetchProducts() {
-      setIsLoading(true);
+      if (limit === 24) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       try {
         const baseFilters = {
           ...unifiedFilters,
@@ -292,12 +306,14 @@ export function ProductsPageContent({
               mainCategorySlug: selectedMainCategorySlug,
               subCategorySlug: selectedSubcategory || undefined,
               subSubCategorySlug: selectedSubSubcategory || undefined,
-              limit: 100,
+              limit,
               statusFilter: productStatusView,
             });
             if (!cancelled) {
-              if ((results?.length || 0) > 0) {
-                setProducts(results || []);
+              const gotProducts = results || [];
+              if (gotProducts.length > 0) {
+                setProducts(gotProducts);
+                setHasMore(gotProducts.length >= limit && gotProducts.length < 500);
               } else {
                 // Fallback when Typesense index is stale or incomplete.
                 const fallbackProducts = await fetchProductsQuery(
@@ -306,9 +322,10 @@ export function ProductsPageContent({
                     searchTerm: q,
                   },
                   sortBy,
-                  60
+                  limit
                 );
                 setProducts(fallbackProducts || []);
+                setHasMore((fallbackProducts?.length || 0) >= limit && (fallbackProducts?.length || 0) < 500);
               }
             }
           } else {
@@ -320,13 +337,17 @@ export function ProductsPageContent({
                 statusFilter: 'waiting_room',
               },
               sortBy,
-              60
+              limit
             );
-            if (!cancelled) setProducts(waitingProducts || []);
+            if (!cancelled) {
+              const gotProducts = waitingProducts || [];
+              setProducts(gotProducts);
+              setHasMore(gotProducts.length >= limit && gotProducts.length < 500);
+            }
           }
         } else {
           // Użyj zunifiowanych filtrów do pobierania ProductCore
-          const filteredProducts = await fetchProductsQuery(baseFilters, sortBy, 60);
+          const filteredProducts = await fetchProductsQuery(baseFilters, sortBy, limit);
           if (!cancelled) {
             // When the selected status has no results, switch once to the opposite status.
             if (
@@ -356,18 +377,23 @@ export function ProductsPageContent({
               }
             }
 
-            setProducts(filteredProducts);
+            const gotProducts = filteredProducts || [];
+            setProducts(gotProducts);
+            setHasMore(gotProducts.length >= limit && gotProducts.length < 500);
           }
         }
       } catch (error) {
         console.error('Error fetching products:', error);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }
       }
     }
     const t = setTimeout(fetchProducts, 250); // drobny debounce
     return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy, productStatusView]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy, productStatusView, limit]);
 
   useEffect(() => {
     autoStatusSwitchPerformed.current = false;
@@ -401,18 +427,31 @@ export function ProductsPageContent({
     return product.bestPrice?.amount || 0;
   };
 
-  // Infinite scroll hook - ładuje kolejne produkty przy scrollowaniu
-  // Filtry i sortowanie są teraz obsługiwane przez getProductCoresByFilters w useEffect
-  const {
-    displayedItems: displayedProducts,
-    hasMore,
-    isLoading: isLoadingMore,
-    observerTarget,
-  } = useInfiniteScroll({
-    items: products, // Bezpośrednio z products (już przefiltrowane i posortowane)
-    initialItemsPerPage: 20,
-    loadMoreThreshold: 500,
-  });
+  // Wyświetlamy wszystkie pobrane z serwera produkty bezpośrednio
+  const displayedProducts = products;
+
+  // Obserwator do infinite scroll (serwerowego)
+  useEffect(() => {
+    if (isLoading || !hasMore || isLoadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setLimit((prev) => prev + 24);
+        }
+      },
+      { rootMargin: '400px' }
+    );
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+      observer.disconnect();
+    };
+  }, [isLoading, hasMore, isLoadingMore]);
 
   // Unified currency formatting handled via useCurrency()
 
