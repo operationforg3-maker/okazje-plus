@@ -1,10 +1,20 @@
-import Image from 'next/image';
+import { getHotDeals, getRecommendedProducts, getCategories } from '@/lib/data';
+import { UXPreviewV4Client } from './v4-client';
 
-export default function UXPreviewV4() {
+export const revalidate = 0;
+
+export default async function UXPreviewV4Page() {
+  const [hotDeals, topProducts, categories] = await Promise.all([
+    getHotDeals(16),
+    getRecommendedProducts(8),
+    getCategories(),
+  ]);
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">UI Preview - Version 4</h1>
-      <Image src="/preview/ux_version_4.png" alt="UI Version 4" width={1200} height={800} />
-    </div>
+    <UXPreviewV4Client
+      initialHotDeals={hotDeals}
+      initialTopProducts={topProducts}
+      categories={categories}
+    />
   );
 }

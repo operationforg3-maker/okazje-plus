@@ -102,14 +102,15 @@ const navStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
-    title: 'Preview UI',
+    title: 'Propozycje UX',
     icon: Eye,
     items: [
-      { title: 'Version 1', href: '/admin/ux-preview/v1', icon: Eye },
-      { title: 'Version 2', href: '/admin/ux-preview/v2', icon: Eye },
-      { title: 'Version 3', href: '/admin/ux-preview/v3', icon: Eye },
-      { title: 'Version 4', href: '/admin/ux-preview/v4', icon: Eye },
-      { title: 'Version 5', href: '/admin/ux-preview/v5', icon: Eye },
+      { title: 'V0 — Home Redesign', href: '/admin/ux-preview', icon: Eye, badge: 'LIVE', badgeVariant: 'default' },
+      { title: 'V1 — Lista + Sidebar', href: '/admin/ux-preview/v1', icon: Eye },
+      { title: 'V2 — Magazynowy', href: '/admin/ux-preview/v2', icon: Eye },
+      { title: 'V3 — Dark Neon', href: '/admin/ux-preview/v3', icon: Eye },
+      { title: 'V4 — Masonry/Kafelki', href: '/admin/ux-preview/v4', icon: Eye },
+      { title: 'V5 — Kategorie', href: '/admin/ux-preview/v5', icon: Eye },
     ],
   },
 ];
