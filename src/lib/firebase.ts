@@ -42,15 +42,21 @@ assertValidPublicConfig();
 
 // Na serwerze używamy konfiguracji z App Hosting, na kliencie z publicznych zmiennych
 // Podczas buildu (bez FIREBASE_WEBAPP_CONFIG) używamy konfiguracji klienta także na serwerze
-const firebaseConfig = isServer
-  ? (process.env.FIREBASE_WEBAPP_CONFIG 
-      ? JSON.parse(process.env.FIREBASE_WEBAPP_CONFIG)
-      : {
-          ...defaultClientConfig,
-        })
-  : {
-      ...defaultClientConfig,
-    };
+let parsedConfig = null;
+if (isServer && process.env.FIREBASE_WEBAPP_CONFIG) {
+  try {
+    const trimmed = process.env.FIREBASE_WEBAPP_CONFIG.trim();
+    if (trimmed) {
+      parsedConfig = JSON.parse(trimmed);
+    }
+  } catch (e) {
+    console.warn('[firebase] Failed to parse FIREBASE_WEBAPP_CONFIG environment variable:', e);
+  }
+}
+
+const firebaseConfig = parsedConfig || {
+  ...defaultClientConfig,
+};
 
 // Inicjalizuj Firebase tylko raz
 let app: FirebaseApp;

@@ -21,6 +21,7 @@ import {
   Wrench,
   Rocket,
   ShieldCheck,
+  Eye,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -98,6 +99,17 @@ const navStructure: (NavItem | NavGroup)[] = [
       { title: 'Ustawienia', href: '/admin/settings', icon: Settings },
       { title: 'OAuth', href: '/admin/settings/oauth', icon: Settings },
       { title: 'Przewodnik M6 UI', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
+    ],
+  },
+  {
+    title: 'Preview UI',
+    icon: Eye,
+    items: [
+      { title: 'Version 1', href: '/admin/ux-preview/v1', icon: Eye },
+      { title: 'Version 2', href: '/admin/ux-preview/v2', icon: Eye },
+      { title: 'Version 3', href: '/admin/ux-preview/v3', icon: Eye },
+      { title: 'Version 4', href: '/admin/ux-preview/v4', icon: Eye },
+      { title: 'Version 5', href: '/admin/ux-preview/v5', icon: Eye },
     ],
   },
 ];
