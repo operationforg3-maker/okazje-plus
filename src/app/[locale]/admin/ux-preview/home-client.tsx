@@ -26,6 +26,14 @@ function getLocalizedText(value: unknown, fallback = 'Oferta'): string {
   return fallback;
 }
 
+function formatPrice(v: any, currency = 'PLN'): string | null {
+  const n = typeof v === 'number' ? v
+    : typeof v === 'object' && v?.amount ? v.amount
+    : parseFloat(String(v || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+  if (isNaN(n) || n <= 0) return null;
+  return new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(n);
+}
+
 interface Props {
   initialHotDeals: Deal[];
   initialTopProducts: Product[];
@@ -283,11 +291,11 @@ export function UXPreviewHomeClient({ initialHotDeals, initialTopProducts, categ
                   <div className="flex items-center justify-between pt-2">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xl font-black text-foreground">
-                        {featureDeal.price ? `${featureDeal.price} PLN` : 'Gratis'}
+                        {formatPrice(featureDeal.price) || 'Gratis'}
                       </span>
-                      {featureDeal.originalPrice && (
+                      {featureDeal.originalPrice && formatPrice(featureDeal.originalPrice) !== formatPrice(featureDeal.price) && (
                         <span className="text-xs text-muted-foreground line-through opacity-70">
-                          {featureDeal.originalPrice} PLN
+                          {formatPrice(featureDeal.originalPrice)}
                         </span>
                       )}
                     </div>
