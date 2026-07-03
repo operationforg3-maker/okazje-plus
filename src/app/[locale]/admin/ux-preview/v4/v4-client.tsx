@@ -145,7 +145,7 @@ export function UXPreviewV4Client({ initialHotDeals, initialTopProducts, categor
               const aspect = aspects[idx % aspects.length];
 
               return (
-                <Link key={deal.id} href={`/${locale}/deals/${deal.id}`} className="group block break-inside-avoid mb-4">
+                <Link key={deal.id} href={`/${locale}/admin/ux-preview/deal/${deal.id}`} className="group block break-inside-avoid mb-4">
                   <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden border border-amber-100 dark:border-zinc-800 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
                     <div className={cn("relative overflow-hidden", aspect)}>
                       <Image
@@ -194,7 +194,7 @@ export function UXPreviewV4Client({ initialHotDeals, initialTopProducts, categor
               const temp = Math.round(deal.temperature || 0);
 
               return (
-                <Link key={deal.id} href={`/${locale}/deals/${deal.id}`} className="group block">
+                <Link key={deal.id} href={`/${locale}/admin/ux-preview/deal/${deal.id}`} className="group block">
                   <div className="bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden border border-amber-100 dark:border-zinc-800 hover:shadow-lg transition-all">
                     <div className="relative aspect-square overflow-hidden">
                       <Image src={withImageProxy(image)} alt={title} fill className="object-cover group-hover:scale-105 transition-transform duration-400" loading={idx < 4 ? 'eager' : 'lazy'} />

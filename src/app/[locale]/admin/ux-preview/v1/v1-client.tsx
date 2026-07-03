@@ -113,7 +113,7 @@ export function UXPreviewV1Client({ initialHotDeals, initialTopProducts, categor
                 const title = getLocalizedText(p.title || p.name, 'Produkt');
                 const slug = typeof p.slug === 'string' ? p.slug : p.id;
                 return (
-                  <Link key={p.id} href={`/${locale}/products/${slug}`} className="flex items-center gap-3 group">
+                  <Link key={p.id} href={`/${locale}/admin/ux-preview/product/${slug}`} className="flex items-center gap-3 group">
                     <div className="h-12 w-12 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 flex-shrink-0 relative">
                       <Image src={withImageProxy(img)} alt={title} fill className="object-cover" />
                     </div>
@@ -162,7 +162,7 @@ export function UXPreviewV1Client({ initialHotDeals, initialTopProducts, categor
               const isHot = temp >= 100;
 
               return (
-                <Link key={deal.id} href={`/${locale}/deals/${deal.id}`} className="group block">
+                <Link key={deal.id} href={`/${locale}/admin/ux-preview/deal/${deal.id}`} className="group block">
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex">
                     {/* Image */}
                     <div className="w-36 sm:w-48 flex-shrink-0 relative bg-slate-100 dark:bg-slate-800">

@@ -292,7 +292,7 @@ export function UXPreviewHomeClient({ initialHotDeals, initialTopProducts, categ
                       )}
                     </div>
                     <Button size="sm" className="rounded-xl font-bold bg-primary text-primary-foreground shadow-md" asChild>
-                      <Link href={`/${locale}/deals/${featureDeal.id}`}>
+                      <Link href={`/${locale}/admin/ux-preview/deal/${featureDeal.id}`}>
                         Odbierz okazję
                       </Link>
                     </Button>

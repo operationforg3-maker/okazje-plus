@@ -63,7 +63,7 @@ export function UXPreviewV2Client({ initialHotDeals, initialTopProducts, categor
             : null;
 
           return (
-            <Link href={`/${locale}/deals/${(heroDeal as any).id}`} className="group block">
+            <Link href={`/${locale}/admin/ux-preview/deal/${(heroDeal as any).id}`} className="group block">
               <div className="relative rounded-3xl overflow-hidden h-[420px] shadow-2xl">
                 <Image
                   src={withImageProxy(image)}
@@ -124,7 +124,7 @@ export function UXPreviewV2Client({ initialHotDeals, initialTopProducts, categor
                 ? Math.round((deal.originalPrice - deal.price) / deal.originalPrice * 100)
                 : null;
               return (
-                <Link key={deal.id} href={`/${locale}/deals/${deal.id}`} className="group block">
+                <Link key={deal.id} href={`/${locale}/admin/ux-preview/deal/${deal.id}`} className="group block">
                   <div className="rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:shadow-lg transition-all">
                     <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
                       <Image src={withImageProxy(image)} alt={title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -178,7 +178,7 @@ export function UXPreviewV2Client({ initialHotDeals, initialTopProducts, categor
               const temp = Math.round(deal.temperature || 0);
 
               return (
-                <Link key={deal.id} href={`/${locale}/deals/${deal.id}`} className="group block">
+                <Link key={deal.id} href={`/${locale}/admin/ux-preview/deal/${deal.id}`} className="group block">
                   <div className="rounded-2xl overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:shadow-xl transition-all">
                     <div className="relative aspect-[16/9] overflow-hidden bg-gray-100 dark:bg-gray-800">
                       <Image src={withImageProxy(image)} alt={title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />

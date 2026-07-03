@@ -177,7 +177,7 @@ export function UXPreviewV5Client({ initialHotDeals, initialTopProducts, categor
                   : null;
 
                 return (
-                  <Link key={deal.id} href={`/${locale}/deals/${deal.id}`} className="group block">
+                  <Link key={deal.id} href={`/${locale}/admin/ux-preview/deal/${deal.id}`} className="group block">
                     <div className="bg-white dark:bg-neutral-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-neutral-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                       {/* Image */}
                       <div className="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-neutral-800">

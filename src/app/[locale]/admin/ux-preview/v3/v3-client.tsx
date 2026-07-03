@@ -99,7 +99,7 @@ export function UXPreviewV3Client({ initialHotDeals, initialTopProducts, categor
               : null;
 
             return (
-              <Link key={deal.id} href={`/${locale}/deals/${deal.id}`} className="group block">
+              <Link key={deal.id} href={`/${locale}/admin/ux-preview/deal/${deal.id}`} className="group block">
                 <div
                   className="h-full rounded-2xl overflow-hidden flex flex-col transition-all duration-300 group-hover:-translate-y-1"
                   style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}
@@ -174,7 +174,7 @@ export function UXPreviewV3Client({ initialHotDeals, initialTopProducts, categor
             const slug = typeof p.slug === 'string' ? p.slug : p.id;
             const price = formatPrice(p.bestPrice ?? p.price);
             return (
-              <Link key={p.id} href={`/${locale}/products/${slug}`} className="group block">
+              <Link key={p.id} href={`/${locale}/admin/ux-preview/product/${slug}`} className="group block">
                 <div
                   className="rounded-2xl overflow-hidden transition-all group-hover:-translate-y-1"
                   style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
