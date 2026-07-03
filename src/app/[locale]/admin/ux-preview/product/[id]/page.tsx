@@ -5,6 +5,35 @@ import { UXPreviewProductDetailClient } from './product-detail-client';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+function sanitizeData<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+
+  if (typeof (obj as any).toDate === 'function') {
+    return (obj as any).toDate().toISOString() as any;
+  }
+
+  if (typeof (obj as any).seconds === 'number' && typeof (obj as any).nanoseconds === 'number') {
+    return new Date((obj as any).seconds * 1000).toISOString() as any;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeData(item)) as any;
+  }
+
+  if (typeof obj === 'object') {
+    const res: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        if (key === 'embedding') continue;
+        res[key] = sanitizeData(obj[key]);
+      }
+    }
+    return res;
+  }
+
+  return obj;
+}
+
 async function resolveProduct(id: string) {
   if (!id || id.trim() === '') return null;
 
@@ -18,11 +47,11 @@ async function resolveProduct(id: string) {
     recentRatings = [];
   }
 
-  return JSON.parse(JSON.stringify({
-    product: data.product,
-    deals: data.deals,
-    recentRatings,
-  }));
+  return {
+    product: sanitizeData(data.product),
+    deals: sanitizeData(data.deals),
+    recentRatings: sanitizeData(recentRatings),
+  };
 }
 
 export default async function UXPreviewProductPage({
