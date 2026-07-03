@@ -367,7 +367,7 @@ export function UXPreviewHomeClient({ initialHotDeals, initialTopProducts, categ
         {hotDeals.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {hotDeals.map((deal) => (
-              <UXRedesignDealCard key={deal.id} deal={deal} />
+              <UXRedesignDealCard key={deal.id} deal={deal} previewMode />
             ))}
           </div>
         ) : (
@@ -400,7 +400,7 @@ export function UXPreviewHomeClient({ initialHotDeals, initialTopProducts, categ
         {topProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {topProducts.map((product) => (
-              <UXRedesignProductCard key={product.id} product={product} />
+              <UXRedesignProductCard key={product.id} product={product} previewMode />
             ))}
           </div>
         ) : (

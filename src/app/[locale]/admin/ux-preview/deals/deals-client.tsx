@@ -156,6 +156,7 @@ export function UXPreviewDealsClient({ initialDeals }: Props) {
               key={`${deal.id}-${idx}`} 
               deal={deal} 
               priority={idx < 4}
+              previewMode
             />
           ))}
         </div>

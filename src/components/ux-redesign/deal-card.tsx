@@ -10,6 +10,7 @@ import { withImageProxy } from '@/lib/image-proxy';
 interface UXRedesignDealCardProps {
   deal: any;
   priority?: boolean;
+  previewMode?: boolean;
 }
 
 function getLocalizedText(value: unknown, fallback = 'Oferta'): string {
@@ -58,12 +59,14 @@ function formatPrice(value: number, currency = 'PLN'): string {
   return new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(value);
 }
 
-export function UXRedesignDealCard({ deal, priority = false }: UXRedesignDealCardProps) {
+export function UXRedesignDealCard({ deal, priority = false, previewMode = false }: UXRedesignDealCardProps) {
   const locale = useLocale();
   const title = getLocalizedText(deal?.title, 'Oferta');
   const image = getDealImage(deal);
   const imageUrl = withImageProxy(image);
-  const href = `/${locale}/deals/${deal?.id}`;
+  const href = previewMode
+    ? `/${locale}/admin/ux-preview/deal/${deal?.id}`
+    : `/${locale}/deals/${deal?.id}`;
   const source = getLocalizedText(deal?.merchant || deal?.metadata?.merchant || deal?.source, 'Sklep');
   const currency = deal?.currency || 'PLN';
 

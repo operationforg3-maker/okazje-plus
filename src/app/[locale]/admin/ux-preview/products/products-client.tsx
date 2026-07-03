@@ -151,7 +151,8 @@ export function UXPreviewProductsClient({ initialProducts }: Props) {
           {products.map((product, idx) => (
             <UXRedesignProductCard 
               key={`${product.id}-${idx}`} 
-              product={product} 
+              product={product}
+              previewMode
             />
           ))}
         </div>

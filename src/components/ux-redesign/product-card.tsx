@@ -8,6 +8,7 @@ import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
 
 interface UXRedesignProductCardProps {
   product: any;
+  previewMode?: boolean;
 }
 
 function getLocalizedText(value: unknown, fallback = 'Produkt'): string {
@@ -47,12 +48,15 @@ function formatPrice(value: number, currency = 'PLN'): string {
   return new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(value);
 }
 
-export function UXRedesignProductCard({ product }: UXRedesignProductCardProps) {
+export function UXRedesignProductCard({ product, previewMode = false }: UXRedesignProductCardProps) {
   const locale = useLocale();
   const title = getLocalizedText(product?.title || product?.name, 'Produkt');
   const rawSlug = product?.slug;
   const safeSlug = typeof rawSlug === 'string' ? rawSlug : (rawSlug ? getLocalizedText(rawSlug) : null);
-  const href = `/${locale}/products/${safeSlug || product?.id}`;
+  const productId = safeSlug || product?.id;
+  const href = previewMode
+    ? `/${locale}/admin/ux-preview/product/${productId}`
+    : `/${locale}/products/${productId}`;
   const image = getProductImage(product);
   const imageUrl = withImageProxy(image);
   const currency = product?.currency || 'PLN';
