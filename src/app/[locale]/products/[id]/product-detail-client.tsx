@@ -43,6 +43,7 @@ import CommentSection from '@/components/comment-section';
 import RatingInput from '@/components/rating-input';
 import ShareButton from '@/components/share-button';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
+import { InfiniteSimilarFeed } from '@/components/infinite-similar-feed';
 import AIExpertSummary from '@/components/ai-expert-summary';
 import { PriceHistoryChart } from '@/components/price-history-chart';
 import { getTotalPrice, getPriceAmount } from '@/lib/i18n-utils';
@@ -939,7 +940,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
         </TabsContent>
       </Tabs>
 
-      {/* Related Products */}
+      {/* Related Products (Fallback / Carousel) */}
       {relatedProducts.length > 0 && (
         <>
           <Separator className="my-12" />
@@ -949,7 +950,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
               Podobne produkty
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {relatedProducts.map(p => (
+              {relatedProducts.slice(0, 3).map(p => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>
@@ -968,6 +969,21 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
         excludeItemId={product.id}
         maxItems={8}
       />
+
+      <Separator className="my-12" />
+      
+      {/* Infinite Scroll Feed */}
+      <section>
+        <h2 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">
+          <Package className="h-6 w-6 text-primary" />
+          Więcej podobnych produktów
+        </h2>
+        <InfiniteSimilarFeed
+          itemType="product"
+          categoryId={product.mainCategorySlug || ''}
+          excludeId={product.id}
+        />
+      </section>
     </div>
   );
 }

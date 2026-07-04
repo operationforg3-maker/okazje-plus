@@ -55,6 +55,7 @@ import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { SimilarItemsCarousel } from '@/components/similar-items-carousel';
+import { InfiniteSimilarFeed } from '@/components/infinite-similar-feed';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -1110,7 +1111,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
         )}
       </Tabs>
 
-      {/* Related Deals */}
+      {/* Related Deals (Fallback / Carousel) */}
       {relatedDeals.length > 0 && (
         <>
           <Separator className="my-12" />
@@ -1120,7 +1121,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               Podobne okazje
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {relatedDeals.map(d => (
+              {relatedDeals.slice(0, 3).map(d => (
                 <DealCard key={d.id} deal={d} />
               ))}
             </div>
@@ -1143,6 +1144,21 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
         excludeItemId={deal.id}
         maxItems={8}
       />
+
+      <Separator className="my-12" />
+      
+      {/* Infinite Scroll Feed */}
+      <section>
+        <h2 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">
+          <Flame className="h-6 w-6 text-orange-500" />
+          Więcej podobnych ofert
+        </h2>
+        <InfiniteSimilarFeed
+          itemType="deal"
+          categoryId={deal.mainCategorySlug || ''}
+          excludeId={deal.id}
+        />
+      </section>
     </div>
   );
 }

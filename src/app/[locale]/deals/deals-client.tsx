@@ -18,7 +18,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List as ListIcon, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List as ListIcon, Columns, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { List as VirtualizedList } from 'react-window';
@@ -35,6 +35,7 @@ import { FEATURES } from '@/lib/config';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
 import { extractDealPriceAmount } from '@/lib/price-utils';
+import { useUX } from '@/context/UXContext';
 // Umożliwiamy nawigację przez query params z mega‑menu (mainCategory, subCategory, sort, q)
 
 type ViewMode = 'list' | 'grid';
@@ -97,7 +98,7 @@ function DealsPageContent() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [totalDealsCount, setTotalDealsCount] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const { viewMode, setViewMode } = useUX();
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({
     priceRange: { min: 0, max: 15000 },
@@ -281,10 +282,8 @@ function DealsPageContent() {
     } catch {}
   }, [categories, setSortBy]);
 
-  // Persistuj view mode
-  useEffect(() => {
-    try { localStorage.setItem('deals_view_mode', viewMode); } catch {}
-  }, [viewMode]);
+
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -593,6 +592,10 @@ function DealsPageContent() {
   const gridWrapperClass = cardDensity === 'compact'
     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
     : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+
+  const masonryWrapperClass = cardDensity === 'compact'
+    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+    : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
@@ -1275,6 +1278,16 @@ function DealsPageContent() {
                         <span className="hidden sm:inline">{t('viewMode.list')}</span>
                       </Button>
                       <Button
+                        variant={viewMode === 'masonry' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setViewMode('masonry')}
+                        className="h-8 px-3"
+                        aria-label="Kafelki"
+                      >
+                        <Columns className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Kafelki</span>
+                      </Button>
+                      <Button
                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
                         size="sm"
                         onClick={() => setViewMode('grid')}
@@ -1289,7 +1302,7 @@ function DealsPageContent() {
                 </div>
                 {isLoading ? (
                   <div className={cn(
-                    viewMode === 'list' ? listWrapperClass : gridWrapperClass
+                    viewMode === 'list' ? listWrapperClass : (viewMode === 'masonry' ? masonryWrapperClass : gridWrapperClass)
                   )}>
                     {[...Array(5)].map((_, i) => (
                       <div key={i} className={cn(
@@ -1328,6 +1341,14 @@ function DealsPageContent() {
                           ))}
                         </div>
                       )
+                    ) : viewMode === 'masonry' ? (
+                      <div className={masonryWrapperClass}>
+                        {displayedDeals.map((deal) => (
+                          <div key={deal.id} className={cardWrapperClass}>
+                            <DealCard deal={deal} />
+                          </div>
+                        ))}
+                      </div>
                     ) : (
                       <div className={gridWrapperClass}>
                         {displayedDeals.map((deal) => (

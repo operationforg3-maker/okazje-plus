@@ -196,21 +196,22 @@ export default async function LocaleLayout({
 
       <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
         <ErrorBoundary fallback={<div className="min-h-screen w-full flex items-center justify-center"><div className="text-center"><h1 className="text-2xl font-bold mb-4">Coś poszło nie tak</h1><p className="text-muted-foreground">Błąd aplikacji. Spróbuj odświeżyć stronę.</p></div></div>}>
+          <AuthProvider>
             <ThemeProvider>
               <UXProvider>
-                <AuthProvider>
-                  <CurrencyProvider>
-                    <SmartCartProvider>
-                      <div className="flex flex-col min-h-screen w-full">
-                    <ConditionalNav>
+                <CurrencyProvider>
+                  <SmartCartProvider>
+                    <div className="flex flex-col min-h-screen w-full">
+                      <ConditionalNav>
                         {children}
-                    </ConditionalNav>
-                    <DeferredClientWidgets />
-                  </div>
-                </SmartCartProvider>
-              </CurrencyProvider>
-            </AuthProvider>
-          </UXProvider>
+                      </ConditionalNav>
+                      <DeferredClientWidgets />
+                    </div>
+                  </SmartCartProvider>
+                </CurrencyProvider>
+              </UXProvider>
+            </ThemeProvider>
+          </AuthProvider>
         </ErrorBoundary>
       </NextIntlClientProvider>
     </>

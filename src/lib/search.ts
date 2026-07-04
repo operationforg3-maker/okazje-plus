@@ -15,6 +15,7 @@ export type ProductSearchOptions = {
   maxPrice?: number;
   minRating?: number;
   limit?: number;
+  page?: number;
   sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'popularity' | 'newest';
   statusFilter?: 'approved' | 'waiting_room';
 };
@@ -27,6 +28,7 @@ export type DealSearchOptions = {
   maxPrice?: number;
   minTemperature?: number;
   limit?: number;
+  page?: number;
   sortBy?: 'relevance' | 'temperature' | 'hot' | 'price_asc' | 'price_desc' | 'newest' | 'discount_desc' | 'popularity';
   statusFilter?: 'approved' | 'waiting_room';
 };
@@ -40,6 +42,7 @@ export async function searchProductsTypesense(
     params.set('q', q);
     params.set('type', 'products');
     if (opts.limit) params.set('limit', String(opts.limit));
+    if (opts.page) params.set('page', String(opts.page));
     if (opts.mainCategorySlug) params.set('mainCategorySlug', String(opts.mainCategorySlug));
     if (opts.subCategorySlug) params.set('subCategorySlug', String(opts.subCategorySlug));
     if (opts.subSubCategorySlug) params.set('subSubCategorySlug', String(opts.subSubCategorySlug));
@@ -69,6 +72,7 @@ export async function searchDealsTypesense(
     params.set('q', query);
     params.set('type', 'deals');
     if (opts.limit) params.set('limit', String(opts.limit));
+    if (opts.page) params.set('page', String(opts.page));
     if (opts.mainCategorySlug) params.set('mainCategorySlug', String(opts.mainCategorySlug));
     if (opts.subCategorySlug) params.set('subCategorySlug', String(opts.subCategorySlug));
     if (opts.subSubCategorySlug) params.set('subSubCategorySlug', String(opts.subSubCategorySlug));

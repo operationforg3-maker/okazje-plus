@@ -108,6 +108,7 @@ export type ProductSearchOptions = {
   maxPrice?: number;
   minRating?: number;
   limit?: number;
+  page?: number;
   sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'rating' | 'popularity' | 'newest';
   statusFilter?: 'approved' | 'waiting_room';
 };
@@ -129,6 +130,7 @@ export type DealSearchOptions = {
   maxPrice?: number;
   minTemperature?: number;
   limit?: number;
+  page?: number;
   sortBy?: 'relevance' | 'temperature' | 'hot' | 'price_asc' | 'price_desc' | 'newest' | 'discount_desc' | 'popularity';
   statusFilter?: 'approved' | 'waiting_room';
 };
@@ -278,6 +280,7 @@ async function searchProductsFirestoreFallback(
     minRating,
     sortBy = 'relevance',
     statusFilter = 'approved',
+    page = 1,
   } = opts;
 
   try {
@@ -301,7 +304,7 @@ async function searchProductsFirestoreFallback(
             vectorField: 'embedding',
             queryVector: FieldValue.vector(queryVector),
             distanceMeasure: 'COSINE',
-            limit: safeLimit * 3,
+            limit: Math.max(safeLimit * page * 3, 100),
           }).get();
         } catch (err: any) {
           const errStr = String(err);
@@ -311,7 +314,7 @@ async function searchProductsFirestoreFallback(
               vectorField: 'embedding',
               queryVector: FieldValue.vector(queryVector),
               distanceMeasure: 'COSINE',
-              limit: safeLimit * 3,
+              limit: Math.max(safeLimit * page * 3, 100),
             }).get();
           } else {
             throw err;
@@ -376,10 +379,12 @@ async function searchProductsFirestoreFallback(
       if (maxPrice !== undefined) docs = docs.filter((d: any) => (d.bestPrice?.amount || d.price || 0) <= Number(maxPrice));
       if (minRating !== undefined) docs = docs.filter((d: any) => (d.ratingCard?.average || d.rating || 0) >= Number(minRating));
 
-      return docs.slice(0, safeLimit) as ProductCore[];
+      const offset = (page - 1) * safeLimit;
+      return docs.slice(offset, offset + safeLimit) as ProductCore[];
     } else {
       const { getProductCoresByFiltersData } = await import('@/lib/data/products');
-      return await getProductCoresByFiltersData(
+      const fetchLimit = safeLimit * page;
+      const allDocs = await getProductCoresByFiltersData(
         {
           categoryId: mainCategorySlug,
           subCategorySlug,
@@ -391,8 +396,10 @@ async function searchProductsFirestoreFallback(
           statusFilter,
         },
         sortBy as any,
-        safeLimit
+        fetchLimit
       );
+      const offset = (page - 1) * safeLimit;
+      return allDocs.slice(offset, offset + safeLimit);
     }
   } catch (err) {
     console.error('Firestore fallback for searchProductsTypesense failed:', err);
@@ -414,6 +421,7 @@ async function searchDealsFirestoreFallback(
     minTemperature,
     sortBy = 'relevance',
     statusFilter = 'approved',
+    page = 1,
   } = opts;
 
   const query = q.trim().length > 0 ? q : '*';
@@ -571,10 +579,12 @@ async function searchDealsFirestoreFallback(
         return 0; // relevance
       });
 
-      return await hydrateFallbackDealImages(docs.slice(0, safeLimit) as Deal[]);
+      const offset = (page - 1) * safeLimit;
+      return await hydrateFallbackDealImages(docs.slice(offset, offset + safeLimit) as Deal[]);
     } else {
       const { getDealsByFiltersData } = await import('@/lib/data/deals');
-      return await getDealsByFiltersData(
+      const fetchLimit = safeLimit * page;
+      const allDocs = await getDealsByFiltersData(
         {
           categoryId: mainCategorySlug,
           subCategorySlug,
@@ -585,8 +595,10 @@ async function searchDealsFirestoreFallback(
           statusFilter,
         },
         sortBy as any,
-        safeLimit
+        fetchLimit
       );
+      const offset = (page - 1) * safeLimit;
+      return allDocs.slice(offset, offset + safeLimit);
     }
   } catch (err) {
     console.error('Firestore fallback for searchDealsTypesense failed:', err);

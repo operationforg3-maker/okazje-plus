@@ -14,7 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, TrendingUp, Clock, Star, Truck, Save, Bookmark } from 'lucide-react';
+import { Search, ChevronRight, Flame, Sparkles, ArrowRight, Filter, Loader2, Package, LayoutGrid, List, Columns, TrendingUp, Clock, Star, Truck, Save, Bookmark } from 'lucide-react';
 import { Category, ProductCore, Deal } from '@/lib/types';
 import { useCurrency } from '@/lib/unified-currency';
 import Link from 'next/link';
@@ -29,6 +29,7 @@ import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
 import { buildCategoryPath } from '@/lib/category-routes';
+import { useUX } from '@/context/UXContext';
 
 const toSearchableText = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -108,12 +109,7 @@ export function ProductsPageContent({
   const [dealOfTheDay, setDealOfTheDay] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
-      return 'list';
-    }
-    return 'grid';
-  });
+  const { viewMode, setViewMode } = useUX();
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [sortBy, setSortBy] = useState<SortBy>('relevance');
   const [productStatusView, setProductStatusView] = useState<ProductStatusView>(
@@ -260,13 +256,6 @@ export function ProductsPageContent({
 
   useEffect(() => {
     try {
-      const savedView = localStorage.getItem('products_view_mode');
-      if (savedView === 'list' || savedView === 'grid') {
-        setViewMode(savedView);
-      } else if (typeof window !== 'undefined') {
-        // M6 mobile-first default: list on phones, grid on tablet/desktop.
-        setViewMode(window.innerWidth < 768 ? 'list' : 'grid');
-      }
       const savedDensity = localStorage.getItem('products_density');
       if (savedDensity === 'compact' || savedDensity === 'comfortable') {
         setCardDensity(savedDensity);
@@ -399,9 +388,7 @@ export function ProductsPageContent({
     autoStatusSwitchPerformed.current = false;
   }, [selectedMainCategorySlug, selectedSubcategory, selectedSubSubcategory, unifiedFilters, sortBy, searchTerm]);
 
-  useEffect(() => {
-    try { localStorage.setItem('products_view_mode', viewMode); } catch {}
-  }, [viewMode]);
+
 
   useEffect(() => {
     try { localStorage.setItem('products_density', cardDensity); } catch {}
@@ -458,6 +445,10 @@ export function ProductsPageContent({
   const gridWrapperClass = cardDensity === 'compact'
     ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
     : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+
+  const masonryWrapperClass = cardDensity === 'compact'
+    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
+    : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
@@ -1035,6 +1026,16 @@ export function ProductsPageContent({
                         <span className="hidden sm:inline">{t('viewMode.grid')}</span>
                       </Button>
                       <Button
+                        variant={viewMode === 'masonry' ? 'default' : 'ghost'}
+                        size="sm"
+                        className="h-8 px-3"
+                        onClick={() => setViewMode('masonry')}
+                        aria-label="Masonry"
+                      >
+                        <Columns className="h-4 w-4 mr-1" />
+                        <span className="hidden sm:inline">Kafelki</span>
+                      </Button>
+                      <Button
                         variant={viewMode === 'list' ? 'default' : 'ghost'}
                         size="sm"
                         className="h-8 px-3"
@@ -1049,7 +1050,7 @@ export function ProductsPageContent({
                 </div>
                 {isLoading ? (
                   <div className={cn(
-                    viewMode === 'list' ? listWrapperClass : gridWrapperClass
+                    viewMode === 'list' ? listWrapperClass : (viewMode === 'masonry' ? masonryWrapperClass : gridWrapperClass)
                   )}>
                     {[...Array(6)].map((_, i) => (
                       <div key={i} className={cn(
@@ -1067,6 +1068,14 @@ export function ProductsPageContent({
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
                             <ProductCard product={product as any} viewMode="list" fetchBestDeal={false} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : viewMode === 'masonry' ? (
+                      <div className={masonryWrapperClass}>
+                        {displayedProducts.map((product) => (
+                          <div key={product.id} className={cardWrapperClass}>
+                            <ProductCard product={product as any} viewMode="grid" fetchBestDeal={false} />
                           </div>
                         ))}
                       </div>

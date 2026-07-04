@@ -114,6 +114,7 @@ export async function GET(request: Request) {
   const q = qParam.length > 0 ? qParam : '*';
   const type = url.searchParams.get('type') || 'all'; // products|deals|all
   const limit = Number(url.searchParams.get('limit') || '50');
+  const page = Number(url.searchParams.get('page') || '1');
   // optional filters
   let mainCategorySlug = url.searchParams.get('mainCategorySlug') || '';
   let subCategorySlug = url.searchParams.get('subCategorySlug') || '';
@@ -147,7 +148,7 @@ export async function GET(request: Request) {
   const allowed = await rateLimit(ip, 60, 60);
   if (!allowed) return NextResponse.json({ error: 'rate_limited', message: 'Too many requests' }, { status: 429 });
 
-  const key = `search:${type}:${q}:${limit}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}:${statusFilter}:${dealId}`;
+  const key = `search:${type}:${q}:${limit}:${page}:${mainCategorySlug}:${subCategorySlug}:${subSubCategorySlug}:${minPrice}:${maxPrice}:${minRating}:${minTemperature}:${sort}:${statusFilter}:${dealId}`;
   const cached = await cacheGet(key);
   if (cached) return NextResponse.json(cached as any);
 
@@ -174,6 +175,7 @@ export async function GET(request: Request) {
             maxPrice: maxPrice ? Number(maxPrice) : undefined,
             minRating: minRating ? Number(minRating) : undefined,
             limit,
+            page,
             sortBy: prodSort as any,
             statusFilter: statusFilter as any,
           }).then(res => { products = res; })
@@ -192,6 +194,7 @@ export async function GET(request: Request) {
             maxPrice: maxPrice ? Number(maxPrice) : undefined,
             minTemperature: minTemperature ? Number(minTemperature) : undefined,
             limit,
+            page,
             sortBy: dealSort as any,
             statusFilter: statusFilter as any,
           }).then(res => { deals = res; })

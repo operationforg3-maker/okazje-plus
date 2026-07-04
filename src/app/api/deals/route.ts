@@ -33,7 +33,7 @@ export async function GET(request: Request) {
           subCategorySlug,
           subSubCategorySlug,
           limit: size,
-          offset: (page - 1) * size,
+          page,
           sortBy: sort as any,
           statusFilter: status,
         })

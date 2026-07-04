@@ -21,6 +21,7 @@ const AutocompleteSearch = dynamic(
 
 // Dynamic imports for below-fold components — reduces TBT / main-thread parse cost
 const CategoryGrid = dynamic(() => import('@/components/home/category-grid'), { ssr: false });
+const RegistrationCTA = dynamic(() => import('@/components/home/registration-cta'), { ssr: false });
 const RealTimeStats = dynamic(
   () => import('@/components/home/real-time-stats').then((m) => ({ default: m.RealTimeStats })),
   {
@@ -147,7 +148,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
         </div>
       </section>
 
-      {/* CATEGORIES SHOWCASE - Mega Menu with Images */}
+      {/* 1. CATEGORIES SHOWCASE - Mega Menu with Images */}
       <section
         className="py-16 bg-background"
         style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 500px' }}
@@ -175,45 +176,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
         </div>
       </section>
 
-      {/* HOT DEALS SECTION */}
-      <section className="py-16">
-        <div className="page-container">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Flame className="h-8 w-8 text-orange-500" />
-                <h2 className="font-headline text-3xl md:text-4xl font-bold">
-                  {t('hotDeals.title')}
-                </h2>
-              </div>
-              <p className="text-muted-foreground">{t('hotDeals.subtitle')}</p>
-            </div>
-            <Button variant="outline" asChild>
-              <Link href={`/${locale}/deals`}>
-                {t('hotDeals.viewAll')}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-
-          {visibleHotDeals.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {visibleHotDeals.map((deal, idx) => (
-                <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
-              ))}
-            </div>
-          ) : (
-            <Card className="p-12 text-center">
-              <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground">
-                {t('hotDeals.empty')}
-              </p>
-            </Card>
-          )}
-        </div>
-      </section>
-
-      {/* TOP PRODUCTS SECTION */}
+      {/* 2. TOP PRODUCTS SECTION */}
       <section className="py-16 bg-card/50">
         <div className="page-container">
           <div className="flex items-center justify-between mb-8">
@@ -251,6 +214,48 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
         </div>
       </section>
 
+      {/* 3. REGISTRATION CTA */}
+      <RegistrationCTA />
+
+      {/* 4. HOT DEALS SECTION */}
+      <section className="py-16">
+        <div className="page-container">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Flame className="h-8 w-8 text-orange-500" />
+                <h2 className="font-headline text-3xl md:text-4xl font-bold">
+                  {t('hotDeals.title')}
+                </h2>
+              </div>
+              <p className="text-muted-foreground">{t('hotDeals.subtitle')}</p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link href={`/${locale}/deals`}>
+                {t('hotDeals.viewAll')}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+
+          {visibleHotDeals.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {visibleHotDeals.map((deal, idx) => (
+                <HomeDealCard key={deal.id} deal={deal} priority={idx === 0} />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-12 text-center">
+              <Flame className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">
+                {t('hotDeals.empty')}
+              </p>
+            </Card>
+          )}
+        </div>
+      </section>
+
+      {/* 5. OTHER SECONDARY SECTIONS */}
       <div ref={secondarySectionRef} style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 1000px' }}>
         {showSecondarySections ? <HomeSecondarySections /> : <div className="min-h-[1000px]" aria-hidden="true" />}
       </div>
