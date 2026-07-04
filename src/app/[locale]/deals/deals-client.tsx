@@ -406,87 +406,34 @@ function DealsPageContent() {
     async function fetchDeals() {
       setIsLoading(true);
       try {
-        // Wait for online if needed
-        if (!isOnline()) {
-          console.debug('[DealsPage] Waiting for online before fetching deals...');
-          const online = await waitForOnline(3000);
-          if (!online) {
-            if (!cancelled) setDeals([]);
-            return;
-          }
-        }
-        
-        const q = searchTerm.trim();
-        const typesenseSort = sortBy === 'hot' ? 'hot' : sortBy === 'newest' ? 'newest' : sortBy === 'price_asc' ? 'price_asc' : sortBy === 'price_desc' ? 'price_desc' : 'relevance';
-        const results = await retryWithBackoff(() => searchDealsTypesense(q.length > 1 ? q : '*', {
-          mainCategorySlug: selectedMainCategorySlug,
-          subCategorySlug: selectedSubcategory || undefined,
-          subSubCategorySlug: selectedSubSubcategory || undefined,
-          limit: 100,
-          sortBy: typesenseSort as any,
-          statusFilter: dealStatusView,
-        }), 2, 500);
-
-        let effectiveResults = results || [];
-
-        // Typesense index can be stale for waiting room statuses. Fallback to Firestore query.
-        if ((effectiveResults.length || 0) === 0) {
-          effectiveResults = await getDealsByFilters({
-            ...unifiedFilters,
-            categoryId: selectedMainCategorySlug || unifiedFilters.categoryId,
-            subCategorySlug: selectedSubcategory || undefined,
-            subSubCategorySlug: selectedSubSubcategory || undefined,
-            searchTerm: q.length > 1 ? q : undefined,
-            statusFilter: dealStatusView,
-          }, typesenseSort as any, 100);
-        }
-
-        // If waiting room has no data, transparently switch back to approved.
-        if (
-          !cancelled &&
-          dealStatusView === 'waiting_room' &&
-          (effectiveResults?.length || 0) === 0 &&
-          q.length === 0
-        ) {
-          setDealStatusView('approved');
-          const params = new URLSearchParams(searchParams.toString());
-          params.set('status', 'approved');
-          router.replace(`${window.location.pathname}?${params.toString()}`);
-          return;
-        }
-
-        // LocalStorage can restore stale category filters with no active deals.
-        // Reset once to avoid the "no deals loaded" experience on plain /deals open.
-        if (
-          !cancelled &&
-          !autoResetPerformed.current &&
-          (effectiveResults?.length || 0) === 0 &&
-          q.length === 0 &&
-          dealStatusView === 'approved' &&
-          (selectedMainCategorySlug || selectedSubcategory || selectedSubSubcategory)
-        ) {
-          autoResetPerformed.current = true;
-          setSelectedCategory(null);
-          setSelectedSubcategory(null);
-          setSelectedSubSubcategory(null);
-          toast.info('Brak okazji w zapisanym filtrze. Pokazuję wszystkie okazje.');
-          return;
-        }
-
-      if (!cancelled) setDeals(effectiveResults || []);
+        const params = new URLSearchParams();
+        params.set('page', '1');
+        params.set('size', '200');
+        params.set('sort', sortBy);
+        params.set('status', dealStatusView);
+        if (searchTerm.trim().length > 0) params.set('q', searchTerm.trim());
+        if (selectedMainCategorySlug) params.set('mainCategorySlug', selectedMainCategorySlug);
+        if (selectedSubcategory) params.set('subCategorySlug', selectedSubcategory);
+        if (selectedSubSubcategory) params.set('subSubCategorySlug', selectedSubSubcategory);
+        const response = await fetch(`/api/deals?${params.toString()}`);
+        if (!response.ok) throw new Error('Failed to fetch deals');
+        const data = await response.json();
+        if (cancelled) return;
+        setDeals(data.deals || []);
+        setTotalDealsCount(data.pagination?.total ?? null);
       } catch (error) {
         console.error('[DealsPage] Error fetching deals:', error);
-        if (isOfflineError(error)) {
-          console.debug('[DealsPage] Offline error while fetching deals, showing empty');
+        if (!cancelled) {
+          setDeals([]);
+          setTotalDealsCount(null);
         }
-        if (!cancelled) setDeals([]);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     }
-    const t = setTimeout(fetchDeals, 250); // debounce
-    return () => { cancelled = true; clearTimeout(t); };
-  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, unifiedFilters, sortBy, dealStatusView]);
+    fetchDeals();
+    return () => { cancelled = true; };
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, sortBy, dealStatusView]);
 
   useEffect(() => {
     let cancelled = false;

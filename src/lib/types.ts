@@ -13,6 +13,10 @@ export interface Category {
   translations?: Record<string, { name: string; description?: string }>;
   subcategories?: Subcategory[];
   tiles?: CategoryTile[];
+  // New UX fields
+  uxTheme?: 'default' | 'v4' | 'v5' | 'neon';
+  layoutType?: 'grid' | 'list';
+  iconUrl?: string;
 }
 
 export interface Subcategory {

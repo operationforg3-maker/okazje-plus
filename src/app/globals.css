@@ -329,6 +329,20 @@
     --opacity-light: 0.1;        /* Light overlay */
     --opacity-medium: 0.2;       /* Medium overlay */
   }
+
+/* Theme-specific overrides */
+[data-theme='v4'] {
+  --primary: 200 80% 45%; /* Example: blue */
+  --accent: 45 90% 55%;   /* Example: amber */
+}
+[data-theme='v5'] {
+  --primary: 280 70% 50%; /* Example: purple */
+  --accent: 340 80% 60%;   /* Example: pink */
+}
+[data-theme='neon'] {
+  --primary: 120 100% 50%; /* Neon green */
+  --accent: 50 100% 50%;   /* Neon yellow */
+}
     
     /* ============ SEMANTIC COLOR SYSTEM ============
        Unified backgrounds, surfaces, text, borders
