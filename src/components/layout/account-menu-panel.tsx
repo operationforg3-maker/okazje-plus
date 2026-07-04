@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { useUX } from '@/context/UXContext';
 
 interface AccountMenuPanelProps {
   user: User | null;
@@ -79,26 +80,13 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
     }
   };
 
-  // Theme switching
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('okp_theme') as 'light' | 'dark' | null;
-      const initial: 'light' | 'dark' = stored === 'light' || stored === 'dark' ? stored : 'dark';
-      setTheme(initial);
-    }
-  }, []);
+  // Theme and UX settings from global context
+  const { themeFamily, setThemeFamily, themeMode, toggleThemeMode } = useUX();
 
-  const cycleTheme = () => {
-    const next: 'light' | 'dark' = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('okp_theme', next);
-      const isDark = next === 'dark';
-      document.documentElement.classList.toggle('dark', isDark);
-      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
-    }
+  const cycleThemeFamily = () => {
+    const families: ('classic' | 'v4' | 'v5' | 'neon')[] = ['classic', 'v4', 'v5', 'neon'];
+    const nextIdx = (families.indexOf(themeFamily) + 1) % families.length;
+    setThemeFamily(families[nextIdx]);
   };
   
   const SUPPORTED_CURRENCIES = [
@@ -242,11 +230,27 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
           </button>
         )}
 
-        {/* Theme Switch (ikona) */}
+        {/* Theme Family Switch */}
         <button
           onClick={(e) => {
             e.stopPropagation();
-            cycleTheme();
+            cycleThemeFamily();
+          }}
+          className={cn(
+            "h-9 px-3 rounded-full flex items-center justify-center text-xs font-semibold transition-all border hover:shadow-md uppercase",
+            "bg-background/70 border-border/40 hover:border-primary/60 text-foreground"
+          )}
+          title="Zmień motyw graficzny"
+          aria-label="Zmień motyw graficzny"
+        >
+          🧩 {themeFamily}
+        </button>
+
+        {/* Theme Mode Switch (Sun/Moon) */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleThemeMode();
           }}
           className={cn(
             "h-9 w-9 rounded-full flex items-center justify-center transition-all border hover:shadow-md",
@@ -255,7 +259,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
           title={t('changeTheme')}
           aria-label={t('changeTheme')}
         >
-          {theme === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {themeMode === 'light' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
       </div>
     </div>

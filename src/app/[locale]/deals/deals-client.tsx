@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { FEATURES } from '@/lib/config';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
+import { getCategoryStyle } from '@/lib/category-theme';
 import { extractDealPriceAmount } from '@/lib/price-utils';
 import { useUX } from '@/context/UXContext';
 // Umożliwiamy nawigację przez query params z mega‑menu (mainCategory, subCategory, sort, q)
@@ -858,6 +859,8 @@ function DealsPageContent() {
 
         {sortedCategories.map((category) => {
           const isActive = selectedCategory?.id === category.id;
+          const style = getCategoryStyle(category);
+          const IconComponent = style.icon;
           return (
             <div key={category.id} className="mb-1">
               <button
@@ -871,15 +874,28 @@ function DealsPageContent() {
                   setIsMobileSidebarOpen(false);
                 }}
                 className={cn(
-                  "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
-                  isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                  "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group text-sm font-semibold",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
-                {category.icon && <span className="text-xl">{category.icon}</span>}
-                <span className="font-medium flex-1">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
+                <div className={cn(
+                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : cn("bg-gradient-to-br", style.bg, style.accent)
+                )}>
+                  {typeof IconComponent === 'function' ? (
+                    <IconComponent className="h-4 w-4" />
+                  ) : (
+                    <span className="text-sm">{IconComponent}</span>
+                  )}
+                </div>
+                <span className="font-semibold flex-1 truncate">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
                 <ChevronRight className={cn(
-                  "h-4 w-4 transition-transform",
-                  isActive ? "rotate-90" : "group-hover:translate-x-1"
+                  "h-4 w-4 transition-transform opacity-50",
+                  isActive ? "rotate-90 opacity-100" : "group-hover:translate-x-1 group-hover:opacity-100"
                 )} />
               </button>
 

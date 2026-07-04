@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
 import { buildCategoryPath } from '@/lib/category-routes';
 import { useUX } from '@/context/UXContext';
+import { getCategoryStyle } from '@/lib/category-theme';
 
 const toSearchableText = (value: unknown): string => {
   if (typeof value === 'string') return value;
@@ -671,6 +672,8 @@ export function ProductsPageContent({
 
         {sortedCategories.map((category) => {
           const isActive = selectedCategory?.id === category.id;
+          const style = getCategoryStyle(category);
+          const IconComponent = style.icon;
           return (
             <div key={category.id} className="mb-1">
               <button
@@ -681,17 +684,28 @@ export function ProductsPageContent({
                   navigateToCategory(category.slug || category.id);
                 }}
                 className={cn(
-                  "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
+                  "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group text-sm font-semibold",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted"
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
-                {category.icon && <span className="text-xl">{category.icon}</span>}
-                <span className="font-medium flex-1">{getLocalizedCategoryName(category, lang)}</span>
+                <div className={cn(
+                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                  isActive
+                    ? "bg-white/20 text-white"
+                    : cn("bg-gradient-to-br", style.bg, style.accent)
+                )}>
+                  {typeof IconComponent === 'function' ? (
+                    <IconComponent className="h-4 w-4" />
+                  ) : (
+                    <span className="text-sm">{IconComponent}</span>
+                  )}
+                </div>
+                <span className="font-semibold flex-1 truncate">{getLocalizedCategoryName(category, lang)}</span>
                 <ChevronRight className={cn(
-                  "h-4 w-4 transition-transform",
-                  isActive ? "rotate-90" : "group-hover:translate-x-1"
+                  "h-4 w-4 transition-transform opacity-50",
+                  isActive ? "rotate-90 opacity-100" : "group-hover:translate-x-1 group-hover:opacity-100"
                 )} />
               </button>
               {isActive && sortedSubcategories && sortedSubcategories.length > 0 && (
