@@ -418,7 +418,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   // --------------------------------------------------------------------------
   return (
     <div 
-      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-xl border bg-card transition-shadow duration-200 hover:shadow-md"
+      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
       onClick={() => {
         window.location.href = productUrl;
       }}
@@ -432,7 +432,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
         isFavorited={isFavorited}
         isFavoritesLoading={isFavoriteLoading}
         imageClassName="object-contain transition-transform-base group-hover:scale-105 p-4"
-        imageContainerClassName="h-auto aspect-square bg-muted/40 rounded-t-xl border-b"
+        imageContainerClassName="h-auto aspect-square bg-muted/20 rounded-t-2xl border-b border-border/40"
         className="rounded-none"
       >
         {/* Badges Column (Right Top) */}

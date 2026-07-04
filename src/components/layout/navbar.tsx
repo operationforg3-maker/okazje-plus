@@ -172,7 +172,6 @@ export function Navbar() {
                 </div>
               );
             })()}
-            <UxMenu />
             {/* PRIMARY CTA: Add Deal - Now visible on md+ screens */}
             <Button asChild className="hidden md:inline-flex rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all">
               <Link href={`${prefix}/add-deal`}>
