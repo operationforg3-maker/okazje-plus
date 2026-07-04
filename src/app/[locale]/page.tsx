@@ -142,7 +142,7 @@ export default async function HomePage() {
       sortBy: 'hot',
       statusFilter: 'approved',
     }),
-    getRecommendedProducts(6),
+    getRecommendedProducts(8),
     getCategories(),
   ]);
 

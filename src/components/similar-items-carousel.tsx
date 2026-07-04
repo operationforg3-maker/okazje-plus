@@ -20,7 +20,7 @@ interface SimilarItemsCarouselProps {
   subsubcategory?: string;
   priceRange?: [number, number];
   excludeItemId?: string;
-  maxItems?: number;
+  maxItems?: number; // defaults to 8
 }
 
 export function SimilarItemsCarousel({
@@ -42,6 +42,14 @@ export function SimilarItemsCarousel({
     fetchSimilarItems();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemId, category, subcategory, subsubcategory]);
+
+  // Auto‑rotate carousel every 7 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      scroll('right');
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [scrollPosition]);
 
   const fetchSimilarItems = async () => {
     setLoading(true);

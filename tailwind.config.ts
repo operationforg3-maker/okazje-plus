@@ -39,6 +39,10 @@ export default {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
         },
+        // Custom palette for premium UI
+        'primary-glow': '#ff5f6d',
+        'neon-purple': '#8e44ad',
+        'amber-warm': '#ffae42',
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',

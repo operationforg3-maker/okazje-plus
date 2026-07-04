@@ -5,6 +5,7 @@ import { ConditionalNav } from '@/components/layout/conditional-nav';
 import { AuthProvider } from '@/lib/auth';
 import { SmartCartProvider } from '@/lib/cart-context';
 import { CurrencyProvider } from '@/context/currency-context';
+import { UXProvider } from '@/context/UXContext';
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import ErrorBoundary from '@/components/auth/error-boundary';
@@ -194,18 +195,20 @@ export default async function LocaleLayout({
 
       <NextIntlClientProvider locale={effectiveLocale} messages={messages}>
         <ErrorBoundary fallback={<div className="min-h-screen w-full flex items-center justify-center"><div className="text-center"><h1 className="text-2xl font-bold mb-4">Coś poszło nie tak</h1><p className="text-muted-foreground">Błąd aplikacji. Spróbuj odświeżyć stronę.</p></div></div>}>
-          <AuthProvider>
-            <CurrencyProvider>
-              <SmartCartProvider>
-                <div className="flex flex-col min-h-screen w-full">
-                  <ConditionalNav>
-                      {children}
-                  </ConditionalNav>
-                  <DeferredClientWidgets />
-                </div>
-              </SmartCartProvider>
-            </CurrencyProvider>
-          </AuthProvider>
+          <UXProvider>
+            <AuthProvider>
+              <CurrencyProvider>
+                <SmartCartProvider>
+                  <div className="flex flex-col min-h-screen w-full">
+                    <ConditionalNav>
+                        {children}
+                    </ConditionalNav>
+                    <DeferredClientWidgets />
+                  </div>
+                </SmartCartProvider>
+              </CurrencyProvider>
+            </AuthProvider>
+          </UXProvider>
         </ErrorBoundary>
       </NextIntlClientProvider>
     </>

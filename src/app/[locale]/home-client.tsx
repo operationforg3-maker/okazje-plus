@@ -53,8 +53,8 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
   const [isMounted, setIsMounted] = useState(false);
   const [showSecondarySections, setShowSecondarySections] = useState(false);
 
-  const visibleHotDeals = initialHotDeals.slice(0, 4);
-  const visibleTopProducts = initialTopProducts.slice(0, 4);
+  const visibleHotDeals = initialHotDeals.slice(0, 8);
+  const visibleTopProducts = initialTopProducts.slice(0, 8);
 
   useEffect(() => {
     setIsMounted(true);

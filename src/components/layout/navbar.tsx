@@ -33,6 +33,7 @@ import { useCurrency } from '@/lib/unified-currency';
 import { withImageProxy } from '@/lib/image-proxy';
 import { getPriceAmount, getTotalPrice, isFreeShipping } from '@/lib/i18n-utils';
 import Image from 'next/image';
+import { UxMenu } from '@/components/layout/ux-menu';
 
 export function Navbar() {
   const t = useTranslations('nav');
@@ -171,7 +172,7 @@ export function Navbar() {
                 </div>
               );
             })()}
-            {/* Language, Currency, Theme moved to AccountMenuPanel */}
+            <UxMenu />
             {/* PRIMARY CTA: Add Deal - Now visible on md+ screens */}
             <Button asChild className="hidden md:inline-flex rounded-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all">
               <Link href={`${prefix}/add-deal`}>
