@@ -49,91 +49,44 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
   return (
     <div className="w-full space-y-8">
       {/* Main Grid View - Top Level Categories */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         {categories.map((category) => {
           const style = getCategoryStyle(category);
           const totalProducts = getTotalProducts(category);
           const IconComponent = style.icon;
 
           return (
-            <div key={category.id} className="group">
-              {/* Main Category Card */}
-              <Card
-                className={cn(
-                  'border-2 transition-[box-shadow,border-color,transform] duration-300 hover:shadow-xl hover:-translate-y-1 overflow-hidden cursor-pointer',
-                  style.border
+            <button
+              key={category.id}
+              onClick={() => handleOpenDrawer(category)}
+              className={cn(
+                "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 text-left group",
+                "bg-background/60 backdrop-blur-md hover:bg-background border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5"
+              )}
+            >
+              <div className={cn(
+                "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-gradient-to-br shadow-sm group-hover:shadow-md",
+                style.bg,
+                style.accent
+              )}>
+                {typeof IconComponent === 'function' ? (
+                  <IconComponent className="h-5 w-5" />
+                ) : (
+                  <span className="text-lg">{IconComponent}</span>
                 )}
-                onClick={() => handleOpenDrawer(category)}
-              >
-                <CardContent className="p-4">
-                  {/* Główny nagłówek - ikona, tytuł i liczba produktów w jednej linii */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg flex items-center justify-center w-12 h-12 shrink-0', `bg-gradient-to-br ${style.gradient}`)}>
-                      {typeof IconComponent === 'function' ? (
-                        <IconComponent className="h-6 w-6 text-white" />
-                      ) : (
-                        <span className="text-2xl">{IconComponent}</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className={cn(
-                        'text-lg font-bold truncate group-hover:text-primary transition-colors',
-                        style.accent
-                      )}>
-                        {getLocalizedCategoryName(category, locale as SupportedLanguage)}
-                      </h3>
-                      {totalProducts > 0 && (
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {t('productsCount', { count: totalProducts })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Podkategorie - pokazuj wszystkie L2 */}
-                  {category.subcategories && category.subcategories.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-hidden">
-                        {category.subcategories.slice(0, 4).map((sub) => (
-                          <span
-                            key={sub.id}
-                            className="text-xs px-2 py-1 rounded-md bg-secondary/50 hover:bg-primary/10 hover:text-primary transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenDrawer(category);
-                            }}
-                          >
-                            {getLocalizedCategoryName(sub, locale as SupportedLanguage)}
-                          </span>
-                        ))}
-                        {category.subcategories.length > 4 && (
-                          <span className="text-xs px-2 py-1 rounded-md bg-secondary/30 text-muted-foreground">
-                            +{category.subcategories.length - 4}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Przycisk View Subcategories */}
-                  {category.subcategories && category.subcategories.length > 0 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDrawer(category);
-                      }}
-                      className="w-full flex items-center justify-between text-sm font-medium hover:text-primary transition-colors py-2 px-3 rounded-lg hover:bg-secondary/50"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <Grid3x3 className="h-4 w-4" />
-                        {t('viewSubcategories')}
-                      </span>
-                      <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </button>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+              </div>
+              <div className="flex-grow min-w-0">
+                <span className="block text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors">
+                  {getLocalizedCategoryName(category, locale as SupportedLanguage)}
+                </span>
+                {totalProducts > 0 && (
+                  <span className="block text-[10px] text-muted-foreground mt-0.5">
+                    {totalProducts} ofert
+                  </span>
+                )}
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+            </button>
           );
         })}
       </div>

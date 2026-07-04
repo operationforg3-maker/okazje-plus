@@ -60,9 +60,11 @@ async function getProductData(id: string) {
       // M6 ProductCore found - return with deals
       const { product: productCore, deals } = m6Data;
 
-      // Skip non-approved cores early to avoid leaking drafts
-      // UNLESS user is admin
-      if (productCore?.status && productCore.status !== 'approved' && !isAdmin) {
+      // Skip only truly hidden items (drafts / rejected) from public view.
+      // Products with status 'pending' or 'pending_approval' are shown in
+      // search results and the waiting-room feed, so clicking them must work.
+      const hiddenStatuses = ['draft', 'rejected'];
+      if (productCore?.status && hiddenStatuses.includes(productCore.status) && !isAdmin) {
         return null;
       }
 

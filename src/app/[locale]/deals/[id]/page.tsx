@@ -155,7 +155,10 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
 // Server-side data fetching
 async function getDealData(id: string) {
   const dealDoc = await getDealByIdTypesense(id);
-  if (!dealDoc || (dealDoc as any).status && (dealDoc as any).status !== 'approved') {
+  // Block only truly hidden statuses (drafts / rejected).
+  // 'pending' and 'pending_approval' are visible in search/waiting-room feeds.
+  const hiddenDealStatuses = ['draft', 'rejected'];
+  if (!dealDoc || hiddenDealStatuses.includes((dealDoc as any).status)) {
     return null;
   }
 

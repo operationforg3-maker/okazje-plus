@@ -111,7 +111,7 @@ export default function HomeSecondarySections() {
               </div>
 
               <div className="relative">
-                <Card className="border-2">
+                <Card className="border border-border/40 bg-background/60 backdrop-blur-md rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300">
                   <CardContent className="p-8 space-y-6">
                     <div className="space-y-4">
                       {[
@@ -121,7 +121,7 @@ export default function HomeSecondarySections() {
                         { icon: Zap, title: 'Real-time', desc: 'Natychmiastowe powiadomienia o nowych okazjach' },
                       ].map((item, idx) => (
                         <div key={idx} className="flex items-start gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                             <item.icon className="h-5 w-5 text-primary" />
                           </div>
                           <div>
@@ -140,23 +140,24 @@ export default function HomeSecondarySections() {
       </section>
 
       {/* CTA SECTION */}
-      <section className="py-16 bg-gradient-to-r from-primary to-accent text-white">
-        <div className="page-container text-center">
+      <section className="py-20 relative overflow-hidden bg-gradient-to-br from-primary to-accent text-white rounded-3xl mx-4 sm:mx-6 my-16 shadow-2xl">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
+        <div className="page-container text-center relative z-10">
           <div className="max-w-3xl mx-auto space-y-6">
-            <h2 className="font-headline text-3xl md:text-5xl font-bold">
+            <h2 className="font-headline text-3xl md:text-5xl font-black tracking-tight">
               Gotowy na najlepsze okazje?
             </h2>
-            <p className="text-xl opacity-90">
-              Dołącz do tysięcy użytkowników, którzy już oszczędzają z Okazje Plus
+            <p className="text-base sm:text-xl opacity-90 max-w-xl mx-auto font-medium">
+              Dołącz do tysięcy użytkowników, którzy już oszczędzają z Okazje Plus.
             </p>
-            <div className="flex flex-wrap justify-center gap-4 pt-4">
-              <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
+            <div className="flex flex-wrap justify-center gap-4 pt-6">
+              <Button size="lg" variant="secondary" className="text-sm font-bold px-8 py-6 rounded-full hover:shadow-lg transition-all" asChild>
                 <Link href={`/${locale}/deals`}>
-                  <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary fill-primary" />
                   Przeglądaj okazje
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-white/40 bg-black/15 backdrop-blur-[2px] text-white hover:bg-black/35 hover:border-white transition-all shadow-sm" asChild>
+              <Button size="lg" variant="outline" className="text-sm font-bold px-8 py-6 rounded-full border-white/40 bg-black/15 backdrop-blur-[2px] text-white hover:bg-black/35 hover:border-white transition-all shadow-sm" asChild>
                 <Link href={`/${locale}/products`}>
                   <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Katalog produktów
