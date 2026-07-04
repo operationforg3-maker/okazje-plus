@@ -18,7 +18,10 @@
     "previous": "Previous",
     "close": "Close",
     "confirm": "Confirm",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "theme": {
+      "variant": "Theme variant"
+    }
   },
   "filters": {
     "title": "Filters",

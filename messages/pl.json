@@ -18,7 +18,10 @@
     "previous": "Poprzedni",
     "close": "Zamknij",
     "confirm": "Potwierdź",
-    "viewAll": "Zobacz wszystko"
+    "viewAll": "Zobacz wszystko",
+    "theme": {
+      "variant": "Motyw graficzny"
+    }
   },
   "filters": {
     "title": "Filtry",
