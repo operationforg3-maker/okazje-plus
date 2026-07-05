@@ -94,13 +94,13 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
   if (!deals.length) return null;
 
   return (
-    // Stała wysokość 440px — karuzela nigdy nie skacze
-    <div className="relative" style={{ height: 440 }}>
+    // Stała wysokość 400px — karuzela nigdy nie skacze
+    <div className="relative" style={{ height: 400 }}>
       {/* Glow */}
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/25 to-accent/25 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
 
       {/* Karta kontenera — stała wielkość */}
-      <div className="relative bg-background/60 backdrop-blur-xl border border-border/40 rounded-3xl shadow-2xl overflow-hidden" style={{ height: 440 }}>
+      <div className="relative bg-background/60 backdrop-blur-xl border border-border/40 rounded-3xl shadow-2xl overflow-hidden" style={{ height: 400 }}>
 
         {/* Wszystkie slajdy renderowane naraz — tylko aktywny jest widoczny (opacity transition) */}
         {deals.map((deal, idx) => {
@@ -145,9 +145,9 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                 </div>
               </div>
 
-              {/* Obraz — stała wysokość 220px, object-contain = widać całe zdjęcie */}
+              {/* Obraz — strzałki na bokach, object-contain = widać całe zdjęcie */}
               <div
-                className="mx-4 shrink-0 rounded-2xl overflow-hidden"
+                className="mx-4 shrink-0 rounded-2xl overflow-hidden relative"
                 style={{
                   height: 220,
                   background: 'radial-gradient(ellipse at center, var(--muted) 0%, var(--background) 100%)',
@@ -167,18 +167,39 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                   onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.07)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'; }}
                 />
+                {/* Strzałka LEWO — na środku wysokości zdjęcia */}
+                {isActive && (
+                  <>
+                    <button
+                      onClick={() => { prev(); resetTimer(); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200"
+                      aria-label="Poprzednia okazja"
+                      style={{ zIndex: 5 }}
+                    >
+                      <ChevronLeft className="h-4 w-4 text-foreground" />
+                    </button>
+                    <button
+                      onClick={() => { next(); resetTimer(); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200"
+                      aria-label="Następna okazja"
+                      style={{ zIndex: 5 }}
+                    >
+                      <ChevronRight className="h-4 w-4 text-foreground" />
+                    </button>
+                  </>
+                )}
               </div>
 
-              {/* Treść — stała wysokość, tytuł max 2 linie */}
-              <div className="flex-1 flex flex-col justify-between px-5 pt-3 pb-4">
-                {/* Tytuł — max 2 linie, fixed height ~48px */}
-                <div style={{ height: 48, overflow: 'hidden' }}>
-                  <h3 className="font-bold text-sm leading-6 text-foreground line-clamp-2">
+              {/* Treść */}
+              <div className="flex-1 flex flex-col justify-between px-5 pt-2 pb-4">
+                {/* Tytuł — max 2 linie, fixed height 44px */}
+                <div style={{ height: 44, overflow: 'hidden' }}>
+                  <h3 className="font-bold text-sm leading-5 text-foreground line-clamp-2">
                     {title}
                   </h3>
                 </div>
 
-                {/* Cena + CTA */}
+                {/* Cena + CTA + Dots */}
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-baseline gap-2">
                     <span className="text-xl font-black text-foreground">{price || 'Sprawdź'}</span>
@@ -190,44 +211,27 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                     <Link href={`/${locale}/deals/${deal.id}`}>Odbierz okazję</Link>
                   </Button>
                 </div>
+
+                {/* Kropki nawigacji — pod tytułem, nad ceną */}
+                <div className="flex justify-center gap-1.5 pt-1">
+                  {deals.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setActive(i); resetTimer(); }}
+                      className={cn(
+                        'h-1.5 rounded-full transition-all duration-300',
+                        i === active ? 'w-5 bg-primary' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                      )}
+                      aria-label={`Okazja ${i + 1}`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           );
         })}
 
-        {/* Nawigacja — przyklejona do dołu karty, zawsze w tym samym miejscu */}
-        <div
-          className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 pb-3"
-          style={{ zIndex: 10 }}
-        >
-          <button
-            onClick={() => { prev(); resetTimer(); }}
-            className="p-1.5 rounded-full hover:bg-muted/80 transition-colors"
-            aria-label="Poprzednia okazja"
-          >
-            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-          </button>
-          <div className="flex gap-1.5">
-            {deals.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { setActive(i); resetTimer(); }}
-                className={cn(
-                  'h-1.5 rounded-full transition-all duration-300',
-                  i === active ? 'w-5 bg-primary' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                )}
-                aria-label={`Okazja ${i + 1}`}
-              />
-            ))}
-          </div>
-          <button
-            onClick={() => { next(); resetTimer(); }}
-            className="p-1.5 rounded-full hover:bg-muted/80 transition-colors"
-            aria-label="Następna okazja"
-          >
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </div>
+        {/* Strzałki są teraz wewnątrz obrazu każdego slajdu (powyżej) */}
       </div>
     </div>
   );
