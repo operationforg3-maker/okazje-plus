@@ -72,7 +72,7 @@ function calcDiscount(deal: Deal): number {
 }
 
 // ============================================================
-// Karuzela "Okazja Tygodnia" — 5 slajdów, auto-rotate 5s
+// Karuzela "Okazja Tygodnia" — stała wysokość, cross-fade bez skoków
 // ============================================================
 function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: string }) {
   const [active, setActive] = useState(0);
@@ -93,98 +93,135 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
 
   if (!deals.length) return null;
 
-  const deal = deals[active];
-  const title = getLocalizedText(deal.title);
-  const image = deal.image || (deal as any).imageUrl || '/icon_okazjeplus.svg';
-  const price = formatPrice(deal.price);
-  const origPrice = formatPrice(deal.originalPrice);
-  const discount = calcDiscount(deal);
-
   return (
-    <div className="relative group h-full flex flex-col">
-      <div className="absolute inset-0 bg-gradient-to-tr from-primary/25 to-accent/25 rounded-3xl blur-2xl opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 pointer-events-none" />
-      <div className="relative bg-background/60 backdrop-blur-xl border border-border/40 rounded-3xl shadow-2xl flex flex-col h-full overflow-hidden">
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-2">
-          <span className="bg-orange-500/15 text-orange-400 border border-orange-500/25 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
-            <Flame className="h-3.5 w-3.5 animate-pulse" />
-            Okazja Tygodnia
-          </span>
-          <div className="flex items-center gap-2">
-            {discount > 0 && (
-              <span className="flex items-center gap-1 bg-green-500/15 text-green-400 border border-green-500/20 text-xs font-black px-2.5 py-1 rounded-full">
-                <TrendingDown className="h-3.5 w-3.5" />
-                -{discount}%
-              </span>
-            )}
-            <span className="flex items-center gap-1 text-xs text-orange-400 font-black">
-              <Flame className="h-3.5 w-3.5" />
-              +{Math.round(deal.temperature || 0)}°
-            </span>
-          </div>
-        </div>
+    // Stała wysokość 440px — karuzela nigdy nie skacze
+    <div className="relative" style={{ height: 440 }}>
+      {/* Glow */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary/25 to-accent/25 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
 
-        {/* Image */}
-        <div className="relative mx-4 aspect-[4/3] rounded-2xl overflow-hidden bg-muted/30 flex-shrink-0">
-          <img
-            src={image}
-            alt={title}
-            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700"
-          />
-        </div>
+      {/* Karta kontenera — stała wielkość */}
+      <div className="relative bg-background/60 backdrop-blur-xl border border-border/40 rounded-3xl shadow-2xl overflow-hidden" style={{ height: 440 }}>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col justify-between p-5 pt-3 space-y-3">
-          <h3 className="font-bold text-sm sm:text-base leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
-            {title}
-          </h3>
-          <div className="flex items-center justify-between">
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-black text-foreground">{price || 'Sprawdź'}</span>
-              {origPrice && origPrice !== price && (
-                <span className="text-xs text-muted-foreground line-through opacity-70">{origPrice}</span>
-              )}
-            </div>
-            <Button size="sm" className="rounded-xl font-bold bg-primary text-primary-foreground shadow-md text-xs" asChild>
-              <Link href={`/${locale}/deals/${deal.id}`}>Odbierz okazję</Link>
-            </Button>
-          </div>
+        {/* Wszystkie slajdy renderowane naraz — tylko aktywny jest widoczny (opacity transition) */}
+        {deals.map((deal, idx) => {
+          const title = getLocalizedText(deal.title);
+          const image = deal.image || (deal as any).imageUrl || '/icon_okazjeplus.svg';
+          const price = formatPrice(deal.price);
+          const origPrice = formatPrice(deal.originalPrice);
+          const discount = calcDiscount(deal);
+          const isActive = idx === active;
 
-          {/* Dots + arrows */}
-          <div className="flex items-center justify-between pt-1">
-            <button
-              onClick={() => { prev(); resetTimer(); }}
-              className="p-1.5 rounded-full hover:bg-muted transition-colors"
-              aria-label="Poprzednia okazja"
+          return (
+            <div
+              key={deal.id ?? idx}
+              aria-hidden={!isActive}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                opacity: isActive ? 1 : 0,
+                transition: 'opacity 0.45s ease',
+                pointerEvents: isActive ? 'auto' : 'none',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
             >
-              <ChevronLeft className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <div className="flex gap-1.5">
-              {deals.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => { setActive(i); resetTimer(); }}
-                  className={cn(
-                    'h-1.5 rounded-full transition-all duration-300',
-                    i === active ? 'w-5 bg-primary' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+              {/* Top bar — stała wysokość 44px */}
+              <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 44, paddingTop: 14 }}>
+                <span className="bg-orange-500/15 text-orange-400 border border-orange-500/25 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                  <Flame className="h-3.5 w-3.5 animate-pulse" />
+                  Okazja Tygodnia
+                </span>
+                <div className="flex items-center gap-2">
+                  {discount > 0 && (
+                    <span className="flex items-center gap-1 bg-green-500/15 text-green-400 border border-green-500/20 text-xs font-black px-2.5 py-1 rounded-full">
+                      <TrendingDown className="h-3.5 w-3.5" />
+                      -{discount}%
+                    </span>
                   )}
-                  aria-label={`Okazja ${i + 1}`}
+                  <span className="flex items-center gap-1 text-xs text-orange-400 font-black">
+                    <Flame className="h-3.5 w-3.5" />
+                    +{Math.round(deal.temperature || 0)}°
+                  </span>
+                </div>
+              </div>
+
+              {/* Obraz — stała wysokość 220px */}
+              <div className="mx-4 shrink-0 rounded-2xl overflow-hidden bg-muted/30" style={{ height: 220 }}>
+                <img
+                  src={image}
+                  alt={title}
+                  loading={idx === 0 ? 'eager' : 'lazy'}
+                  className="object-cover w-full h-full"
+                  style={{ transition: 'transform 0.6s ease' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.05)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'; }}
                 />
-              ))}
+              </div>
+
+              {/* Treść — stała wysokość, tytuł max 2 linie */}
+              <div className="flex-1 flex flex-col justify-between px-5 pt-3 pb-4">
+                {/* Tytuł — max 2 linie, fixed height ~48px */}
+                <div style={{ height: 48, overflow: 'hidden' }}>
+                  <h3 className="font-bold text-sm leading-6 text-foreground line-clamp-2">
+                    {title}
+                  </h3>
+                </div>
+
+                {/* Cena + CTA */}
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-black text-foreground">{price || 'Sprawdź'}</span>
+                    {origPrice && origPrice !== price && (
+                      <span className="text-xs text-muted-foreground line-through opacity-70">{origPrice}</span>
+                    )}
+                  </div>
+                  <Button size="sm" className="rounded-xl font-bold bg-primary text-primary-foreground shadow-md text-xs" asChild>
+                    <Link href={`/${locale}/deals/${deal.id}`}>Odbierz okazję</Link>
+                  </Button>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={() => { next(); resetTimer(); }}
-              className="p-1.5 rounded-full hover:bg-muted transition-colors"
-              aria-label="Następna okazja"
-            >
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
+          );
+        })}
+
+        {/* Nawigacja — przyklejona do dołu karty, zawsze w tym samym miejscu */}
+        <div
+          className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 pb-3"
+          style={{ zIndex: 10 }}
+        >
+          <button
+            onClick={() => { prev(); resetTimer(); }}
+            className="p-1.5 rounded-full hover:bg-muted/80 transition-colors"
+            aria-label="Poprzednia okazja"
+          >
+            <ChevronLeft className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <div className="flex gap-1.5">
+            {deals.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { setActive(i); resetTimer(); }}
+                className={cn(
+                  'h-1.5 rounded-full transition-all duration-300',
+                  i === active ? 'w-5 bg-primary' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                )}
+                aria-label={`Okazja ${i + 1}`}
+              />
+            ))}
           </div>
+          <button
+            onClick={() => { next(); resetTimer(); }}
+            className="p-1.5 rounded-full hover:bg-muted/80 transition-colors"
+            aria-label="Następna okazja"
+          >
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
 
 // ============================================================
 // Main HomeClient
