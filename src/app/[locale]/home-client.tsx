@@ -145,15 +145,26 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                 </div>
               </div>
 
-              {/* Obraz — stała wysokość 220px */}
-              <div className="mx-4 shrink-0 rounded-2xl overflow-hidden bg-muted/30" style={{ height: 220 }}>
+              {/* Obraz — stała wysokość 220px, object-contain = widać całe zdjęcie */}
+              <div
+                className="mx-4 shrink-0 rounded-2xl overflow-hidden"
+                style={{
+                  height: 220,
+                  background: 'radial-gradient(ellipse at center, var(--muted) 0%, var(--background) 100%)',
+                }}
+              >
                 <img
                   src={image}
                   alt={title}
                   loading={idx === 0 ? 'eager' : 'lazy'}
-                  className="object-cover w-full h-full"
-                  style={{ transition: 'transform 0.6s ease' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.05)'; }}
+                  className="w-full h-full"
+                  style={{
+                    objectFit: 'contain',
+                    objectPosition: 'center',
+                    padding: '8px',
+                    transition: 'transform 0.6s ease',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.07)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'; }}
                 />
               </div>
