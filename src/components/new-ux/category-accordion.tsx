@@ -150,7 +150,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                       >
                         {/* Level 2: Subcategory Link */}
                         <Link
-                          href={buildCategoryPath(
+                          href={buildCategoryPathNewUx(
                             locale,
                             activeCategory.slug || activeCategory.id || '',
                             sub.slug || sub.id || ''
@@ -174,7 +174,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                             {sub.subcategories.map((subsub) => (
                               <Link
                                 key={subsub.id}
-                                href={buildCategoryPath(
+                                href={buildCategoryPathNewUx(
                                   locale,
                                   activeCategory.slug || activeCategory.id || '',
                                   sub.slug || sub.id || '',
