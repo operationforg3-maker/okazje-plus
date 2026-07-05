@@ -8,8 +8,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
-import { UXRedesignProductCard } from '@/components/ux-redesign/product-card';
+import DealCard from '@/components/deal-card';
+import ProductCard from '@/components/product-card';
 import {
   Flame,
   ShoppingBag,
@@ -412,7 +412,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           {visibleTopProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {visibleTopProducts.map((product) => (
-                <UXRedesignProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           ) : (
@@ -448,7 +448,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
           {visibleHotDeals.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {visibleHotDeals.map((deal, idx) => (
-                <UXRedesignDealCard key={deal.id} deal={deal} priority={idx === 0} />
+                <DealCard key={deal.id} deal={deal} priority={idx === 0} />
               ))}
             </div>
           ) : (

@@ -6,17 +6,10 @@ import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { Category } from '@/lib/types';
 import { buildCategoryPath } from '@/lib/category-routes';
-import { ChevronRight, Grid3x3, Package } from 'lucide-react';
+import { ChevronRight, Package, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Card, CardContent } from '@/components/ui/card';
 import { getLocalizedCategoryName, SupportedLanguage } from '@/lib/i18n-utils';
 import { getCategoryStyle } from '@/lib/category-theme';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 
 interface CategoryGridProps {
   categories: Category[];
@@ -25,7 +18,6 @@ interface CategoryGridProps {
 export default function CategoryGrid({ categories }: CategoryGridProps) {
   const t = useTranslations('home.browseCategories');
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const params = useParams();
   const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
 
@@ -41,27 +33,33 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
     return total;
   };
 
-  const handleOpenDrawer = (category: Category) => {
-    setActiveCategory(category);
-    setIsDrawerOpen(true);
+  const handleCategoryClick = (category: Category) => {
+    if (activeCategory?.id === category.id) {
+      setActiveCategory(null); // Toggle close
+    } else {
+      setActiveCategory(category); // Open
+    }
   };
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full space-y-4">
       {/* Main Grid View - Top Level Categories */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
         {categories.map((category) => {
           const style = getCategoryStyle(category);
           const totalProducts = getTotalProducts(category);
           const IconComponent = style.icon;
+          const isActive = activeCategory?.id === category.id;
 
           return (
             <button
               key={category.id}
-              onClick={() => handleOpenDrawer(category)}
+              onClick={() => handleCategoryClick(category)}
               className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 text-left group",
-                "bg-background/60 backdrop-blur-md hover:bg-background border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5"
+                "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 text-left group relative",
+                isActive
+                  ? "bg-background border-primary shadow-lg ring-2 ring-primary/20 -translate-y-0.5"
+                  : "bg-background/60 backdrop-blur-md hover:bg-background border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5"
               )}
             >
               <div className={cn(
@@ -80,121 +78,130 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                   {getLocalizedCategoryName(category, locale as SupportedLanguage)}
                 </span>
                 {totalProducts > 0 && (
-                  <span className="block text-[10px] text-muted-foreground mt-0.5">
+                  <span className="block text-[10px] text-muted-foreground mt-0.5 font-medium">
                     {totalProducts} ofert
                   </span>
                 )}
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+              <ChevronRight className={cn(
+                "h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all",
+                isActive ? "rotate-90 text-primary opacity-100" : "group-hover:translate-x-0.5"
+              )} />
             </button>
           );
         })}
       </div>
 
-      {/* Slide-over Drawer (Sheet panel) for category hierarchy details */}
-      <Sheet open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          {activeCategory && (() => {
-            const style = getCategoryStyle(activeCategory);
-            const IconComponent = style.icon;
-            return (
-              <div className="space-y-6">
-                <SheetHeader className="pb-4 border-b">
-                  <div className="flex items-center gap-3">
-                    <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg flex items-center justify-center w-12 h-12', `bg-gradient-to-br ${style.gradient}`)}>
-                      {typeof IconComponent === 'function' ? (
-                        <IconComponent className="h-6 w-6 text-white" />
-                      ) : (
-                        <span className="text-2xl">{IconComponent}</span>
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <SheetTitle className="text-xl font-bold font-headline">
-                        {getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}
-                      </SheetTitle>
-                      <Link
-                        href={buildCategoryPath(locale, activeCategory.slug || activeCategory.id || '')}
-                        onClick={() => setIsDrawerOpen(false)}
-                        className="text-xs text-primary hover:underline flex items-center mt-1 font-medium"
-                      >
-                        Przeglądaj całą kategorię
-                        <ChevronRight className="h-3 w-3 ml-0.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </SheetHeader>
+      {/* Collapsible Subcategories Panel - Grid Accordion Layout */}
+      <div 
+        className={cn(
+          "overflow-hidden transition-all duration-500 ease-in-out relative",
+          activeCategory ? "max-h-[1000px] opacity-100 py-2" : "max-h-0 opacity-0 py-0"
+        )}
+      >
+        {activeCategory && (() => {
+          const style = getCategoryStyle(activeCategory);
+          const IconComponent = style.icon;
+          return (
+            <div className="bg-background/40 backdrop-blur-xl border border-border/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+              {/* Subtle background glow matching category theme */}
+              <div className={cn("absolute -top-12 -left-12 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none bg-gradient-to-br", style.bg)} />
 
-                <div className="space-y-6 py-2">
-                  {activeCategory.subcategories && activeCategory.subcategories.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-4">
-                      {activeCategory.subcategories.map((sub) => (
-                        <div key={sub.id} className="space-y-2 pb-4 border-b border-border/40 last:border-0 last:pb-0">
-                          {/* Level 2: Subcategory */}
-                          <Link
-                            href={buildCategoryPath(
-                              locale,
-                              activeCategory.slug || activeCategory.id || '',
-                              sub.slug || sub.id || ''
-                            )}
-                            onClick={() => setIsDrawerOpen(false)}
-                            className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-secondary transition-colors group/sub"
-                          >
-                            <div className="p-1.5 rounded bg-primary/10 group-hover/sub:bg-primary/20 transition-colors">
-                              {sub.icon ? (
-                                <span className="text-lg">{sub.icon}</span>
-                              ) : (
-                                <Package className="h-4 w-4 text-primary" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-semibold text-sm group-hover/sub:text-primary transition-colors">
-                                {getLocalizedCategoryName(sub, locale as SupportedLanguage)}
-                              </div>
-                              {sub.subcategories && sub.subcategories.length > 0 && (
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  {sub.subcategories.length} podkategorie
-                                </div>
-                              )}
-                            </div>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover/sub:text-primary transition-[color,transform] group-hover/sub:translate-x-0.5 align-self-center" />
-                          </Link>
+              {/* Close Button */}
+              <button 
+                onClick={() => setActiveCategory(null)} 
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors z-10"
+                aria-label="Zamknij podkategorie"
+              >
+                <X className="h-4 w-4" />
+              </button>
 
-                          {/* Level 3: Sub-subcategories */}
-                          {sub.subcategories && sub.subcategories.length > 0 && (
-                            <div className="ml-8 pl-3 border-l-2 border-border space-y-1">
-                              {sub.subcategories.map((subsub) => (
-                                <Link
-                                  key={subsub.id}
-                                  href={buildCategoryPath(
-                                    locale,
-                                    activeCategory.slug || activeCategory.id || '',
-                                    sub.slug || sub.id || '',
-                                    subsub.slug || subsub.id || ''
-                                  )}
-                                  onClick={() => setIsDrawerOpen(false)}
-                                  className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-secondary hover:text-primary transition-colors group/subsub"
-                                >
-                                  <div className="h-1.5 w-1.5 rounded-full bg-primary/40 group-hover/subsub:bg-primary" />
-                                  <span className="flex-1 truncate">{getLocalizedCategoryName(subsub, locale as SupportedLanguage)}</span>
-                                  <ChevronRight className="h-3 w-3 opacity-0 group-hover/subsub:opacity-100 transition-opacity" />
-                                </Link>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+              {/* Category Title Header */}
+              <div className="flex items-center gap-4 mb-6 pb-4 border-b border-border/20 relative z-10">
+                <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg flex items-center justify-center w-12 h-12', style.bg, style.accent)}>
+                  {typeof IconComponent === 'function' ? (
+                    <IconComponent className="h-6 w-6" />
                   ) : (
-                    <p className="text-sm text-muted-foreground text-center py-6">
-                      Brak podkategorii
-                    </p>
+                    <span className="text-2xl">{IconComponent}</span>
                   )}
                 </div>
+                <div className="text-left">
+                  <h3 className="text-xl font-bold font-headline text-foreground">
+                    {getLocalizedCategoryName(activeCategory, locale as SupportedLanguage)}
+                  </h3>
+                  <Link
+                    href={buildCategoryPath(locale, activeCategory.slug || activeCategory.id || '')}
+                    className="text-xs text-primary hover:underline flex items-center mt-1 font-semibold"
+                  >
+                    Przeglądaj całą kategorię
+                    <ChevronRight className="h-3 w-3 ml-0.5" />
+                  </Link>
+                </div>
               </div>
-            );
-          })()}
-        </SheetContent>
-      </Sheet>
+
+              {/* Subcategories Grid List */}
+              <div className="max-h-[500px] overflow-y-auto pr-1 relative z-10">
+                {activeCategory.subcategories && activeCategory.subcategories.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                    {activeCategory.subcategories.map((sub) => (
+                      <div 
+                        key={sub.id} 
+                        className="space-y-3 p-4 rounded-2xl bg-background/55 border border-border/40 hover:border-primary/20 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-md"
+                      >
+                        {/* Level 2: Subcategory Link */}
+                        <Link
+                          href={buildCategoryPath(
+                            locale,
+                            activeCategory.slug || activeCategory.id || '',
+                            sub.slug || sub.id || ''
+                          )}
+                          className="flex items-center gap-2.5 font-bold text-sm text-foreground hover:text-primary transition-colors group/sub"
+                        >
+                          <div className={cn("p-1.5 rounded-lg text-primary flex items-center justify-center bg-gradient-to-br", style.bg, style.accent)}>
+                            {sub.icon ? (
+                              <span className="text-sm font-black">{sub.icon}</span>
+                            ) : (
+                              <Package className="h-3.5 w-3.5" />
+                            )}
+                          </div>
+                          <span className="truncate">{getLocalizedCategoryName(sub, locale as SupportedLanguage)}</span>
+                          <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-0 group-hover/sub:opacity-100 group-hover/sub:translate-x-0.5 transition-all text-primary" />
+                        </Link>
+
+                        {/* Level 3: Sub-subcategories Links */}
+                        {sub.subcategories && sub.subcategories.length > 0 && (
+                          <div className="space-y-1.5 pl-2 border-l border-border/40">
+                            {sub.subcategories.map((subsub) => (
+                              <Link
+                                key={subsub.id}
+                                href={buildCategoryPath(
+                                  locale,
+                                  activeCategory.slug || activeCategory.id || '',
+                                  sub.slug || sub.id || '',
+                                  subsub.slug || subsub.id || ''
+                                )}
+                                className="flex items-center gap-1.5 py-1 px-2 rounded-md text-xs text-muted-foreground hover:text-primary hover:bg-secondary/40 transition-colors group/subsub"
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 group-hover/subsub:bg-primary transition-colors" />
+                                <span className="flex-grow truncate">{getLocalizedCategoryName(subsub, locale as SupportedLanguage)}</span>
+                                <ChevronRight className="h-3 w-3 opacity-0 group-hover/subsub:opacity-100 transition-opacity ml-1" />
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    Brak podkategorii
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }
