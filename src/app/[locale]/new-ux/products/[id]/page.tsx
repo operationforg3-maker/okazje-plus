@@ -10,8 +10,8 @@ import { getGoogleProductPublicationState } from '@/lib/google-product-publicati
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import ProductDetailM6Client from './product-detail-m6-client';
 
-// ISR: revalidate co 5 minut, dynamic paths supported
-export const revalidate = 300;
+// Must be force-dynamic: page uses headers() for auth session verification
+export const dynamic = 'force-dynamic';
 
 
 interface PageProps {

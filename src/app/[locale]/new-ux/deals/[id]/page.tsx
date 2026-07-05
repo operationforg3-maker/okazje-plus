@@ -8,8 +8,8 @@ import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-gene
 import { buildCategoryPath, humanizeCategorySlug, buildCategoryPathNewUx } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
 
-// ISR: revalidate co 5 minut, dynamic paths supported
-export const revalidate = 300;
+// Must be force-dynamic: page uses headers() for auth session verification
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: { id: string; locale: string };
