@@ -332,16 +332,57 @@
 
 /* Theme-specific overrides */
 [data-theme='v4'] {
-  --primary: 200 80% 45%; /* Example: blue */
-  --accent: 45 90% 55%;   /* Example: amber */
+  --primary: 200 80% 45%; /* Blue */
+  --accent: 45 90% 55%;   /* Amber */
 }
 [data-theme='v5'] {
-  --primary: 280 70% 50%; /* Example: purple */
-  --accent: 340 80% 60%;   /* Example: pink */
+  --primary: 280 75% 55%; /* Purple */
+  --accent: 340 85% 60%;   /* Pink */
 }
 [data-theme='neon'] {
-  --primary: 120 100% 50%; /* Neon green */
-  --accent: 50 100% 50%;   /* Neon yellow */
+  --primary: 142.1 90% 50%; /* Vibrant Emerald Green */
+  --accent: 320 100% 60%;   /* Neon Pink */
+}
+
+/* Dark mode theme overrides */
+.dark[data-theme='v4'] {
+  --primary: 200 90% 55%; /* Bright Blue */
+  --accent: 45 100% 60%;  /* Amber */
+}
+.dark[data-theme='v5'] {
+  --primary: 280 85% 65%; /* Bright Purple */
+  --accent: 340 95% 65%;  /* Bright Pink */
+}
+.dark[data-theme='neon'] {
+  --background: 250 40% 6%; /* #090615 - deep space dark violet */
+  --foreground: 0 0% 98%;
+  --card: 250 35% 10%; /* #0e0a22 - dark space card */
+  --card-foreground: 0 0% 98%;
+  --popover: 250 40% 6%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 140 100% 50%; /* Neon emerald green */
+  --primary-foreground: 250 40% 6%;
+  --secondary: 250 30% 12%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 250 30% 12%;
+  --muted-foreground: 250 15% 65%;
+  --accent: 320 100% 60%;  /* Neon pink */
+  --accent-foreground: 0 0% 98%;
+  --border: 250 30% 16%; /* Space border */
+  --input: 250 30% 16%;
+  --ring: 140 100% 50%;
+  
+  --bg-base: 250 40% 6%;
+  --bg-subtle: 250 40% 8%;
+  --bg-muted: 250 40% 10%;
+  --surface-default: 250 35% 10%;
+  --surface-hover: 250 35% 14%;
+  --surface-active: 250 35% 18%;
+  --surface-elevated: 250 35% 12%;
+  --text-primary: 0 0% 100%;
+  --border-subtle: 250 30% 12%;
+  --border-default: 250 30% 16%;
+  --border-strong: 250 30% 25%;
 }
     
     /* ============ SEMANTIC COLOR SYSTEM ============
