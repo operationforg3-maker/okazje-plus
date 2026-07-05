@@ -12,7 +12,7 @@ import ProductDetailM6Client from './product-detail-m6-client';
 
 // Force dynamic rendering - no CDN caching to avoid stale 404s
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+export const revalidate = 300; // ISR: revalidate co 5 minut
 
 interface PageProps {
   params: Promise<{ id: string; locale: string }>;
