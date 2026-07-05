@@ -313,11 +313,11 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   // --------------------------------------------------------------------------
   if (viewMode === 'list') {
     return (
-      <div className="group relative overflow-hidden rounded-lg transition-all duration-300 flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg hover:-translate-y-0.5">
+      <div className="group relative overflow-hidden rounded-2xl transition-all duration-300 flex flex-col sm:flex-row bg-background/60 backdrop-blur-md p-3 sm:p-4 md:p-5 border border-border/40 items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-xl hover:-translate-y-1">
         <Link 
           href={productUrl} 
           onClick={handleDetailClick} 
-          className="relative overflow-hidden bg-muted block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-md"
+          className="relative overflow-hidden bg-muted/40 block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-xl border border-border/40"
         >
           <ProductGallery images={galleryImages} />
           {/* Trust Badges Overlay */}

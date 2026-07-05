@@ -8,9 +8,9 @@ import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-gene
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
 
-// Force dynamic rendering dla real-time danych
+// Force dynamic rendering - no CDN caching to avoid stale 404s
 export const dynamic = 'force-dynamic';
-export const revalidate = 300; // ISR: revalidate co 5 minut
+export const revalidate = 0;
 
 interface PageProps {
   params: { id: string; locale: string };

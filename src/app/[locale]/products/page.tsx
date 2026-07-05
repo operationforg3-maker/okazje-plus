@@ -112,6 +112,37 @@ export function ProductsPageContent({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { viewMode, setViewMode } = useUX();
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
+
+  // Dynamic Category UX styling: override global theme when browsing a themed category
+  useEffect(() => {
+    if (!selectedCategory) return;
+    const catTheme = (selectedCategory as any).uxTheme || (selectedCategory as any).layoutType;
+    if (catTheme) {
+      const root = document.documentElement;
+      root.setAttribute('data-theme', catTheme);
+      root.classList.forEach((cls) => {
+        if (cls.startsWith('theme-')) root.classList.remove(cls);
+      });
+      root.classList.add(`theme-${catTheme}`);
+
+      return () => {
+        // Restore previous global theme
+        try {
+          const stored = localStorage.getItem('uxSettings');
+          const originalTheme = stored ? JSON.parse(stored).themeFamily : 'classic';
+          const effectiveTheme = originalTheme === 'classic' ? 'default' : originalTheme;
+          root.setAttribute('data-theme', effectiveTheme);
+          root.classList.forEach((cls) => {
+            if (cls.startsWith('theme-')) root.classList.remove(cls);
+          });
+          if (effectiveTheme !== 'default') {
+            root.classList.add(`theme-${effectiveTheme}`);
+          }
+        } catch {}
+      };
+    }
+  }, [selectedCategory]);
+
   const [sortBy, setSortBy] = useState<SortBy>('relevance');
   const [productStatusView, setProductStatusView] = useState<ProductStatusView>(
     statusParam === 'waiting_room' ? 'waiting_room' : 'approved'
@@ -448,8 +479,8 @@ export function ProductsPageContent({
     : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
   const masonryWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+    ? 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3'
+    : 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-4';
 
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
@@ -1088,7 +1119,7 @@ export function ProductsPageContent({
                     ) : viewMode === 'masonry' ? (
                       <div className={masonryWrapperClass}>
                         {displayedProducts.map((product) => (
-                          <div key={product.id} className={cardWrapperClass}>
+                          <div key={product.id} className={cn("break-inside-avoid mb-4", cardWrapperClass)}>
                             <ProductCard product={product as any} viewMode="grid" fetchBestDeal={false} />
                           </div>
                         ))}

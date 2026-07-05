@@ -42,6 +42,7 @@ import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { getExternalUrl } from '@/lib/external-url';
 import { LogisticsBadge } from '@/components/product/LogisticsBadge';
 import { SellerInfo } from '@/components/product/SellerInfo';
+import { InfiniteSimilarFeed } from '@/components/infinite-similar-feed';
 
 interface Props {
   productCore?: ProductCore;
@@ -1017,6 +1018,21 @@ export default function ProductDetailM6Client({
           <ProductPriceHistoryChart deals={deals} />
         </div>
       )}
+
+      <Separator className="my-12" />
+      
+      {/* Infinite Scroll Feed */}
+      <section className="mb-12">
+        <h2 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">
+          <Package className="h-6 w-6 text-primary" />
+          Więcej podobnych produktów
+        </h2>
+        <InfiniteSimilarFeed
+          itemType="product"
+          categoryId={productCore?.mainCategorySlug || product?.mainCategorySlug || ''}
+          excludeId={productId || ''}
+        />
+      </section>
     </div>
   );
 }

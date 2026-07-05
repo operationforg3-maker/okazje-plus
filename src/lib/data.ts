@@ -2097,6 +2097,11 @@ export async function getProductCore(productId: string): Promise<any | null> {
       console.error('[getProductCore] Invalid product ID provided:', productId);
       return null;
     }
+
+    // Normalize slug: strip trailing hyphens that can appear in URLs
+    // e.g. "jessica-fletcher-" -> "jessica-fletcher"
+    const normalizedId = productId.replace(/-+$/, '');
+    const idsToTry = normalizedId !== productId ? [productId, normalizedId] : [productId];
     
     if (typeof window === 'undefined') {
       const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
@@ -2116,18 +2121,21 @@ export async function getProductCore(productId: string): Promise<any | null> {
           data = docRes.data();
           finalId = docRes.id;
         } else {
-          // Fallback to slug search
-          const slugQueries = await Promise.all([
-            adminDb.collection('product_cores').where('slug.pl', '==', productId).limit(1).get(),
-            adminDb.collection('product_cores').where('slug.en', '==', productId).limit(1).get(),
-            adminDb.collection('product_cores').where('slug', '==', productId).limit(1).get()
-          ]);
-          for (const res of slugQueries) {
-            if (!res.empty) {
-              data = res.docs[0].data();
-              finalId = res.docs[0].id;
-              break;
+          // Fallback to slug search - try each candidate slug variant
+          for (const slugCandidate of idsToTry) {
+            const slugQueries = await Promise.all([
+              adminDb.collection('product_cores').where('slug.pl', '==', slugCandidate).limit(1).get(),
+              adminDb.collection('product_cores').where('slug.en', '==', slugCandidate).limit(1).get(),
+              adminDb.collection('product_cores').where('slug', '==', slugCandidate).limit(1).get()
+            ]);
+            for (const res of slugQueries) {
+              if (!res.empty) {
+                data = res.docs[0].data();
+                finalId = res.docs[0].id;
+                break;
+              }
             }
+            if (data) break;
           }
         }
       }
