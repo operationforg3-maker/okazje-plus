@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import HomeClient from './home-client';
-import { getRecommendedProducts, getCategories } from '@/lib/data';
+import { getRecommendedProducts, getCategories, getWeeklyShowcaseDeals } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search-server';
 import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
 
@@ -136,7 +136,7 @@ export async function generateMetadata({
 
 export default async function HomePage() {
   // Load data for home page
-  const [hotDeals, topProducts, categories] = await Promise.all([
+  const [hotDeals, topProducts, categories, weeklyDeals] = await Promise.all([
     searchDealsTypesense('*', {
       limit: 8,
       sortBy: 'hot',
@@ -144,6 +144,7 @@ export default async function HomePage() {
     }),
     getRecommendedProducts(8),
     getCategories(),
+    getWeeklyShowcaseDeals(5),
   ]);
 
   const homeJsonLd = generateHomePageJsonLd(hotDeals, topProducts);
@@ -158,6 +159,7 @@ export default async function HomePage() {
         initialHotDeals={hotDeals}
         initialTopProducts={topProducts}
         categories={categories}
+        weeklyDeals={weeklyDeals}
       />
     </>
   );

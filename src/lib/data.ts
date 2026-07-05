@@ -152,6 +152,73 @@ export async function getRandomDeals(count: number): Promise<Deal[]> {
   return all.slice(0, count);
 }
 
+/**
+ * Pobiera najlepsze okazje do karuzeli "Okazja Tygodnia" na homepage.
+ * Priorytet: największa % przecena + wysoka temperatura (AliExpress + inne źródła).
+ */
+export async function getWeeklyShowcaseDeals(count: number = 5): Promise<Deal[]> {
+  const cacheKey = `deals:weekly-showcase:v1:${count}`;
+  let cacheGetFn: any = null, cacheSetFn: any = null;
+  if (typeof window === 'undefined') {
+    try {
+      const mod = await import('@/lib/cache');
+      cacheGetFn = mod.cacheGet;
+      cacheSetFn = mod.cacheSet;
+    } catch (_) {}
+  }
+  if (cacheGetFn) {
+    const cached = await cacheGetFn(cacheKey);
+    if (cached) return cached as Deal[];
+  }
+
+  try {
+    const dealsRef = collection(db, 'deals');
+    // Pobierz więcej i filtruj po stronie serwera — szukamy z originalPrice > price
+    const q = query(
+      dealsRef,
+      where('status', '==', 'approved'),
+      orderBy('temperature', 'desc'),
+      limit(80)
+    );
+    const snap = await getDocs(q);
+    const all = snap.docs.map(docToDeal);
+
+    // Oblicz discount% i posortuj malejąco
+    const withDiscount = all
+      .map(deal => {
+        const price = typeof deal.price === 'number' ? deal.price
+          : parseFloat(String((deal as any).legacyPrice || 0));
+        const orig = typeof deal.originalPrice === 'number' ? deal.originalPrice
+          : parseFloat(String((deal as any).originalPrice || 0));
+        const discountPct = (orig > 0 && price > 0 && orig > price)
+          ? Math.round(((orig - price) / orig) * 100)
+          : 0;
+        return { deal, discountPct };
+      })
+      .filter(({ discountPct }) => discountPct >= 10) // min 10% zniżki
+      .sort((a, b) => {
+        // Ważona: 70% discount, 30% temperatura
+        const scoreA = a.discountPct * 0.7 + (a.deal.temperature || 0) * 0.001 * 30;
+        const scoreB = b.discountPct * 0.7 + (b.deal.temperature || 0) * 0.001 * 30;
+        return scoreB - scoreA;
+      })
+      .slice(0, count)
+      .map(({ deal }) => deal);
+
+    // Fallback: jeśli za mało dealów z zniżką, uzupełnij gorącymi
+    if (withDiscount.length < count) {
+      const hotFallback = all.filter(d => !withDiscount.find(w => w.id === d.id));
+      withDiscount.push(...hotFallback.slice(0, count - withDiscount.length));
+    }
+
+    if (cacheSetFn) await cacheSetFn(cacheKey, withDiscount, 600);
+    return withDiscount;
+  } catch (err) {
+    console.error('[getWeeklyShowcaseDeals] error', err);
+    return getHotDeals(count);
+  }
+}
+
 // Admin: pobierz produkty z opcjonalnym filtrem statusu
 export async function getProductsForAdmin(status?: string, maxCount: number = 200): Promise<Product[]> {
   const productsRef = collection(db, "products");
