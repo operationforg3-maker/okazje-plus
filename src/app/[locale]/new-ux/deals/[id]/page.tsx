@@ -196,6 +196,28 @@ async function getDealData(id: string) {
   return { deal, relatedDeals, product };
 }
 
+/** Deep-sanitize any value so Next.js can serialize it across the Server→Client boundary.
+ *  Firestore Admin SDK can return objects with custom prototypes (Timestamp, DocumentReference, etc.)
+ *  that Next.js refuses to pass to Client Components. JSON round-trip removes all non-plain objects. */
+function deepSerialize<T>(value: T): T {
+  if (value === null || value === undefined) return value;
+  try {
+    return JSON.parse(JSON.stringify(value, (_, v) => {
+      // Convert Firestore Timestamp-like objects to ISO string
+      if (v && typeof v === 'object' && typeof v.toDate === 'function') {
+        return v.toDate().toISOString();
+      }
+      if (v && typeof v === 'object' && v.seconds !== undefined && v.nanoseconds !== undefined) {
+        return new Date(v.seconds * 1000).toISOString();
+      }
+      return v;
+    }));
+  } catch {
+    return value;
+  }
+}
+
+
 // SEO: Generate metadata
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
@@ -328,7 +350,11 @@ export default async function DealDetailPage({ params }: PageProps) {
     notFound();
   }
   
-  const { deal, relatedDeals, product } = data;
+  // Deep-serialize ALL data to ensure no Firestore class instances (Timestamp, DocumentReference, etc.)
+  // cross the Server→Client boundary, which would cause HTTP 500.
+  const deal = deepSerialize(data.deal);
+  const relatedDeals = deepSerialize(data.relatedDeals);
+  const product = deepSerialize(data.product);
   
   // JSON-LD structured data dla Google Rich Results
   const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || 'Okazja';
