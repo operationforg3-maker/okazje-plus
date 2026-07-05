@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { ProductGallery } from './product-gallery';
+import { ProductGallery } from '../product-gallery';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { 
@@ -9,7 +9,7 @@ import {
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
   TrendingDown, Award, Clock, Check, Plus, Eye, Scale, Flame, TrendingUp, Sparkles
 } from 'lucide-react';
-import { RatingBar } from './rating-bar';
+import { RatingBar } from '../rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import type { Product } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -272,7 +272,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   const productId = typeof rawId === 'object' ? String(rawId) : rawId;
   const rawSlug = (product as any).slug;
   const safeSlug = typeof rawSlug === 'string' ? rawSlug : (rawSlug ? getText(rawSlug) : null);
-  const productUrl = `${prefix}/products/${safeSlug || productId || 'missing-id'}`;
+  const productUrl = `${prefix}/new-ux/products/${safeSlug || productId || 'missing-id'}`;
   
   // Resolve images from Product (gallery/image) or ProductCore (images)
   const rawGallery = Array.isArray(product.gallery) ? product.gallery : [];
@@ -313,11 +313,11 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   // --------------------------------------------------------------------------
   if (viewMode === 'list') {
     return (
-      <div className="group relative overflow-hidden rounded-lg transition-all duration-300 flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg hover:-translate-y-0.5">
+      <div className="group relative overflow-hidden rounded-2xl transition-all duration-300 flex flex-col sm:flex-row bg-background/60 backdrop-blur-md p-3 sm:p-4 md:p-5 border border-border/40 items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-xl hover:-translate-y-1">
         <Link 
           href={productUrl} 
           onClick={handleDetailClick} 
-          className="relative overflow-hidden bg-muted block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-md"
+          className="relative overflow-hidden bg-muted/40 block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-xl border border-border/40"
         >
           <ProductGallery images={galleryImages} />
           {/* Trust Badges Overlay */}

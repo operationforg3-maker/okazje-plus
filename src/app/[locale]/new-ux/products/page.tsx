@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState, useRef, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { searchProductsTypesense } from '@/lib/search';
-import ProductCard from '@/components/product-card';
+import ProductCard from '@/components/new-ux/product-card';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
-import { buildCategoryPath } from '@/lib/category-routes';
+import { buildCategoryPath, buildCategoryPathNewUx } from '@/lib/category-routes';
 import { useUX } from '@/context/UXContext';
 import { getCategoryStyle } from '@/lib/category-theme';
 
@@ -112,6 +112,37 @@ export function ProductsPageContent({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { viewMode, setViewMode } = useUX();
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
+
+  // Dynamic Category UX styling: override global theme when browsing a themed category
+  useEffect(() => {
+    if (!selectedCategory) return;
+    const catTheme = (selectedCategory as any).uxTheme || (selectedCategory as any).layoutType;
+    if (catTheme) {
+      const root = document.documentElement;
+      root.setAttribute('data-theme', catTheme);
+      root.classList.forEach((cls) => {
+        if (cls.startsWith('theme-')) root.classList.remove(cls);
+      });
+      root.classList.add(`theme-${catTheme}`);
+
+      return () => {
+        // Restore previous global theme
+        try {
+          const stored = localStorage.getItem('uxSettings');
+          const originalTheme = stored ? JSON.parse(stored).themeFamily : 'classic';
+          const effectiveTheme = originalTheme === 'classic' ? 'default' : originalTheme;
+          root.setAttribute('data-theme', effectiveTheme);
+          root.classList.forEach((cls) => {
+            if (cls.startsWith('theme-')) root.classList.remove(cls);
+          });
+          if (effectiveTheme !== 'default') {
+            root.classList.add(`theme-${effectiveTheme}`);
+          }
+        } catch {}
+      };
+    }
+  }, [selectedCategory]);
+
   const [sortBy, setSortBy] = useState<SortBy>('relevance');
   const [productStatusView, setProductStatusView] = useState<ProductStatusView>(
     statusParam === 'waiting_room' ? 'waiting_room' : 'approved'
@@ -142,8 +173,8 @@ export function ProductsPageContent({
     }
 
     const basePath = mainSlug
-      ? buildCategoryPath(locale, mainSlug, subSlug || undefined, subSubSlug || undefined)
-      : `/${locale}/products`;
+      ? buildCategoryPathNewUx(locale, mainSlug, subSlug || undefined, subSubSlug || undefined)
+      : `/${locale}/new-ux/products`;
     const queryString = params.toString();
 
     return queryString ? `${basePath}?${queryString}` : basePath;
@@ -448,8 +479,8 @@ export function ProductsPageContent({
     : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
   const masonryWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+    ? 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3'
+    : 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-4';
 
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
@@ -1088,7 +1119,7 @@ export function ProductsPageContent({
                     ) : viewMode === 'masonry' ? (
                       <div className={masonryWrapperClass}>
                         {displayedProducts.map((product) => (
-                          <div key={product.id} className={cardWrapperClass}>
+                          <div key={product.id} className={cn("break-inside-avoid mb-4", cardWrapperClass)}>
                             <ProductCard product={product as any} viewMode="grid" fetchBestDeal={false} />
                           </div>
                         ))}
@@ -1185,7 +1216,7 @@ export function ProductsPageContent({
                         </Badge>
                       </div>
                       <Button asChild className="w-full" size="sm">
-                        <Link href={`/${locale}/deals/${dealOfTheDay.id}`}>
+                        <Link href={`/${locale}/new-ux/deals/${dealOfTheDay.id}`}>
                           {t('insights.seeOffer')}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
@@ -1246,7 +1277,7 @@ export function ProductsPageContent({
                       {t('insights.bestOffersDesc')}
                     </p>
                     <Button asChild variant="outline" size="sm" className="w-full">
-                      <Link href={`/${locale}/deals`}>
+                      <Link href={`/${locale}/new-ux/deals`}>
                         {t('insights.seeDeals')}
                       </Link>
                     </Button>

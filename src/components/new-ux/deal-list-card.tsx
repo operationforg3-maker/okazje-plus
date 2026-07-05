@@ -303,14 +303,14 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
     (typeof deal?.productCoreId === 'string' && deal.productCoreId) ||
     (typeof deal?.product?.id === 'string' && deal.product.id) ||
     (Array.isArray(deal?.linkedProductIds) && typeof deal.linkedProductIds[0] === 'string' ? deal.linkedProductIds[0] : '');
-  const productPageUrl = linkedProductId ? `${prefix}/products/${linkedProductId}` : null;
+  const productPageUrl = linkedProductId ? `${prefix}/new-ux/products/${linkedProductId}` : null;
 
   // Generate responsive image URL with size params for proxy optimization
   const imageUrl = withImageProxy(dealImage);
 
   return (
-    <div className="group relative flex flex-col sm:flex-row rounded-xl border bg-card p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full transition-shadow duration-200 hover:shadow-md">
-      <Link href={`${prefix}/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-lg border bg-muted/40">
+    <div className="group relative flex flex-col sm:flex-row rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md p-3 sm:p-4 md:p-5 items-stretch gap-3 sm:gap-5 w-full shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+      <Link href={`${prefix}/new-ux/deals/${deal.id}`} className="relative flex-shrink-0 overflow-hidden rounded-xl border border-border/40 bg-muted/40">
         <div className="relative w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 bg-muted/50">
           <Image
             src={imageUrl}
@@ -369,7 +369,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
       <div className="flex flex-col flex-grow min-w-0 justify-between">
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-3">
-            <Link href={`${prefix}/deals/${deal.id}`} className="group/title">
+            <Link href={`${prefix}/new-ux/deals/${deal.id}`} className="group/title">
               <h3 className="font-headline text-xl font-semibold group-hover/title:text-primary transition-colors line-clamp-2">
                 {dealTitle}
               </h3>
@@ -467,7 +467,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
               type="deal"
               itemId={deal.id}
               title={dealTitle || t('labels.deal')}
-              url={`/deals/${deal.id}`}
+              url={`/new-ux/deals/${deal.id}`}
               variant="outline"
               size="icon"
             />

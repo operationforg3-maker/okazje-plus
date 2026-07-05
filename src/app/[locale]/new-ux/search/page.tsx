@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { searchProductsTypesense, searchDealsTypesense } from '@/lib/search';
-import ProductListCard from '@/components/product-list-card';
-import ProductCard from '@/components/product-card';
-import DealCard from '@/components/deal-card';
+import ProductCard from '@/components/new-ux/product-card';
+import DealCard from '@/components/new-ux/deal-card';
+import DealListCard from '@/components/new-ux/deal-list-card';
 import { ProductCore, Deal } from '@/lib/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,12 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Filter, X, SlidersHorizontal, Bookmark, Zap, Truck, Star, Flame, ShieldCheck } from 'lucide-react';
+import { Filter, X, SlidersHorizontal, Bookmark, Zap, Truck, Star, Flame, ShieldCheck, LayoutGrid, Columns, List } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { QUICK_FILTERS } from '@/lib/saved-searches';
 import SavedSearchDialog from '@/components/saved-search-dialog';
 import { useTranslations } from 'next-intl';
 import type { SavedSearchFilters } from '@/lib/saved-searches';
+import { useUX } from '@/context/UXContext';
+import { cn } from '@/lib/utils';
 import { useCurrency } from '@/lib/unified-currency';
 
 interface SearchFilters {
@@ -59,6 +61,7 @@ function SearchPageContent() {
   const tActions = useTranslations('common.actions');
   const searchParams = useSearchParams();
   const q = searchParams.get('q') || '';
+  const { viewMode, setViewMode } = useUX();
 
   const [products, setProducts] = useState<ProductCore[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -173,6 +176,40 @@ function SearchPageContent() {
               </Button>
             </>
           )}
+        </div>
+
+        {/* View Mode Switcher */}
+        <div className="flex items-center gap-1 border rounded-lg p-1">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="h-8 px-3"
+            aria-label="Lista"
+          >
+            <List className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Lista</span>
+          </Button>
+          <Button
+            variant={viewMode === 'masonry' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('masonry')}
+            className="h-8 px-3"
+            aria-label="Kafelki"
+          >
+            <Columns className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Kafelki</span>
+          </Button>
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+            className="h-8 px-3"
+            aria-label="Siatka"
+          >
+            <LayoutGrid className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Siatka</span>
+          </Button>
         </div>
       </div>
 
@@ -313,25 +350,58 @@ function SearchPageContent() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="space-y-8">
+          <TabsContent value="all" className="space-y-12">
             {products.length > 0 && (
               <div>
-                <h2 className="font-headline text-2xl font-bold mb-4">🛍️ Produkty</h2>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                  {products.map((product) => (
-                    <ProductCard key={product.id} product={product as any} viewMode="grid" />
-                  ))}
-                </div>
+                <h2 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">🛍️ Produkty</h2>
+                {viewMode === 'list' ? (
+                  <div className="space-y-4">
+                    {products.map((product) => (
+                      <ProductCard key={product.id} product={product as any} viewMode="list" />
+                    ))}
+                  </div>
+                ) : viewMode === 'masonry' ? (
+                  <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+                    {products.map((product) => (
+                      <div key={product.id} className="break-inside-avoid mb-4">
+                        <ProductCard product={product as any} viewMode="grid" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                    {products.map((product) => (
+                      <ProductCard key={product.id} product={product as any} viewMode="grid" />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
             {deals.length > 0 && (
               <div>
-                <h2 className="font-headline text-2xl font-bold mb-4">🔥 Okazje</h2>
-                <div className="grid grid-cols-1 gap-6">
-                  {deals.map((deal) => (
-                    <DealCard key={deal.id} deal={deal} />
-                  ))}
-                </div>
+                <h2 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">🔥 Okazje</h2>
+                {viewMode === 'list' ? (
+                  <div className="space-y-4">
+                    {deals.map((deal) => (
+                      <DealListCard key={deal.id} deal={deal} />
+                    ))}
+                  </div>
+                ) : viewMode === 'masonry' ? (
+                  <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+                    {deals.map((deal) => (
+                      <div key={deal.id} className="break-inside-avoid mb-4">
+                        <DealCard deal={deal} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                    {deals.map((deal) => (
+                      <DealCard key={deal.id} deal={deal} />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -339,6 +409,20 @@ function SearchPageContent() {
           <TabsContent value="products">
             {products.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Brak produktów</p>
+            ) : viewMode === 'list' ? (
+              <div className="space-y-4">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product as any} viewMode="list" />
+                ))}
+              </div>
+            ) : viewMode === 'masonry' ? (
+              <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+                {products.map((product) => (
+                  <div key={product.id} className="break-inside-avoid mb-4">
+                    <ProductCard product={product as any} viewMode="grid" />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {products.map((product) => (
@@ -351,8 +435,22 @@ function SearchPageContent() {
           <TabsContent value="deals">
             {deals.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Brak okazji</p>
+            ) : viewMode === 'list' ? (
+              <div className="space-y-4">
+                {deals.map((deal) => (
+                  <DealListCard key={deal.id} deal={deal} />
+                ))}
+              </div>
+            ) : viewMode === 'masonry' ? (
+              <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+                {deals.map((deal) => (
+                  <div key={deal.id} className="break-inside-avoid mb-4">
+                    <DealCard deal={deal} />
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {deals.map((deal) => (
                   <DealCard key={deal.id} deal={deal} />
                 ))}

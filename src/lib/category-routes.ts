@@ -49,6 +49,19 @@ export const buildCategoryPath = (
   return `/${locale}/categories/${segments.join('/')}`;
 };
 
+export const buildCategoryPathNewUx = (
+  locale: string,
+  mainSlug: string,
+  subSlug?: string,
+  subSubSlug?: string
+): string => {
+  const segments = [mainSlug, subSlug, subSubSlug]
+    .filter((segment): segment is string => Boolean(segment && segment.trim().length > 0))
+    .map((segment) => encodeURIComponent(segment));
+
+  return `/${locale}/new-ux/categories/${segments.join('/')}`;
+};
+
 export function resolveCategoryRoute(
   categories: Category[],
   mainSlug: string,

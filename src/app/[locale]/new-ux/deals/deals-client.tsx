@@ -9,8 +9,8 @@ import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib
 import { Deal, Category, Product } from '@/lib/types';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
-import DealCard from '@/components/deal-card';
-import DealListCard from '@/components/deal-list-card';
+import DealCard from '@/components/new-ux/deal-card';
+import DealListCard from '@/components/new-ux/deal-list-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -100,6 +100,43 @@ function DealsPageContent() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [totalDealsCount, setTotalDealsCount] = useState<number | null>(null);
   const { viewMode, setViewMode } = useUX();
+  
+  // Server-side infinite scroll states
+  const [limit, setLimit] = useState(24);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Dynamic Category UX styling: override global theme when browsing a themed category
+  useEffect(() => {
+    if (!selectedCategory) return;
+    const catTheme = (selectedCategory as any).uxTheme || (selectedCategory as any).layoutType;
+    if (catTheme) {
+      const root = document.documentElement;
+      root.setAttribute('data-theme', catTheme);
+      root.classList.forEach((cls) => {
+        if (cls.startsWith('theme-')) root.classList.remove(cls);
+      });
+      root.classList.add(`theme-${catTheme}`);
+
+      return () => {
+        // Restore previous global theme
+        try {
+          const stored = localStorage.getItem('uxSettings');
+          const originalTheme = stored ? JSON.parse(stored).themeFamily : 'classic';
+          const effectiveTheme = originalTheme === 'classic' ? 'default' : originalTheme;
+          root.setAttribute('data-theme', effectiveTheme);
+          root.classList.forEach((cls) => {
+            if (cls.startsWith('theme-')) root.classList.remove(cls);
+          });
+          if (effectiveTheme !== 'default') {
+            root.classList.add(`theme-${effectiveTheme}`);
+          }
+        } catch {}
+      };
+    }
+  }, [selectedCategory]);
+
   const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
   const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({
     priceRange: { min: 0, max: 15000 },
@@ -400,15 +437,25 @@ function DealsPageContent() {
     fetchData();
   }, []);
 
-  // Pobierz deals przy zmianie kategorii / subkategorii / wyszukiwaniu / filtrów
+  // Reset limit when parameters change
+  useEffect(() => {
+    setLimit(24);
+    setHasMore(true);
+  }, [selectedMainCategorySlug, selectedSubcategory, selectedSubSubcategory, searchTerm, sortBy, dealStatusView]);
+
+  // Pobierz deals przy zmianie kategorii / subkategorii / wyszukiwaniu / filtrów / limitu
   useEffect(() => {
     let cancelled = false;
     async function fetchDeals() {
-      setIsLoading(true);
+      if (limit === 24) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
+      }
       try {
         const params = new URLSearchParams();
         params.set('page', '1');
-        params.set('size', '200');
+        params.set('size', String(limit));
         params.set('sort', sortBy);
         params.set('status', dealStatusView);
         if (searchTerm.trim().length > 0) params.set('q', searchTerm.trim());
@@ -421,6 +468,7 @@ function DealsPageContent() {
         if (cancelled) return;
         setDeals(data.deals || []);
         setTotalDealsCount(data.pagination?.total ?? null);
+        setHasMore((data.deals?.length || 0) >= limit && (data.pagination?.total ? limit < data.pagination.total : true));
       } catch (error) {
         console.error('[DealsPage] Error fetching deals:', error);
         if (!cancelled) {
@@ -428,12 +476,15 @@ function DealsPageContent() {
           setTotalDealsCount(null);
         }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+          setIsLoadingMore(false);
+        }
       }
     }
     fetchDeals();
     return () => { cancelled = true; };
-  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, sortBy, dealStatusView]);
+  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, sortBy, dealStatusView, limit]);
 
   useEffect(() => {
     let cancelled = false;
@@ -535,17 +586,30 @@ function DealsPageContent() {
       });
   }, [deals, typeFilter, quickFilters, unifiedFilters, sortBy]);
 
-  // Infinite scroll hook - ładuje kolejne deale przy scrollowaniu
-  const {
-    displayedItems: displayedDeals,
-    hasMore,
-    isLoading: isLoadingMore,
-    observerTarget,
-  } = useInfiniteScroll({
-    items: filteredAndSortedDeals,
-    initialItemsPerPage: 20,
-    loadMoreThreshold: 500,
-  });
+  // Obserwator do infinite scroll (serwerowego)
+  useEffect(() => {
+    if (isLoading || !hasMore || isLoadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setLimit((prev) => prev + 24);
+        }
+      },
+      { rootMargin: '400px' }
+    );
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+      observer.disconnect();
+    };
+  }, [isLoading, hasMore, isLoadingMore]);
+
+  const displayedDeals = filteredAndSortedDeals;
 
   const shouldUseVirtualizedWaitingRoom =
     isMobileViewport && dealStatusView === 'waiting_room' && viewMode === 'list';
@@ -595,8 +659,8 @@ function DealsPageContent() {
     : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
 
   const masonryWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+    ? 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3'
+    : 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-4';
 
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
@@ -1360,7 +1424,7 @@ function DealsPageContent() {
                     ) : viewMode === 'masonry' ? (
                       <div className={masonryWrapperClass}>
                         {displayedDeals.map((deal) => (
-                          <div key={deal.id} className={cardWrapperClass}>
+                          <div key={deal.id} className={cn("break-inside-avoid mb-4", cardWrapperClass)}>
                             <DealCard deal={deal} />
                           </div>
                         ))}
@@ -1456,7 +1520,7 @@ function DealsPageContent() {
                         )}
                       </div>
                       <Button asChild className="w-full" size="sm">
-                        <Link href={`/products/${productOfTheDay.id}`}>
+                        <Link href={`/new-ux/products/${productOfTheDay.id}`}>
                           {tCommon('labels.viewProduct')}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
@@ -1517,7 +1581,7 @@ function DealsPageContent() {
                       Sprawdź produkty z najwyższymi ocenami i opiniami
                     </p>
                     <Button asChild variant="outline" size="sm" className="w-full">
-                      <Link href={`/${locale}/products`}>
+                      <Link href={`/${locale}/new-ux/products`}>
                         Zobacz produkty
                       </Link>
                     </Button>

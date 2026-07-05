@@ -42,6 +42,7 @@ import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { getExternalUrl } from '@/lib/external-url';
 import { LogisticsBadge } from '@/components/product/LogisticsBadge';
 import { SellerInfo } from '@/components/product/SellerInfo';
+import { InfiniteSimilarFeed } from '@/components/new-ux/infinite-similar-feed';
 
 interface Props {
   productCore?: ProductCore;
@@ -270,7 +271,7 @@ export default function ProductDetailM6Client({
           {tCommon('breadcrumb.home')}
         </Link>
         <ChevronRight className="w-4 h-4 flex-shrink-0" />
-        <Link href={`/${locale}/products`} className="hover:text-foreground transition-colors whitespace-nowrap">
+        <Link href={`/${locale}/new-ux/products`} className="hover:text-foreground transition-colors whitespace-nowrap">
           {tCommon('breadcrumb.products')}
         </Link>
         {mainCategorySlug && (
@@ -328,7 +329,7 @@ export default function ProductDetailM6Client({
 
             {hasVideo && (
               <Link
-                href={`/${locale}/watch/products/${productId}`}
+                href={`/${locale}/watch/new-ux/products/${productId}`}
                 className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
               >
                 <Play className="w-4 h-4" />
@@ -981,7 +982,7 @@ export default function ProductDetailM6Client({
             {relatedProducts.filter(p => p.id).map((relatedProduct, index) => (
               <Link
                 key={relatedProduct.id || `related-${index}`}
-                href={`/${locale}/products/${relatedProduct.id}`}
+                href={`/${locale}/new-ux/products/${relatedProduct.id}`}
                 className="group"
               >
                 <Card className="hover:shadow-lg transition-shadow">
@@ -1017,6 +1018,21 @@ export default function ProductDetailM6Client({
           <ProductPriceHistoryChart deals={deals} />
         </div>
       )}
+
+      <Separator className="my-12" />
+      
+      {/* Infinite Scroll Feed */}
+      <section className="mb-12">
+        <h2 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">
+          <Package className="h-6 w-6 text-primary" />
+          Więcej podobnych produktów
+        </h2>
+        <InfiniteSimilarFeed
+          itemType="product"
+          categoryId={productCore?.mainCategorySlug || product?.mainCategorySlug || ''}
+          excludeId={productId || ''}
+        />
+      </section>
     </div>
   );
 }

@@ -135,16 +135,34 @@ export async function generateMetadata({
 }
 
 export default async function HomePage() {
-  // Load data for home page
-  const [hotDeals, topProducts, categories] = await Promise.all([
+  // Pobieramy więcej dealów jednocześnie — 40 do karuzeli + hot deals grid
+  const [allHotDeals, topProducts, categories] = await Promise.all([
     searchDealsTypesense('*', {
-      limit: 8,
+      limit: 40,  // więcej żeby wybrać najlepiej przecenione do karuzeli
       sortBy: 'hot',
       statusFilter: 'approved',
     }),
     getRecommendedProducts(8),
     getCategories(),
   ]);
+
+  // Wyciągamy top 5 z największą przeceną % dla karuzeli "Okazja Tygodnia"
+  function calcDiscountPct(deal: any): number {
+    const price = typeof deal.price === 'number' ? deal.price : parseFloat(String(deal.legacyPrice || 0));
+    const orig = typeof deal.originalPrice === 'number' ? deal.originalPrice : parseFloat(String(deal.originalPrice || 0));
+    return (orig > 0 && price > 0 && orig > price) ? Math.round(((orig - price) / orig) * 100) : 0;
+  }
+  const weeklyDeals = [...allHotDeals]
+    .filter(d => calcDiscountPct(d) >= 5)
+    .sort((a, b) => {
+      const sa = calcDiscountPct(a) * 0.7 + (a.temperature || 0) * 0.001 * 30;
+      const sb = calcDiscountPct(b) * 0.7 + (b.temperature || 0) * 0.001 * 30;
+      return sb - sa;
+    })
+    .slice(0, 5);
+
+  // Pierwsze 8 gorących dealów do siatki
+  const hotDeals = allHotDeals.slice(0, 8);
 
   const homeJsonLd = generateHomePageJsonLd(hotDeals, topProducts);
 
@@ -158,6 +176,7 @@ export default async function HomePage() {
         initialHotDeals={hotDeals}
         initialTopProducts={topProducts}
         categories={categories}
+        weeklyDeals={weeklyDeals}
       />
     </>
   );

@@ -5,12 +5,12 @@ import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
 import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search-server';
 import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
-import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
+import { buildCategoryPath, humanizeCategorySlug, buildCategoryPathNewUx } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
 
-// Force dynamic rendering dla real-time danych
+// Force dynamic rendering - no CDN caching to avoid stale 404s
 export const dynamic = 'force-dynamic';
-export const revalidate = 300; // ISR: revalidate co 5 minut
+export const revalidate = 0;
 
 interface PageProps {
   params: { id: string; locale: string };
@@ -345,7 +345,7 @@ export default async function DealDetailPage({ params }: PageProps) {
             humanizeCategorySlug(deal.subSubCategorySlug)
             || humanizeCategorySlug(deal.subCategorySlug)
             || humanizeCategorySlug(deal.mainCategorySlug),
-          path: buildCategoryPath(locale, deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug),
+          path: buildCategoryPathNewUx(locale, deal.mainCategorySlug, deal.subCategorySlug, deal.subSubCategorySlug),
         }
       : undefined,
     'deals'
