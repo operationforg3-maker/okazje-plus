@@ -26,11 +26,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://ae-pic-a1.aliexpress-media.com" />
         <link rel="dns-prefetch" href="https://imgproxy.convertiser.com" />
         <style dangerouslySetInnerHTML={{__html: `
-          * { margin: 0; padding: 0; box-sizing: border-box; }
           html { scroll-behavior: smooth; }
-          body { background: #ffffff; color: #000000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-          a { color: inherit; text-decoration: none; }
-          button { cursor: pointer; border: none; background: none; font-family: inherit; }
         `}} />
       </head>
       <body suppressHydrationWarning className={cn('min-h-screen bg-background font-body antialiased')} style={{ WebkitOverflowScrolling: 'touch' }}>
