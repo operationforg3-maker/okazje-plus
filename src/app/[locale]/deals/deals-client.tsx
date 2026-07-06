@@ -874,12 +874,12 @@ function DealsPageContent() {
             className={cn(
               "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group text-sm font-semibold mb-1.5",
               !selectedCategory
-                ? "bg-teal-500 text-white shadow-md shadow-teal-500/20"
+                ? "bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-md shadow-teal-500/10"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
-            <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white", !selectedCategory ? "bg-white/30" : "bg-gray-200 dark:bg-neutral-850")}>
-              ✦
+            <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center transition-all", !selectedCategory ? "bg-white/20 text-white" : "bg-gradient-to-br from-teal-500/20 to-cyan-500/20 text-teal-600 dark:text-teal-400")}>
+              <Flame className="h-4 w-4" />
             </div>
             <span className="font-semibold flex-1">{t('sidebar.allDeals')}</span>
             <ChevronRight className={cn(
@@ -889,9 +889,10 @@ function DealsPageContent() {
           </button>
         </div>
 
-        {sortedCategories.map((category, idx) => {
+        {sortedCategories.map((category) => {
           const isActive = selectedCategory?.id === category.id;
-          const c = catColors[idx % catColors.length];
+          const style = getCategoryStyle(category);
+          const IconComponent = style.icon;
           const catName = getLocalizedCategoryName(category, locale as SupportedLanguage);
           return (
             <div key={category.id} className="mb-1.5">
@@ -908,17 +909,21 @@ function DealsPageContent() {
                 className={cn(
                   "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group text-sm font-semibold",
                   isActive
-                    ? `${c.activeBg} text-white shadow-md shadow-teal-500/20`
+                    ? `bg-gradient-to-br ${style.gradient} text-white shadow-md shadow-teal-500/10`
                     : "hover:bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
                 <div className={cn(
-                  "h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white transition-all",
+                  "h-7 w-7 rounded-lg flex items-center justify-center transition-all",
                   isActive
-                    ? "bg-white/30"
-                    : c.abbr
+                    ? "bg-white/20 text-white"
+                    : cn("bg-gradient-to-br", style.bg, style.accent)
                 )}>
-                  {catName.substring(0, 2).toUpperCase()}
+                  {typeof IconComponent === 'function' ? (
+                    <IconComponent className="h-4 w-4" />
+                  ) : (
+                    <span className="text-sm">{IconComponent}</span>
+                  )}
                 </div>
                 <span className="font-semibold flex-1 truncate">{catName}</span>
                 <ChevronRight className={cn(
@@ -1120,7 +1125,7 @@ function DealsPageContent() {
                 </div>
               </div>
 
-              {/* Mobile horizontal category scroller (V5 style) */}
+              {/* Mobile horizontal category scroller (V5 style with Icons) */}
               <div className="flex gap-2 overflow-x-auto pb-3 mb-4 lg:hidden no-scrollbar scroll-smooth">
                 <button
                   onClick={() => {
@@ -1129,17 +1134,19 @@ function DealsPageContent() {
                     setSelectedSubSubcategory(null);
                   }}
                   className={cn(
-                    "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all",
+                    "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5",
                     !selectedCategory 
-                      ? "bg-teal-500 text-white shadow-md shadow-teal-500/20" 
-                      : "bg-teal-100/50 dark:bg-teal-900/10 text-teal-600 dark:text-teal-400"
+                      ? "bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-md shadow-teal-500/10" 
+                      : "bg-gradient-to-br from-teal-500/20 to-cyan-500/20 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-900/40"
                   )}
                 >
-                  {t('sidebar.allDeals')}
+                  <Flame className="h-3.5 w-3.5" />
+                  <span>{t('sidebar.allDeals')}</span>
                 </button>
-                {sortedCategories.map((category, i) => {
-                  const c = catColors[i % catColors.length];
+                {sortedCategories.map((category) => {
                   const isActive = selectedCategory?.id === category.id;
+                  const style = getCategoryStyle(category);
+                  const IconComponent = style.icon;
                   const catName = getLocalizedCategoryName(category, locale as SupportedLanguage);
                   return (
                     <button
@@ -1150,11 +1157,18 @@ function DealsPageContent() {
                         setSelectedSubSubcategory(null);
                       }}
                       className={cn(
-                        "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all",
-                        isActive ? `${c.activeBg} text-white` : `${c.bg} ${c.text}`
+                        "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5",
+                        isActive 
+                          ? `bg-gradient-to-br ${style.gradient} text-white shadow-md` 
+                          : `bg-gradient-to-br ${style.bg} ${style.accent} border ${style.border}`
                       )}
                     >
-                      {catName}
+                      {typeof IconComponent === 'function' ? (
+                        <IconComponent className="h-3.5 w-3.5" />
+                      ) : (
+                        <span className="text-xs">{IconComponent}</span>
+                      )}
+                      <span>{catName}</span>
                     </button>
                   );
                 })}

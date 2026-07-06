@@ -15,7 +15,7 @@ export async function POST(
   { params }: { params: { userId: string } }
 ) {
   try {
-    const session = await requireAdmin(request);
+    const session = await requireAdmin();
     if (!session) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
