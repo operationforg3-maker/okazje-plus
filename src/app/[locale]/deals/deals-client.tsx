@@ -364,12 +364,12 @@ function DealsPageContent() {
             limit: 100,
             sortBy: 'hot',
             statusFilter: 'approved',
-          }), 2, 500), // Pobierz gorące okazje na start przez Typesense
+          }), 2, 500), // Pobierz gorące okazje na start przez Vertex AI Semantic Search
         ]);
         
         let hotDeals = hotDealsResult || [];
         if (hotDeals.length === 0) {
-          console.log('[DealsPage] Hot deals empty or Typesense offline, falling back to Firestore');
+          console.log('[DealsPage] Hot deals empty or Vertex AI vector search offline, falling back to direct Firestore query');
           hotDeals = await getDealsByFilters({
             statusFilter: 'approved',
           }, 'hot', 100);

@@ -29,11 +29,11 @@ export async function GET(request: Request) {
   const sources = url.searchParams.get('sources');
   const discountOnly = url.searchParams.get('discountOnly') === 'true';
 
-  // Try Typesense search first if there is a query or we need sorting.
+  // Try Vertex AI Semantic Vector Search first if there is a query or we need sorting.
   let results: any[] = [];
   try {
     if (q.length > 0 || sort) {
-      const typesenseResults = await retryWithBackoff(() =>
+      const semanticResults = await retryWithBackoff(() =>
         searchDealsTypesense(q.length > 0 ? q : '*', {
           mainCategorySlug,
           subCategorySlug,
@@ -47,10 +47,10 @@ export async function GET(request: Request) {
           minTemperature: minTemperature ? Number(minTemperature) : undefined,
         })
       , 2, 500);
-      results = typesenseResults || [];
+      results = semanticResults || [];
     }
   } catch (e) {
-    // ignore, fallback to Firestore
+    // ignore, fallback to direct Firestore query
   }
 
   if (results.length === 0) {
