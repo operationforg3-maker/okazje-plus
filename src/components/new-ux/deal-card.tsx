@@ -2,7 +2,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import {useParams} from 'next/navigation';
+import { withImageProxy } from '@/lib/image-proxy';
 import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useCategoryName } from '@/hooks/use-category-name';
@@ -599,9 +601,9 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               <span>{temperature}°</span>
             </div>
           )}
-          {discount > 0 && (
+          {typeof priceData.discount === 'number' && priceData.discount > 0 && (
             <div className="bg-red-500 text-white font-black text-xs px-2.5 py-1 rounded-xl shadow-md w-fit">
-              -{discount}%
+              -{priceData.discount}%
             </div>
           )}
         </div>

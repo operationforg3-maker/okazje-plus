@@ -3,7 +3,9 @@
 
 import { ProductGallery } from '../product-gallery';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { withImageProxy } from '@/lib/image-proxy';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
