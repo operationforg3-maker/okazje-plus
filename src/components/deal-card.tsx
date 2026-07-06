@@ -6,6 +6,7 @@ import Image from 'next/image';
 import {useParams} from 'next/navigation';
 import { withImageProxy } from '@/lib/image-proxy';
 import type { Deal, Product } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useCategoryName } from '@/hooks/use-category-name';
 import { auth } from '@/lib/firebase';
