@@ -834,47 +834,52 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
           )}
 
           {/* Price Section */}
-          <Card className="bg-gradient-to-br from-primary/5 to-accent/5 border-2 border-primary/20">
-            <CardContent className="p-6">
-              <div className="flex items-end gap-3 mb-2 flex-wrap">
-                <div className="text-4xl md:text-5xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</div>
-                {priceData.formattedOriginal && (
-                  <div className="text-xl text-muted-foreground line-through mb-1">{priceData.formattedOriginal}</div>
-                )}
-                {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-                  <Badge variant="destructive" className="mb-1 text-lg">-{priceData.discount}%</Badge>
+          <Card className="bg-gradient-to-br from-primary/5 via-accent/5 to-background border-border/60 shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+            <CardContent className="p-6 space-y-5">
+              <div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-1">Cena i Oszczędność</span>
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <div className="text-4xl md:text-5xl font-black text-foreground tracking-tight">{priceData.formattedPrice || 'N/A'}</div>
+                  {priceData.formattedOriginal && (
+                    <div className="text-lg text-muted-foreground line-through decoration-muted-foreground/45 mb-1">{priceData.formattedOriginal}</div>
+                  )}
+                  {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                    <Badge className="bg-red-500 text-white font-extrabold text-sm mb-1 px-2.5 py-0.5 rounded-md">-{priceData.discount}%</Badge>
+                  )}
+                </div>
+                {priceData.formattedSavings ? (
+                  <p className="text-green-600 dark:text-green-500 text-sm font-bold flex items-center gap-1 mt-1">
+                    <span>Oszczędzasz {priceData.formattedSavings}</span>
+                  </p>
+                ) : (
+                  typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                    <p className="text-green-600 dark:text-green-500 text-sm font-bold flex items-center gap-1 mt-1">
+                      <span>Zniżka {priceData.discount}%</span>
+                    </p>
+                  )
                 )}
               </div>
-              {priceData.formattedSavings ? (
-                <p className="text-green-600 font-semibold mb-4 text-lg">
-                  💰 Oszczędzasz {priceData.formattedSavings}
-                </p>
-              ) : (
-                typeof priceData.discount === 'number' && priceData.discount > 0 && (
-                  <p className="text-green-600 font-semibold mb-4 text-lg">
-                    💰 Zniżka {priceData.discount}%
-                  </p>
-                )
-              )}
-              <div className="flex gap-2">
+
+              <div className="flex gap-2.5 pt-2">
                 {deal.metadata?.isExpired ? (
                   <ExpiredDealBadge 
                     isExpired={true}
                     reason={deal.metadata?.expiryReason || 'Oferta wygasła'}
                     checkedAt={deal.metadata?.expiryCheckedAt}
                     variant="button"
-                    className="flex-1 h-14 text-base"
+                    className="flex-1 h-12 text-sm"
                   />
                 ) : outboundUrl ? (
-                  <Button size="lg" asChild className="flex-1 bg-primary hover:bg-primary/90 text-base md:text-lg py-6">
+                  <Button size="lg" asChild className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-12 text-sm shadow-md hover:shadow-lg transition-all duration-300">
                     <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-2 h-5 w-5" />
+                      <ExternalLink className="mr-2 h-4 w-4" />
                       Przejdź do okazji
                     </a>
                   </Button>
                 ) : (
-                  <Button size="lg" className="flex-1 text-base md:text-lg py-6" disabled>
-                    <ExternalLink className="mr-2 h-5 w-5" />
+                  <Button size="lg" className="flex-1 h-12 text-sm" disabled>
+                    <ExternalLink className="mr-2 h-4 w-4" />
                     Brak linku zewnętrznego
                   </Button>
                 )}
@@ -885,66 +890,70 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                   url={`/new-ux/deals/${deal.id}`}
                   size="lg"
                   variant="outline"
+                  className="h-12 w-12 border-border/80"
                 />
               </div>
               {linkedProductId && (
-                <Button asChild variant="outline" className="w-full mt-2">
+                <Button asChild variant="outline" className="w-full h-10 border-border/80 text-xs font-semibold">
                   <Link href={`/${locale}/new-ux/products/${linkedProductId}`}>
-                    <Package className="mr-2 h-4 w-4" />
+                    <Package className="mr-2 h-3.5 w-3.5" />
                     Zobacz stronę produktu
                   </Link>
                 </Button>
               )}
 
-              {/* Action strip: głosowanie, ulubione, porównanie, komentarze */}
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Button
-                  variant={userVote === 1 ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleVote('up')}
-                  disabled={isVoting}
-                  className="justify-center"
-                >
-                  <ArrowUp className="h-4 w-4 mr-2" />
-                  Głosuj +
-                </Button>
-                <Button
-                  variant={userVote === -1 ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleVote('down')}
-                  disabled={isVoting}
-                  className="justify-center"
-                >
-                  <ArrowDown className="h-4 w-4 mr-2" />
-                  Głosuj -
-                </Button>
+              {/* Action strip: głosowanie, ulubione, porównanie */}
+              <div className="pt-3 border-t border-border/20 grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-1 col-span-2 justify-center bg-muted/40 p-1.5 rounded-xl border border-border/20">
+                  <Button
+                    variant={userVote === 1 ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleVote('up')}
+                    disabled={isVoting}
+                    className="flex-1 h-8 text-xs font-bold gap-1 rounded-lg"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                    Hot
+                  </Button>
+                  <Button
+                    variant={userVote === -1 ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleVote('down')}
+                    disabled={isVoting}
+                    className="flex-1 h-8 text-xs font-bold gap-1 rounded-lg"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                    Cold
+                  </Button>
+                </div>
+                
                 <Button
                   variant={isFavorited ? 'secondary' : 'outline'}
                   size="sm"
                   onClick={() => toggleFavorite()}
                   disabled={isFavoriteLoading}
-                  className="justify-center"
+                  className="w-full h-9 text-xs font-semibold border-border/80"
                 >
-                  <Heart className={`h-4 w-4 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                  <Heart className={`h-3.5 w-3.5 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
                   Ulubione
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => addToComparison({ ...deal, type: 'deal' })}
-                  className="justify-center"
+                  className="w-full h-9 text-xs font-semibold border-border/80"
                 >
-                  <Scale className="h-4 w-4 mr-2" />
+                  <Scale className="h-3.5 w-3.5 mr-2" />
                   Porównaj
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={scrollToDiscussion}
-                  className="col-span-2 sm:col-span-4 justify-center"
+                  className="col-span-2 h-9 text-xs font-semibold text-muted-foreground hover:text-foreground"
                 >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Opinie i komentarze
+                  <MessageSquare className="h-3.5 w-3.5 mr-2" />
+                  Zjeżdżam do dyskusji
                 </Button>
               </div>
             </CardContent>

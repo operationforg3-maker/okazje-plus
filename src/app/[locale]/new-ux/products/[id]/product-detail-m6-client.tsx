@@ -338,133 +338,130 @@ export default function ProductDetailM6Client({
             )}
           </div>
 
-          {/* Best Price Card */}
-          <Card className="border-2 border-green-500 shadow-md">
-            <CardHeader className="bg-green-50/50 pb-3">
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-green-700">
-                  <TrendingUp className="w-5 h-5" />
-                  {t('productDetail.priceComparison.bestPriceBadge')}
-                </span>
-                {bestDeal?.source && (
-                  <Badge variant="outline" className="capitalize border-green-200 bg-white text-green-700">
-                    Sklep: {bestDeal.source}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              <div>
-                <div className="text-4xl font-extrabold text-green-600 tracking-tight">
-                  {formattedPriceWithCurrency}
-                </div>
-                {bestDeal && (
-                  <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-0.5">
-                    <p>Cena produktu: {formatPrice(CurrencyManager.convertToPLN(bestDeal.price?.amount || 0, bestDeal.price?.currency || 'PLN'))}</p>
-                    <p>Koszt dostawy: {bestDealShippingCost !== undefined && bestDealShippingCost > 0 
-                      ? formatPrice(CurrencyManager.convertToPLN(bestDealShippingCost, bestDeal.price?.currency || 'PLN'))
-                      : (bestDeal.freeShipping || bestDealShippingCost === 0 ? 'DARMOWA' : 'Do ustalenia')}</p>
-                    {(bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays) && (
-                      <p>Szacowany czas dostawy: {t('productDetail.priceComparison.deliveryDays', { count: bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays })}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {isM6 && !bestDeal && (
-                <div className="p-3 bg-muted/40 rounded-lg text-sm border border-muted text-muted-foreground">
-                  {t('productDetail.priceComparison.empty')}
-                </div>
-              )}
-              
-              {marketPriceInfo && (
-                <div className="p-3 bg-muted/50 rounded-lg text-sm border border-muted">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-muted-foreground">{t('productDetail.priceComparison.marketPrice.label')}:</span>
-                    <span className="font-medium line-through text-muted-foreground">{marketPriceInfo.formatted}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-green-700 font-medium">
-                    <span>{t('productDetail.priceComparison.marketPrice.savings')}:</span>
-                    <span className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">-{marketPriceInfo.percent}%</Badge>
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 opacity-70">
-                    {t('productDetail.priceComparison.marketPrice.note')}
-                  </p>
-                </div>
-              )}
-
-              {outboundUrl && (
-                <Button asChild size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base shadow-sm">
-                  <a href={outboundUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                    <ShoppingCart className="w-5 h-5" />
-                    {t('productDetail.simple.buyNow')}
-                    <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
-                  </a>
-                </Button>
-              )}
-
-              {isM6 && deals.length > 0 && (
-                <div className="pt-2 border-t space-y-2 text-xs text-gray-500">
-                  <p className="flex items-center gap-2">
-                    <Package className="w-3.5 h-3.5" />
-                    {t('productDetail.m6.dealsAvailable', { count: deals.length })} (Najtańsza oferta wyróżniona powyżej)
-                  </p>
-                  <p>
-                    {t('productDetail.m6.compareHint')}
-                  </p>
-                </div>
-              )}
-
-
-              {bestDeal?.couponCode && (
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-amber-800">Kod rabatowy</p>
-                      <p className="text-lg font-semibold text-amber-950">{bestDeal.couponCode}</p>
-                    </div>
-                    <Badge className="bg-amber-600 text-white hover:bg-amber-600">Kupon aktywny</Badge>
-                  </div>
-                </div>
-              )}
-
-              {promotionCampaign && (
-                <div className="mt-4 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="bg-fuchsia-600 text-white hover:bg-fuchsia-600">
-                      {promotionCampaign.label || promotionCampaign.name || 'Kampania AliExpress'}
+          {/* Najlepsza oferta / Cena */}
+          {formattedPriceWithCurrency !== '—' && (
+            <Card className="bg-gradient-to-br from-primary/5 via-accent/5 to-background border-border/60 shadow-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+              <CardHeader className="pb-2">
+                <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Najlepsza Cena</span>
+                  {bestDeal?.source && (
+                    <Badge variant="outline" className="capitalize border-green-200 bg-green-50 text-green-700 text-[10px] font-bold">
+                      Sklep: {bestDeal.source}
                     </Badge>
-                    {promotionCampaign.flashDeal && (
-                      <Badge className="bg-orange-600 text-white hover:bg-orange-600">Flash Sale</Badge>
-                    )}
-                    {promotionCampaign.appOnly && (
-                      <Badge variant="outline">Cena tylko w aplikacji</Badge>
-                    )}
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="text-4xl font-black text-foreground tracking-tight">
+                    {formattedPriceWithCurrency}
                   </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    {promotionCampaign.startAt && <span>Start: {new Date(promotionCampaign.startAt).toLocaleString('pl-PL')}</span>}
-                    {promotionCampaign.endAt && <span>Koniec: {new Date(promotionCampaign.endAt).toLocaleString('pl-PL')}</span>}
-                    {promotionAppPrice !== undefined && <span>Cena w aplikacji: {formatPrice(promotionAppPrice)}</span>}
-                  </div>
+                  {bestDeal && (
+                    <div className="text-xs text-muted-foreground mt-1.5 flex flex-col gap-1">
+                      <div className="flex justify-between border-b border-border/10 pb-1">
+                        <span>Cena produktu:</span>
+                        <span className="font-semibold text-foreground">{formatPrice(CurrencyManager.convertToPLN(bestDeal.price?.amount || 0, bestDeal.price?.currency || 'PLN'))}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-border/10 pb-1">
+                        <span>Dostawa:</span>
+                        <span className="font-semibold text-foreground">
+                          {bestDealShippingCost !== undefined && bestDealShippingCost > 0 
+                            ? formatPrice(CurrencyManager.convertToPLN(bestDealShippingCost, bestDeal.price?.currency || 'PLN'))
+                            : (bestDeal.freeShipping || bestDealShippingCost === 0 ? 'DARMOWA' : 'Do ustalenia')}
+                        </span>
+                      </div>
+                      {(bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays) && (
+                        <div className="flex justify-between">
+                          <span>Czas dostawy:</span>
+                          <span className="font-semibold text-foreground">~{bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays} dni</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {isM6 && (shippingOrigin || bestDeal?.minOrderValue || bestDeal?.limitPerUser || bestDealShippingCost !== undefined || (bestDeal as any)?.freeShipping !== undefined) && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {((bestDeal as any)?.freeShipping || (bestDealShippingCost !== undefined && bestDealShippingCost <= 0)) ? (
-                    <Badge className="bg-green-600 text-white hover:bg-green-600">Darmowa dostawa</Badge>
-                  ) : bestDealShippingCost !== undefined ? (
-                    <Badge variant="outline">Wysyłka: {formatPrice(bestDealShippingCost)}</Badge>
-                  ) : null}
-                  {shippingOrigin && <Badge variant="outline">Wysyłka z: {shippingOrigin}</Badge>}
-                  {bestDeal?.minOrderValue && <Badge variant="outline">Min. zamówienie: {formatPrice(bestDeal.minOrderValue)}</Badge>}
-                  {bestDeal?.limitPerUser && <Badge variant="outline">Limit: {bestDeal.limitPerUser} na osobę</Badge>}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                {isM6 && !bestDeal && (
+                  <div className="p-3 bg-muted/40 rounded-lg text-xs border border-muted text-muted-foreground">
+                    {t('productDetail.priceComparison.empty')}
+                  </div>
+                )}
+                
+                {marketPriceInfo && (
+                  <div className="p-3 bg-muted/30 rounded-xl text-xs border border-border/40">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-muted-foreground">{t('productDetail.priceComparison.marketPrice.label')}:</span>
+                      <span className="font-medium line-through text-muted-foreground">{marketPriceInfo.formatted}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-green-700 font-bold">
+                      <span>Oszczędzasz:</span>
+                      <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50 text-[10px] font-black">-{marketPriceInfo.percent}%</Badge>
+                    </div>
+                  </div>
+                )}
+
+                {outboundUrl && (
+                  <Button asChild size="lg" className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-12 text-sm shadow-md hover:shadow-lg transition-all duration-300">
+                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                      <ShoppingCart className="w-4 h-4" />
+                      {t('productDetail.simple.buyNow')}
+                      <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />
+                    </a>
+                  </Button>
+                )}
+
+                {isM6 && deals.length > 0 && (
+                  <div className="pt-2 border-t border-border/10 space-y-1.5 text-[11px] text-muted-foreground">
+                    <p className="flex items-center gap-1.5 font-medium">
+                      <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                      Dostępne oferty: {deals.length} (najtańsza powyżej)
+                    </p>
+                  </div>
+                )}
+
+                {bestDeal?.couponCode && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-2.5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Kod rabatowy</p>
+                        <p className="text-base font-bold font-mono text-amber-950">{bestDeal.couponCode}</p>
+                      </div>
+                      <Badge className="bg-amber-600 text-white text-[10px] font-bold">Kupon</Badge>
+                    </div>
+                  </div>
+                )}
+
+                {promotionCampaign && (
+                  <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/50 p-2.5 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge className="bg-fuchsia-600 text-white text-[10px] font-bold">
+                        {promotionCampaign.label || promotionCampaign.name || 'Kampania'}
+                      </Badge>
+                      {promotionCampaign.flashDeal && (
+                        <Badge className="bg-orange-600 text-white text-[10px] font-bold">Flash Sale</Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">
+                      {promotionAppPrice !== undefined && <span>W aplikacji: {formatPrice(promotionAppPrice)}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {isM6 && (shippingOrigin || bestDeal?.minOrderValue || bestDeal?.limitPerUser || bestDealShippingCost !== undefined || (bestDeal as any)?.freeShipping !== undefined) && (
+                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/10">
+                    {((bestDeal as any)?.freeShipping || (bestDealShippingCost !== undefined && bestDealShippingCost <= 0)) ? (
+                      <Badge className="bg-emerald-600 text-white text-[10px] font-bold">Darmowa dostawa</Badge>
+                    ) : bestDealShippingCost !== undefined ? (
+                      <Badge variant="outline" className="text-[10px] font-medium">Wysyłka: {formatPrice(bestDealShippingCost)}</Badge>
+                    ) : null}
+                    {shippingOrigin && <Badge variant="outline" className="text-[10px] font-medium">Wysyłka z: {shippingOrigin}</Badge>}
+                    {bestDeal?.minOrderValue && <Badge variant="outline" className="text-[10px] font-medium font-mono">Min: {formatPrice(bestDeal.minOrderValue)}</Badge>}
+                    {bestDeal?.limitPerUser && <Badge variant="outline" className="text-[10px] font-medium">Limit: {bestDeal.limitPerUser}/os</Badge>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {isM6 && productVariants.length > 0 && (
             <VariantsM6 specs={specs} variants={productVariants} />
