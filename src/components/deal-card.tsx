@@ -11,7 +11,7 @@ import { useCategoryName } from '@/hooks/use-category-name';
 import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart, MoreVertical } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart, MoreVertical, ExternalLink } from "lucide-react";
 import React, { useEffect, useState } from 'react';
 import { useFormatter } from 'next-intl';
 import { toast } from 'sonner';
