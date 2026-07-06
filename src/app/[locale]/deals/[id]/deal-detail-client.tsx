@@ -681,9 +681,105 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               {deal.merchant && (
                 <div className="flex items-center gap-1.5">
                   <Star className="h-3.5 w-3.5" />
-                  <span>Sprzedawca: <span className="font-semibold text-foreground">{deal.merchant}</span></span>
-                </div>
+                <span>Sprzedawca: <span className="font-semibold text-foreground">{deal.merchant}</span></span>
+            </div>
               )}
+            </div>
+
+            {/* Mobile Price Card (block lg:hidden) */}
+            <div className="block lg:hidden bg-card border border-border/60 rounded-2xl p-5 shadow-md space-y-4 my-2">
+              <div className="flex justify-between items-baseline gap-2.5 flex-wrap">
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Cena i Oszczędność</span>
+                  <div className="flex items-baseline gap-2.5 flex-wrap">
+                    <div className="text-3xl font-black text-foreground tracking-tight">{priceData.formattedPrice || 'N/A'}</div>
+                    {priceData.formattedOriginal && (
+                      <div className="text-base text-muted-foreground line-through decoration-muted-foreground/45 mb-0.5">{priceData.formattedOriginal}</div>
+                    )}
+                    {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                      <Badge className="bg-red-500 text-white font-extrabold text-xs px-2 py-0.5 rounded-md">-{priceData.discount}%</Badge>
+                    )}
+                  </div>
+                </div>
+                {priceData.formattedSavings && (
+                  <div className="text-right">
+                    <span className="text-green-600 dark:text-green-500 text-xs font-bold block">
+                      Oszczędzasz {priceData.formattedSavings}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {deal.metadata?.isExpired ? (
+                  <ExpiredDealBadge 
+                    isExpired={true}
+                    reason={deal.metadata?.expiryReason || 'Oferta wygasła'}
+                    checkedAt={deal.metadata?.expiryCheckedAt}
+                    variant="button"
+                    className="flex-1 h-12 text-sm"
+                  />
+                ) : outboundUrl ? (
+                  <Button size="lg" asChild className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-12 text-sm shadow-md transition-all duration-300">
+                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4.5 w-4.5" />
+                      Przejdź do okazji
+                    </a>
+                  </Button>
+                ) : (
+                  <Button size="lg" className="flex-1 h-12 text-sm" disabled>
+                    <ExternalLink className="mr-2 h-4.5 w-4.5" />
+                    Brak linku
+                  </Button>
+                )}
+                <ShareButton 
+                  type="deal"
+                  itemId={deal.id}
+                  title={dealTitle}
+                  url={`/deals/${deal.id}`}
+                  size="lg"
+                  variant="outline"
+                />
+              </div>
+
+              {/* Vote controls (Hot/Cold) & Favorite */}
+              <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
+                <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/40">
+                  <Button
+                    variant={userVote === 1 ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleVote('up')}
+                    disabled={isVoting}
+                    className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                    Hot
+                  </Button>
+                  <span className="font-bold text-sm px-2 text-foreground min-w-[28px] text-center">{temperature}°</span>
+                  <Button
+                    variant={userVote === -1 ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleVote('down')}
+                    disabled={isVoting}
+                    className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                    Cold
+                  </Button>
+                </div>
+
+                <Button
+                  variant={isFavorited ? 'secondary' : 'outline'}
+                  size="icon"
+                  onClick={() => toggleFavorite()}
+                  disabled={isFavoriteLoading}
+                  className="h-8 w-8 border border-border/80"
+                  aria-label="Ulubione"
+                >
+                  <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                </Button>
+              </div>
             </div>
 
             {/* Description Text */}
@@ -741,7 +837,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
         </div>
 
         {/* RIGHT COLUMN: Sticky combined box */}
-        <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
+        <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-24 space-y-4">
           <Card className="border border-border/60 shadow-xl overflow-hidden rounded-2xl bg-card">
             {/* Header: Price & CTA Section */}
             <div className="bg-gradient-to-br from-primary/5 via-accent/5 to-background p-6 border-b border-border/40 space-y-4">

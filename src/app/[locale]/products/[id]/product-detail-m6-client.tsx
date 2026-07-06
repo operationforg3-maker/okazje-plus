@@ -365,6 +365,88 @@ export default function ProductDetailM6Client({
               )}
             </div>
 
+            {/* Mobile Price Card (block lg:hidden) */}
+            <div className="block lg:hidden bg-card border border-border/60 rounded-2xl p-5 shadow-md space-y-4 my-2">
+              <div className="flex justify-between items-baseline gap-2.5 flex-wrap">
+                <div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                    {bestDeal?.source ? `Najlepsza Cena (${bestDeal.source})` : 'Cena produktu'}
+                  </span>
+                  <div className="flex items-baseline gap-2.5 flex-wrap">
+                    <div className="text-3xl font-black text-foreground tracking-tight">
+                      {formattedPriceWithCurrency}
+                    </div>
+                    {marketPriceInfo && (
+                      <div className="text-sm text-muted-foreground line-through decoration-muted-foreground/45 mb-0.5">
+                        {marketPriceInfo.formatted}
+                      </div>
+                    )}
+                    {marketPriceInfo && (
+                      <Badge className="bg-red-500 text-white font-extrabold text-xs px-2 py-0.5 rounded-md">
+                        -{marketPriceInfo.percent}%
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {marketPriceInfo && (
+                  <div className="text-right">
+                    <span className="text-green-600 dark:text-green-500 text-xs font-bold block">
+                      Oszczędzasz {formatPrice(marketPriceInfo.amount - (priceAmount ?? 0))}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {outboundUrl ? (
+                  <Button size="lg" asChild className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-12 text-sm shadow-md transition-all duration-300">
+                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4.5 w-4.5" />
+                      Idź do sklepu
+                    </a>
+                  </Button>
+                ) : (
+                  <Button size="lg" className="flex-1 h-12 text-sm" disabled>
+                    <ExternalLink className="mr-2 h-4.5 w-4.5" />
+                    Brak linku
+                  </Button>
+                )}
+                <ShareButton 
+                  type="product"
+                  itemId={productId}
+                  title={title}
+                  url={`/products/${productId}`}
+                  size="lg"
+                  variant="outline"
+                />
+              </div>
+
+              {/* Favorites & Cart Action Strip */}
+              <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
+                <Button
+                  variant={isInCart(productId) ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => addItem(asLegacyProduct())}
+                  className="h-9 px-3 text-xs font-bold gap-1.5 rounded-lg border-border/80 flex-1"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {isInCart(productId) ? 'W koszyku' : 'Dodaj do koszyka'}
+                </Button>
+
+                <Button
+                  variant={isFavorited ? 'secondary' : 'outline'}
+                  size="icon"
+                  onClick={() => toggleFavorite()}
+                  disabled={isFavoriteLoading}
+                  className="h-9 w-9 border-border/80"
+                  aria-label="Ulubione"
+                >
+                  <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                </Button>
+              </div>
+            </div>
+
             {/* Description Text */}
             <div className="pt-2">
               {description ? (
@@ -440,7 +522,7 @@ export default function ProductDetailM6Client({
         </div>
 
         {/* RIGHT COLUMN: Sticky combined info card */}
-        <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
+        <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-24 space-y-4">
           <Card className="border border-border/60 shadow-xl overflow-hidden rounded-2xl bg-card">
             {/* Header: Best Price & Primary Action */}
             <div className="bg-gradient-to-br from-primary/5 via-accent/5 to-background p-6 border-b border-border/40 space-y-4">
