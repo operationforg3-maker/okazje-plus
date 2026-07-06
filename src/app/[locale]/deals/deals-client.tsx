@@ -81,6 +81,17 @@ export default function DealsPage() {
   );
 }
 
+const catColors = [
+  { bg: 'bg-rose-100 dark:bg-rose-900/20', text: 'text-rose-600 dark:text-rose-400', border: 'border-rose-200 dark:border-rose-800', activeBg: 'bg-rose-500', abbr: 'bg-rose-500' },
+  { bg: 'bg-sky-100 dark:bg-sky-900/20', text: 'text-sky-600 dark:text-sky-400', border: 'border-sky-200 dark:border-sky-800', activeBg: 'bg-sky-500', abbr: 'bg-sky-500' },
+  { bg: 'bg-violet-100 dark:bg-violet-900/20', text: 'text-violet-600 dark:text-violet-400', border: 'border-violet-200 dark:border-violet-800', activeBg: 'bg-violet-500', abbr: 'bg-violet-500' },
+  { bg: 'bg-emerald-100 dark:bg-emerald-900/20', text: 'text-emerald-600 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800', activeBg: 'bg-emerald-500', abbr: 'bg-emerald-500' },
+  { bg: 'bg-amber-100 dark:bg-amber-900/20', text: 'text-amber-600 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800', activeBg: 'bg-amber-500', abbr: 'bg-amber-500' },
+  { bg: 'bg-pink-100 dark:bg-pink-900/20', text: 'text-pink-600 dark:text-pink-400', border: 'border-pink-200 dark:border-pink-800', activeBg: 'bg-pink-500', abbr: 'bg-pink-500' },
+  { bg: 'bg-cyan-100 dark:bg-cyan-900/20', text: 'text-cyan-600 dark:text-cyan-400', border: 'border-cyan-200 dark:border-cyan-800', activeBg: 'bg-cyan-500', abbr: 'bg-cyan-500' },
+  { bg: 'bg-lime-100 dark:bg-lime-900/20', text: 'text-lime-600 dark:text-lime-400', border: 'border-lime-200 dark:border-lime-800', activeBg: 'bg-lime-500', abbr: 'bg-lime-500' },
+];
+
 function DealsPageContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -408,6 +419,18 @@ function DealsPageContent() {
         if (selectedMainCategorySlug) params.set('mainCategorySlug', selectedMainCategorySlug);
         if (selectedSubcategory) params.set('subCategorySlug', selectedSubcategory);
         if (selectedSubSubcategory) params.set('subSubCategorySlug', selectedSubSubcategory);
+
+        if (unifiedFilters.priceRange) {
+          params.set('minPrice', String(unifiedFilters.priceRange.min));
+          params.set('maxPrice', String(unifiedFilters.priceRange.max));
+        }
+        if (unifiedFilters.minRating) params.set('minRating', String(unifiedFilters.minRating));
+        if (unifiedFilters.minTemperature) params.set('minTemperature', String(unifiedFilters.minTemperature));
+        if (unifiedFilters.sources && unifiedFilters.sources.length > 0) {
+          params.set('sources', unifiedFilters.sources.join(','));
+        }
+        if (unifiedFilters.discountOnly) params.set('discountOnly', 'true');
+
         const response = await fetch(`/api/deals?${params.toString()}`);
         if (!response.ok) throw new Error('Failed to fetch deals');
         const data = await response.json();
@@ -426,7 +449,21 @@ function DealsPageContent() {
     }
     fetchDeals();
     return () => { cancelled = true; };
-  }, [selectedMainCategorySlug, selectedCategory, selectedSubcategory, selectedSubSubcategory, searchTerm, sortBy, dealStatusView]);
+  }, [
+    selectedMainCategorySlug, 
+    selectedCategory, 
+    selectedSubcategory, 
+    selectedSubSubcategory, 
+    searchTerm, 
+    sortBy, 
+    dealStatusView,
+    unifiedFilters.priceRange?.min,
+    unifiedFilters.priceRange?.max,
+    unifiedFilters.minRating,
+    unifiedFilters.minTemperature,
+    unifiedFilters.sources?.join(','),
+    unifiedFilters.discountOnly
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -835,14 +872,16 @@ function DealsPageContent() {
               setIsMobileSidebarOpen(false);
             }}
             className={cn(
-              "w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center gap-3 group",
+              "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group text-sm font-semibold mb-1.5",
               !selectedCategory
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted"
+                ? "bg-teal-500 text-white shadow-md shadow-teal-500/20"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
-            <Flame className="h-5 w-5" />
-            <span className="font-medium flex-1">{t('sidebar.allDeals')}</span>
+            <div className={cn("h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white", !selectedCategory ? "bg-white/30" : "bg-gray-200 dark:bg-neutral-850")}>
+              ✦
+            </div>
+            <span className="font-semibold flex-1">{t('sidebar.allDeals')}</span>
             <ChevronRight className={cn(
               "h-4 w-4 transition-transform",
               !selectedCategory ? "rotate-90" : "group-hover:translate-x-1"
@@ -850,12 +889,12 @@ function DealsPageContent() {
           </button>
         </div>
 
-        {sortedCategories.map((category) => {
+        {sortedCategories.map((category, idx) => {
           const isActive = selectedCategory?.id === category.id;
-          const style = getCategoryStyle(category);
-          const IconComponent = style.icon;
+          const c = catColors[idx % catColors.length];
+          const catName = getLocalizedCategoryName(category, locale as SupportedLanguage);
           return (
-            <div key={category.id} className="mb-1">
+            <div key={category.id} className="mb-1.5">
               <button
                 ref={(el) => {
                   if (el) categoryButtonRefs.current[category.id] = el;
@@ -869,23 +908,19 @@ function DealsPageContent() {
                 className={cn(
                   "w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 flex items-center gap-3 group text-sm font-semibold",
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                    ? `${c.activeBg} text-white shadow-md shadow-teal-500/20`
                     : "hover:bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
                 <div className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                  "h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-black text-white transition-all",
                   isActive
-                    ? "bg-white/20 text-white"
-                    : cn("bg-gradient-to-br", style.bg, style.accent)
+                    ? "bg-white/30"
+                    : c.abbr
                 )}>
-                  {typeof IconComponent === 'function' ? (
-                    <IconComponent className="h-4 w-4" />
-                  ) : (
-                    <span className="text-sm">{IconComponent}</span>
-                  )}
+                  {catName.substring(0, 2).toUpperCase()}
                 </div>
-                <span className="font-semibold flex-1 truncate">{getLocalizedCategoryName(category, locale as SupportedLanguage)}</span>
+                <span className="font-semibold flex-1 truncate">{catName}</span>
                 <ChevronRight className={cn(
                   "h-4 w-4 transition-transform opacity-50",
                   isActive ? "rotate-90 opacity-100" : "group-hover:translate-x-1 group-hover:opacity-100"
@@ -1083,6 +1118,46 @@ function DealsPageContent() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+              </div>
+
+              {/* Mobile horizontal category scroller (V5 style) */}
+              <div className="flex gap-2 overflow-x-auto pb-3 mb-4 lg:hidden no-scrollbar scroll-smooth">
+                <button
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setSelectedSubcategory(null);
+                    setSelectedSubSubcategory(null);
+                  }}
+                  className={cn(
+                    "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all",
+                    !selectedCategory 
+                      ? "bg-teal-500 text-white shadow-md shadow-teal-500/20" 
+                      : "bg-teal-100/50 dark:bg-teal-900/10 text-teal-600 dark:text-teal-400"
+                  )}
+                >
+                  {t('sidebar.allDeals')}
+                </button>
+                {sortedCategories.map((category, i) => {
+                  const c = catColors[i % catColors.length];
+                  const isActive = selectedCategory?.id === category.id;
+                  const catName = getLocalizedCategoryName(category, locale as SupportedLanguage);
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => {
+                        setSelectedCategory(isActive ? null : category);
+                        setSelectedSubcategory(null);
+                        setSelectedSubSubcategory(null);
+                      }}
+                      className={cn(
+                        "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all",
+                        isActive ? `${c.activeBg} text-white` : `${c.bg} ${c.text}`
+                      )}
+                    >
+                      {catName}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Statystyki */}

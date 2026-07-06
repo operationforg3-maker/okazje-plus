@@ -11,12 +11,18 @@ import { useCategoryName } from '@/hooks/use-category-name';
 import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart, MoreVertical } from "lucide-react";
 import React, { useEffect, useState } from 'react';
 import { useFormatter } from 'next-intl';
 import { toast } from 'sonner';
 import { useSmartCart } from '@/lib/cart-context';
 import { trackVote, trackFirestoreView, trackFirestoreClick, trackFirestoreShare, trackFirestoreVote } from '@/lib/analytics';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import ShareButton from '@/components/share-button';
 import { RatingBar } from './rating-bar';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
@@ -868,124 +874,132 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           </Button>
         </div>
         
-        <div className="flex flex-wrap items-center gap-1 justify-center sm:justify-end">
-          {isPromotionDeal && offerPreviewUrl && (
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-            >
-              <a
-                href={offerPreviewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+        <div className="flex items-center gap-1.5 w-full mt-auto pt-2">
+          {/* Main CTA */}
+          <div className="flex-1 min-w-0">
+            {deal.metadata?.isExpired ? (
+              <ExpiredDealBadge 
+                isExpired={true}
+                reason={deal.metadata?.expiryReason || t('messages.dealExpired')}
+                checkedAt={deal.metadata?.expiryCheckedAt}
+                variant="button"
+              />
+            ) : dealExternalUrl ? (
+              <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 text-xs shadow-sm flex items-center justify-center gap-1" aria-label={t('actions.goTo')}>
+                <a href={dealExternalUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                  <span>{t('actions.goTo')}</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </Button>
+            ) : (
+              <Button className="w-full bg-emerald-600 text-white opacity-80 font-bold h-9 text-xs" aria-label={t('actions.goTo')} disabled>
+                <span>{t('actions.goTo')}</span>
+              </Button>
+            )}
+          </div>
+
+          {/* More actions menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0 border-border/80"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-card border border-border" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem
+                className="flex items-center gap-2 cursor-pointer font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toggleFavorite();
+                }}
+                disabled={isFavoriteLoading}
+              >
+                <Heart className={cn("w-4 h-4 text-red-500", isFavorited && "fill-current")} />
+                {isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="flex items-center gap-2 cursor-pointer font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addToComparison({ ...deal, type: 'deal' });
+                }}
+              >
+                <Scale className="w-4 h-4 text-primary" />
+                Porównaj okazję
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="flex items-center gap-2 cursor-pointer font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  try {
+                    addDeal(deal, 1);
+                    toast.success(t('messages.dealAddedToCart'));
+                  } catch (err) {
+                    console.error('addDeal failed', err);
+                    toast.error(t('cart.addToCartError'));
+                  }
+                }}
+              >
+                <ShoppingCart className="w-4 h-4 text-emerald-500" />
+                Dodaj do koszyka
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="flex items-center gap-2 cursor-pointer font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  toast.success(t('messages.priceAlertEnabled'));
+                }}
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                Alert cenowy
+              </DropdownMenuItem>
+
+              {productPageUrl && (
+                <DropdownMenuItem
+                  asChild
+                  className="flex items-center gap-2 cursor-pointer font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Link href={productPageUrl}>
+                    <Package className="w-4 h-4 text-blue-500" />
+                    Pokaż produkt
+                  </Link>
+                </DropdownMenuItem>
+              )}
+
+              <DropdownMenuItem
+                asChild
+                className="flex items-center gap-2 cursor-pointer font-medium"
                 onClick={(e) => e.stopPropagation()}
               >
-                {t('labels.dealPreview')}
-              </a>
-            </Button>
-          )}
-          <Button 
-            variant={isFavorited ? "default" : "outline"} 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleFavorite();
-            }}
-            aria-label={isFavorited ? t('auth.removeFromFavorites') : t('auth.addToFavorites')}
-            disabled={isFavoriteLoading}
-            className={isFavorited ? "bg-red-500 hover:bg-red-600" : ""}
-          >
-            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
-          </Button>
-          <ShareButton 
-            type="deal" 
-            itemId={deal.id} 
-            title={dealTitle || t('labels.deal')} 
-            url={`/deals/${deal.id}`} 
-            variant="outline" 
-            size="icon"
-            onShared={(platform) => handleShareTrack(platform)} 
-          />
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toast.success(t('messages.priceAlertEnabled'));
-            }}
-            aria-label={t('auth.priceAlert')}
-          >
-            <AlertTriangle className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              addToComparison({ ...deal, type: 'deal' });
-            }}
-            aria-label={t('comparison.addToComparison')}
-          >
-            <Scale className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="default" 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              try {
-                addDeal(deal, 1);
-                toast.success(t('messages.dealAddedToCart'));
-              } catch (err) {
-                console.error('addDeal failed', err);
-                toast.error(t('cart.addToCartError'));
-              }
-            }}
-            aria-label={t('cart.addToCart')}
-            className="h-11 w-11"
-          >
-            <ShoppingCart className="h-4 w-4" />
-          </Button>
-          {deal.metadata?.isExpired ? (
-            <ExpiredDealBadge 
-              isExpired={true}
-              reason={deal.metadata?.expiryReason || t('messages.dealExpired')}
-              checkedAt={deal.metadata?.expiryCheckedAt}
-              variant="button"
-            />
-          ) : dealExternalUrl ? (
-            <Button asChild size="icon" className="h-11 w-11 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
-              <a href={dealExternalUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                <ArrowUp className="h-4 w-4 rotate-90" />
-              </a>
-            </Button>
-          ) : (
-            <Button size="icon" className="h-11 w-11 bg-emerald-600 text-white opacity-80" aria-label={t('actions.goTo')} disabled>
-              <ArrowUp className="h-4 w-4 rotate-90" />
-            </Button>
-          )}
-          {productPageUrl && (
-            <Button
-              asChild
-              variant="outline"
-              size="icon"
-              className="h-11 w-11"
-              aria-label={t('labels.viewProduct')}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <Link href={productPageUrl}>
-                <Package className="h-4 w-4" />
-              </Link>
-            </Button>
-          )}
+                <ShareButton 
+                  type="deal" 
+                  itemId={deal.id} 
+                  title={dealTitle || t('labels.deal')} 
+                  url={`/deals/${deal.id}`} 
+                  variant="ghost" 
+                  size="sm"
+                  className="w-full justify-start h-8 px-2 font-normal text-sm border-none shadow-none hover:bg-transparent"
+                  onShared={(platform) => handleShareTrack(platform)} 
+                />
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

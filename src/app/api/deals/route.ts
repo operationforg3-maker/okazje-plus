@@ -22,6 +22,12 @@ export async function GET(request: Request) {
   const mainCategorySlug = url.searchParams.get('mainCategorySlug') ?? undefined;
   const subCategorySlug = url.searchParams.get('subCategorySlug') ?? undefined;
   const subSubCategorySlug = url.searchParams.get('subSubCategorySlug') ?? undefined;
+  const minPrice = url.searchParams.get('minPrice');
+  const maxPrice = url.searchParams.get('maxPrice');
+  const minRating = url.searchParams.get('minRating');
+  const minTemperature = url.searchParams.get('minTemperature');
+  const sources = url.searchParams.get('sources');
+  const discountOnly = url.searchParams.get('discountOnly') === 'true';
 
   // Try Typesense search first if there is a query or we need sorting.
   let results: any[] = [];
@@ -36,6 +42,9 @@ export async function GET(request: Request) {
           page,
           sortBy: sort as any,
           statusFilter: status,
+          minPrice: minPrice ? Number(minPrice) : undefined,
+          maxPrice: maxPrice ? Number(maxPrice) : undefined,
+          minTemperature: minTemperature ? Number(minTemperature) : undefined,
         })
       , 2, 500);
       results = typesenseResults || [];
@@ -53,6 +62,18 @@ export async function GET(request: Request) {
     if (subCategorySlug) filters.subCategorySlug = subCategorySlug;
     if (subSubCategorySlug) filters.subSubCategorySlug = subSubCategorySlug;
     if (q) filters.searchTerm = q;
+
+    if (minPrice !== null && maxPrice !== null) {
+      filters.priceRange = { min: Number(minPrice), max: Number(maxPrice) };
+    } else {
+      if (minPrice !== null) filters.priceLimitMin = Number(minPrice);
+      if (maxPrice !== null) filters.priceLimitMax = Number(maxPrice);
+    }
+    if (minRating !== null) filters.minRating = Number(minRating);
+    if (minTemperature !== null) filters.minTemperature = Number(minTemperature);
+    if (sources) filters.sources = sources.split(',') as any;
+    if (discountOnly) filters.discountOnly = true;
+
     const deals = await getDealsByFilters(filters, sort as any, size);
     // Firestore fetch does not support offset directly; we slice manually.
     const offset = (page - 1) * size;
