@@ -425,87 +425,53 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
       role="link"
       tabIndex={0}
     >
-      <CardHeader
-        image={primaryImageSrc}
-        title={displayTitle || 'Produkt'}
-        onFavorite={() => toggleFavorite()}
-        isFavorited={isFavorited}
-        isFavoritesLoading={isFavoriteLoading}
-        imageClassName="object-contain transition-all duration-500 group-hover:scale-105 p-4"
-        imageContainerClassName="h-auto aspect-square bg-muted/10 rounded-t-2xl border-b border-border/40 overflow-hidden relative"
-        className="rounded-none p-0"
-      >
-        {/* Badges Column (Right Top) */}
-        <div className="absolute right-2.5 top-2.5 flex flex-col space-sm z-10 gap-1 items-end">
+      {/* Clean Apple-style Product Image Container */}
+      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/5 border-b border-border/20 overflow-hidden transition-all duration-300">
+        <Image
+          src={withImageProxy(primaryImageSrc)}
+          alt={displayTitle || 'Produkt'}
+          fill
+          sizes="(max-width: 768px) 100vw, 300px"
+          className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+        />
+
+        {/* Minimalist Top Bar Overlays */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
           {galleryImages.length > 1 && (
-            <Badge variant="secondary" className="bg-background/90 backdrop-blur-sm text-[10px] shadow-sm text-foreground px-2 py-0.5 font-medium border border-border/20">
-              <Eye className="mr-1 h-3 w-3" />
-              {galleryImages.length} zdjęć
-            </Badge>
+            <span className="bg-background/90 text-foreground text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/20 shadow-sm">
+              {galleryImages.length} zdj.
+            </span>
           )}
-          {/* Social Proof */}
-          {ordersCount > 10 && (
-            <div className="bg-red-500 text-white text-[11px] px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm transition-transform duration-300 group-hover:-translate-x-1">
-               <Flame className="w-3.5 h-3.5 animate-pulse" />
-               <span className="font-bold">
-                 {ordersCount > 1000 ? `${(ordersCount/1000).toFixed(1)}k` : ordersCount} kup.
-               </span>
-            </div>
-          )}
-          
-          {/* Hot Deal */}
-          {isHotDeal && (
-            <Badge variant="destructive" className="shadow-sm font-extrabold text-[11px] px-2.5 py-1">
-              <Zap className="mr-1 h-3.5 w-3.5" />
-              Hot Deal
-            </Badge>
-          )}
-
-          {/* Discount */}
           {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-none font-extrabold text-[11px] px-2.5 py-1 shadow-sm transition-transform duration-300 group-hover:-translate-x-1">
-              <TrendingDown className="w-3.5 h-3.5 mr-1" />
+            <span className="bg-green-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
               -{priceData.discount}%
-            </Badge>
-          )}
-
-          {hasCoupons && (
-            <Badge className="bg-purple-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              🎟️ Kupon
-            </Badge>
-          )}
-
-          {isBestsellerTag && (
-            <Badge className="bg-purple-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <TrendingUp className="mr-1 h-3.5 w-3.5" />
-              Bestseller
-            </Badge>
-          )}
-          
-          {isNewArrival && (
-            <Badge className="bg-blue-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <Sparkles className="mr-1 h-3.5 w-3.5" />
-              Nowość
-            </Badge>
-          )}
-
-          {priceData.formattedShipping === null && (
-            <Badge className="bg-emerald-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <Truck className="mr-1 h-3.5 w-3.5" />
-              Free
-            </Badge>
+            </span>
           )}
         </div>
 
-        {/* Admin Quick Actions */}
-        <div className="absolute right-2.5 bottom-2.5 z-10 transition-all duration-300 group-hover:scale-105">
+        {/* Simple Favorite trigger */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite();
+          }}
+          disabled={isFavoriteLoading}
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/20 transition-all"
+          aria-label="Polub"
+        >
+          <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+        </button>
+
+        {/* Admin actions overlay */}
+        <div className="absolute right-3 bottom-3 z-10">
           <AdminQuickActions
             productId={product.id}
             onEdit={() => setEditDialogOpen(true)}
-            className=""
           />
         </div>
-      </CardHeader>
+      </div>
 
       {/* Content Body */}
       <div className="flex-grow space-y-2.5 p-4 sm:p-5 min-w-0">

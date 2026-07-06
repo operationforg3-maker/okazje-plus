@@ -580,126 +580,65 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
       role="link"
       tabIndex={0}
     >
-      <CardHeader
-        image={coverImage || '/icon_okazjeplus.svg'}
-        title={dealTitle || 'Okazja'}
-        onFavorite={() => toggleFavorite()}
-        isFavorited={isFavorited}
-        isFavoritesLoading={isFavoriteLoading}
-        imageClassName="object-contain transition-all duration-500 group-hover:scale-105"
-        imageContainerClassName="h-auto aspect-square bg-muted/10 rounded-t-2xl border-b border-border/40 overflow-hidden relative"
-        className="rounded-none p-0"
-        priority={priority}
-      >
-        {/* Pasek ocen produktu jeśli powiązany */}
-        {resolvedProduct && resolvedProduct.ratingSources && (
-          <div className="absolute left-2.5 top-2.5 z-10 transition-transform duration-300 group-hover:translate-x-1">
-            <RatingBar users={resolvedProduct.ratingSources.users} editorial={resolvedProduct.ratingSources.editorial} external={resolvedProduct.ratingSources.external} />
-          </div>
-        )}
-        <div className="absolute right-2.5 top-2.5 flex flex-col space-sm z-10 gap-1 items-end">
-          {/* Social Proof Badge */}
-          {((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount || 0) > 10 && (
-            <div className="bg-red-500 text-white text-[11px] px-2.5 py-1 rounded-full font-bold flex items-center gap-1 shadow-sm transition-transform duration-300 group-hover:-translate-x-1">
-               <Flame className="w-3.5 h-3.5 animate-pulse" />
-               <span>
-                 {t('labels.boughtCount', { count: ((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount || 0) })}
-               </span>
+      {/* Image container & overlay badge details for Hot Deal style */}
+      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/10 border-b border-border/30 overflow-hidden group-hover:bg-muted/20 transition-all duration-300">
+        <Image
+          src={withImageProxy(coverImage || '/icon_okazjeplus.svg')}
+          alt={dealTitle || 'Okazja'}
+          fill
+          sizes="(max-width: 768px) 100vw, 300px"
+          className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+          loading={priority ? 'eager' : 'lazy'}
+        />
+
+        {/* Dynamic float temperature tag on image */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+          {isHot && (
+            <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-white font-black text-xs px-3 py-1.5 rounded-2xl shadow-md border border-orange-400/20">
+              <Flame className="h-4 w-4 animate-bounce" />
+              <span>{temperature}°</span>
             </div>
           )}
-          {isHot && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-none font-extrabold text-[11px] px-2.5 py-1 shadow-sm transition-transform duration-300 group-hover:-translate-x-1">
-              <Flame className="mr-1 h-3.5 w-3.5 animate-bounce" />
-              Hot {temperature}°
-            </Badge>
+          {discount > 0 && (
+            <div className="bg-red-500 text-white font-black text-xs px-2.5 py-1 rounded-xl shadow-md w-fit">
+              -{discount}%
+            </div>
           )}
-          {isHotDealTag && (
-            <Badge variant="destructive" className="shadow-sm font-extrabold text-[11px] px-2.5 py-1">
-              <Zap className="mr-1 h-3.5 w-3.5" />
-              Hot Deal
-            </Badge>
-          )}
-          {isBestsellerTag && (
-            <Badge className="bg-purple-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <TrendingUp className="mr-1 h-3.5 w-3.5" />
-              Bestseller
-            </Badge>
-          )}
-          {isNewArrival && (
-            <Badge className="bg-blue-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <Sparkles className="mr-1 h-3.5 w-3.5" />
-              {t('labels.isNew')}
-            </Badge>
-          )}
-          {isNew && (
-            <Badge className="bg-cyan-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <Sparkles className="mr-1 h-3.5 w-3.5" />
-              Nowa oferta
-            </Badge>
-          )}
-          {isPolishMarket && (
-            <Badge className="bg-green-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              PL Market
-            </Badge>
-          )}
-          {hasVariants && (
-            <Badge variant="secondary" className="shadow-sm text-[11px] px-2.5 py-1">
-              {variants.length} wariantów
-            </Badge>
-          )}
+        </div>
+
+        {/* Favorite overlay button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-md hover:bg-background shadow-md h-9 w-9 rounded-full border border-border/40"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite();
+          }}
+          disabled={isFavoriteLoading}
+        >
+          <Heart className={`h-4.5 w-4.5 transition-colors ${isFavorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+        </Button>
+
+        {/* Extra indicators */}
+        <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
           {deal.freeShipping && (
-            <Badge className="bg-emerald-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <Truck className="mr-1 h-3.5 w-3.5" />
+            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[9px] font-bold py-0.5 px-2 rounded-lg">
               Darmowa dostawa
             </Badge>
           )}
-          {deal.importMetadata?.hotProduct && (
-            <Badge className="bg-red-600 text-white shadow-sm font-extrabold text-[11px] px-2.5 py-1 animate-pulse">
-              <Zap className="mr-1 h-3.5 w-3.5" />
-              HOT
-            </Badge>
-          )}
-          {deal.importMetadata?.flashDeal && (
-            <Badge className="bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-sm font-bold text-[11px] px-2.5 py-1">
-              <Zap className="mr-1 h-3.5 w-3.5" />
-              Flash
-            </Badge>
-          )}
-          {deal.importMetadata?.stockStatus === 'low_stock' && (
-            <Badge variant="outline" className="border-yellow-600 text-yellow-600 bg-white/95 dark:bg-black/95 shadow-sm text-[10px] px-2 py-0.5">
-              <AlertTriangle className="mr-1 h-3 w-3" />
-              {t('labels.lowStock')}
-            </Badge>
-          )}
-          {deal.importMetadata?.stockStatus === 'out_of_stock' && (
-            <Badge variant="outline" className="border-red-600 text-red-600 bg-white/95 dark:bg-black/95 shadow-sm text-[10px] px-2 py-0.5">
-              <AlertTriangle className="mr-1 h-3 w-3" />
-              {t('labels.soldOut')}
-            </Badge>
-          )}
-          {deal.importMetadata?.promotionId && (
-            <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm text-[11px] px-2.5 py-1">
-              <Tag className="mr-1 h-3 w-3" />
-              {t('labels.promo')}
-            </Badge>
-          )}
-          {promotionLabel && (
-            <Badge className="bg-gradient-to-r from-fuchsia-600 to-rose-600 text-white shadow-sm max-w-[180px] text-[11px] px-2.5 py-1">
-              <Tag className="mr-1 h-3 w-3" />
-              <span className="truncate">{promotionLabel}</span>
-            </Badge>
-          )}
         </div>
-        
-        {/* Admin Quick Actions (Bottom-right overlay) */}
-        <div className="absolute right-2.5 bottom-2.5 z-10 transition-all duration-300 group-hover:scale-105">
+
+        {/* Admin Quick Actions */}
+        <div className="absolute right-3 bottom-3 z-10">
           <AdminQuickActions
             productId={deal.product?.id || deal.id} 
             itemType="deal"
             onEdit={() => setEditDialogOpen(true)}
           />
         </div>
-      </CardHeader>
+      </div>
       
       <div className="flex-grow space-y-2.5 p-4 sm:p-5 min-w-0">
         {/* Category Breadcrumb & Time */}
