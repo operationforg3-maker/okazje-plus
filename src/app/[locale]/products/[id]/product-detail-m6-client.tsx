@@ -33,9 +33,11 @@ import GalleryM6 from '@/components/gallery-m6';
 import VariantsM6 from '@/components/variants-m6';
 import CommentSection from '@/components/comment-section';
 import RatingInput from '@/components/rating-input';
-import ShareButton from '@/components/share-button';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
+import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
+import ShareButton from '@/components/share-button';
+import { cn } from '@/lib/utils';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
@@ -251,6 +253,17 @@ export default function ProductDetailM6Client({
     ? promotionCampaign.price.appSale
     : undefined;
 
+  const deepDataBadges = useMemo(() => {
+    return generateSmartBadges({
+      price: {
+        current: priceAmount ?? 0,
+        lowest30d: bestDeal?.lowestPriceIn30Days,
+      },
+      logistics: productCore?.logistics || (product as any)?.logistics,
+      priceHistory: bestDeal?.priceHistory,
+    });
+  }, [priceAmount, bestDeal, productCore, product]);
+
   // Helper: map ProductCore -> minimal Product for SmartCart
   const asLegacyProduct = (): Product => {
     return {
@@ -364,6 +377,30 @@ export default function ProductDetailM6Client({
                 </Link>
               )}
             </div>
+
+            {/* Smart Badges (features currently on cards) */}
+            {deepDataBadges && deepDataBadges.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2.5 border-t border-border/20 pt-3">
+                {deepDataBadges.filter(badge => badge && badge.text).map((badge, idx) => {
+                  const getBadgeColor = (colorClass: string) => {
+                    if (colorClass.includes('red')) return '#ef4444';
+                    if (colorClass.includes('green')) return '#10b981';
+                    if (colorClass.includes('blue')) return '#3b82f6';
+                    if (colorClass.includes('purple')) return '#a855f7';
+                    return '#6b7280';
+                  };
+                  return (
+                    <Badge
+                      key={idx}
+                      className="text-white text-[10px] px-2 py-0.5 font-bold rounded-md"
+                      style={{ backgroundColor: getBadgeColor(badge.color) }}
+                    >
+                      {badge.text}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Mobile Price Card (block lg:hidden) */}
             <div className="block lg:hidden bg-card border border-border/60 rounded-2xl p-5 shadow-md space-y-4 my-2">
@@ -534,6 +571,12 @@ export default function ProductDetailM6Client({
                   <div className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
                     {formattedPriceWithCurrency}
                   </div>
+                  {bestDeal?.priceHistory && Array.isArray(bestDeal.priceHistory) && bestDeal.priceHistory.length > 1 && (
+                    <div className="flex items-center gap-1.5 ml-3">
+                      <span className="text-[9px] uppercase font-extrabold text-muted-foreground">Trend:</span>
+                      <Sparkline data={bestDeal.priceHistory} width={60} height={12} />
+                    </div>
+                  )}
                   {marketPriceInfo && (
                     <div className="text-base text-muted-foreground line-through decoration-muted-foreground/45 mb-0.5">
                       {marketPriceInfo.formatted}
@@ -577,29 +620,42 @@ export default function ProductDetailM6Client({
                 />
               </div>
 
-              {/* Favorites & Cart Action Strip */}
-              <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
-                <Button
-                  variant={isInCart(productId) ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => addItem(asLegacyProduct())}
-                  className="h-9 px-3 text-xs font-bold gap-1.5 rounded-lg border-border/80 flex-1"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  {isInCart(productId) ? 'W koszyku' : 'Dodaj do koszyka'}
-                </Button>
+              {/* Gated Cart & Favorites (Incentive for non-logged in users) */}
+              {!user ? (
+                <div className="bg-amber-50/50 dark:bg-zinc-900/50 border border-dashed border-amber-200 dark:border-zinc-800 rounded-xl p-3.5 text-center space-y-2 border-t mt-3">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">
+                    🔑 Zaloguj się, aby dodawać do koszyka i zapisywać produkty!
+                  </p>
+                  <Button asChild size="sm" variant="outline" className="w-full text-[11px] h-8 border-amber-300 hover:bg-amber-100 text-amber-800 dark:text-amber-300">
+                    <Link href={`/${locale}/login`}>
+                      Zaloguj się teraz
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
+                  <Button
+                    variant={isInCart(productId) ? 'secondary' : 'outline'}
+                    size="sm"
+                    onClick={() => addItem(asLegacyProduct())}
+                    className="h-9 px-3 text-xs font-bold gap-1.5 rounded-lg border-border/80 flex-1"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {isInCart(productId) ? 'W koszyku' : 'Dodaj do koszyka'}
+                  </Button>
 
-                <Button
-                  variant={isFavorited ? 'secondary' : 'outline'}
-                  size="icon"
-                  onClick={() => toggleFavorite()}
-                  disabled={isFavoriteLoading}
-                  className="h-9 w-9 border-border/80"
-                  aria-label="Ulubione"
-                >
-                  <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-                </Button>
-              </div>
+                  <Button
+                    variant={isFavorited ? 'secondary' : 'outline'}
+                    size="icon"
+                    onClick={() => toggleFavorite()}
+                    disabled={isFavoriteLoading}
+                    className="h-9 w-9 border-border/80"
+                    aria-label="Ulubione"
+                  >
+                    <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Inner Details: Logistics, Warehouses, Specs Teaser */}

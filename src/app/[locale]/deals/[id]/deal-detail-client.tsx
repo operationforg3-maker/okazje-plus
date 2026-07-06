@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
+import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 import { 
   ChevronRight, 
   ExternalLink, 
@@ -189,6 +190,21 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
   const { addToComparison } = useComparison();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const [activeTab, setActiveTab] = useState<'discussion' | 'specifications'>('discussion');
+
+  const deepDataBadges = useMemo(() => {
+    const _rawPrice = typeof deal.price === 'number' ? deal.price
+      : typeof deal.price?.amount === 'number' ? deal.price.amount
+      : typeof deal.legacyPrice === 'number' ? deal.legacyPrice
+      : 0;
+    return generateSmartBadges({
+      price: {
+        current: _rawPrice,
+        lowest30d: deal.lowestPriceIn30Days,
+      },
+      logistics: deal.product?.logistics || (deal as any).logistics || { isFreeShipping: deal.freeShipping },
+      priceHistory: deal.priceHistory,
+    });
+  }, [deal]);
 
   const { currency } = useCurrency();
   // Format prices on client using unified currency
@@ -686,13 +702,45 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               )}
             </div>
 
+            {/* Smart Badges (features currently on cards) */}
+            {deepDataBadges && deepDataBadges.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2.5 border-t border-border/20 pt-3">
+                {deepDataBadges.filter(badge => badge && badge.text).map((badge, idx) => {
+                  const getBadgeColor = (colorClass: string) => {
+                    if (colorClass.includes('red')) return '#ef4444';
+                    if (colorClass.includes('green')) return '#10b981';
+                    if (colorClass.includes('blue')) return '#3b82f6';
+                    if (colorClass.includes('purple')) return '#a855f7';
+                    return '#6b7280';
+                  };
+                  return (
+                    <Badge
+                      key={idx}
+                      className="text-white text-[10px] px-2 py-0.5 font-bold rounded-md"
+                      style={{ backgroundColor: getBadgeColor(badge.color) }}
+                    >
+                      {badge.text}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Mobile Price Card (block lg:hidden) */}
             <div className="block lg:hidden bg-card border border-border/60 rounded-2xl p-5 shadow-md space-y-4 my-2">
               <div className="flex justify-between items-baseline gap-2.5 flex-wrap">
                 <div>
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Cena i Oszczędność</span>
                   <div className="flex items-baseline gap-2.5 flex-wrap">
-                    <div className="text-3xl font-black text-foreground tracking-tight">{priceData.formattedPrice || 'N/A'}</div>
+                    <div className="text-3xl font-black text-foreground tracking-tight">
+                      {priceData.formattedPrice || 'N/A'}
+                    </div>
+                    {deal.priceHistory && Array.isArray(deal.priceHistory) && deal.priceHistory.length > 1 && (
+                      <div className="flex items-center gap-1.5 ml-3">
+                        <span className="text-[9px] uppercase font-extrabold text-muted-foreground">Trend:</span>
+                        <Sparkline data={deal.priceHistory} width={60} height={12} />
+                      </div>
+                    )}
                     {priceData.formattedOriginal && (
                       <div className="text-base text-muted-foreground line-through decoration-muted-foreground/45 mb-0.5">{priceData.formattedOriginal}</div>
                     )}
@@ -743,43 +791,56 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                 />
               </div>
 
-              {/* Vote controls (Hot/Cold) & Favorite */}
-              <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
-                <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/40">
-                  <Button
-                    variant={userVote === 1 ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleVote('up')}
-                    disabled={isVoting}
-                    className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                    Hot
-                  </Button>
-                  <span className="font-bold text-sm px-2 text-foreground min-w-[28px] text-center">{temperature}°</span>
-                  <Button
-                    variant={userVote === -1 ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleVote('down')}
-                    disabled={isVoting}
-                    className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                    Cold
+              {/* Gated Voting & Favorites (Incentive for non-logged in users) */}
+              {!user ? (
+                <div className="bg-amber-50/50 dark:bg-zinc-900/50 border border-dashed border-amber-200 dark:border-zinc-800 rounded-xl p-3 text-center space-y-1.5 border-t mt-3">
+                  <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-400">
+                    🔑 Zaloguj się, aby głosować, zapisywać i porównywać okazje!
+                  </p>
+                  <Button asChild size="sm" variant="outline" className="w-full text-[10px] h-7 border-amber-300 hover:bg-amber-100 text-amber-800 dark:text-amber-300">
+                    <Link href={`/${locale}/login`}>
+                      Zaloguj się teraz
+                    </Link>
                   </Button>
                 </div>
+              ) : (
+                <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
+                  <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/40">
+                    <Button
+                      variant={userVote === 1 ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => handleVote('up')}
+                      disabled={isVoting}
+                      className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                      Hot
+                    </Button>
+                    <span className="font-bold text-sm px-2 text-foreground min-w-[28px] text-center">{temperature}°</span>
+                    <Button
+                      variant={userVote === -1 ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => handleVote('down')}
+                      disabled={isVoting}
+                      className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                      Cold
+                    </Button>
+                  </div>
 
-                <Button
-                  variant={isFavorited ? 'secondary' : 'outline'}
-                  size="icon"
-                  onClick={() => toggleFavorite()}
-                  disabled={isFavoriteLoading}
-                  className="h-8 w-8 border border-border/80"
-                  aria-label="Ulubione"
-                >
-                  <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-                </Button>
-              </div>
+                  <Button
+                    variant={isFavorited ? 'secondary' : 'outline'}
+                    size="icon"
+                    onClick={() => toggleFavorite()}
+                    disabled={isFavoriteLoading}
+                    className="h-8 w-8 border border-border/80"
+                    aria-label="Ulubione"
+                  >
+                    <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Description Text */}
@@ -845,6 +906,12 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Cena i Oszczędność</span>
                 <div className="flex items-baseline gap-2.5 flex-wrap">
                   <div className="text-3xl md:text-4xl font-black text-foreground tracking-tight">{priceData.formattedPrice || 'N/A'}</div>
+                  {deal.priceHistory && Array.isArray(deal.priceHistory) && deal.priceHistory.length > 1 && (
+                    <div className="flex items-center gap-1.5 ml-3">
+                      <span className="text-[9px] uppercase font-extrabold text-muted-foreground">Trend:</span>
+                      <Sparkline data={deal.priceHistory} width={60} height={12} />
+                    </div>
+                  )}
                   {priceData.formattedOriginal && (
                     <div className="text-base text-muted-foreground line-through decoration-muted-foreground/45 mb-0.5">{priceData.formattedOriginal}</div>
                   )}
@@ -892,54 +959,67 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                 />
               </div>
 
-              {/* Vote controls (Hot/Cold) */}
-              <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
-                <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/40">
-                  <Button
-                    variant={userVote === 1 ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleVote('up')}
-                    disabled={isVoting}
-                    className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
-                  >
-                    <ArrowUp className="h-3.5 w-3.5" />
-                    Hot
-                  </Button>
-                  <span className="font-bold text-sm px-2 text-foreground min-w-[28px] text-center">{temperature}°</span>
-                  <Button
-                    variant={userVote === -1 ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleVote('down')}
-                    disabled={isVoting}
-                    className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
-                  >
-                    <ArrowDown className="h-3.5 w-3.5" />
-                    Cold
+              {/* Gated Voting & Favorites (Incentive for non-logged in users) */}
+              {!user ? (
+                <div className="bg-amber-50/50 dark:bg-zinc-900/50 border border-dashed border-amber-200 dark:border-zinc-800 rounded-xl p-3.5 text-center space-y-2 border-t mt-3">
+                  <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">
+                    🔑 Zaloguj się, aby głosować, zapisywać i porównywać okazje!
+                  </p>
+                  <Button asChild size="sm" variant="outline" className="w-full text-[11px] h-8 border-amber-300 hover:bg-amber-100 text-amber-800 dark:text-amber-300">
+                    <Link href={`/${locale}/login`}>
+                      Zaloguj się teraz
+                    </Link>
                   </Button>
                 </div>
+              ) : (
+                <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
+                  <div className="flex items-center gap-1 border rounded-lg p-1 bg-muted/40">
+                    <Button
+                      variant={userVote === 1 ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => handleVote('up')}
+                      disabled={isVoting}
+                      className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                      Hot
+                    </Button>
+                    <span className="font-bold text-sm px-2 text-foreground min-w-[28px] text-center">{temperature}°</span>
+                    <Button
+                      variant={userVote === -1 ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => handleVote('down')}
+                      disabled={isVoting}
+                      className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                      Cold
+                    </Button>
+                  </div>
 
-                <div className="flex gap-1.5">
-                  <Button
-                    variant={isFavorited ? 'secondary' : 'outline'}
-                    size="icon"
-                    onClick={() => toggleFavorite()}
-                    disabled={isFavoriteLoading}
-                    className="h-10 w-10 border-border/80"
-                    aria-label="Ulubione"
-                  >
-                    <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => addToComparison({ ...deal, type: 'deal' })}
-                    className="h-10 w-10 border-border/80"
-                    aria-label="Porównaj"
-                  >
-                    <Scale className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1.5">
+                    <Button
+                      variant={isFavorited ? 'secondary' : 'outline'}
+                      size="icon"
+                      onClick={() => toggleFavorite()}
+                      disabled={isFavoriteLoading}
+                      className="h-10 w-10 border-border/80"
+                      aria-label="Ulubione"
+                    >
+                      <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => addToComparison({ ...deal, type: 'deal' })}
+                      className="h-10 w-10 border-border/80"
+                      aria-label="Porównaj"
+                    >
+                      <Scale className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Inner Details: Expiry, Coupon, Shipping, Specs Teaser */}
