@@ -12,6 +12,7 @@ import {getMessages} from 'next-intl/server';
 import ErrorBoundary from '@/components/auth/error-boundary';
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/json-ld-generators';
 import { DeferredClientWidgets } from '@/components/layout/deferred-client-widgets';
+import { getCategories } from '@/lib/data';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
 
@@ -149,6 +150,7 @@ export default async function LocaleLayout({
   const messages = await getMessages();
   const websiteJsonLd = generateWebSiteJsonLd();
   const organizationJsonLd = generateOrganizationJsonLd();
+  const categories = await getCategories().catch(() => []);
   
   return (
     <>
@@ -202,7 +204,7 @@ export default async function LocaleLayout({
                 <CurrencyProvider>
                   <SmartCartProvider>
                     <div className="flex flex-col min-h-screen w-full">
-                      <ConditionalNav>
+                      <ConditionalNav categories={categories}>
                         {children}
                       </ConditionalNav>
                       <DeferredClientWidgets />

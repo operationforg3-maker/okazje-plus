@@ -10,6 +10,7 @@ export interface UXSettings {
   themeFamily: 'classic' | 'v4' | 'v5' | 'neon';
   themeMode: 'light' | 'dark';
   selectedCategories: string[];
+  cardDensity: 'comfortable' | 'compact';
 }
 
 interface UXContextProps {
@@ -17,11 +18,13 @@ interface UXContextProps {
   themeFamily: UXSettings['themeFamily'];
   themeMode: UXSettings['themeMode'];
   selectedCategories: string[];
+  cardDensity: UXSettings['cardDensity'];
   setViewMode: (mode: UXSettings['viewMode']) => void;
   setThemeFamily: (family: UXSettings['themeFamily']) => void;
   setThemeMode: (mode: UXSettings['themeMode']) => void;
   toggleThemeMode: () => void;
   setSelectedCategories: (categories: string[]) => void;
+  setCardDensity: (density: UXSettings['cardDensity']) => void;
 }
 
 const UXContext = createContext<UXContextProps | undefined>(undefined);
@@ -32,6 +35,7 @@ export const UXProvider = ({ children }: { children: ReactNode }) => {
   const [themeFamily, setThemeFamily] = useState<UXSettings['themeFamily']>('classic');
   const [themeMode, setThemeMode] = useState<UXSettings['themeMode']>('dark'); // Default to dark as per App guidelines
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [cardDensity, setCardDensity] = useState<UXSettings['cardDensity']>('comfortable');
 
   // Load initial settings from localStorage on client mount
   useEffect(() => {
@@ -42,12 +46,15 @@ export const UXProvider = ({ children }: { children: ReactNode }) => {
         if (parsed.viewMode) setViewMode(parsed.viewMode);
         if (parsed.themeFamily) setThemeFamily(parsed.themeFamily);
         if (parsed.themeMode) setThemeMode(parsed.themeMode);
+        if (parsed.cardDensity) setCardDensity(parsed.cardDensity);
       } else {
         // Fallbacks for individual storage keys
         const legacyVariant = localStorage.getItem('okp_theme_variant') as any;
         if (legacyVariant) setThemeFamily(legacyVariant);
         const legacyTheme = localStorage.getItem('okp_theme') as any;
         if (legacyTheme) setThemeMode(legacyTheme);
+        const legacyDensity = localStorage.getItem('deals_density') as any;
+        if (legacyDensity) setCardDensity(legacyDensity);
       }
     } catch {}
   }, []);
@@ -62,10 +69,11 @@ export const UXProvider = ({ children }: { children: ReactNode }) => {
         if (snap.exists()) {
           const data = snap.data();
           if (data.uxSettings) {
-            const { viewMode: dbViewMode, themeFamily: dbThemeFamily, themeMode: dbThemeMode } = data.uxSettings;
+            const { viewMode: dbViewMode, themeFamily: dbThemeFamily, themeMode: dbThemeMode, cardDensity: dbCardDensity } = data.uxSettings;
             if (dbViewMode) setViewMode(dbViewMode);
             if (dbThemeFamily) setThemeFamily(dbThemeFamily);
             if (dbThemeMode) setThemeMode(dbThemeMode);
+            if (dbCardDensity) setCardDensity(dbCardDensity);
           }
         }
       } catch (err) {
@@ -95,14 +103,15 @@ export const UXProvider = ({ children }: { children: ReactNode }) => {
   const persistSettings = async (
     vMode: UXSettings['viewMode'],
     tFamily: UXSettings['themeFamily'],
-    tMode: UXSettings['themeMode']
+    tMode: UXSettings['themeMode'],
+    cDensity: UXSettings['cardDensity']
   ) => {
     try {
-      localStorage.setItem('uxSettings', JSON.stringify({ viewMode: vMode, themeFamily: tFamily, themeMode: tMode }));
+      localStorage.setItem('uxSettings', JSON.stringify({ viewMode: vMode, themeFamily: tFamily, themeMode: tMode, cardDensity: cDensity }));
       if (user) {
         const userRef = doc(db, 'users', user.uid);
         await setDoc(userRef, {
-          uxSettings: { viewMode: vMode, themeFamily: tFamily, themeMode: tMode }
+          uxSettings: { viewMode: vMode, themeFamily: tFamily, themeMode: tMode, cardDensity: cDensity }
         }, { merge: true });
       }
     } catch (err) {
@@ -112,23 +121,28 @@ export const UXProvider = ({ children }: { children: ReactNode }) => {
 
   const changeViewMode = (mode: UXSettings['viewMode']) => {
     setViewMode(mode);
-    persistSettings(mode, themeFamily, themeMode);
+    persistSettings(mode, themeFamily, themeMode, cardDensity);
   };
 
   const changeThemeFamily = (family: UXSettings['themeFamily']) => {
     setThemeFamily(family);
-    persistSettings(viewMode, family, themeMode);
+    persistSettings(viewMode, family, themeMode, cardDensity);
   };
 
   const changeThemeMode = (mode: UXSettings['themeMode']) => {
     setThemeMode(mode);
-    persistSettings(viewMode, themeFamily, mode);
+    persistSettings(viewMode, themeFamily, mode, cardDensity);
   };
 
   const toggleThemeMode = () => {
     const nextMode = themeMode === 'light' ? 'dark' : 'light';
     setThemeMode(nextMode);
-    persistSettings(viewMode, themeFamily, nextMode);
+    persistSettings(viewMode, themeFamily, nextMode, cardDensity);
+  };
+
+  const changeCardDensity = (density: UXSettings['cardDensity']) => {
+    setCardDensity(density);
+    persistSettings(viewMode, themeFamily, themeMode, density);
   };
 
   return (
@@ -138,11 +152,13 @@ export const UXProvider = ({ children }: { children: ReactNode }) => {
         themeFamily,
         themeMode,
         selectedCategories,
+        cardDensity,
         setViewMode: changeViewMode,
         setThemeFamily: changeThemeFamily,
         setThemeMode: changeThemeMode,
         toggleThemeMode,
         setSelectedCategories,
+        setCardDensity: changeCardDensity,
       }}
     >
       {children}

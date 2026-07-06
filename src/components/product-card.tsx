@@ -3,7 +3,9 @@
 
 import { ProductGallery } from './product-gallery';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
+import { withImageProxy } from '@/lib/image-proxy';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
@@ -313,11 +315,11 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   // --------------------------------------------------------------------------
   if (viewMode === 'list') {
     return (
-      <div className="group relative overflow-hidden rounded-lg transition-all duration-300 flex flex-col sm:flex-row bg-card p-3 sm:p-4 md:p-5 border items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-lg hover:-translate-y-0.5">
+      <div className="group relative overflow-hidden rounded-2xl transition-all duration-300 flex flex-col sm:flex-row bg-background/60 backdrop-blur-md p-3 sm:p-4 md:p-5 border border-border/40 items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-xl hover:-translate-y-1">
         <Link 
           href={productUrl} 
           onClick={handleDetailClick} 
-          className="relative overflow-hidden bg-muted block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-md"
+          className="relative overflow-hidden bg-muted/40 block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-xl border border-border/40"
         >
           <ProductGallery images={galleryImages} />
           {/* Trust Badges Overlay */}
@@ -418,156 +420,122 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   // --------------------------------------------------------------------------
   return (
     <div 
-      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/30 bg-background/50 backdrop-blur-md shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/20"
       onClick={() => {
         window.location.href = productUrl;
       }}
       role="link"
       tabIndex={0}
     >
-      <CardHeader
-        image={primaryImageSrc}
-        title={displayTitle || 'Produkt'}
-        onFavorite={() => toggleFavorite()}
-        isFavorited={isFavorited}
-        isFavoritesLoading={isFavoriteLoading}
-        imageClassName="object-contain transition-transform-base group-hover:scale-105 p-4"
-        imageContainerClassName="h-auto aspect-square bg-muted/20 rounded-t-2xl border-b border-border/40"
-        className="rounded-none"
-      >
-        {/* Badges Column (Right Top) */}
-        <div className="absolute right-2 top-2 flex flex-col space-sm z-10 gap-1 items-end">
+      {/* Clean Apple-style Product Image Container */}
+      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/5 border-b border-border/20 overflow-hidden transition-all duration-300">
+        <Image
+          src={withImageProxy(primaryImageSrc)}
+          alt={displayTitle || 'Produkt'}
+          fill
+          sizes="(max-width: 768px) 100vw, 300px"
+          className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+        />
+
+        {/* Minimalist Top Bar Overlays */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
           {galleryImages.length > 1 && (
-            <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-[10px] shadow-sm text-foreground">
-              <Eye className="mr-1 h-3 w-3" />
-              {galleryImages.length} zdjęć
-            </Badge>
+            <span className="bg-background/90 text-foreground text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/20 shadow-sm">
+              {galleryImages.length} zdj.
+            </span>
           )}
-          {/* Social Proof */}
-          {ordersCount > 10 && (
-            <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
-               <Flame className="w-3 h-3" />
-               <span className="font-medium">
-                 {ordersCount > 1000 ? `${(ordersCount/1000).toFixed(1)}k` : ordersCount} kup.
-               </span>
-            </div>
-          )}
-          
-          {/* Hot Deal */}
-          {isHotDeal && (
-            <Badge variant="destructive" className="shadow-md">
-              <Zap className="mr-1 h-3 w-3" />
-              Hot Deal
-            </Badge>
-          )}
-
-          {/* Discount */}
           {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-            <Badge className="badge-hot badge-trust text-sm font-bold shadow-md">
-              <TrendingDown className="w-3 h-3 mr-1" />
+            <span className="bg-green-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
               -{priceData.discount}%
-            </Badge>
-          )}
-
-          {hasCoupons && (
-            <Badge className="bg-purple-600 text-white shadow-md">
-              🎟️ Kupon
-            </Badge>
-          )}
-
-          {isBestsellerTag && (
-            <Badge className="bg-purple-500 text-white shadow-md">
-              <TrendingUp className="mr-1 h-3 w-3" />
-              Bestseller
-            </Badge>
-          )}
-          
-          {isNewArrival && (
-            <Badge className="bg-blue-500 text-white shadow-md">
-              <Sparkles className="mr-1 h-3 w-3" />
-              Nowość
-            </Badge>
-          )}
-
-          {priceData.formattedShipping === null && (
-            <Badge className="bg-emerald-500 text-white badge-trust shadow-md">
-              <Truck className="mr-1 h-3 w-3" />
-              Free
-            </Badge>
+            </span>
           )}
         </div>
 
-        {/* Admin Quick Actions */}
-        <div className="absolute right-2 bottom-2 z-10">
+        {/* Simple Favorite trigger */}
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite();
+          }}
+          disabled={isFavoriteLoading}
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/20 transition-all"
+          aria-label="Polub"
+        >
+          <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+        </button>
+
+        {/* Admin actions overlay */}
+        <div className="absolute right-3 bottom-3 z-10">
           <AdminQuickActions
             productId={product.id}
             onEdit={() => setEditDialogOpen(true)}
-            className=""
           />
         </div>
-      </CardHeader>
+      </div>
 
       {/* Content Body */}
-      <div className="flex-grow space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-5 min-w-0">
+      <div className="flex-grow space-y-2.5 p-4 sm:p-5 min-w-0">
         
-        {/* Rating Row (Instead of Breadcrumb/Time in DealCard) */}
+        {/* Rating Row */}
         <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
           <div className="flex items-center gap-1">
              {productRating > 0 ? (
                <>
-                 <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                 <span className="font-semibold text-foreground">{productRating.toFixed(1)}</span>
-                 <span>({ratingCount})</span>
+                 <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                 <span className="font-bold text-foreground text-xs">{productRating.toFixed(1)}</span>
+                 <span className="text-[11px]">({ratingCount})</span>
                </>
              ) : (
-               <span>Brak ocen</span>
+               <span className="text-[11px]">Brak ocen</span>
              )}
           </div>
           {merchantRating > 0 && (
-            <div className="flex items-center gap-1" title="Ocena sprzedawcy">
-              <ShieldCheck className="w-3 h-3 text-green-600" />
-              <span>{merchantRating.toFixed(0)}%</span>
+            <div className="flex items-center gap-1 font-medium" title="Ocena sprzedawcy">
+              <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
+              <span className="text-foreground text-xs">{merchantRating.toFixed(0)}%</span>
             </div>
           )}
         </div>
 
-        <h3 className="font-headline text-sm sm:text-base md:text-lg font-semibold leading-tight transition-colors group-hover:text-primary line-clamp-2">
+        <h3 className="font-headline text-base sm:text-lg font-bold leading-tight transition-colors group-hover:text-primary line-clamp-2">
           {displayTitle}
         </h3>
 
         {/* Price Row (Big) */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
-          <span className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
+        <div className="flex items-baseline gap-2 pt-2 border-t border-border/10 flex-wrap">
+          <span className="text-2xl font-black text-foreground tracking-tight">
             {priceData.formattedPrice || 'N/A'}
           </span>
           {priceData.formattedOriginal && (
-             <span className="text-xs sm:text-sm text-muted-foreground line-through">
+             <span className="text-sm text-muted-foreground line-through decoration-muted-foreground/50">
                {priceData.formattedOriginal}
              </span>
           )}
           {priceData.savings && (
-            <span className="ml-auto text-xs font-semibold text-green-600">
+            <span className="ml-auto text-xs font-bold text-green-600 bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/10">
               Oszczędzasz {priceData.savings}
             </span>
           )}
         </div>
 
         {/* Info/Tags Row */}
-        <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs text-muted-foreground mt-2">
+        <div className="flex flex-wrap gap-1.5 pt-1">
            {packageInfo?.weight && (
-             <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-               <Package className="w-3 h-3 mr-1" />
+             <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
+               <Package className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
                {packageInfo.weight}kg
              </Badge>
            )}
            {hasVariants && (
-             <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+             <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
                {variants.length} wariantów
              </Badge>
            )}
            {warrantyInfo?.available && (
-              <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                <ShieldCheck className="w-3 h-3 mr-1" />
+              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
+                <ShieldCheck className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
                 Gwarancja
               </Badge>
            )}
@@ -575,14 +543,15 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
 
       </div>
 
-      {/* Footer Actions (Matching DealCard style) */}
-      <div className="flex flex-col gap-2 border-t bg-muted/30 p-2 sm:p-3">
+      {/* Footer Actions */}
+      <div className="flex flex-col gap-2 border-t bg-muted/30 p-3 mt-auto">
         {/* Main Action: Buy Now */}
         {productExternalUrl ? (
           <Button
             asChild
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-9 shadow-sm hover:shadow-md transition-all"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm h-10 shadow-sm hover:shadow-md transition-all duration-300"
           >
+
             <a 
               href={productExternalUrl} 
               target="_blank" 

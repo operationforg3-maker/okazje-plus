@@ -99,8 +99,7 @@ function DealsPageContent() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [totalDealsCount, setTotalDealsCount] = useState<number | null>(null);
-  const { viewMode, setViewMode } = useUX();
-  const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const { viewMode, setViewMode, cardDensity, setCardDensity } = useUX();
   const [unifiedFilters, setUnifiedFilters] = useState<UnifiedFilters>({
     priceRange: { min: 0, max: 15000 },
     priceLimitMin: 0,
@@ -158,10 +157,6 @@ function DealsPageContent() {
       const savedView = localStorage.getItem('deals_view_mode');
       if (savedView === 'list' || savedView === 'grid') {
         setViewMode(savedView);
-      }
-      const savedDensity = localStorage.getItem('deals_density');
-      if (savedDensity === 'compact' || savedDensity === 'comfortable') {
-        setCardDensity(savedDensity);
       }
     } catch {}
   }, []);
@@ -300,9 +295,7 @@ function DealsPageContent() {
     return () => window.removeEventListener('resize', updateViewportFlags);
   }, []);
 
-  useEffect(() => {
-    try { localStorage.setItem('deals_density', cardDensity); } catch {}
-  }, [cardDensity]);
+  // cardDensity persisted via UXContext
 
   // Persistuj kategorię
   useEffect(() => {
@@ -1312,6 +1305,28 @@ function DealsPageContent() {
                       >
                         <LayoutGrid className="h-4 w-4 mr-1" />
                         <span className="hidden sm:inline">{t('viewMode.grid')}</span>
+                      </Button>
+                    </div>
+
+                    {/* Density Selector */}
+                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                      <Button
+                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setCardDensity('comfortable')}
+                        className="h-8 px-2 sm:px-3 text-xs"
+                        aria-label="Luźny"
+                      >
+                        Luźny
+                      </Button>
+                      <Button
+                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setCardDensity('compact')}
+                        className="h-8 px-2 sm:px-3 text-xs"
+                        aria-label="Kompaktowy"
+                      >
+                        Kompaktowy
                       </Button>
                     </div>
                   </div>

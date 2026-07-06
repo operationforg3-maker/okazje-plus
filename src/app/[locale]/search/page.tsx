@@ -306,7 +306,7 @@ function SearchPageContent() {
               Wszystkie ({totalResults})
             </TabsTrigger>
             <TabsTrigger value="products">
-              Produkty ({products.length})
+              Katalog produktów ({products.length})
             </TabsTrigger>
             <TabsTrigger value="deals">
               Okazje ({deals.length})
@@ -316,7 +316,7 @@ function SearchPageContent() {
           <TabsContent value="all" className="space-y-8">
             {products.length > 0 && (
               <div>
-                <h2 className="font-headline text-2xl font-bold mb-4">🛍️ Produkty</h2>
+                <h2 className="font-headline text-2xl font-bold mb-4">🛍️ Katalog produktów</h2>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product as any} viewMode="grid" />

@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, Tags, Pin, Lock, Award, Search, Bookmark } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type SortOption = 'newest' | 'popular' | 'unanswered';
 type FilterOption = 'all' | 'answered' | 'unanswered' | 'pinned';
@@ -198,7 +199,7 @@ export default function ForumHomePage() {
           <Skeleton className="h-20 w-full" />
         </div>
       ) : filteredThreads.length === 0 ? (
-        <Card>
+        <Card className="rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md">
           <CardContent className="p-6 text-sm text-muted-foreground">
             {searchQuery ? `Brak wyników dla "${searchQuery}"` : 'Brak wątków w tej kategorii.'}
           </CardContent>
@@ -232,32 +233,38 @@ export default function ForumHomePage() {
                         <Badge variant="secondary" className="rounded-full">{threads.length}</Badge>
                       </div>
                       {threads.map((t) => (
-                        <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
+                        <Card 
+                          key={t.id} 
+                          className={cn(
+                            "rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/40",
+                            t.isPinned ? "border-blue-500/40 shadow-sm bg-blue-500/5" : ""
+                          )}
+                        >
                           <CardHeader className="pb-2">
                             <CardTitle className="text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
-                              <Link href={`/forum/${t.id}`} className="hover:underline break-words">
+                              <Link href={`/forum/${t.id}`} className="hover:text-primary transition-colors break-words font-semibold">
                                 {t.title}
                               </Link>
                               {t.isPinned && (
-                                <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1">
+                                <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-blue-500/10 text-blue-500 border-blue-500/30 font-medium">
                                   <Pin className="h-3 w-3" />
-                                  <span className="hidden sm:inline">Przypięty</span>
+                                  <span>Przypięty</span>
                                 </Badge>
                               )}
                               {t.isLocked && (
-                                <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1">
+                                <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-red-500/10 text-red-500 border-red-500/30 font-medium">
                                   <Lock className="h-3 w-3" />
-                                  <span className="hidden sm:inline">Zablokowany</span>
+                                  <span>Zablokowany</span>
                                 </Badge>
                               )}
                               {t.bestAnswerId && (
-                                <Badge variant="default" className="gap-0.5 text-xs py-0 px-1 bg-green-600">
+                                <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-green-500/10 text-green-500 border-green-500/30 font-medium">
                                   <Award className="h-3 w-3" />
-                                  <span className="hidden sm:inline">Rozwiązany</span>
+                                  <span>Rozwiązany</span>
                                 </Badge>
                               )}
                             </CardTitle>
-                            <CardDescription>
+                            <CardDescription className="text-xs text-muted-foreground">
                               {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}
                             </CardDescription>
                           </CardHeader>
@@ -291,32 +298,38 @@ export default function ForumHomePage() {
                       <Badge variant="outline" className="rounded-full">{uncategorized.length}</Badge>
                     </div>
                     {uncategorized.map((t) => (
-                      <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
+                      <Card 
+                        key={t.id} 
+                        className={cn(
+                          "rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/40",
+                          t.isPinned ? "border-blue-500/40 shadow-sm bg-blue-500/5" : ""
+                        )}
+                      >
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
-                            <Link href={`/forum/${t.id}`} className="hover:underline break-words">
+                            <Link href={`/forum/${t.id}`} className="hover:text-primary transition-colors break-words font-semibold">
                               {t.title}
                             </Link>
                             {t.isPinned && (
-                              <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1">
+                              <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-blue-500/10 text-blue-500 border-blue-500/30 font-medium">
                                 <Pin className="h-3 w-3" />
-                                <span className="hidden sm:inline">Przypięty</span>
+                                <span>Przypięty</span>
                               </Badge>
                             )}
                             {t.isLocked && (
-                              <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1">
+                              <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-red-500/10 text-red-500 border-red-500/30 font-medium">
                                 <Lock className="h-3 w-3" />
-                                <span className="hidden sm:inline">Zablokowany</span>
+                                <span>Zablokowany</span>
                               </Badge>
                             )}
                             {t.bestAnswerId && (
-                              <Badge variant="default" className="gap-0.5 text-xs py-0 px-1 bg-green-600">
+                              <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-green-500/10 text-green-500 border-green-500/30 font-medium">
                                 <Award className="h-3 w-3" />
-                                <span className="hidden sm:inline">Rozwiązany</span>
+                                <span>Rozwiązany</span>
                               </Badge>
                             )}
                           </CardTitle>
-                          <CardDescription>
+                          <CardDescription className="text-xs text-muted-foreground">
                             {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}
                           </CardDescription>
                         </CardHeader>
@@ -351,35 +364,41 @@ export default function ForumHomePage() {
           {filteredThreads.map((t) => {
             const categoryLabel = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
             return (
-              <Card key={t.id} className={t.isPinned ? "border-blue-500" : ""}>
+              <Card 
+                key={t.id} 
+                className={cn(
+                  "rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-300 hover:border-primary/40",
+                  t.isPinned ? "border-blue-500/40 shadow-sm bg-blue-500/5" : ""
+                )}
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm sm:text-base flex items-center gap-1 sm:gap-2 flex-wrap">
-                    <Link href={`/forum/${t.id}`} className="hover:underline break-words">
+                    <Link href={`/forum/${t.id}`} className="hover:text-primary transition-colors break-words font-semibold">
                       {t.title}
                     </Link>
                     {categoryLabel && (
-                      <Badge variant="secondary" className="text-xs py-0 px-1">{categoryLabel}</Badge>
+                      <Badge variant="secondary" className="text-xs py-0.5 px-2 bg-secondary/50 text-foreground font-medium">{categoryLabel}</Badge>
                     )}
                     {t.isPinned && (
-                      <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1">
+                      <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-blue-500/10 text-blue-500 border-blue-500/30 font-medium">
                         <Pin className="h-3 w-3" />
-                        <span className="hidden sm:inline">Przypięty</span>
+                        <span>Przypięty</span>
                       </Badge>
                     )}
                     {t.isLocked && (
-                      <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1">
+                      <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-red-500/10 text-red-500 border-red-500/30 font-medium">
                         <Lock className="h-3 w-3" />
-                        <span className="hidden sm:inline">Zablokowany</span>
+                        <span>Zablokowany</span>
                       </Badge>
                     )}
                     {t.bestAnswerId && (
-                      <Badge variant="default" className="gap-0.5 text-xs py-0 px-1 bg-green-600">
+                      <Badge variant="outline" className="gap-0.5 text-xs py-0.5 px-2 bg-green-500/10 text-green-500 border-green-500/30 font-medium">
                         <Award className="h-3 w-3" />
-                        <span className="hidden sm:inline">Rozwiązany</span>
+                        <span>Rozwiązany</span>
                       </Badge>
                     )}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs text-muted-foreground">
                     {t.authorDisplayName || 'Użytkownik'} • {new Date(t.createdAt).toLocaleString('pl-PL')}
                   </CardDescription>
                 </CardHeader>

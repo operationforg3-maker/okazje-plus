@@ -6,40 +6,65 @@ import DealCard from '@/components/deal-card';
 import ProductCard from '@/components/product-card';
 import { Loader2 } from 'lucide-react';
 
+interface CategoryFilterPayload {
+  mainCategorySlug?: string;
+  subCategorySlug?: string;
+  subSubCategorySlug?: string;
+}
+
 interface InfiniteSimilarFeedProps {
   itemType: 'deal' | 'product';
-  categoryId: string;
+  categoryId?: string; // Legacy fallback
+  categoryQueue?: CategoryFilterPayload[];
   excludeId: string;
 }
 
-export function InfiniteSimilarFeed({ itemType, categoryId, excludeId }: InfiniteSimilarFeedProps) {
+export function InfiniteSimilarFeed({ itemType, categoryId, categoryQueue, excludeId }: InfiniteSimilarFeedProps) {
   const [items, setItems] = useState<(Deal | ProductCore)[]>([]);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [queueIndex, setQueueIndex] = useState(0);
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Normalize queue of categories
+  const resolvedQueue = categoryQueue && categoryQueue.length > 0
+    ? categoryQueue
+    : (categoryId ? [{ mainCategorySlug: categoryId }] : [{}]);
 
   useEffect(() => {
     // Reset state if category changes
     setItems([]);
     setPage(1);
+    setQueueIndex(0);
     setHasMore(true);
-  }, [categoryId]);
+  }, [categoryId, JSON.stringify(categoryQueue)]);
 
   useEffect(() => {
-    if (!hasMore || isLoading || !categoryId) return;
+    if (!hasMore || isLoading) return;
 
     const fetchNextPage = async () => {
       setIsLoading(true);
       try {
         const queryType = itemType === 'deal' ? 'deals' : 'products';
+        const currentFilter = resolvedQueue[queueIndex] || {};
+
         const params = new URLSearchParams({
           type: queryType,
-          mainCategorySlug: categoryId,
           limit: '20',
           page: String(page),
           q: '*',
         });
+
+        if (currentFilter.mainCategorySlug) {
+          params.set('mainCategorySlug', currentFilter.mainCategorySlug);
+        }
+        if (currentFilter.subCategorySlug) {
+          params.set('subCategorySlug', currentFilter.subCategorySlug);
+        }
+        if (currentFilter.subSubCategorySlug) {
+          params.set('subSubCategorySlug', currentFilter.subSubCategorySlug);
+        }
 
         const res = await fetch(`/api/search?${params.toString()}`);
         if (!res.ok) throw new Error('Search failed');
@@ -48,14 +73,20 @@ export function InfiniteSimilarFeed({ itemType, categoryId, excludeId }: Infinit
         const newItems: (Deal | ProductCore)[] = itemType === 'deal' ? data.deals : data.products;
 
         if (newItems.length === 0) {
-          setHasMore(false);
+          // If we run out of items at this level, check if we can step up in the queue
+          if (queueIndex < resolvedQueue.length - 1) {
+            setQueueIndex((prev) => prev + 1);
+            setPage(1); // Reset page for the next category level
+          } else {
+            setHasMore(false); // Fully finished the entire category tree fallback queue
+          }
         } else {
           // Filter out duplicates and excluded ID
           setItems((prev) => {
             const existingIds = new Set(prev.map((i) => i.id));
             const filtered = newItems.filter((i) => i.id !== excludeId && !existingIds.has(i.id));
             if (filtered.length === 0 && newItems.length > 0) {
-              // If we filtered everything out but the server returned items, keep paginating
+              // If everything was filtered out, load the next page
               setPage((p) => p + 1);
             }
             return [...prev, ...filtered];
@@ -70,7 +101,7 @@ export function InfiniteSimilarFeed({ itemType, categoryId, excludeId }: Infinit
     };
 
     fetchNextPage();
-  }, [page, categoryId, itemType, excludeId, hasMore]);
+  }, [page, queueIndex, itemType, excludeId, hasMore, JSON.stringify(resolvedQueue)]);
 
   // Observer to trigger next page load
   useEffect(() => {

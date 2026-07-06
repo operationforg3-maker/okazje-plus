@@ -2,7 +2,9 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import {useParams} from 'next/navigation';
+import { withImageProxy } from '@/lib/image-proxy';
 import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useCategoryName } from '@/hooks/use-category-name';
@@ -568,7 +570,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
 
   return (
     <div 
-      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/40 bg-background/60 backdrop-blur-md shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/30 bg-background/50 backdrop-blur-md shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/20"
       onClick={() => {
         window.location.href = `${prefix}/deals/${deal.id}`;
       }}
@@ -580,163 +582,93 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
       role="link"
       tabIndex={0}
     >
-      <CardHeader
-        image={coverImage || '/icon_okazjeplus.svg'}
-        title={dealTitle || 'Okazja'}
-        onFavorite={() => toggleFavorite()}
-        isFavorited={isFavorited}
-        isFavoritesLoading={isFavoriteLoading}
-        imageClassName="object-contain transition-transform-base group-hover:scale-105"
-        imageContainerClassName="h-auto aspect-square bg-muted/20 rounded-t-2xl border-b border-border/40"
-        className="rounded-none"
-        priority={priority}
-      >
-        {/* Pasek ocen produktu jeśli powiązany */}
-        {resolvedProduct && resolvedProduct.ratingSources && (
-          <div className="absolute left-1.5 top-1.5 z-10">
-            <RatingBar users={resolvedProduct.ratingSources.users} editorial={resolvedProduct.ratingSources.editorial} external={resolvedProduct.ratingSources.external} />
-          </div>
-        )}
-        <div className="absolute right-2 top-2 flex flex-col space-sm z-10 gap-1">
-          {/* Social Proof Badge */}
-          {((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount || 0) > 10 && (
-            <div className="bg-red-600/90 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm flex items-center gap-1 shadow-sm">
-               <Flame className="w-3 h-3" />
-               <span className="font-medium">
-                 {t('labels.boughtCount', { count: ((resolvedProduct as any)?.marketing?.ordersCount || (deal as any)?.marketing?.ordersCount || 0) })}
-               </span>
+      {/* Image container & overlay badge details for Hot Deal style */}
+      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/10 border-b border-border/30 overflow-hidden group-hover:bg-muted/20 transition-all duration-300">
+        <Image
+          src={withImageProxy(coverImage || '/icon_okazjeplus.svg')}
+          alt={dealTitle || 'Okazja'}
+          fill
+          sizes="(max-width: 768px) 100vw, 300px"
+          className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+          loading={priority ? 'eager' : 'lazy'}
+        />
+
+        {/* Dynamic float temperature tag on image */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+          {isHot && (
+            <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-white font-black text-xs px-3 py-1.5 rounded-2xl shadow-md border border-orange-400/20">
+              <Flame className="h-4 w-4 animate-bounce" />
+              <span>{temperature}°</span>
             </div>
           )}
-          {isHot && (
-            <Badge className="badge-hot badge-trust">
-              <Flame className="mr-1 h-3 w-3 md:h-4 md:w-4" />
-              Hot {temperature}°
-            </Badge>
+          {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+            <div className="bg-red-500 text-white font-black text-xs px-2.5 py-1 rounded-xl shadow-md w-fit">
+              -{priceData.discount}%
+            </div>
           )}
-          {isHotDealTag && (
-            <Badge variant="destructive" className="shadow-md">
-              <Zap className="mr-1 h-3 w-3" />
-              Hot Deal
-            </Badge>
-          )}
-          {isBestsellerTag && (
-            <Badge className="bg-purple-500 text-white shadow-md">
-              <TrendingUp className="mr-1 h-3 w-3" />
-              Bestseller
-            </Badge>
-          )}
-          {isNewArrival && (
-            <Badge className="bg-blue-500 text-white shadow-md">
-              <Sparkles className="mr-1 h-3 w-3" />
-              {t('labels.isNew')}
-            </Badge>
-          )}
-          {isNew && (
-            <Badge className="badge-cool badge-trust">
-              <Sparkles className="mr-1 h-3 w-3 md:h-4 md:w-4" />
-              Nowa oferta
-            </Badge>
-          )}
-          {isPolishMarket && (
-            <Badge className="bg-green-500 text-white shadow-md">
-              PL Market
-            </Badge>
-          )}
-          {hasVariants && (
-            <Badge variant="secondary" className="shadow-md">
-              {variants.length} wariantów
-            </Badge>
-          )}
+        </div>
+
+        {/* Favorite overlay button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-md hover:bg-background shadow-md h-9 w-9 rounded-full border border-border/40"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFavorite();
+          }}
+          disabled={isFavoriteLoading}
+        >
+          <Heart className={`h-4.5 w-4.5 transition-colors ${isFavorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+        </Button>
+
+        {/* Extra indicators */}
+        <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
           {deal.freeShipping && (
-            <Badge className="bg-emerald-500 text-white badge-trust">
-              <Truck className="mr-1 h-3 w-3 md:h-4 md:w-4" />
+            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[9px] font-bold py-0.5 px-2 rounded-lg">
               Darmowa dostawa
             </Badge>
           )}
-          {deal.importMetadata?.hotProduct && (
-            <Badge className="badge-hot badge-trust animate-pulse">
-              <Zap className="mr-1 h-3 w-3" />
-              HOT
-            </Badge>
-          )}
-          {deal.importMetadata?.flashDeal && (
-            <Badge className="bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md">
-              <Zap className="mr-1 h-3 w-3" />
-              Flash
-            </Badge>
-          )}
-          {deal.importMetadata?.stockStatus === 'low_stock' && (
-            <Badge variant="outline" className="border-yellow-600 text-yellow-600 bg-white/90 shadow-md">
-              <AlertTriangle className="mr-1 h-3 w-3" />
-              {t('labels.lowStock')}
-            </Badge>
-          )}
-          {deal.importMetadata?.stockStatus === 'out_of_stock' && (
-            <Badge variant="outline" className="border-red-600 text-red-600 bg-white/90 shadow-md">
-              <AlertTriangle className="mr-1 h-3 w-3" />
-              {t('labels.soldOut')}
-            </Badge>
-          )}
-          {deal.importMetadata?.promotionId && (
-            <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md">
-              <Tag className="mr-1 h-3 w-3" />
-              {t('labels.promo')}
-            </Badge>
-          )}
-          {promotionLabel && (
-            <Badge className="bg-gradient-to-r from-fuchsia-600 to-rose-600 text-white shadow-md max-w-[180px]">
-              <Tag className="mr-1 h-3 w-3" />
-              <span className="truncate">{promotionLabel}</span>
-            </Badge>
-          )}
         </div>
-        
-        {/* Admin Quick Actions (Bottom-right overlay) */}
-        <div className="absolute right-2 bottom-2">
+
+        {/* Admin Quick Actions */}
+        <div className="absolute right-3 bottom-3 z-10">
           <AdminQuickActions
-            productId={deal.product?.id || deal.id} // Deal might link to product, or assume deal ID if product missing
+            productId={deal.product?.id || deal.id} 
             itemType="deal"
             onEdit={() => setEditDialogOpen(true)}
           />
         </div>
-      </CardHeader>
+      </div>
       
-      {/* Edit Dialog (Admin only) */}
-      {/* {user?.role === 'admin' && (
-        <DealEditDialog
-          deal={deal}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-        />
-      )} */}
-      
-      <div className="flex-grow space-y-2 sm:space-y-3 p-3 sm:p-4 md:p-5">
-        {/* Category Breadcrumb - 3 levels with translations */}
-        <div className="flex items-center justify-between gap-2 mb-1">
+      <div className="flex-grow space-y-2.5 p-4 sm:p-5 min-w-0">
+        {/* Category Breadcrumb & Time */}
+        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
           <CategoryBreadcrumb
             mainCategorySlug={deal.mainCategorySlug}
             subCategorySlug={deal.subCategorySlug}
             subSubCategorySlug={deal.subSubCategorySlug}
             className="flex-grow"
           />
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <Clock className="h-3 w-3 md:h-4 md:w-4" />
-            <span className="text-[10px] sm:text-xs">{relativeTime}</span>
+          <div className="flex items-center gap-1 flex-shrink-0 text-muted-foreground/80">
+            <Clock className="h-3.5 w-3.5" />
+            <span className="text-[10px] sm:text-xs font-medium">{relativeTime}</span>
           </div>
         </div>
 
-        <h3 className="font-headline text-base sm:text-lg md:text-xl font-bold leading-tight transition-colors group-hover:text-primary">
+        <h3 className="font-headline text-base sm:text-lg font-bold leading-tight transition-colors group-hover:text-primary line-clamp-2">
           {dealTitle}
         </h3>
         
-        {/* Deep Data: Specs Teaser (Product.specificationsStructured) */}
+        {/* Specs Teaser */}
         {resolvedProduct?.specificationsStructured && resolvedProduct.specificationsStructured.length > 0 && (
           <SpecsTeaserInline specifications={resolvedProduct.specificationsStructured} maxSpecs={2} />
         )}
         
-        {/* Deep Data: Smart Badges (Auto-generated) */}
+        {/* Smart Badges */}
         {deepDataBadges && deepDataBadges.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
+          <div className="flex flex-wrap gap-1 mt-1">
             {deepDataBadges.filter(badge => badge && badge.text).map((badge, idx) => {
               const getBadgeColor = (colorClass: string) => {
                 if (colorClass.includes('red')) return '#ef4444';
@@ -748,7 +680,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               return (
                 <Badge
                   key={idx}
-                  className="text-white text-xs"
+                  className="text-white text-[10px] px-2 py-0.5 font-bold"
                   style={{ backgroundColor: getBadgeColor(badge.color) }}
                 >
                   {String(badge.text)}
@@ -758,36 +690,36 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           </div>
         )}
         
-        <p className="mt-2 text-xs sm:text-sm text-muted-foreground line-clamp-2">
+        <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed">
           {dealDescription}
         </p>
         
-        {/* Deep Data: Sparkline Price Trend */}
+        {/* Sparkline Price Trend */}
         {deal.priceHistory && Array.isArray(deal.priceHistory) && deal.priceHistory.length > 1 && (
-          <div className="mt-2 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Trend ceny:</span>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground font-medium">Trend ceny:</span>
             <Sparkline data={deal.priceHistory} width={80} height={16} />
           </div>
         )}
 
         {/* Enhanced Metadata Row */}
         {(hasRealShipping || warrantyInfo.available || specifications.length > 0) && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {hasRealShipping && shippingInfo.cost > 0 && (
-              <Badge variant="outline" className="text-xs">
-                <Truck className="w-3 h-3 mr-1" />
+              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
+                <Truck className="w-3 h-3 mr-1 text-muted-foreground" />
                 Dostawa: {formatPrice(shippingInfo.cost)}
               </Badge>
             )}
             {hasRealShipping && shippingInfo.estimatedDays && (
-              <Badge variant="outline" className="text-xs">
-                <Clock className="w-3 h-3 mr-1" />
+              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
+                <Clock className="w-3 h-3 mr-1 text-muted-foreground" />
                 ~{shippingInfo.estimatedDays} dni
               </Badge>
             )}
             {warrantyInfo.available && (
-              <Badge variant="outline" className="text-xs">
-                <ShieldCheck className="w-3 h-3 mr-1" />
+              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
+                <ShieldCheck className="w-3 h-3 mr-1 text-muted-foreground" />
                 Gwarancja
               </Badge>
             )}
@@ -795,8 +727,8 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="outline" className="text-xs cursor-help">
-                      <Info className="w-3 h-3 mr-1" />
+                    <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50 cursor-help">
+                      <Info className="w-3 h-3 mr-1 text-muted-foreground" />
                       {specifications.length} spec.
                     </Badge>
                   </TooltipTrigger>
@@ -818,267 +750,91 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
           </div>
         )}
 
-        {/* Commission Info (for admins) */}
+        {/* Commission Info */}
         {commission && user?.role === 'admin' && (
-          <Badge variant="secondary" className="text-xs w-fit gap-1">
+          <Badge variant="secondary" className="text-[10px] w-fit gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold">
             <DollarSign className="h-3 w-3" />
             Prowizja: {commission}%
           </Badge>
         )}
 
-        {/* Szczegóły dostawy i dodatkowe info */}
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-muted-foreground">
-          {/* Enhanced deal tags */}
+        {/* Szczegóły dostawy */}
+        <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
           {deal.metadata?.dealTags && deal.metadata.dealTags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {deal.metadata.dealTags.slice(0, 3).map((tag: string, idx: number) => (
-                <Badge key={idx} variant="outline" className="text-xs">
+              {deal.metadata.dealTags.slice(0, 2).map((tag: string, idx: number) => (
+                <Badge key={idx} variant="outline" className="text-[9px] px-1.5 py-0">
                   {tag}
                 </Badge>
               ))}
             </div>
           )}
           
-          {/* Flash sale indicator */}
           {deal.metadata?.flashSale?.active && (
-            <Badge variant="destructive" className="bg-orange-600 animate-pulse">
-              <Zap className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+            <Badge variant="destructive" className="bg-orange-600 animate-pulse text-[10px] px-2 py-0">
+              <Zap className="h-3 w-3 mr-1" />
               Flash Sale
             </Badge>
           )}
           {promotionAppPrice !== undefined && promotionAppPrice > 0 && (
-            <Badge variant="outline" className="text-xs border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700">
-              Cena w app: {formatPrice(promotionAppPrice)}
+            <Badge variant="outline" className="text-[10px] border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 px-1.5 py-0">
+              W app: {formatPrice(promotionAppPrice)}
             </Badge>
           )}
           {promotionEndsAt && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 font-medium">
               <Clock className="h-3 w-3" />
               Do: {new Date(promotionEndsAt).toLocaleDateString('pl-PL')}
             </span>
           )}
-          
-          {/* Stock alert */}
-          {deal.metadata?.stockAlert?.lowStock && (
-            <Badge variant="outline" className="border-yellow-600 text-yellow-600">
-              <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-              Tylko {deal.metadata.stockAlert.available} szt.
-            </Badge>
-          )}
-          
-          {/* Shipping details */}
-          {deal.metadata?.shippingDetails?.free && (
-            <Badge variant="default" className="bg-green-600 text-white">
-              <Truck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-              Darmowa wysyłka
-            </Badge>
-          )}
-          {deal.metadata?.shippingDetails?.deliveryTime && (
-            <span className="flex items-center gap-1">
-              <Truck className="h-3 w-3" />
-              Dostawa: {deal.metadata.shippingDetails.deliveryTime}
-            </span>
-          )}
-          {deal.metadata?.shippingDetails?.fromCountry && (
-            <span>Z: {deal.metadata.shippingDetails.fromCountry}</span>
-          )}
-          
-          {/* Merchant rating */}
-          {deal.metadata?.merchantRating && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center gap-1 cursor-help">
-                    <Star className="h-3 w-3 md:h-4 md:w-4 fill-yellow-400 text-yellow-400" />
-                    Sprzedawca: {Number.isFinite(deal.metadata.merchantRating) ? deal.metadata.merchantRating.toFixed(1) : '—'}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Ocena sprzedawcy na platformie
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          
-          {/* Certifications */}
-          {deal.metadata?.certifications && deal.metadata.certifications.length > 0 && (
-            <Badge variant="outline" className="text-xs">
-              <ShieldCheck className="h-3 w-3 md:h-4 md:w-4 mr-1" />
-              {deal.metadata.certifications.join(', ')}
-            </Badge>
-          )}
-          
-          {/* Video indicator */}
-          {deal.metadata?.videoUrl && (
-            <Badge variant="outline" className="text-xs gap-1">
-              <Video className="h-3 w-3" />
-              Wideo
-            </Badge>
-          )}
-          
-          {/* Legacy fields for backward compatibility */}
-          {deliveryTime && !deal.metadata?.shippingDetails && (
-            <span className="flex items-center gap-1">
-              <Truck className="h-3 w-3" />
-              {deliveryTime}
-            </span>
-          )}
-          {warehouseInfo && (
-            <span className="flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              Magazyn: {warehouseInfo}
-            </span>
-          )}
-          {priceData.formattedShippingCost && (
-            <span>Koszt wysyłki: {priceData.formattedShippingCost}</span>
-          )}
-          {deal.cashback && (
-            <span className="font-semibold text-green-600">
-              Cashback: {typeof deal.cashback.amount === 'number' && deal.cashback.amount > 0 ? formatPrice(deal.cashback.amount) : `${deal.cashback.percentage}%`}
-              {deal.cashback.provider && ` (${safeText(deal.cashback.provider)})`}
-            </span>
-          )}
-          {couponCode && (
-            <span className="font-mono text-primary">Kod: {couponCode}</span>
-          )}
-          {typeof deal.importMetadata?.sellerRating === 'number' && !deal.metadata?.merchantRating && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center gap-1 cursor-help">
-                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                    Sprzedawca: {Number.isFinite(deal.importMetadata.sellerRating) ? deal.importMetadata.sellerRating.toFixed(1) : '—'}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Ocena sprzedawcy na platformie
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {returnPolicy && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center gap-1 cursor-help text-green-600">
-                    <ShieldCheck className="h-3 w-3" />
-                    Zwroty
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  {returnPolicy}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {typeof deal.importMetadata?.evaluateCount === 'number' && deal.importMetadata.evaluateCount > 0 && (
-            <span>Oceny: {deal.importMetadata.evaluateCount}</span>
-          )}
-          {deal.importMetadata?.specifications && Array.isArray(deal.importMetadata.specifications) && deal.importMetadata.specifications.length > 0 && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="flex items-center gap-1 cursor-help">
-                    <Info className="h-3 w-3" />
-                    Specyfikacja
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <div className="space-y-1">
-                    {deal.importMetadata.specifications.slice(0, 5).map((spec, i) => (
-                      <div key={i} className="text-xs">
-                        <span className="font-semibold">{safeText(spec?.key)}:</span> {safeText(spec?.value)}
-                      </div>
-                    ))}
-                    {deal.importMetadata.specifications.length > 5 && (
-                      <div className="text-[11px] opacity-70">+{deal.importMetadata.specifications.length - 5} {t('labels.more')}</div>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+        </div>
+
+        {/* Sekcja ceny */}
+        <div className="pt-2 border-t border-border/20">
+          {isPromotionDeal ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="text-xs px-2 py-0.5 font-bold">{t('labels.promoCoupon')}</Badge>
+              {deal?.metadata?.hasCoupons && (
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5">{t('labels.couponsAvailable')}</Badge>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-2xl font-black text-foreground tracking-tight">{priceData.formattedPrice || 'N/A'}</span>
+              {priceData.formattedOriginal && (
+                <span className="text-sm text-muted-foreground line-through decoration-muted-foreground/50">{priceData.formattedOriginal}</span>
+              )}
+              {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/10">
+                  -{priceData.discount}%
+                </span>
+              )}
+              {priceData.formattedSavings ? (
+                <span className="ml-auto text-xs font-bold text-green-600">{t('labels.youSave', { amount: priceData.formattedSavings })}</span>
+              ) : (
+                typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                  <span className="ml-auto text-xs font-bold text-green-600">{t('labels.discount', { percent: priceData.discount })}</span>
+                )
+              )}
+            </div>
           )}
         </div>
 
-        {isPromotionDeal ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="text-sm px-2 py-0.5">{t('labels.promoCoupon')}</Badge>
-            {deal?.metadata?.hasCoupons && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5">{t('labels.couponsAvailable')}</Badge>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-2xl sm:text-3xl font-bold text-primary">{priceData.formattedPrice || 'N/A'}</span>
-            {priceData.formattedOriginal && <span className="text-sm sm:text-base text-muted-foreground line-through">{priceData.formattedOriginal}</span>}
-            {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-              <Badge variant="destructive" className="text-sm px-2 py-0.5">-{priceData.discount}%</Badge>
-            )}
-            {priceData.formattedSavings ? (
-              <span className="ml-auto text-sm font-semibold text-green-600">{t('labels.youSave', { amount: priceData.formattedSavings })}</span>
-            ) : (
-              typeof priceData.discount === 'number' && priceData.discount > 0 && (
-                <span className="ml-auto text-sm font-semibold text-green-600">{t('labels.discount', { percent: priceData.discount })}</span>
-              )
-            )}
-          </div>
-        )}
-
         {/* Temperature bar */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-sm">
+        <div className="space-y-1 pt-1">
+          <div className="flex items-center justify-between text-xs font-medium">
             <span className="flex items-center gap-1 text-muted-foreground">
-              <Flame className="h-4 w-4" />
+              <Flame className="h-3.5 w-3.5" />
               {t('labels.temperature')}
             </span>
-            <span className="font-semibold">{temperature} pkt</span>
+            <span className="font-bold text-foreground">{temperature} pkt</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/50">
             <div 
               className={`h-full bg-gradient-to-r ${temperatureColor} transition-all duration-500`}
               style={{ width: `${temperaturePercent}%` }}
             />
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>{t('labels.addedBy')} <span className="font-medium text-foreground">{postedBy}</span></span>
-          <span aria-hidden>•</span>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1" title={t('labels.votes')}>
-              <ArrowUp className="h-4 w-4" />
-              {voteCount}
-            </span>
-            <span className="flex items-center gap-1" title={t('comments.title')}>
-              <MessageSquare className="h-4 w-4" />
-              {liveComments.count}
-            </span>
-            {typeof deal.shareCount === 'number' && deal.shareCount > 0 && (
-              <span className="flex items-center gap-1" title={t('labels.shares')}>
-                <Share2 className="h-4 w-4" />
-                {deal.shareCount}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-          <Badge variant="outline" className="gap-1">
-            <Scale className="h-3 w-3" />
-            {t('comparison.compare')}
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <Heart className="h-3 w-3" />
-            {t('auth.favorites')}
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <MessageSquare className="h-3 w-3" />
-            {t('comments.title')}
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <ArrowUp className="h-3 w-3" />
-            {t('actions.vote')}
-          </Badge>
         </div>
       </div>
       

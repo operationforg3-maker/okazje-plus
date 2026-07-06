@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
@@ -42,6 +42,7 @@ import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { getExternalUrl } from '@/lib/external-url';
 import { LogisticsBadge } from '@/components/product/LogisticsBadge';
 import { SellerInfo } from '@/components/product/SellerInfo';
+import { InfiniteSimilarFeed } from '@/components/infinite-similar-feed';
 
 interface Props {
   productCore?: ProductCore;
@@ -262,6 +263,34 @@ export default function ProductDetailM6Client({
   };
 
 
+  const uniqueQueue = useMemo(() => {
+    const uniqueList = [];
+    const seen = new Set();
+    const candidates = [
+      {
+        mainCategorySlug,
+        subCategorySlug,
+        subSubCategorySlug,
+      },
+      {
+        mainCategorySlug,
+        subCategorySlug,
+      },
+      {
+        mainCategorySlug,
+      },
+      {},
+    ];
+    for (const cand of candidates) {
+      const key = `${cand.mainCategorySlug || ''}:${cand.subCategorySlug || ''}:${cand.subSubCategorySlug || ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueList.push(cand);
+      }
+    }
+    return uniqueList;
+  }, [mainCategorySlug, subCategorySlug, subSubCategorySlug]);
+
   return (
     <div className="page-container pb-8 pt-2 md:pt-4">
       {/* Breadcrumbs */}
@@ -290,733 +319,277 @@ export default function ProductDetailM6Client({
         </span>
       </div>
 
-      {/* Hero Section - Gallery + Price Widget */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 mb-8">
-        {/* Image Gallery - Using GalleryM6 Component */}
-        <GalleryM6 images={imageUrls} title={title} />
+      {/* Main Grid Layout: Left Column (Gallery + Info), Right Column (Sticky Box) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-12">
+        {/* LEFT COLUMN: Gallery, Description, Price Comparison, Specs, Comments */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Gallery Component */}
+          <GalleryM6 images={imageUrls} title={title} />
 
-        {/* Price Widget & Actions */}
-        <div className="space-y-6">
-          <div>
+          {/* Description Card */}
+          <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-4">
             <div className="flex items-start justify-between gap-4">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+              <h1 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight text-foreground break-words flex-1">
                 {title}
               </h1>
               <AdminQuickActions 
                 productId={productId} 
                 itemType="product"
-                className="mt-1"
+                className="mt-1 flex-shrink-0"
               />
             </div>
-            
-            {/* Rating */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex items-center gap-1">
+
+            {/* Ratings & Video Link */}
+            <div className="flex flex-wrap items-center gap-4 text-sm pb-4 border-b border-border/20">
+              <div className="flex items-center gap-1.5">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`w-5 h-5 ${
+                    className={`w-4 h-4 ${
                       i < Math.round(avgRating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
                     }`}
                   />
                 ))}
-              </div>
-              <span className="text-sm text-gray-600">
-                {avgRating.toFixed(1)} ({ratingCount} {ratingCount === 1 ? 'ocena' : 'ocen'})
-              </span>
-            </div>
-
-            {hasVideo && (
-              <Link
-                href={`/${locale}/watch/products/${productId}`}
-                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-              >
-                <Play className="w-4 h-4" />
-                Obejrzyj wideo produktu
-              </Link>
-            )}
-          </div>
-
-          {/* Best Price Card */}
-          <Card className="border-2 border-green-500 shadow-md">
-            <CardHeader className="bg-green-50/50 pb-3">
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-green-700">
-                  <TrendingUp className="w-5 h-5" />
-                  {t('productDetail.priceComparison.bestPriceBadge')}
-                </span>
-                {bestDeal?.source && (
-                  <Badge variant="outline" className="capitalize border-green-200 bg-white text-green-700">
-                    Sklep: {bestDeal.source}
-                  </Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-4 space-y-4">
-              <div>
-                <div className="text-4xl font-extrabold text-green-600 tracking-tight">
-                  {formattedPriceWithCurrency}
-                </div>
-                {bestDeal && (
-                  <div className="text-xs text-muted-foreground mt-1 flex flex-col gap-0.5">
-                    <p>Cena produktu: {formatPrice(CurrencyManager.convertToPLN(bestDeal.price?.amount || 0, bestDeal.price?.currency || 'PLN'))}</p>
-                    <p>Koszt dostawy: {bestDealShippingCost !== undefined && bestDealShippingCost > 0 
-                      ? formatPrice(CurrencyManager.convertToPLN(bestDealShippingCost, bestDeal.price?.currency || 'PLN'))
-                      : (bestDeal.freeShipping || bestDealShippingCost === 0 ? 'DARMOWA' : 'Do ustalenia')}</p>
-                    {(bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays) && (
-                      <p>Szacowany czas dostawy: {t('productDetail.priceComparison.deliveryDays', { count: bestDeal.shipping?.timeDays || (bestDeal as any).shippingTimeDays })}</p>
-                    )}
-                  </div>
-                )}
+                <span className="font-bold text-foreground pl-1">{avgRating.toFixed(1)}</span>
+                <span className="text-muted-foreground">({ratingCount} ocen)</span>
               </div>
 
-              {isM6 && !bestDeal && (
-                <div className="p-3 bg-muted/40 rounded-lg text-sm border border-muted text-muted-foreground">
-                  {t('productDetail.priceComparison.empty')}
-                </div>
+              {hasVideo && (
+                <Link
+                  href={`/${locale}/watch/products/${productId}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline ml-auto"
+                >
+                  <Play className="w-3.5 h-3.5 fill-primary" />
+                  Obejrzyj wideo
+                </Link>
               )}
-              
-              {marketPriceInfo && (
-                <div className="p-3 bg-muted/50 rounded-lg text-sm border border-muted">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-muted-foreground">{t('productDetail.priceComparison.marketPrice.label')}:</span>
-                    <span className="font-medium line-through text-muted-foreground">{marketPriceInfo.formatted}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-green-700 font-medium">
-                    <span>{t('productDetail.priceComparison.marketPrice.savings')}:</span>
-                    <span className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-green-700 border-green-200 bg-green-50">-{marketPriceInfo.percent}%</Badge>
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 opacity-70">
-                    {t('productDetail.priceComparison.marketPrice.note')}
-                  </p>
-                </div>
-              )}
-
-              {outboundUrl && (
-                <Button asChild size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base shadow-sm">
-                  <a href={outboundUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                    <ShoppingCart className="w-5 h-5" />
-                    {t('productDetail.simple.buyNow')}
-                    <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
-                  </a>
-                </Button>
-              )}
-
-              {isM6 && deals.length > 0 && (
-                <div className="pt-2 border-t space-y-2 text-xs text-gray-500">
-                  <p className="flex items-center gap-2">
-                    <Package className="w-3.5 h-3.5" />
-                    {t('productDetail.m6.dealsAvailable', { count: deals.length })} (Najtańsza oferta wyróżniona powyżej)
-                  </p>
-                  <p>
-                    {t('productDetail.m6.compareHint')}
-                  </p>
-                </div>
-              )}
-
-
-              {bestDeal?.couponCode && (
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-amber-800">Kod rabatowy</p>
-                      <p className="text-lg font-semibold text-amber-950">{bestDeal.couponCode}</p>
-                    </div>
-                    <Badge className="bg-amber-600 text-white hover:bg-amber-600">Kupon aktywny</Badge>
-                  </div>
-                </div>
-              )}
-
-              {promotionCampaign && (
-                <div className="mt-4 rounded-lg border border-fuchsia-200 bg-fuchsia-50 p-3 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge className="bg-fuchsia-600 text-white hover:bg-fuchsia-600">
-                      {promotionCampaign.label || promotionCampaign.name || 'Kampania AliExpress'}
-                    </Badge>
-                    {promotionCampaign.flashDeal && (
-                      <Badge className="bg-orange-600 text-white hover:bg-orange-600">Flash Sale</Badge>
-                    )}
-                    {promotionCampaign.appOnly && (
-                      <Badge variant="outline">Cena tylko w aplikacji</Badge>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                    {promotionCampaign.startAt && <span>Start: {new Date(promotionCampaign.startAt).toLocaleString('pl-PL')}</span>}
-                    {promotionCampaign.endAt && <span>Koniec: {new Date(promotionCampaign.endAt).toLocaleString('pl-PL')}</span>}
-                    {promotionAppPrice !== undefined && <span>Cena w aplikacji: {formatPrice(promotionAppPrice)}</span>}
-                  </div>
-                </div>
-              )}
-
-              {isM6 && (shippingOrigin || bestDeal?.minOrderValue || bestDeal?.limitPerUser || bestDealShippingCost !== undefined || (bestDeal as any)?.freeShipping !== undefined) && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {((bestDeal as any)?.freeShipping || (bestDealShippingCost !== undefined && bestDealShippingCost <= 0)) ? (
-                    <Badge className="bg-green-600 text-white hover:bg-green-600">Darmowa dostawa</Badge>
-                  ) : bestDealShippingCost !== undefined ? (
-                    <Badge variant="outline">Wysyłka: {formatPrice(bestDealShippingCost)}</Badge>
-                  ) : null}
-                  {shippingOrigin && <Badge variant="outline">Wysyłka z: {shippingOrigin}</Badge>}
-                  {bestDeal?.minOrderValue && <Badge variant="outline">Min. zamówienie: {formatPrice(bestDeal.minOrderValue)}</Badge>}
-                  {bestDeal?.limitPerUser && <Badge variant="outline">Limit: {bestDeal.limitPerUser} na osobę</Badge>}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {isM6 && productVariants.length > 0 && (
-            <VariantsM6 specs={specs} variants={productVariants} />
-          )}
-
-          {isM6 && logistics && <LogisticsBadge logistics={logistics} compact={false} />}
-
-          {isM6 && productCore?.seller && <SellerInfo seller={productCore.seller as any} compact={false} />}
-
-          {isM6 && productCore?.warehouses && productCore.warehouses.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Magazyny i wysyłka</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {productCore.warehouses.map((warehouse) => (
-                    <Badge key={warehouse} variant={warehouse === 'PL' ? 'default' : 'outline'}>
-                      {warehouse === 'PL' ? 'Magazyn PL' : warehouse}
-                    </Badge>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {isM6 && bestDealSellingPoints.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  Najważniejsze zalety oferty
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  {bestDealSellingPoints.slice(0, 6).map((point: string, index: number) => (
-                    <li key={`${point}-${index}`} className="flex items-start gap-2">
-                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            {/* Do koszyka */}
-            <Button
-              size="lg"
-              variant="secondary"
-              className="flex-1"
-              onClick={() => addItem(asLegacyProduct(), 1)}
-              disabled={isInCart(productId)}
-            >
-              <ShoppingCart className="w-5 h-5 mr-2" />
-              {isInCart(productId) ? t('card.inCart') : t('card.toCart')}
-            </Button>
-            <Button
-              onClick={() => toggleFavorite()}
-              variant="outline"
-              size="lg"
-              className="flex-1"
-              disabled={isFavoriteLoading}
-            >
-              <Heart className={`w-5 h-5 mr-2 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
-              {isFavorited ? t('card.favoriteRemove') : t('card.favoriteAdd')}
-            </Button>
-            <ShareButton
-              type="product"
-              itemId={productData.id}
-              url="" // Empty string jako default - ShareButton sam pobierze window.location.href po mount na client
-              title={title}
-            />
-            {/* Porównaj (scroll do tabeli) */}
-            {isM6 && deals.length > 0 && (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  const el = document.getElementById('price-comparison');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-              >
-                <Scale className="w-5 h-5 mr-2" />
-                {t('card.compare')}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Product Video (if available) */}
-      {isM6 && productCore?.videoUrl && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>{t('productDetail.m6.videoTitle')}</CardTitle>
-            <CardDescription>{t('productDetail.m6.videoDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
-              <video controls className="w-full h-full" src={productCore?.videoUrl} />
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Features / Pros & Cons (if available) */}
-      {isM6 && (productCore?.features?.[locale]?.length || productCore?.pros?.[locale]?.length || productCore?.cons?.[locale]?.length) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {productCore?.features?.[locale] && productCore.features[locale].length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Cechy produktu</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-disc pl-5 space-y-1">
-                  {productCore?.features?.[locale]?.map((f: string, idx: number) => (
-                    <li key={idx} className="text-sm text-gray-700">{f}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-          {(productCore?.pros?.[locale]?.length || productCore?.cons?.[locale]?.length) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Plusy i minusy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {productCore?.pros?.[locale] && productCore.pros[locale].length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2 text-green-700">Plusy</h4>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {productCore?.pros?.[locale]?.map((p: string, idx: number) => (
-                          <li key={idx} className="text-sm text-gray-700">{p}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {productCore?.cons?.[locale] && productCore.cons[locale].length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-2 text-red-700">Minusy</h4>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {productCore?.cons?.[locale]?.map((c: string, idx: number) => (
-                          <li key={idx} className="text-sm text-gray-700">{c}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Price Comparison Table (M6 only) */}
-            {isM6 && deals.length > 1 && (
-        <div className="mb-8" id="price-comparison">
-          <PriceComparisonTable productId={productId} initialDeals={deals} onBuyClick={(deal: any) => {
-            // Optional: also add to cart after clicking buy
-            try { addItem(asLegacyProduct(), 1); } catch {}
-          }} />
-        </div>
-      )}
-
-      {/* Tabs - Description, Specs, Reviews, All Data */}
-      <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="mb-8">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="description">Opis</TabsTrigger>
-          <TabsTrigger value="specs">Specyfikacja</TabsTrigger>
-          <TabsTrigger value="reviews">Opinie ({ratingCount})</TabsTrigger>
-          <TabsTrigger value="rate">Oceń</TabsTrigger>
-          <TabsTrigger value="alldata">Wszystkie dane</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="description" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Opis produktu</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {fullHtmlDescription ? (
+            {/* Description Text */}
+            <div className="pt-2">
+              {description ? (
                 <div 
-                  className="prose prose-gray max-w-none"
-                  dangerouslySetInnerHTML={{ __html: fullHtmlDescription }} 
+                  className="text-sm md:text-base text-muted-foreground leading-relaxed prose prose-neutral dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: description }}
                 />
               ) : (
-                <div className="prose prose-gray max-w-none">
-                  {description || 'Brak opisu produktu.'}
+                <p className="text-sm md:text-base text-muted-foreground italic">
+                  Brak opisu dla tego produktu.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Variants selector if any */}
+          {productVariants && productVariants.length > 0 && (
+            <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+              <VariantsM6 variants={productVariants} specs={specs} />
+            </div>
+          )}
+
+          {/* Price Comparison Table */}
+          {isM6 && deals.length > 0 && (
+            <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm" id="price-comparison">
+              <h3 className="font-headline text-lg font-bold mb-4 flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5 text-primary" />
+                Porównanie ofert w sklepach
+              </h3>
+              <PriceComparisonTable productId={productId} initialDeals={deals} onBuyClick={(deal) => {
+                const url = getExternalUrl(deal.affiliateLink, deal.link);
+                if (url) window.open(url, '_blank', 'noopener,noreferrer');
+              }} />
+            </div>
+          )}
+
+          {/* Specifications Table */}
+          {specs && Object.keys(specs).length > 0 && (
+            <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+              <h3 className="font-headline text-lg font-bold mb-4 flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Specyfikacja techniczna
+              </h3>
+              <SpecsTable specs={specs} />
+            </div>
+          )}
+
+          {/* Price History Chart */}
+          {isM6 && deals.length > 0 && (
+            <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+              <h3 className="font-headline text-lg font-bold mb-4 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Historia ceny produktu
+              </h3>
+              <ProductPriceHistoryChart deals={deals} />
+            </div>
+          )}
+
+          {/* Discussion / Comments */}
+          {productId && (
+            <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+              <h3 className="font-headline text-lg font-bold mb-6 flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Dyskusja i opinie
+              </h3>
+              
+              <div className="space-y-6">
+                <RatingInput productId={productId} onRatingSubmitted={fetchRatings} />
+                <CommentSection collectionName="products" docId={productId} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN: Sticky combined info card */}
+        <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-4">
+          <Card className="border border-border/60 shadow-xl overflow-hidden rounded-2xl bg-card">
+            {/* Header: Best Price & Primary Action */}
+            <div className="bg-gradient-to-br from-primary/5 via-accent/5 to-background p-6 border-b border-border/40 space-y-4">
+              <div>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">
+                  {bestDeal?.source ? `Najlepsza Cena (${bestDeal.source})` : 'Cena produktu'}
+                </span>
+                <div className="flex items-baseline gap-2.5 flex-wrap">
+                  <div className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
+                    {formattedPriceWithCurrency}
+                  </div>
+                  {marketPriceInfo && (
+                    <div className="text-base text-muted-foreground line-through decoration-muted-foreground/45 mb-0.5">
+                      {marketPriceInfo.formatted}
+                    </div>
+                  )}
+                  {marketPriceInfo && (
+                    <Badge className="bg-red-500 text-white font-extrabold text-xs px-2 py-0.5 rounded-md">
+                      -{marketPriceInfo.percent}%
+                    </Badge>
+                  )}
+                </div>
+                {marketPriceInfo && (
+                  <p className="text-green-600 dark:text-green-500 text-xs font-bold mt-1">
+                    Oszczędzasz {formatPrice(marketPriceInfo.amount - (priceAmount ?? 0))}
+                  </p>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                {outboundUrl ? (
+                  <Button size="lg" asChild className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-12 text-sm shadow-md hover:shadow-lg transition-all duration-300">
+                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="mr-2 h-4.5 w-4.5" />
+                      Idź do sklepu
+                    </a>
+                  </Button>
+                ) : (
+                  <Button size="lg" className="flex-1 h-12 text-sm" disabled>
+                    <ExternalLink className="mr-2 h-4.5 w-4.5" />
+                    Brak linku
+                  </Button>
+                )}
+                <ShareButton 
+                  type="product"
+                  itemId={productId}
+                  title={title}
+                  url={`/products/${productId}`}
+                  size="lg"
+                  variant="outline"
+                />
+              </div>
+
+              {/* Favorites & Cart Action Strip */}
+              <div className="flex items-center justify-between border-t border-border/20 pt-3 gap-2">
+                <Button
+                  variant={isInCart(productId) ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => addItem(asLegacyProduct())}
+                  className="h-9 px-3 text-xs font-bold gap-1.5 rounded-lg border-border/80 flex-1"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {isInCart(productId) ? 'W koszyku' : 'Dodaj do koszyka'}
+                </Button>
+
+                <Button
+                  variant={isFavorited ? 'secondary' : 'outline'}
+                  size="icon"
+                  onClick={() => toggleFavorite()}
+                  disabled={isFavoriteLoading}
+                  className="h-9 w-9 border-border/80"
+                  aria-label="Ulubione"
+                >
+                  <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+                </Button>
+              </div>
+            </div>
+
+            {/* Inner Details: Logistics, Warehouses, Specs Teaser */}
+            <div className="p-6 space-y-4 text-sm">
+              {/* Delivery / Shipping details */}
+              {logistics && (
+                <div className="space-y-3">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Szczegóły wysyłki</p>
+                  
+                  <div className="flex items-center gap-2.5 text-xs">
+                    <LogisticsBadge logistics={logistics} />
+                  </div>
+                  
+                  {shippingOrigin && (
+                    <div className="flex items-center gap-2.5 text-muted-foreground text-xs">
+                      <span className="font-semibold text-foreground">Wysyłka z:</span>
+                      <span className="uppercase">{shippingOrigin}</span>
+                    </div>
+                  )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="specs" className="mt-6">
-          <div className="space-y-6">
-            {isM6 && productCore?.attributes && productCore.attributes.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Parametry źródłowe</CardTitle>
-                  <CardDescription>Dane bezpośrednio z importu produktu</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    {productCore.attributes.map((attribute, index) => (
-                      <div key={`${attribute.name}-${index}`} className="flex flex-col gap-1 rounded-lg border p-3">
-                        <span className="font-medium text-gray-900">{attribute.name}</span>
-                        <span className="text-gray-600">{attribute.value}</span>
+              {/* Seller details */}
+              {bestDeal && (
+                <div className="border-t border-border/40 pt-3">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Sprzedawca</p>
+                  <SellerInfo seller={bestDeal.seller || { name: bestDeal.source }} />
+                </div>
+              )}
+
+              {/* Selling points list */}
+              {bestDealSellingPoints && bestDealSellingPoints.length > 0 && (
+                <div className="border-t border-border/40 pt-3">
+                  <ul className="space-y-1.5 text-xs text-muted-foreground list-disc pl-4">
+                    {bestDealSellingPoints.map((point, idx) => (
+                      <li key={idx}>{point}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Specs Teaser */}
+              {specs && Object.keys(specs).length > 0 && (
+                <div className="border-t border-border/40 pt-3">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-2">Główne cechy</p>
+                  <div className="space-y-1.5">
+                    {Object.entries(specs).slice(0, 3).map(([key, value]) => (
+                      <div key={key} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground truncate max-w-[120px]">{key}:</span>
+                        <span className="font-semibold text-foreground truncate pl-2 max-w-[140px]">{String(value)}</span>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <SpecsTable specs={specs} title="Specyfikacja techniczna" />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="reviews" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Opinie użytkowników</CardTitle>
-              <CardDescription>
-                {ratingCount} {ratingCount === 1 ? 'ocena' : 'ocen'} • Średnia {avgRating.toFixed(1)}/5.0
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recentRatings.length > 0 ? (
-                <div className="space-y-4">
-                  {recentRatings.map((rating) => (
-                    <div key={rating.id} className="border-b pb-4 last:border-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-medium">{rating.userDisplayName || 'Użytkownik'}</div>
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-4 h-4 ${
-                                i < rating.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      {rating.review && (
-                        <p className="text-sm text-gray-600">{rating.review}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-gray-500 py-8">
-                  Brak opinii. Bądź pierwszy i zostaw swoją ocenę!
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="rate" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Oceń ten produkt</CardTitle>
-              <CardDescription>
-                Podziel się swoją opinią z innymi użytkownikami
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {user ? (
-                <RatingInput
-                  productId={productId}
-                  existingRating={userRating}
-                  onRatingSubmitted={fetchRatings}
-                />
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">Zaloguj się aby ocenić produkt</p>
-                  <Button asChild>
-                    <Link href={`/${locale}/login`}>Zaloguj się</Link>
-                  </Button>
                 </div>
               )}
-            </CardContent>
+            </div>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="alldata" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Wszystkie dane produktu z bazy</CardTitle>
-              <CardDescription>Kompletne informacje techniczne i metadane</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Basic Info */}
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 border-b pb-2">Podstawowe informacje</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div><span className="font-medium">ID produktu:</span> <code className="bg-muted px-2 py-1 rounded">{productId}</code></div>
-                    <div><span className="font-medium">Status:</span> <Badge>{productData.status || 'unknown'}</Badge></div>
-                    {productCore?.identityHash && (
-                      <div><span className="font-medium">Identity Hash:</span> <code className="bg-muted px-2 py-1 rounded text-xs">{productCore.identityHash.substring(0, 32)}...</code></div>
-                    )}
-                    {productCore?.aiQualityScore && (
-                      <div><span className="font-medium">Quality Score:</span> <Badge variant={productCore.aiQualityScore >= 80 ? 'default' : 'secondary'}>{productCore.aiQualityScore}/100</Badge></div>
-                    )}
-                    {productCore?.createdAt && (
-                      <div><span className="font-medium">Utworzono:</span> {new Date(productCore.createdAt).toLocaleString('pl-PL')}</div>
-                    )}
-                    {productCore?.updatedAt && (
-                      <div><span className="font-medium">Zaktualizowano:</span> {new Date(productCore.updatedAt).toLocaleString('pl-PL')}</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Categories */}
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 border-b pb-2">Kategorie</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {productData.mainCategorySlug && <Badge variant="outline">Main: {productData.mainCategorySlug}</Badge>}
-                    {productData.subCategorySlug && <Badge variant="outline">Sub: {productData.subCategorySlug}</Badge>}
-                    {productData.subSubCategorySlug && <Badge variant="outline">SubSub: {productData.subSubCategorySlug}</Badge>}
-                  </div>
-                </div>
-
-                {/* Search Tags */}
-                {productCore?.searchTags && productCore.searchTags.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Tagi wyszukiwania ({productCore.searchTags.length})</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {productCore.searchTags.map((tag: string, idx: number) => (
-                        <Badge key={idx} variant="secondary">{tag}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Specs - ALL fields */}
-                {specs && Object.keys(specs).length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Specyfikacja techniczna ({Object.keys(specs).length} pól)</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      {Object.entries(specs).map(([key, value]) => (
-                        <div key={key} className="flex gap-2 border-b border-muted pb-1">
-                          <span className="font-medium min-w-[120px]">{key}:</span>
-                          <span className="text-muted-foreground break-words">{String(value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Rating Details */}
-                {productCore?.rating && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Szczegóły oceny</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                      <div className="p-3 bg-muted rounded">
-                        <div className="text-2xl font-bold text-primary">{productCore.rating.score?.toFixed(2) || 0}</div>
-                        <div className="text-xs text-muted-foreground">Średnia ocena</div>
-                      </div>
-                      <div className="p-3 bg-muted rounded">
-                        <div className="text-2xl font-bold text-primary">{productCore.rating.count || 0}</div>
-                        <div className="text-xs text-muted-foreground">Liczba ocen</div>
-                      </div>
-                      <div className="p-3 bg-muted rounded">
-                        <div className="text-2xl font-bold text-blue-600">{productCore.rating.provider || 'mixed'}</div>
-                        <div className="text-xs text-muted-foreground">Źródło ocen</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Source Info (from metadata) */}
-                {productCore?.metadata?.source && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Źródło produktu</h3>
-                    <div className="p-3 bg-muted rounded">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline">{productCore.metadata.source}</Badge>
-                        {productCore.metadata.originalId && (
-                          <span className="text-sm text-muted-foreground">ID: {productCore.metadata.originalId}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Images Gallery */}
-                {imageUrls && imageUrls.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Galeria zdjęć ({imageUrls.length})</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      {imageUrls.map((url: string, idx: number) => (
-                        <div key={idx} className="relative aspect-square bg-muted rounded overflow-hidden">
-                          <Image src={url} alt={`${title} - zdjęcie ${idx + 1}`} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-contain" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Metadata (import info) */}
-                {productCore?.metadata && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Metadane importu</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      {productCore.metadata.source && (
-                        <div><span className="font-medium">Źródło:</span> <Badge variant="outline">{productCore.metadata.source}</Badge></div>
-                      )}
-                      {productCore.metadata.importedAt && (
-                        <div><span className="font-medium">Data importu:</span> {new Date(productCore.metadata.importedAt).toLocaleString('pl-PL')}</div>
-                      )}
-                      {productCore.metadata.originalId && (
-                        <div><span className="font-medium">ID źródłowe:</span> <code className="bg-muted px-2 py-1 rounded text-xs">{productCore.metadata.originalId}</code></div>
-                      )}
-                      {productCore.metadata.enrichedAt && (
-                        <div><span className="font-medium">Wzbogacono:</span> {new Date(productCore.metadata.enrichedAt).toLocaleString('pl-PL')}</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* All Descriptions (multilingual) */}
-                {productCore?.description && typeof productCore.description === 'object' && (
-                  <div>
-                    <h3 className="font-semibold text-lg mb-3 border-b pb-2">Opisy w różnych językach</h3>
-                    <Tabs defaultValue="pl" className="w-full">
-                      <TabsList>
-                        {productCore.description.pl && <TabsTrigger value="pl">Polski</TabsTrigger>}
-                        {productCore.description.en && <TabsTrigger value="en">English</TabsTrigger>}
-                        {productCore.description.de && <TabsTrigger value="de">Deutsch</TabsTrigger>}
-                        {productCore.description.fr && <TabsTrigger value="fr">Français</TabsTrigger>}
-                        {productCore.description.es && <TabsTrigger value="es">Español</TabsTrigger>}
-                        {productCore.description.uk && <TabsTrigger value="uk">Українська</TabsTrigger>}
-                      </TabsList>
-                      {productCore.description.pl && (
-                        <TabsContent value="pl" className="mt-4">
-                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
-                            {productCore.description.pl}
-                          </div>
-                        </TabsContent>
-                      )}
-                      {productCore.description.en && (
-                        <TabsContent value="en" className="mt-4">
-                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
-                            {productCore.description.en}
-                          </div>
-                        </TabsContent>
-                      )}
-                      {productCore.description.de && (
-                        <TabsContent value="de" className="mt-4">
-                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
-                            {productCore.description.de}
-                          </div>
-                        </TabsContent>
-                      )}
-                      {productCore.description.fr && (
-                        <TabsContent value="fr" className="mt-4">
-                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
-                            {productCore.description.fr}
-                          </div>
-                        </TabsContent>
-                      )}
-                      {productCore.description.es && (
-                        <TabsContent value="es" className="mt-4">
-                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
-                            {productCore.description.es}
-                          </div>
-                        </TabsContent>
-                      )}
-                      {productCore.description.uk && (
-                        <TabsContent value="uk" className="mt-4">
-                          <div className="prose prose-sm max-w-none p-4 bg-muted rounded">
-                            {productCore.description.uk}
-                          </div>
-                        </TabsContent>
-                      )}
-                    </Tabs>
-                  </div>
-                )}
-
-                {/* Raw JSON dump dla debugowania */}
-                <details className="border rounded p-4">
-                  <summary className="font-semibold cursor-pointer">Raw JSON (dla programistów)</summary>
-                  <pre className="mt-3 p-3 bg-muted rounded text-xs overflow-x-auto">
-                    {JSON.stringify(productData, null, 2)}
-                  </pre>
-                </details>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Comments Section - tylko jeśli productId istnieje */}
-      {productId && (
-        <div className="mb-8">
-          <CommentSection collectionName="products" docId={productId} />
         </div>
-      )}
+      </div>
 
-      {/* Related Products */}
-      {relatedProducts.length > 0 && (
-        <div>
-          <h2 className="text-2xl font-bold mb-6">Podobne produkty</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {relatedProducts.filter(p => p.id).map((relatedProduct, index) => (
-              <Link
-                key={relatedProduct.id || `related-${index}`}
-                href={`/${locale}/products/${relatedProduct.id}`}
-                className="group"
-              >
-                <Card className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="relative aspect-square mb-4 rounded-lg overflow-hidden bg-gray-100">
-                      <Image
-                        src={relatedProduct.images?.[0] || relatedProduct.image || relatedProduct.imageUrl || '/placeholder.png'}
-                        alt={relatedProduct.title?.pl || relatedProduct.name}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        className="object-contain p-2 group-hover:scale-105 transition-transform"
-                      />
-                    </div>
-                    <h3 className="font-medium line-clamp-2 mb-2">
-                      {relatedProduct.title?.pl || relatedProduct.name}
-                    </h3>
-                    {relatedProduct.bestPrice && (
-                      <p className="text-lg font-bold text-green-600">
-                        {formatPrice(relatedProduct.bestPrice.amount)}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Price History Chart (M6 only) */}
-      {isM6 && deals.length > 0 && (
-        <div className="mb-8">
-          <ProductPriceHistoryChart deals={deals} />
-        </div>
-      )}
+      {/* PROGRESSIVE SIMILAR PRODUCTS STREAM */}
+      <div className="border-t border-border/40 pt-12 mt-12">
+        <h3 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">
+          <Sparkles className="h-6 w-6 text-primary" />
+          Podobne produkty
+        </h3>
+        <InfiniteSimilarFeed
+          itemType="product"
+          categoryQueue={uniqueQueue}
+          excludeId={productId}
+        />
+      </div>
     </div>
   );
 }

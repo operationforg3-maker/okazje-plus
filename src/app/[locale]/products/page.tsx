@@ -110,8 +110,7 @@ export function ProductsPageContent({
   const [dealOfTheDay, setDealOfTheDay] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const { viewMode, setViewMode } = useUX();
-  const [cardDensity, setCardDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  const { viewMode, setViewMode, cardDensity, setCardDensity } = useUX();
   const [sortBy, setSortBy] = useState<SortBy>('relevance');
   const [productStatusView, setProductStatusView] = useState<ProductStatusView>(
     statusParam === 'waiting_room' ? 'waiting_room' : 'approved'
@@ -255,14 +254,7 @@ export function ProductsPageContent({
     }
   }, [pathname, productStatusView, searchParams]);
 
-  useEffect(() => {
-    try {
-      const savedDensity = localStorage.getItem('products_density');
-      if (savedDensity === 'compact' || savedDensity === 'comfortable') {
-        setCardDensity(savedDensity);
-      }
-    } catch {}
-  }, []);
+  // cardDensity loaded from UXProvider
 
   // Reset limit when filters change
   useEffect(() => {
@@ -391,9 +383,7 @@ export function ProductsPageContent({
 
 
 
-  useEffect(() => {
-    try { localStorage.setItem('products_density', cardDensity); } catch {}
-  }, [cardDensity]);
+  // cardDensity persisted via UXContext
 
   // Filtruj produkty na podstawie wyszukiwania (szukaj w title/shortDescription)
   const filteredProducts = useMemo(() => {
@@ -1058,6 +1048,28 @@ export function ProductsPageContent({
                       >
                         <List className="h-4 w-4 mr-1" />
                         <span className="hidden sm:inline">{t('viewMode.list')}</span>
+                      </Button>
+                    </div>
+
+                    {/* Density Selector */}
+                    <div className="flex items-center gap-1 border rounded-lg p-1">
+                      <Button
+                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setCardDensity('comfortable')}
+                        className="h-8 px-2 sm:px-3 text-xs"
+                        aria-label="Luźny"
+                      >
+                        Luźny
+                      </Button>
+                      <Button
+                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setCardDensity('compact')}
+                        className="h-8 px-2 sm:px-3 text-xs"
+                        aria-label="Kompaktowy"
+                      >
+                        Kompaktowy
                       </Button>
                     </div>
                   </div>

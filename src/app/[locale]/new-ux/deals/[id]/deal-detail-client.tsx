@@ -890,7 +890,6 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                   url={`/new-ux/deals/${deal.id}`}
                   size="lg"
                   variant="outline"
-                  className="h-12 w-12 border-border/80"
                 />
               </div>
               {linkedProductId && (

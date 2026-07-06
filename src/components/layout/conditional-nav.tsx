@@ -3,8 +3,10 @@
 import { Navbar } from "./navbar";
 import { Footer } from "./footer";
 import { BottomTabBar } from "./bottom-tab-bar";
+import { SubNavbar } from "./sub-navbar";
+import { Category } from "@/lib/types";
 
-export function ConditionalNav({ children }: { children: React.ReactNode }) {
+export function ConditionalNav({ children, categories = [] }: { children: React.ReactNode; categories?: Category[] }) {
   // Always render navbar and footer - no conditional logic based on auth
   return (
     <div className="relative flex min-h-screen flex-col">
@@ -16,6 +18,7 @@ export function ConditionalNav({ children }: { children: React.ReactNode }) {
         Przejdź do głównej zawartości
       </a>
       <Navbar />
+      <SubNavbar categories={categories} />
       <main id="main-content" className="flex-1 pb-20 md:pb-0" role="main">
         {children}
       </main>
