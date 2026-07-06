@@ -433,16 +433,10 @@ export function ProductsPageContent({
 
   // Unified currency formatting handled via useCurrency()
 
-  const gridWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
-
-  const masonryWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
-
-  const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
-  const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
+  const gridWrapperClass = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+  const masonryWrapperClass = 'columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4';
+  const listWrapperClass = 'space-y-4';
+  const cardWrapperClass = '';
 
   // Derived quick filters for UI based on unifiedFilters
   const quickFilters = {
@@ -875,131 +869,50 @@ export function ProductsPageContent({
 
             {/* Center Content - Subcategories & Products */}
             <div className="col-span-1 lg:col-span-9">
-              {/* Search Bar */}
-              <div className="mb-4 lg:mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('filters.search')}
-                    aria-label={t('filters.search')}
-                    className="pl-9"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
+              {/* Mobile horizontal category scroller (V5 style with Icons) */}
+              <div className="flex gap-2 overflow-x-auto pb-3 mb-4 lg:hidden no-scrollbar scroll-smooth">
+                <button
+                  onClick={() => {
+                    navigateToCategory(null);
+                  }}
+                  className={cn(
+                    "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5",
+                    !selectedCategory 
+                      ? "bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-md shadow-teal-500/10" 
+                      : "bg-gradient-to-br from-teal-500/20 to-cyan-500/20 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-900/40"
+                  )}
+                >
+                  <Flame className="h-3.5 w-3.5" />
+                  <span>{t('categories.allProducts')}</span>
+                </button>
+                {sortedCategories.map((category) => {
+                  const isActive = selectedCategory?.id === category.id;
+                  const style = getCategoryStyle(category);
+                  const IconComponent = style.icon;
+                  const catName = getLocalizedCategoryName(category, lang);
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => {
+                        navigateToCategory(isActive ? null : (category.slug || category.id));
+                      }}
+                      className={cn(
+                        "flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5",
+                        isActive 
+                          ? `bg-gradient-to-br ${style.gradient} text-white shadow-md` 
+                          : `bg-gradient-to-br ${style.bg} ${style.accent} border ${style.border}`
+                      )}
+                    >
+                      {typeof IconComponent === 'function' ? (
+                        <IconComponent className="h-3.5 w-3.5" />
+                      ) : (
+                        <span className="text-xs">{IconComponent}</span>
+                      )}
+                      <span>{catName}</span>
+                    </button>
+                  );
+                })}
               </div>
-
-              {/* Subcategories przeniesione do lewego panelu */}
-
-              {/* Filters Card */}
-              <Card className="mb-4 lg:mb-6">
-                <CardContent className="p-4 space-y-4">
-                  {/* Sortowanie i Zakres ceny */}
-                  <div className="flex flex-wrap gap-3">
-                    {/* Sortowanie */}
-                    <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-                      <SelectTrigger className="w-[200px] h-10" aria-label={t('filters.sort')}>
-                        <TrendingUp className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder={t('filters.sort')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="recommended">{t('filters.sortOptions.popular')}</SelectItem>
-                        <SelectItem value="newest">{t('filters.sortOptions.newest')}</SelectItem>
-                        <SelectItem value="rating">{t('filters.sortOptions.rating')}</SelectItem>
-                        <SelectItem value="price_asc">{t('filters.sortOptions.price_asc')}</SelectItem>
-                        <SelectItem value="price_desc">{t('filters.sortOptions.price_desc')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={productStatusView} onValueChange={(value: ProductStatusView) => setProductStatusView(value)}>
-                      <SelectTrigger className="w-[220px] h-10" aria-label={t('statusView.visibilityPlaceholder')}>
-                        <Clock className="mr-2 h-4 w-4" />
-                        <SelectValue placeholder={t('statusView.visibilityPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="approved">{t('statusView.approvedView')}</SelectItem>
-                        <SelectItem value="waiting_room">{t('statusView.waitingRoomView')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Quick filters - chipy */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge
-                      variant={quickFilters.freeShipping ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setUnifiedFilters(prev => ({
-                        ...prev,
-                        promo: { ...prev.promo, freeShippingOnly: !prev.promo?.freeShippingOnly },
-                      }))}
-                    >
-                      <Truck className="h-3 w-3 mr-1" />
-                      {t('filters.quickFilters.freeShipping')}
-                    </Badge>
-                    <Badge
-                      variant={quickFilters.topRated ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setUnifiedFilters(prev => ({
-                        ...prev,
-                        rating: quickFilters.topRated ? undefined : { ...(prev.rating || {}), minStars: 4.5 },
-                      }))}
-                    >
-                      <Star className="h-3 w-3 mr-1" />
-                      {t('filters.quickFilters.topRated')}
-                    </Badge>
-                    <Badge
-                      variant={quickFilters.bestsellers ? 'default' : 'outline'}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => setSortBy(quickFilters.bestsellers ? 'relevance' : 'popularity')}
-                    >
-                      <Flame className="h-3 w-3 mr-1" />
-                      {t('filters.quickFilters.bestsellers')}
-                    </Badge>
-                  </div>
-
-                  {/* Zapisane filtry */}
-                  {user && savedFilters.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t">
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Bookmark className="h-3 w-3" />
-                        {t('filters.savedLabel')}
-                      </span>
-                      {savedFilters.map((filter) => (
-                        <Badge
-                          key={filter.name}
-                          variant="secondary"
-                          className="cursor-pointer hover:bg-secondary/80 transition-colors group"
-                        >
-                          <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteSavedFilter(filter.name);
-                            }}
-                            className="ml-1 hover:text-destructive"
-                            aria-label={`Usuń filtr ${filter.name}`}
-                          >
-                            ×
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Przycisk zapisywania filtra */}
-                  {user && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={saveCurrentFilter}
-                      className="w-full sm:w-auto"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {t('filters.saveFilter')}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
 
               {/* Products Grid */}
               <div>
@@ -1018,6 +931,37 @@ export function ProductsPageContent({
                       <Sparkles className="mr-2 h-4 w-4" />
                       {t('recommendations')}
                     </Button>
+                    {/* Sort & Visibility Controls */}
+                    <div className="flex items-center gap-2">
+                      <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                        <SelectTrigger className="h-9 w-[130px] text-xs" aria-label={t('filters.sort')}>
+                          <TrendingUp className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                          <SelectValue placeholder={t('filters.sort')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="recommended">{t('filters.sortOptions.popular')}</SelectItem>
+                          <SelectItem value="newest">{t('filters.sortOptions.newest')}</SelectItem>
+                          <SelectItem value="rating">{t('filters.sortOptions.rating')}</SelectItem>
+                          <SelectItem value="price_asc">{t('filters.sortOptions.price_asc')}</SelectItem>
+                          <SelectItem value="price_desc">{t('filters.sortOptions.price_desc')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {user && (user as any).role === 'admin' && (
+                        <Select value={productStatusView} onValueChange={(value: any) => setProductStatusView(value)}>
+                          <SelectTrigger className="h-9 w-[130px] text-xs" aria-label={t('statusView.visibilityPlaceholder')}>
+                            <Clock className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                            <SelectValue placeholder={t('statusView.visibilityPlaceholder')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="approved">{t('statusView.approvedView')}</SelectItem>
+                            <SelectItem value="waiting_room">{t('statusView.waitingRoomView')}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+
+                    {/* View Mode Toggle */}
                     <div className="flex items-center gap-1 border rounded-lg p-1">
                       <Button
                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -1050,28 +994,6 @@ export function ProductsPageContent({
                         <span className="hidden sm:inline">{t('viewMode.list')}</span>
                       </Button>
                     </div>
-
-                    {/* Density Selector */}
-                    <div className="flex items-center gap-1 border rounded-lg p-1">
-                      <Button
-                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setCardDensity('comfortable')}
-                        className="h-8 px-2 sm:px-3 text-xs"
-                        aria-label="Luźny"
-                      >
-                        Luźny
-                      </Button>
-                      <Button
-                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setCardDensity('compact')}
-                        className="h-8 px-2 sm:px-3 text-xs"
-                        aria-label="Kompaktowy"
-                      >
-                        Kompaktowy
-                      </Button>
-                    </div>
                   </div>
                 </div>
                 {isLoading ? (
@@ -1093,15 +1015,15 @@ export function ProductsPageContent({
                       <div className={listWrapperClass}>
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
-                            <ProductCard product={product as any} viewMode="list" fetchBestDeal={false} />
+                            <ProductCard product={product as any} viewMode="list" layoutMode="list" fetchBestDeal={false} />
                           </div>
                         ))}
                       </div>
                     ) : viewMode === 'masonry' ? (
                       <div className={masonryWrapperClass}>
                         {displayedProducts.map((product) => (
-                          <div key={product.id} className={cardWrapperClass}>
-                            <ProductCard product={product as any} viewMode="grid" fetchBestDeal={false} />
+                          <div key={product.id} className={cn(cardWrapperClass, "break-inside-avoid mb-4")}>
+                            <ProductCard product={product as any} viewMode="grid" layoutMode="masonry" fetchBestDeal={false} />
                           </div>
                         ))}
                       </div>
@@ -1109,7 +1031,7 @@ export function ProductsPageContent({
                       <div className={gridWrapperClass}>
                         {displayedProducts.map((product) => (
                           <div key={product.id} className={cardWrapperClass}>
-                            <ProductCard product={product as any} viewMode="grid" fetchBestDeal={false} />
+                            <ProductCard product={product as any} viewMode="grid" layoutMode="grid" fetchBestDeal={false} />
                           </div>
                         ))}
                       </div>

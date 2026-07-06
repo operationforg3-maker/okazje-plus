@@ -495,7 +495,7 @@ export class SmartHarvester {
     };
   }
 
-  private async scrapeAliExpressPage(url: string): Promise<{
+  private async scrapeAliExpressPage(url: string, explicitProductId?: string): Promise<{
     title?: string;
     description?: string;
     specs?: Record<string, string>;
@@ -515,12 +515,17 @@ export class SmartHarvester {
     };
   }> {
     if (!url || !url.startsWith('http')) {
-      return {};
+      if (!explicitProductId) {
+        return {};
+      }
     }
 
     try {
-      const match = url.match(/\/item\/(\d+)\.html/i);
-      const productId = match ? match[1] : '';
+      let productId = explicitProductId || '';
+      if (!productId) {
+        const match = url.match(/\/item\/(\d+)\.html/i);
+        productId = match ? match[1] : '';
+      }
       if (!productId) {
         this.addLog('warn', `AliExpress Scraper: Could not extract product ID from URL: ${url}`);
         return {};
@@ -2903,9 +2908,10 @@ export class SmartHarvester {
           fallbackUrl: p.product_url || p.product_detail_url || p.promotion_link || '',
         });
 
+        const pid = String(p.item_id || p.product_id || '');
         const scrapeTarget = p.product_detail_url || p.product_url || p.promotion_link || '';
-        const shouldScrape = (!p.product_description || !p.product_props) && Boolean(scrapeTarget);
-        const scraped = shouldScrape ? await this.scrapeAliExpressPage(scrapeTarget) : {};
+        const shouldScrape = (!p.product_description || !p.product_props) && (Boolean(scrapeTarget) || Boolean(pid));
+        const scraped = shouldScrape ? await this.scrapeAliExpressPage(scrapeTarget, pid) : {};
 
         const baseCandidates = [
           p.price?.current,

@@ -49,6 +49,7 @@ interface DealCardProps {
   product?: Product | null;
   /** Pass true for first ~4 cards above the fold for LCP priority */
   priority?: boolean;
+  layoutMode?: 'grid' | 'masonry' | 'list';
 }
 
 const safeText = (value: unknown, fallback = ''): string => {
@@ -198,7 +199,7 @@ function getRelativeTime(when: any): string {
   return `${Math.floor(diffDays / 30)} mies. temu`;
 }
 
-function DealCard({ deal, product, priority = false }: DealCardProps) {
+function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: DealCardProps) {
   // Używaj przekazanego ProductCore jeśli dostępny (spójność z ProductCard)
   const resolvedProduct = product || null;
   const params = useParams();
@@ -590,15 +591,27 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
       tabIndex={0}
     >
       {/* Image container & overlay badge details for Hot Deal style */}
-      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/10 border-b border-border/30 overflow-hidden group-hover:bg-muted/20 transition-all duration-300">
-        <Image
-          src={withImageProxy(coverImage || '/icon_okazjeplus.svg')}
-          alt={dealTitle || 'Okazja'}
-          fill
-          sizes="(max-width: 768px) 100vw, 300px"
-          className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-          loading={priority ? 'eager' : 'lazy'}
-        />
+      <div className={cn(
+        "relative bg-muted/10 border-b border-border/30 overflow-hidden group-hover:bg-muted/20 transition-all duration-300 w-full",
+        layoutMode === 'masonry' ? '' : 'aspect-[4/3] sm:aspect-square'
+      )}>
+        {layoutMode === 'masonry' ? (
+          <img
+            src={withImageProxy(coverImage || '/icon_okazjeplus.svg')}
+            alt={dealTitle || 'Okazja'}
+            className="w-full h-auto max-h-[320px] object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <Image
+            src={withImageProxy(coverImage || '/icon_okazjeplus.svg')}
+            alt={dealTitle || 'Okazja'}
+            fill
+            sizes="(max-width: 768px) 100vw, 300px"
+            className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+            loading={priority ? 'eager' : 'lazy'}
+          />
+        )}
 
         {/* Dynamic float temperature tag on image */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">

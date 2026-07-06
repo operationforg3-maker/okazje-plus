@@ -620,16 +620,10 @@ function DealsPageContent() {
     currency: 'PLN',
   });
 
-  const gridWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
-
-  const masonryWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
-
-  const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
-  const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
+  const gridWrapperClass = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+  const masonryWrapperClass = 'columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4';
+  const listWrapperClass = 'space-y-4';
+  const cardWrapperClass = '';
 
   // Funkcja zapisywania filtrów
   const saveCurrentFilter = async () => {
@@ -1111,20 +1105,6 @@ function DealsPageContent() {
 
             {/* Center Content - Subcategories & Deals */}
             <div className="col-span-1 lg:col-span-9">
-              {/* Search Bar */}
-              <div className="mb-4 lg:mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('filters.search')}
-                    aria-label={t('filters.search')}
-                    className="pl-9"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-
               {/* Mobile horizontal category scroller (V5 style with Icons) */}
               <div className="flex gap-2 overflow-x-auto pb-3 mb-4 lg:hidden no-scrollbar scroll-smooth">
                 <button
@@ -1211,140 +1191,6 @@ function DealsPageContent() {
                 </div>
               )}
 
-              {/* Filtry i sortowanie */}
-              <Card className="mb-4 shadow-sm border-dashed">
-                <CardContent className="p-4 pt-3 space-y-2">
-                  <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-                    <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold">{t('filtersTitle')}</p>
-                        <span className="text-xs text-muted-foreground">{t('filtersSubtitle')}</span>
-                      </div>
-                      <ChevronDown
-                        className={cn('h-4 w-4 text-muted-foreground transition-transform', isFiltersOpen && 'rotate-180')}
-                      />
-                    </CollapsibleTrigger>
-
-                    <CollapsibleContent className="space-y-2 pt-2">
-                      {/* Sortowanie */}
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <SortSelect />
-                        <Select value={dealStatusView} onValueChange={(value: DealStatusView) => {
-                          setDealStatusView(value);
-                          const params = new URLSearchParams(searchParams.toString());
-                          params.set('status', value);
-                          router.push(`${window.location.pathname}?${params.toString()}`);
-                        }}>
-                          <SelectTrigger className="w-full sm:w-[260px]" aria-label="Widoczność">
-                            <SelectValue placeholder="Widoczność" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="approved">Widok: Zatwierdzone</SelectItem>
-                            <SelectItem value="waiting_room">Widok: Poczekalnia</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Quick filters - chipy */}
-                      <div className="flex flex-wrap gap-2">
-                        <Badge
-                          variant={quickFilters.freeShipping ? 'default' : 'outline'}
-                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
-                          onClick={() => setQuickFilters(prev => ({ ...prev, freeShipping: !prev.freeShipping }))}
-                        >
-                          <Truck className="h-3 w-3 mr-1" />
-                          {t('filters.quickFilters.freeShipping')}
-                        </Badge>
-                        {FEATURES.DEALS_TYPE_FILTER && (
-                          <Badge
-                            variant={typeFilter === 'coupon' ? 'default' : 'outline'}
-                            className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
-                            onClick={() => setTypeFilter(prev => prev === 'coupon' ? 'all' as DealTypeFilter : 'coupon')}
-                          >
-                            🎟️ {t('filters.quickFilters.couponOnly')}
-                          </Badge>
-                        )}
-                        {FEATURES.DEALS_TYPE_FILTER && (
-                          <Badge
-                            variant={typeFilter === 'freebie' ? 'default' : 'outline'}
-                            className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
-                            onClick={() => setTypeFilter(prev => prev === 'freebie' ? 'all' as DealTypeFilter : 'freebie')}
-                          >
-                            🆓 {t('filters.quickFilters.freebies')}
-                          </Badge>
-                        )}
-                        <Badge
-                          variant={quickFilters.bigDiscount ? 'default' : 'outline'}
-                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
-                          onClick={() => setQuickFilters(prev => ({ ...prev, bigDiscount: !prev.bigDiscount }))}
-                        >
-                          <Tag className="h-3 w-3 mr-1" />
-                          {t('filters.quickFilters.bigDiscount')}
-                        </Badge>
-                        <Badge
-                          variant={quickFilters.today ? 'default' : 'outline'}
-                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
-                          onClick={() => setQuickFilters(prev => ({ ...prev, today: !prev.today }))}
-                        >
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {t('filters.quickFilters.todayOnly')}
-                        </Badge>
-                        <Badge
-                          variant={quickFilters.verified ? 'default' : 'outline'}
-                          className="cursor-pointer hover:bg-primary/10 transition-colors text-[11px] px-2 py-0.5"
-                          onClick={() => setQuickFilters(prev => ({ ...prev, verified: !prev.verified }))}
-                        >
-                          <Star className="h-3 w-3 mr-1" />
-                          {t('filters.quickFilters.verifiedStores')}
-                        </Badge>
-                      </div>
-
-                      {/* Zapisane filtry */}
-                      {user && savedFilters.length > 0 && (
-                        <div className="flex flex-wrap gap-2 pt-2 border-t">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Bookmark className="h-3 w-3" />
-                            {t('filters.savedLabel')}
-                          </span>
-                          {savedFilters.map((filter) => (
-                            <Badge
-                              key={filter.name}
-                              variant="secondary"
-                              className="cursor-pointer hover:bg-secondary/80 transition-colors group"
-                            >
-                              <span onClick={() => loadSavedFilter(filter)}>{filter.name}</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSavedFilter(filter.name);
-                                }}
-                                className="ml-1 hover:text-destructive"
-                                aria-label={`Usuń filtr ${filter.name}`}
-                              >
-                                ×
-                              </button>
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Przycisk zapisywania filtra */}
-                      {user && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={saveCurrentFilter}
-                          className="w-full sm:w-auto h-8 px-3 text-xs"
-                        >
-                          <Save className="h-4 w-4 mr-2" />
-                          {t('filters.saveFilterCurrent')}
-                        </Button>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
-                </CardContent>
-              </Card>
-
               {/* Deals List */}
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -1362,6 +1208,27 @@ function DealsPageContent() {
                       <Sparkles className="mr-2 h-4 w-4" />
                       {t('recommendations')}
                     </Button>
+
+                    {/* Sort & Visibility Controls */}
+                    <div className="flex items-center gap-2">
+                      <SortSelect />
+                      {user && (user as any).role === 'admin' && (
+                        <Select value={dealStatusView} onValueChange={(value: DealStatusView) => {
+                          setDealStatusView(value);
+                          const params = new URLSearchParams(searchParams.toString());
+                          params.set('status', value);
+                          router.push(`${window.location.pathname}?${params.toString()}`);
+                        }}>
+                          <SelectTrigger className="h-9 w-[130px] text-xs" aria-label="Widoczność">
+                            <SelectValue placeholder="Widoczność" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="approved">Zatwierdzone</SelectItem>
+                            <SelectItem value="waiting_room">Poczekalnia</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
 
                     {/* View Mode Toggle */}
                     <div className="flex items-center gap-1 border rounded-lg p-1">
@@ -1394,28 +1261,6 @@ function DealsPageContent() {
                       >
                         <LayoutGrid className="h-4 w-4 mr-1" />
                         <span className="hidden sm:inline">{t('viewMode.grid')}</span>
-                      </Button>
-                    </div>
-
-                    {/* Density Selector */}
-                    <div className="flex items-center gap-1 border rounded-lg p-1">
-                      <Button
-                        variant={cardDensity === 'comfortable' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setCardDensity('comfortable')}
-                        className="h-8 px-2 sm:px-3 text-xs"
-                        aria-label="Luźny"
-                      >
-                        Luźny
-                      </Button>
-                      <Button
-                        variant={cardDensity === 'compact' ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setCardDensity('compact')}
-                        className="h-8 px-2 sm:px-3 text-xs"
-                        aria-label="Kompaktowy"
-                      >
-                        Kompaktowy
                       </Button>
                     </div>
                   </div>
@@ -1464,8 +1309,8 @@ function DealsPageContent() {
                     ) : viewMode === 'masonry' ? (
                       <div className={masonryWrapperClass}>
                         {displayedDeals.map((deal) => (
-                          <div key={deal.id} className={cardWrapperClass}>
-                            <DealCard deal={deal} />
+                          <div key={deal.id} className={cn(cardWrapperClass, "break-inside-avoid mb-4")}>
+                            <DealCard deal={deal} layoutMode="masonry" />
                           </div>
                         ))}
                       </div>
@@ -1473,7 +1318,7 @@ function DealsPageContent() {
                       <div className={gridWrapperClass}>
                         {displayedDeals.map((deal) => (
                           <div key={deal.id} className={cardWrapperClass}>
-                            <DealCard deal={deal} />
+                            <DealCard deal={deal} layoutMode="grid" />
                           </div>
                         ))}
                       </div>

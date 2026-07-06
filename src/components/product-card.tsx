@@ -48,6 +48,7 @@ interface ProductCardProps {
   product: Product;
   showFullDetails?: boolean;
   viewMode?: 'list' | 'grid';
+  layoutMode?: 'grid' | 'masonry' | 'list';
   fetchBestDeal?: boolean;
 }
 
@@ -58,7 +59,7 @@ const safeText = (value: unknown, fallback = ''): string => {
   return fallback;
 };
 
-function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetchBestDeal = false }: ProductCardProps) {
+function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layoutMode = 'grid', fetchBestDeal = false }: ProductCardProps) {
   const params = useParams();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(() => localeFromParams);
@@ -489,15 +490,27 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
       tabIndex={0}
     >
       {/* Clean Apple-style Product Image Container */}
-      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/5 border-b border-border/20 overflow-hidden transition-all duration-300">
-        <Image
-          src={withImageProxy(primaryImageSrc)}
-          alt={displayTitle || 'Produkt'}
-          fill
-          sizes="(max-width: 768px) 100vw, 300px"
-          className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
+      <div className={cn(
+        "relative bg-muted/5 border-b border-border/20 overflow-hidden transition-all duration-300 w-full",
+        layoutMode === 'masonry' ? '' : 'aspect-[4/3] sm:aspect-square'
+      )}>
+        {layoutMode === 'masonry' ? (
+          <img
+            src={withImageProxy(primaryImageSrc)}
+            alt={displayTitle || 'Produkt'}
+            className="w-full h-auto max-h-[320px] object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <Image
+            src={withImageProxy(primaryImageSrc)}
+            alt={displayTitle || 'Produkt'}
+            fill
+            sizes="(max-width: 768px) 100vw, 300px"
+            className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        )}
 
         {/* Minimalist Top Bar Overlays */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
