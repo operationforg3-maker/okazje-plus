@@ -248,8 +248,8 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
   const [isMounted, setIsMounted] = useState(false);
   const [showSecondarySections, setShowSecondarySections] = useState(false);
 
-  const visibleHotDeals = initialHotDeals.slice(0, 8);
-  const visibleTopProducts = initialTopProducts.slice(0, 8);
+  const visibleHotDeals = initialHotDeals.slice(0, 12);
+  const visibleTopProducts = initialTopProducts.slice(0, 12);
   const showcaseDeals = weeklyDeals.length > 0 ? weeklyDeals : initialHotDeals.slice(0, 5);
 
   useEffect(() => { setIsMounted(true); }, []);
@@ -410,7 +410,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </Button>
           </div>
           {visibleTopProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
               {visibleTopProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -446,7 +446,7 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </Button>
           </div>
           {visibleHotDeals.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
               {visibleHotDeals.map((deal, idx) => (
                 <DealCard key={deal.id} deal={deal} priority={idx === 0} />
               ))}

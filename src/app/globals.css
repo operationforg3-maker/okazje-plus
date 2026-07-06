@@ -286,7 +286,8 @@
     --page-padding-x-sm: 1.25rem; /* 20px - sm (tablet 640px+) */
     --page-padding-x-md: 1.5rem; /* 24px - md (laptop 768px+) */
     --page-padding-x-lg: 2rem;   /* 32px - lg (desktop 1024px+) */
-    --page-max-width: 1400px;    /* max-w-screen-2xl - 1400px */
+    --page-max-width: 1920px;    /* Max width expanded to 1920px for wide screens */
+
     
     /* ============ UNIFIED SIZING SYSTEM ============
        Consistent spacing, shadows, radius across app

@@ -142,7 +142,7 @@ export default async function HomePage() {
       sortBy: 'hot',
       statusFilter: 'approved',
     }),
-    getRecommendedProducts(8),
+    getRecommendedProducts(12),
     getCategories(),
   ]);
 
@@ -161,8 +161,8 @@ export default async function HomePage() {
     })
     .slice(0, 5);
 
-  // Pierwsze 8 gorących dealów do siatki
-  const hotDeals = allHotDeals.slice(0, 8);
+  // Pierwsze 12 gorących dealów do siatki (6 w rzędzie na ultra-wide screen)
+  const hotDeals = allHotDeals.slice(0, 12);
 
   const homeJsonLd = generateHomePageJsonLd(hotDeals, topProducts);
 

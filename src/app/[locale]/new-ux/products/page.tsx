@@ -475,12 +475,12 @@ export function ProductsPageContent({
   // Unified currency formatting handled via useCurrency()
 
   const gridWrapperClass = cardDensity === 'compact'
-    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
-    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3'
+    : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4';
 
   const masonryWrapperClass = cardDensity === 'compact'
-    ? 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-3'
-    : 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 gap-4';
+    ? 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 3xl:columns-6 gap-3'
+    : 'columns-2 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 3xl:columns-6 gap-4';
 
   const listWrapperClass = cardDensity === 'compact' ? 'space-y-3' : 'space-y-4';
   const cardWrapperClass = cardDensity === 'compact' ? 'scale-[0.99] text-sm' : '';
@@ -894,7 +894,7 @@ export function ProductsPageContent({
             </div>
 
             {/* Left Sidebar - Categories & Unified Filters (Desktop only) */}
-            <div className="hidden lg:block lg:col-span-3 space-y-6">
+            <div className="hidden lg:block lg:col-span-3 2xl:col-span-2 space-y-6">
               {/* Categories */}
               <div suppressHydrationWarning>
                 <SidebarContent />
@@ -915,7 +915,7 @@ export function ProductsPageContent({
             </div>
 
             {/* Center Content - Subcategories & Products */}
-            <div className="col-span-1 lg:col-span-9">
+            <div className="col-span-1 lg:col-span-9 2xl:col-span-10">
               {/* Search Bar */}
               <div className="mb-4 lg:mb-6">
                 <div className="relative">
