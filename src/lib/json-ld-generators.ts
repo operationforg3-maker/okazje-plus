@@ -153,17 +153,13 @@ function buildShippingDetails(input: {
   const hasCost = typeof input.shippingCost === 'number' && Number.isFinite(input.shippingCost);
   const isFreeShipping = input.freeShipping === true || (hasCost && (input.shippingCost || 0) <= 0);
 
-  if (!hasCost && !isFreeShipping) {
-    return undefined;
-  }
-
-  const shippingValue = isFreeShipping ? 0 : Math.max(0, input.shippingCost || 0);
+  const shippingValue = isFreeShipping ? 0 : (hasCost ? Math.max(0, input.shippingCost || 0) : 0);
   return {
     '@type': 'OfferShippingDetails',
     shippingRate: {
       '@type': 'MonetaryAmount',
       value: shippingValue,
-      currency: normalizeCurrency(input.currency),
+      currency: normalizeCurrency(input.currency || 'PLN'),
     },
     shippingDestination: {
       '@type': 'DefinedRegion',
@@ -351,6 +347,29 @@ export function generateProductJsonLd(
   const gender = extractGender(productData);
   const ageGroup = extractAgeGroup(productData);
 
+  // Extract brand name
+  let brandName = 'Various';
+  if (productData.metadata?.brand) {
+    brandName = productData.metadata.brand;
+  } else if ((productData as any).specs?.brand) {
+    brandName = (productData as any).specs.brand;
+  } else if ((productData as any).specs?.Brand) {
+    brandName = (productData as any).specs.Brand;
+  } else if ((productData as any).specs?.['Marka']) {
+    brandName = (productData as any).specs?.['Marka'];
+  } else if (product?.metadata?.brand) {
+    brandName = product.metadata.brand;
+  } else if (productCore?.metadata?.brand) {
+    brandName = productCore.metadata.brand;
+  }
+
+  // Extract global identifiers (GTIN, EAN, MPN, UPC, ISBN)
+  const gtin = productData.metadata?.gtin || (productData as any).gtin || product?.metadata?.gtin || productCore?.metadata?.gtin;
+  const ean = productData.metadata?.ean || (productData as any).ean || product?.metadata?.ean || productCore?.metadata?.ean;
+  const mpn = productData.metadata?.mpn || (productData as any).mpn || product?.metadata?.mpn || productCore?.metadata?.mpn;
+  const upc = productData.metadata?.upc || (productData as any).upc || product?.metadata?.upc || productCore?.metadata?.upc;
+  const isbn = productData.metadata?.isbn || (productData as any).isbn || product?.metadata?.isbn || productCore?.metadata?.isbn;
+
   const baseSchema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -362,8 +381,12 @@ export function generateProductJsonLd(
     sku: productId,
     brand: {
       '@type': 'Brand',
-      name: isM6 ? 'Various' : (product?.metadata?.brand || 'Various'),
+      name: brandName,
     },
+    ...(gtin && { gtin }),
+    ...((ean || upc) && { gtin13: ean || upc }),
+    ...(mpn && { mpn }),
+    ...(isbn && { isbn }),
     ...(color && { color }),
     ...(size && { size }),
     audience: {
@@ -445,7 +468,9 @@ export function generateProductJsonLd(
           freeShipping: (product as any)?.freeShipping ?? (product as any)?.price?.freeShipping,
           currency: priceCurrency,
         }),
-        hasMerchantReturnPolicy: buildMerchantReturnPolicy(getReturnPolicyText((product as any)?.returnPolicy || product?.metadata?.returnPolicy)),
+        hasMerchantReturnPolicy: buildMerchantReturnPolicy(
+          getReturnPolicyText((product as any)?.returnPolicy || product?.metadata?.returnPolicy) || '14 dni na zwrot'
+        ),
         seller: {
           '@type': 'Organization',
           name: product?.metadata?.merchant || 'Various',

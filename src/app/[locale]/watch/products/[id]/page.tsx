@@ -91,8 +91,7 @@ async function getWatchData(id: string, locale: string) {
   const videoUrl = extractVideoUrl(product);
   if (!videoUrl) return null;
 
-  const thumbnailUrl = extractThumbnailUrl(product);
-  if (!thumbnailUrl) return null;
+  const thumbnailUrl = extractThumbnailUrl(product) || `${BASE_URL}/icon_okazjeplus.png`;
 
   const name = getLocalizedText(product.title, 'Wideo produktu');
   const rawDescription = getLocalizedText(product.description, '')
