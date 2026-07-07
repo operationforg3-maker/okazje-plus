@@ -904,6 +904,143 @@ export async function getCategories(): Promise<Category[]> {
     return cached as Category[];
   }
 
+  // If on server side, use Firestore Admin SDK (fixes translation loading issues in SSR)
+  if (typeof window === 'undefined') {
+    try {
+      const { adminDb } = await import('@/lib/firebase-admin');
+      
+      const [categoriesSnap, allSubsSnap, allTilesSnap] = await Promise.all([
+        adminDb.collection('categories').get(),
+        adminDb.collectionGroup('subcategories').get(),
+        adminDb.collectionGroup('tiles').get(),
+      ]);
+
+      const l2Map = new Map<string, Array<{ id: string; path: string; [k: string]: unknown }>>();
+      const l3Map = new Map<string, Array<{ id: string; [k: string]: unknown }>>();
+
+      for (const subDoc of allSubsSnap.docs) {
+        const pathParts = subDoc.ref.path.split('/');
+        const entry = { id: subDoc.id, path: subDoc.ref.path, ...subDoc.data() };
+
+        if (pathParts.length === 4) {
+          const catId = pathParts[1];
+          if (!l2Map.has(catId)) l2Map.set(catId, []);
+          l2Map.get(catId)!.push(entry);
+        } else if (pathParts.length === 6) {
+          const parentPath = pathParts.slice(0, 4).join('/');
+          if (!l3Map.has(parentPath)) l3Map.set(parentPath, []);
+          l3Map.get(parentPath)!.push(entry);
+        }
+      }
+
+      const tilesMap = new Map<string, CategoryTile[]>();
+      for (const tileDoc of allTilesSnap.docs) {
+        const pathParts = tileDoc.ref.path.split('/');
+        if (pathParts.length === 4) {
+          const catId = pathParts[1];
+          if (!tilesMap.has(catId)) tilesMap.set(catId, []);
+          tilesMap.get(catId)!.push({ id: tileDoc.id, ...(tileDoc.data() as CategoryTile) });
+        }
+      }
+
+      const categories = categoriesSnap.docs.map((categoryDoc) => {
+        const data = categoryDoc.data() as Partial<Category> & {
+          subcategories?: Array<Partial<Subcategory>>;
+          promo?: Partial<CategoryPromo> | null;
+        };
+
+        const l2Subs = l2Map.get(categoryDoc.id) || [];
+        const embeddedSubs: Array<Partial<Subcategory> & { id?: string }> = Array.isArray(data.subcategories)
+          ? data.subcategories.map((sub) => ({ ...sub, id: sub.id ?? sub.slug }))
+          : [];
+
+        const rawSubs = l2Subs.length > 0 ? l2Subs : embeddedSubs;
+
+        const subcategories: Subcategory[] = rawSubs
+          .map((subData: any) => {
+            const subId = subData.id || subData.slug;
+            const subPath = `categories/${categoryDoc.id}/subcategories/${subId}`;
+            const l3Subs = l3Map.get(subPath) || [];
+            const embeddedSubSubs: Subcategory[] = subData.subcategories ?? [];
+
+            const subSubcategories = (l3Subs.length > 0 ? l3Subs : embeddedSubSubs)
+              .map((ss: any) => ({
+                name: ss.name ?? ss.id,
+                slug: ss.slug ?? ss.id,
+                id: ss.id,
+                icon: ss.icon,
+                description: ss.description,
+                importKeywords: ss.importKeywords,
+                translations: ensureCategoryTranslations(ss.translations, ss.name ?? ss.id, ss.description),
+                sortOrder: ss.sortOrder,
+                image: ss.image,
+              }))
+              .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+            return {
+              id: subId,
+              name: subData.name ?? subId,
+              slug: subData.slug ?? subId,
+              icon: subData.icon,
+              description: subData.description,
+              translations: ensureCategoryTranslations(subData.translations, subData.name ?? subId, subData.description),
+              sortOrder: subData.sortOrder,
+              image: subData.image,
+              highlight: subData.highlight,
+              subcategories: subSubcategories,
+            } satisfies Subcategory;
+          })
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+        const promo = data.promo
+          ? {
+              title: data.promo.title ?? data.name ?? categoryDoc.id,
+              subtitle: data.promo.subtitle,
+              description: data.promo.description,
+              image: data.promo.image,
+              link: data.promo.link,
+              cta: data.promo.cta,
+              badge: data.promo.badge,
+              color: data.promo.color,
+            }
+          : undefined;
+
+        const tiles: CategoryTile[] = tilesMap.get(categoryDoc.id) || [];
+
+        return {
+          id: categoryDoc.id,
+          name: data.name ?? categoryDoc.id,
+          slug: data.slug ?? categoryDoc.id,
+          icon: data.icon,
+          description: data.description,
+          sortOrder: data.sortOrder,
+          accentColor: data.accentColor,
+          heroImage: data.heroImage,
+          translations: ensureCategoryTranslations(
+            data.translations,
+            data.name ?? categoryDoc.id,
+            data.description
+          ),
+          promo,
+          tiles,
+          subcategories,
+        } satisfies Category;
+      });
+
+      const sortedCategories = categories.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      
+      if (DEBUG_DATA_LOGS) {
+        console.log('[getCategories] (Server Admin SDK) Final result, count:', sortedCategories.length);
+      }
+
+      await cacheSet(cacheKey, sortedCategories, 3600);
+      return sortedCategories;
+    } catch (err) {
+      console.warn('[getCategories] Admin SDK fetch failed, falling back to client SDK:', err);
+    }
+  }
+
+  // Client-side fallback (or if Admin SDK failed)
   const loadCategoriesLegacy = async () => {
     const categoriesRef = collection(db, 'categories');
     const snapshot = await getDocs(categoriesRef);
