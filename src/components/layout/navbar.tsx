@@ -100,7 +100,7 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {/* Mobile Nav */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="md:hidden">
+            <SheetTrigger asChild className="hidden">
               <Button variant="ghost" size="icon" className="rounded-full" aria-label={t('openMenu')}>
                 <Menu className="h-5 w-5" />
                 <span className="sr-only">{t('openMenu')}</span>
@@ -137,6 +137,11 @@ export function Navbar() {
             </div>
           </Link>
 
+          {/* Mobile Search Bar */}
+          <div className="flex-1 sm:hidden max-w-[240px]">
+            <AutocompleteSearch />
+          </div>
+
           {/* Desktop Nav */}
           <NavigationMenu className="hidden md:flex">
             <NavigationMenuList className="gap-2">
@@ -158,7 +163,7 @@ export function Navbar() {
             </NavigationMenuList>
           </NavigationMenu>
 
-          <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
+          <div className="flex items-center justify-end gap-2 md:gap-3 sm:flex-1">
             {(() => {
               const isHomepage = pathname === `${prefix}` || pathname === `${prefix}/` || pathname === '/' || pathname === '/pl' || pathname === '/pl/';
               return (
@@ -184,7 +189,7 @@ export function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="sm:hidden rounded-full h-10 w-10 p-0"
+              className="hidden rounded-full h-10 w-10 p-0"
               onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-search'))}
               aria-label="Szukaj"
             >
@@ -192,7 +197,7 @@ export function Navbar() {
             </Button>
 
             {/* Cart & Comparison Menu */}
-            <div className="relative" ref={cartMenuRef}>
+            <div className="hidden sm:relative sm:block" ref={cartMenuRef}>
               <Button 
                 variant="ghost" 
                 className="relative h-10 w-10 rounded-full p-0"
@@ -323,11 +328,13 @@ export function Navbar() {
                 </div>
               )}
             </div>
-            {!isMounted ? (
-              <Skeleton className="h-9 w-9 rounded-full" />
-            ) : (
-              <UserNav />
-            )}
+            <div className="hidden sm:block">
+              {!isMounted ? (
+                <Skeleton className="h-9 w-9 rounded-full" />
+              ) : (
+                <UserNav />
+              )}
+            </div>
           </div>
         </div>
 

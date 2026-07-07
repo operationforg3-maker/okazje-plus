@@ -14,6 +14,12 @@ import {
 import { MobileSearchModule } from '@/components/layout/mobile-search-module';
 import { useTranslations } from 'next-intl';
 
+import { useAuth } from '@/lib/auth';
+import { auth } from '@/lib/firebase';
+import { useNotifications } from '@/hooks/use-notifications';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AccountMenuPanel } from '@/components/layout/account-menu-panel';
+
 type BottomNavItem = {
   key: string;
   href: string;
@@ -25,11 +31,26 @@ type BottomNavItem = {
 export function BottomTabBar() {
   const t = useTranslations('nav');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const params = useParams();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const locale = (params?.locale as string) || 'pl';
   const prefix = `/${locale}`;
+
+  const { user, loading } = useAuth();
+  const { unreadCount } = useNotifications();
+
+  const handleLogout = async () => {
+    await auth.signOut();
+  };
+
+  let userInitial = 'U';
+  if (user?.displayName && typeof user.displayName === 'string' && user.displayName.length > 0) {
+    userInitial = user.displayName.charAt(0).toUpperCase();
+  } else if (user?.email && typeof user.email === 'string' && user.email.length > 0) {
+    userInitial = user.email.charAt(0).toUpperCase();
+  }
 
   const items: BottomNavItem[] = [
     {
@@ -58,7 +79,7 @@ export function BottomTabBar() {
       href: `${prefix}/profile`,
       label: t('account'),
       icon: User,
-      isActive: (p) => p === `${prefix}/profile` || p.startsWith(`${prefix}/profile/`),
+      isActive: (p) => p === `${prefix}/profile` || p.startsWith(`${prefix}/profile/`) || isAccountOpen,
     },
   ];
 
@@ -71,6 +92,23 @@ export function BottomTabBar() {
           </SheetHeader>
           <div className="mt-4">
             <MobileSearchModule prefix={prefix} onNavigate={() => setIsSearchOpen(false)} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isAccountOpen} onOpenChange={setIsAccountOpen}>
+        <SheetContent side="bottom" className="md:hidden rounded-t-2xl p-4 max-h-[85vh] overflow-y-auto bg-background/95 backdrop-blur-xl">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="text-left">{t('account')}</SheetTitle>
+          </SheetHeader>
+          <div className="flex justify-center">
+            <AccountMenuPanel
+              user={user}
+              loading={loading}
+              onLogout={handleLogout}
+              onNavigate={() => setIsAccountOpen(false)}
+              unreadCount={unreadCount}
+            />
           </div>
         </SheetContent>
       </Sheet>
@@ -102,6 +140,37 @@ export function BottomTabBar() {
                     aria-label={t('openSearch')}
                   >
                     <Icon className={cn('h-5 w-5', active && 'text-primary')} />
+                    <span>{item.label}</span>
+                  </button>
+                ) : item.key === 'account' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsAccountOpen(true)}
+                    className={cn(
+                      'flex h-full w-full flex-col items-center justify-center gap-1 rounded-md text-[11px] font-medium transition-colors',
+                      active
+                        ? 'text-primary font-bold'
+                        : 'text-zinc-700 dark:text-zinc-300 hover:text-foreground active:scale-[0.98]'
+                    )}
+                    aria-label={t('account')}
+                  >
+                    {user ? (
+                      <div className="relative flex items-center justify-center h-5 w-5">
+                        <Avatar className="h-5 w-5 border border-border/40">
+                          {user.photoURL ? (
+                            <AvatarImage src={user.photoURL} alt={user?.displayName || 'User'} />
+                          ) : null}
+                          <AvatarFallback className="bg-primary text-primary-foreground text-[8px] font-bold">
+                            {userInitial}
+                          </AvatarFallback>
+                        </Avatar>
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2 rounded-full bg-destructive" />
+                        )}
+                      </div>
+                    ) : (
+                      <Icon className={cn('h-5 w-5', active && 'text-primary')} />
+                    )}
                     <span>{item.label}</span>
                   </button>
                 ) : (
